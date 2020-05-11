@@ -329,6 +329,7 @@ test_that("package-related functions work", {
   "Holidays (>=1.3.1)"
   )
 
+  browser()
   ip <- as.data.table(installed.packages(noCache = TRUE))[[1]]
   if ("LandR" %in% ip)
     remove.packages("LandR")

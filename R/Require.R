@@ -1,3 +1,11 @@
+if (getRversion() >= "3.1.0") {
+  utils::globalVariables(c(".SD", ":=", "Account", "AvailableVersion", "Branch", "Package",
+                           "Repo", "RepoWBranch", "Version", "compareVersionAvail", "correctVersion",
+                           "correctVersionAvail", "download.file", "fullGit", "githubPkgName",
+                           "hasVersionSpec", "inequality", "installed", "isGH", "packageFullName",
+                           "versionSpec"))
+}
+
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
 #' This is an "all in one" function that will run \code{install.packages} for
@@ -68,7 +76,7 @@
 #' @export
 #' @importFrom remotes install_github
 #' @importFrom data.table data.table as.data.table setDT set is.data.table rbindlist
-#' @importFrom data.table setnames setorderv
+#' @importFrom data.table setnames setorderv := .SD
 #' @importFrom utils install.packages capture.output assignInMyNamespace available.packages
 #' @importFrom utils compareVersion installed.packages
 #' @examples
@@ -197,6 +205,7 @@ getPkgVersions <- function(pkgDT) {
   pkgDT
 }
 
+#' @importFrom utils download.file tail
 getAvailable <- function(pkgDT) {
   if (any(!pkgDT$correctVersion)) {#} && sum(notCorrectVersions$installed) > 0) {
     #if (!is.memoised(available.packagesMem)) {

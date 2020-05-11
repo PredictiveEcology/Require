@@ -25,6 +25,8 @@ Imports:
     tools,
     utils,
     versions
+Suggests:
+    testthat
 Encoding: UTF-8
 Language: en-CA
 License: GPL-3
