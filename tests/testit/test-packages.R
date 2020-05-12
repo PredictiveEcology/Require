@@ -1,3 +1,23 @@
+RequireDeps <- c("data.table", "remotes", "tools", "utils", "versions", "methods",
+                 "stats", "grDevices", "graphics")
+helpers <- dir(pattern = "helper", full.names = TRUE)
+out <- lapply(helpers, source, local = environment())
+
+# testInitOut <- testInit()
+tmpdir <- if (Sys.info()["user"] != "emcintir") {
+  file.path(tempdir(), Require:::rndstr(1,6))
+} else {
+  "c:/Eliot/TempLib"
+}
+
+checkPath(tmpdir, create = TRUE)
+oldLibPaths <- .libPaths()
+on.exit(.libPaths(oldLibPaths))
+.libPaths(tmpdir)
+
+Require2(c("bitops (<=1.0-5)", "Holidays (>=0.0.1)", "achubaty/amc@development", "PredictiveEcology/LandR (>=0.0.1)",
+"PredictiveEcology/LandR (>=0.0.2)", "Holidays (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"))
+
 # test_that("package-related functions work", {
 #
 #   skip_on_cran()
@@ -261,30 +281,30 @@
 #               imports = TRUE)
 #   expect_identical(sort(unique(c(names(a), unique(unlist(a))))), sort(b$reproducible))
 # })
-
-test_that("package-related functions work", {
-  skip_on_cran()
-  skip_on_appveyor()
-  skip_on_travis()
-  testInitOut <- testInit(libraries = c("data.table"))#,
-                          #opts = list("reproducible.Require.install" = FALSE))
-  tmpdir <- checkPath("~/TempLib3", create = TRUE) # need a persistent folder
-  on.exit({
-    try(testOnExit(testInitOut))
-  }, add = TRUE)
-
-  repo <- getCRANrepos()
-  opts <- options(repos = repo)
-  on.exit(opts, add = TRUE)
-
-  origLibPaths <- .libPaths()
-  on.exit(
-    .libPaths(origLibPaths)
-  )
-  .libPaths(tmpdir)
-  # ._test111 <<- 1
-  # pedev::rmDotUnderline()
-  ######## NEW FULL
+#
+# test_that("package-related functions work", {
+#   skip_on_cran()
+#   skip_on_appveyor()
+#   skip_on_travis()
+#   testInitOut <- testInit(libraries = c("data.table"))#,
+#                           #opts = list("reproducible.Require.install" = FALSE))
+#   tmpdir <- checkPath("~/TempLib3", create = TRUE) # need a persistent folder
+#   on.exit({
+#     try(testOnExit(testInitOut))
+#   }, add = TRUE)
+#
+#   repo <- getCRANrepos()
+#   opts <- options(repos = repo)
+#   on.exit(opts, add = TRUE)
+#
+#   origLibPaths <- .libPaths()
+#   on.exit(
+#     .libPaths(origLibPaths)
+#   )
+#   .libPaths(tmpdir)
+#   # ._test111 <<- 1
+#   # pedev::rmDotUnderline()
+#   ######## NEW FULL
   pkgs <- list(c("SpaDES.core (>=0.9)",
                  "PredictiveEcology/map@development (>= 4.0.9)",
 
@@ -328,67 +348,72 @@ test_that("package-related functions work", {
   c("Holidays (>=1.0.1)", "fpCompare"),
   "Holidays (>=1.3.1)"
   )
+#
+#   browser()
+#   ip <- as.data.table(installed.packages(noCache = TRUE))[[1]]
+#   if ("LandR" %in% ip)
+#     remove.packages("LandR")
+#   out1 <- capture.output(out <- unloadRandom(unique(extractPkgName(unlist(pkgs))),
+#                                              keepDepsOf = c("reproducible", "devtools"),
+#                                              num = 10))
+#   options("reproducible.Require.install" = TRUE)
+#   Sys.setenv("R_REMOTES_UPGRADE" = "never")
+   i <- 0
 
-  browser()
-  ip <- as.data.table(installed.packages(noCache = TRUE))[[1]]
-  if ("LandR" %in% ip)
-    remove.packages("LandR")
-  out1 <- capture.output(out <- unloadRandom(unique(extractPkgName(unlist(pkgs))),
-                                             keepDepsOf = c("reproducible", "devtools"),
-                                             num = 10))
-  options("reproducible.Require.install" = TRUE)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  i <- 0
-  for (pkg in pkgs) {
-    i <- i + 1
-    #._Require_3 <<- ._installPackages_1 <<-
-    #   ._installPackages_4 <<- 1
-    # Remove another package, but only after SpaDES.core is no long being Require-d
-    # if (!any(grepl("SpaDES.core", pkg))) {
-    #   kdo <- c("reproducible")
-    #   if (any(grepl("amc", pkg)))
-    #     kdo <- c("amc", kdo)
-    #   out1 <- capture.output(out <- unloadRandom(pkg, keepDepsOf = kdo))
-    #   message("removed ", paste(out, collapse = ", "))
-    # }
-    suppressWarnings(rm(list = "outFromRequire", inherits = FALSE))
+   for (pkg in pkgs) {
+#     i <- i + 1
+#     #._Require_3 <<- ._installPackages_1 <<-
+#     #   ._installPackages_4 <<- 1
+#     # Remove another package, but only after SpaDES.core is no long being Require-d
+#     # if (!any(grepl("SpaDES.core", pkg))) {
+#     #   kdo <- c("reproducible")
+#     #   if (any(grepl("amc", pkg)))
+#     #     kdo <- c("amc", kdo)
+     out <- unloadNSRecursive()
+#     #   out1 <- capture.output(out <- unloadRandom(pkg, keepDepsOf = kdo))
+#     #   message("removed ", paste(out, collapse = ", "))
+#     # }
+#     suppressWarnings(rm(list = "outFromRequire", inherits = FALSE))
+#
+#     ipPre <- as.data.table(installed.packages(noCache = TRUE))[[1]]
+#     #._installPackages_1 <<- ._installPackages_2 <<- ._installPackages_4 <<- 1
+#     # ._Require_1 <<- 1
+#     #browser()
+#    err <- capture_error(
+ #     warn <- capture_warnings(
+  #      mess <- capture_messages(
+     i <- i + 1
+     print(i)
+          outFromRequire <- Require2(pkg, repos = repo, standAlone = FALSE)
 
-    ipPre <- as.data.table(installed.packages(noCache = TRUE))[[1]]
-    #._installPackages_1 <<- ._installPackages_2 <<- ._installPackages_4 <<- 1
-    # ._Require_1 <<- 1
-    #browser()
-    err <- capture_error(
-      warn <- capture_warnings(
-        mess <- capture_messages(
-          outFromRequire <- Require(pkg, repos = repo, standAlone = FALSE)
-        ))
-    )
-    browser()
-    if (length(err) == 0) {
-      ipPost <- as.data.table(installed.packages(noCache = TRUE))[[1]]
-      if (!"PredictiveEcology/LandR@development (>= 1.0.2)" %in% pkg && "PredictiveEcology/LandR@development(>= 0.0.0.9)" %in% pkg) {
-        expect_true("LandR" %in% ipPost)
-      } else {
-        expect_false("LandR" %in% ipPost)
-      }
-      if (!exists("warn", inherits = FALSE))
-        warn <- character()
-      if (!exists("mess", inherits = FALSE))
-        mess <- character()
-      if (length(warn) == 0)
-        warn <- ""
-      if (length(mess) == 0)
-        mess <- ""
-      dealWithWarns(c(mess, warn), outFromRequire)
-    }
-    toDetachAndRm <- c("amc", "LandR")
-    for (j in toDetachAndRm) {
-      out <- capture.output(try(detach(paste0("package:",j), unload = TRUE), silent = TRUE))
-      out <- capture.output(try(remove.packages(j), silent = TRUE))
-    }
-
-  }
-
+   #     ))
+   # )
+#     browser()
+#     if (length(err) == 0) {
+#       ipPost <- as.data.table(installed.packages(noCache = TRUE))[[1]]
+#       if (!"PredictiveEcology/LandR@development (>= 1.0.2)" %in% pkg && "PredictiveEcology/LandR@development(>= 0.0.0.9)" %in% pkg) {
+#         expect_true("LandR" %in% ipPost)
+#       } else {
+#         expect_false("LandR" %in% ipPost)
+#       }
+#       if (!exists("warn", inherits = FALSE))
+#         warn <- character()
+#       if (!exists("mess", inherits = FALSE))
+#         mess <- character()
+#       if (length(warn) == 0)
+#         warn <- ""
+#       if (length(mess) == 0)
+#         mess <- ""
+#       dealWithWarns(c(mess, warn), outFromRequire)
+#     }
+#     toDetachAndRm <- c("amc", "LandR")
+#     for (j in toDetachAndRm) {
+#       out <- capture.output(try(detach(paste0("package:",j), unload = TRUE), silent = TRUE))
+#       out <- capture.output(try(remove.packages(j), silent = TRUE))
+#     }
+#
+   }
+#
   # if (FALSE) {
   #
   #   for (lp in rev(c(origLibPaths[1], tmpdir))) {
@@ -669,7 +694,7 @@ test_that("package-related functions work", {
   #     }
   #   }
   # }
-})
+#})
 
 
 # test_that("package topoSort", {
@@ -712,3 +737,4 @@ test_that("package-related functions work", {
 #   out <- pkgDep(vals, topoSort = TRUE)
 #   expect_true(tail(names(out), 1) == "quickPlot")
 # })
+.libPaths(oldLibPaths)

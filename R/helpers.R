@@ -162,3 +162,114 @@ setMethod("checkPath",
           definition = function() {
             stop("Invalid path: no path specified.")
           })
+
+rndstr <- function(n = 1, len = 8) {
+  unlist(lapply(character(n), function(x) {
+    x <- paste0(sample(c(0:9, letters, LETTERS), size = len,
+                       replace = TRUE), collapse = "")
+  }))
+}
+
+
+
+#' Use message to print a clean square data structure
+#'
+#' Sends to \code{message}, but in a structured way so that a data.frame-like can
+#' be cleanly sent to messaging.
+#'
+#' @param df A data.frame, data.table, matrix
+#' @param round An optional numeric to pass to \code{round}
+#' @param colour An optional colour to use from \code{crayon}
+#' @importFrom crayon blue black red green yellow cyan magenta silver white
+#' @importFrom data.table is.data.table as.data.table
+#' @importFrom utils capture.output
+#' @export
+messageDF <- function(df, round, colour = NULL) {
+  if (is.matrix(df))
+    df <- as.data.frame(df)
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
+  }
+  if (!missing(round)) {
+    isNum <- sapply(df, is.numeric)
+    isNum <- colnames(df)[isNum]
+    for (Col in isNum) {
+      set(df, NULL, Col, round(df[[Col]], round))
+    }
+  }
+  out <- lapply(capture.output(df), function(x) {
+    if (!is.null(colour)) {
+      message(getFromNamespace(colour, ns = "crayon")(x))
+    } else {
+      message(x)
+    }
+  })
+}
+
+#' Make a temporary sub-directory or file in that subdirectory
+#'
+#' Create a temporary subdirectory in \code{.RequireTempPath()}, or a
+#' temporary file in that temporary subdirectory.
+#'
+#' @param sub Character string, length 1. Can be a result of
+#'   \code{file.path("smth", "smth2")} for nested temporary sub
+#'   directories.
+#' @param tempdir Optional character string where the temporary dir should be placed.
+#'   Defaults to \code{.RequireTempPath()}
+#'
+#' @rdname tempFilesAndFolders
+#' @export
+tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath())) {
+  checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
+}
+
+#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
+#'
+#' @rdname tempFilesAndFolders
+#' @export
+tempfile2 <- function(sub = "", ...) {
+  normPath(file.path(tempdir2(sub = sub), basename(tempfile(...))))
+}
+
+.RequireTempPath <- function() normPath(file.path(tempdir(), "Require"))
+
+#' @export
+unloadNSRecursive <- function(packages) {
+  out <- as.data.table(installed.packages())[[1]]
+  names(out) <- out
+  out <- lapply(out, isNamespaceLoaded)
+  out <- unlist(out)
+  out <- out[out]
+  keepLoaded1 <- c("Require", "raster", "Rcpp", "rstudioapi", c("crayon", "data.table", "remotes", "tools", "utils", "versions",
+                                              "grDevices", "methods", "stats", "graphics"))
+  keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
+  out <- names(out)
+  names(out) <- out
+  out <- unique(setdiff(out, keepLoaded))
+
+  names(out) <- out
+  out1 <- lapply(out, function(pInner) {
+        names(pInner) <- pInner
+        if (isNamespaceLoaded(pInner)) {
+          out <- tryCatch(unloadNamespace(pInner), error = function(x) FALSE)
+          if (is.null(out)) out <- TRUE
+          out
+        }
+      })
+
+  out2 <- unlist(out1)
+  if (sum(!out2) > 0) {
+    out3 <- out2[out2]
+    sam <- sample(names(out3), 4)
+    message(crayon::green("removing ", paste(sam, collapse = ", ")))
+
+    out <- capture.output(remove.packages(sam), type = "message")
+
+  #   browser()
+  #   names(out2)
+  #   out4 <- unloadNSRecursive()
+  #   out2 <- unique(c(out2, out4))
+  }
+  return(out2)
+}
+

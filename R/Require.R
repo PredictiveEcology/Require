@@ -114,7 +114,7 @@ if (getRversion() >= "3.1.0") {
 #' Require(c("cranlogs", "covr"), libPaths = tempPkgFolder)
 #' }
 #'
-Require <- function(packages, packageVersionFile,
+Require2 <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),       # nolint
                     install.packagesArgs = list(),
@@ -128,32 +128,109 @@ Require <- function(packages, packageVersionFile,
 
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
 
+  installedPkgsCurrent <- installed.packages(noCache = TRUE)
+  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"), drop = FALSE])
+
+  # Join installed with requested
+  pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
+  pkgDT[, installed := !is.na(Version)]
+
   pkgDT <- parseGitHub(pkgDT)
   pkgDT <- getPkgVersions(pkgDT)
 
-  if (any(pkgDT$hasVersionSpec)) {
-    installedPkgsCurrent <- installed.packages()
-    installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"), drop = FALSE])
+  if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)]))
+    pkgDT <- getAvailable(pkgDT)
+  pkgDT <- installFrom(pkgDT)
+  if (any(!pkgDT$installed)) {
+    toInstall <- pkgDT[installed == FALSE]
+    if (any(!toInstall$installFrom %in% "Fail")) {
+      if (any("CRAN" %in% toInstall$installFrom)) {
+        out <- install.packages(toInstall[installFrom == "CRAN"]$Package)
+        warn <- warnings()
+        permDen <- grepl("Permission denied", names(warn))
+        packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
+        if (any(permDen)) {
+          stopMess <- character()
+          if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
+            stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                 "------\n", "install.packages(c('", paste(packagesDen, collapse = "', '"), "'))\n"))
+          if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
+            stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                              "------\n", "remotes::install_github(c('",
+                              paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
+                                    collapse = "', '"), "'))"))
+          stop(stopMess)
 
-    # Join installed with requested
-    pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
-    pkgDT[, installed := !is.na(Version)]
-    if (any(!pkgDT$correctVersion))
-      pkgDT <- getAvailable(pkgDT)
-    pkgDT <- installFrom(pkgDT)
-    if (any(!pkgDT$installed & pkgDT$correctVersionAvail)) {
-      if (any(!pkgDT$isGH)) {
-        out <- install.packages(pkgDT[isGH == FALSE]$Package)
+        }
       }
-      if (any(pkgDT$isGH)) {
-        out <- remotes::install_github(pkgDT[isGH == TRUE]$packageFullName)
-
+      if (any("GitHub" %in% toInstall$installFrom)) {
+        out <- remotes::install_github(trimVersionNumber(toInstall[installFrom == "GitHub"]$packageFullName))
+      }
+      if (any("Versions" %in% toInstall$installFrom)) {
+        out <- versions::install.versions(toInstall[installFrom == "Versions"]$Package,
+                                          versions = toInstall[installFrom == "Versions"]$OlderVersionsAvailable)
+      }
+      CRANArchive <- "CRANArchive"
+      if (any(CRANArchive %in% toInstall$installFrom)) {
+        out <- remotes::install_version(toInstall[installFrom == CRANArchive]$Package,
+                                        version = toInstall[installFrom == CRANArchive]$OlderVersionsAvailable)
       }
     }
   }
+  if (NROW(pkgDT[installFrom == "Fail"])) {
+    keepCols <- c("packageFullName", "installed", "correctVersion", "AvailableVersion")
+    message("The following packages could not be installed because could not find a correct version")
+    messageDF(pkgDT[installFrom == "Fail", ..keepCols])
+    pkgDTFail <- pkgDT[installFrom == "Fail"]
+    pkgDT <- pkgDT[is.na(installFrom) | installFrom != "Fail"]
+  }
 
-  out <- lapply(pkgDT$Package, require, character.only = TRUE)
+  installPkgs <- pkgDT$Package
+  names(installPkgs) <- installPkgs
+  outMess <- capture.output(out <- lapply(installPkgs, require, character.only = TRUE),
+                 type = "message")
+  warn <- warnings()
+  grep3 <- "no package called"
+  missingDeps <- grepl(grep3, outMess)
 
+  grep2 <- "package or namespace load failed for"
+  grep1 <- "onLoad failed in loadNamespace"
+  otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
+  toInstall <- character()
+  if (any(otherErrors) || any(missingDeps)) {
+    browser()
+    if (any(otherErrors)) {
+      error1 <- grepl(.libPaths()[1], outMess)
+      error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
+      packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
+      error2 <- grepl("no such symbol", outMess)
+      if (any(error2)) {
+        message()
+        pkgs <- paste(packageNames, collapse = "', '")
+        stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+             "-----\ninstall.packages('",pkgs, "')","\n-----\n...before any other packages get loaded")
+      }
+    }
+    #  [2] "Error: package or namespace load failed for ‘map’:"
+    #  [3] " .onLoad failed in loadNamespace() for 'Rcpp', details:"
+    #  [4] "  call: new_dummyObject(.dummyInstancePointer)"
+    #  [5] "  error: object 'class__dummyInstance' not found"
+    if (any(missingDeps)) {
+      grep3b <- paste0(".*",grep3,".{2}(.*).{1}")
+      packageNames <- unique(gsub(grep3b, "\\1", outMess[missingDeps]))
+      toInstall <- c(toInstall, packageNames)
+      outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
+      outMess <- grep(grep3, outMess, value = TRUE, invert = TRUE)
+    }
+    out2 <- Require2(unique(toInstall))
+    out2 <- unlist(out2)
+    names(out2) <- unique(toInstall)
+
+    out <- c(out, out2)
+  }
+  message(paste0(outMess, collapse = "\n"))
+
+  return(unlist(out))
 
 }
 
@@ -161,9 +238,13 @@ parseGitHub <- function(pkgDT) {
   if (!is.data.table(pkgDT))
     pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
-  pkgDT[, isGH := !is.na(githubPkgName)]
-  if (any(pkgDT$isGH)) {
-    isGitHub <- pkgDT$isGH == TRUE
+  isGH <- !is.na(pkgDT$githubPkgName)
+  pkgDT[isGH, repoLocation := "GitHub"]
+  pkgDT[!isGH, repoLocation := "CRAN"]
+
+  # pkgDT[, isGH := !is.na(githubPkgName)]
+  if (any(pkgDT$repoLocation == "GitHub")) {
+    isGitHub <- pkgDT$repoLocation == "GitHub"
     pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
     pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
     pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
@@ -188,69 +269,99 @@ getPkgVersions <- function(pkgDT) {
     pkgDT[hasVersionSpec == TRUE, inequality := gsub(grepExtractPkgs, "\\1", packageFullName)]
 
 
-    # pkgDTNoMV[isGH == TRUE, correctVersionAvailGH := TRUE]
+    # pkgDTNoMV[repoLocation == "GitHub", correctVersionAvailGH := TRUE]
     # setnames(pkgDTNoMV, old = colsToKeep, new = newColNames)
+    pkgDT[hasVersionSpec == TRUE & grepl("<", inequality), versionSpec := as.character(min(package_version(versionSpec))),
+          by = "Package"]
 
-    # any duplicates with different minimum version number to be dealt with here
+    setorderv(pkgDT, c("Package", "versionSpec"), order = -1L)
+    # any duplicates with different minimum version number to be dealt with here --> only those with > in their inequality
+    pkgDT[hasVersionSpec == TRUE & grepl(">", inequality), versionSpec := as.character(max(package_version(versionSpec))), by = "Package"]
     pkgDT_maxVersion <- pkgDT[hasVersionSpec == TRUE, list(versionSpec = as.character(max(package_version(versionSpec)))),
                               by = "Package"]
-    pkgDT <- rbindlist(list(pkgDT[hasVersionSpec == FALSE], pkgDT[ pkgDT_maxVersion, on = c("Package", "versionSpec")]))
+    pkgDT <- rbindlist(list(pkgDT[hasVersionSpec == FALSE], pkgDT[pkgDT_maxVersion, on = c("Package", "versionSpec")]))
     setorderv(pkgDT, c("Package", "hasVersionSpec"), order = -1L)
-    pkgDT <- pkgDT[, .SD[1], by = "Package"]
+    pkgDT <- pkgDT[, .SD[1], by = c("Package", "inequality")]
 
-    pkgDT[, compareVersion := .compareVersionV(Version, versionSpec)]
-    pkgDT[hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
-    pkgDT[hasVersionSpec == FALSE, correctVersion := TRUE]
+    pkgDT[!is.na(Version), compareVersion := .compareVersionV(Version, versionSpec)]
+    pkgDT[!is.na(Version) & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
+    pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
+    pkgDT <- pkgDT[, .SD[1], by = "Package"]
+  } else {
+    pkgDT[ , correctVersion := NA]
   }
   pkgDT
 }
 
 #' @importFrom utils download.file tail
 getAvailable <- function(pkgDT) {
-  if (any(!pkgDT$correctVersion)) {#} && sum(notCorrectVersions$installed) > 0) {
+  whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
+  if (NROW(whNotCorrect)) {
     #if (!is.memoised(available.packagesMem)) {
     #  assignInMyNamespace("available.packagesMem", memoise(available.packages, ~timeout(360))) # nolint
     #}
 
-    notCorrectVersions <- pkgDT[correctVersion == FALSE]
+    notCorrectVersions <- pkgDT[whNotCorrect]
 
     # do CRAN first
-    if (any(!notCorrectVersions$isGH)) {
-      browser()
+    if (any(notCorrectVersions$repoLocation == "CRAN")) {
       #apm <- available.packagesMem()
       apm <- available.packages()
       apm <- as.data.table(apm[, c("Package", "Version")])
       setnames(apm, "Version", "AvailableVersion")
       notCorrectVersions <- apm[notCorrectVersions, on = "Package"]
-      notCorrectVersions[isGH == FALSE,
+      notCorrectVersions[repoLocation != "GitHub",
                          compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
-      notCorrectVersions[isGH == FALSE,
+      notCorrectVersions[repoLocation != "GitHub",
                          correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
     }
 
     # do Older Versions
     needOlder <- grepl("==|<=|<", notCorrectVersions$inequality)
-    needOlderOnGH <- notCorrectVersions$needOlder & notCorrectVersions$isGH == FALSE
-    if (any(needOlderOnGH)) {
+    needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
+    if (any(needOlderNotGH)) {
       message("installing older versions is still experimental and may cause package version conflicts")
-      out <- versions::available.versions(notCorrectVersions[isGH == FALSE & needOlder]$Package)
-      out <- rbindlist(out, idcol = "Package")
-      setDT(out)
-      setnames(out, old = "version", new = "Version")
-      needOlderDT <- notCorrectVersions[needOlder & isGH == FALSE]
-      out1 <- out[needOlderDT, on = c("Package", "Version")]
-      browser()
+      oldAvailableVersions <- if (!exists("oldAvailableVersions", envir = .GlobalEnv)) {
+        versions::available.versions(notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package)
+      } else {
+        .GlobalEnv$oldAvailableVersions
+      }
+      assign("oldAvailableVersions", oldAvailableVersions, envir = .GlobalEnv)
+      oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
+      setDT(oldAvailableVersions)
+      setnames(oldAvailableVersions, old = "version", new = "OlderVersionsAvailable")
+      needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
+      # oldAvailableVersions <- oldAvailableVersions[available == TRUE]
+      oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
+
+      oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE]
+      oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
+      oldAvailableVersions[, correctVersionAvail :=
+                           .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+      if (!all(oldAvailableVersions$correctVersionAvail)) {
+        oldAvailableVersions[correctVersionAvail == TRUE & available == TRUE, archiveSource := "Versions"]
+        oldAvailableVersions[is.na(archiveSource) & correctVersionAvail == TRUE, archiveSource := "CRANArchive", by = "Package"]
+        oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
+        oldAvailableVersions[, repoLocation := archiveSource]
+      }
+
+      oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
+      set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh", "available"), NULL)
+
+      notCorrectVersions <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
+                                           oldAvailableVersions), fill = TRUE, use.names = TRUE)
     }
-    notCorrectVersions[isGH == FALSE,
-                       correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+    #notCorrectVersions[repoLocation != "GitHub",
+    #                   correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
     # do GitHub second
-    if (any(notCorrectVersions$isGH)) {
-      notCorrectVersions[isGH == TRUE,
+    if (any(notCorrectVersions$repoLocation == "GitHub")) {
+      notCorrectVersions[repoLocation == "GitHub",
                          url := file.path("https://raw.githubusercontent.com", Account,
                                           Repo, Branch, "DESCRIPTION", fsep = "/")
                          ]
       # ua <- httr::user_agent(getOption("reproducible.useragent"))
-      notCorrectVersions[isGH == TRUE, {
+      checkPath(dirname(tempfile()), create = TRUE)
+      notCorrectVersions[repoLocation == "GitHub", {
         AvailableVersion := {
           destFile <- tempfile()
           #suppressWarnings(
@@ -260,28 +371,41 @@ getAvailable <- function(pkgDT) {
         }
       }, by = c("Package", "Branch")]
 
-      notCorrectVersions[isGH == TRUE, compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
-      notCorrectVersions[isGH == TRUE, correctVersionAvail :=
+      notCorrectVersions[repoLocation == "GitHub", compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
+      notCorrectVersions[repoLocation == "GitHub", correctVersionAvail :=
                            .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
       set(notCorrectVersions, NULL, c("url"), NULL)
 
     }
+    pkgDT <- rbindlist(list(pkgDT[!correctVersion == FALSE], notCorrectVersions), fill = TRUE, use.names = TRUE)
+  } else {
+    pkgDT[, correctVersionAvail := NA]
   }
-  pkgDT <- rbindlist(list(pkgDT[correctVersion == TRUE], notCorrectVersions), fill = TRUE, use.names = TRUE)
 
   pkgDT
 }
 
 installFrom <- function(pkgDT) {
-  if (any(!pkgDT$correctVersion)) {
-    if (NROW(pkgDT[correctVersionAvail == TRUE])) {
-      pkgDT[installed == FALSE & correctVersionAvail == TRUE & isGH == FALSE, installFrom := "CRAN"]
-      pkgDT[installed == FALSE & correctVersionAvail == TRUE & isGH == TRUE, installFrom := "GitHub"]
-      pkgDT[installed == FALSE & correctVersionAvail == FALSE, installFrom := "Fail"]
-    } else {
-      pkgDT[, installFrom := NA_character_]
+  pkgDT <- pkgDT[correctVersion == FALSE | is.na(correctVersion), needInstall := TRUE]
+  if (NROW(pkgDT[needInstall == TRUE])) {
+    pkgDT[needInstall == TRUE & installed == FALSE &
+            (correctVersionAvail == TRUE | is.na(correctVersionAvail)) & repoLocation == "CRAN",
+          installFrom := repoLocation]
+    pkgDT[needInstall == TRUE & installed == FALSE &
+            (correctVersionAvail == TRUE | is.na(correctVersionAvail)) & repoLocation == "GitHub",
+          installFrom := repoLocation]
+    pkgDT[needInstall == TRUE & installed == FALSE & correctVersionAvail == FALSE,
+          installFrom := "Fail"]
+    if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
+      pkgDT[needInstall == TRUE & installed == FALSE & repoLocation == "CRANArchive",
+            installFrom := repoLocation]
+      pkgDT[needInstall == TRUE & installed == FALSE & correctVersionAvail == TRUE & repoLocation == "Versions",
+            installFrom := repoLocation]
     }
+  } else {
+    pkgDT[, installFrom := NA_character_]
   }
+
   pkgDT
 }
 
@@ -301,7 +425,6 @@ setLibPaths <- function(libPaths = .libPaths(), standAlone = FALSE) {
   if (standAlone) {
     .libPaths(c(libPaths, tail(.libPaths(), 1)))
   } else {
-    # browser()
     if (!all(normPath(libPaths) %in% normPath(.libPaths())))
       .libPaths(c(libPaths, .libPaths()))
   }

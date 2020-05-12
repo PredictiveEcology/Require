@@ -1,2 +1,2 @@
-library(testthat)
-test_check("Require")
+library(testit)
+test_pkg('Require')
