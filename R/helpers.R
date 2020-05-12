@@ -240,7 +240,7 @@ unloadNSRecursive <- function(packages) {
   out <- lapply(out, isNamespaceLoaded)
   out <- unlist(out)
   out <- out[out]
-  keepLoaded1 <- c("Require", "raster", "Rcpp", "rstudioapi", c("crayon", "data.table", "remotes", "tools", "utils", "versions",
+  keepLoaded1 <- c("Require", "base64enc", "fastmatch", "raster", "Rcpp", "rstudioapi", c("crayon", "data.table", "remotes", "tools", "utils", "versions",
                                               "grDevices", "methods", "stats", "graphics"))
   keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
   out <- names(out)
@@ -261,9 +261,9 @@ unloadNSRecursive <- function(packages) {
   if (sum(!out2) > 0) {
     out3 <- out2[out2]
     sam <- sample(names(out3), 4)
-    message(crayon::green("removing ", paste(sam, collapse = ", ")))
+    # message(crayon::green("removing ", paste(sam, collapse = ", ")))
 
-    out <- capture.output(remove.packages(sam), type = "message")
+    # out <- capture.output(remove.packages(sam), type = "message")
 
   #   browser()
   #   names(out2)

@@ -153,12 +153,14 @@ Require2 <- function(packages, packageVersionFile,
           stopMess <- character()
           if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
             stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-                 "------\n", "install.packages(c('", paste(packagesDen, collapse = "', '"), "'))\n"))
+                 "------\n",
+                 #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
+                 "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",libPaths[1],"')"))
           if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
             stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
                               "------\n", "remotes::install_github(c('",
                               paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
-                                    collapse = "', '"), "'))"))
+                                    collapse = "', '"), "'), lib = '",libPaths[1],"')"))
           stop(stopMess)
 
         }
@@ -206,7 +208,9 @@ Require2 <- function(packages, packageVersionFile,
       if (any(error2)) {
         pkgs <- paste(packageNames, collapse = "', '")
         stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-             "-----\ninstall.packages('",pkgs, "')","\n-----\n...before any other packages get loaded")
+             "-----\n",
+             "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
+             "\n-----\n...before any other packages get loaded")
       }
     }
     #  [2] "Error: package or namespace load failed for ‘map’:"
