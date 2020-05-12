@@ -198,14 +198,12 @@ Require2 <- function(packages, packageVersionFile,
   otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
   toInstall <- character()
   if (any(otherErrors) || any(missingDeps)) {
-    browser()
     if (any(otherErrors)) {
       error1 <- grepl(.libPaths()[1], outMess)
       error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
       packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
       error2 <- grepl("no such symbol", outMess)
       if (any(error2)) {
-        message()
         pkgs <- paste(packageNames, collapse = "', '")
         stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
              "-----\ninstall.packages('",pkgs, "')","\n-----\n...before any other packages get loaded")
