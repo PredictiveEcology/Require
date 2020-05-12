@@ -11,6 +11,8 @@ Require2(
   install_githubArgs = list(),
   install.packagesArgs = list(),
   standAlone = FALSE,
+  install = getOption("Require.install", TRUE),
+  require = getOption("Require.require", TRUE),
   repos = getOption("repos")
 )
 }
