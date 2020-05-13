@@ -15,6 +15,10 @@
 #' }
 #'
 #' @inheritParams Require
+#' @param which a character vector listing the types of dependencies, a subset of
+#'   \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
+#'   Character string \code{"all"} is shorthand for that vector,
+#'   character string \code{"most"} for the same vector without \code{"Enhances"}.
 #' @param depends Logical. Include packages listed in "Depends". Default \code{TRUE}.
 #' @param imports Logical. Include packages listed in "Imports". Default \code{TRUE}.
 #' @param suggests Logical. Include packages listed in "Suggests". Default \code{FALSE}.
@@ -34,49 +38,74 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
                    depends, imports, suggests, linkingTo,
                    repos = getCRANrepos(),
-                   keepVersionNumber = TRUE) {
+                   keepVersionNumber = TRUE,
+                   sort = TRUE) {
 
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
     message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
-    if (!missing(depends)) {
-      depends <- TRUE
-    }
-    if (!missing(imports)) {
-      imports = TRUE
-    }
-    if (!missing(suggests)) {
-      suggests <- TRUE
-    }
-    if (!missing(linkingTo)) {
-      linkingTo <- TRUE
-    }
+    if (!missing(depends)) depends <- TRUE
+    if (!missing(imports)) imports = TRUE
+    if (!missing(suggests)) suggests <- TRUE
+    if (!missing(linkingTo)) linkingTo <- TRUE
+  }
+  if (identical("all", which)) {
+    which <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
+  } else if (identical("most", which)) {
+    which <- c("Depends", "Imports", "LinkingTo", "Suggests")
   }
 
-  names(packages) <- packages
-  desc_paths <- lapply(packages, function(pkg) {
-    dp <- sprintf("%s/%s/DESCRIPTION", libPath, pkg) # nolint
-    fe <- file.exists(dp)
-    dp[fe][1] # take first file that exists
-  })
+  neededFull <- pkgDepInner(packages, libPath, which, keepVersionNumber)
+  if (recursive) {
+    neededFull <- lapply(neededFull, function(needed) {
+      i <- 1
+      pkgsNew <- list()
+      pkgsNew[[i]] <- needed
+      while (length(unlist(pkgsNew[[i]])) > 0) {
+        i <- i + 1
+        pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i-1]]), function(needed) {
+          unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber)))
+        })
+        pkgsNew[[i]] <- unique(unlist(lapply(pkgsNew[[i]], trimVersionNumber)))
+        pkgsNew[[i]] <- setdiff(pkgsNew[[i]], unlist(pkgsNew[1:(i-1)])) # don't redo ones that are already in the list
+      }
+      needed <- unique(unlist(pkgsNew))
 
-  Map(desc_path = desc_paths, pkg = packages, function(desc_path, pkg) {
+    })
+  }
+  if (isTRUE(sort))
+    neededFull <- lapply(neededFull, function(x) sort(x))
+  neededFull
+
+}
+
+pkgDepInner <- function(packages, libPath, which, keepVersionNumber) {
+  names(packages) <- packages
+  desc_paths <- getDescPath(packages, libPath)
+
+  needed <- Map(desc_path = desc_paths, pkg = packages, function(desc_path, pkg) {
     if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {
         pkgDT <- getGitHubDESCRIPTION(pkgDT)
         needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile)
       } else if (any("CRAN" %in% pkgDT$repoLocation)) {
-        needed <- unname(unlist(pkgDepCRAN(pkg, recursive = recursive, which = which, keepVersionNumber = keepVersionNumber)))
+        needed <- unname(unlist(pkgDepCRAN(pkg, recursive = FALSE, which = which, keepVersionNumber = keepVersionNumber)))
       } else {
         stop("Can only get package dependencies from CRAN and GitHub")
       }
-
     } else {
       needed <- DESCRIPTIONFileDeps(desc_path, which = which, keepVersionNumber = keepVersionNumber)
     }
     needed
   })
 
+}
+getDescPath <- function(packages, libPath) {
+  lapply(packages, function(pkg) {
+    dp <- sprintf("%s/%s/DESCRIPTION", libPath, pkg) # nolint
+    fe <- file.exists(dp)
+    dp[fe][1] # take first file that exists
+  })
 }
 
 #' @description
