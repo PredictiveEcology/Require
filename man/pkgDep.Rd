@@ -7,26 +7,25 @@
 \usage{
 pkgDep(
   packages,
-  libPath,
-  recursive = TRUE,
-  depends = TRUE,
-  imports = TRUE,
-  suggests = FALSE,
-  linkingTo = TRUE,
-  topoSort = FALSE,
-  repos = getOption("repos"),
-  refresh = FALSE,
-  verbose = getOption("Require.verbose", FALSE),
-  keepVersionNumber = FALSE
+  libPath = .libPaths(),
+  which = c("Depends", "Imports", "LinkingTo"),
+  recursive = FALSE,
+  depends,
+  imports,
+  suggests,
+  linkingTo,
+  repos = getCRANrepos(),
+  keepVersionNumber = TRUE
 )
 
 pkgDep2(
   packages,
   recursive = TRUE,
-  depends = TRUE,
-  imports = TRUE,
-  suggests = FALSE,
-  linkingTo = TRUE,
+  which = c("Depends", "Imports", "LinkingTo"),
+  depends,
+  imports,
+  suggests,
+  linkingTo,
   repos = getOption("repos"),
   refresh = FALSE,
   verbose = getOption("reproducible.verbose"),
@@ -34,7 +33,9 @@ pkgDep2(
 )
 }
 \arguments{
-\item{packages}{a character vector of package names.}
+\item{packages}{Character vector of packages to install via
+\code{install.packages}, then load (i.e., with \code{library}). If it is
+one package, it can be unquoted (as in \code{require})}
 
 \item{recursive}{Logical. Should dependencies of dependencies be searched, recursively.
 NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
@@ -47,24 +48,24 @@ NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
 
 \item{linkingTo}{Logical. Include packages listed in "LinkingTo". Default \code{TRUE}.}
 
-\item{refresh}{There is an internal type of caching. If the results are wrong, likely
-set \code{refresh = TRUE}.}
-
-\item{verbose}{logical indicating if output should monitor the package
-    search cycles.}
+\item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
+\code{install.packages}, \code{install_github} or \code{installVersions}.}
 
 \item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies returned
 will include version number. Default is \code{FALSE}}
+
+\item{refresh}{There is an internal type of caching. If the results are wrong, likely
+set \code{refresh = TRUE}.}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
 }
 \description{
-This is intended to replace \code{\link[tools]{package_dependencies}} or
+This is intended to replace \code{tools::package_dependencies} or
 \code{pkgDep} in the \pkg{miniCRAN} package, but with modifications for speed.
 It will first check local package directories in \code{libPath}, and it if
 the function cannot find the packages there, then it will use
-\code{\link[tools]{package_dependencies}}.
+\code{tools::package_dependencies}.
 
 \code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
 i.e., the first order dependencies, and runs the \code{pkgDep} on those.
@@ -79,6 +80,6 @@ circumstances:
 }
 }
 \examples{
-pkgDep("crayon")
+pkgDep("Require")
 pkgDep2("reproducible")
 }

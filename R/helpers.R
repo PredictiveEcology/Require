@@ -163,6 +163,7 @@ setMethod("checkPath",
             stop("Invalid path: no path specified.")
           })
 
+#' @export
 rndstr <- function(n = 1, len = 8) {
   unlist(lapply(character(n), function(x) {
     x <- paste0(sample(c(0:9, letters, LETTERS), size = len,
@@ -180,11 +181,10 @@ rndstr <- function(n = 1, len = 8) {
 #' @param df A data.frame, data.table, matrix
 #' @param round An optional numeric to pass to \code{round}
 #' @param colour An optional colour to use from \code{crayon}
-#' @importFrom crayon blue black red green yellow cyan magenta silver white
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
 #' @export
-messageDF <- function(df, round, colour = NULL) {
+messageDF <- function(df, round) {#}, colour = NULL) {
   if (is.matrix(df))
     df <- as.data.frame(df)
   if (!is.data.table(df)) {
@@ -198,11 +198,11 @@ messageDF <- function(df, round, colour = NULL) {
     }
   }
   out <- lapply(capture.output(df), function(x) {
-    if (!is.null(colour)) {
-      message(getFromNamespace(colour, ns = "crayon")(x))
-    } else {
+    #if (!is.null(colour)) {
+    #  message(getFromNamespace(colour, ns = "crayon")(x))
+    #} else {
       message(x)
-    }
+    #}
   })
 }
 

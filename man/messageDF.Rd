@@ -4,7 +4,7 @@
 \alias{messageDF}
 \title{Use message to print a clean square data structure}
 \usage{
-messageDF(df, round, colour = NULL)
+messageDF(df, round)
 }
 \arguments{
 \item{df}{A data.frame, data.table, matrix}

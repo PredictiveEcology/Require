@@ -1,4 +1,7 @@
-
+pkgDepTest1 <- Require::pkgDep("Require")
+testit::assert(length(pkgDepTest1) == 1)
+testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes", "utils",
+                                           "versions"))
 
 if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
   RequireDeps <- c("data.table", "remotes", "tools", "utils", "versions", "methods",
@@ -8,12 +11,12 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   # testInitOut <- testInit()
   tmpdir <- if (Sys.info()["user"] != "emcintir") {
-    file.path(tempdir(), Require:::rndstr(1,6))
+    file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
   } else {
     "c:/Eliot/TempLib5"
   }
 
-  Require::checkPath(tmpdir, create = TRUE)
+  suppressWarnings(dir.create(tmpdir))
   oldLibPaths <- .libPaths()
   on.exit(.libPaths(oldLibPaths))
   .libPaths(tmpdir)
@@ -25,17 +28,22 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
       testit::assert(!all(have[installFrom == "Fail" & correctVersionAvail == FALSE]$toLoad))
   }
   unloadNSRecursive <- function(packages, n = 0) {
-    out <- data.table::as.data.table(installed.packages(noCache = TRUE))[[1]]
-    names(out) <- out
-    out <- lapply(out, isNamespaceLoaded)
-    out <- unlist(out)
-    out <- out[out]
-    keepLoaded1 <- c("Require", "base64enc", "RCurl", "fastmatch", "raster", "Rcpp", "rstudioapi", c("crayon", "data.table", "remotes", "tools", "utils", "versions",
-                                                                                                     "grDevices", "methods", "stats", "graphics"))
-    keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
-    out <- names(out)
-    names(out) <- out
-    out <- unique(setdiff(out, keepLoaded))
+    if (!missing(packages)) {
+      out <- packages
+      browser(expr = "bitops" %in% packages)
+    } else {
+      out <- data.table::as.data.table(installed.packages(noCache = TRUE))[[1]]
+      names(out) <- out
+      out <- lapply(out, isNamespaceLoaded)
+      out <- unlist(out)
+      out <- out[out]
+      keepLoaded1 <- c("Require", "testit", "base64enc", "RCurl", "dismo", "units", "fastmatch", "raster", "Rcpp", "rstudioapi", c("crayon", "data.table", "remotes", "tools", "utils", "versions",
+                                                                                                                                   "grDevices", "methods", "stats", "graphics"))
+      keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
+      out <- names(out)
+      names(out) <- out
+      out <- unique(setdiff(out, keepLoaded))
+    }
     if (length(out) > 0) {
 
       names(out) <- out
@@ -49,33 +57,39 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
       })
 
       out2 <- unlist(out1)
-      if (sum(!out2) > 0) {
+      if (sum(out2) > 0) {
         out3 <- out2[out2]
         sam <- sample(names(out3), size = n)
         if (n > 0) {
-          message(crayon::green("removing ", paste(sam, collapse = ", ")))
+          message("removing ", paste(sam, collapse = ", "))
 
-          browser()
           files <- dir(.libPaths()[1], recursive = TRUE, full.names = TRUE)
-          grep(sam, files, value = TRUE)
-          td <- file.path(tempdir(), "tmp11")
+          origDir <- Require::normPath(file.path(.libPaths()[1]))
+          origDirWithPkg <- file.path(origDir, sam)
+          files <- grep(Require::normPath(origDirWithPkg), files, value = TRUE)
+          td <- Require::normPath(file.path(tempdir(), Require::rndstr(1, 6)))
+          newFiles <- gsub(origDir, td, files)
+          dirs <- unique(dirname(files))
+          newDirs <- gsub(origDir, td, dirs)
           Require::checkPath(td, create = TRUE)
-          file.copy(files, td)
-          unlink1 <- unlink(files)
-          if (isTRUE(file.exists(files))) {
-            dirName <- file.path(.libPaths()[1], sam)
-            file.copy(files, dirName)
-          }
-          browser(expr = sam %in% dir(.libPaths()[1]))
-          out <- capture.output(remove.packages(sam), type = "message")
-          if (sam %in% dir(.libPaths()[1])) {
-            file.copy(dir(td, recursive = TRUE, full.names = TRUE), file.path(.libPaths()[1], sam))
-          }
-          files1 <- dir(.libPaths()[1], pattern = sam, recursive = TRUE, full.names = TRUE)
-          file.copy()
+          #dir.create(dirname(td))
+          #dir.create(td)
+          out <- lapply(newDirs, dir.create)
 
-          dirToRm <- grep(sam, dir(.libPaths()[1], full.names = TRUE), value = TRUE)
-          unlink(td, recursive = TRUE)
+          outFC <- file.copy(files, newFiles)
+          if (any(outFC == FALSE)) {
+            file.copy(newFiles, files)
+          }
+          unlink1 <- unlink(file.path(origDir, sam), recursive = TRUE)
+          if (isTRUE(any(file.exists(files)))) {
+            suppressWarnings(out <- lapply(dirs, dir.create, recursive = TRUE))
+            out <- file.copy(newFiles, files)
+            message("Actually, not deleting ", sam)
+          } else {
+            browser(expr = sam %in% dir(.libPaths()[1]))
+            out11 <- capture.output(out <- capture.output(remove.packages(sam), type = "message"),
+                                    type = "output")
+          }
         }
       }
     } else {
@@ -142,22 +156,37 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     i <- i + 1
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     # if (i == 7) stop()
-    outFromRequire <- Require::Require2(pkg, repos = repo, standAlone = FALSE)
-    out <- Require::Require2(pkg)
+    outFromRequire <- Require::Require(pkg, repos = repo, standAlone = FALSE)
+    out <- Require::Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
-    have <- Require::Require2(pkg, install = FALSE, require = FALSE)
+    have <- Require::Require(pkg, install = FALSE, require = FALSE)
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     normalRequire <- unlist(lapply(pkgsToTest,
                                    function(p) tryCatch(require(p, character.only = TRUE),
                                                         error = function(x) FALSE)))
-    out <- out[names(out) %in% names(normalRequire)]
+    out2 <- out
+    out2 <- out2[names(out2) %in% names(normalRequire)]
     #out1 <- out1[Package %in% names(normalRequire)]
-    out <- out[match(names(normalRequire), names(out))]
-    browser(expr = !all(out == normalRequire))
-    testit::assert(all(out == normalRequire))
+    out2 <- out2[match(names(normalRequire), names(out2))]
     have <- attr(have, "Require")
+    have2 <- have[toLoad == TRUE]
+    normalRequire2 <- if (NROW(have2))
+      normalRequire[have2$Package]
+    else
+      normalRequire
+
+    out2 <- out2[out2]
+    browser(expr = !all(out2 == normalRequire2))
+    testit::assert(all(out2 == normalRequire2))
     runTests(have)
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
+    if ("bitops" %in% Require::extractPkgName(pkg)) {
+      unloadNSRecursive("bitops", n = 1)
+      remove.packages("bitops")
+    }
   }
 }
+
+out <- Require::Require("Holiday (<= 2.3.1)", standAlone = T, libPaths = tempdir())
+assert(attr(out, "Require"))
