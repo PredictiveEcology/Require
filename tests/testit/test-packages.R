@@ -196,5 +196,5 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
   }
 }
 
-out <- Require::Require("Holiday (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
+out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
 assert(attr(out, "Require"))

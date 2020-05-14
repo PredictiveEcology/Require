@@ -3,7 +3,7 @@ if (getRversion() >= "3.1.0") {
                            "Repo", "RepoWBranch", "Version", "compareVersionAvail", "correctVersion",
                            "correctVersionAvail", "download.file", "fullGit", "githubPkgName",
                            "hasVersionSpec", "inequality", "installed", "isGH", "packageFullName",
-                           "versionSpec", "..colsToKeep", "..keepCols", ".I", "DESCFile", "OlderVersionsAvailable",
+                           "versionSpec", "..colsToKeep", "..keepCols", "DESCFile", "OlderVersionsAvailable",
                            "OlderVersionsAvailableCh", "PackageUrl", "archiveSource", "isInteractive",
                            "libPaths", "needInstall", "pkgDepTopoSort", "repoLocation", "toLoad"))
 }
@@ -12,15 +12,12 @@ if (getRversion() >= "3.1.0") {
 #'
 #' This is an "all in one" function that will run \code{install.packages} for
 #' CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
-#' will install specific versions of each package if there is a
-#' \code{packageVersionFile} supplied. Plus, when \code{packages} is provided as
-#' a character vector, or a \code{packageVersionFile} is supplied, all package
-#' dependencies will be first assessed for \code{unique(dependencies)} so the
-#' same package is not installed multiple times. Finally \code{library} is
-#' called on the \code{packages}. If packages are already installed
-#' (\code{packages} supplied), and their version numbers are exact (when
-#' \code{packageVersionFile} is supplied), then the "install" component will be
-#' skipped very quickly with a message.
+#' will install specific versions of each package if versions are specified either
+#' via an inequality (e.g., \code{"Holidays (>=1.0.0)} or with a
+#' \code{packageVersionFile}. The function will then run \code{require} on all
+#' named packages that satisfy their version requirements. If packages are already installed
+#' (\code{packages} supplied), and their optional version numbers are satisfied,
+#' then the "install" component will be skipped.
 #'
 #' \code{standAlone} will either put the \code{Require}d packages and their
 #' dependencies \emph{all} within the libPaths (if \code{TRUE}) or if
@@ -77,8 +74,11 @@ if (getRversion() >= "3.1.0") {
 #' @param install_githubArgs List of optional named arguments, passed to \code{install_github}.
 #' @param install.packagesArgs List of optional named arguments, passed to \code{install.packages}.
 #' @param standAlone Logical. If \code{TRUE}, all packages will be installed to and loaded from
-#'                   the \code{libPaths} only. If \code{FALSE}, then the full \code{.libPaths()} will
-#'                   be used to find the correct versions. This can be create dramatically faster
+#'                   the \code{libPaths[1]} only., i.e., only the first path on the supplied
+#'                   \code{libPaths}. If \code{FALSE}, then all supplied paths will be searched
+#'                   for loading from before determining if the package needs to be installed (based
+#'                   on package name and optional version specification.
+#'                   This can be create dramatically faster
 #'                   installs if the user has a substantial number of the packages already in their
 #'                   personal library. In the case of \code{TRUE}, there will be a hidden file
 #'                   place in the \code{libPaths} directory that lists all the packages
@@ -86,20 +86,20 @@ if (getRversion() >= "3.1.0") {
 #'                   minimize package installing.
 #' @param ... Passed to \emph{all} of \code{install_github}, \code{install.packages}, and
 #'   \code{remotes::install_version}, i.e., the function will error if all of these functions
-#'   can not use the ... argument. Good candidates are e.g., \code{type}, \code{dependencies}. This
-#'   can be used with \code{install_githubArgs} or \code{install.packageArgs} which give individual
-#'   options for those 2 internal function calls.
+#'   can not use the ... argument. Good candidates are e.g., \code{type} or \code{dependencies}.
+#'   This can be used with \code{install_githubArgs} or \code{install.packageArgs} which
+#'   give individual options for those 2 internal function calls.
 #' @export
 #' @importFrom remotes install_github install_version
 #' @importFrom data.table data.table as.data.table setDT set is.data.table rbindlist
-#' @importFrom data.table setnames setorderv := .SD
+#' @importFrom data.table setnames setorderv := .SD .I
 #' @importFrom utils install.packages capture.output assignInMyNamespace available.packages
 #' @importFrom utils compareVersion installed.packages
 #' @examples
 #' \dontrun{
 #' # simple usage, like conditional install.packages then library
 #' library(Require)
-#' Require("stats") # analogous to require(stats), but slower because it checks for
+#' Require("stats") # analogous to require(stats), but it checks for
 #'                  #   pkg dependencies, and installs them, if missing
 #' tempPkgFolder <- file.path(tempdir(), "Packages")
 #'
@@ -107,28 +107,58 @@ if (getRversion() >= "3.1.0") {
 #' #   in another local library (e.g., personal library)
 #' Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#' # make a package version snapshot
-#' packageVersionFile <- file.path(tempPkgFolder, ".packageVersion.txt")
-#' pkgSnapshot(libPaths=tempPkgFolder, packageVersionFile)
+#' # make a package version snapshot of installed packages
+#' packageVersionFile <- "_.packageVersionTest.txt"
+#' (pkgSnapshot(libPath = tempPkgFolder, packageVersionFile, standAlone = TRUE))
 #'
-#' # confirms that correct version is installed
-#' Require("crayon", packageVersionFile = packageVersionFile)
+#' # Restart R -- to remove the old temp folder (it disappears with restarting R)
+#' library(Require)
+#' tempPkgFolder <- file.path(tempdir(), "Packages")
+#' packageVersionFile <- "_.packageVersionTest.txt"
+#' # Reinstall and reload the exact version from previous
+#' Require(packageVersionFile = packageVersionFile, libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #' # Create mismatching versions -- desired version is older than current installed
 #' # This will try to install the older version, overwriting the newer version
 #' desiredVersion <- data.frame(instPkgs="crayon", instVers = "1.3.2", stringsAsFactors = FALSE)
 #' write.table(file = packageVersionFile, desiredVersion, row.names = FALSE)
-#' # won't work because newer crayon is loaded
-#' Require("crayon", packageVersionFile = packageVersionFile)
+#' newTempPkgFolder <- file.path(tempdir(), "Packages2")
 #'
-#' # unload it first
-#' detach("package:crayon", unload = TRUE)
+#' # Note this will install the 1.3.2 version (older that current on CRAN), but
+#' #   because crayon is still loaded in memory, it will return TRUE, using the current version
+#' #   of crayon. To start using the older 1.3.2, need to unload or restart R
+#' Require("crayon", packageVersionFile = packageVersionFile,
+#'         libPaths = newTempPkgFolder, standAlone = TRUE)
 #'
+#' # restart R again to get access to older version
 #' # run again, this time, correct "older" version installs in place of newer one
-#' Require("crayon", packageVersionFile = packageVersionFile)
+#' library(Require)
+#' packageVersionFile <- "_.packageVersionTest.txt"
+#' newTempPkgFolder <- file.path(tempdir(), "Packages3")
+#' Require("crayon", packageVersionFile = packageVersionFile,
+#'         libPaths = newTempPkgFolder, standAlone = TRUE)
 #'
 #' # Mutual dependencies, only installs once -- e.g., httr
-#' Require(c("cranlogs", "covr"), libPaths = tempPkgFolder)
+#' tempPkgFolder <- file.path(tempdir(), "Packages")
+#' Require(c("cranlogs", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'
+#' #######################################################################
+#' # Isolated projects -- Just use a project folder and pass to libPaths #
+#' #######################################################################
+#' # GitHub packages -- restart R because crayon is needed
+#' library(Require)
+#' ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+#' #  THIS ONE IS LARGE -- > 100 dependencies -- use standAlone = FALSE to
+#' #    reuse already installed packages --> this won't allow as much control
+#' #    of package versioning
+#' Require("PredictiveEcology/SpaDES@development",
+#'                  libPaths = ProjectPackageFolder, standAlone = FALSE)
+#' # To keep totally isolated: use standAlone = TRUE
+#' Require("PredictiveEcology/SpaDES@development",
+#'                  libPaths = ProjectPackageFolder, standAlone = TRUE)
+#'
+#'
+#' # If creating an iso
 #' }
 #'
 Require <- function(packages, packageVersionFile,
@@ -141,6 +171,10 @@ Require <- function(packages, packageVersionFile,
                     repos = getOption("repos"),
                     ...){
 
+  if (!missing(packageVersionFile)) {
+    packages <- data.table::fread(packageVersionFile)
+    packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
+  }
   if (missing(libPaths))
     libPaths <- .libPaths()
   origLibPaths <- setLibPaths(libPaths, standAlone)
@@ -171,7 +205,7 @@ Require <- function(packages, packageVersionFile,
     toLoadPkgs <- pkgDT[toLoad == TRUE]$Package
     names(toLoadPkgs) <- toLoadPkgs
     if (isTRUE(require)) {
-      postLoad <- doLoading(toLoadPkgs)
+      postLoad <- doLoading(toLoadPkgs, ...)
     } else {
       postLoad <- list(out = lapply(toLoadPkgs, function(x) FALSE), out2 = character())
     }
@@ -244,19 +278,23 @@ getPkgVersions <- function(pkgDT, install) {
           by = "Package"]
 
     setorderv(pkgDT, c("Package", "versionSpec"), order = -1L)
+
     # any duplicates with different minimum version number to be dealt with here --> only those with > in their inequality
-    pkgDT[hasVersionSpec == TRUE & grepl(">", inequality), versionSpec := as.character(max(package_version(versionSpec))), by = "Package"]
-    pkgDT_maxVersion <- pkgDT[hasVersionSpec == TRUE, list(versionSpec = as.character(max(package_version(versionSpec)))),
-                              by = "Package"]
-    pkgDT <- rbindlist(list(pkgDT[hasVersionSpec == FALSE], pkgDT[pkgDT_maxVersion, on = c("Package", "versionSpec")]))
+    pkgDT[hasVersionSpec == TRUE, versionSpec := as.character(max(package_version(versionSpec))), by = "Package"]
+    # pkgDT_maxVersion <- pkgDT[hasVersionSpec == TRUE & grepl(">", inequality),
+    #                           list(versionSpec = as.character(max(package_version(versionSpec)))),
+    #                           by = "Package"]
+    # pkgDT <- rbindlist(list(pkgDT[hasVersionSpec == FALSE], pkgDT[pkgDT_maxVersion, on = c("Package", "versionSpec")]))
     setorderv(pkgDT, c("Package", "hasVersionSpec"), order = -1L)
-    pkgDT <- pkgDT[, .SD[1], by = c("Package", "inequality")]
+    # pkgDT <- pkgDT[, .SD[1], by = c("Package", "inequality")]
 
     if ("Version" %in% colnames(pkgDT)) {
       pkgDT[!is.na(Version), compareVersion := .compareVersionV(Version, versionSpec)]
       pkgDT[!is.na(Version) & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
       pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
-      pkgDT <- pkgDT[, .SD[1], by = "Package"]
+      # put FALSE at top of each package -- then take the first one, so we will know if all inequalities are satisfied
+      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L)
+      pkgDT <- pkgDT[, .SD[1], by = c("Package")]
     }
   } else {
     pkgDT[ , correctVersion := NA]
@@ -296,7 +334,8 @@ getAvailable <- function(pkgDT) {
     }
 
     # do Older Versions
-    needOlder <- grepl("==|<=|<", notCorrectVersions$inequality)
+
+    needOlder <- notCorrectVersions$correctVersionAvail == FALSE & grepl("==|<=|<", notCorrectVersions$inequality)
     needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
     if (any(needOlderNotGH)) {
       message("installing older versions is still experimental and may cause package version conflicts")
@@ -574,7 +613,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
   pkgDT
 }
 
-doLoading <- function(toLoadPkgs) {
+doLoading <- function(toLoadPkgs, ...) {
   outMess <- capture.output(
     out <- lapply(toLoadPkgs, require, character.only = TRUE),
     type = "message")
@@ -600,8 +639,18 @@ doLoading <- function(toLoadPkgs) {
              "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
              "\n-----\n...before any other packages get loaded")
       }
+      error3 <- grepl("is being loaded, but", outMess)
+      packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)’ .*$"), "\\1", outMess[error3])
+      if (any(error3)) {
+        pkgs <- paste(packageNames, collapse = "', '")
+        stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+             "-----\n", "install.packages(c('", paste(pkgs,
+                                                      collapse = ", "), "'), lib = '", .libPaths()[1],
+             "')", "\n-----\n...before any other packages get loaded")
+      }
     }
-    if (any(missingDeps)) {
+    doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else FALSE
+    if (any(missingDeps) && doDeps) {
       grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
       packageNames <- character()
       if (any(grepl(grep3a, outMess[missingDeps])))
@@ -616,7 +665,7 @@ doLoading <- function(toLoadPkgs) {
       outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
     }
 
-    out2 <- Require(unique(toInstall))
+    out2 <- Require(unique(toInstall), ...)
     out2 <- unlist(out2)
     names(out2) <- unique(toInstall)
 

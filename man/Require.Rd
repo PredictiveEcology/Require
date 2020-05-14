@@ -34,8 +34,11 @@ isolated, stand alone package installations.}
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. If \code{FALSE}, then the full \code{.libPaths()} will
-be used to find the correct versions. This can be create dramatically faster
+the \code{libPaths[1]} only., i.e., only the first path on the supplied
+\code{libPaths}. If \code{FALSE}, then all supplied paths will be searched
+for loading from before determining if the package needs to be installed (based
+on package name and optional version specification.
+This can be create dramatically faster
 installs if the user has a substantial number of the packages already in their
 personal library. In the case of \code{TRUE}, there will be a hidden file
 place in the \code{libPaths} directory that lists all the packages
@@ -114,7 +117,7 @@ This function will use \code{memoise} internally to determine the
 \dontrun{
 # simple usage, like conditional install.packages then library
 library(Require)
-Require("stats") # analogous to require(stats), but slower because it checks for
+Require("stats") # analogous to require(stats), but it checks for
                  #   pkg dependencies, and installs them, if missing
 tempPkgFolder <- file.path(tempdir(), "Packages")
 
