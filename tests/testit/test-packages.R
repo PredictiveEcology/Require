@@ -1,25 +1,28 @@
+tmpdir <- if (Sys.info()["user"] != "emcintir") {
+  file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+} else {
+  "c:/Eliot/TempLib5"
+}
+suppressWarnings(dir.create(tmpdir))
+oldLibPaths <- .libPaths()
+on.exit(.libPaths(oldLibPaths))
+.libPaths(tmpdir)
+
 pkgDepTest1 <- Require::pkgDep("Require")
 testit::assert(length(pkgDepTest1) == 1)
-testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes", "utils",
-                                           "versions"))
+testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes", "utils"))
+
+pkgDepTest2 <- Require::pkgDep2("Require")
+testit::assert(length(pkgDepTest2) == 3)
+testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
 
 if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
-  RequireDeps <- c("data.table", "remotes", "tools", "utils", "versions", "methods",
-                   "stats", "grDevices", "graphics")
-  helpers <- dir(pattern = "helper", full.names = TRUE)
-  out <- lapply(helpers, source, local = environment())
 
-  # testInitOut <- testInit()
-  tmpdir <- if (Sys.info()["user"] != "emcintir") {
-    file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-  } else {
-    "c:/Eliot/TempLib5"
-  }
-
-  suppressWarnings(dir.create(tmpdir))
-  oldLibPaths <- .libPaths()
-  on.exit(.libPaths(oldLibPaths))
-  .libPaths(tmpdir)
+  pkgsInstalled <- dir(tmpdir, full.names = TRUE)
+  RequireDeps <- c("data.table", "remotes", "utils")
+  pkgsToRm <- setdiff(sample(pkgsInstalled, 5), RequireDeps)
+  message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
+  out <- unlink(pkgsToRm, recursive = TRUE)
 
   runTests <- function(have) {
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
@@ -37,8 +40,10 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
       out <- lapply(out, isNamespaceLoaded)
       out <- unlist(out)
       out <- out[out]
-      keepLoaded1 <- c("Require", "testit", "base64enc", "RCurl", "dismo", "units", "fastmatch", "raster", "Rcpp", "rstudioapi", c("crayon", "data.table", "remotes", "tools", "utils", "versions",
-                                                                                                                                   "grDevices", "methods", "stats", "graphics"))
+      keepLoaded1 <- c("Require", "testit", "base64enc", "RCurl", "dismo", "units",
+                       "fastmatch", "raster", "Rcpp", "rstudioapi", "crayon", "data.table",
+                       "remotes", "tools", "utils", "versions", "fastdigest",
+                       "grDevices", "methods", "stats", "graphics", "dplyr", "stringi")
       keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
       out <- names(out)
       names(out) <- out
@@ -101,8 +106,8 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
 
 
-  pkgs <- list(c("bitops (<=1.0-5)", "Holidays (>=0.0.1)", "achubaty/amc@development", "PredictiveEcology/LandR (>=0.0.1)",
-                 "PredictiveEcology/LandR (>=0.0.2)", "Holidays (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
+  pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "achubaty/amc@development", "PredictiveEcology/LandR (>=0.0.1)",
+                 "PredictiveEcology/LandR (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
                  "PredictiveEcology/map@development (>= 4.0.9)",
 
@@ -148,11 +153,12 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
   )
   #   options("reproducible.Require.install" = TRUE)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
+  options("Require.verbose" = TRUE)
 
   i <- 0
   pkg <- pkgs[[1]]
   for (pkg in pkgs) {
-    out <- unloadNSRecursive(n = 1)
+    # out <- unloadNSRecursive(n = 1)
     i <- i + 1
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     # if (i == 7) stop()
@@ -181,12 +187,13 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     testit::assert(all(out2 == normalRequire2))
     runTests(have)
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
-    if ("bitops" %in% Require::extractPkgName(pkg)) {
-      unloadNSRecursive("bitops", n = 1)
-      remove.packages("bitops")
+    if (any("TimeWarp" %in% Require::extractPkgName(pkg))) {
+      unloadNamespace("Holidays")
+      unloadNamespace("TimeWarp")
+      remove.packages(c("Holidays", "TimeWarp"))
     }
   }
 }
 
-out <- Require::Require("Holiday (<= 2.3.1)", standAlone = T, libPaths = tempdir())
+out <- Require::Require("Holiday (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
 assert(attr(out, "Require"))

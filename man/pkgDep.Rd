@@ -3,7 +3,7 @@
 \name{pkgDep}
 \alias{pkgDep}
 \alias{pkgDep2}
-\title{Determine package dependencies, first looking at local filesystem}
+\title{Determine package dependencies}
 \usage{
 pkgDep(
   packages,
@@ -15,7 +15,8 @@ pkgDep(
   suggests,
   linkingTo,
   repos = getCRANrepos(),
-  keepVersionNumber = TRUE
+  keepVersionNumber = TRUE,
+  sort = TRUE
 )
 
 pkgDep2(
@@ -37,6 +38,11 @@ pkgDep2(
 \code{install.packages}, then load (i.e., with \code{library}). If it is
 one package, it can be unquoted (as in \code{require})}
 
+\item{which}{a character vector listing the types of dependencies, a subset of
+\code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
+Character string \code{"all"} is shorthand for that vector,
+character string \code{"most"} for the same vector without \code{"Enhances"}.}
+
 \item{recursive}{Logical. Should dependencies of dependencies be searched, recursively.
 NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
 
@@ -54,24 +60,23 @@ NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
 \item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies returned
 will include version number. Default is \code{FALSE}}
 
-\item{refresh}{There is an internal type of caching. If the results are wrong, likely
-set \code{refresh = TRUE}.}
-
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
 }
 \description{
+This will first look in local filesystem (in \code{.libPaths()}), then
+\code{CRAN}. If the package is in the form of a GitHub package with format
+Account/Repo@branch, it will attempt to get package dependencies from the
+GitHub DESCRIPTION file. Currently, it will not find \code{Remotes}.
 This is intended to replace \code{tools::package_dependencies} or
-\code{pkgDep} in the \pkg{miniCRAN} package, but with modifications for speed.
-It will first check local package directories in \code{libPath}, and it if
-the function cannot find the packages there, then it will use
-\code{tools::package_dependencies}.
+\code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
+multiple sources to be searched in the same function call.
 
 \code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
 i.e., the first order dependencies, and runs the \code{pkgDep} on those.
 }
 \note{
-\code{package_dependencies} and \code{pkgDep} will differ under the following
+\code{tools::package_dependencies} and \code{pkgDep} will differ under the following
 circumstances:
 \enumerate{
   \item GitHub packages are not detected using \code{tools::package_dependencies};
@@ -81,5 +86,10 @@ circumstances:
 }
 \examples{
 pkgDep("Require")
+pkgDep("Require", keepVersionNumber = FALSE) # just names
+pkgDep("PredictiveEcology/reproducible") # GitHub
+pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
+pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
+pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
 pkgDep2("reproducible")
 }

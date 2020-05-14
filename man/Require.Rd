@@ -14,7 +14,8 @@ Require(
   install = getOption("Require.install", TRUE),
   require = getOption("Require.require", TRUE),
   upgrade = getOption("Require.upgrade", TRUE),
-  repos = getOption("repos")
+  repos = getOption("repos"),
+  ...
 )
 }
 \arguments{
@@ -25,15 +26,16 @@ one package, it can be unquoted (as in \code{require})}
 \item{packageVersionFile}{If provided, then this will override all \code{install.package}
 calls with \code{versions::install.versions}}
 
-\item{libPaths}{The library path where all packages should be installed, and looked for to load
-(i.e., call \code{library})}
+\item{libPaths}{The library path (or libraries) where all packages should be installed,
+and looked for to load (i.e., call \code{library}). This can be used to create
+isolated, stand alone package installations.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
-\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed and loaded strictly
-from the \code{libPaths} only. If \code{FALSE}, all \code{.libPaths} will
+\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
+the \code{libPaths} only. If \code{FALSE}, then the full \code{.libPaths()} will
 be used to find the correct versions. This can be create dramatically faster
 installs if the user has a substantial number of the packages already in their
 personal library. In the case of \code{TRUE}, there will be a hidden file
@@ -43,6 +45,12 @@ minimize package installing.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
+
+\item{...}{Passed to \emph{all} of \code{install_github}, \code{install.packages}, and
+\code{remotes::install_version}, i.e., the function will error if all of these functions
+can not use the ... argument. Good candidates are e.g., \code{type}, \code{dependencies}. This
+can be used with \code{install_githubArgs} or \code{install.packageArgs} which give individual
+options for those 2 internal function calls.}
 }
 \description{
 This is an "all in one" function that will run \code{install.packages} for
