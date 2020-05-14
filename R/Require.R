@@ -154,6 +154,8 @@ if (getRversion() >= "3.1.0") {
 #' Require("PredictiveEcology/SpaDES@development",
 #'                  libPaths = ProjectPackageFolder, standAlone = FALSE)
 #' # To keep totally isolated: use standAlone = TRUE
+#' library(Require)
+#' ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
 #' Require("PredictiveEcology/SpaDES@development",
 #'                  libPaths = ProjectPackageFolder, standAlone = TRUE)
 #'
@@ -163,9 +165,9 @@ if (getRversion() >= "3.1.0") {
 #'
 Require <- function(packages, packageVersionFile,
                     libPaths, # nolint
-                    install_githubArgs = list(),       # nolint
+                    install_githubArgs = list(),
                     install.packagesArgs = list(),
-                    standAlone = FALSE,      # nolint
+                    standAlone = getOption("Require.standAlone", FALSE),
                     install = getOption("Require.install", TRUE),
                     require = getOption("Require.require", TRUE),
                     repos = getOption("repos"),
@@ -456,7 +458,7 @@ DESCRIPTIONFileVersion <- function(file) {
 }
 
 setLibPaths <- function(libPaths = .libPaths(), standAlone = FALSE) {
-  out <- lapply(libPaths, checkPath, create = TRUE)
+  out <- unlist(lapply(libPaths, checkPath, create = TRUE))
   libPaths <- normalizePath(libPaths, winslash = "/") # the system call requires this
 
   origLibPaths <- .libPaths()
