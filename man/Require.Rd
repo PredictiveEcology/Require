@@ -13,7 +13,6 @@ Require(
   standAlone = FALSE,
   install = getOption("Require.install", TRUE),
   require = getOption("Require.require", TRUE),
-  upgrade = getOption("Require.upgrade", TRUE),
   repos = getOption("repos"),
   ...
 )
@@ -42,6 +41,16 @@ personal library. In the case of \code{TRUE}, there will be a hidden file
 place in the \code{libPaths} directory that lists all the packages
 that were needed during the \code{Require} call. Default \code{FALSE} to
 minimize package installing.}
+
+\item{install}{Logical or "force". If \code{FALSE}, this will not try to install anything.
+If \code{"force"}, then it will force installation of requested packages,
+mimicking a call to e.g., \code{install.packages}. If \code{TRUE}, the default,
+then this
+function will try to install any missing packages or dependencies.}
+
+\item{require}{Logical. If \code{TRUE}, the default, then the function will attempt
+to call \code{require} on all requested \code{packages}, possibly after they
+are installed.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}

@@ -10,8 +10,6 @@ messageDF(df, round)
 \item{df}{A data.frame, data.table, matrix}
 
 \item{round}{An optional numeric to pass to \code{round}}
-
-\item{colour}{An optional colour to use from \code{crayon}}
 }
 \description{
 Sends to \code{message}, but in a structured way so that a data.frame-like can

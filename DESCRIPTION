@@ -23,6 +23,8 @@ Imports:
     data.table (>= 1.10.4),
     remotes,
     utils
+Suggests:
+    testit
 Encoding: UTF-8
 Language: en-CA
 License: GPL-3

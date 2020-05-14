@@ -28,8 +28,6 @@ pkgDep2(
   suggests,
   linkingTo,
   repos = getOption("repos"),
-  refresh = FALSE,
-  verbose = getOption("reproducible.verbose"),
   sorted = TRUE
 )
 }
@@ -37,6 +35,8 @@ pkgDep2(
 \item{packages}{Character vector of packages to install via
 \code{install.packages}, then load (i.e., with \code{library}). If it is
 one package, it can be unquoted (as in \code{require})}
+
+\item{libPath}{A path to search for installed packages. Defaults to \code{.libPaths()}}
 
 \item{which}{a character vector listing the types of dependencies, a subset of
 \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
@@ -59,6 +59,10 @@ NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
 
 \item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies returned
 will include version number. Default is \code{FALSE}}
+
+\item{sort}{Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
+If \code{FALSE}, the packages will not have a discernable order as they will be a
+concatenation of the possibly recursive package dependencies.}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}

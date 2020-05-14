@@ -180,7 +180,6 @@ rndstr <- function(n = 1, len = 8) {
 #'
 #' @param df A data.frame, data.table, matrix
 #' @param round An optional numeric to pass to \code{round}
-#' @param colour An optional colour to use from \code{crayon}
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
 #' @export

@@ -3,7 +3,9 @@ if (getRversion() >= "3.1.0") {
                            "Repo", "RepoWBranch", "Version", "compareVersionAvail", "correctVersion",
                            "correctVersionAvail", "download.file", "fullGit", "githubPkgName",
                            "hasVersionSpec", "inequality", "installed", "isGH", "packageFullName",
-                           "versionSpec"))
+                           "versionSpec", "..colsToKeep", "..keepCols", ".I", "DESCFile", "OlderVersionsAvailable",
+                           "OlderVersionsAvailableCh", "PackageUrl", "archiveSource", "isInteractive",
+                           "libPaths", "needInstall", "pkgDepTopoSort", "repoLocation", "toLoad"))
 }
 
 #' Repeatability-safe install and load packages, optionally with specific versions
@@ -54,6 +56,14 @@ if (getRversion() >= "3.1.0") {
 #'   #the user, then this cached element should be wiped, using \code{forget =
 #'   #TRUE}.
 #'
+#' @param install Logical or "force". If \code{FALSE}, this will not try to install anything.
+#'        If \code{"force"}, then it will force installation of requested packages,
+#'        mimicking a call to e.g., \code{install.packages}. If \code{TRUE}, the default,
+#'        then this
+#'        function will try to install any missing packages or dependencies.
+#' @param require Logical. If \code{TRUE}, the default, then the function will attempt
+#'        to call \code{require} on all requested \code{packages}, possibly after they
+#'        are installed.
 #' @param packages Character vector of packages to install via
 #'        \code{install.packages}, then load (i.e., with \code{library}). If it is
 #'        one package, it can be unquoted (as in \code{require})
@@ -85,7 +95,6 @@ if (getRversion() >= "3.1.0") {
 #' @importFrom data.table setnames setorderv := .SD
 #' @importFrom utils install.packages capture.output assignInMyNamespace available.packages
 #' @importFrom utils compareVersion installed.packages
-#' @importFrom versions install.versions
 #' @examples
 #' \dontrun{
 #' # simple usage, like conditional install.packages then library
@@ -129,7 +138,6 @@ Require <- function(packages, packageVersionFile,
                     standAlone = FALSE,      # nolint
                     install = getOption("Require.install", TRUE),
                     require = getOption("Require.require", TRUE),
-                    upgrade = getOption("Require.upgrade", TRUE),
                     repos = getOption("repos"),
                     ...){
 

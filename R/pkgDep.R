@@ -29,6 +29,10 @@
 #'                  NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.
 #' @param keepVersionNumber Logical. If \code{TRUE}, then the package dependencies returned
 #'   will include version number. Default is \code{FALSE}
+#' @param libPath A path to search for installed packages. Defaults to \code{.libPaths()}
+#' @param sort Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
+#'        If \code{FALSE}, the packages will not have a discernable order as they will be a
+#'        concatenation of the possibly recursive package dependencies.
 #' @export
 #' @rdname pkgDep
 #'
@@ -129,8 +133,7 @@ getDescPath <- function(packages, libPath) {
 pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
                     depends, imports, suggests, linkingTo,
-                    repos = getOption("repos"), refresh = FALSE,
-                    verbose = getOption("reproducible.verbose"),
+                    repos = getOption("repos"),
                     sorted = TRUE) {
   a <- lapply(pkgDep(packages, recursive = FALSE, which = which, depends = depends, imports = imports, suggests = suggests,
                      linkingTo = linkingTo)[[1]],
@@ -187,7 +190,8 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
   if (isFALSE(keepVersionNumber))
     pkgs <- trimVersionNumber(pkgs)
   ap <- ap[ap$Package %in% pkgsNoVersion]
-  keep <- na.omit(match(ap$Package, pkgsNoVersion))
+  keep <- match(ap$Package, pkgsNoVersion)
+  keep <- keep[!is.na(keep)]
   pkgsNoVersion1 <- pkgsNoVersion[keep]
   pkgs <- pkgs[keep]
   ap <- ap[order(pkgsNoVersion1)]
@@ -196,7 +200,7 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
   deps <- lapply (which, function(i) {
     lapply(ap[[i]], function(x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
-      out <- na.omit(out)
+      out <- out[!is.na(out)]
       out <- grep("^\\<R\\>", out, value = TRUE, invert = TRUE) # remove references to R
     })
   })
@@ -259,7 +263,9 @@ pkgDepOld <- function(packages, libPath, recursive = TRUE, depends = TRUE,
     names(ans) <- packages
 
     ll2 <- lapply(ans, function(x) {
-      ll1 <- unique(na.omit(unlist(x)))
+      ll1 <- unlist(x)
+      ll1 <- unique(ll1[!is.na(ll1)])
+      # ll1 <- unique(na.omit(unlist(x)))
       attr(ll1, "na.action") <- NULL
       attr(ll1, "class") <- NULL
       ll1
@@ -451,7 +457,9 @@ pkgDepOld <- function(packages, libPath, recursive = TRUE, depends = TRUE,
                              depends = depends, imports = imports, suggests = FALSE,
                              linkingTo = linkingTo,
                              refresh = FALSE)
-        needed <- na.omit(unique(c(needed, unlist(needed2)))) # collapses recursive on non-recursive
+        needed <- unique(c(needed, unlist(needed2)))
+        needed <- needed[!is.na(needed)]
+        # needed <- na.omit(unique(c(needed, unlist(needed2)))) # collapses recursive on non-recursive
       }
       if (length(oldNeeded) > 0) { # just because we don't need to find its depenencies, doesn't mean it isn't needed
         needed <- unique(c(needed, oldNeeded, unlist(.pkgEnv$.depsAll[["recursive"]][[typeString]][oldNeeded])))
