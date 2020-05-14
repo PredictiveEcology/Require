@@ -13,7 +13,7 @@ if (getRversion() >= "3.1.0") {
 #' This is an "all in one" function that will run \code{install.packages} for
 #' CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
 #' will install specific versions of each package if versions are specified either
-#' via an inequality (e.g., \code{"Holidays (>=1.0.0)} or with a
+#' via an inequality (e.g., \code{"Holidays (>=1.0.0)"}) or with a
 #' \code{packageVersionFile}. The function will then run \code{require} on all
 #' named packages that satisfy their version requirements. If packages are already installed
 #' (\code{packages} supplied), and their optional version numbers are satisfied,
@@ -68,16 +68,17 @@ if (getRversion() >= "3.1.0") {
 #'        calls with \code{versions::install.versions}
 #' @param libPaths The library path (or libraries) where all packages should be installed,
 #'        and looked for to load (i.e., call \code{library}). This can be used to create
-#'        isolated, stand alone package installations.
+#'        isolated, stand alone package installations, if used with \code{standAlone = TRUE}.
+#'        Currently, the path supplied here will be prepended to \code{.libPaths()} unless
+#'        \code{standAlone = TRUE}.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              \code{install.packages}, \code{install_github} or \code{installVersions}.
 #' @param install_githubArgs List of optional named arguments, passed to \code{install_github}.
 #' @param install.packagesArgs List of optional named arguments, passed to \code{install.packages}.
 #' @param standAlone Logical. If \code{TRUE}, all packages will be installed to and loaded from
-#'                   the \code{libPaths[1]} only., i.e., only the first path on the supplied
-#'                   \code{libPaths}. If \code{FALSE}, then all supplied paths will be searched
-#'                   for loading from before determining if the package needs to be installed (based
-#'                   on package name and optional version specification.
+#'                   the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
+#'                   be prepended to \code{.libPaths()}, resulting in shared packages, i.e.,
+#'                   it will include the user's default package folder\(s\).
 #'                   This can be create dramatically faster
 #'                   installs if the user has a substantial number of the packages already in their
 #'                   personal library. In the case of \code{TRUE}, there will be a hidden file

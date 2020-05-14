@@ -10,7 +10,7 @@ Require(
   libPaths,
   install_githubArgs = list(),
   install.packagesArgs = list(),
-  standAlone = FALSE,
+  standAlone = getOption("Require.standAlone", FALSE),
   install = getOption("Require.install", TRUE),
   require = getOption("Require.require", TRUE),
   repos = getOption("repos"),
@@ -27,17 +27,18 @@ calls with \code{versions::install.versions}}
 
 \item{libPaths}{The library path (or libraries) where all packages should be installed,
 and looked for to load (i.e., call \code{library}). This can be used to create
-isolated, stand alone package installations.}
+isolated, stand alone package installations, if used with \code{standAlone = TRUE}.
+Currently, the path supplied here will be prepended to \code{.libPaths()} unless
+\code{standAlone = TRUE}.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths[1]} only., i.e., only the first path on the supplied
-\code{libPaths}. If \code{FALSE}, then all supplied paths will be searched
-for loading from before determining if the package needs to be installed (based
-on package name and optional version specification.
+the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
+be prepended to \code{.libPaths()}, resulting in shared packages, i.e.,
+it will include the user's default package folder\(s\).
 This can be create dramatically faster
 installs if the user has a substantial number of the packages already in their
 personal library. In the case of \code{TRUE}, there will be a hidden file
@@ -60,22 +61,19 @@ are installed.}
 
 \item{...}{Passed to \emph{all} of \code{install_github}, \code{install.packages}, and
 \code{remotes::install_version}, i.e., the function will error if all of these functions
-can not use the ... argument. Good candidates are e.g., \code{type}, \code{dependencies}. This
-can be used with \code{install_githubArgs} or \code{install.packageArgs} which give individual
-options for those 2 internal function calls.}
+can not use the ... argument. Good candidates are e.g., \code{type} or \code{dependencies}.
+This can be used with \code{install_githubArgs} or \code{install.packageArgs} which
+give individual options for those 2 internal function calls.}
 }
 \description{
 This is an "all in one" function that will run \code{install.packages} for
 CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
-will install specific versions of each package if there is a
-\code{packageVersionFile} supplied. Plus, when \code{packages} is provided as
-a character vector, or a \code{packageVersionFile} is supplied, all package
-dependencies will be first assessed for \code{unique(dependencies)} so the
-same package is not installed multiple times. Finally \code{library} is
-called on the \code{packages}. If packages are already installed
-(\code{packages} supplied), and their version numbers are exact (when
-\code{packageVersionFile} is supplied), then the "install" component will be
-skipped very quickly with a message.
+will install specific versions of each package if versions are specified either
+via an inequality (e.g., \code{"Holidays (>=1.0.0)"}) or with a
+\code{packageVersionFile}. The function will then run \code{require} on all
+named packages that satisfy their version requirements. If packages are already installed
+(\code{packages} supplied), and their optional version numbers are satisfied,
+then the "install" component will be skipped.
 }
 \details{
 \code{standAlone} will either put the \code{Require}d packages and their
@@ -125,28 +123,60 @@ tempPkgFolder <- file.path(tempdir(), "Packages")
 #   in another local library (e.g., personal library)
 Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 
-# make a package version snapshot
-packageVersionFile <- file.path(tempPkgFolder, ".packageVersion.txt")
-pkgSnapshot(libPaths=tempPkgFolder, packageVersionFile)
+# make a package version snapshot of installed packages
+packageVersionFile <- "_.packageVersionTest.txt"
+(pkgSnapshot(libPath = tempPkgFolder, packageVersionFile, standAlone = TRUE))
 
-# confirms that correct version is installed
-Require("crayon", packageVersionFile = packageVersionFile)
+# Restart R -- to remove the old temp folder (it disappears with restarting R)
+library(Require)
+tempPkgFolder <- file.path(tempdir(), "Packages")
+packageVersionFile <- "_.packageVersionTest.txt"
+# Reinstall and reload the exact version from previous
+Require(packageVersionFile = packageVersionFile, libPaths = tempPkgFolder, standAlone = TRUE)
 
 # Create mismatching versions -- desired version is older than current installed
 # This will try to install the older version, overwriting the newer version
 desiredVersion <- data.frame(instPkgs="crayon", instVers = "1.3.2", stringsAsFactors = FALSE)
 write.table(file = packageVersionFile, desiredVersion, row.names = FALSE)
-# won't work because newer crayon is loaded
-Require("crayon", packageVersionFile = packageVersionFile)
+newTempPkgFolder <- file.path(tempdir(), "Packages2")
 
-# unload it first
-detach("package:crayon", unload = TRUE)
+# Note this will install the 1.3.2 version (older that current on CRAN), but
+#   because crayon is still loaded in memory, it will return TRUE, using the current version
+#   of crayon. To start using the older 1.3.2, need to unload or restart R
+Require("crayon", packageVersionFile = packageVersionFile,
+        libPaths = newTempPkgFolder, standAlone = TRUE)
 
+# restart R again to get access to older version
 # run again, this time, correct "older" version installs in place of newer one
-Require("crayon", packageVersionFile = packageVersionFile)
+library(Require)
+packageVersionFile <- "_.packageVersionTest.txt"
+newTempPkgFolder <- file.path(tempdir(), "Packages3")
+Require("crayon", packageVersionFile = packageVersionFile,
+        libPaths = newTempPkgFolder, standAlone = TRUE)
 
 # Mutual dependencies, only installs once -- e.g., httr
-Require(c("cranlogs", "covr"), libPaths = tempPkgFolder)
+tempPkgFolder <- file.path(tempdir(), "Packages")
+Require(c("cranlogs", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
+
+#######################################################################
+# Isolated projects -- Just use a project folder and pass to libPaths #
+#######################################################################
+# GitHub packages -- restart R because crayon is needed
+library(Require)
+ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+#  THIS ONE IS LARGE -- > 100 dependencies -- use standAlone = FALSE to
+#    reuse already installed packages --> this won't allow as much control
+#    of package versioning
+Require("PredictiveEcology/SpaDES@development",
+                 libPaths = ProjectPackageFolder, standAlone = FALSE)
+# To keep totally isolated: use standAlone = TRUE
+library(Require)
+ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+Require("PredictiveEcology/SpaDES@development",
+                 libPaths = ProjectPackageFolder, standAlone = TRUE)
+
+
+# If creating an iso
 }
 
 }

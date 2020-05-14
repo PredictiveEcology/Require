@@ -4,20 +4,19 @@
 \alias{pkgSnapshot}
 \title{Take a snapshot of all the packages and version numbers}
 \usage{
-pkgSnapshot(packageVersionFile, libPath, standAlone = FALSE)
+pkgSnapshot(packageVersionFile, libPaths, standAlone = FALSE)
 }
 \arguments{
 \item{packageVersionFile}{A filename to save the packages and their currently
 installed version numbers. Defaults to \code{".packageVersions.txt"}.}
 
-\item{libPath}{The path to the local library where packages are installed.
+\item{libPaths}{The path to the local library where packages are installed.
 Defaults to the .libPaths()[1]}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths[1]} only., i.e., only the first path on the supplied
-\code{libPaths}. If \code{FALSE}, then all supplied paths will be searched
-for loading from before determining if the package needs to be installed (based
-on package name and optional version specification.
+the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
+be prepended to \code{.libPaths()}, resulting in shared packages, i.e.,
+it will include the user's default package folder\(s\).
 This can be create dramatically faster
 installs if the user has a substantial number of the packages already in their
 personal library. In the case of \code{TRUE}, there will be a hidden file
@@ -29,7 +28,7 @@ minimize package installing.}
 This can be used later by \code{installVersions} to install or re-install the correct versions.
 }
 \details{
-A file is written with the package names and versions of all packages within \code{libPath}.
+A file is written with the package names and versions of all packages within \code{libPaths}.
 This can later be passed to \code{Require}.
 }
 \examples{
