@@ -26,20 +26,27 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
   RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
-                   "crayon", "desc", "digest", "DT", "ellipsis",
+                   "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
                    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
                    "withr")
-  pkgsToRm <- setdiff(sample(pkgsInstalled, 2), RequireDeps)
+  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), 2), RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
 
-  runTests <- function(have) {
+  runTests <- function(have, pkgs) {
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
-    testit::assert(all(have[hasVersionSpec == TRUE & correctVersion == TRUE]$toLoad))
-    if (any(have$installFrom == "Fail", na.rm = TRUE))
-      testit::assert(!all(have[installFrom == "Fail" & correctVersionAvail == FALSE]$toLoad))
+    testit::assert(all(have[toLoad == TRUE & (correctVersion == TRUE | hasVersionSpec == FALSE)]$toLoad))
+    couldHaveLoaded <- unique(Require:::extractPkgName(pkgs))
+    actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {
+      didntLoad <- have[Package %in% couldHaveLoaded & correctVersionAvail == FALSE]
+      setdiff(couldHaveLoaded, didntLoad$Package)
+    } else {
+      couldHaveLoaded
+    }
+
+    testit::assert(sort(actuallyLoaded) == sort(have[toLoad == TRUE]$Package))
   }
   unloadNSRecursive <- function(packages, n = 0) {
     if (!missing(packages)) {
@@ -177,7 +184,8 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     outFromRequire <- Require::Require(pkg, repos = repo, standAlone = FALSE)
     out <- Require::Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
-    have <- Require::Require(pkg, install = FALSE, require = FALSE)
+    have <- attr(out, "Require")
+    #have <- Require::Require(pkg, install = FALSE, require = FALSE)
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     normalRequire <- unlist(lapply(pkgsToTest,
@@ -190,23 +198,18 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     whMatch <- match(names(normalRequire), names(out2))
     whMatch <- whMatch[!is.na(whMatch)]
     out2 <- out2[whMatch]
-    have <- attr(have, "Require")
-    have <- Require:::getPkgVersions(have, install = FALSE)
-    have <- Require:::getAvailable(have)
-    have <- Require:::installFrom(have)
-
-
-    browser()
-    have2 <- have[installed == TRUE]
+    # have <- attr(have, "Require")
+    have2 <- have[toLoad == TRUE]
     normalRequire2 <- if (NROW(have2))
       normalRequire[have2$Package]
     else
       normalRequire
 
+    browser(expr = all("fastdigest" %in% unique(Require:::extractPkgName(pkg))))
     out2 <- out2[out2]
-    browser(expr = !all(out2 == normalRequire2))
-    testit::assert(all(out2 == normalRequire2))
-    runTests(have)
+    browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
+    testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
+    runTests(have, pkg)
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
     if (any("TimeWarp" %in% Require::extractPkgName(pkg))) {
       unloadNamespace("Holidays")

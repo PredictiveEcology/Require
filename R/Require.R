@@ -212,7 +212,6 @@ Require <- function(packages, packageVersionFile,
   pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
   pkgDT[, installed := !is.na(Version)]
 
-  browser(expr = exists("abab"))
   if (length(packages) && (isTRUE(install) || isTRUE(require))) {
     if (isTRUE(install)) {
       pkgDT <- parseGitHub(pkgDT)
@@ -225,13 +224,13 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs, ...)
       }
-      pkgDT[, toLoad := packageFullName %in% packagesOrig]
+      pkgDT[, toLoad := (trimVersionNumber(packageFullName) %in% unique(trimVersionNumber(packagesOrig)))]
+      # pkgDT[, toLoad := correctVersion == TRUE]
       pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
       packages <- pkgDT[toLoad == TRUE]$Package
     }
     names(packages) <- packages
     if (isTRUE(require)) {
-      browser()
       postLoad <- doLoading(packages, ...)
     } else {
       postLoad <- list(out = lapply(packages, function(x) FALSE), out2 = character())
@@ -558,7 +557,7 @@ getGitHubDESCRIPTION <- function(pkg) {
           }
           file.path("https://raw.githubusercontent.com", Account,
                          Repo, Branch, "DESCRIPTION", fsep = "/")
-        }]
+        }, by = "Package"]
 
   checkPath(dirname(tempfile()), create = TRUE)
   pkgDT[repoLocation == "GitHub", {
@@ -646,7 +645,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
 }
 
 doLoading <- function(toLoadPkgs, ...) {
-  browser()
   outMess <- capture.output(
     out <- lapply(toLoadPkgs, require, character.only = TRUE),
     type = "message")
@@ -684,6 +682,7 @@ doLoading <- function(toLoadPkgs, ...) {
     }
     doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
     if (any(missingDeps) && doDeps) {
+      browser()
       grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
       packageNames <- character()
       if (any(grepl(grep3a, outMess[missingDeps])))
@@ -736,7 +735,7 @@ install_githubV <- function(gitPkgNames, install_githubArgs, ...) {
                           #  but there are weird cases where the internals of Require don't get correct
                           #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
                           #  which has R.oo
-  gitPkgs <- gitPkgNames$packageFullName
+  gitPkgs <- trimVersionNumber(gitPkgNames$packageFullName)
   names(gitPkgs) <- gitPkgs
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
@@ -756,10 +755,11 @@ install_githubV <- function(gitPkgNames, install_githubArgs, ...) {
     }
     isTryError <- unlist(lapply(outRes, is, "try-error"))
     gitPkgs1 <- gitPkgs[!names(gitPkgs) %in% names(outRes)[!isTryError]]
-    if (all(gitPkgs1 == gitPkgs)) {
+    if (identical(gitPkgs1, gitPkgs)) {
       failedAttempts <- names(gitPkgs)
       gitPkgs <- character()
     }
+    gitPkgs <- gitPkgs1
   }
   outRes
 
