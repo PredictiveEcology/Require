@@ -533,8 +533,8 @@ extractPkgGitHub <- function(pkgs) {
 #' @param pkgs A character string vector of packages with or without GitHub path or versions
 #' @return Just the package names without extraneous info.
 #' @export
-#' @examples
 #' @rdname extractPkgName
+#' @examples
 #' extractPkgName("Require (>=0.0.1)")
 extractPkgName <- function(pkgs) {
   hasNamesAny <- !is.null(names(pkgs))

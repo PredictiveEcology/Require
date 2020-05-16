@@ -2,6 +2,7 @@ repos <- NULL
 repos2 <- "https://cloud.r-project.org"
 repos["CRAN"] <- repos2
 options("repos" = repos, "Require.purge" = TRUE)
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 tmpdir <- if (Sys.info()["user"] != "emcintir") {
@@ -175,7 +176,6 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                  "PredictiveEcology/LandR@development", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
   options("Require.verbose" = TRUE)
 
   i <- 0

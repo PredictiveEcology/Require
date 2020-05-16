@@ -16,7 +16,8 @@ pkgDep(
   linkingTo,
   repos = getCRANrepos(),
   keepVersionNumber = TRUE,
-  sort = TRUE
+  sort = TRUE,
+  purge = getOption("Require.purge", FALSE)
 )
 
 pkgDep2(
@@ -34,7 +35,11 @@ pkgDep2(
 \arguments{
 \item{packages}{Character vector of packages to install via
 \code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require})}
+one package, it can be unquoted (as in \code{require}). In the case of a GitHub
+package, it will be assumed that the name of the repository is the name of the
+package. If this is not the case, then pass a named character vector here, where
+the names are the package names that could be different than the GitHub repository
+name.}
 
 \item{libPath}{A path to search for installed packages. Defaults to \code{.libPaths()}}
 

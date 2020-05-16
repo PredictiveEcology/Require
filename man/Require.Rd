@@ -14,13 +14,18 @@ Require(
   install = getOption("Require.install", TRUE),
   require = getOption("Require.require", TRUE),
   repos = getOption("repos"),
+  purge = getOption("Require.purge", FALSE),
   ...
 )
 }
 \arguments{
 \item{packages}{Character vector of packages to install via
 \code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require})}
+one package, it can be unquoted (as in \code{require}). In the case of a GitHub
+package, it will be assumed that the name of the repository is the name of the
+package. If this is not the case, then pass a named character vector here, where
+the names are the package names that could be different than the GitHub repository
+name.}
 
 \item{packageVersionFile}{If provided, then this will override all \code{install.package}
 calls with \code{versions::install.versions}}
@@ -103,6 +108,11 @@ package versions will be saved automatically (with \code{standAlone = TRUE}
 or \code{standAlone = FALSE}), allowing a call to \code{pkgSnapshot} when a
 more permanent record of versions can be made.
 }
+\note{
+For advanced use and diagnosis, the user can set \code{options("Require.verbose")}
+and there will be an attribute \code{attr(obj, "Require")} attached to the output
+of this function.
+}
 \examples{
 \dontrun{
 # simple usage, like conditional install.packages then library
@@ -150,9 +160,9 @@ Require("crayon", packageVersionFile = packageVersionFile,
 tempPkgFolder <- file.path(tempdir(), "Packages")
 Require(c("cranlogs", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
 
-#######################################################################
-# Isolated projects -- Just use a project folder and pass to libPaths #
-#######################################################################
+##########################################################################################
+# Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
+##########################################################################################
 # GitHub packages -- restart R because crayon is needed
 library(Require)
 ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
@@ -161,11 +171,14 @@ ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
 #    of package versioning
 Require("PredictiveEcology/SpaDES@development",
                  libPaths = ProjectPackageFolder, standAlone = FALSE)
+
 # To keep totally isolated: use standAlone = TRUE
+#   --> setting .libPaths() directly means standAlone is not necessary; it will only
+#   use .libPaths()
 library(Require)
-ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
-Require("PredictiveEcology/SpaDES@development",
-                 libPaths = ProjectPackageFolder, standAlone = TRUE)
+ProjectPackageFolder <- file.path("~", "ProjectA")
+.libPaths(ProjectPackageFolder)
+Require("PredictiveEcology/SpaDES@development")
 
 
 # If creating an iso
