@@ -198,6 +198,7 @@ Require <- function(packages, packageVersionFile,
   on.exit({.libPaths(origLibPaths)}, add = TRUE)
 
 
+  browser(expr = exists("._Require_1"))
   if (length(which) && isTRUE(install)) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
   }
@@ -224,7 +225,8 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs, ...)
       }
-      pkgDT[, toLoad := (trimVersionNumber(packageFullName) %in% unique(trimVersionNumber(packagesOrig)))]
+      pkgDT[Package %in% unique(extractPkgName(packagesOrig)), packagesRequired := TRUE]
+      pkgDT[, toLoad := packagesRequired]
       # pkgDT[, toLoad := correctVersion == TRUE]
       pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
       packages <- pkgDT[toLoad == TRUE]$Package
@@ -238,6 +240,8 @@ Require <- function(packages, packageVersionFile,
     out <- unlist(postLoad$out)
     if (is.null(out)) out <- character()
     pkgDT[, loaded := (pkgDT$Package %in% names(out) & toLoad == TRUE)]
+    out <- pkgDT[packagesRequired == TRUE]$loaded
+    names(out) <- pkgDT[packagesRequired == TRUE]$Package
   } else {
     out <- rep(FALSE, length(packages))
     names(out) <- packages
@@ -771,20 +775,23 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   out1 <- unique(unname(unlist(out1)))
   out2 <- c(out1, pkgs)
   out3 <- c(out1, packages)
-  dt <- data.table(github = extractPkgGitHub(out2), reg = out2,
+  dt <- data.table(github = extractPkgGitHub(out2), Package = out2,
                    depOrOrig = c(rep("dep", length(out1)), rep("orig", length(pkgs))),
-                   Package = out3)
+                   fullPackageName = out3)
   set(dt, NULL, "origOrder", seq_along(dt$github))
-  dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "reg"]
+  dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
   dt[bothDepAndOrig == TRUE, depOrOrig := "both"]
 
 
   if ("github" %in% colnames(dt))
     setorderv(dt, na.last = TRUE, "github") # keep github packages up at top -- they take precedence
-  dt <- dt[!duplicated(reg)]
+  haveVersion <- dt[Package != fullPackageName] # have no version number or are github
+  haveNoVersion <- dt[Package == fullPackageName] # have no version number or are github
+  dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package][!duplicated(Package)]))
+  # dt <- dt[!duplicated(Package)]
   setorderv(dt, "origOrder")
   # set(dt, NULL, c("github", "origOrder", "bothDepAndOrig"), NULL)
-  dt$Package
+  dt$fullPackageName
 }
 
 colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",

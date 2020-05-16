@@ -46,7 +46,7 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
       couldHaveLoaded
     }
 
-    testit::assert(sort(actuallyLoaded) == sort(have[toLoad == TRUE]$Package))
+    testit::assert(isTRUE(all.equal(sort(actuallyLoaded), sort(have[toLoad == TRUE]$Package))))
   }
   unloadNSRecursive <- function(packages, n = 0) {
     if (!missing(packages)) {
@@ -180,7 +180,8 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     i <- i + 1
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     # if (i == 7) stop()
-    # abab <<- 1
+    #if (all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
+    #  ._Require_1 <<- 1
     outFromRequire <- Require::Require(pkg, repos = repo, standAlone = FALSE)
     out <- Require::Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
@@ -191,7 +192,6 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     normalRequire <- unlist(lapply(pkgsToTest,
                                    function(p) tryCatch(require(p, character.only = TRUE),
                                                         error = function(x) FALSE)))
-    abab <<- 1
     out2 <- out
     out2 <- out2[names(out2) %in% names(normalRequire)]
     #out1 <- out1[Package %in% names(normalRequire)]
@@ -205,11 +205,15 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     else
       normalRequire
 
-    browser(expr = all("fastdigest" %in% unique(Require:::extractPkgName(pkg))))
-    out2 <- out2[out2]
-    browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
-    testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
-    runTests(have, pkg)
+    # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
+    if (length(out2)) {
+      out2 <- out2[out2]
+      browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
+      testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
+      runTests(have, pkg)
+    } else {
+
+    }
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
     if (any("TimeWarp" %in% Require::extractPkgName(pkg))) {
       unloadNamespace("Holidays")
