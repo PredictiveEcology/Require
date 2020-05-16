@@ -31,7 +31,7 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
                    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
                    "withr")
-  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), 2), RequireDeps)
+  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), 5), RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
 
@@ -167,7 +167,9 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
                "Holidays (>=1000.3.1)",
                c("Holidays (>=1.0.1)", "fpCompare"),
-               "Holidays (>=1.3.1)"
+               "Holidays (>=1.3.1)",
+               c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "PredictiveEcology/LandR",
+                 "PredictiveEcology/LandR@development", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")

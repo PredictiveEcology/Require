@@ -180,14 +180,22 @@ Require <- function(packages, packageVersionFile,
                     purge = getOption("Require.purge", FALSE),
                     ...){
 
+  browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
+  # Some package names are not derived from their GitHub repo names -- user can supply named packages
   origPackagesHaveNames <- nchar(names(packages)) > 0
   if (any(origPackagesHaveNames))
     packages <- packages[order(names(packages), decreasing = TRUE)]
-  packages <- packages[!duplicated(packages)] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
+  dups <- duplicated(packages)
+  packages <- packages[!dups] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
+  origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
   packagesOrig <- packages
+  packageNamesOrig <- packages
+  if (any(origPackagesHaveNames))
+    packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
+
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
     packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
@@ -204,7 +212,8 @@ Require <- function(packages, packageVersionFile,
   }
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
   if (any(origPackagesHaveNames))
-    pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames], Package := names(packagesOrig[origPackagesHaveNames])]
+    pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
+          Package := names(packagesOrig[origPackagesHaveNames])]
 
   installedPkgsCurrent <- installed.packages(noCache = isTRUE(purge))
   installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"), drop = FALSE])
@@ -225,7 +234,8 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs, ...)
       }
-      pkgDT[Package %in% unique(extractPkgName(packagesOrig)), packagesRequired := TRUE]
+      browser(expr = exists("._Require_2"))
+      pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
       pkgDT[, toLoad := packagesRequired]
       # pkgDT[, toLoad := correctVersion == TRUE]
       pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
