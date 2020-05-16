@@ -181,7 +181,15 @@ ProjectPackageFolder <- file.path("~", "ProjectA")
 Require("PredictiveEcology/SpaDES@development")
 
 
-# If creating an iso
+############################################################################
+# Mixing and matching
+############################################################################
+# Restart R -- when installing/loading packages, start fresh
+pkgs <- c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
+"achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+"PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)")
+Require::Require(pkgs)
+
 }
 
 }
