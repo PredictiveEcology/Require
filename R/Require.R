@@ -207,6 +207,7 @@ Require <- function(packages, packageVersionFile,
 
 
   browser(expr = exists("._Require_1"))
+  # aaaaa <<- 1
   if (length(which) && isTRUE(install)) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
   }
@@ -265,6 +266,16 @@ Require <- function(packages, packageVersionFile,
   return(out)
 }
 
+
+#' @details
+#' \code{parseGitHub} turns the single character string representation into 3 or 4:
+#' Account, Repo, Branch, SubFolder.
+#'
+#' @return
+#' A data.table with added columns.
+#'
+#' @rdname GitHubTools
+#' @export
 parseGitHub <- function(pkgDT) {
   if (!is.data.table(pkgDT))
     pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
@@ -526,6 +537,14 @@ extractPkgGitHub <- function(pkgs) {
 #' @rdname extractPkgName
 #' extractPkgName("Require (>=0.0.1)")
 extractPkgName <- function(pkgs) {
+  hasNamesAny <- !is.null(names(pkgs))
+  if (hasNamesAny) {
+    browser(expr = exists("aaaaa"))
+    hasNames <- nchar(names(pkgs)) > 0
+    pkgs[hasNames] <- names(pkgs)[hasNames]
+    pkgs <- unname(pkgs)
+  }
+
   pkgNames <- trimVersionNumber(pkgs)
   withGitName <- extractPkgGitHub(pkgNames)
   isNAWithGitName <- is.na(withGitName)
@@ -549,21 +568,27 @@ grepExtractPkgs <- ".*\\((<*>*=*) *(.*)\\)"
 .evalV <- Vectorize(eval, vectorize.args = "expr")
 .parseV <- Vectorize(parse, vectorize.args = "text")
 
-
+#' GitHub package tools
 #'
+#' A series of helpers to access and deal with GitHub packages
+#'
+#' @details
+#' \code{getGitHubDESCRIPTION} retrieves the DESCRIPTION file from GitHub.com
+#'
+#' @rdname GitHubTools
 #' @export
-getGitHubPackageVersion <- function(pkgDT) {
-  if (!is.data.table(pkgDT))
-    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
-  pkgDT <- getGitHubDESCRIPTION(pkgDT$packageFullName)
-  pkgDT[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersion(DESCFile),
-        by = c("Package", "Branch")]
-  pkgDT[]
-}
-
+#' @param pkg A character string with a GitHub package specification (c.f. remotes)
 getGitHubDESCRIPTION <- function(pkg) {
+  if (is.data.table(pkg)) {
+    if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
+      if (all(c("fullPackageName") %in% colnames(pkg))) {
+        browser()
+        pkg <- pkg$fullPackageName
+      }
+    }
+  }
+
   pkgDT <- parseGitHub(pkg)
-  names(pkg) <- extractPkgName(pkg)
   pkgDT[repoLocation == "GitHub",
         url := {
           if (hasSubFolder) {
