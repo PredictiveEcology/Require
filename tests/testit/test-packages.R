@@ -184,14 +184,10 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
-    # if (i == 7) stop()
-    #if (all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
-    #  ._Require_1 <<- 1
     outFromRequire <- Require::Require(pkg, repos = repo, standAlone = FALSE)
     out <- Require::Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
     have <- attr(out, "Require")
-    #have <- Require::Require(pkg, install = FALSE, require = FALSE)
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     normalRequire <- unlist(lapply(pkgsToTest,
@@ -199,11 +195,9 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                                                         error = function(x) FALSE)))
     out2 <- out
     out2 <- out2[names(out2) %in% names(normalRequire)]
-    #out1 <- out1[Package %in% names(normalRequire)]
     whMatch <- match(names(normalRequire), names(out2))
     whMatch <- whMatch[!is.na(whMatch)]
     out2 <- out2[whMatch]
-    # have <- attr(have, "Require")
     have2 <- have[toLoad == TRUE]
     normalRequire2 <- if (NROW(have2))
       normalRequire[have2$Package]
