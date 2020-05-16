@@ -210,6 +210,7 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
     if (length(out2)) {
       out2 <- out2[out2]
+      normalRequire2 <- normalRequire2[!is.na(normalRequire2)]
       browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
       testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
       runTests(have, pkg)
