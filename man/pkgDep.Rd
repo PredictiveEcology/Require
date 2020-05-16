@@ -69,6 +69,9 @@ will include version number. Default is \code{FALSE}}
 If \code{FALSE}, the packages will not have a discernable order as they will be a
 concatenation of the possibly recursive package dependencies.}
 
+\item{purge}{Logical. Internally, there are calls to \code{installed.packages} and
+\code{available.packages}}
+
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
 }

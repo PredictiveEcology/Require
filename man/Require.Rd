@@ -64,6 +64,9 @@ are installed.}
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
+\item{purge}{Logical. Internally, there are calls to \code{installed.packages} and
+\code{available.packages}}
+
 \item{...}{Passed to \emph{all} of \code{install_github}, \code{install.packages}, and
 \code{remotes::install_version}, i.e., the function will error if all of these functions
 can not use the ... argument. Good candidates are e.g., \code{type} or \code{dependencies}.

@@ -87,6 +87,8 @@ if (getRversion() >= "3.1.0") {
 #'                   place in the \code{libPaths} directory that lists all the packages
 #'                   that were needed during the \code{Require} call. Default \code{FALSE} to
 #'                   minimize package installing.
+#' @param purge Logical. Internally, there are calls to \code{installed.packages} and
+#'   \code{available.packages}
 #' @param ... Passed to \emph{all} of \code{install_github}, \code{install.packages}, and
 #'   \code{remotes::install_version}, i.e., the function will error if all of these functions
 #'   can not use the ... argument. Good candidates are e.g., \code{type} or \code{dependencies}.
