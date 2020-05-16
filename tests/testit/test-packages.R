@@ -25,8 +25,13 @@ testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
 if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
-  RequireDeps <- c("data.table", "remotes", "utils")
-  pkgsToRm <- setdiff(sample(pkgsInstalled, 5), RequireDeps)
+  RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
+                   "crayon", "desc", "digest", "DT", "ellipsis",
+                   "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
+                   "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
+                   "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
+                   "withr")
+  pkgsToRm <- setdiff(sample(pkgsInstalled, 2), RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
 
@@ -178,12 +183,21 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     normalRequire <- unlist(lapply(pkgsToTest,
                                    function(p) tryCatch(require(p, character.only = TRUE),
                                                         error = function(x) FALSE)))
+    abab <<- 1
     out2 <- out
     out2 <- out2[names(out2) %in% names(normalRequire)]
     #out1 <- out1[Package %in% names(normalRequire)]
-    out2 <- out2[match(names(normalRequire), names(out2))]
+    whMatch <- match(names(normalRequire), names(out2))
+    whMatch <- whMatch[!is.na(whMatch)]
+    out2 <- out2[whMatch]
     have <- attr(have, "Require")
-    have2 <- have[toLoad == TRUE]
+    have <- Require:::getPkgVersions(have, install = FALSE)
+    have <- Require:::getAvailable(have)
+    have <- Require:::installFrom(have)
+
+
+    browser()
+    have2 <- have[installed == TRUE]
     normalRequire2 <- if (NROW(have2))
       normalRequire[have2$Package]
     else

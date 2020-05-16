@@ -67,14 +67,13 @@ pkgDep <- function(packages, libPath = .libPaths(),
   if (isTRUE(purge)) {
     whExist <- unlist(lapply(saveNames, exists, envir = .pkgEnv))
     if (any(whExist))
-      rm(list = saveNames[whExist], envir = .pkgEnv)
+      suppressWarnings(rm(list = saveNames[whExist], envir = .pkgEnv))
   }
   neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
   needGet <- unlist(lapply(neededFull1, is.null))
 
   if (any(needGet)) {
 
-    browser(expr = exists("abab"))
     neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber, purge = purge)
     purge <- FALSE # whatever it was, it was done in line above
     theNulls <- unlist(lapply(neededFull, is.null))
@@ -136,7 +135,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         }
         needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
       } else if (any("CRAN" %in% pkgDT$repoLocation)) {
-        browser(expr = exists("abab"))
         needed <- unname(unlist(pkgDepCRAN(pkg, recursive = FALSE,
                                            which = which, keepVersionNumber = keepVersionNumber,
                                            purge = purge)))
@@ -175,7 +173,8 @@ pkgDep2 <- function(packages, recursive = TRUE,
                     depends, imports, suggests, linkingTo,
                     repos = getOption("repos"),
                     sorted = TRUE) {
-  a <- lapply(pkgDep(packages, recursive = FALSE, which = which, depends = depends, imports = imports, suggests = suggests,
+  a <- lapply(pkgDep(packages, recursive = FALSE, which = which, depends = depends,
+                     imports = imports, suggests = suggests,
                      linkingTo = linkingTo)[[1]],
               recursive = recursive,
               pkgDep, depends = depends, imports = imports, suggests = suggests,
@@ -192,7 +191,6 @@ pkgDep2 <- function(packages, recursive = TRUE,
 pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
-  browser(expr = exists("abab"))
   cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
     aa <- available.packages(repos = repos)
     assign("cachedAvailablePackages", aa, envir = .pkgEnv)
