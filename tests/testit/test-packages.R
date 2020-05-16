@@ -1,3 +1,8 @@
+repos <- NULL
+repos2 <- "https://cloud.r-project.org"
+repos["CRAN"] <- repos2
+options("repos" = repos, "Require.purge" = TRUE)
+
 library(testit)
 tmpdir <- if (Sys.info()["user"] != "emcintir") {
   file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
@@ -11,10 +16,10 @@ on.exit(.libPaths(oldLibPaths))
 
 pkgDepTest1 <- Require::pkgDep("Require")
 testit::assert(length(pkgDepTest1) == 1)
-testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes", "utils"))
+testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
 
 pkgDepTest2 <- Require::pkgDep2("Require")
-testit::assert(length(pkgDepTest2) == 3)
+testit::assert(length(pkgDepTest2) == 4)
 testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
 
 if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
@@ -107,8 +112,8 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
 
 
-  pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "achubaty/amc@development", "PredictiveEcology/LandR (>=0.0.1)",
-                 "PredictiveEcology/LandR (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
+  pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)", "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+                 "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
                  "PredictiveEcology/map@development (>= 4.0.9)",
 
@@ -157,12 +162,13 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
   options("Require.verbose" = TRUE)
 
   i <- 0
-  pkg <- pkgs[[1]]
+  pkg <- pkgs[[1]] # redundant, but kept for interactive use
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     # if (i == 7) stop()
+    # abab <<- 1
     outFromRequire <- Require::Require(pkg, repos = repo, standAlone = FALSE)
     out <- Require::Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
@@ -196,5 +202,6 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
   }
 }
 
+options("Require.verbose" = TRUE)
 out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
-assert(attr(out, "Require"))
+testit::assert(is.data.table(attr(out, "Require")))

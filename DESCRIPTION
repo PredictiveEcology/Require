@@ -21,6 +21,7 @@ Depends:
     R (>= 3.5)
 Imports:
     data.table (>= 1.10.4),
+    methods,
     remotes,
     utils
 Suggests:

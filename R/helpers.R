@@ -232,3 +232,12 @@ tempfile2 <- function(sub = "", ...) {
 
 .RequireTempPath <- function() normPath(file.path(tempdir(), "Require"))
 
+
+invertList <- function(l) {
+  indices <- list(names(l), names(l[[1]]))
+  names(indices[[1]]) <- indices[[1]]
+  names(indices[[2]]) <- indices[[2]]
+  lapply(indices[[2]], function(i) {
+    lapply(indices[[1]], function(j) l[[j]][[i]])
+  })
+}
