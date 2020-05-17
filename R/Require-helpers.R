@@ -342,7 +342,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       installPkgNames <- toInstall[installFrom == "CRAN"]$Package
       names(installPkgNames) <- installPkgNames
       dots <- list(...)
-      dots$dependencies <- FALSE
+      dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
       out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs), dots))
       warn <- warnings()
