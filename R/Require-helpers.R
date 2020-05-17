@@ -224,20 +224,6 @@ DESCRIPTIONFileVersion <- function(file) {
   unlist(out)
 }
 
-setLibPaths <- function(libPaths = .libPaths(), standAlone = FALSE) {
-  out <- unlist(lapply(libPaths, checkPath, create = TRUE))
-  libPaths <- normalizePath(libPaths, winslash = "/") # the system call requires this
-
-  origLibPaths <- .libPaths()
-  if (standAlone) {
-    .libPaths(c(libPaths, tail(.libPaths(), 1)))
-  } else {
-    if (!all(normPath(libPaths) %in% normPath(.libPaths())))
-      .libPaths(c(libPaths, .libPaths()))
-  }
-  return(invisible(origLibPaths))
-}
-
 extractVersionNumber <- function(packageFullName) {
   gsub(grepExtractPkgs, "\\2", packageFullName)
 }
@@ -560,3 +546,40 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "installed", "repoLocation", "correctVersion", "correctVersionAvail",
                 "toLoad", "hasVersionSpec")
+
+#' Set .libPaths
+#'
+#' This will set the .libPaths() by either adding a new path to
+#' it if \code{standAlone = FALSE}, or will concatenate
+#' \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
+#'
+#' @details
+#' This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}
+#'
+#' @param libPaths A new path to append to, or replace all existing user
+#'   components of \code{.libPath()}
+#' @inheritParams Require
+#' @export
+#' @examples
+#' \dontrun{
+#' setLibPaths("~/newProjectLib") # will have 2 or more paths
+#' setLibPaths("~/newProjectLib", standAlone = TRUE) # will only have 2 paths
+#'
+#' }
+setLibPaths <- function(libPaths, standAlone = FALSE) {
+
+  libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
+
+  shim_fun <- .libPaths
+  shim_env <- new.env(parent = environment(shim_fun))
+  if (isTRUE(standAlone)) {
+    shim_env$.Library <- tail(.libPaths(), 1)
+  } else {
+    shim_env$.Library <- .libPaths()
+  }
+  shim_env$.Library.site <- character()
+
+  environment(shim_fun) <- shim_env
+  shim_fun(libPaths)
+
+}
