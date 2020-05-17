@@ -298,7 +298,6 @@ getGitHubDESCRIPTION <- function(pkg) {
   if (is.data.table(pkg)) {
     if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
       if (all(c("fullPackageName") %in% colnames(pkg))) {
-        browser()
         pkg <- pkg$fullPackageName
       }
     }
@@ -425,7 +424,6 @@ doLoading <- function(toLoadPkgs, ...) {
              "\n-----\n...before any other packages get loaded")
       }
       error3 <- grepl("is being loaded, but", outMess)
-      browser()
       packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
       if (any(error3)) {
         pkgs <- paste(packageNames, collapse = "', '")
@@ -437,7 +435,6 @@ doLoading <- function(toLoadPkgs, ...) {
     }
     doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
     if (any(missingDeps) && doDeps) {
-      browser()
       grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
       packageNames <- character()
       if (any(grepl(grep3a, outMess[missingDeps])))
