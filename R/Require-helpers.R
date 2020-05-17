@@ -562,11 +562,11 @@ colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
 #' @export
 #' @examples
 #' \dontrun{
-#' setLibPaths("~/newProjectLib") # will have 2 or more paths
-#' setLibPaths("~/newProjectLib", standAlone = TRUE) # will only have 2 paths
+#' setLibPaths("~/newProjectLib") # will only have 2 paths
+#' setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
 #'
 #' }
-setLibPaths <- function(libPaths, standAlone = FALSE) {
+setLibPaths <- function(libPaths, standAlone = TRUE) {
 
   libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
 

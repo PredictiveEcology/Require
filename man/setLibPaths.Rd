@@ -4,7 +4,7 @@
 \alias{setLibPaths}
 \title{Set .libPaths}
 \usage{
-setLibPaths(libPaths, standAlone = FALSE)
+setLibPaths(libPaths, standAlone = TRUE)
 }
 \arguments{
 \item{libPaths}{A new path to append to, or replace all existing user
@@ -31,8 +31,8 @@ This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}
 }
 \examples{
 \dontrun{
-setLibPaths("~/newProjectLib") # will have 2 or more paths
-setLibPaths("~/newProjectLib", standAlone = TRUE) # will only have 2 paths
+setLibPaths("~/newProjectLib") # will only have 2 paths
+setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
 
 }
 }
