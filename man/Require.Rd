@@ -185,14 +185,20 @@ Require("PredictiveEcology/SpaDES@development")
 
 
 ############################################################################
-# Mixing and matching
+# Mixing and matching GitHub, CRAN, with and without version numbering
 ############################################################################
 # Restart R -- when installing/loading packages, start fresh
 pkgs <- c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
-"achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
-"PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)")
+          "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+          "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)")
 Require::Require(pkgs)
 
+############################################################################
+# Using libPathsh -- This will only be used inside this function;
+# To change .libPaths() for the whole session use a manually call to
+# setLibPaths(newPath) first
+############################################################################
+Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
 }
 
 }

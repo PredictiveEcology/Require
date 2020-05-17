@@ -565,6 +565,7 @@ colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
 #' }
 setLibPaths <- function(libPaths, standAlone = TRUE) {
 
+  oldLibPaths <- .libPaths()
   libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
 
   shim_fun <- .libPaths
@@ -577,6 +578,6 @@ setLibPaths <- function(libPaths, standAlone = TRUE) {
   shim_env$.Library.site <- character()
 
   environment(shim_fun) <- shim_env
-  shim_fun(libPaths)
-
+  shim_fun(unique(libPaths))
+  return(oldLibPaths)
 }
