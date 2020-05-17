@@ -75,21 +75,21 @@ if (getRversion() >= "3.1.0") {
 #' @param libPaths The library path (or libraries) where all packages should be installed,
 #'        and looked for to load (i.e., call \code{library}). This can be used to create
 #'        isolated, stand alone package installations, if used with \code{standAlone = TRUE}.
-#'        Currently, the path supplied here will be prepended to \code{.libPaths()} unless
-#'        \code{standAlone = TRUE}.
+#'        Currently, the path supplied here will be prepended to \code{.libPaths()} (temporarily
+#'        during this call) to \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
+#'        .libPaths() to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              \code{install.packages}, \code{install_github} or \code{installVersions}.
 #' @param install_githubArgs List of optional named arguments, passed to \code{install_github}.
 #' @param install.packagesArgs List of optional named arguments, passed to \code{install.packages}.
 #' @param standAlone Logical. If \code{TRUE}, all packages will be installed to and loaded from
 #'                   the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-#'                   be prepended to \code{.libPaths()}, resulting in shared packages, i.e.,
+#'                   be prepended to \code{.libPaths()} during the \code{Require} call,
+#'                   resulting in shared packages, i.e.,
 #'                   it will include the user's default package folder(s).
 #'                   This can be create dramatically faster
 #'                   installs if the user has a substantial number of the packages already in their
-#'                   personal library. In the case of \code{TRUE}, there will be a hidden file
-#'                   place in the \code{libPaths} directory that lists all the packages
-#'                   that were needed during the \code{Require} call. Default \code{FALSE} to
+#'                   personal library. Default \code{FALSE} to
 #'                   minimize package installing.
 #' @param purge Logical. Internally, there are calls to \code{installed.packages} and
 #'   \code{available.packages}
@@ -168,7 +168,7 @@ if (getRversion() >= "3.1.0") {
 #' #   use .libPaths()
 #' library(Require)
 #' ProjectPackageFolder <- file.path("~", "ProjectA")
-#' .libPaths(ProjectPackageFolder)
+#' setLibPaths(ProjectPackageFolder)
 #' Require("PredictiveEcology/SpaDES@development")
 #'
 #'
@@ -187,6 +187,13 @@ if (getRversion() >= "3.1.0") {
 #' # setLibPaths(newPath) first
 #' ############################################################################
 #' Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
+#'
+#' ############################################################################
+#' # Persistent separate packagesss
+#' ############################################################################
+#' setLibPaths("~/TempLib2", standAlone = TRUE)
+#' Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
+#'
 #' }
 #'
 Require <- function(packages, packageVersionFile,
@@ -223,7 +230,6 @@ Require <- function(packages, packageVersionFile,
   if (missing(libPaths))
     libPaths <- .libPaths()
   origLibPaths <- setLibPaths(libPaths, standAlone)
-  browser()
   on.exit({setLibPaths(origLibPaths)}, add = TRUE)
 
 

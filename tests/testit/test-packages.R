@@ -12,8 +12,8 @@ tmpdir <- if (Sys.info()["user"] != "emcintir") {
 }
 suppressWarnings(dir.create(tmpdir))
 oldLibPaths <- .libPaths()
-on.exit(.libPaths(oldLibPaths))
-.libPaths(tmpdir)
+on.exit(setLibPaths(oldLibPaths))
+setLibPaths(tmpdir)
 
 pkgDepTest1 <- Require::pkgDep("Require")
 testit::assert(length(pkgDepTest1) == 1)

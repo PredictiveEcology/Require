@@ -15,13 +15,12 @@ Defaults to the .libPaths()[1]}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
 the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-be prepended to \code{.libPaths()}, resulting in shared packages, i.e.,
+be prepended to \code{.libPaths()} during the \code{Require} call,
+resulting in shared packages, i.e.,
 it will include the user's default package folder(s).
 This can be create dramatically faster
 installs if the user has a substantial number of the packages already in their
-personal library. In the case of \code{TRUE}, there will be a hidden file
-place in the \code{libPaths} directory that lists all the packages
-that were needed during the \code{Require} call. Default \code{FALSE} to
+personal library. Default \code{FALSE} to
 minimize package installing.}
 }
 \description{
