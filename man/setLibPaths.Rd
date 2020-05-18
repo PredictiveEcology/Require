@@ -25,7 +25,10 @@ it if \code{standAlone = FALSE}, or will concatenate
 \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
 }
 \details{
-This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}
+This was taken from https://stackoverflow.com/a/36873741/3890027 . Another
+possible solution to this strange issue is here:
+This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}.
+This 2nd one is currently not used as it appeared not to work on Travis
 }
 \examples{
 \dontrun{
