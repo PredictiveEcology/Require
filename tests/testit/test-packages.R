@@ -22,8 +22,8 @@ testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", 
 
 testit::assert(length(pkgDepTest2) == 4)
 testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
-if (FALSE) {
-if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
+#if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
+if (interactive()) {
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
   RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
@@ -223,7 +223,6 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
       remove.packages(c("Holidays", "TimeWarp"))
     }
   }
-}
 }
 options("Require.verbose" = TRUE)
 out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())

@@ -79,8 +79,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
     theNulls <- unlist(lapply(neededFull, is.null))
     neededFull2 <- neededFull[!theNulls]
     if (NROW(neededFull2)) {
+
       if (recursive) {
-        which <- tail(which, 1)[[1]]
+        which <- tail(which, 1)[[1]] # take the last of the list of which
         neededFull2 <- lapply(neededFull2, function(needed) {
           i <- 1
           pkgsNew <- list()
@@ -105,7 +106,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     Map(sn = saveNames, n = names(saveNames), function(sn, n) {
       assign(sn, neededFull2[[n]], envir = .pkgEnv)
     })
-    neededFull1 <- append(neededFull1[!needGet], neededFull2[needGet])
+    neededFull1 <- append(neededFull1[!needGet], neededFull2)
   }
 
 
@@ -113,6 +114,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
   if (isTRUE(sort))
     neededFull1 <- lapply(neededFull1, function(x) sort(x))
+  if (isFALSE(keepVersionNumber))
+    neededFull1 <- lapply(neededFull1, trimVersionNumber)
   neededFull1
 
 }
