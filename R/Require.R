@@ -107,7 +107,7 @@ if (getRversion() >= "3.1.0") {
 #' @importFrom data.table data.table as.data.table setDT set is.data.table
 #'   rbindlist
 #' @importFrom data.table setnames setorderv := .SD .I
-#' @importFrom utils install.packages capture.output assignInMyNamespace
+#' @importFrom utils install.packages capture.output assignInMyNamespace packageVersion
 #'   available.packages
 #' @importFrom utils compareVersion installed.packages
 #' @examples

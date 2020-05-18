@@ -22,7 +22,7 @@ testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", 
 
 testit::assert(length(pkgDepTest2) == 4)
 testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
-
+if (FALSE) {
 if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
@@ -224,9 +224,8 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
     }
   }
 }
-
+}
 options("Require.verbose" = TRUE)
 out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
-testit::assert(is.data.table(attr(out, "Require")))
+testit::assert(data.table::is.data.table(attr(out, "Require")))
 
-Require::Require("A3")

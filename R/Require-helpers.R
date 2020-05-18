@@ -213,6 +213,8 @@ installFrom <- function(pkgDT) {
   pkgDT
 }
 
+#' @rdname DESCRIPTION-helpers
+#' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersion <- function(file) {
   out <- lapply(file, function(f) {
     lines <- readLines(f);
@@ -224,23 +226,6 @@ DESCRIPTIONFileVersion <- function(file) {
   unlist(out)
 }
 
-extractVersionNumber <- function(packageFullName) {
-  gsub(grepExtractPkgs, "\\2", packageFullName)
-}
-
-
-#' @rdname extractPkgName
-#' @export
-extractInequality <- function(pkgs) {
-  gsub(grepExtractPkgs, "\\1", pkgs)
-}
-
-
-#' @rdname extractPkgName
-#' @export
-extractPkgGitHub <- function(pkgs) {
-  unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
-}
 
 #' Extract info from package character strings
 #'
@@ -271,6 +256,37 @@ extractPkgName <- function(pkgs) {
   pkgNames
 }
 
+#' @rdname extractPkgName
+#' @export
+#' @examples
+#' extractVersionNumber("Require (<=0.0.1)")
+extractVersionNumber <- function(pkgs) {
+  gsub(grepExtractPkgs, "\\2", pkgs)
+}
+
+
+#' @rdname extractPkgName
+#' @export
+#' @examples
+#' extractInequality("Require (<=0.0.1)")
+extractInequality <- function(pkgs) {
+  gsub(grepExtractPkgs, "\\1", pkgs)
+}
+
+
+#' @rdname extractPkgName
+#' @export
+#' @examples
+#' extractPkgGitHub("PredictiveEcology/Require")
+extractPkgGitHub <- function(pkgs) {
+  unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
+}
+
+
+#' @rdname extractPkgName
+#' @export
+#' @examples
+#' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 trimVersionNumber <- function(packages) {
   out <- gsub(.grepVersionNumber, "", packages)
   gsub("\n|\t", "", out)
@@ -291,7 +307,7 @@ grepExtractPkgs <- ".*\\((<*>*=*) *(.*)\\)"
 #' @details
 #' \code{getGitHubDESCRIPTION} retrieves the DESCRIPTION file from GitHub.com
 #'
-#' @rdname GitHubTools
+#' @rdname DESCRIPTION-helpers
 #' @export
 #' @param pkg A character string with a GitHub package specification (c.f. remotes)
 getGitHubDESCRIPTION <- function(pkg) {
@@ -324,7 +340,6 @@ getGitHubDESCRIPTION <- function(pkg) {
   pkgDT[]
 }
 
-# getPkgVersions(pkgs1)
 
 updateInstalled <- function(pkgDT, installPkgNames, warn) {
   if (missing(warn)) warn <- warnings()
@@ -481,7 +496,24 @@ archiveVersionsAvailable <- function(package, repos) {
   stop(sprintf("couldn't find package '%s'", package))
 }
 
+#' Vectorized install_github
+#'
+#' This will attempt to identify all dependencies of all packages first, then
+#' load the packages in the correct order so that each of their dependencies are
+#' met before each is installed.
+#'
+#' @param gitPkgNames Character vector of package to install from github
+#' @param install_githubArgs Any arguments passed to \code{install_github}
+#' @param ... Another way to pass arguments to \code{install_github}
+#' @examples
+#' \dontrun{
+#'   install_githubV(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
+#' }
+#'
 install_githubV <- function(gitPkgNames, install_githubArgs, ...) {
+  if (!is.data.table(gitPkgNames)) {
+    pkgDT <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
+  }
   dots <- list(...)
   dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
