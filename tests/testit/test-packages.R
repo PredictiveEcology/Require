@@ -8,27 +8,27 @@ options("repos" = repos, "Require.purge" = TRUE)
 # suggested solution https://stackoverflow.com/a/27994299/3890027
 Sys.setenv("R_TESTS" = "")
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
+
+library(testit)
+tmpdir <- if (Sys.info()["user"] != "emcintir") {
+  file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+} else {
+  "~/TempLib5"
+}
+suppressWarnings(dir.create(tmpdir))
+oldLibPaths <- .libPaths()
+on.exit(Require::setLibPaths(oldLibPaths))
+pkgDepTest1 <- Require::pkgDep("Require")
+pkgDepTest2 <- Require::pkgDep2("Require")
+Require::setLibPaths(tmpdir, standAlone = TRUE)
+
+testit::assert(length(pkgDepTest1) == 1)
+testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
+
+testit::assert(length(pkgDepTest2) == 4)
+testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
+#if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 if (interactive()) {
-
-  library(testit)
-  tmpdir <- if (Sys.info()["user"] != "emcintir") {
-    file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-  } else {
-    "~/TempLib5"
-  }
-  suppressWarnings(dir.create(tmpdir))
-  oldLibPaths <- .libPaths()
-  on.exit(Require::setLibPaths(oldLibPaths))
-  pkgDepTest1 <- Require::pkgDep("Require")
-  pkgDepTest2 <- Require::pkgDep2("Require")
-  Require::setLibPaths(tmpdir, standAlone = TRUE)
-
-  testit::assert(length(pkgDepTest1) == 1)
-  testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
-
-  testit::assert(length(pkgDepTest2) == 4)
-  testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
-  #if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
   RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
