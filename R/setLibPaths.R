@@ -33,7 +33,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE) {
            envir = environment(.libPaths))
     #shim_env$.Library <- tail(.libPaths(), 1)
   } else {
-    assign(".lib.loc", unique(c(libPaths, .libPaths)),
+    assign(".lib.loc", unique(c(libPaths, .libPaths())),
            envir = environment(.libPaths))
     #shim_env$.Library <- .libPaths()
   }
