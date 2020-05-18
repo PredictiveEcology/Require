@@ -228,3 +228,5 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 options("Require.verbose" = TRUE)
 out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
 testit::assert(is.data.table(attr(out, "Require")))
+
+Require::Require("A3")
