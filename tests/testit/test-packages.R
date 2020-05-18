@@ -223,8 +223,8 @@ if (interactive()) {
       remove.packages(c("Holidays", "TimeWarp"))
     }
   }
+  options("Require.verbose" = TRUE)
+  out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
+  testit::assert(data.table::is.data.table(attr(out, "Require")))
 }
-options("Require.verbose" = TRUE)
-out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
-testit::assert(data.table::is.data.table(attr(out, "Require")))
 
