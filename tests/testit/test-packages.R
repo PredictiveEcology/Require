@@ -19,16 +19,19 @@ suppressWarnings(dir.create(tmpdir))
 oldLibPaths <- .libPaths()
 on.exit(Require::setLibPaths(oldLibPaths))
 pkgDepTest1 <- Require::pkgDep("Require")
-pkgDepTest2 <- Require::pkgDep2("Require")
-Require::setLibPaths(tmpdir, standAlone = TRUE)
 
-testit::assert(length(pkgDepTest1) == 1)
-testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
-
-testit::assert(length(pkgDepTest2) == 4)
-testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
+Require::setLibPaths(oldLibPaths)
+###
 #if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 if (interactive()) {
+  pkgDepTest2 <- Require::pkgDep2("Require")
+  Require::setLibPaths(tmpdir, standAlone = TRUE)
+
+  testit::assert(length(pkgDepTest1) == 1)
+  testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
+
+  testit::assert(length(pkgDepTest2) == 4)
+  testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
   RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
