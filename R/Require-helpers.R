@@ -505,14 +505,16 @@ archiveVersionsAvailable <- function(package, repos) {
 #' @param gitPkgNames Character vector of package to install from github
 #' @param install_githubArgs Any arguments passed to \code{install_github}
 #' @param ... Another way to pass arguments to \code{install_github}
+#' @export
+#' @rdname GitHubTools
 #' @examples
 #' \dontrun{
 #'   install_githubV(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
 #' }
 #'
-install_githubV <- function(gitPkgNames, install_githubArgs, ...) {
+install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
   if (!is.data.table(gitPkgNames)) {
-    pkgDT <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
+    gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
   }
   dots <- list(...)
   dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
@@ -576,40 +578,3 @@ colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "installed", "repoLocation", "correctVersion", "correctVersionAvail",
                 "toLoad", "hasVersionSpec")
 
-#' Set .libPaths
-#'
-#' This will set the .libPaths() by either adding a new path to
-#' it if \code{standAlone = FALSE}, or will concatenate
-#' \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
-#'
-#' @details
-#' This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}
-#'
-#' @param libPaths A new path to append to, or replace all existing user
-#'   components of \code{.libPath()}
-#' @inheritParams Require
-#' @export
-#' @examples
-#' \dontrun{
-#' setLibPaths("~/newProjectLib") # will only have 2 paths
-#' setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
-#'
-#' }
-setLibPaths <- function(libPaths, standAlone = TRUE) {
-
-  oldLibPaths <- .libPaths()
-  libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
-
-  shim_fun <- .libPaths
-  shim_env <- new.env(parent = environment(shim_fun))
-  if (isTRUE(standAlone)) {
-    shim_env$.Library <- tail(.libPaths(), 1)
-  } else {
-    shim_env$.Library <- .libPaths()
-  }
-  shim_env$.Library.site <- character()
-
-  environment(shim_fun) <- shim_env
-  shim_fun(unique(libPaths))
-  return(oldLibPaths)
-}
