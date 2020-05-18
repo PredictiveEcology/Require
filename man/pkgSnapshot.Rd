@@ -14,14 +14,13 @@ installed version numbers. Defaults to \code{".packageVersions.txt"}.}
 Defaults to the .libPaths()[1]}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e.,
-it will include the user's default package folder(s).
-This can be create dramatically faster
-installs if the user has a substantial number of the packages already in their
-personal library. Default \code{FALSE} to
-minimize package installing.}
+                  the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
+                  be prepended to \code{.libPaths()} during the \code{Require} call,
+                  resulting in shared packages, i.e.,
+                  it will include the user's default package folder(s).
+                  This can be create dramatically faster
+installs if the user has a substantial number of the packages already in
+their personal library. Default \code{FALSE} to minimize package installing.}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.

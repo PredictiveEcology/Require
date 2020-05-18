@@ -51,32 +51,34 @@ if (getRversion() >= "3.1.0") {
 #' more permanent record of versions can be made.
 #'
 #' @note
-#' For advanced use and diagnosis, the user can set \code{options("Require.verbose")}
-#' and there will be an attribute \code{attr(obj, "Require")} attached to the output
-#' of this function.
+#' For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
+#' \code{1} or \code{2} (or via \code{options("Require.verbose")}). This will
+#' attache an attribute \code{attr(obj, "Require")} to the output of this
+#' function.
 #'
-#' @param install Logical or "force". If \code{FALSE}, this will not try to install anything.
-#'        If \code{"force"}, then it will force installation of requested packages,
-#'        mimicking a call to e.g., \code{install.packages}. If \code{TRUE}, the default,
-#'        then this
-#'        function will try to install any missing packages or dependencies.
-#' @param require Logical. If \code{TRUE}, the default, then the function will attempt
-#'        to call \code{require} on all requested \code{packages}, possibly after they
-#'        are installed.
+#' @param install Logical or "force". If \code{FALSE}, this will not try to
+#'   install anything. If \code{"force"}, then it will force installation of
+#'   requested packages, mimicking a call to e.g., \code{install.packages}. If
+#'   \code{TRUE}, the default, then this function will try to install any
+#'   missing packages or dependencies.
+#' @param require Logical. If \code{TRUE}, the default, then the function will
+#'   attempt to call \code{require} on all requested \code{packages}, possibly
+#'   after they are installed.
 #' @param packages Character vector of packages to install via
-#'        \code{install.packages}, then load (i.e., with \code{library}). If it is
-#'        one package, it can be unquoted (as in \code{require}). In the case of a GitHub
-#'        package, it will be assumed that the name of the repository is the name of the
-#'        package. If this is not the case, then pass a named character vector here, where
-#'        the names are the package names that could be different than the GitHub repository
-#'        name.
-#' @param packageVersionFile If provided, then this will override all \code{install.package}
-#'        calls with \code{versions::install.versions}
-#' @param libPaths The library path (or libraries) where all packages should be installed,
-#'        and looked for to load (i.e., call \code{library}). This can be used to create
-#'        isolated, stand alone package installations, if used with \code{standAlone = TRUE}.
-#'        Currently, the path supplied here will be prepended to \code{.libPaths()} (temporarily
-#'        during this call) to \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
+#'   \code{install.packages}, then load (i.e., with \code{library}). If it is
+#'   one package, it can be unquoted (as in \code{require}). In the case of a
+#'   GitHub package, it will be assumed that the name of the repository is the
+#'   name of the package. If this is not the case, then pass a named character
+#'   vector here, where the names are the package names that could be different
+#'   than the GitHub repository name.
+#' @param packageVersionFile If provided, then this will override all
+#'   \code{install.package} calls with \code{versions::install.versions}
+#' @param libPaths The library path (or libraries) where all packages should be
+#'   installed, and looked for to load (i.e., call \code{library}). This can be
+#'   used to create isolated, stand alone package installations, if used with
+#'   \code{standAlone = TRUE}. Currently, the path supplied here will be
+#'   prepended to \code{.libPaths()} (temporarily during this call) to
+#'   \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
 #'        .libPaths() to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              \code{install.packages}, \code{install_github} or \code{installVersions}.
@@ -88,21 +90,25 @@ if (getRversion() >= "3.1.0") {
 #'                   resulting in shared packages, i.e.,
 #'                   it will include the user's default package folder(s).
 #'                   This can be create dramatically faster
-#'                   installs if the user has a substantial number of the packages already in their
-#'                   personal library. Default \code{FALSE} to
-#'                   minimize package installing.
-#' @param purge Logical. Internally, there are calls to \code{installed.packages} and
-#'   \code{available.packages}
-#' @param ... Passed to \emph{all} of \code{install_github}, \code{install.packages}, and
-#'   \code{remotes::install_version}, i.e., the function will error if all of these functions
-#'   can not use the ... argument. Good candidates are e.g., \code{type} or \code{dependencies}.
-#'   This can be used with \code{install_githubArgs} or \code{install.packageArgs} which
+#' installs if the user has a substantial number of the packages already in
+#' their personal library. Default \code{FALSE} to minimize package installing.
+#' @param purge Logical. Internally, there are calls to
+#'   \code{installed.packages} and \code{available.packages}
+#' @param verbose Numeric. If \code{1} (less) or \code{2} (more), there will be
+#'   a data.table with many details attached to the output
+#' @param ... Passed to \emph{all} of \code{install_github},
+#'   \code{install.packages}, and \code{remotes::install_version}, i.e., the
+#'   function will error if all of these functions can not use the ... argument.
+#'   Good candidates are e.g., \code{type} or \code{dependencies}. This can be
+#'   used with \code{install_githubArgs} or \code{install.packageArgs} which
 #'   give individual options for those 2 internal function calls.
 #' @export
 #' @importFrom remotes install_github install_version
-#' @importFrom data.table data.table as.data.table setDT set is.data.table rbindlist
+#' @importFrom data.table data.table as.data.table setDT set is.data.table
+#'   rbindlist
 #' @importFrom data.table setnames setorderv := .SD .I
-#' @importFrom utils install.packages capture.output assignInMyNamespace available.packages
+#' @importFrom utils install.packages capture.output assignInMyNamespace
+#'   available.packages
 #' @importFrom utils compareVersion installed.packages
 #' @examples
 #' \dontrun{
@@ -205,6 +211,7 @@ Require <- function(packages, packageVersionFile,
                     require = getOption("Require.require", TRUE),
                     repos = getOption("repos"),
                     purge = getOption("Require.purge", FALSE),
+                    verbose = getOption("Require.verbose", FALSE),
                     ...){
 
   browser(expr = exists("._Require_0"))
@@ -286,9 +293,11 @@ Require <- function(packages, packageVersionFile,
     out <- rep(FALSE, length(packages))
     names(out) <- packages
   }
-  if (getOption("Require.verbose", FALSE)) {
-    colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
-    pkgDT <- pkgDT[, ..colsToKeep]
+  if (verbose > 0) {
+    if (verbose < 2) {
+      colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
+      pkgDT <- pkgDT[, ..colsToKeep]
+    }
 
     attr(out, "Require") <- pkgDT[]
   }

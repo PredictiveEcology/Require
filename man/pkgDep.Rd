@@ -35,11 +35,11 @@ pkgDep2(
 \arguments{
 \item{packages}{Character vector of packages to install via
 \code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require}). In the case of a GitHub
-package, it will be assumed that the name of the repository is the name of the
-package. If this is not the case, then pass a named character vector here, where
-the names are the package names that could be different than the GitHub repository
-name.}
+one package, it can be unquoted (as in \code{require}). In the case of a
+GitHub package, it will be assumed that the name of the repository is the
+name of the package. If this is not the case, then pass a named character
+vector here, where the names are the package names that could be different
+than the GitHub repository name.}
 
 \item{libPath}{A path to search for installed packages. Defaults to \code{.libPaths()}}
 
@@ -69,8 +69,8 @@ will include version number. Default is \code{FALSE}}
 If \code{FALSE}, the packages will not have a discernable order as they will be a
 concatenation of the possibly recursive package dependencies.}
 
-\item{purge}{Logical. Internally, there are calls to \code{installed.packages} and
-\code{available.packages}}
+\item{purge}{Logical. Internally, there are calls to
+\code{installed.packages} and \code{available.packages}}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
