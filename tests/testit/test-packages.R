@@ -2,6 +2,11 @@ repos <- NULL
 repos2 <- "https://cloud.r-project.org"
 repos["CRAN"] <- repos2
 options("repos" = repos, "Require.purge" = TRUE)
+
+# Failure on Travis:
+# cannot open file 'startup.Rs': No such file or directory
+# suggested solution https://stackoverflow.com/a/27994299/3890027
+Sys.setenv("R_TESTS" = "")
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 if (interactive()) {
 
