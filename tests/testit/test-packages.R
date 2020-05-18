@@ -1,9 +1,9 @@
+repos <- NULL
+repos2 <- "https://cloud.r-project.org"
+repos["CRAN"] <- repos2
+options("repos" = repos, "Require.purge" = TRUE)
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
 if (interactive()) {
-  repos <- NULL
-  repos2 <- "https://cloud.r-project.org"
-  repos["CRAN"] <- repos2
-  options("repos" = repos, "Require.purge" = TRUE)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
   library(testit)
   tmpdir <- if (Sys.info()["user"] != "emcintir") {
