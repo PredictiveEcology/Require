@@ -8,18 +8,18 @@ library(testit)
 tmpdir <- if (Sys.info()["user"] != "emcintir") {
   file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
 } else {
-  "c:/Eliot/TempLib5"
+  "~/TempLib5"
 }
 suppressWarnings(dir.create(tmpdir))
 oldLibPaths <- .libPaths()
-on.exit(setLibPaths(oldLibPaths))
-setLibPaths(tmpdir)
-
+on.exit(Require::setLibPaths(oldLibPaths))
 pkgDepTest1 <- Require::pkgDep("Require")
+pkgDepTest2 <- Require::pkgDep2("Require")
+Require::setLibPaths(tmpdir, standAlone = TRUE)
+
 testit::assert(length(pkgDepTest1) == 1)
 testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
 
-pkgDepTest2 <- Require::pkgDep2("Require")
 testit::assert(length(pkgDepTest2) == 4)
 testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
 
@@ -32,11 +32,13 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
                    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
                    "withr")
-  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), 5), RequireDeps)
+  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)),
+                             RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
 
   runTests <- function(have, pkgs) {
+    # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
     testit::assert(all(have[toLoad == TRUE & (correctVersion == TRUE | hasVersionSpec == FALSE)]$toLoad))
     couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
@@ -149,13 +151,13 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                  "PredictiveEcology/map@development (>= 5.0.0.9)",
                  "achubaty/amc@development (>=0.1.5)",
                  "data.table (>=100.0)",
-                 paste0("digest (>=", packageVersion("digest"),")"),
+                 paste0("digest (>=0.6.25)"),
                  "PredictiveEcology/LandR@development (>= 1.0.2)"),
                c("fastdigest (>=0.0.0.9)",
                  "PredictiveEcology/map@development (>= 0.0.0.9)",
                  "achubaty/amc@development (>=0.0.0.9)",
                  "data.table (>=0.0.0.9)",
-                 paste0("digest (>=", packageVersion("digest"),")"),
+                 paste0("digest (>=0.6.25)"),
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
                # Multiple conflicting version numbers, and with NO version number
                c("fastdigest (>=0.0.0.8)", "fastdigest (>=0.0.0.9)", "fastdigest"), #"quickPlot", "testthat"),
@@ -167,7 +169,7 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                  "PredictiveEcology/map@development (>= 110.0.9)",
                  "achubaty/amc@development (>=0.0.0.9)",
                  "data.table (>=0.0.0.9)",
-                 paste0("digest (>=", packageVersion("digest"),")"),
+                 paste0("digest (>=0.6.25)"),
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
                "Holidays (>=1000.3.1)",
                c("Holidays (>=1.0.1)", "fpCompare"),
