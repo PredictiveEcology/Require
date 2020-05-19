@@ -47,12 +47,16 @@ parseGitHub <- function(pkgDT) {
 #' While these are not intended to be called manually by users, they may be
 #' of some use for advanced users.
 #'
+#' @return
+#' In general, these functions return a data.table with various package
+#' information, installation status, version, available version etc.
+#'
 #' @importFrom data.table setorderv
 #' @inheritParams Require
 #' @inheritParams parseGitHub
 #' @rdname Require-internals
 #' @export
-getPkgVersions <- function(pkgDT, install) {
+getPkgVersions <- function(pkgDT, install = TRUE) {
   if (!is.data.table(pkgDT))
     pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
 
@@ -94,7 +98,7 @@ getPkgVersions <- function(pkgDT, install) {
   if (isTRUE(install == "force")) {
     pkgDT[, correctVersion := FALSE]
   }
-  pkgDT
+  pkgDT[]
 }
 
 #' @importFrom utils download.file tail

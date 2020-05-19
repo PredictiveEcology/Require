@@ -9,7 +9,7 @@
 \alias{archiveVersionsAvailable}
 \title{Internals used by \code{Require}}
 \usage{
-getPkgVersions(pkgDT, install)
+getPkgVersions(pkgDT, install = TRUE)
 
 getAvailable(pkgDT, purge = FALSE)
 
