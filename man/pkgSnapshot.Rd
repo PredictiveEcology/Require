@@ -11,7 +11,7 @@ pkgSnapshot(packageVersionFile, libPaths, standAlone = FALSE)
 installed version numbers. Defaults to \code{".packageVersions.txt"}.}
 
 \item{libPaths}{The path to the local library where packages are installed.
-Defaults to the .libPaths()[1]}
+Defaults to the \code{.libPaths()[1]}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
                   the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will

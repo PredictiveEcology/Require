@@ -6,7 +6,7 @@
 #' @param packageVersionFile A filename to save the packages and their currently
 #'        installed version numbers. Defaults to \code{".packageVersions.txt"}.
 #' @param libPaths The path to the local library where packages are installed.
-#'        Defaults to the .libPaths()[1]
+#'        Defaults to the \code{.libPaths()[1]}.
 #' @details
 #' A file is written with the package names and versions of all packages within \code{libPaths}.
 #' This can later be passed to \code{Require}.

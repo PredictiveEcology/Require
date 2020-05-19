@@ -70,7 +70,7 @@ will include version number. Default is \code{FALSE}}
 \code{tail(.libPath(), 1)}}
 
 \item{sort}{Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
-If \code{FALSE}, the packages will not have a discernable order as they will be a
+If \code{FALSE}, the packages will not have a discernible order as they will be a
 concatenation of the possibly recursive package dependencies.}
 
 \item{purge}{Logical. Internally, there are calls to

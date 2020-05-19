@@ -37,7 +37,7 @@ used to create isolated, stand alone package installations, if used with
 \code{standAlone = TRUE}. Currently, the path supplied here will be
 prepended to \code{.libPaths()} (temporarily during this call) to
 \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
-     .libPaths() to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
+     \code{.libPaths()} to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
 
@@ -90,7 +90,7 @@ then the "install" component will be skipped.
 }
 \details{
 \code{standAlone} will either put the \code{Require}d packages and their
-dependencies \emph{all} within the libPaths (if \code{TRUE}) or if
+dependencies \emph{all} within the \code{libPaths} (if \code{TRUE}) or if
 \code{FALSE} will only install packages and their dependencies that are
 otherwise not installed in \code{.libPaths()}, i.e., the personal or base
 library paths. Any packages or dependencies that are not yet installed will

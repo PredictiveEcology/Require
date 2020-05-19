@@ -1,6 +1,6 @@
-#' Set .libPaths
+#' Set \code{.libPaths}
 #'
-#' This will set the .libPaths() by either adding a new path to
+#' This will set the \code{.libPaths()} by either adding a new path to
 #' it if \code{standAlone = FALSE}, or will concatenate
 #' \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
 #'
@@ -22,7 +22,6 @@
 #'
 #' }
 setLibPaths <- function(libPaths, standAlone = TRUE) {
-
   oldLibPaths <- .libPaths()
   libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
 

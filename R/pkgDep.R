@@ -31,7 +31,7 @@
 #'   will include version number. Default is \code{FALSE}
 #' @param libPath A path to search for installed packages. Defaults to \code{.libPaths()}
 #' @param sort Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
-#'        If \code{FALSE}, the packages will not have a discernable order as they will be a
+#'        If \code{FALSE}, the packages will not have a discernible order as they will be a
 #'        concatenation of the possibly recursive package dependencies.
 #' @param includeBase Logical. Should R base packages be included, specifically, those in
 #'   \code{tail(.libPath(), 1)}
