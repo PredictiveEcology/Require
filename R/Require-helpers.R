@@ -256,34 +256,38 @@ DESCRIPTIONFileVersion <- function(file) {
 #' @export
 #' @param pkg A character string with a GitHub package specification (c.f. remotes)
 getGitHubDESCRIPTION <- function(pkg) {
-  if (is.data.table(pkg)) {
-    if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
-      if (any(c("packageFullName") %in% colnames(pkg))) {
-        pkg <- pkg$packageFullName
+  ret <- if (length(pkg) > 0) {
+    if (is.data.table(pkg)) {
+      if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
+        if (any(c("packageFullName") %in% colnames(pkg))) {
+          pkg <- pkg$packageFullName
+        }
       }
     }
+
+    pkgDT <- parseGitHub(pkg)
+    pkgDT[repoLocation == "GitHub",
+          url := {
+            if (hasSubFolder) {
+              Branch <- paste0(Branch, "/", GitSubFolder)
+            }
+            file.path("https://raw.githubusercontent.com", Account,
+                      Repo, Branch, "DESCRIPTION", fsep = "/")
+          },
+          by = "Package"]
+
+    checkPath(dirname(tempfile()), create = TRUE)
+    pkgDT[repoLocation == "GitHub",
+      DESCFile := {
+        destFile <- tempfile()
+        download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
+        destFile
+      }, by = c("Package", "Branch")]
+    pkgDT[]
+  } else {
+    pkgDT[]
   }
-
-  browser()
-  pkgDT <- parseGitHub(pkg)
-  pkgDT[repoLocation == "GitHub",
-        url := {
-          if (hasSubFolder) {
-            Branch <- paste0(Branch, "/", GitSubFolder)
-          }
-          file.path("https://raw.githubusercontent.com", Account,
-                    Repo, Branch, "DESCRIPTION", fsep = "/")
-        }, by = "Package"]
-
-  checkPath(dirname(tempfile()), create = TRUE)
-  pkgDT[repoLocation == "GitHub", {
-    DESCFile := {
-      destFile <- tempfile()
-      download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
-      destFile
-    }
-  }, by = c("Package", "Branch")]
-  pkgDT[]
+  ret
 }
 
 
