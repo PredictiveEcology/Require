@@ -23,7 +23,7 @@ archiveVersionsAvailable(package, repos)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a data.table
-with at least 2 columns "Package" and "packageFullName".}
+with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 
 \item{install}{Logical or "force". If \code{FALSE}, this will not try to
 install anything. If \code{"force"}, then it will force installation of

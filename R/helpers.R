@@ -85,7 +85,7 @@ setMethod("normPath",
 #' @param path A character string corresponding to a directory path.
 #'
 #' @param create A logical indicating whether the path should
-#' be created if it doesn't exist. Default is \code{FALSE}.
+#' be created if it does not exist. Default is \code{FALSE}.
 #'
 #' @return Character string denoting the cleaned up filepath.
 #'

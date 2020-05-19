@@ -11,7 +11,7 @@ install_githubV(gitPkgNames, install_githubArgs = list(), ...)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a data.table
-with at least 2 columns "Package" and "packageFullName".}
+with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 
 \item{gitPkgNames}{Character vector of package to install from github}
 
@@ -20,7 +20,7 @@ with at least 2 columns "Package" and "packageFullName".}
 \item{...}{Another way to pass arguments to \code{install_github}
 #' @return
 \code{install_githubV} returns a named character vector indicating packages
-  successfullyinstalled, unless the word "Failed" is returned, indicating
+  successfully installed, unless the word "Failed" is returned, indicating
   installation failure. The names will be the full github package name,
   as provided to \code{gitPkgNames} in the function call.}
 }
@@ -36,7 +36,7 @@ met before each is installed.
 }
 \details{
 \code{parseGitHub} turns the single character string representation into 3 or 4:
-Account, Repo, Branch, SubFolder.
+\code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
 }
 \examples{
 \dontrun{

@@ -2,7 +2,7 @@
 % Please edit documentation in R/setLibPaths.R
 \name{setLibPaths}
 \alias{setLibPaths}
-\title{Set .libPaths}
+\title{Set \code{.libPaths}}
 \usage{
 setLibPaths(libPaths, standAlone = TRUE)
 }
@@ -20,7 +20,7 @@ installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 }
 \description{
-This will set the .libPaths() by either adding a new path to
+This will set the \code{.libPaths()} by either adding a new path to
 it if \code{standAlone = FALSE}, or will concatenate
 \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
 }
