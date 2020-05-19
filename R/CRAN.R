@@ -28,10 +28,15 @@ getCRANrepos <- function(repos = NULL) {
   return(repos)
 }
 
+#' Pass through function for \code{chooseCRANmirror}
+#'
+#' This is here to allow mocking during unit testing related to chooseCRANmirror.
+#'
 #' @importFrom utils chooseCRANmirror
+#' @param ... Passed to \code{chooseCRANmirror}
 #' @keywords internal
-chooseCRANmirror2 <- function() {
-  chooseCRANmirror()
+chooseCRANmirror2 <- function(...) {
+  chooseCRANmirror(...)
 }
 
 isInteractive <- function() interactive()

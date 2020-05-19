@@ -1,3 +1,6 @@
+testit::assert(identical(isInteractive(), interactive()))
+Require::chooseCRANmirror2(ind = 1)
+
 isInteractive <- function() TRUE
 chooseCRANmirror2 <- function() {
   repos <- NULL
@@ -15,11 +18,12 @@ chooseCRANmirror2 <- function() {
 #   get(out, inherits = FALSE)
 # }
 # assignInNamespace("available.packagesCRAN", available.packagesCRAN, ns = "Require")
-#assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
-#assignInNamespace("isInteractive", isInteractive, ns = "Require")
+assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
+assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
-repos <- Require:::getCRANrepos()
+repos <- Require:::getCRANrepos("")
 testit::assert(is.character(repos))
+testit::assert(nchar(repos) > 0)
 
 repos <- NULL
 repos2 <- "https://cloud.r-project.org"
