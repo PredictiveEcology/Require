@@ -136,50 +136,44 @@ getAvailable <- function(pkgDT, purge = FALSE) {
     needOlder <- notCorrectVersions$correctVersionAvail == FALSE & grepl("==|<=|<", notCorrectVersions$inequality)
     needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
     if (any(needOlderNotGH)) {
-      if (FALSE) {
-        oldAvailableVersions <- notCorrectVersions[repoLocation != "GitHub" & needOlder]
-        oldAvailableVersions[, archiveSource := "CRANArchive"]
-        oldAvailableVersions[, OlderVersionsAvailable := extractVersionNumber(packageFullName)] # Assuming it is available!!!
-        oldAvailableVersions[, correctVersionAvail := TRUE]
 
+      oldAvailableVersions <- if (!exists("oldAvailableVersions", envir = .pkgEnv) || isTRUE(purge)) {
+        pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
+        names(pkg) <- pkg
+        ava <- lapply(pkg, function(p) {
+          as.data.table(archiveVersionsAvailable(p, repos = getCRANrepos()), keep.rownames = "PackageUrl")
+        })
+        assign("oldAvailableVersions", ava, envir = .pkgEnv)
+        ava
+        # versions::available.versions(notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package)
       } else {
-        oldAvailableVersions <- if (!exists("oldAvailableVersions", envir = .pkgEnv) || isTRUE(purge)) {
-          pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
-          names(pkg) <- pkg
-          ava <- lapply(pkg, function(p) {
-            as.data.table(archiveVersionsAvailable(p, repos = getCRANrepos()), keep.rownames = "PackageUrl")
-          })
-          assign("oldAvailableVersions", ava, envir = .pkgEnv)
-          ava
-          # versions::available.versions(notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package)
-        } else {
-          .pkgEnv$oldAvailableVersions
-        }
-        oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
-        # delete unwanted columns
-        set(oldAvailableVersions, NULL, c("size", "isdir", "mode", "mtime",
-                                          "ctime", "atime", "uid", "gid", "uname", "grname"),
-            NULL)
-        setDT(oldAvailableVersions)
-        oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)]
-        needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
-        oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
-
-        oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE]
-        oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
-        oldAvailableVersions[, correctVersionAvail :=
-                               .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
-        if (any(oldAvailableVersions$correctVersionAvail)) {
-          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "CRANArchive"]
-          oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "CRANArchive"]
-          oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
-          oldAvailableVersions[, repoLocation := archiveSource]
-          setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
-        }
-
-        oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
-        set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
+        .pkgEnv$oldAvailableVersions
       }
+      oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
+      # delete unwanted columns
+      set(oldAvailableVersions, NULL, c("size", "isdir", "mode", "mtime",
+                                        "ctime", "atime", "uid", "gid", "uname", "grname"),
+          NULL)
+      setDT(oldAvailableVersions)
+      oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)]
+      needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
+      oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
+
+      oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE]
+      oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
+      oldAvailableVersions[, correctVersionAvail :=
+                             .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+      if (any(oldAvailableVersions$correctVersionAvail)) {
+        oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "CRANArchive"]
+        oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "CRANArchive"]
+        oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
+        oldAvailableVersions[, repoLocation := archiveSource]
+        setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
+      }
+
+      oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
+      set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
+
       notCorrectVersions <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
                                            oldAvailableVersions), fill = TRUE, use.names = TRUE)
     }
@@ -380,6 +374,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
 #' \code{doLoading} is a wrapper around \code{require}.
 doLoading <- function(packages, ...) {
   packages <- extractPkgName(packages)
+  names(packages) <- packages
   outMess <- capture.output(
     out <- lapply(packages, require, character.only = TRUE),
     type = "message")

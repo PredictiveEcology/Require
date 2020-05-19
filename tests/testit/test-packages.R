@@ -232,7 +232,21 @@ if (interactive()) {
     }
   }
 }
+
 options("Require.verbose" = TRUE)
-out <- Require::Require("Holidays (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
+out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
 testit::assert(data.table::is.data.table(attr(out, "Require")))
+req <- require("TimeWarp", lib.loc = tempdir())
+testit::assert(req == out)
+detach("package:TimeWarp", unload = TRUE)
+remove.packages("TimeWarp", lib = tempdir())
+
+# Try older version
+pvWant <- "1.0-7"
+inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"),
+                       standAlone = TRUE, libPaths = tempdir())
+pv <- packageVersion("TimeWarp")
+testit::assert(pv == pvWant)
+remove.packages("TimeWarp", lib = tempdir())
+
 
