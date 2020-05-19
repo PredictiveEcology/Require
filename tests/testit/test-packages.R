@@ -6,6 +6,11 @@ chooseCRANmirror2 <- function() {
   options("repos" = repos)
   repos
 }
+available.packagesCRAN <- function(repos) {
+  out <- load(system.file(".cacheAvailablePackages.rda", package = "Require"))
+  get(out, inherits = FALSE)
+}
+assignInNamespace("available.packagesCRAN", available.packagesCRAN, ns = "Require")
 assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 

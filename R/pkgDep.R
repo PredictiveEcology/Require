@@ -39,9 +39,9 @@
 #' @rdname pkgDep
 #'
 #' @examples
+#' pkgDep("Require")
+#' pkgDep("Require", keepVersionNumber = FALSE) # just names
 #' \dontrun{
-#'   pkgDep("Require")
-#'   pkgDep("Require", keepVersionNumber = FALSE) # just names
 #'   pkgDep("PredictiveEcology/reproducible") # GitHub
 #'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
 #'   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
@@ -178,7 +178,11 @@ getDescPath <- function(packages, libPath) {
 #' @param sorted Logical. If \code{TRUE}, the default, the packages will be sorted in
 #'   the returned list from most number of dependencies to least.
 #' @examples
+#' pkgDep2("Require")
+#' \dontrun{
+#' # much bigger one
 #' pkgDep2("reproducible")
+#' }
 pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
                     depends, imports, suggests, linkingTo,
@@ -203,7 +207,7 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), recurs
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
   cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-    aa <- available.packages(repos = repos)
+    aa <- available.packagesCRAN(repos = repos)
     assign("cachedAvailablePackages", aa, envir = .pkgEnv)
     aa
   } else {
@@ -314,3 +318,8 @@ whichToDILES <- function(which) {
 }
 
 .basePkgs <- rownames(installed.packages(tail(.libPaths(),1)))
+
+#' Keep this so unit testing can override
+available.packagesCRAN <- function(repos = repos) {
+  available.packages(repos = repos)
+}
