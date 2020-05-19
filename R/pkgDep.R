@@ -33,6 +33,8 @@
 #' @param sort Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
 #'        If \code{FALSE}, the packages will not have a discernable order as they will be a
 #'        concatenation of the possibly recursive package dependencies.
+#' @param includeBase Logical. Should R base packages be included, specifically, those in
+#'   \code{tail(.libPath(), 1)}
 #' @export
 #' @rdname pkgDep
 #'
@@ -49,7 +51,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
                    depends, imports, suggests, linkingTo,
                    repos = getCRANrepos(),
-                   keepVersionNumber = TRUE,
+                   keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
 
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
@@ -118,6 +120,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull1 <- lapply(neededFull1, function(x) sort(x))
   if (isFALSE(keepVersionNumber))
     neededFull1 <- lapply(neededFull1, trimVersionNumber)
+  if (!isTRUE(includeBase)) {
+    neededFull1 <- lapply(neededFull1, setdiff, .basePkgs)
+  }
   neededFull1
 
 }
@@ -307,3 +312,5 @@ whichToDILES <- function(which) {
   }
   which
 }
+
+.basePkgs <- rownames(installed.packages(tail(.libPaths(),1)))

@@ -28,7 +28,7 @@ if (interactive()) {
   Require::setLibPaths(tmpdir, standAlone = TRUE)
 
   testit::assert(length(pkgDepTest1) == 1)
-  testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "methods", "remotes", "utils"))
+  testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes"))
 
   testit::assert(length(pkgDepTest2) == 4)
   testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
@@ -233,26 +233,31 @@ if (interactive()) {
   }
 }
 
+dir1 <- tempdir2("test1")
 options("Require.verbose" = TRUE)
-out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = tempdir())
+out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
 testit::assert(data.table::is.data.table(attr(out, "Require")))
-req <- require("TimeWarp", lib.loc = tempdir())
+req <- require("TimeWarp", lib.loc = dir1)
 testit::assert(req == out)
 detach("package:TimeWarp", unload = TRUE)
-remove.packages("TimeWarp", lib = tempdir())
 
 # Try older version
+dir2 <- tempdir2("test2")
 pvWant <- "1.0-7"
 inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"),
-                       standAlone = TRUE, libPaths = tempdir())
+                       standAlone = TRUE, libPaths = dir2)
 pv <- packageVersion("TimeWarp")
 testit::assert(pv == pvWant)
-remove.packages("TimeWarp", lib = tempdir())
+detach("package:TimeWarp", unload = TRUE)
+
 
 # Try github
+dir3 <- tempdir2("test3")
 inst <- Require::Require("PredictiveEcology/Require", install = "force",
                          require = FALSE,
-                         standAlone = FALSE, libPaths = tempdir())
-remove.packages("TimeWarp", lib = tempdir())
-
-
+                         standAlone = FALSE, libPaths = dir3)
+pkgs <- c("data.table", "remotes", "Require")
+ip <- as.data.table(installed.packages(lib.loc = dir3))[[1]]
+testit::assert(isTRUE(all.equal(sort(pkgs),
+                                sort(ip))))
+unlink(dirname(dir3), recursive = TRUE)

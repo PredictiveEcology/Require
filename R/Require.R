@@ -241,7 +241,7 @@ Require <- function(packages, packageVersionFile,
 
 
   browser(expr = exists("._Require_1"))
-  if (length(which) && isTRUE(install)) {
+  if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
   }
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
@@ -257,7 +257,8 @@ Require <- function(packages, packageVersionFile,
   pkgDT <- pkgDT[, .SD[1], by = "Package"] # remove duplicates
   pkgDT[, installed := !is.na(Version)]
 
-  if (length(packages) && (isTRUE(install) || isTRUE(require))) {
+  if (length(packages) && ((isTRUE(install) || identical(install, "force")) ||
+                           isTRUE(require))) {
     if (isTRUE(install) || identical(install, "force")) {
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
