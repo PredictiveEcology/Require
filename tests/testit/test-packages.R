@@ -11,7 +11,7 @@ assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
 repos <- Require:::getCRANrepos()
 testit::assert(is.character(repos))
-# options("repos" = repos) # shouldn't be necessary now
+options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = TRUE)
 
 # Failure on Travis:
