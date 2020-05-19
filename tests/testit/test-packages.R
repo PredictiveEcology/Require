@@ -299,3 +299,16 @@ testit::assert(length(mess) > 0)
 testit::assert(sum(grepl("could not be installed", mess)) == 1)
 
 unlink(dirname(dir3), recursive = TRUE)
+
+
+## Try to get an error
+dir5 <- tempdir2("test5")
+out <- Require::Require("data.table", standAlone = TRUE, libPaths = dir5)
+out2 <- Require::Require("data.table (<=1.11.0)", standAlone = TRUE, libPaths = dir5, install = "force")
+
+# Code coverage
+pkg <- c("rforge/mumin/pkg", "Require")
+names(pkg) <- c("MuMIn", "")
+out <- Require(pkg, install = FALSE, require = FALSE)
+testit::assert(isFALSE(all(out)))
+

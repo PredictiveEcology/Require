@@ -290,7 +290,7 @@ Require <- function(packages, packageVersionFile,
     names(out) <- pkgDT[packagesRequired == TRUE]$Package
   } else {
     out <- rep(FALSE, length(packages))
-    names(out) <- packages
+    names(out) <- packageNamesOrig
   }
   if (verbose > 0) {
     if (verbose < 2) {
