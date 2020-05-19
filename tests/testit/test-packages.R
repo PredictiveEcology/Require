@@ -261,4 +261,17 @@ pkgs <- c("data.table", "remotes", "Require")
 ip <- as.data.table(installed.packages(lib.loc = dir3))[[1]]
 testit::assert(isTRUE(all.equal(sort(pkgs),
                                 sort(ip))))
+
+
+# Try github with version
+dir4 <- tempdir2("test4")
+mess <- capture.output(type = "message",
+               inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
+                         require = FALSE,
+                         standAlone = FALSE, libPaths = dir4))
+testit::assert(isFALSE(inst))
+testit::assert(length(mess) > 0)
+testit::assert(sum(grepl("could not be installed", mess)) == 1)
+
+
 unlink(dirname(dir3), recursive = TRUE)
