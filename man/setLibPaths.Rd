@@ -4,7 +4,7 @@
 \alias{setLibPaths}
 \title{Set \code{.libPaths}}
 \usage{
-setLibPaths(libPaths, standAlone = TRUE)
+setLibPaths(libPaths, standAlone = TRUE, algo = 2)
 }
 \arguments{
 \item{libPaths}{A new path to append to, or replace all existing user
@@ -18,6 +18,15 @@ components of \code{.libPath()}}
                   This can be create dramatically faster
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
+
+\item{algo}{Numeric, either 1 or 2, indicating which underlying algorithm
+to use to set \code{.libPaths()}. \code{1} uses a defunct \code{.lib.loc}
+and \code{2} uses a shim environment. Default is \code{2}. Both appear to
+work on all systems tested.}
+}
+\value{
+As when setting \code{options}, this will return the previous state of
+\code{.libPaths()} allowing the user to reset easily.
 }
 \description{
 This will set the \code{.libPaths()} by either adding a new path to
@@ -32,7 +41,12 @@ This 2nd one is currently not used as it appeared not to work on Travis
 }
 \examples{
 \dontrun{
-setLibPaths("~/newProjectLib") # will only have 2 paths
+orig <- setLibPaths("~/newProjectLib") # will only have 2 paths
+.libPaths() # see the 2 paths
+setLibPaths(orig) # reset
+.libPaths() # see the 2 original paths back
+
+# will have 2 or more paths
 setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
 
 }
