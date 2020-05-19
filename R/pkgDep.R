@@ -39,10 +39,12 @@
 #' @examples
 #' pkgDep("Require")
 #' pkgDep("Require", keepVersionNumber = FALSE) # just names
-#' pkgDep("PredictiveEcology/reproducible") # GitHub
-#' pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
-#' pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
-#' pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+#' \dontrun{
+#'   pkgDep("PredictiveEcology/reproducible") # GitHub
+#'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
+#'   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
+#'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+#' }
 pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
                    depends, imports, suggests, linkingTo,
