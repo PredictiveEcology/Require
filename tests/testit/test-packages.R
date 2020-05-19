@@ -15,11 +15,17 @@ chooseCRANmirror2 <- function() {
 #   get(out, inherits = FALSE)
 # }
 # assignInNamespace("available.packagesCRAN", available.packagesCRAN, ns = "Require")
-assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
-assignInNamespace("isInteractive", isInteractive, ns = "Require")
+#assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
+#assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
 repos <- Require:::getCRANrepos()
 testit::assert(is.character(repos))
+
+repos <- NULL
+repos2 <- "https://cloud.r-project.org"
+repos["CRAN"] <- repos2
+# options("repos" = repos, "Require.purge" = TRUE)
+
 options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = TRUE)
 
