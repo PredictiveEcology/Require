@@ -6,15 +6,15 @@ chooseCRANmirror2 <- function() {
   options("repos" = repos)
   repos
 }
-available.packagesCRAN <- function(repos) {
-  destfile <- tempfile()
-  download.file(destfile = destfile,
-                "https://github.com/PredictiveEcology/Require/raw/master/.cacheAvailablePackages.rda"
-                )
-  out <- load(destfile)
-  get(out, inherits = FALSE)
-}
-assignInNamespace("available.packagesCRAN", available.packagesCRAN, ns = "Require")
+# available.packagesCRAN <- function(repos) {
+#   destfile <- tempfile()
+#   download.file(destfile = destfile,
+#                 "https://github.com/PredictiveEcology/Require/raw/master/.cacheAvailablePackages.rda"
+#                 )
+#   out <- load(destfile)
+#   get(out, inherits = FALSE)
+# }
+# assignInNamespace("available.packagesCRAN", available.packagesCRAN, ns = "Require")
 assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
