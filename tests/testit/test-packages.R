@@ -43,8 +43,9 @@ pkgDepTest1 <- Require::pkgDep("Require")
 Require::setLibPaths(oldLibPaths)
 ###
 #if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
-if (interactive()) {
-  pkgDepTest2 <- Require::pkgDep2("Require")
+if (FALSE) {
+  #if (interactive()) {
+    pkgDepTest2 <- Require::pkgDep2("Require")
   Require::setLibPaths(tmpdir, standAlone = TRUE)
 
   testit::assert(length(pkgDepTest1) == 1)
@@ -262,8 +263,10 @@ detach("package:TimeWarp", unload = TRUE)
 # Try older version
 dir2 <- tempdir2("test2")
 pvWant <- "1.0-7"
-inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE, libPaths = dir2)
-pv <- packageVersion("TimeWarp")
+inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
+                         libPaths = dir2,
+                         dependencies = FALSE)
+pv <- packageVersion("TimeWarp", lib.loc = dir2)
 testit::assert(pv == pvWant)
 detach("package:TimeWarp", unload = TRUE)
 
