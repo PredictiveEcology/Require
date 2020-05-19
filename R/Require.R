@@ -6,7 +6,7 @@ if (getRversion() >= "3.1.0") {
                            "versionSpec", "..colsToKeep", "..keepCols", "DESCFile", "OlderVersionsAvailable",
                            "OlderVersionsAvailableCh", "PackageUrl", "archiveSource", "isInteractive",
                            "libPaths", "needInstall", "pkgDepTopoSort", "repoLocation", "toLoad",
-                           "GitSubFolder", "bothDepAndOrig", "depOrOrig", "fullPackageName", "hasSubFolder",
+                           "GitSubFolder", "bothDepAndOrig", "depOrOrig", "hasSubFolder",
                            "loaded", "packagesRequired"))
 }
 

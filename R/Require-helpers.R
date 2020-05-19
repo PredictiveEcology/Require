@@ -3,7 +3,7 @@
 #' Account, Repo, Branch, SubFolder.
 #'
 #' @return
-#' A data.table with added columns.
+#' \code{parseGitHub} returns a data.table with added columns.
 #'
 #' @param pkgDT A character string with full package names or a data.table
 #'   with at least 2 columns "Package" and "packageFullName".
@@ -42,7 +42,15 @@ parseGitHub <- function(pkgDT) {
   pkgDT[]
 }
 
+#' Internals used by \code{Require}
+#'
+#' While these are not intended to be called manually by users, they may be
+#' of some use for advanced users.
+#'
 #' @importFrom data.table setorderv
+#' @inheritParams Require
+#' @rdname Require-internals
+#' @export
 getPkgVersions <- function(pkgDT, install) {
   if (!is.data.table(pkgDT))
     pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
@@ -89,6 +97,9 @@ getPkgVersions <- function(pkgDT, install) {
 }
 
 #' @importFrom utils download.file tail
+#' @inheritParams Require
+#' @rdname Require-internals
+#' @export
 getAvailable <- function(pkgDT, purge = FALSE) {
   whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
   if (NROW(whNotCorrect)) {
@@ -186,6 +197,9 @@ getAvailable <- function(pkgDT, purge = FALSE) {
   pkgDT
 }
 
+#' @inheritParams Require
+#' @rdname Require-internals
+#' @export
 installFrom <- function(pkgDT) {
   pkgDT <- pkgDT[correctVersion == FALSE | is.na(correctVersion) & installed == FALSE, needInstall := TRUE]
   if (NROW(pkgDT[needInstall == TRUE])) {
@@ -243,12 +257,13 @@ DESCRIPTIONFileVersion <- function(file) {
 getGitHubDESCRIPTION <- function(pkg) {
   if (is.data.table(pkg)) {
     if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
-      if (all(c("fullPackageName") %in% colnames(pkg))) {
-        pkg <- pkg$fullPackageName
+      if (any(c("packageFullName") %in% colnames(pkg))) {
+        pkg <- pkg$packageFullName
       }
     }
   }
 
+  browser()
   pkgDT <- parseGitHub(pkg)
   pkgDT[repoLocation == "GitHub",
         url := {
@@ -271,6 +286,10 @@ getGitHubDESCRIPTION <- function(pkg) {
 }
 
 
+
+#' @inheritParams Require
+#' @rdname Require-internals
+#' @export
 updateInstalled <- function(pkgDT, installPkgNames, warn) {
   if (missing(warn)) warn <- warnings()
   warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, names(warn))))
@@ -280,6 +299,12 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
   pkgDT[]
 }
 
+#' @inheritParams Require
+#' @rdname Require-internals
+#' @export
+#' @details
+#' \code{doInstall} is a wrapper around \code{install.packages},
+#' \code{remotes::install_github}, and \code{remotes::install_version}.
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
   toInstall <- pkgDT[installed == FALSE  | !correctVersion]
   if (any(!toInstall$installFrom %in% "Fail")) {
@@ -287,7 +312,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       installPkgNames <- toInstall[installFrom == "CRAN"]$Package
       names(installPkgNames) <- installPkgNames
       dots <- list(...)
-      dots$dependencies <- NA # This should be dealt with manually, but apparently not
+      if (is.null(dots$dependencies))
+        dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
       out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs), dots))
       warn <- warnings()
@@ -342,6 +368,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
   pkgDT
 }
 
+#' @rdname Require-internals
+#' @export
+#' @details
+#' \code{doLoading} is a wrapper around \code{require}.
 doLoading <- function(toLoadPkgs, ...) {
   outMess <- capture.output(
     out <- lapply(toLoadPkgs, require, character.only = TRUE),
@@ -407,6 +437,10 @@ doLoading <- function(toLoadPkgs, ...) {
 
 }
 
+#' @rdname Require-internals
+#' @export
+#' @details
+#' \code{archiveVersionsAvailable} searches CRAN Archives for available versions.
 archiveVersionsAvailable <- function(package, repos) {
   for (repo in repos) {
     if (length(repos) > 1)
@@ -426,15 +460,22 @@ archiveVersionsAvailable <- function(package, repos) {
   stop(sprintf("couldn't find package '%s'", package))
 }
 
-#' Vectorized install_github
+#' GitHub specific helpers
 #'
-#' This will attempt to identify all dependencies of all packages first, then
+#' \code{install_githubV} is a vectorized \code{remotes::install_github}.
+#' This will attempt to identify all dependencies of all supplied
+#' packages first, then
 #' load the packages in the correct order so that each of their dependencies are
 #' met before each is installed.
 #'
 #' @param gitPkgNames Character vector of package to install from github
 #' @param install_githubArgs Any arguments passed to \code{install_github}
 #' @param ... Another way to pass arguments to \code{install_github}
+#' #' @return
+#' \code{install_githubV} returns a named character vector indicating packages
+#'   successfullyinstalled, unless the word "Failed" is returned, indicating
+#'   installation failure. The names will be the full github package name,
+#'   as provided to \code{gitPkgNames} in the function call.
 #' @export
 #' @rdname GitHubTools
 #' @examples
@@ -447,7 +488,8 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
     gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
   }
   dots <- list(...)
-  dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
+  if (is.null(dots$dependencies))
+    dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
   #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
   #  which has R.oo
@@ -489,7 +531,7 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   out3 <- c(out1, packages)
   dt <- data.table(github = extractPkgGitHub(out2), Package = out2,
                    depOrOrig = c(rep("dep", length(out1)), rep("orig", length(pkgs))),
-                   fullPackageName = out3)
+                   packageFullName = out3)
   set(dt, NULL, "origOrder", seq_along(dt$github))
   dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
   dt[bothDepAndOrig == TRUE, depOrOrig := "both"]
@@ -497,11 +539,11 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 
   if ("github" %in% colnames(dt))
     setorderv(dt, na.last = TRUE, "github") # keep github packages up at top -- they take precedence
-  haveVersion <- dt[Package != fullPackageName] # have no version number or are github
-  haveNoVersion <- dt[Package == fullPackageName] # have no version number or are github
+  haveVersion <- dt[Package != packageFullName] # have no version number or are github
+  haveNoVersion <- dt[Package == packageFullName] # have no version number or are github
   dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package][!duplicated(Package)]))
   setorderv(dt, "origOrder")
-  dt$fullPackageName
+  dt$packageFullName
 }
 
 colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",

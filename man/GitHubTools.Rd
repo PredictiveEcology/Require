@@ -3,7 +3,7 @@
 \name{parseGitHub}
 \alias{parseGitHub}
 \alias{install_githubV}
-\title{Vectorized install_github}
+\title{GitHub specific helpers}
 \usage{
 parseGitHub(pkgDT)
 
@@ -17,13 +17,20 @@ with at least 2 columns "Package" and "packageFullName".}
 
 \item{install_githubArgs}{Any arguments passed to \code{install_github}}
 
-\item{...}{Another way to pass arguments to \code{install_github}}
+\item{...}{Another way to pass arguments to \code{install_github}
+#' @return
+\code{install_githubV} returns a named character vector indicating packages
+  successfullyinstalled, unless the word "Failed" is returned, indicating
+  installation failure. The names will be the full github package name,
+  as provided to \code{gitPkgNames} in the function call.}
 }
 \value{
-A data.table with added columns.
+\code{parseGitHub} returns a data.table with added columns.
 }
 \description{
-This will attempt to identify all dependencies of all packages first, then
+\code{install_githubV} is a vectorized \code{remotes::install_github}.
+This will attempt to identify all dependencies of all supplied
+packages first, then
 load the packages in the correct order so that each of their dependencies are
 met before each is installed.
 }
