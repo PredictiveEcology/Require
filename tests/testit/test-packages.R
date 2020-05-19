@@ -41,7 +41,7 @@ dir1 <- tempdir2("test1")
 options("Require.verbose" = TRUE)
 out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
 testit::assert(data.table::is.data.table(attr(out, "Require")))
-ip <- as.data.table(installed.packages(lib.loc = dir1))[[1]]
+ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
 testit::assert(isTRUE(out))
 testit::assert("TimeWarp" %in% ip)
 detach("package:TimeWarp", unload = TRUE)
@@ -60,16 +60,21 @@ detach("package:TimeWarp", unload = TRUE)
 orig <- setLibPaths(dir2, standAlone = TRUE)
 pkgSnapFile <- tempfile()
 pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
-pkgSnapFile <- data.table::fread(pkgSnapFile)
+pkgSnapFileRes <- data.table::fread(pkgSnapFile)
+
+dir6 <- tempdir2("test6")
+out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
+testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2), packageVersion("TimeWarp", lib.loc = dir6)))
 
 
+setLibPaths(orig)
 # Try github
 dir3 <- tempdir2("test3")
 inst <- Require::Require("PredictiveEcology/Require", install = "force",
                          require = FALSE,
                          standAlone = FALSE, libPaths = dir3)
 pkgs <- c("data.table", "remotes", "Require")
-ip <- as.data.table(installed.packages(lib.loc = dir3))[[1]]
+ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
 testit::assert(isTRUE(all.equal(sort(pkgs),
                                 sort(ip))))
 

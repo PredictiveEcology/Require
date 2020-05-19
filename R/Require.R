@@ -213,7 +213,13 @@ Require <- function(packages, packageVersionFile,
                     ...){
 
   browser(expr = exists("._Require_0"))
-  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  if (!missing(packageVersionFile)) {
+    packages <- data.table::fread(packageVersionFile)
+    packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
+  }
+
+
+    doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
@@ -228,10 +234,6 @@ Require <- function(packages, packageVersionFile,
   if (any(origPackagesHaveNames))
     packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
 
-  if (!missing(packageVersionFile)) {
-    packages <- data.table::fread(packageVersionFile)
-    packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
-  }
   if (missing(libPaths))
     libPaths <- .libPaths()
   origLibPaths <- setLibPaths(libPaths, standAlone)
