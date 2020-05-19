@@ -1,5 +1,5 @@
 testit::assert(identical(isInteractive(), interactive()))
-Require::chooseCRANmirror2(ind = 1)
+Require:::chooseCRANmirror2(ind = 1)
 
 isInteractive <- function() TRUE
 chooseCRANmirror2 <- function() {
