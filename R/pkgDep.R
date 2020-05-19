@@ -319,7 +319,6 @@ whichToDILES <- function(which) {
 
 .basePkgs <- rownames(installed.packages(tail(.libPaths(),1)))
 
-#' Keep this so unit testing can override
 available.packagesCRAN <- function(repos = repos) {
   available.packages(repos = repos)
 }
