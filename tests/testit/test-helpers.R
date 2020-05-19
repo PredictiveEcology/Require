@@ -65,9 +65,9 @@ f1 <- tempfile()
 testit::assert(file.create(f1)) ## TRUE
 testit::assert(file.exists(f1)) ## TRUE
 
-out <- capture.output(type = "message", a <- checkPath(f1))
+out <- capture.output(type = "message", { a <- checkPath(f1) })
 testit::assert(isTRUE(grepl("is an existing file", out)))
 
-rst <- rndstr(1,6)
+rst <- rndstr(1, 6)
 testit::assert(is.character(rst))
-testit::assert(nchar(rst)==6)
+testit::assert(nchar(rst) == 6)

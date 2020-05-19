@@ -53,8 +53,7 @@ if (interactive()) {
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
                    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
                    "withr")
-  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)),
-                      RequireDeps)
+  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)), RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
 
@@ -72,8 +71,6 @@ if (interactive()) {
 
     theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(have[toLoad == TRUE]$Package)))
     browser(expr = !theTest)
-
-
   }
   unloadNSRecursive <- function(packages, n = 0) {
     if (!missing(packages)) {
@@ -137,8 +134,9 @@ if (interactive()) {
             message("Actually, not deleting ", sam)
           } else {
             browser(expr = sam %in% dir(.libPaths()[1]))
-            out11 <- capture.output(out <- capture.output(remove.packages(sam), type = "message"),
-                                    type = "output")
+            out11 <- capture.output({
+              out <- capture.output(remove.packages(sam), type = "message")
+            }, type = "output")
           }
         }
       }
@@ -148,16 +146,15 @@ if (interactive()) {
     return(out2)
   }
 
-
-
-
-  pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)", "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+  pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
+                 "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
                  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
                  "PredictiveEcology/map@development (>= 4.0.9)",
 
                  "achubaty/amc@development (>=0.1.5)", "data.table (>=100.0)",
-                 "digest (>=0.6.23)", "PredictiveEcology/LandR@development (>= 1.0.2)", "versions (>=0.3)",
+                 "digest (>=0.6.23)", "PredictiveEcology/LandR@development (>= 1.0.2)",
+                 "versions (>=0.3)",
                  "fastdigest (>=0.0.0.9)", "PredictiveEcology/map@development (>= 0.1.0.9)",
                  "achubaty/amc@development (>=0.0.0.9)", "data.table (>=0.0.0.9)",
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)", "fastdigest (>=1000.0.0.8)",
@@ -258,12 +255,10 @@ detach("package:TimeWarp", unload = TRUE)
 # Try older version
 dir2 <- tempdir2("test2")
 pvWant <- "1.0-7"
-inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"),
-                       standAlone = TRUE, libPaths = dir2)
+inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE, libPaths = dir2)
 pv <- packageVersion("TimeWarp")
 testit::assert(pv == pvWant)
 detach("package:TimeWarp", unload = TRUE)
-
 
 # Try github
 dir3 <- tempdir2("test3")
@@ -278,13 +273,13 @@ testit::assert(isTRUE(all.equal(sort(pkgs),
 
 # Try github with version
 dir4 <- tempdir2("test4")
-mess <- capture.output(type = "message",
-               inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
-                         require = FALSE,
-                         standAlone = FALSE, libPaths = dir4))
+mess <- capture.output({
+  inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
+                           require = FALSE,
+                           standAlone = FALSE, libPaths = dir4)
+}, type = "message")
 testit::assert(isFALSE(inst))
 testit::assert(length(mess) > 0)
 testit::assert(sum(grepl("could not be installed", mess)) == 1)
-
 
 unlink(dirname(dir3), recursive = TRUE)

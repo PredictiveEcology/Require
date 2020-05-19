@@ -1,16 +1,14 @@
-if (getRversion() >= "3.1.0") {
-  utils::globalVariables(c(".SD", ":=", "Account", "AvailableVersion", "Branch", "Package",
-                           "Repo", "RepoWBranch", "Version", "compareVersionAvail", "correctVersion",
-                           "correctVersionAvail", "download.file", "fullGit", "githubPkgName",
-                           "hasVersionSpec", "inequality", "installed", "isGH", "packageFullName",
-                           "versionSpec", "..colsToKeep", "..keepCols", "DESCFile", "OlderVersionsAvailable",
-                           "OlderVersionsAvailableCh", "PackageUrl", "archiveSource", "isInteractive",
-                           "libPaths", "needInstall", "pkgDepTopoSort", "repoLocation", "toLoad",
-                           "GitSubFolder", "bothDepAndOrig", "depOrOrig", "hasSubFolder",
-                           "loaded", "packagesRequired"))
-}
-
-
+utils::globalVariables(c(
+  "..colsToKeep", "..keepCols", ".SD", ":=",
+  "Account", "archiveSource", "AvailableVersion", "bothDepAndOrig", "Branch",
+  "compareVersionAvail", "correctVersion", "correctVersionAvail",
+  "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
+  "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
+  "libPaths", "loaded", "needInstall",
+  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
+  "Package", "packageFullName", "packagesRequired", "pkgDepTopoSort",
+  "Repo", "repoLocation", "RepoWBranch", "toLoad", "Version", "versionSpec"
+))
 
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
