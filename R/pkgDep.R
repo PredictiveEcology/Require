@@ -147,7 +147,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         }
         needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
       } else if (any("CRAN" %in% pkgDT$repoLocation)) {
-        needed <- unname(unlist(pkgDepCRAN(pkg, recursive = FALSE,
+        needed <- unname(unlist(pkgDepCRAN(pkg, #recursive = FALSE,
                                            which = which, keepVersionNumber = keepVersionNumber,
                                            purge = purge)))
         purge <<- FALSE
@@ -204,7 +204,7 @@ pkgDep2 <- function(packages, recursive = TRUE,
   return(a)
 }
 
-pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
+pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recursive = FALSE,
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
   cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
@@ -217,26 +217,26 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), recurs
 
   capFull <- as.data.table(cachedAvailablePackages)
   deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, keepVersionNumber = keepVersionNumber)
-  if (recursive) {
-    i <- 1
-    pkgsNew <- list()
-    pkgsNew[[i]] <- deps
-    while (length(unlist(pkgsNew[[i]])) > 0) {
-      i <- i + 1
-      pkgsNew[[i]] <- lapply(pkgsNew[[i-1]], function(deps) {
-        deps1 <- pkgDepCRANInner(capFull, which = which, pkgs = deps, keepVersionNumber = keepVersionNumber)
-        unique(unlist(deps1))
-      })
-    }
-    ss <- seq_along(deps)
-    names(ss) <- names(deps)
-    deps <- lapply(ss, function(x) {
-      out <- unique(unname(unlist(lapply(pkgsNew, function(y) y[[x]]))))
-      if (isFALSE(keepVersionNumber))
-        out <- trimVersionNumber(out)
-      out
-      })
-  }
+  # if (recursive) {
+  #   i <- 1
+  #   pkgsNew <- list()
+  #   pkgsNew[[i]] <- deps
+  #   while (length(unlist(pkgsNew[[i]])) > 0) {
+  #     i <- i + 1
+  #     pkgsNew[[i]] <- lapply(pkgsNew[[i-1]], function(deps) {
+  #       deps1 <- pkgDepCRANInner(capFull, which = which, pkgs = deps, keepVersionNumber = keepVersionNumber)
+  #       unique(unlist(deps1))
+  #     })
+  #   }
+  #   ss <- seq_along(deps)
+  #   names(ss) <- names(deps)
+  #   deps <- lapply(ss, function(x) {
+  #     out <- unique(unname(unlist(lapply(pkgsNew, function(y) y[[x]]))))
+  #     if (isFALSE(keepVersionNumber))
+  #       out <- trimVersionNumber(out)
+  #     out
+  #     })
+  # }
   deps
 }
 
