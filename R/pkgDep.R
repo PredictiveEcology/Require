@@ -85,6 +85,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     if (NROW(neededFull2)) {
 
       if (recursive) {
+
         which <- tail(which, 1)[[1]] # take the last of the list of which
         neededFull2 <- lapply(neededFull2, function(needed) {
           i <- 1
@@ -242,8 +243,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), recurs
 pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
   # MUCH faster to use base "ap$Package %in% pkgs" than data.table internal "Package %in% pkgs"
   pkgsNoVersion <- trimVersionNumber(pkgs)
-  if (isFALSE(keepVersionNumber))
+  if (isFALSE(keepVersionNumber)) {
     pkgs <- trimVersionNumber(pkgs)
+  }
   ap <- ap[ap$Package %in% pkgsNoVersion]
   keep <- match(ap$Package, pkgsNoVersion)
   keep <- keep[!is.na(keep)]
