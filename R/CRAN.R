@@ -16,7 +16,7 @@ getCRANrepos <- function(repos = NULL) {
     repos <- if (nzchar(cranRepo)) {
       cranRepo
     } else {
-      if (interactive()) {
+      if (isInteractive()) {
         chooseCRANmirror2() ## sets repo option
         getOption("repos")["CRAN"]
       } else {
@@ -33,3 +33,5 @@ getCRANrepos <- function(repos = NULL) {
 chooseCRANmirror2 <- function() {
   chooseCRANmirror()
 }
+
+isInteractive <- function() interactive()
