@@ -101,9 +101,9 @@ circumstances:
 }
 }
 \examples{
-pkgDep("Require")
-pkgDep("Require", keepVersionNumber = FALSE) # just names
 \dontrun{
+  pkgDep("Require")
+  pkgDep("Require", keepVersionNumber = FALSE) # just names
   pkgDep("PredictiveEcology/reproducible") # GitHub
   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
