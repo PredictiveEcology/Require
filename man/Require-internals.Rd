@@ -4,7 +4,6 @@
 \alias{getPkgVersions}
 \alias{getAvailable}
 \alias{installFrom}
-\alias{updateInstalled}
 \alias{doInstalls}
 \alias{doLoading}
 \alias{archiveVersionsAvailable}
@@ -15,8 +14,6 @@ getPkgVersions(pkgDT, install)
 getAvailable(pkgDT, purge = FALSE)
 
 installFrom(pkgDT)
-
-updateInstalled(pkgDT, installPkgNames, warn)
 
 doInstalls(pkgDT, install_githubArgs, install.packagesArgs, ...)
 

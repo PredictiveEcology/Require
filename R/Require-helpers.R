@@ -288,8 +288,6 @@ getGitHubDESCRIPTION <- function(pkg) {
 
 
 
-#' @inheritParams Require
-#' @rdname Require-internals
 updateInstalled <- function(pkgDT, installPkgNames, warn) {
   if (missing(warn)) warn <- warnings()
   warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, names(warn))))
