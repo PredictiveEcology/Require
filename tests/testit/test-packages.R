@@ -7,7 +7,11 @@ chooseCRANmirror2 <- function() {
   repos
 }
 available.packagesCRAN <- function(repos) {
-  out <- load(system.file(".cacheAvailablePackages.rda", package = "Require"))
+  destfile <- tempfile()
+  download.file(destfile = destfile,
+                "https://github.com/PredictiveEcology/Require/raw/master/.cacheAvailablePackages.rda"
+                )
+  out <- load(destfile)
   get(out, inherits = FALSE)
 }
 assignInNamespace("available.packagesCRAN", available.packagesCRAN, ns = "Require")
