@@ -249,4 +249,10 @@ pv <- packageVersion("TimeWarp")
 testit::assert(pv == pvWant)
 remove.packages("TimeWarp", lib = tempdir())
 
+# Try github
+inst <- Require::Require("PredictiveEcology/Require", install = "force",
+                         require = FALSE,
+                         standAlone = FALSE, libPaths = tempdir())
+remove.packages("TimeWarp", lib = tempdir())
+
 

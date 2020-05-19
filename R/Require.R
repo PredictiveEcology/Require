@@ -258,7 +258,7 @@ Require <- function(packages, packageVersionFile,
   pkgDT[, installed := !is.na(Version)]
 
   if (length(packages) && (isTRUE(install) || isTRUE(require))) {
-    if (isTRUE(install)) {
+    if (isTRUE(install) || identical(install, "force")) {
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
       if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)]))
