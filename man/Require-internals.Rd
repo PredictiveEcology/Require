@@ -20,11 +20,14 @@ updateInstalled(pkgDT, installPkgNames, warn)
 
 doInstalls(pkgDT, install_githubArgs, install.packagesArgs, ...)
 
-doLoading(toLoadPkgs, ...)
+doLoading(packages, ...)
 
 archiveVersionsAvailable(package, repos)
 }
 \arguments{
+\item{pkgDT}{A character string with full package names or a data.table
+with at least 2 columns "Package" and "packageFullName".}
+
 \item{install}{Logical or "force". If \code{FALSE}, this will not try to
 install anything. If \code{"force"}, then it will force installation of
 requested packages, mimicking a call to e.g., \code{install.packages}. If
@@ -45,6 +48,16 @@ Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 
+\item{packages}{Character vector of packages to install via
+\code{install.packages}, then load (i.e., with \code{library}). If it is
+one package, it can be unquoted (as in \code{require}). In the case of a
+GitHub package, it will be assumed that the name of the repository is the
+name of the package. If this is not the case, then pass a named character
+vector here, where the names are the package names that could be different
+than the GitHub repository name.}
+
+\item{package}{A single package name (without version or github specifications)}
+
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 }
@@ -59,4 +72,6 @@ of some use for advanced users.
 \code{doLoading} is a wrapper around \code{require}.
 
 \code{archiveVersionsAvailable} searches CRAN Archives for available versions.
+It has been borrowed from a sub-set of the code in a non-exported function:
+\code{remotes:::download_version_url}
 }

@@ -49,6 +49,7 @@ parseGitHub <- function(pkgDT) {
 #'
 #' @importFrom data.table setorderv
 #' @inheritParams Require
+#' @inheritParams parseGitHub
 #' @rdname Require-internals
 #' @export
 getPkgVersions <- function(pkgDT, install) {
@@ -289,7 +290,6 @@ getGitHubDESCRIPTION <- function(pkg) {
 
 #' @inheritParams Require
 #' @rdname Require-internals
-#' @export
 updateInstalled <- function(pkgDT, installPkgNames, warn) {
   if (missing(warn)) warn <- warnings()
   warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, names(warn))))
@@ -372,9 +372,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
 #' @export
 #' @details
 #' \code{doLoading} is a wrapper around \code{require}.
-doLoading <- function(toLoadPkgs, ...) {
+doLoading <- function(packages, ...) {
+  packages <- extractPkgName(packages)
   outMess <- capture.output(
-    out <- lapply(toLoadPkgs, require, character.only = TRUE),
+    out <- lapply(packages, require, character.only = TRUE),
     type = "message")
   warn <- warnings()
   grep3a <- "no package called"
@@ -439,8 +440,11 @@ doLoading <- function(toLoadPkgs, ...) {
 
 #' @rdname Require-internals
 #' @export
+#' @param package A single package name (without version or github specifications)
 #' @details
 #' \code{archiveVersionsAvailable} searches CRAN Archives for available versions.
+#' It has been borrowed from a sub-set of the code in a non-exported function:
+#' \code{remotes:::download_version_url}
 archiveVersionsAvailable <- function(package, repos) {
   for (repo in repos) {
     if (length(repos) > 1)
