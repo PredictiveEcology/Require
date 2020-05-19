@@ -146,14 +146,12 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
           setorderv(pkgDT2, "github", na.last = TRUE)
         }
         needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
-      } else if (any("CRAN" %in% pkgDT$repoLocation)) {
+      } else { #if (any("CRAN" %in% pkgDT$repoLocation)) {
         needed <- unname(unlist(pkgDepCRAN(pkg, #recursive = FALSE,
                                            which = which, keepVersionNumber = keepVersionNumber,
                                            purge = purge)))
         purge <<- FALSE
         needed
-      } else {
-        stop("Can only get package dependencies from CRAN and GitHub")
       }
     } else {
       needed <- DESCRIPTIONFileDeps(desc_path, which = which, keepVersionNumber = keepVersionNumber)
