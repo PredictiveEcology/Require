@@ -4,18 +4,15 @@ chooseCRANmirror2 <- function() {
   repos2 <- "https://cloud.r-project.org"
   repos["CRAN"] <- repos2
   options("repos" = repos)
+  repos
 }
 assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
-out <- Require:::getCRANrepos("")
-testit::assert(is.character(out))
+repos <- Require:::getCRANrepos()
+testit::assert(is.character(repos))
+# options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = TRUE)
-
-#repos <- NULL
-#repos2 <- "https://cloud.r-project.org"
-#repos["CRAN"] <- repos2
-#options("repos" = repos, "Require.purge" = TRUE)
 
 # Failure on Travis:
 # cannot open file 'startup.Rs': No such file or directory
