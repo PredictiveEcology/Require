@@ -1,5 +1,3 @@
-library(Require)
-
 out <- capture.output(type = "message", messageDF(data.frame(a = 1)))
 testit::assert(is.character(out))
 
@@ -70,3 +68,6 @@ testit::assert(file.exists(f1)) ## TRUE
 out <- capture.output(type = "message", a <- checkPath(f1))
 testit::assert(isTRUE(grepl("is an existing file", out)))
 
+rst <- rndstr(1,6)
+testit::assert(is.character(rst))
+testit::assert(nchar(rst)==6)
