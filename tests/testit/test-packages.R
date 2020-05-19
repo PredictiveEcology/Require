@@ -1,7 +1,14 @@
-repos <- NULL
-repos2 <- "https://cloud.r-project.org"
-repos["CRAN"] <- repos2
-options("repos" = repos, "Require.purge" = TRUE)
+chooseCRANmirror2 <- function() {
+  repos <- NULL
+  repos2 <- "https://cloud.r-project.org"
+  repos["CRAN"] <- repos2
+  options("repos" = repos)
+}
+assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
+
+out <- Require:::getCRANrepos("")
+testit::assert(is.character(out))
+options("Require.purge" = TRUE)
 
 # Failure on Travis:
 # cannot open file 'startup.Rs': No such file or directory
@@ -30,7 +37,7 @@ if (interactive()) {
   testit::assert(length(pkgDepTest1) == 1)
   testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes"))
 
-  testit::assert(length(pkgDepTest2) == 4)
+  testit::assert(length(pkgDepTest2) == 2)
   testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
 
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
