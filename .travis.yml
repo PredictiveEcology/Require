@@ -36,6 +36,16 @@ matrix:
       - devtools
   - os: osx
     osx_image: xcode9.4
+    r: oldrel
+    addons:
+      homebrew:
+        update: true
+    latex: false
+    r_build_args: '--no-build-vignettes'
+    r_check_args: '--as-cran --ignore-vignettes --no-examples'
+  - os: osx
+    osx_image: xcode11.4
+    r: release
     addons:
       homebrew:
         update: true
