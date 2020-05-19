@@ -29,3 +29,4 @@ a <- trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 testit::assert(isTRUE(all.equal("PredictiveEcology/Require", a)))
 a <- trimVersionNumber("Require (<=0.0.1)")
 testit::assert(isTRUE(all.equal("Require", a)))
+
