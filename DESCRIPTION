@@ -25,7 +25,6 @@ Imports:
     remotes,
     utils
 Suggests:
-    spelling,
     testit
 Encoding: UTF-8
 Language: en-CA
