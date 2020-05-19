@@ -263,7 +263,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
       if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)]))
-        pkgDT <- getAvailable(pkgDT, purge = purge)
+        pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
       pkgDT <- installFrom(pkgDT)
 
       if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) && (isTRUE(install) || install == "force")) {

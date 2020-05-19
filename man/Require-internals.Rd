@@ -11,7 +11,7 @@
 \usage{
 getPkgVersions(pkgDT, install = TRUE)
 
-getAvailable(pkgDT, purge = FALSE)
+getAvailable(pkgDT, purge = FALSE, repos = repos)
 
 installFrom(pkgDT)
 
@@ -34,6 +34,9 @@ missing packages or dependencies.}
 \item{purge}{Logical. Internally, there are calls to
 \code{installed.packages} and \code{available.packages}}
 
+\item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
+\code{install.packages}, \code{install_github} or \code{installVersions}.}
+
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
@@ -54,9 +57,6 @@ vector here, where the names are the package names that could be different
 than the GitHub repository name.}
 
 \item{package}{A single package name (without version or github specifications)}
-
-\item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
-\code{install.packages}, \code{install_github} or \code{installVersions}.}
 }
 \value{
 In general, these functions return a data.table with various package

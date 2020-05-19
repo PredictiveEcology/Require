@@ -101,11 +101,12 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
   pkgDT[]
 }
 
-#' @importFrom utils download.file tail
 #' @inheritParams Require
-#' @rdname Require-internals
+#'
 #' @export
-getAvailable <- function(pkgDT, purge = FALSE) {
+#' @importFrom utils download.file tail
+#' @rdname Require-internals
+getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
   whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
   if (NROW(whNotCorrect)) {
 
@@ -114,7 +115,7 @@ getAvailable <- function(pkgDT, purge = FALSE) {
     # do CRAN first
     if (any(notCorrectVersions$repoLocation == "CRAN")) {
       cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-        cap <- available.packages()
+        cap <- available.packages(repos = repos)
         assign("cachedAvailablePackages", cap, envir = .pkgEnv)
         cap
       } else {
