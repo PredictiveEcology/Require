@@ -16,6 +16,7 @@ pkgDep(
   linkingTo,
   repos = getCRANrepos(),
   keepVersionNumber = TRUE,
+  includeBase = FALSE,
   sort = TRUE,
   purge = getOption("Require.purge", FALSE)
 )
@@ -64,6 +65,9 @@ NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
 
 \item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies returned
 will include version number. Default is \code{FALSE}}
+
+\item{includeBase}{Logical. Should R base packages be included, specifically, those in
+\code{tail(.libPath(), 1)}}
 
 \item{sort}{Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
 If \code{FALSE}, the packages will not have a discernable order as they will be a

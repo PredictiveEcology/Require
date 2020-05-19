@@ -58,6 +58,10 @@ than the GitHub repository name.}
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 }
+\value{
+In general, these functions return a data.table with various package
+information, installation status, version, available version etc.
+}
 \description{
 While these are not intended to be called manually by users, they may be
 of some use for advanced users.
