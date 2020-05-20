@@ -134,3 +134,14 @@ testit::assert(file.exists(out$DESCFile))
 
 out <- getGitHubDESCRIPTION(pkg = character())
 testit::assert(length(out) == 0)
+
+
+# Trigger the save available.packages and archiveAvailable
+warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
+         warning = function(x) x)
+warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
+                 warning = function(x) x)
+warn <- tryCatch(out <- Require("Require (<=0.0.1)", dependencies = FALSE, install = "force"),
+                 warning = function(x) x)
+warn <- tryCatch(out <- Require("Require (<=0.0.1)", dependencies = FALSE, install = "force"),
+                 warning = function(x) x)
