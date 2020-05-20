@@ -208,7 +208,7 @@ pkgs <- c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
 Require::Require(pkgs)
 
 ############################################################################
-# Using libPathsh -- This will only be used inside this function;
+# Using libPaths -- This will only be used inside this function;
 # To change .libPaths() for the whole session use a manually call to
 # setLibPaths(newPath) first
 ############################################################################
@@ -219,7 +219,6 @@ Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
 ############################################################################
 setLibPaths("~/TempLib2", standAlone = TRUE)
 Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
-
 }
 
 }

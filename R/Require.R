@@ -185,7 +185,7 @@ utils::globalVariables(c(
 #' Require::Require(pkgs)
 #'
 #' ############################################################################
-#' # Using libPathsh -- This will only be used inside this function;
+#' # Using libPaths -- This will only be used inside this function;
 #' # To change .libPaths() for the whole session use a manually call to
 #' # setLibPaths(newPath) first
 #' ############################################################################
@@ -196,7 +196,6 @@ utils::globalVariables(c(
 #' ############################################################################
 #' setLibPaths("~/TempLib2", standAlone = TRUE)
 #' Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
-#'
 #' }
 #'
 Require <- function(packages, packageVersionFile,
