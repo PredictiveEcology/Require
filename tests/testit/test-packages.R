@@ -48,8 +48,8 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
   options("Require.verbose" = TRUE)
   out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
   testit::assert(data.table::is.data.table(attr(out, "Require")))
-  ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
   testit::assert(isTRUE(out))
+  ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
   testit::assert("TimeWarp" %in% ip)
   detach("package:TimeWarp", unload = TRUE)
 }
