@@ -7,33 +7,6 @@ A simple package for reproducible package management in R.
 Built on top of `git2r` and `archivist`, this package aims at making high-level, robust, machine and OS independent tools for making deeply reproducible package management in R.
 This extends beyond the package management utilities of `packrat` and `checkpoint` by including all in one management for packages in R focused around a single function, `Require`.
 
-## News
-
-See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [development](https://github.com/PredictiveEcology/Require/blob/development/NEWS.md) versions. 
-
-## Installation
-
-### Current release (not yet on CRAN)
-
-[![Build Status](https://travis-ci.org/PredictiveEcology/Require.svg?branch=master)](https://travis-ci.org/PredictiveEcology/Require)
-[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/master?svg=true)](https://ci.appveyor.com/project/achubaty/Require/branch/master)
-[![Coverage Status](https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=master)](https://coveralls.io/github/PredictiveEcology/Require?branch=master)
-
-**Install from CRAN:**
-
-Not yet on CRAN
-```r
-# install.packages("Require")
-```
-
-**Install from GitHub:**
-    
-```r
-#install.packages("devtools")
-library("devtools")
-install_github("PredictiveEcology/Require", dependencies = TRUE) 
-```
-
 # Objectives
 
 Some packages, including those in our PredictiveEcology repository, have _many_ package dependencies. 
@@ -57,6 +30,8 @@ We define a reproducible workflow as a workflow that can be run from the start t
 It is vectorized on package names.
 
 ```{r Intro, eval=FALSE}
+# install.packages("Require") # sadly, Require can't install itself, so must comment this line
+library(Require)
 Require("data.table")
 
 # With version numbering
@@ -116,6 +91,34 @@ Require::Require(packageVersionFile = "mySnapshot.txt")
 ```
 
 # Installing
+
+## News
+
+See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [development](https://github.com/PredictiveEcology/Require/blob/development/NEWS.md) versions. 
+
+## Installation
+
+### Current release (not yet on CRAN)
+
+[![Build Status](https://travis-ci.org/PredictiveEcology/Require.svg?branch=master)](https://travis-ci.org/PredictiveEcology/Require)
+[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/master?svg=true)](https://ci.appveyor.com/project/achubaty/Require/branch/master)
+[![Coverage Status](https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=master)](https://coveralls.io/github/PredictiveEcology/Require?branch=master)
+
+**Install from CRAN:**
+
+Not yet on CRAN
+```r
+# install.packages("Require")
+```
+
+**Install from GitHub:**
+    
+```r
+#install.packages("devtools")
+library("devtools")
+install_github("PredictiveEcology/Require", dependencies = TRUE) 
+```
+
 
 ### Development version
 
