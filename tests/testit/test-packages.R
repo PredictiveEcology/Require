@@ -86,7 +86,7 @@ testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes))
 
 # Skip on CRAN
 dir3 <- tempdir2("test3")
-#if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
+if (identical(Sys.getenv("NOT_CRAN"), "true")) {
   # Try github
   inst <- Require::Require("PredictiveEcology/Require", install = "force",
                            require = FALSE, standAlone = FALSE, libPaths = dir3)
@@ -104,7 +104,7 @@ dir3 <- tempdir2("test3")
   testit::assert(isFALSE(inst))
   testit::assert(length(mess) > 0)
   testit::assert(sum(grepl("could not be installed", mess)) == 1)
-#}
+}
 unlink(dirname(dir3), recursive = TRUE)
 
 
