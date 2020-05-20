@@ -19,7 +19,15 @@ Finally, how do we do all this for many concurrent projects without installing h
 
 The `Require` package attempts to address these issues and others. 
 It is different than `packrat` in that it is much simpler and is closer to base R package management.
-It is different than other packages like `renv` in that it is focused around a single function, `Require`, that can be used in a reproducible workflow.
+`Require` _can_ use hierarchical library paths, as in base R, with many paths in the `.libPaths()`, or can set a single library path to be `standAlone`.
+This allows "system" packages to be used as well as "project-specific" packages to be used together, as in base R.
+It is different than other packages like `renv` in that it is focused around a single function, `Require`, that can be used in a reproducible workflow. 
+`renv` uses a notion of package versions, the "snapshot", _as installed_ at its foundation; any changes to package versions by a user then updates this snapshot.
+`renv` does not keep this information in the source code of the project.
+`Require` uses the notion of a "snapshot" as a decision to make by a user when it is time to _set_ the package versions. 
+Package versions are primarily updated by the code developer by stating the minimum (or maximum) package version _in the source code_.
+This means that by default, projects are somewhat more fluid, defined by no package version if none is required or minimum (or maximum) package versions if required until it is time to freeze it, say when publishing or needing to set up virtual machines with identical setup.
+From this perspective, `renv` is more "top-down", and `Require` is more "bottom-up", though they can each emulate the other's behaviour.
 
 We define a reproducible workflow as a workflow that can be run from the start to any point in the project, without having to "skip over" or "comment out" or "jump to" particular lines or chunks of code. 
 `Require` does that. 
@@ -71,10 +79,13 @@ Require("data.table (<=1.11.0)")
 
 ### Managing a project
 
-Because it is vectorized, there can be a long list of packages at the start of a project.
+Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.
 
 ```{r LongPackageList}
-Require(c("data.table", "dplyr", "reproducible", "SpaDES", "raster"))
+library(Require)
+setLibPaths("ProjectA", standAlone = TRUE)
+Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
+          "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"))
 ```
 
 ### Taking a snapshot
