@@ -30,7 +30,7 @@ getCRANrepos <- function(repos = NULL) {
 
 #' Pass through function for \code{chooseCRANmirror}
 #'
-#' This is here to allow mocking during unit testing related to chooseCRANmirror.
+#' This is here to allow mocking during unit testing related to \code{chooseCRANmirror}.
 #'
 #' @importFrom utils chooseCRANmirror
 #' @param ... Passed to \code{chooseCRANmirror}
