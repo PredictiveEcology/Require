@@ -316,8 +316,11 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       if (is.null(dots$dependencies))
         dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
-      out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs), dots))
-      warn <- warnings()
+      warn <- tryCatch(out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs), dots)),
+          warning = function(condition) condition)
+
+      if (!is.null(warn))
+        warning(warn)
       pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
       permDen <- grepl("Permission denied", names(warn))
       packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
