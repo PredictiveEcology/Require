@@ -201,6 +201,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
 #' @rdname Require-internals
 #' @export
 installFrom <- function(pkgDT) {
+  cn <- colnames(pkgDT)
+  if (!"installed" %in% cn) {
+    stop("pkgDT needs a column named 'installed' to indicate whether it is installed or not")
+  }
   pkgDT <- pkgDT[correctVersion == FALSE | is.na(correctVersion) & installed == FALSE, needInstall := TRUE]
   if (NROW(pkgDT[needInstall == TRUE])) {
     pkgDT[needInstall == TRUE & # installed == FALSE &
@@ -284,7 +288,7 @@ getGitHubDESCRIPTION <- function(pkg) {
       }, by = c("Package", "Branch")]
     pkgDT[]
   } else {
-    pkgDT[]
+    pkg
   }
   ret
 }
