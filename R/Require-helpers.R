@@ -116,7 +116,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
         cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-          cap <- available.packages(repos = repos)
+          isOldMac <- ((Sys.info()[["sysname"]] == "Darwin" &&
+                          paste0(version$major, ".", version$minor) == R_system_version("3.6.3")))
+          cap <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
           assign("cachedAvailablePackages", cap, envir = .pkgEnv)
           cap
         } else {
@@ -471,16 +473,9 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
     }
     message(paste0(outMess, collapse = "\n"))
 
-
-  } else {
-    out = lapply(packages, function(x) FALSE)
+    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
   }
-  if (is.null(out)) out <- logical()
-  pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
   pkgDT[]
-  # out <- pkgDT[packagesRequired == TRUE]$loaded
-  # names(out) <- pkgDT[packagesRequired == TRUE]$Package
-  # list(out = out)
 }
 
 #' @rdname Require-internals

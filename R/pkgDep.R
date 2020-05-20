@@ -203,7 +203,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recur
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
   cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-    aa <- available.packages(repos = repos)
+    isOldMac <- ((Sys.info()[["sysname"]] == "Darwin" &&
+                    paste0(version$major, ".", version$minor) == R_system_version("3.6.3")))
+    aa <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
     assign("cachedAvailablePackages", aa, envir = .pkgEnv)
     aa
   } else {
