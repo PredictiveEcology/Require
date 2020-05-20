@@ -1,5 +1,8 @@
-out <- capture.output(type = "message", messageDF(data.frame(a = 1)))
+out <- capture.output(type = "message", messageDF(cbind(a = 1.1232), round = 2))
 testit::assert(is.character(out))
+testit::assert(is.numeric(as.numeric(gsub(".*: ", "", out)[2])))
+
+
 
 # don't use checkPath here because we are testing normPath!
 tmpdir <- tempdir2("test_normPath")
@@ -71,3 +74,12 @@ testit::assert(isTRUE(grepl("is an existing file", out)))
 rst <- rndstr(1, 6)
 testit::assert(is.character(rst))
 testit::assert(nchar(rst) == 6)
+
+
+a <- list(a = list(d = 1, e = 2:3, f = 4:6), b = list(d = 5, e = 55))
+b <- invertList(a) # creates 2-deep, now 3 levels outer --> 2 levels inner
+testit::assert(length(b[[1]]) == length(a))
+testit::assert(length(b) == length(a[[1]]))
+
+out <- tempfile2("rand")
+testit::assert(isTRUE(all.equal(normPath(dirname(out)), normPath(file.path(tempdir2(), "rand")))))
