@@ -206,11 +206,11 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recur
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
   cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-    aa <- available.packagesCRAN(repos = repos)
+    aa <- available.packages(repos = repos)
     assign("cachedAvailablePackages", aa, envir = .pkgEnv)
     aa
   } else {
-    .pkgEnv$cachedAvailablePackages
+    get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
   }
 
   capFull <- as.data.table(cachedAvailablePackages)
@@ -319,6 +319,3 @@ whichToDILES <- function(which) {
 
 .basePkgs <- rownames(installed.packages(tail(.libPaths(),1)))
 
-available.packagesCRAN <- function(repos = repos) {
-  available.packages(repos = repos)
-}

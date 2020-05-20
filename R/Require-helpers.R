@@ -119,7 +119,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
         assign("cachedAvailablePackages", cap, envir = .pkgEnv)
         cap
       } else {
-        .pkgEnv$cachedAvailablePackages
+        get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
       }
       cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
       setnames(cachedAvailablePackages, "Version", "AvailableVersion")
@@ -148,7 +148,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
         ava
         # versions::available.versions(notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package)
       } else {
-        .pkgEnv$oldAvailableVersions
+        get("oldAvailableVersions", envir = .pkgEnv, inherits = FALSE)
       }
       oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
       # delete unwanted columns
