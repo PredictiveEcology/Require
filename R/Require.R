@@ -243,8 +243,10 @@ Require <- function(packages, packageVersionFile,
 
   # Create data.table of Require workflow
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
+
+  # identify the packages that were asked by user to load -- later dependencies will be in table too
   pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
-  pkgDT[, toLoad := packagesRequired]
+  pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
 
   if (any(origPackagesHaveNames))
     pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
@@ -257,10 +259,9 @@ Require <- function(packages, packageVersionFile,
   # Join installed with requested
   pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
   pkgDT <- pkgDT[, .SD[1], by = "Package"] # remove duplicates
-  pkgDT[, installed := !is.na(Version)]
+  pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
 
-  if (length(packages) && ((isTRUE(install) || identical(install, "force")) ||
-                           isTRUE(require))) {
+  if (length(packages)) {
     if (isTRUE(install) || identical(install, "force")) {
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
@@ -269,25 +270,12 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                           install.packagesArgs = install.packagesArgs,
                           install = install, ...)
-      # update packages to only the ones that can be loaded
-      #packages <- pkgDT[toLoad == TRUE]$Package
     }
-    # names(packages) <- packages
-    pkgDT <- doLoading(pkgDT, require = require, ...)
-    # if (isTRUE(require)) {
-    #   postLoad <- doLoading(packages, require = require, ...)
-    # } else {
-    #   postLoad <- list(out = lapply(packages, function(x) FALSE), out2 = FALSE)
-    # }
-    # out <- unlist(postLoad$out)
-    # if (is.null(out)) out <- character()
-    # pkgDT[, loaded := (pkgDT$Package %in% names(out)[out] & toLoad == TRUE)]
-    out <- pkgDT[packagesRequired == TRUE]$loaded
-    names(out) <- pkgDT[packagesRequired == TRUE]$Package
-  } else {
-    out <- rep(FALSE, length(packages))
-    names(out) <- packageNamesOrig
+    if (isTRUE(require))
+      pkgDT <- doLoading(pkgDT, ...)
   }
+  out <- pkgDT[packagesRequired == TRUE]$loaded
+  names(out) <- pkgDT[packagesRequired == TRUE]$Package
   if (verbose > 0) {
     if (verbose < 2) {
       colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
