@@ -73,8 +73,6 @@ dir6 <- tempdir2("test6")
 out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
 testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
                          packageVersion("TimeWarp", lib.loc = dir6)))
-
-
 setLibPaths(orig)
 
 # Test snapshot file with no args
@@ -84,7 +82,6 @@ testit::assert(is.data.frame(out))
 testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
 testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
 
-
 # Skip on CRAN
 if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
   # Try github
@@ -93,8 +90,7 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
                            require = FALSE, standAlone = FALSE, libPaths = dir3)
   pkgs <- c("data.table", "remotes", "Require")
   ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
-  testit::assert(isTRUE(all.equal(sort(pkgs),
-                                  sort(ip))))
+  testit::assert(isTRUE(all.equal(sort(pkgs), sort(ip))))
 }
 
 # Try github with version
@@ -136,10 +132,9 @@ testit::assert(file.exists(out$DESCFile))
 out <- getGitHubDESCRIPTION(pkg = character())
 testit::assert(length(out) == 0)
 
-
 # Trigger the save available.packages and archiveAvailable
 warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
-         warning = function(x) x)
+                 warning = function(x) x)
 warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
                  warning = function(x) x)
 warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
