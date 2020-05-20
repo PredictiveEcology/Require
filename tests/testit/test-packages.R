@@ -1,7 +1,6 @@
 testit::assert(identical(isInteractive(), interactive()))
 Require:::chooseCRANmirror2(ind = 1)
 
-isInteractive <- function() TRUE
 chooseCRANmirror2 <- function() {
   repos <- NULL
   repos2 <- "https://cloud.r-project.org"
@@ -10,11 +9,16 @@ chooseCRANmirror2 <- function() {
   repos
 }
 assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
+
+isInteractive <- function() TRUE
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
 Sys.setenv("CRAN_REPO" = "")
+out <- getCRANrepos("")
+isInteractive <- function() FALSE
+assignInNamespace("isInteractive", isInteractive, ns = "Require")
 out <- getCRANrepos("")
 Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
