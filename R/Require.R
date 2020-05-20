@@ -164,7 +164,7 @@ utils::globalVariables(c(
 #' #    reuse already installed packages --> this won't allow as much control
 #' #    of package versioning
 #' Require("PredictiveEcology/SpaDES@development",
-#'                  libPaths = ProjectPackageFolder, standAlone = FALSE)
+#'         libPaths = ProjectPackageFolder, standAlone = FALSE)
 #'
 #' # To keep totally isolated: use standAlone = TRUE
 #' #   --> setting .libPaths() directly means standAlone is not necessary; it will only
