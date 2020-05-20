@@ -86,8 +86,7 @@ testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes))
 # Try github
 dir3 <- Require::tempdir2("test3")
 inst <- Require::Require("PredictiveEcology/Require", install = "force",
-                         require = FALSE,
-                         standAlone = FALSE, libPaths = dir3)
+                         require = FALSE, standAlone = FALSE, libPaths = dir3)
 pkgs <- c("data.table", "remotes", "Require")
 ip <- data.table::as.data.table(utils::installed.packages(lib.loc = dir3))[[1]]
 testit::assert(isTRUE(all.equal(sort(pkgs), sort(ip))))

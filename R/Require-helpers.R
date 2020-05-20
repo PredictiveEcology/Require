@@ -320,8 +320,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       if (is.null(dots$dependencies))
         dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
-      warn <- tryCatch(out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs), dots)),
-          warning = function(condition) condition)
+      warn <- tryCatch({
+        out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs),
+                                                dots))
+      }, warning = function(condition) condition)
 
       if (!is.null(warn))
         warning(warn)
@@ -331,17 +333,23 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       if (any(permDen)) {
         stopMess <- character()
         if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
-          stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-                                         "------\n",
-                                         #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
-                                         "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",libPaths[1],"')"))
+          stopMess <- c(
+            stopMess,
+            paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                   "------\n",
+                   #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '", libPaths[1],"')",
+                   "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",
+                   libPaths[1],"')")
+          )
         if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
-          stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-                                         "------\n", "remotes::install_github(c('",
-                                         paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
-                                                collapse = "', '"), "'), lib = '",libPaths[1],"')"))
+          stopMess <- c(
+            stopMess,
+            paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                   "------\n", "remotes::install_github(c('",
+                   paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
+                          collapse = "', '"), "'), lib = '",libPaths[1],"')")
+          )
         stop(stopMess)
-
       }
     }
     if (any("GitHub" %in% toInstall$installFrom)) {
