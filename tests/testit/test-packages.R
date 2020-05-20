@@ -86,24 +86,27 @@ testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes))
 
 # Skip on CRAN
 dir3 <- tempdir2("test3")
-if (identical(Sys.getenv("NOT_CRAN"), "true")) {
-  # Try github
-  inst <- Require::Require("PredictiveEcology/Require", install = "force",
-                           require = FALSE, standAlone = FALSE, libPaths = dir3)
-  pkgs <- c("data.table", "remotes", "Require")
-  ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
-  testit::assert(isTRUE(all.equal(sort(pkgs),
-                                  sort(ip))))
+if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
+  if (!(Sys.info()[["sysname"]] == "Darwin" &&
+        paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
+    # Try github
+    inst <- Require::Require("PredictiveEcology/Require", install = "force",
+                             require = FALSE, standAlone = FALSE, libPaths = dir3)
+    pkgs <- c("data.table", "remotes", "Require")
+    ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
+    testit::assert(isTRUE(all.equal(sort(pkgs),
+                                    sort(ip))))
 
-  # Try github with version
-  dir4 <- Require::tempdir2("test4")
-  mess <- utils::capture.output({
-    inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
-                             require = FALSE, standAlone = FALSE, libPaths = dir4)
-  }, type = "message")
-  testit::assert(isFALSE(inst))
-  testit::assert(length(mess) > 0)
-  testit::assert(sum(grepl("could not be installed", mess)) == 1)
+    # Try github with version
+    dir4 <- Require::tempdir2("test4")
+    mess <- utils::capture.output({
+      inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
+                               require = FALSE, standAlone = FALSE, libPaths = dir4)
+    }, type = "message")
+    testit::assert(isFALSE(inst))
+    testit::assert(length(mess) > 0)
+    testit::assert(sum(grepl("could not be installed", mess)) == 1)
+  }
 }
 unlink(dirname(dir3), recursive = TRUE)
 
