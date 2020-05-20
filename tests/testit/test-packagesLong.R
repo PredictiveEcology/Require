@@ -7,6 +7,7 @@ suppressWarnings(dir.create(tmpdir))
 
 # if (FALSE) {
 if (interactive()) {
+  pkgDepTest1 <- Require::pkgDep("Require")
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
   on.exit(Require::setLibPaths(orig))
