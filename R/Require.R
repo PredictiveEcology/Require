@@ -271,7 +271,7 @@ Require <- function(packages, packageVersionFile,
                             install.packagesArgs = install.packagesArgs, ...)
       }
       pkgDT[needInstall == TRUE & installed == TRUE, Version :=
-              unlist(lapply(Package, function(x) as.character(packageVersion(x))))]
+              unlist(lapply(Package, function(x) as.character(packageVersion(x, lib.loc = libPaths))))]
       browser(expr = exists("._Require_2"))
       pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
       pkgDT[, toLoad := packagesRequired]
