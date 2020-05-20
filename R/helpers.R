@@ -237,6 +237,7 @@ tempfile2 <- function(sub = "", ...) {
 #' with 2 levels
 #' @param l A list with 2 levels. If some levels are absent, they will be
 #'   NULL
+#' @export
 #' @return
 #' A list with 2 levels deep, inverted from \code{l}
 #'

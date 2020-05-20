@@ -4,7 +4,11 @@
 \alias{pkgSnapshot}
 \title{Take a snapshot of all the packages and version numbers}
 \usage{
-pkgSnapshot(packageVersionFile, libPaths, standAlone = FALSE)
+pkgSnapshot(
+  packageVersionFile = "packageVersions.txt",
+  libPaths,
+  standAlone = FALSE
+)
 }
 \arguments{
 \item{packageVersionFile}{A filename to save the packages and their currently

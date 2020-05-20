@@ -72,6 +72,15 @@ testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2), packageVers
 
 
 setLibPaths(orig)
+
+# Test snapshot file with no args
+out <- pkgSnapshot()
+pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
+testit::assert(is.data.frame(out))
+testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
+testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
+
+
 # Try github
 dir3 <- tempdir2("test3")
 inst <- Require::Require("PredictiveEcology/Require", install = "force",

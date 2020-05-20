@@ -18,14 +18,13 @@
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
 #' data.table::fread(pkgSnapFile)
 #'
-pkgSnapshot <- function(packageVersionFile, libPaths, standAlone = FALSE) {
+pkgSnapshot <- function(packageVersionFile = "packageVersions.txt",
+                        libPaths, standAlone = FALSE) {
   browser(expr = exists("aaaa"))
   if (missing(libPaths))
     libPaths <- .libPaths()
   origLibPaths <- setLibPaths(libPaths, standAlone)
   on.exit({.libPaths(origLibPaths)}, add = TRUE)
-
-  if (missing(packageVersionFile)) packageVersionFile <- ".packageVersions.txt"
 
   ip <- as.data.table(installed.packages(lib.loc = libPaths))
   instPkgs <- ip$Package
@@ -38,14 +37,6 @@ pkgSnapshot <- function(packageVersionFile, libPaths, standAlone = FALSE) {
   return(invisible(out))
 }
 
-
-basename2 <- function(x) {
-  if (is.null(x)) {
-    NULL
-  } else {
-    basename(x)
-  }
-}
 
 #' @keywords internal
 .pkgSnapshot <- function(instPkgs, instVers, packageVersionFile = "._packageVersionsAuto.txt") {
