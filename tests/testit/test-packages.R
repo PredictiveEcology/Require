@@ -70,7 +70,8 @@ pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
 dir6 <- tempdir2("test6")
 out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
-testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2), packageVersion("TimeWarp", lib.loc = dir6)))
+testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
+                         packageVersion("TimeWarp", lib.loc = dir6)))
 
 
 setLibPaths(orig)
@@ -88,7 +89,7 @@ inst <- Require::Require("PredictiveEcology/Require", install = "force",
                          require = FALSE,
                          standAlone = FALSE, libPaths = dir3)
 pkgs <- c("data.table", "remotes", "Require")
-ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
+ip <- data.table::as.data.table(utils::installed.packages(lib.loc = dir3))[[1]]
 testit::assert(isTRUE(all.equal(sort(pkgs), sort(ip))))
 
 # Try github with version
@@ -140,4 +141,3 @@ warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = 
                  warning = function(x) x)
 warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
                  warning = function(x) x)
-

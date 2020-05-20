@@ -476,18 +476,18 @@ archiveVersionsAvailable <- function(package, repos) {
 #' GitHub specific helpers
 #'
 #' \code{install_githubV} is a vectorized \code{remotes::install_github}.
-#' This will attempt to identify all dependencies of all supplied
-#' packages first, then
-#' load the packages in the correct order so that each of their dependencies are
-#' met before each is installed.
+#' This will attempt to identify all dependencies of all supplied packages first,
+#' then load the packages in the correct order so that each of their dependencies
+#' are met before each is installed.
 #'
-#' @param gitPkgNames Character vector of package to install from github
+#' @param gitPkgNames Character vector of package to install from GitHub
 #' @param install_githubArgs Any arguments passed to \code{install_github}
 #' @param ... Another way to pass arguments to \code{install_github}
-#' #' @return
+#'
+#' @return
 #' \code{install_githubV} returns a named character vector indicating packages
 #'   successfully installed, unless the word "Failed" is returned, indicating
-#'   installation failure. The names will be the full github package name,
+#'   installation failure. The names will be the full GitHub package name,
 #'   as provided to \code{gitPkgNames} in the function call.
 #' @export
 #' @rdname GitHubTools
