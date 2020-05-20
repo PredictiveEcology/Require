@@ -1,6 +1,7 @@
 testit::assert(identical(isInteractive(), interactive()))
 Require:::chooseCRANmirror2(ind = 1)
 
+# Mock the internal functions
 chooseCRANmirror2 <- function() {
   repos <- NULL
   repos2 <- "https://cloud.r-project.org"

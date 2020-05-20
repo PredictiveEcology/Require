@@ -4,7 +4,7 @@ tmpdir <- if (Sys.info()["user"] != "emcintir") {
   "~/TempLib5"
 }
 suppressWarnings(dir.create(tmpdir))
-
+repo <- "https://cloud.r-project.org"
 # if (FALSE) {
 if (interactive()) {
   pkgDepTest1 <- Require::pkgDep("Require")
