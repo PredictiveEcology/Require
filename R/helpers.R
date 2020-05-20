@@ -231,7 +231,19 @@ tempfile2 <- function(sub = "", ...) {
 
 .RequireTempPath <- function() normPath(file.path(tempdir(), "Require"))
 
-
+#' Invert a 2-level list
+#'
+#' This is a simple version of \code{purrr::transpose}, only for lists
+#' with 2 levels
+#' @param l A list with 2 levels. If some levels are absent, they will be
+#'   NULL
+#' @return
+#' A list with 2 levels deep, inverted from \code{l}
+#'
+#' @examples
+#' # create a 2-deep, 2 levels in first, 3 levels in second
+#' a <- list(a = list(d = 1, e = 2:3, f = 4:6), b = list(d = 5, e = 55))
+#' invertList(a) # creates 2-deep, now 3 levels outer --> 2 levels inner
 invertList <- function(l) {
   indices <- list(names(l), names(l[[1]]))
   names(indices[[1]]) <- indices[[1]]
