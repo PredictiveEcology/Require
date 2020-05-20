@@ -1,6 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 .*\.toc$
+^\.cacheAvailablePackages\.rda$
 ^\.lintr$
 ^\.httr-oauth$
 ^\.travis\.yml$
@@ -12,10 +13,10 @@
 ^CRAN-RELEASE$
 ^docs$
 ^LICENSE$
+^packageVersions\.txt$
 ^revdep$
 ^travis_wait_.*\.log$
 ^stickers$
 tests/testthat/\.httr-oauth$
 vignettes/.*_cache$
 vignettes/.*\.log$
-.cacheAvailablePackages.rda
