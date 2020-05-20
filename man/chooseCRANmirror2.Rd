@@ -10,6 +10,6 @@ chooseCRANmirror2(...)
 \item{...}{Passed to \code{chooseCRANmirror}}
 }
 \description{
-This is here to allow mocking during unit testing related to chooseCRANmirror.
+This is here to allow mocking during unit testing related to \code{chooseCRANmirror}.
 }
 \keyword{internal}

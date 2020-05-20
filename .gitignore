@@ -44,3 +44,5 @@ vignettes/Intro-to-Cache\.R
 *.vrb
 *.xdy
 *.tdo
+
+packageVersions.txt
