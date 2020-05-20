@@ -33,8 +33,7 @@ it if \code{standAlone = FALSE}, or will concatenate
 \details{
 This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}.
 A different, likely non-approved by CRAN approach that also works is here:
-https://stackoverflow.com/a/36873741/3890027 . Another
-possible solution to this strange issue is here:
+\url{https://stackoverflow.com/a/36873741/3890027}.
 }
 \examples{
 \dontrun{

@@ -71,7 +71,8 @@ pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
 dir6 <- tempdir2("test6")
 out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
-testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2), packageVersion("TimeWarp", lib.loc = dir6)))
+testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
+                         packageVersion("TimeWarp", lib.loc = dir6)))
 
 
 setLibPaths(orig)
@@ -98,18 +99,16 @@ if (!identical(Sys.getenv("NOT_CRAN"), "true")) {
 }
 
 # Try github with version
-dir4 <- tempdir2("test4")
-mess <- capture.output({
+dir4 <- Require::tempdir2("test4")
+mess <- utils::capture.output({
   inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
-                           require = FALSE,
-                           standAlone = FALSE, libPaths = dir4)
+                           require = FALSE, standAlone = FALSE, libPaths = dir4)
 }, type = "message")
 testit::assert(isFALSE(inst))
 testit::assert(length(mess) > 0)
 testit::assert(sum(grepl("could not be installed", mess)) == 1)
 
 unlink(dirname(dir3), recursive = TRUE)
-
 
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
@@ -148,4 +147,3 @@ warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = 
                  warning = function(x) x)
 warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
                  warning = function(x) x)
-

@@ -320,8 +320,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       if (is.null(dots$dependencies))
         dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
-      warn <- tryCatch(out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs), dots)),
-          warning = function(condition) condition)
+      warn <- tryCatch({
+        out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs),
+                                                dots))
+      }, warning = function(condition) condition)
 
       if (!is.null(warn))
         warning(warn)
@@ -331,17 +333,23 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
       if (any(permDen)) {
         stopMess <- character()
         if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
-          stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-                                         "------\n",
-                                         #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
-                                         "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",libPaths[1],"')"))
+          stopMess <- c(
+            stopMess,
+            paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                   "------\n",
+                   #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '", libPaths[1],"')",
+                   "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",
+                   libPaths[1],"')")
+          )
         if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
-          stopMess <- c(stopMess, paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-                                         "------\n", "remotes::install_github(c('",
-                                         paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
-                                                collapse = "', '"), "'), lib = '",libPaths[1],"')"))
+          stopMess <- c(
+            stopMess,
+            paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                   "------\n", "remotes::install_github(c('",
+                   paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
+                          collapse = "', '"), "'), lib = '",libPaths[1],"')")
+          )
         stop(stopMess)
-
       }
     }
     if (any("GitHub" %in% toInstall$installFrom)) {
@@ -376,16 +384,18 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
   pkgDT
 }
 
-#' @rdname Require-internals
-#' @export
 #' @details
 #' \code{doLoading} is a wrapper around \code{require}.
+#'
+#' @export
+#' @importFrom utils capture.output
+#' @rdname Require-internals
 doLoading <- function(packages, ...) {
   packages <- extractPkgName(packages)
   names(packages) <- packages
-  outMess <- capture.output(
-    out <- lapply(packages, require, character.only = TRUE),
-    type = "message")
+  outMess <- capture.output({
+    out <- lapply(packages, require, character.only = TRUE)
+  }, type = "message")
   warn <- warnings()
   grep3a <- "no package called"
   grep3b <- "could not be found"
@@ -413,8 +423,8 @@ doLoading <- function(packages, ...) {
       if (any(error3)) {
         pkgs <- paste(packageNames, collapse = "', '")
         stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-             "-----\n", "install.packages(c('", paste(pkgs,
-                                                      collapse = ", "), "'), lib = '", .libPaths()[1],
+             "-----\n", "install.packages(c('",
+             paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
              "')", "\n-----\n...before any other packages get loaded")
       }
     }
@@ -444,7 +454,6 @@ doLoading <- function(packages, ...) {
   }
   message(paste0(outMess, collapse = "\n"))
   list(out = out, out2 = out2)
-
 }
 
 #' @rdname Require-internals
@@ -459,8 +468,7 @@ archiveVersionsAvailable <- function(package, repos) {
     if (length(repos) > 1)
       message("Trying ", repo)
     archive <- tryCatch({
-      con <- gzcon(url(sprintf("%s/src/contrib/Meta/archive.rds",
-                               repo), "rb"))
+      con <- gzcon(url(sprintf("%s/src/contrib/Meta/archive.rds", repo), "rb"))
       on.exit(close(con))
       readRDS(con)
     }, warning = function(e) list(), error = function(e) list())
@@ -476,18 +484,18 @@ archiveVersionsAvailable <- function(package, repos) {
 #' GitHub specific helpers
 #'
 #' \code{install_githubV} is a vectorized \code{remotes::install_github}.
-#' This will attempt to identify all dependencies of all supplied
-#' packages first, then
-#' load the packages in the correct order so that each of their dependencies are
-#' met before each is installed.
+#' This will attempt to identify all dependencies of all supplied packages first,
+#' then load the packages in the correct order so that each of their dependencies
+#' are met before each is installed.
 #'
-#' @param gitPkgNames Character vector of package to install from github
+#' @param gitPkgNames Character vector of package to install from GitHub
 #' @param install_githubArgs Any arguments passed to \code{install_github}
 #' @param ... Another way to pass arguments to \code{install_github}
-#' #' @return
+#'
+#' @return
 #' \code{install_githubV} returns a named character vector indicating packages
 #'   successfully installed, unless the word "Failed" is returned, indicating
-#'   installation failure. The names will be the full github package name,
+#'   installation failure. The names will be the full GitHub package name,
 #'   as provided to \code{gitPkgNames} in the function call.
 #' @export
 #' @rdname GitHubTools
@@ -516,9 +524,8 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
     outRes <- lapply(gitPkgDeps2, function(p) {
-      try(do.call(remotes::install_github, append(append(list(p),
-                                                         install_githubArgs), dots))
-      )})
+      try(do.call(remotes::install_github, append(append(list(p), install_githubArgs), dots)))
+    })
     attempts[names(outRes)] <- attempts[names(outRes)] + 1
     if (any(attempts > 1)) {
       failedAttempts <- attempts[attempts > 1]
@@ -533,7 +540,6 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
     gitPkgs <- gitPkgs1
   }
   outRes
-
 }
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
@@ -562,4 +568,3 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "installed", "repoLocation", "correctVersion", "correctVersionAvail",
                 "toLoad", "hasVersionSpec")
-

@@ -23,8 +23,7 @@ if (interactive()) {
                    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
-                   "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
-                   "withr")
+                   "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr")
   pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)), RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
@@ -86,7 +85,7 @@ if (interactive()) {
           origDir <- Require::normPath(file.path(.libPaths()[1]))
           origDirWithPkg <- file.path(origDir, sam)
           files <- grep(Require::normPath(origDirWithPkg), files, value = TRUE)
-          td <- Require::normPath(file.path(tempdir(), Require::rndstr(1, 6)))
+          td <- Require::normPath(file.path(tempdir(), .rndstr(1, 6)))
           newFiles <- gsub(origDir, td, files)
           dirs <- unique(dirname(files))
           newDirs <- gsub(origDir, td, dirs)
@@ -101,13 +100,17 @@ if (interactive()) {
           }
           unlink1 <- unlink(file.path(origDir, sam), recursive = TRUE)
           if (isTRUE(any(file.exists(files)))) {
-            suppressWarnings(out <- lapply(dirs, dir.create, recursive = TRUE))
+            suppressWarnings({
+              out <- lapply(dirs, dir.create, recursive = TRUE)
+            })
             out <- file.copy(newFiles, files)
             message("Actually, not deleting ", sam)
           } else {
             browser(expr = sam %in% dir(.libPaths()[1]))
-            out11 <- capture.output({
-              out <- capture.output(remove.packages(sam), type = "message")
+            out11 <- utils::capture.output({
+              out <- utils::capture.output({
+                utils::remove.packages(sam)
+              }, type = "message")
             }, type = "output")
           }
         }
@@ -204,7 +207,7 @@ if (interactive()) {
       testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
       runTests(have, pkg)
     } else {
-
+      # TODO: what goes here?
     }
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
     if (any("TimeWarp" %in% Require::extractPkgName(pkg))) {

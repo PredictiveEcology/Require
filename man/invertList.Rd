@@ -7,15 +7,13 @@
 invertList(l)
 }
 \arguments{
-\item{l}{A list with 2 levels. If some levels are absent, they will be
-NULL}
+\item{l}{A list with 2 levels. If some levels are absent, they will be \code{NULL}}
 }
 \value{
 A list with 2 levels deep, inverted from \code{l}
 }
 \description{
-This is a simple version of \code{purrr::transpose}, only for lists
-with 2 levels
+This is a simple version of \code{purrr::transpose}, only for lists with 2 levels.
 }
 \examples{
 # create a 2-deep, 2 levels in first, 3 levels in second

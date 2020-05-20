@@ -1,12 +1,10 @@
 utils::globalVariables(c(
-  "..colsToKeep", "..keepCols", ".SD", ":=",
-  "Account", "archiveSource", "AvailableVersion", "bothDepAndOrig", "Branch",
-  "compareVersionAvail", "correctVersion", "correctVersionAvail",
+  "..colsToKeep", "..keepCols", "Account", "archiveSource", "AvailableVersion",
+  "bothDepAndOrig", "Branch", "compareVersionAvail", "correctVersion", "correctVersionAvail",
   "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
-  "libPaths", "loaded", "needInstall",
-  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
-  "Package", "packageFullName", "packagesRequired", "pkgDepTopoSort",
+  "libPaths", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
+  "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
   "Repo", "repoLocation", "RepoWBranch", "toLoad", "Version", "versionSpec"
 ))
 
@@ -100,14 +98,15 @@ utils::globalVariables(c(
 #'   Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 #'   used with \code{install_githubArgs} or \code{install.packageArgs} which
 #'   give individual options for those 2 internal function calls.
+#'
 #' @export
-#' @importFrom remotes install_github install_version
 #' @importFrom data.table data.table as.data.table setDT set is.data.table
 #'   rbindlist
-#' @importFrom data.table setnames setorderv := .SD .I
-#' @importFrom utils install.packages capture.output assignInMyNamespace packageVersion
-#'   available.packages
-#' @importFrom utils compareVersion installed.packages
+#' @importFrom data.table  :=  .I .SD setnames setorderv
+#' @importFrom remotes install_github install_version
+#' @importFrom utils assignInMyNamespace available.packages capture.output compareVersion
+#' @importFrom utils install.packages installed.packages packageVersion
+#'
 #' @examples
 #' \dontrun{
 #' # simple usage, like conditional install.packages then library
@@ -165,7 +164,7 @@ utils::globalVariables(c(
 #' #    reuse already installed packages --> this won't allow as much control
 #' #    of package versioning
 #' Require("PredictiveEcology/SpaDES@development",
-#'                  libPaths = ProjectPackageFolder, standAlone = FALSE)
+#'         libPaths = ProjectPackageFolder, standAlone = FALSE)
 #'
 #' # To keep totally isolated: use standAlone = TRUE
 #' #   --> setting .libPaths() directly means standAlone is not necessary; it will only
@@ -186,18 +185,17 @@ utils::globalVariables(c(
 #' Require::Require(pkgs)
 #'
 #' ############################################################################
-#' # Using libPathsh -- This will only be used inside this function;
+#' # Using libPaths -- This will only be used inside this function;
 #' # To change .libPaths() for the whole session use a manually call to
 #' # setLibPaths(newPath) first
 #' ############################################################################
 #' Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
 #'
 #' ############################################################################
-#' # Persistent separate packagesss
+#' # Persistent separate packages
 #' ############################################################################
 #' setLibPaths("~/TempLib2", standAlone = TRUE)
 #' Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
-#'
 #' }
 #'
 Require <- function(packages, packageVersionFile,
@@ -210,7 +208,7 @@ Require <- function(packages, packageVersionFile,
                     repos = getOption("repos"),
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
-                    ...){
+                    ...) {
 
   browser(expr = exists("._Require_0"))
   if (!missing(packageVersionFile)) {
@@ -218,8 +216,7 @@ Require <- function(packages, packageVersionFile,
     packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
   }
 
-
-    doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
@@ -239,7 +236,6 @@ Require <- function(packages, packageVersionFile,
   origLibPaths <- setLibPaths(libPaths, standAlone)
   on.exit({setLibPaths(origLibPaths)}, add = TRUE)
 
-
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
@@ -250,7 +246,8 @@ Require <- function(packages, packageVersionFile,
           Package := names(packagesOrig[origPackagesHaveNames])]
 
   installedPkgsCurrent <- installed.packages(noCache = isTRUE(purge))
-  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"), drop = FALSE])
+  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"),
+                                                             drop = FALSE])
 
   # Join installed with requested
   pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
@@ -266,7 +263,8 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
       pkgDT <- installFrom(pkgDT)
 
-      if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) && (isTRUE(install) || install == "force")) {
+      if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
+          (isTRUE(install) || install == "force")) {
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs, ...)
       }

@@ -11,7 +11,7 @@ This extends beyond the package management utilities of `packrat` and `checkpoin
 
 Some packages, including those in our PredictiveEcology repository, have _many_ package dependencies. 
 Some of them are on CRAN, but some are still in development and so are hosted elsewhere. 
-Mixing many package depdencies that are constantly evolving creates challenges with standard R package management.
+Mixing many package dependencies that are constantly evolving creates challenges with standard R package management.
 For example, what is the best way to move analyses from one machine to another, or set up a series of High Performance Compute nodes? 
 How should we use functions like `install.packages` in a reproducible workflow that are clearly intended to be used once or very few times?
 How do we deal with many packages on GitHub that have many common dependencies?
@@ -39,7 +39,6 @@ Require("data.table (>=1.12.8)")
 
 # vectorized, mixed github and CRAN, mixed version number and not
 Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
-
 ```
 
 ## Advanced usage
@@ -52,15 +51,14 @@ We can keep all packages in an isolated folder for a project, using `standAlone 
 setLibPaths("Project_A_Packages", standAlone = TRUE)
 .libPaths() # this is just to check what happened in the previous line -- there are 2 folders only
 Require("data.table (>=1.12.8)")
-
 ```
 
 Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
+
 ```{r standALone}
 setLibPaths("Project_A_Packages", standAlone = FALSE)
 .libPaths() # we have added a library to original ones on this system
 Require("data.table (>=1.12.8)")
-
 ```
 ### Installing old package versions
 
@@ -74,6 +72,7 @@ Require("data.table (<=1.11.0)")
 ### Managing a project
 
 Because it is vectorized, there can be a long list of packages at the start of a project.
+
 ```{r LongPackageList}
 Require(c("data.table", "dplyr", "reproducible", "SpaDES", "raster"))
 ```
@@ -87,7 +86,6 @@ pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project speci
 
 ## move to a new machine, say
 Require::Require(packageVersionFile = "mySnapshot.txt")
-
 ```
 
 # Installing
@@ -118,7 +116,6 @@ Not yet on CRAN
 library("devtools")
 install_github("PredictiveEcology/Require", dependencies = TRUE) 
 ```
-
 
 ### Development version
 

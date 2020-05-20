@@ -16,7 +16,6 @@ testit::assert(length(b) == 1)
 testit::assert(all(names(b) == pkg))
 testit::assert(length(b[[1]]) > length(a)[[1]])
 
-
 d <- pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
 testit::assert(length(d) == 2)
 testit::assert(isTRUE(all.equal(a$Require, d$Require)))
@@ -27,14 +26,14 @@ testit::assert(isTRUE(all.equal(e[[pkg]],
                                 d[[pkg]])))
 testit::assert(isTRUE(all.equal(d$Require, e$Require)))
 
-mess <- capture.output(type = "message", f <- pkgDep("Require", depends = TRUE))
+mess <- utils::capture.output(type = "message", f <- pkgDep("Require", depends = TRUE))
 testit::assert(isTRUE(any(grepl("Please use", mess))))
 
-mess <- capture.output(type = "message", f <- pkgDep("Require", linkingTo = TRUE))
+mess <- utils::capture.output(type = "message", f <- pkgDep("Require", linkingTo = TRUE))
 testit::assert(isTRUE(any(grepl("Please use", mess))))
-mess <- capture.output(type = "message", f <- pkgDep("Require", imports = TRUE))
+mess <- utils::capture.output(type = "message", f <- pkgDep("Require", imports = TRUE))
 testit::assert(isTRUE(any(grepl("Please use", mess))))
-mess <- capture.output(type = "message", f <- pkgDep("Require", suggests = TRUE))
+mess <- utils::capture.output(type = "message", f <- pkgDep("Require", suggests = TRUE))
 testit::assert(isTRUE(any(grepl("Please use", mess))))
 
 a <- pkgDep("Require", which = "all", recursive = FALSE)
