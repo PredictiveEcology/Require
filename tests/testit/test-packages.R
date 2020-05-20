@@ -42,12 +42,13 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-dir1 <- tempdir2("test1")
-options("Require.verbose" = TRUE)
-out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
-testit::assert(data.table::is.data.table(attr(out, "Require")))
-ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
-if (!Sys.info()[["sysname"]] == "Darwin") {
+if (!(Sys.info()[["sysname"]] == "Darwin" &&
+      paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
+  dir1 <- tempdir2("test1")
+  options("Require.verbose" = TRUE)
+  out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
+  testit::assert(data.table::is.data.table(attr(out, "Require")))
+  ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
   testit::assert(isTRUE(out))
   testit::assert("TimeWarp" %in% ip)
   detach("package:TimeWarp", unload = TRUE)
@@ -57,8 +58,7 @@ if (!Sys.info()[["sysname"]] == "Darwin") {
 dir2 <- tempdir2("test2")
 pvWant <- "1.0-7"
 inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
-                         libPaths = dir2,
-                         dependencies = FALSE)
+                         libPaths = dir2, dependencies = FALSE)
 pv <- packageVersion("TimeWarp", lib.loc = dir2)
 testit::assert(pv == pvWant)
 detach("package:TimeWarp", unload = TRUE)

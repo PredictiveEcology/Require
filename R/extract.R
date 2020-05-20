@@ -35,7 +35,6 @@ extractVersionNumber <- function(pkgs) {
   gsub(grepExtractPkgs, "\\2", pkgs)
 }
 
-
 #' @rdname extractPkgName
 #' @export
 #' @examples
@@ -44,7 +43,6 @@ extractInequality <- function(pkgs) {
   gsub(grepExtractPkgs, "\\1", pkgs)
 }
 
-
 #' @rdname extractPkgName
 #' @export
 #' @examples
@@ -52,7 +50,6 @@ extractInequality <- function(pkgs) {
 extractPkgGitHub <- function(pkgs) {
   unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
-
 
 #' @rdname extractPkgName
 #' @export
