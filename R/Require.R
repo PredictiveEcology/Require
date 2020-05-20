@@ -240,7 +240,12 @@ Require <- function(packages, packageVersionFile,
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
   }
+
+  # Create data.table of Require workflow
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
+  pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
+  pkgDT[, toLoad := packagesRequired]
+
   if (any(origPackagesHaveNames))
     pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
           Package := names(packagesOrig[origPackagesHaveNames])]
@@ -259,35 +264,24 @@ Require <- function(packages, packageVersionFile,
     if (isTRUE(install) || identical(install, "force")) {
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
-      if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)]))
-        pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
+      pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
       pkgDT <- installFrom(pkgDT)
-
-      if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
-          (isTRUE(install) || install == "force")) {
-        pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
-                            install.packagesArgs = install.packagesArgs, ...)
-      }
-
-      pkgDT[needInstall == TRUE & installed == TRUE, Version :=
-              unlist(lapply(Package, function(x) as.character(
-                tryCatch(packageVersion(x, lib.loc = libPaths), error = function(x) NA_character_))))]
-      browser(expr = exists("._Require_2"))
-      pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
-      pkgDT[, toLoad := packagesRequired]
-      # pkgDT[, toLoad := correctVersion == TRUE]
-      pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
-      packages <- pkgDT[toLoad == TRUE]$Package
+      pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
+                          install.packagesArgs = install.packagesArgs,
+                          install = install, ...)
+      # update packages to only the ones that can be loaded
+      #packages <- pkgDT[toLoad == TRUE]$Package
     }
-    names(packages) <- packages
-    if (isTRUE(require)) {
-      postLoad <- doLoading(packages, ...)
-    } else {
-      postLoad <- list(out = lapply(packages, function(x) FALSE), out2 = FALSE)
-    }
-    out <- unlist(postLoad$out)
-    if (is.null(out)) out <- character()
-    pkgDT[, loaded := (pkgDT$Package %in% names(out)[out] & toLoad == TRUE)]
+    # names(packages) <- packages
+    pkgDT <- doLoading(pkgDT, require = require, ...)
+    # if (isTRUE(require)) {
+    #   postLoad <- doLoading(packages, require = require, ...)
+    # } else {
+    #   postLoad <- list(out = lapply(packages, function(x) FALSE), out2 = FALSE)
+    # }
+    # out <- unlist(postLoad$out)
+    # if (is.null(out)) out <- character()
+    # pkgDT[, loaded := (pkgDT$Package %in% names(out)[out] & toLoad == TRUE)]
     out <- pkgDT[packagesRequired == TRUE]$loaded
     names(out) <- pkgDT[packagesRequired == TRUE]$Package
   } else {

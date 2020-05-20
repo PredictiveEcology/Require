@@ -15,9 +15,15 @@ getAvailable(pkgDT, purge = FALSE, repos = repos)
 
 installFrom(pkgDT)
 
-doInstalls(pkgDT, install_githubArgs, install.packagesArgs, ...)
+doInstalls(
+  pkgDT,
+  install_githubArgs,
+  install.packagesArgs,
+  install = TRUE,
+  ...
+)
 
-doLoading(packages, ...)
+doLoading(pkgDT, require = TRUE, ...)
 
 archiveVersionsAvailable(package, repos)
 }
@@ -48,13 +54,9 @@ Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 
-\item{packages}{Character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require}). In the case of a
-GitHub package, it will be assumed that the name of the repository is the
-name of the package. If this is not the case, then pass a named character
-vector here, where the names are the package names that could be different
-than the GitHub repository name.}
+\item{require}{Logical. If \code{TRUE}, the default, then the function will
+attempt to call \code{require} on all requested \code{packages}, possibly
+after they are installed.}
 
 \item{package}{A single package name (without version or github specifications)}
 }
