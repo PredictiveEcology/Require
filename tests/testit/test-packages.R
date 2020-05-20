@@ -141,7 +141,7 @@ warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, insta
          warning = function(x) x)
 warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("Require (<=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("Require (<=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
                  warning = function(x) x)
