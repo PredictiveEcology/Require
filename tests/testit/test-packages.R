@@ -49,8 +49,8 @@ ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
 if (!Sys.info()[["sysname"]] == "Darwin") {
   testit::assert(isTRUE(out))
   testit::assert("TimeWarp" %in% ip)
+  detach("package:TimeWarp", unload = TRUE)
 }
-detach("package:TimeWarp", unload = TRUE)
 
 # Try older version
 dir2 <- tempdir2("test2")
