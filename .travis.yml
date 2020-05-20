@@ -26,7 +26,7 @@ matrix:
     r_github_packages:
       - jimhester/lintr
     after_success:
-    - Rscript -e 'spelling::spell_check_package(error = FALSE)'
+    - Rscript -e 'spelling::spell_check_package()'
     - Rscript -e 'covr::coveralls(type = "all", quiet = FALSE)'
     - Rscript -e 'lintr::lint_package()'
   - os: linux
