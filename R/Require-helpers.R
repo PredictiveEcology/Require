@@ -394,7 +394,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   # Now that it is installed, add installed version to Version column
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
-            tryCatch(packageVersion(x, lib.loc = libPaths), error = function(x) NA_character_))))]
+            tryCatch(packageVersion(x), error = function(x) NA_character_))))]
   pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
 
   pkgDT
