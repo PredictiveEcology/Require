@@ -4,9 +4,8 @@ utils::globalVariables(c(
   "compareVersionAvail", "correctVersion", "correctVersionAvail",
   "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
-  "libPaths", "loaded", "needInstall",
-  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
-  "Package", "packageFullName", "packagesRequired", "pkgDepTopoSort",
+  "libPaths", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
+  "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
   "Repo", "repoLocation", "RepoWBranch", "toLoad", "Version", "versionSpec"
 ))
 
@@ -193,7 +192,7 @@ utils::globalVariables(c(
 #' Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
 #'
 #' ############################################################################
-#' # Persistent separate packagesss
+#' # Persistent separate packages
 #' ############################################################################
 #' setLibPaths("~/TempLib2", standAlone = TRUE)
 #' Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
@@ -210,7 +209,7 @@ Require <- function(packages, packageVersionFile,
                     repos = getOption("repos"),
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
-                    ...){
+                    ...) {
 
   browser(expr = exists("._Require_0"))
   if (!missing(packageVersionFile)) {
@@ -218,8 +217,7 @@ Require <- function(packages, packageVersionFile,
     packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
   }
 
-
-    doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
@@ -239,7 +237,6 @@ Require <- function(packages, packageVersionFile,
   origLibPaths <- setLibPaths(libPaths, standAlone)
   on.exit({setLibPaths(origLibPaths)}, add = TRUE)
 
-
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
@@ -250,7 +247,8 @@ Require <- function(packages, packageVersionFile,
           Package := names(packagesOrig[origPackagesHaveNames])]
 
   installedPkgsCurrent <- installed.packages(noCache = isTRUE(purge))
-  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"), drop = FALSE])
+  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"),
+                                                             drop = FALSE])
 
   # Join installed with requested
   pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
@@ -266,7 +264,8 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
       pkgDT <- installFrom(pkgDT)
 
-      if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) && (isTRUE(install) || install == "force")) {
+      if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
+          (isTRUE(install) || install == "force")) {
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs, ...)
       }

@@ -145,7 +145,7 @@ setMethod("checkPath",
           signature(path = "character", create = "missing"),
           definition = function(path) {
             return(checkPath(path, create = FALSE))
-          })
+})
 
 #' @export
 #' @rdname checkPath
@@ -153,7 +153,7 @@ setMethod("checkPath",
           signature(path = "NULL", create = "ANY"),
           definition = function(path) {
             stop("Invalid path: cannot be NULL.")
-          })
+})
 
 #' @export
 #' @rdname checkPath
@@ -161,16 +161,13 @@ setMethod("checkPath",
           signature(path = "missing", create = "ANY"),
           definition = function() {
             stop("Invalid path: no path specified.")
-          })
+})
 
 rndstr <- function(n = 1, len = 8) {
   unlist(lapply(character(n), function(x) {
-    x <- paste0(sample(c(0:9, letters, LETTERS), size = len,
-                       replace = TRUE), collapse = "")
+    x <- paste0(sample(c(0:9, letters, LETTERS), size = len, replace = TRUE), collapse = "")
   }))
 }
-
-
 
 #' Use message to print a clean square data structure
 #'
@@ -233,14 +230,13 @@ tempfile2 <- function(sub = "", ...) {
 
 #' Invert a 2-level list
 #'
-#' This is a simple version of \code{purrr::transpose}, only for lists
-#' with 2 levels
-#' @param l A list with 2 levels. If some levels are absent, they will be
-#'   NULL
-#' @export
-#' @return
-#' A list with 2 levels deep, inverted from \code{l}
+#' This is a simple version of \code{purrr::transpose}, only for lists with 2 levels.
 #'
+#' @param l A list with 2 levels. If some levels are absent, they will be \code{NULL}
+#'
+#' @return A list with 2 levels deep, inverted from \code{l}
+#'
+#' @export
 #' @examples
 #' # create a 2-deep, 2 levels in first, 3 levels in second
 #' a <- list(a = list(d = 1, e = 2:3, f = 4:6), b = list(d = 5, e = 55))

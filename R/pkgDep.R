@@ -114,9 +114,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull1 <- append(neededFull1[!needGet], neededFull2)
   }
 
-
-
-
   if (isTRUE(sort))
     neededFull1 <- lapply(neededFull1, function(x) sort(x))
   if (isFALSE(keepVersionNumber))
@@ -159,7 +156,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
     needed
   })
   needed
-
 }
 getDescPath <- function(packages, libPath) {
   lapply(packages, function(pkg) {
@@ -263,9 +259,7 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
   ss <- seq_along(pkgsNoVersion1)
   names(ss) <- pkgsNoVersion1
   deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
-
 }
-
 
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
                                 keepVersionNumber = TRUE) {
@@ -317,5 +311,4 @@ whichToDILES <- function(which) {
   which
 }
 
-.basePkgs <- rownames(installed.packages(tail(.libPaths(),1)))
-
+.basePkgs <- rownames(installed.packages(tail(.libPaths(), 1)))

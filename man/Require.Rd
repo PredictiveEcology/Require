@@ -207,7 +207,7 @@ Require::Require(pkgs)
 Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
 
 ############################################################################
-# Persistent separate packagesss
+# Persistent separate packages
 ############################################################################
 setLibPaths("~/TempLib2", standAlone = TRUE)
 Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set

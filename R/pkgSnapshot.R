@@ -18,8 +18,7 @@
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
 #' data.table::fread(pkgSnapFile)
 #'
-pkgSnapshot <- function(packageVersionFile = "packageVersions.txt",
-                        libPaths, standAlone = FALSE) {
+pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE) {
   browser(expr = exists("aaaa"))
   if (missing(libPaths))
     libPaths <- .libPaths()
@@ -37,7 +36,6 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt",
   return(invisible(out))
 }
 
-
 #' @keywords internal
 .pkgSnapshot <- function(instPkgs, instVers, packageVersionFile = "._packageVersionsAuto.txt") {
   browser(expr = exists("aaaa"))
@@ -45,4 +43,3 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt",
   write.table(inst, file = packageVersionFile, row.names = FALSE)
   inst
 }
-

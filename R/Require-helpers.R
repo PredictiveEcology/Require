@@ -444,7 +444,6 @@ doLoading <- function(packages, ...) {
   }
   message(paste0(outMess, collapse = "\n"))
   list(out = out, out2 = out2)
-
 }
 
 #' @rdname Require-internals
@@ -459,8 +458,7 @@ archiveVersionsAvailable <- function(package, repos) {
     if (length(repos) > 1)
       message("Trying ", repo)
     archive <- tryCatch({
-      con <- gzcon(url(sprintf("%s/src/contrib/Meta/archive.rds",
-                               repo), "rb"))
+      con <- gzcon(url(sprintf("%s/src/contrib/Meta/archive.rds", repo), "rb"))
       on.exit(close(con))
       readRDS(con)
     }, warning = function(e) list(), error = function(e) list())
@@ -516,9 +514,8 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
     outRes <- lapply(gitPkgDeps2, function(p) {
-      try(do.call(remotes::install_github, append(append(list(p),
-                                                         install_githubArgs), dots))
-      )})
+      try(do.call(remotes::install_github, append(append(list(p), install_githubArgs), dots)))
+    })
     attempts[names(outRes)] <- attempts[names(outRes)] + 1
     if (any(attempts > 1)) {
       failedAttempts <- attempts[attempts > 1]
@@ -533,7 +530,6 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
     gitPkgs <- gitPkgs1
   }
   outRes
-
 }
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
@@ -562,4 +558,3 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "installed", "repoLocation", "correctVersion", "correctVersionAvail",
                 "toLoad", "hasVersionSpec")
-
