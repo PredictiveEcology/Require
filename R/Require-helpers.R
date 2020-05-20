@@ -376,16 +376,18 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs, ...) {
   pkgDT
 }
 
-#' @rdname Require-internals
-#' @export
 #' @details
 #' \code{doLoading} is a wrapper around \code{require}.
+#'
+#' @export
+#' @importFrom utils capture.output
+#' @rdname Require-internals
 doLoading <- function(packages, ...) {
   packages <- extractPkgName(packages)
   names(packages) <- packages
-  outMess <- capture.output(
-    out <- lapply(packages, require, character.only = TRUE),
-    type = "message")
+  outMess <- capture.output({
+    out <- lapply(packages, require, character.only = TRUE)
+  }, type = "message")
   warn <- warnings()
   grep3a <- "no package called"
   grep3b <- "could not be found"
@@ -413,8 +415,8 @@ doLoading <- function(packages, ...) {
       if (any(error3)) {
         pkgs <- paste(packageNames, collapse = "', '")
         stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-             "-----\n", "install.packages(c('", paste(pkgs,
-                                                      collapse = ", "), "'), lib = '", .libPaths()[1],
+             "-----\n", "install.packages(c('",
+             paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
              "')", "\n-----\n...before any other packages get loaded")
       }
     }

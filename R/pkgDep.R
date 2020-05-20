@@ -35,6 +35,7 @@
 #'        concatenation of the possibly recursive package dependencies.
 #' @param includeBase Logical. Should R base packages be included, specifically, those in
 #'   \code{tail(.libPath(), 1)}
+#'
 #' @export
 #' @rdname pkgDep
 #'

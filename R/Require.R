@@ -1,7 +1,6 @@
 utils::globalVariables(c(
-  "..colsToKeep", "..keepCols", ".SD", ":=",
-  "Account", "archiveSource", "AvailableVersion", "bothDepAndOrig", "Branch",
-  "compareVersionAvail", "correctVersion", "correctVersionAvail",
+  "..colsToKeep", "..keepCols", "Account", "archiveSource", "AvailableVersion",
+  "bothDepAndOrig", "Branch", "compareVersionAvail", "correctVersion", "correctVersionAvail",
   "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
   "libPaths", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
@@ -99,14 +98,15 @@ utils::globalVariables(c(
 #'   Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 #'   used with \code{install_githubArgs} or \code{install.packageArgs} which
 #'   give individual options for those 2 internal function calls.
+#'
 #' @export
-#' @importFrom remotes install_github install_version
 #' @importFrom data.table data.table as.data.table setDT set is.data.table
 #'   rbindlist
-#' @importFrom data.table setnames setorderv := .SD .I
-#' @importFrom utils install.packages capture.output assignInMyNamespace packageVersion
-#'   available.packages
-#' @importFrom utils compareVersion installed.packages
+#' @importFrom data.table  :=  .I .SD setnames setorderv
+#' @importFrom remotes install_github install_version
+#' @importFrom utils assignInMyNamespace available.packages capture.output compareVersion
+#' @importFrom utils install.packages installed.packages packageVersion
+#'
 #' @examples
 #' \dontrun{
 #' # simple usage, like conditional install.packages then library

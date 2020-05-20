@@ -82,31 +82,26 @@ testit::assert(is.data.frame(out))
 testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
 testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
 
-
 # Try github
-dir3 <- tempdir2("test3")
+dir3 <- Require::tempdir2("test3")
 inst <- Require::Require("PredictiveEcology/Require", install = "force",
                          require = FALSE,
                          standAlone = FALSE, libPaths = dir3)
 pkgs <- c("data.table", "remotes", "Require")
 ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
-testit::assert(isTRUE(all.equal(sort(pkgs),
-                                sort(ip))))
-
+testit::assert(isTRUE(all.equal(sort(pkgs), sort(ip))))
 
 # Try github with version
-dir4 <- tempdir2("test4")
-mess <- capture.output({
+dir4 <- Require::tempdir2("test4")
+mess <- utils::capture.output({
   inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
-                           require = FALSE,
-                           standAlone = FALSE, libPaths = dir4)
+                           require = FALSE, standAlone = FALSE, libPaths = dir4)
 }, type = "message")
 testit::assert(isFALSE(inst))
 testit::assert(length(mess) > 0)
 testit::assert(sum(grepl("could not be installed", mess)) == 1)
 
 unlink(dirname(dir3), recursive = TRUE)
-
 
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
