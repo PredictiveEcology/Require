@@ -23,8 +23,7 @@ if (interactive()) {
                    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
-                   "sessioninfo", "stats", "testthat", "tools", "usethis", "utils",
-                   "withr")
+                   "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr")
   pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)), RequireDeps)
   message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
