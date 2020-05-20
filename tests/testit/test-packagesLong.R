@@ -1,3 +1,4 @@
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
 tmpdir <- if (Sys.info()["user"] != "emcintir") {
   file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
 } else {
