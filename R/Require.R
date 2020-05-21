@@ -213,7 +213,11 @@ Require <- function(packages, packageVersionFile,
   browser(expr = exists("._Require_0"))
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
-    packages <- paste0(packages$instPkgs, " (==", packages$instVers, ")")
+    packages <- if (NROW(packages)) {
+      paste0(packages$instPkgs, " (==", packages$instVers, ")")
+    } else {
+      character()
+    }
   }
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
