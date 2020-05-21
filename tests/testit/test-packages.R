@@ -54,43 +54,53 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
   ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
   testit::assert("TimeWarp" %in% ip)
   detach("package:TimeWarp", unload = TRUE)
+  remove.packages("TimeWarp", lib = dir1)
 }
 
 # Try older version
-dir2 <- tempdir2("test2")
-pvWant <- "1.0-7"
-inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
-                         libPaths = dir2, dependencies = FALSE)
-pv <- packageVersion("TimeWarp", lib.loc = dir2)
-testit::assert(pv == pvWant)
-detach("package:TimeWarp", unload = TRUE)
+if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
+    interactive() || # interactive
+    identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
+  cat(Sys.time(), file = "tmp.txt")
+  dir2 <- tempdir2("test2")
+  pvWant <- "1.0-7"
+  inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
+                                    libPaths = dir2, dependencies = FALSE)
+  pv <- packageVersion("TimeWarp", lib.loc = dir2)
+  testit::assert(pv == pvWant)
+  detach("package:TimeWarp", unload = TRUE)
 
-# Test snapshot file
-orig <- setLibPaths(dir2, standAlone = TRUE)
-pkgSnapFile <- tempfile()
-pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
-pkgSnapFileRes <- data.table::fread(pkgSnapFile)
+  # Test snapshot file
+  orig <- setLibPaths(dir2, standAlone = TRUE)
+  pkgSnapFile <- tempfile()
+  pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
+  pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
-dir6 <- tempdir2("test6")
-out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
-testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
-                         packageVersion("TimeWarp", lib.loc = dir6)))
-setLibPaths(orig)
+  dir6 <- tempdir2("test6")
+  out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
+                          install = "force")
+  testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
+                           packageVersion("TimeWarp", lib.loc = dir6)))
+  detach("package:TimeWarp", unload = TRUE)
+  remove.packages("TimeWarp", lib = dir2)
+  remove.packages("TimeWarp", lib = dir6)
 
-# Test snapshot file with no args
-out <- pkgSnapshot()
-pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
-testit::assert(is.data.frame(out))
-testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
-testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
 
-# Skip on CRAN
-dir3 <- tempdir2("test3")
-if (identical(Sys.getenv("NOT_CRAN"), "true")) {
+  setLibPaths(orig)
+
+  # Test snapshot file with no args
+  out <- pkgSnapshot()
+  pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
+  testit::assert(is.data.frame(out))
+  testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
+  testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
+
+  # Skip on CRAN
+  dir3 <- tempdir2("test3")
   # Try github
-  inst <- Require::Require("PredictiveEcology/Require", install = "force",
-                           require = FALSE, standAlone = FALSE, libPaths = dir3)
-  pkgs <- c("data.table", "remotes", "Require")
+  try(inst <- Require::Require("achubaty/fpCompare", install = "force",
+                               require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
+  pkgs <- c("fpCompare")
   ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
   testit::assert(isTRUE(all.equal(sort(pkgs),
                                   sort(ip))))
@@ -98,14 +108,14 @@ if (identical(Sys.getenv("NOT_CRAN"), "true")) {
   # Try github with version
   dir4 <- Require::tempdir2("test4")
   mess <- utils::capture.output({
-    inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
+    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
   testit::assert(isFALSE(inst))
   testit::assert(length(mess) > 0)
   testit::assert(sum(grepl("could not be installed", mess)) == 1)
+  unlink(dirname(dir3), recursive = TRUE)
 }
-unlink(dirname(dir3), recursive = TRUE)
 
 
 # Code coverage

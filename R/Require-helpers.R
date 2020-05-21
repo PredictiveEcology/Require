@@ -116,7 +116,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
         cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-          cap <- available.packages(repos = repos)
+          isOldMac <- ((Sys.info()[["sysname"]] == "Darwin" &&
+                          paste0(version$major, ".", version$minor) == R_system_version("3.6.3")))
+          cap <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
           assign("cachedAvailablePackages", cap, envir = .pkgEnv)
           cap
         } else {
@@ -166,8 +168,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
         oldAvailableVersions[, correctVersionAvail :=
                                .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
         if (any(oldAvailableVersions$correctVersionAvail)) {
-          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "CRANArchive"]
-          oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "CRANArchive"]
+          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
+          oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
           oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
           oldAvailableVersions[, repoLocation := archiveSource]
           setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
@@ -221,7 +223,7 @@ installFrom <- function(pkgDT) {
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
       pkgDT[needInstall == TRUE & # installed == FALSE &
               (correctVersionAvail == TRUE) &
-              repoLocation == "CRANArchive", installFrom := "CRANArchive"]
+              repoLocation == "Archive", installFrom := "Archive"]
       # pkgDT[needInstall == TRUE & # installed == FALSE &
       #         (correctVersionAvail == TRUE) &
       #         repoLocation == "Versions", installFrom := repoLocation]
@@ -369,12 +371,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       #                                     versions = toInstall[installFrom == "Versions"]$OlderVersionsAvailable)
       #   pkgDT <- updateInstalled(pkgDT, installPkgNames, warnings())
       # }
-      CRANArchive <- "CRANArchive"
-      if (any(CRANArchive %in% toInstall$installFrom)) {
+      Archive <- "Archive"
+      if (any(Archive %in% toInstall$installFrom)) {
         message("installing older versions is still experimental and may cause package version conflicts")
-        installPkgNames <- toInstall[installFrom == CRANArchive]$Package
+        installPkgNames <- toInstall[installFrom == Archive]$Package
         names(installPkgNames) <- installPkgNames
-        installVersions <- toInstall[installFrom == CRANArchive]$OlderVersionsAvailable
+        installVersions <- toInstall[installFrom == Archive]$OlderVersionsAvailable
         out <- Map(p = installPkgNames, v = installVersions, function(p, v, ...) {
           do.call(remotes::install_version, list(package = p, version = v, ...))
         })
@@ -392,7 +394,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   # Now that it is installed, add installed version to Version column
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
-            tryCatch(packageVersion(x, lib.loc = libPaths), error = function(x) NA_character_))))]
+            tryCatch(packageVersion(x), error = function(x) NA_character_))))]
   pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
 
   pkgDT
@@ -471,16 +473,9 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
     }
     message(paste0(outMess, collapse = "\n"))
 
-
-  } else {
-    out = lapply(packages, function(x) FALSE)
+    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
   }
-  if (is.null(out)) out <- logical()
-  pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
   pkgDT[]
-  # out <- pkgDT[packagesRequired == TRUE]$loaded
-  # names(out) <- pkgDT[packagesRequired == TRUE]$Package
-  # list(out = out)
 }
 
 #' @rdname Require-internals

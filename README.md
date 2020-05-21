@@ -19,7 +19,15 @@ Finally, how do we do all this for many concurrent projects without installing h
 
 The `Require` package attempts to address these issues and others. 
 It is different than `packrat` in that it is much simpler and is closer to base R package management.
-It is different than other packages like `renv` in that it is focused around a single function, `Require`, that can be used in a reproducible workflow.
+`Require` _can_ use hierarchical library paths, as in base R, with many paths in the `.libPaths()`, or can set a single library path to be `standAlone`.
+This allows "system" packages to be used as well as "project-specific" packages to be used together, as in base R.
+It is different than other packages like `renv` in that it is focused around a single function, `Require`, that can be used in a reproducible workflow. 
+`renv` uses a notion of package versions, the "snapshot", _as installed_ at its foundation; any changes to package versions by a user then updates this snapshot.
+`renv` does not keep this information in the source code of the project.
+`Require` uses the notion of a "snapshot" as a decision to make by a user when it is time to _set_ the package versions. 
+Package versions are primarily updated by the code developer by stating the minimum (or maximum) package version _in the source code_.
+This means that by default, projects are somewhat more fluid, defined by no package version if none is required or minimum (or maximum) package versions if required until it is time to freeze it, say when publishing or needing to set up virtual machines with identical setup.
+From this perspective, `renv` is more "top-down", and `Require` is more "bottom-up", though they can each emulate the other's behaviour.
 
 We define a reproducible workflow as a workflow that can be run from the start to any point in the project, without having to "skip over" or "comment out" or "jump to" particular lines or chunks of code. 
 `Require` does that. 
@@ -27,17 +35,21 @@ We define a reproducible workflow as a workflow that can be run from the start t
 ## Basic usage
 
 `Require` is essentially a wrapper around functions that install packages, e.g., `install.packages`, `install_github` and one of the main function to load packages, `require`. 
-It is vectorized on package names.
 
-```{r Intro, eval=FALSE}
-# install.packages("Require") # sadly, Require can't install itself, so must comment this line
+```
+# install.packages("Require") 
 library(Require)
 Require("data.table")
+```
 
-# With version numbering
+And with version numbering:
+
+```
 Require("data.table (>=1.12.8)")
+```
 
-# vectorized, mixed github and CRAN, mixed version number and not
+It is vectorized on package names, and can include mixed github and CRAN, mixed version number and not:
+```
 Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 
@@ -47,7 +59,7 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 
 We can keep all packages in an isolated folder for a project, using `standAlone = TRUE`
 
-```{r standALone}
+```
 setLibPaths("Project_A_Packages", standAlone = TRUE)
 .libPaths() # this is just to check what happened in the previous line -- there are 2 folders only
 Require("data.table (>=1.12.8)")
@@ -55,7 +67,7 @@ Require("data.table (>=1.12.8)")
 
 Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
 
-```{r standALone}
+```
 setLibPaths("Project_A_Packages", standAlone = FALSE)
 .libPaths() # we have added a library to original ones on this system
 Require("data.table (>=1.12.8)")
@@ -65,26 +77,30 @@ Require("data.table (>=1.12.8)")
 In the same way as above, we can specify maximum or exact package versions. 
 `Require` will retrieve these on CRAN archives.
 
-```{r archiveVersions}
+```
 Require("data.table (<=1.11.0)")
 ```
 
 ### Managing a project
 
-Because it is vectorized, there can be a long list of packages at the start of a project.
+Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.
 
-```{r LongPackageList}
-Require(c("data.table", "dplyr", "reproducible", "SpaDES", "raster"))
+```
+library(Require)
+setLibPaths("ProjectA", standAlone = TRUE)
+Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
+          "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"))
 ```
 
 ### Taking a snapshot
 
 When a system is set up with the correct packages and versions, we can take a snapshot and give that file to another person or machine:
 
-```{r packageSnaptop}
+```
 pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project specific ones
-
-## move to a new machine, say
+```
+Move to a new machine, say
+```
 Require::Require(packageVersionFile = "mySnapshot.txt")
 ```
 
@@ -105,13 +121,13 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 **Install from CRAN:**
 
 Not yet on CRAN
-```r
+```
 # install.packages("Require")
 ```
 
 **Install from GitHub:**
     
-```r
+```
 #install.packages("devtools")
 library("devtools")
 install_github("PredictiveEcology/Require", dependencies = TRUE) 
@@ -125,7 +141,7 @@ install_github("PredictiveEcology/Require", dependencies = TRUE)
 
 **Install from GitHub:**
 
-```r
+```
 #install.packages("devtools")
 library("devtools")
 install_github("PredictiveEcology/Require", ref = "development", dependencies = TRUE) 
