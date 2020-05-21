@@ -36,20 +36,20 @@ We define a reproducible workflow as a workflow that can be run from the start t
 
 `Require` is essentially a wrapper around functions that install packages, e.g., `install.packages`, `install_github` and one of the main function to load packages, `require`. 
 
-```{r Intro, eval=FALSE}
-install.packages("Require") 
+```
+# install.packages("Require") 
 library(Require)
 Require("data.table")
 ```
 
-With version numbering:
+And with version numbering:
 
-```{r Intro, eval=FALSE}
+```
 Require("data.table (>=1.12.8)")
 ```
 
 It is vectorized on package names, and can include mixed github and CRAN, mixed version number and not:
-```{r Intro, eval=FALSE}
+```
 Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 
@@ -59,7 +59,7 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 
 We can keep all packages in an isolated folder for a project, using `standAlone = TRUE`
 
-```{r standALone}
+```
 setLibPaths("Project_A_Packages", standAlone = TRUE)
 .libPaths() # this is just to check what happened in the previous line -- there are 2 folders only
 Require("data.table (>=1.12.8)")
@@ -67,7 +67,7 @@ Require("data.table (>=1.12.8)")
 
 Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
 
-```{r standALone}
+```
 setLibPaths("Project_A_Packages", standAlone = FALSE)
 .libPaths() # we have added a library to original ones on this system
 Require("data.table (>=1.12.8)")
@@ -77,7 +77,7 @@ Require("data.table (>=1.12.8)")
 In the same way as above, we can specify maximum or exact package versions. 
 `Require` will retrieve these on CRAN archives.
 
-```{r archiveVersions}
+```
 Require("data.table (<=1.11.0)")
 ```
 
@@ -85,7 +85,7 @@ Require("data.table (<=1.11.0)")
 
 Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.
 
-```{r LongPackageList}
+```
 library(Require)
 setLibPaths("ProjectA", standAlone = TRUE)
 Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
@@ -96,10 +96,11 @@ Require(c("data.table (==1.12.8)", "dplyr", "reproducible",
 
 When a system is set up with the correct packages and versions, we can take a snapshot and give that file to another person or machine:
 
-```{r packageSnaptop}
+```
 pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project specific ones
-
-## move to a new machine, say
+```
+Move to a new machine, say
+```
 Require::Require(packageVersionFile = "mySnapshot.txt")
 ```
 
@@ -120,13 +121,13 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 **Install from CRAN:**
 
 Not yet on CRAN
-```r
+```
 # install.packages("Require")
 ```
 
 **Install from GitHub:**
     
-```r
+```
 #install.packages("devtools")
 library("devtools")
 install_github("PredictiveEcology/Require", dependencies = TRUE) 
@@ -140,7 +141,7 @@ install_github("PredictiveEcology/Require", dependencies = TRUE)
 
 **Install from GitHub:**
 
-```r
+```
 #install.packages("devtools")
 library("devtools")
 install_github("PredictiveEcology/Require", ref = "development", dependencies = TRUE) 
