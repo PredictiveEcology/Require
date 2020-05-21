@@ -95,37 +95,23 @@
 <div id="basic-usage" class="section level2">
 <h2 class="hasAnchor">
 <a href="#basic-usage" class="anchor"></a>Basic usage</h2>
-<p><code>Require</code> is essentially a wrapper around functions that install packages, e.g., <code>install.packages</code>, <code>install_github</code> and one of the main function to load packages, <code>require</code>. It is vectorized on package names.</p>
-<p>```{r Intro, eval=FALSE}</p>
+<p><code>Require</code> is essentially a wrapper around functions that install packages, e.g., <code>install.packages</code>, <code>install_github</code> and one of the main function to load packages, <code>require</code>.</p>
+<p><code>{r Intro, eval=FALSE} install.packages("Require")  library(Require) Require("data.table")</code></p>
+<p>With version numbering:</p>
+<p><code>{r Intro, eval=FALSE} Require("data.table (&gt;=1.12.8)")</code></p>
+<p>It is vectorized on package names, and can include mixed github and CRAN, mixed version number and not: <code>{r Intro, eval=FALSE} Require(c("data.table (&gt;=1.12.8)", "PredictiveEcology/quickPlot"))</code></p>
 </div>
-</div>
-<div id="installpackagesrequire--sadly-require-cant-install-itself-so-must-comment-this-line" class="section level1">
-<h1 class="hasAnchor">
-<a href="#installpackagesrequire--sadly-require-cant-install-itself-so-must-comment-this-line" class="anchor"></a>install.packages(“Require”) # sadly, Require can’t install itself, so must comment this line</h1>
-<p>library(Require) Require(“data.table”)</p>
-</div>
-<div id="with-version-numbering" class="section level1">
-<h1 class="hasAnchor">
-<a href="#with-version-numbering" class="anchor"></a>With version numbering</h1>
-<p>Require(“data.table (&gt;=1.12.8)”)</p>
-</div>
-<div id="vectorized-mixed-github-and-cran-mixed-version-number-and-not" class="section level1">
-<h1 class="hasAnchor">
-<a href="#vectorized-mixed-github-and-cran-mixed-version-number-and-not" class="anchor"></a>vectorized, mixed github and CRAN, mixed version number and not</h1>
-<p>Require(c(“data.table (&gt;=1.12.8)”, “PredictiveEcology/quickPlot”))</p>
-<pre><code>
-## Advanced usage
-
-### Keeping it all isolated
-
-We can keep all packages in an isolated folder for a project, using `standAlone = TRUE`
-
-```{r standALone}
-setLibPaths("Project_A_Packages", standAlone = TRUE)
-.libPaths() # this is just to check what happened in the previous line -- there are 2 folders only
-Require("data.table (&gt;=1.12.8)")</code></pre>
+<div id="advanced-usage" class="section level2">
+<h2 class="hasAnchor">
+<a href="#advanced-usage" class="anchor"></a>Advanced usage</h2>
+<div id="keeping-it-all-isolated" class="section level3">
+<h3 class="hasAnchor">
+<a href="#keeping-it-all-isolated" class="anchor"></a>Keeping it all isolated</h3>
+<p>We can keep all packages in an isolated folder for a project, using <code>standAlone = TRUE</code></p>
+<p><code>{r standALone} setLibPaths("Project_A_Packages", standAlone = TRUE) .libPaths() # this is just to check what happened in the previous line -- there are 2 folders only Require("data.table (&gt;=1.12.8)")</code></p>
 <p>Or we can use a hybrid of our main, “personal” library and a project specific one for “extra” packages:</p>
 <p><code>{r standALone} setLibPaths("Project_A_Packages", standAlone = FALSE) .libPaths() # we have added a library to original ones on this system Require("data.table (&gt;=1.12.8)")</code></p>
+</div>
 <div id="installing-old-package-versions" class="section level3">
 <h3 class="hasAnchor">
 <a href="#installing-old-package-versions" class="anchor"></a>Installing old package versions</h3>
@@ -143,6 +129,7 @@ Require("data.table (&gt;=1.12.8)")</code></pre>
 <a href="#taking-a-snapshot" class="anchor"></a>Taking a snapshot</h3>
 <p>When a system is set up with the correct packages and versions, we can take a snapshot and give that file to another person or machine:</p>
 <p>```{r packageSnaptop} pkgSnapshot(“mySnapshot.txt”, standAlone = TRUE) # to get only the project specific ones</p>
+</div>
 </div>
 <div id="move-to-a-new-machine-say" class="section level2">
 <h2 class="hasAnchor">
@@ -169,17 +156,17 @@ Not yet on CRAN
 ```r
 # install.packages("Require")</code></pre>
 <p><strong>Install from GitHub:</strong></p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="co">#install.packages("devtools")</span></a>
-<a class="sourceLine" id="cb3-2" title="2"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="st">"devtools"</span>)</a>
-<a class="sourceLine" id="cb3-3" title="3"><span class="kw">install_github</span>(<span class="st">"PredictiveEcology/Require"</span>, <span class="dt">dependencies =</span> <span class="ot">TRUE</span>) </a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1"><span class="co">#install.packages("devtools")</span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="st">"devtools"</span>)</a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="kw">install_github</span>(<span class="st">"PredictiveEcology/Require"</span>, <span class="dt">dependencies =</span> <span class="ot">TRUE</span>) </a></code></pre></div>
 <div id="development-version" class="section level3">
 <h3 class="hasAnchor">
 <a href="#development-version" class="anchor"></a>Development version</h3>
 <p><a href="https://travis-ci.org/PredictiveEcology/Require"><img src="https://travis-ci.org/PredictiveEcology/Require.svg?branch=development" alt="Build Status"></a> <a href="https://ci.appveyor.com/project/achubaty/Require/branch/development"><img src="https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/development?svg=true" alt="Appveyor Build status"></a> <a href="https://coveralls.io/github/PredictiveEcology/Require?branch=development"><img src="https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=development" alt="Coverage Status"></a></p>
 <p><strong>Install from GitHub:</strong></p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="co">#install.packages("devtools")</span></a>
-<a class="sourceLine" id="cb4-2" title="2"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="st">"devtools"</span>)</a>
-<a class="sourceLine" id="cb4-3" title="3"><span class="kw">install_github</span>(<span class="st">"PredictiveEcology/Require"</span>, <span class="dt">ref =</span> <span class="st">"development"</span>, <span class="dt">dependencies =</span> <span class="ot">TRUE</span>) </a></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="co">#install.packages("devtools")</span></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span>(<span class="st">"devtools"</span>)</a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="kw">install_github</span>(<span class="st">"PredictiveEcology/Require"</span>, <span class="dt">ref =</span> <span class="st">"development"</span>, <span class="dt">dependencies =</span> <span class="ot">TRUE</span>) </a></code></pre></div>
 </div>
 </div>
 </div>

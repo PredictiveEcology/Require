@@ -35,17 +35,21 @@ We define a reproducible workflow as a workflow that can be run from the start t
 ## Basic usage
 
 `Require` is essentially a wrapper around functions that install packages, e.g., `install.packages`, `install_github` and one of the main function to load packages, `require`. 
-It is vectorized on package names.
 
 ```{r Intro, eval=FALSE}
-# install.packages("Require") # sadly, Require can't install itself, so must comment this line
+install.packages("Require") 
 library(Require)
 Require("data.table")
+```
 
-# With version numbering
+With version numbering:
+
+```{r Intro, eval=FALSE}
 Require("data.table (>=1.12.8)")
+```
 
-# vectorized, mixed github and CRAN, mixed version number and not
+It is vectorized on package names, and can include mixed github and CRAN, mixed version number and not:
+```{r Intro, eval=FALSE}
 Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 
