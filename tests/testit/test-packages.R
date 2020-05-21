@@ -60,11 +60,14 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
 # Try older version
 dir2 <- tempdir2("test2")
 pvWant <- "1.0-7"
-inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
-                         libPaths = dir2, dependencies = FALSE)
-pv <- packageVersion("TimeWarp", lib.loc = dir2)
-testit::assert(pv == pvWant)
-detach("package:TimeWarp", unload = TRUE)
+tryCatch(inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
+                         libPaths = dir2, dependencies = FALSE), error = function(x) FALSE)
+if (!isFALSE(inst)) {
+  pv <- packageVersion("TimeWarp", lib.loc = dir2)
+  testit::assert(pv == pvWant)
+  detach("package:TimeWarp", unload = TRUE)
+  remove.packages("TimeWarp", lib = dir2)
+}
 
 # Test snapshot file
 orig <- setLibPaths(dir2, standAlone = TRUE)
@@ -94,26 +97,23 @@ testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes))
 # Skip on CRAN
 dir3 <- tempdir2("test3")
 if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
-#   if (!(Sys.info()[["sysname"]] == "Darwin" &&
-#         paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
-    # Try github
-    try(inst <- Require::Require("achubaty/fpCompare", install = "force",
-                             require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
-    pkgs <- c("fpCompare")
-    ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
-    testit::assert(isTRUE(all.equal(sort(pkgs),
-                                    sort(ip))))
+  # Try github
+  try(inst <- Require::Require("achubaty/fpCompare", install = "force",
+                               require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
+  pkgs <- c("fpCompare")
+  ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
+  testit::assert(isTRUE(all.equal(sort(pkgs),
+                                  sort(ip))))
 
-    # Try github with version
-    dir4 <- Require::tempdir2("test4")
-    mess <- utils::capture.output({
-      inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
-                               require = FALSE, standAlone = FALSE, libPaths = dir4)
-    }, type = "message")
-    testit::assert(isFALSE(inst))
-    testit::assert(length(mess) > 0)
-    testit::assert(sum(grepl("could not be installed", mess)) == 1)
-#  }
+  # Try github with version
+  dir4 <- Require::tempdir2("test4")
+  mess <- utils::capture.output({
+    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+                             require = FALSE, standAlone = FALSE, libPaths = dir4)
+  }, type = "message")
+  testit::assert(isFALSE(inst))
+  testit::assert(length(mess) > 0)
+  testit::assert(sum(grepl("could not be installed", mess)) == 1)
 }
 unlink(dirname(dir3), recursive = TRUE)
 
