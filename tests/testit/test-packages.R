@@ -90,8 +90,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
    if (!(Sys.info()[["sysname"]] == "Darwin" &&
          paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
     # Try github
-    inst <- Require::Require("PredictiveEcology/Require", install = "force",
-                             require = FALSE, standAlone = FALSE, libPaths = dir3)
+    try(inst <- Require::Require("PredictiveEcology/Require", install = "force",
+                             require = FALSE, standAlone = FALSE, libPaths = dir3), silent = TRUE)
     pkgs <- c("data.table", "remotes", "Require")
     ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
     testit::assert(isTRUE(all.equal(sort(pkgs),
