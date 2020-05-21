@@ -77,7 +77,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
   dir6 <- tempdir2("test6")
-  aaaa <<- 1
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
   testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
