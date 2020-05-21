@@ -97,7 +97,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
    if (!(Sys.info()[["sysname"]] == "Darwin" &&
          paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
     # Try github
-    try(inst <- Require::Require("PredictiveEcology/Require", install = "force",
+    try(inst <- Require::Require("achubaty/fpCompare", install = "force",
                              require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
     pkgs <- c("data.table", "remotes", "Require")
     ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
@@ -107,7 +107,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
     # Try github with version
     dir4 <- Require::tempdir2("test4")
     mess <- utils::capture.output({
-      inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
+      inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                                require = FALSE, standAlone = FALSE, libPaths = dir4)
     }, type = "message")
     testit::assert(isFALSE(inst))
