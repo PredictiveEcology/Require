@@ -54,6 +54,7 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
   ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
   testit::assert("TimeWarp" %in% ip)
   detach("package:TimeWarp", unload = TRUE)
+  remove.packages("TimeWarp", lib = dir1)
 }
 
 # Try older version
@@ -72,9 +73,15 @@ pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
 pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
 dir6 <- tempdir2("test6")
-out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
+out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
+                        install = "force")
 testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
                          packageVersion("TimeWarp", lib.loc = dir6)))
+detach("package:TimeWarp", unload = TRUE)
+remove.packages("TimeWarp", lib = dir2)
+remove.packages("TimeWarp", lib = dir6)
+
+
 setLibPaths(orig)
 
 # Test snapshot file with no args
