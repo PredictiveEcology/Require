@@ -94,8 +94,8 @@ testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes))
 # Skip on CRAN
 dir3 <- tempdir2("test3")
 if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
-   if (!(Sys.info()[["sysname"]] == "Darwin" &&
-         paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
+#   if (!(Sys.info()[["sysname"]] == "Darwin" &&
+#         paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
     # Try github
     try(inst <- Require::Require("achubaty/fpCompare", install = "force",
                              require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
@@ -113,7 +113,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
     testit::assert(isFALSE(inst))
     testit::assert(length(mess) > 0)
     testit::assert(sum(grepl("could not be installed", mess)) == 1)
-  }
+#  }
 }
 unlink(dirname(dir3), recursive = TRUE)
 
