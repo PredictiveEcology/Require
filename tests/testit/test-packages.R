@@ -91,7 +91,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
          paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
     # Try github
     try(inst <- Require::Require("PredictiveEcology/Require", install = "force",
-                             require = FALSE, standAlone = FALSE, libPaths = dir3), silent = TRUE)
+                             require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
     pkgs <- c("data.table", "remotes", "Require")
     ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
     testit::assert(isTRUE(all.equal(sort(pkgs),
