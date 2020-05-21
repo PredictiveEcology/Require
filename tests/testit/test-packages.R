@@ -99,7 +99,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
     # Try github
     try(inst <- Require::Require("achubaty/fpCompare", install = "force",
                              require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
-    pkgs <- c("data.table", "remotes", "Require")
+    pkgs <- c("fpCompare")
     ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
     testit::assert(isTRUE(all.equal(sort(pkgs),
                                     sort(ip))))
