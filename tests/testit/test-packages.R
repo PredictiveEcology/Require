@@ -54,6 +54,7 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
   ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
   testit::assert("TimeWarp" %in% ip)
   detach("package:TimeWarp", unload = TRUE)
+  remove.packages("TimeWarp", lib = dir1)
 }
 
 # Try older version
@@ -72,9 +73,15 @@ pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
 pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
 dir6 <- tempdir2("test6")
-out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6, install = "force")
+out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
+                        install = "force")
 testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
                          packageVersion("TimeWarp", lib.loc = dir6)))
+detach("package:TimeWarp", unload = TRUE)
+remove.packages("TimeWarp", lib = dir2)
+remove.packages("TimeWarp", lib = dir6)
+
+
 setLibPaths(orig)
 
 # Test snapshot file with no args
@@ -87,12 +94,12 @@ testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes))
 # Skip on CRAN
 dir3 <- tempdir2("test3")
 if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
-   if (!(Sys.info()[["sysname"]] == "Darwin" &&
-         paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
+#   if (!(Sys.info()[["sysname"]] == "Darwin" &&
+#         paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
     # Try github
-    inst <- Require::Require("PredictiveEcology/Require", install = "force",
-                             require = FALSE, standAlone = FALSE, libPaths = dir3)
-    pkgs <- c("data.table", "remotes", "Require")
+    try(inst <- Require::Require("achubaty/fpCompare", install = "force",
+                             require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
+    pkgs <- c("fpCompare")
     ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
     testit::assert(isTRUE(all.equal(sort(pkgs),
                                     sort(ip))))
@@ -100,13 +107,13 @@ if (identical(tolower(Sys.getenv("CI")), "true") || interactive()) {
     # Try github with version
     dir4 <- Require::tempdir2("test4")
     mess <- utils::capture.output({
-      inst <- Require::Require("PredictiveEcology/Require (>=2.0.0)",
+      inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                                require = FALSE, standAlone = FALSE, libPaths = dir4)
     }, type = "message")
     testit::assert(isFALSE(inst))
     testit::assert(length(mess) > 0)
     testit::assert(sum(grepl("could not be installed", mess)) == 1)
-  }
+#  }
 }
 unlink(dirname(dir3), recursive = TRUE)
 

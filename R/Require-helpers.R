@@ -168,8 +168,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
         oldAvailableVersions[, correctVersionAvail :=
                                .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
         if (any(oldAvailableVersions$correctVersionAvail)) {
-          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "CRANArchive"]
-          oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "CRANArchive"]
+          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
+          oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
           oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
           oldAvailableVersions[, repoLocation := archiveSource]
           setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
@@ -223,7 +223,7 @@ installFrom <- function(pkgDT) {
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
       pkgDT[needInstall == TRUE & # installed == FALSE &
               (correctVersionAvail == TRUE) &
-              repoLocation == "CRANArchive", installFrom := "CRANArchive"]
+              repoLocation == "Archive", installFrom := "Archive"]
       # pkgDT[needInstall == TRUE & # installed == FALSE &
       #         (correctVersionAvail == TRUE) &
       #         repoLocation == "Versions", installFrom := repoLocation]
@@ -371,12 +371,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       #                                     versions = toInstall[installFrom == "Versions"]$OlderVersionsAvailable)
       #   pkgDT <- updateInstalled(pkgDT, installPkgNames, warnings())
       # }
-      CRANArchive <- "CRANArchive"
-      if (any(CRANArchive %in% toInstall$installFrom)) {
+      Archive <- "Archive"
+      if (any(Archive %in% toInstall$installFrom)) {
         message("installing older versions is still experimental and may cause package version conflicts")
-        installPkgNames <- toInstall[installFrom == CRANArchive]$Package
+        installPkgNames <- toInstall[installFrom == Archive]$Package
         names(installPkgNames) <- installPkgNames
-        installVersions <- toInstall[installFrom == CRANArchive]$OlderVersionsAvailable
+        installVersions <- toInstall[installFrom == Archive]$OlderVersionsAvailable
         out <- Map(p = installPkgNames, v = installVersions, function(p, v, ...) {
           do.call(remotes::install_version, list(package = p, version = v, ...))
         })
