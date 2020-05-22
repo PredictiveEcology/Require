@@ -1,16 +1,16 @@
 Package: Require
 Type: Package
 Title: Installing and loading R packages for reproducible workflows
-Description: A single key function, `Require` that wraps `install.packages`,
-    `remotes::install_github`, `versions::install.versions`, and `base::require`
+Description: A single key function, 'Require' that wraps 'install.packages',
+    'remotes::install_github', 'versions::install.versions', and 'base::require'
     that allows for reproducible workflows. As with other functions in a
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2020-05-20
-Version: 0.0.1
+Date: 2020-05-21
+Version: 0.0.2
 Authors@R: c(
     person("Eliot J B", "McIntire", email = "eliot.mcintire@canada.ca",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6914-8316")),
