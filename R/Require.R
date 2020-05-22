@@ -209,7 +209,6 @@ Require <- function(packages, packageVersionFile,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
-
   browser(expr = exists("._Require_0"))
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
