@@ -1,5 +1,11 @@
 Known issues: https://github.com/PredictiveEcology/reproducible/issues
 
+version 0.0.2
+==============
+
+## minor
+Change backticks to single quotes in DESCRIPTION
+
 version 0.0.1
 ==============
 
