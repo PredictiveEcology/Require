@@ -1,6 +1,6 @@
 Package: Require
 Type: Package
-Title: Installing and loading R packages for reproducible workflows
+Title: Installing and Loading R Packages for Reproducible Workflows
 Description: A single key function, 'Require' that wraps 'install.packages',
     'remotes::install_github', 'versions::install.versions', and 'base::require'
     that allows for reproducible workflows. As with other functions in a

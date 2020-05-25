@@ -1,5 +1,18 @@
 Known issues: https://github.com/PredictiveEcology/reproducible/issues
 
+version 0.0.3
+==============
+
+## minor
+Change title to Title Case in DESCRIPTION
+
+
+version 0.0.2
+==============
+
+## minor
+Change backticks to single quotes in DESCRIPTION
+
 version 0.0.1
 ==============
 
