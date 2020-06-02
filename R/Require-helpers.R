@@ -590,3 +590,21 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "installed", "repoLocation", "correctVersion", "correctVersionAvail",
                 "toLoad", "hasVersionSpec")
+
+installedVers <- function(pkgDT) {
+  pkgs <- pkgDT$Package
+  names(pkgs) <- pkgs
+  installedPkgsCurrent <- lapply(pkgs, function(p) {
+    out <- tryCatch(find.package(p), error = function(x) NA)
+    descV <- if (!is.na(out)) {
+      descV <- DESCRIPTIONFileVersion(file.path(out, "DESCRIPTION"))
+      cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
+    } else {
+      cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
+    }
+    descV
+  })
+  installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
+  installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
+  installedPkgsCurrent[pkgDT, on = "Package"]
+}

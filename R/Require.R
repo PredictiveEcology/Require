@@ -103,7 +103,7 @@ utils::globalVariables(c(
 #'   rbindlist
 #' @importFrom data.table  :=  .I .SD setnames setorderv
 #' @importFrom remotes install_github install_version
-#' @importFrom utils assignInMyNamespace available.packages capture.output compareVersion
+#' @importFrom utils available.packages capture.output compareVersion
 #' @importFrom utils install.packages packageVersion
 #'
 #' @examples
@@ -254,12 +254,8 @@ Require <- function(packages, packageVersionFile,
     pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
           Package := names(packagesOrig[origPackagesHaveNames])]
 
-  installedPkgsCurrent <- .installed.pkgs()
-  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"),
-                                                             drop = FALSE])
-
   # Join installed with requested
-  pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
+  pkgDT <- installedVers(pkgDT)
   pkgDT <- pkgDT[, .SD[1], by = "Package"] # remove duplicates
   pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
 
