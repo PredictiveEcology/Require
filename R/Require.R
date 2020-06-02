@@ -103,7 +103,7 @@ utils::globalVariables(c(
 #'   rbindlist
 #' @importFrom data.table  :=  .I .SD setnames setorderv
 #' @importFrom remotes install_github install_version
-#' @importFrom utils assignInMyNamespace available.packages capture.output compareVersion
+#' @importFrom utils available.packages capture.output compareVersion
 #' @importFrom utils install.packages packageVersion
 #'
 #' @examples
@@ -254,9 +254,21 @@ Require <- function(packages, packageVersionFile,
     pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
           Package := names(packagesOrig[origPackagesHaveNames])]
 
-  installedPkgsCurrent <- .installed.pkgs()
-  installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"),
-                                                             drop = FALSE])
+  pkgs <- pkgDT$Package
+  names(pkgs) <- pkgs
+  installedPkgsCurrent <- lapply(pkgs, function(p) {
+    out <- tryCatch(find.package(p), error = function(x) NA)
+    descV <- if (!is.na(out)) {
+      descV <- DESCRIPTIONFileVersion(file.path(out, "DESCRIPTION"))
+      cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
+    } else {
+      cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
+    }
+    descV
+  })
+  installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
+  installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
+  #}
 
   # Join installed with requested
   pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
