@@ -254,24 +254,8 @@ Require <- function(packages, packageVersionFile,
     pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
           Package := names(packagesOrig[origPackagesHaveNames])]
 
-  pkgs <- pkgDT$Package
-  names(pkgs) <- pkgs
-  installedPkgsCurrent <- lapply(pkgs, function(p) {
-    out <- tryCatch(find.package(p), error = function(x) NA)
-    descV <- if (!is.na(out)) {
-      descV <- DESCRIPTIONFileVersion(file.path(out, "DESCRIPTION"))
-      cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
-    } else {
-      cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
-    }
-    descV
-  })
-  installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
-  installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
-  #}
-
   # Join installed with requested
-  pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
+  pkgDT <- installedVers(pkgDT)
   pkgDT <- pkgDT[, .SD[1], by = "Package"] # remove duplicates
   pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
 
