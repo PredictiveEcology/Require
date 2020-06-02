@@ -49,7 +49,7 @@ if (interactive()) {
       out <- packages
       browser(expr = "bitops" %in% packages)
     } else {
-      out <- data.table::as.data.table(installed.packages(noCache = TRUE))[[1]]
+      out <- data.table::as.data.table(.installed.pkgs(noCache = TRUE))[[1]]
       names(out) <- out
       out <- lapply(out, isNamespaceLoaded)
       out <- unlist(out)

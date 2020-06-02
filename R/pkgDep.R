@@ -314,4 +314,23 @@ whichToDILES <- function(which) {
   which
 }
 
-.basePkgs <- rownames(installed.packages(tail(.libPaths(), 1)))
+.installed.pkgs <- function(lib.loc = .libPaths()) {
+  out <- lapply(lib.loc, function(path) {
+    dirs <- dir(path, full.names = TRUE)
+    areDirs <- dir.exists(dirs)
+    dirs <- dirs[areDirs]
+    files <- file.path(dirs, "DESCRIPTION")
+    filesExist <- file.exists(files)
+    files <- files[filesExist]
+    versions <- unlist(lapply(files, function(file) DESCRIPTIONFileVersion(file)))
+    cbind("Package" = dirs[filesExist], "Version" = versions)
+  })
+  c("Package", "LibPath", "Version")
+  lengths <- unlist(lapply(out, function(x) NROW(x)))
+  out <- do.call(rbind, out)
+  cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
+        "Version" = out[, "Version"])
+}
+
+.basePkgs <- unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
+

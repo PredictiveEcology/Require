@@ -4,7 +4,7 @@
 \name{Require-package}
 \alias{Require}
 \alias{Require-package}
-\title{Require: Installing and loading R packages for reproducible workflows}
+\title{Require: Installing and Loading R Packages for Reproducible Workflows}
 \usage{
 Require(
   packages,
@@ -67,8 +67,7 @@ after they are installed.}
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
-\item{purge}{Logical. Internally, there are calls to
-\code{installed.packages} and \code{available.packages}}
+\item{purge}{Logical. Internally, there are calls to \code{available.packages}}
 
 \item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
 a data.table with many details attached to the output}
@@ -81,8 +80,8 @@ used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 }
 \description{
-A single key function, `Require` that wraps `install.packages`,
-    `remotes::install_github`, `versions::install.versions`, and `base::require`
+A single key function, 'Require' that wraps 'install.packages',
+    'remotes::install_github', 'versions::install.versions', and 'base::require'
     that allows for reproducible workflows. As with other functions in a
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.

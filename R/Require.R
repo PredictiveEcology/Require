@@ -88,8 +88,7 @@ utils::globalVariables(c(
 #'                   This can be create dramatically faster
 #' installs if the user has a substantial number of the packages already in
 #' their personal library. Default \code{FALSE} to minimize package installing.
-#' @param purge Logical. Internally, there are calls to
-#'   \code{installed.packages} and \code{available.packages}
+#' @param purge Logical. Internally, there are calls to \code{available.packages}
 #' @param verbose Numeric. If \code{1} (less) or \code{2} (more), there will be
 #'   a data.table with many details attached to the output
 #' @param ... Passed to \emph{all} of \code{install_github},
@@ -105,7 +104,7 @@ utils::globalVariables(c(
 #' @importFrom data.table  :=  .I .SD setnames setorderv
 #' @importFrom remotes install_github install_version
 #' @importFrom utils assignInMyNamespace available.packages capture.output compareVersion
-#' @importFrom utils install.packages installed.packages packageVersion
+#' @importFrom utils install.packages packageVersion
 #'
 #' @examples
 #' \dontrun{
@@ -255,7 +254,7 @@ Require <- function(packages, packageVersionFile,
     pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
           Package := names(packagesOrig[origPackagesHaveNames])]
 
-  installedPkgsCurrent <- installed.packages(noCache = isTRUE(purge))
+  installedPkgsCurrent <- .installed.pkgs()
   installedPkgsCurrent <- as.data.table(installedPkgsCurrent[, c("Package", "LibPath", "Version"),
                                                              drop = FALSE])
 
