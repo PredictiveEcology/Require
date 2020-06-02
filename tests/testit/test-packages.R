@@ -51,7 +51,7 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
   out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
   testit::assert(data.table::is.data.table(attr(out, "Require")))
   testit::assert(isTRUE(out))
-  ip <- data.table::as.data.table(installed.packages(lib.loc = dir1))[[1]]
+  ip <- data.table::as.data.table(.installed.pkgs(lib.loc = dir1))[[1]]
   testit::assert("TimeWarp" %in% ip)
   detach("package:TimeWarp", unload = TRUE)
   remove.packages("TimeWarp", lib = dir1)
@@ -101,7 +101,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
   try(inst <- Require::Require("achubaty/fpCompare", install = "force",
                                require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
   pkgs <- c("fpCompare")
-  ip <- data.table::as.data.table(installed.packages(lib.loc = dir3))[[1]]
+  ip <- data.table::as.data.table(.installed.pkgs(lib.loc = dir3))[[1]]
   testit::assert(isTRUE(all.equal(sort(pkgs),
                                   sort(ip))))
 

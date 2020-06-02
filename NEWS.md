@@ -1,5 +1,11 @@
 Known issues: https://github.com/PredictiveEcology/reproducible/issues
 
+version 0.0.4
+==============
+
+## minor
+remove `installed.packages` from test code, as per CRAN request
+
 version 0.0.3
 ==============
 
