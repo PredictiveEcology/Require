@@ -256,7 +256,7 @@ Require <- function(packages, packageVersionFile,
 
   # Join installed with requested
   pkgDT <- installedVers(pkgDT)
-  pkgDT <- pkgDT[, .SD[1], by = "Package"] # remove duplicates
+  pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
   pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
 
   if (length(packages)) {
