@@ -412,66 +412,73 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
   if (isTRUE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
-    outMess <- capture.output({
-      out <- lapply(packages, require, character.only = TRUE)
-    }, type = "message")
-    warn <- warnings()
-    grep3a <- "no package called"
-    grep3b <- "could not be found"
-    missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
+    toInstall <- lapply(packages, function(pkg) {
+      browser()
+      outMess <- capture.output({
+        require(pkg, character.only = TRUE)
+      }, type = "message")
+      warn <- warnings()
+      grep3a <- "no package called"
+      grep3b <- "could not be found"
+      missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
 
-    grep2 <- "package or namespace load failed for"
-    grep1 <- "onLoad failed in loadNamespace"
-    otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
-    toInstall <- character()
-    if (any(otherErrors) || any(missingDeps)) {
-      if (any(otherErrors)) {
-        error1 <- grepl(.libPaths()[1], outMess)
-        error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
-        packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
-        error2 <- grepl("no such symbol", outMess)
-        if (any(error2)) {
-          pkgs <- paste(packageNames, collapse = "', '")
-          stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-               "-----\n",
-               "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
-               "\n-----\n...before any other packages get loaded")
+      grep2 <- "package or namespace load failed for"
+      grep1 <- "onLoad failed in loadNamespace"
+      otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
+      toInstall <- character()
+      if (any(otherErrors) || any(missingDeps)) {
+        if (any(otherErrors)) {
+          error1 <- grepl(.libPaths()[1], outMess)
+          error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
+          packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
+          error2 <- grepl("no such symbol", outMess)
+          if (any(error2)) {
+            pkgs <- paste(packageNames, collapse = "', '")
+            stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+                 "-----\n",
+                 "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
+                 "\n-----\n...before any other packages get loaded")
+          }
+          error3 <- grepl("is being loaded, but", outMess)
+          packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
+          if (any(error3)) {
+            pkgs <- paste(packageNames, collapse = "', '")
+            stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+                 "-----\n", "install.packages(c('",
+                 paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
+                 "')", "\n-----\n...before any other packages get loaded")
+          }
         }
-        error3 <- grepl("is being loaded, but", outMess)
-        packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
-        if (any(error3)) {
-          pkgs <- paste(packageNames, collapse = "', '")
-          stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-               "-----\n", "install.packages(c('",
-               paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
-               "')", "\n-----\n...before any other packages get loaded")
+        doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
+        if (any(missingDeps) && doDeps) {
+          grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
+          packageNames <- character()
+          if (any(grepl(grep3a, outMess[missingDeps])))
+            packageNames <- unique(gsub(grep3a_1, "\\1", outMess[missingDeps]))
+          grep3b_1 <- paste0(".*package.{2}(.*).{2}required.*$")
+          if (any(grepl(grep3b, outMess[missingDeps])))
+            packageNames <- unique(c(packageNames,
+                                     unique(gsub(grep3b_1, "\\1", outMess[missingDeps]))))
+          toInstall <- c(toInstall, packageNames)
+          outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
+          outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
+          outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
         }
-      }
-      doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
-      if (any(missingDeps) && doDeps) {
-        grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
-        packageNames <- character()
-        if (any(grepl(grep3a, outMess[missingDeps])))
-          packageNames <- unique(gsub(grep3a_1, "\\1", outMess[missingDeps]))
-        grep3b_1 <- paste0(".*package.{2}(.*).{2}required.*$")
-        if (any(grepl(grep3b, outMess[missingDeps])))
-          packageNames <- unique(c(packageNames,
-                                   unique(gsub(grep3b_1, "\\1", outMess[missingDeps]))))
-        toInstall <- c(toInstall, packageNames)
-        outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
-        outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
-        outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
-      }
 
-      out2 <- Require(unique(toInstall), ...)
-      out2 <- unlist(out2)
-      names(out2) <- unique(toInstall)
+      }
+      message(paste0(outMess, collapse = "\n"))
 
-      out <- c(out, out2)
-    } else {
-      out2 <- character()
-    }
-    message(paste0(outMess, collapse = "\n"))
+    })
+    toInstall <- unlist(toInstall)
+
+    out2 <- Require(unique(toInstall), ...)
+    out2 <- unlist(out2)
+    names(out2) <- unique(toInstall)
+
+    out <- c(out, out2)
+    #    } #else {
+    #out2 <- character()
+    #}
 
     pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
   }
