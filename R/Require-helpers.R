@@ -395,7 +395,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
             tryCatch(packageVersion(x), error = function(x) NA_character_))))]
-  pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
+  pkgDT[toLoad > 0, toLoad := toLoad * as.integer(is.na(installFrom) | installFrom != "Fail")]
 
   pkgDT
 }
@@ -408,14 +408,15 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 #' @rdname Require-internals
 doLoading <- function(pkgDT, require = TRUE, ...) {
 
-  packages <- pkgDT[toLoad == TRUE]$Package
+  packages <- pkgDT[toLoad > 0]$Package
+  packageOrder <- pkgDT[toLoad > 0]$toLoad
   if (isTRUE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
-    toInstall <- lapply(packages, function(pkg) {
-      browser()
+    packages <- packages[order(packageOrder)]
+    requireOut <- lapply(packages, function(pkg) {
       outMess <- capture.output({
-        require(pkg, character.only = TRUE)
+        out <- require(pkg, character.only = TRUE)
       }, type = "message")
       warn <- warnings()
       grep3a <- "no package called"
@@ -467,20 +468,21 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
 
       }
       message(paste0(outMess, collapse = "\n"))
-
+      return(list(out = out, toInstall = toInstall))
     })
-    toInstall <- unlist(toInstall)
+    requireOut
+    out <- unlist(lapply(requireOut, function(x) x$out))
+    toInstall <- unlist(lapply(requireOut, function(x) x$toInstall))
 
-    out2 <- Require(unique(toInstall), ...)
-    out2 <- unlist(out2)
-    names(out2) <- unique(toInstall)
+    if (length(toInstall)) {
+      out2 <- Require(unique(toInstall), ...)
+      out2 <- unlist(out2)
+      names(out2) <- unique(toInstall)
 
-    out <- c(out, out2)
-    #    } #else {
-    #out2 <- character()
-    #}
+      out <- c(out, out2)
+    }
 
-    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
+    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad > 0)]
   }
   pkgDT[]
 }

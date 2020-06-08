@@ -241,13 +241,16 @@ Require <- function(packages, packageVersionFile,
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
+    packagesOrder <- seq(packagesOrig)
+    names(packagesOrder) <- packagesOrig
   }
 
   # Create data.table of Require workflow
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
 
   # identify the packages that were asked by user to load -- later dependencies will be in table too
-  pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
+  pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
+        packagesRequired := packagesOrder[names(packagesOrder) %in% Package], by = "Package"]
   pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
 
   if (any(origPackagesHaveNames))
@@ -272,8 +275,8 @@ Require <- function(packages, packageVersionFile,
     if (isTRUE(require))
       pkgDT <- doLoading(pkgDT, ...)
   }
-  out <- pkgDT[packagesRequired == TRUE]$loaded
-  names(out) <- pkgDT[packagesRequired == TRUE]$Package
+  out <- pkgDT[packagesRequired > 0]$loaded
+  names(out) <- pkgDT[packagesRequired > 0]$Package
   if (verbose > 0) {
     if (verbose < 2) {
       colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
