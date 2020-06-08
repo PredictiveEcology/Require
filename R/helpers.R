@@ -179,7 +179,6 @@ setMethod("checkPath",
 #' @param round An optional numeric to pass to \code{round}
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
-#' @export
 messageDF <- function(df, round) {#}, colour = NULL) {
   if (is.matrix(df))
     df <- as.data.frame(df)
