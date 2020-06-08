@@ -45,7 +45,8 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 library(testit)
 
 if (!(Sys.info()[["sysname"]] == "Darwin" &&
-      paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
+      shortRVersion(paste0(version$major, ".", version$minor)) ==
+      shortRVersion(R_system_version("3.6.3")))) {
   dir1 <- tempdir2("test1")
   options("Require.verbose" = TRUE)
   out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
