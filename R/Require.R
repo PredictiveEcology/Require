@@ -242,7 +242,7 @@ Require <- function(packages, packageVersionFile,
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
     packagesOrder <- seq(packagesOrig)
-    names(packagesOrder) <- packagesOrig
+    names(packagesOrder) <- trimVersionNumber(packagesOrig)
   }
 
   # Create data.table of Require workflow

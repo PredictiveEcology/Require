@@ -267,8 +267,6 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
                                 keepVersionNumber = TRUE) {
   lines <- readLines(desc_path)
-  if (!exists("nTimes")) nTimes <<- 0
-  nTimes <<- nTimes + 1
   Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   on.exit(Sys.setlocale(locale = ""))
   sl <- list()
