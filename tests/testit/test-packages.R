@@ -13,7 +13,6 @@ assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
 
 isInteractiveOrig <- isInteractive
 isInteractive <- function() TRUE
-on.exit({assignInNamespace("isInteractive", isInteractiveOrig, ns = "Require")})
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
@@ -25,6 +24,7 @@ assignInNamespace("isInteractive", isInteractive, ns = "Require")
 out <- getCRANrepos("")
 Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
+assignInNamespace("isInteractive", isInteractiveOrig, ns = "Require")
 repos <- Require:::getCRANrepos("")
 testit::assert(is.character(repos))
 testit::assert(nchar(repos) > 0)
