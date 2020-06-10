@@ -116,9 +116,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
         cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-          isOldMac <- (Sys.info()[["sysname"]] == "Darwin" &&
+          isOldMac <- (Sys.info()["sysname"] == "Darwin" &&
                          compareVersion(as.character(getRversion()), "4.0.0") < 0)
-          cap <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
+          cap <- available.packages(repos = repos, ignore_repo_cache = isOldMac | !isInteractive())
           assign("cachedAvailablePackages", cap, envir = .pkgEnv)
           cap
         } else {

@@ -65,7 +65,6 @@ if (!(Sys.info()[["sysname"]] == "Darwin" &&
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-  cat(Sys.time(), file = "tmp.txt")
   dir2 <- tempdir2("test2")
   pvWant <- "1.0-7"
   inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
