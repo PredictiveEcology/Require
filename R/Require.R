@@ -230,8 +230,11 @@ Require <- function(packages, packageVersionFile,
   origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
   packagesOrig <- packages
   packageNamesOrig <- packages
+
   if (any(origPackagesHaveNames))
     packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
+  packagesOrder <- seq(packagesOrig)
+  names(packagesOrder) <- extractPkgName(packageNamesOrig)
 
   if (missing(libPaths))
     libPaths <- .libPaths()
@@ -241,9 +244,8 @@ Require <- function(packages, packageVersionFile,
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
-    packagesOrder <- seq(packagesOrig)
-    names(packagesOrder) <- trimVersionNumber(packagesOrig)
   }
+
 
   # Create data.table of Require workflow
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
