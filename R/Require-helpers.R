@@ -104,7 +104,7 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
 #' @inheritParams Require
 #'
 #' @export
-#' @importFrom utils download.file tail
+#' @importFrom utils compareVersion download.file tail
 #' @rdname Require-internals
 getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
   if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)])) {

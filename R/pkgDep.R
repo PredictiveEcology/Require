@@ -199,13 +199,17 @@ pkgDep2 <- function(packages, recursive = TRUE,
   return(a)
 }
 
-pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recursive = FALSE,
+#' @importFrom utils compareVersion
+pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
+                       #recursive = FALSE,
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
-  cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
+  cachedAvailablePackages <- if (!exists("cachedAvailablePackages",
+                                         envir = .pkgEnv) || isTRUE(purge)) {
     isOldMac <- (Sys.info()["sysname"] == "Darwin" &&
-                    compareVersion(as.character(getRversion()), "4.0.0") < 0)
-    aa <- available.packages(repos = repos, ignore_repo_cache = isOldMac | !isInteractive())
+                   compareVersion(as.character(getRversion()), "4.0.0") < 0)
+    aa <- available.packages(repos = repos, ignore_repo_cache = isOldMac |
+                               !isInteractive())
     assign("cachedAvailablePackages", aa, envir = .pkgEnv)
     aa
   } else {
@@ -213,7 +217,8 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recur
   }
 
   capFull <- as.data.table(cachedAvailablePackages)
-  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, keepVersionNumber = keepVersionNumber)
+  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg,
+                          keepVersionNumber = keepVersionNumber)
   # if (recursive) {
   #   i <- 1
   #   pkgsNew <- list()

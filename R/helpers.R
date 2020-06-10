@@ -131,7 +131,7 @@ setMethod(
         }
       }
       if (Sys.info()[["sysname"]] == "Darwin")
-        path <- normPath(path) # ensure path re-normalized after creation (see #267)
+        path <- normPath(path) # ensure path re-normalized after creation
 
       return(path)
     }
