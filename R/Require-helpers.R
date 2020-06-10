@@ -89,7 +89,7 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
       pkgDT[!is.na(Version) & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
       pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
       # put FALSE at top of each package -- then take the first one, so we will know if all inequalities are satisfied
-      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L)
+      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L, na.last = TRUE)
       pkgDT <- pkgDT[, .SD[1], by = c("Package")]
     }
   } else {

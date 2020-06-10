@@ -251,8 +251,9 @@ Require <- function(packages, packageVersionFile,
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
 
   # identify the packages that were asked by user to load -- later dependencies will be in table too
+
   pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
-        packagesRequired := packagesOrder[names(packagesOrder) %in% Package], by = "Package"]
+        packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
   pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
 
   if (any(origPackagesHaveNames))
