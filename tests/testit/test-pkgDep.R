@@ -1,4 +1,4 @@
-library(Require)
+#library(Require)
 a <- pkgDep("Require", recursive = TRUE)
 testit::assert(length(a) == 1)
 testit::assert(!isTRUE(all.equal(lapply(a, trimVersionNumber), a)))

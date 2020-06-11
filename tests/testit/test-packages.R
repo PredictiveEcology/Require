@@ -16,9 +16,6 @@ isInteractiveOrig <- isInteractive
 isInteractive <- function() TRUE
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
-isOldMac <- (Sys.info()["sysname"] == "Darwin" &&
-               utils::compareVersion(as.character(getRversion()), "4.0.0") < 0)
-
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
 Sys.setenv("CRAN_REPO" = "")
@@ -40,9 +37,6 @@ repos["CRAN"] <- repos2
 options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = FALSE)
 
-if (isTRUE(isOldMac))
-  options("pkgType" = "mac.binary.el-capitan")
-
 # Failure on Travis:
 # cannot open file 'startup.Rs': No such file or directory
 # suggested solution https://stackoverflow.com/a/27994299/3890027
@@ -51,20 +45,18 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-if (isFALSE(isOldMac)) {
-  dir1 <- tempdir2("test1")
-  options("Require.verbose" = TRUE)
-  out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
-  testit::assert(data.table::is.data.table(attr(out, "Require")))
-  testit::assert(isTRUE(out))
-  isInstalled <- tryCatch( {
-    out <- find.package("TimeWarp", lib.loc = dir1)
-    if(length(out)) TRUE else FALSE
-    }, error = function(x) FALSE)
-  testit::assert(isTRUE(isInstalled))
-  detach("package:TimeWarp", unload = TRUE)
-  remove.packages("TimeWarp", lib = dir1)
-}
+dir1 <- tempdir2("test1")
+options("Require.verbose" = TRUE)
+out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
+testit::assert(data.table::is.data.table(attr(out, "Require")))
+testit::assert(isTRUE(out))
+isInstalled <- tryCatch( {
+  out <- find.package("TimeWarp", lib.loc = dir1)
+  if(length(out)) TRUE else FALSE
+  }, error = function(x) FALSE)
+testit::assert(isTRUE(isInstalled))
+detach("package:TimeWarp", unload = TRUE)
+remove.packages("TimeWarp", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
@@ -72,8 +64,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- tempdir2("test2")
   pvWant <- "1.0-7"
-  inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
-                                    libPaths = dir2, dependencies = FALSE)
+  inst <- Require::Require(paste0("TimeWarp (<=", pvWant, ")"), standAlone = TRUE,
+                           libPaths = dir2, dependencies = FALSE)
   pv <- packageVersion("TimeWarp", lib.loc = dir2)
   testit::assert(pv == pvWant)
   detach("package:TimeWarp", unload = TRUE)

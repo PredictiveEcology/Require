@@ -619,7 +619,6 @@ installedVers <- function(pkgDT) {
 
 available.packagesCached <- function(repos, purge) {
   if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-    browser()
     cap <- list()
     isMac <- tolower(Sys.info()["sysname"]) == "darwin"
     isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
