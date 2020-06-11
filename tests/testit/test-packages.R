@@ -50,9 +50,9 @@ options("Require.verbose" = TRUE)
 out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
 testit::assert(data.table::is.data.table(attr(out, "Require")))
 testit::assert(isTRUE(out))
-isInstalled <- tryCatch( {
+isInstalled <- tryCatch({
   out <- find.package("TimeWarp", lib.loc = dir1)
-  if(length(out)) TRUE else FALSE
+  if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
 testit::assert(isTRUE(isInstalled))
 detach("package:TimeWarp", unload = TRUE)

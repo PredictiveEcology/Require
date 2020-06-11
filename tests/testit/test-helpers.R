@@ -8,7 +8,6 @@ tmpdir <- normalizePath(tmpdir, winslash = "/", mustWork = FALSE)
 
 setwd(tmpdir)
 
-
 paths <- list("./aaa/zzz",
               "./aaa/zzz/",
               ".//aaa//zzz",
