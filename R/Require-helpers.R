@@ -110,7 +110,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
   if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)])) {
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     if (NROW(whNotCorrect)) {
-
       notCorrectVersions <- pkgDT[whNotCorrect]
 
       # do CRAN first
@@ -322,8 +321,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
         ap <- available.packagesCached(repos, purge = FALSE)
         warn <- tryCatch({
-          out <- do.call(install.packages, append(append(list(installPkgNames, available = ap), install.packagesArgs),
-                                                  dots))
+          out <- do.call(install.packages,
+                         append(append(list(installPkgNames, available = ap),
+                                       install.packagesArgs),
+                                dots))
         }, warning = function(condition) condition)
 
         if (!is.null(warn))

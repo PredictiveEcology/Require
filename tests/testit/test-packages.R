@@ -89,7 +89,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
 
-
   setLibPaths(orig)
 
   # Test snapshot file with no args
@@ -124,7 +123,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
   unlink(dirname(dir3), recursive = TRUE)
 }
 
-
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
 names(pkg) <- c("MuMIn", "")
@@ -153,11 +151,15 @@ out <- getGitHubDESCRIPTION(pkg = character())
 testit::assert(length(out) == 0)
 
 # Trigger the save available.packages and archiveAvailable
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
