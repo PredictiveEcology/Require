@@ -81,8 +81,9 @@ the returned list from most number of dependencies to least.}
 \description{
 This will first look in local filesystem (in \code{.libPaths()}), then
 \code{CRAN}. If the package is in the form of a GitHub package with format
-Account/Repo@branch, it will attempt to get package dependencies from the
-GitHub DESCRIPTION file. Currently, it will not find \code{Remotes}.
+\code{account/repo@branch}, it will attempt to get package dependencies from
+the GitHub \file{DESCRIPTION} file.
+Currently, it will not find \code{Remotes}.
 This is intended to replace \code{tools::package_dependencies} or
 \code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
 multiple sources to be searched in the same function call.
