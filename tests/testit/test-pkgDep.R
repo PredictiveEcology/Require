@@ -14,7 +14,7 @@ pkg <- "PredictiveEcology/reproducible"
 b <- pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
 testit::assert(length(b) == 1)
 testit::assert(all(names(b) == pkg))
-testit::assert(length(b[[1]]) > length(a)[[1]])
+testit::assert(length(b[[1]]) > length(a1[[1]]))
 
 d <- pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
 testit::assert(length(d) == 2)
