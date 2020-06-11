@@ -319,11 +319,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (is.null(dots$dependencies))
           dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
-        ap <- available.packagesCached(repos, purge = FALSE)
+        ap <- available.packagesCached(dots$repos, purge = FALSE)
         warn <- tryCatch({
           out <- do.call(install.packages,
-                         append(append(list(installPkgNames, available = ap),
-                                       install.packagesArgs),
+                         append(append(list(installPkgNames, available = ap), install.packagesArgs),
                                 dots))
         }, warning = function(condition) condition)
 
@@ -401,7 +400,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 #' @importFrom utils capture.output
 #' @rdname Require-internals
 doLoading <- function(pkgDT, require = TRUE, ...) {
-
   packages <- pkgDT[toLoad > 0]$Package
   packageOrder <- pkgDT[toLoad > 0]$toLoad
   if (isTRUE(require)) {
@@ -459,7 +457,6 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
           outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
         }
-
       }
       message(paste0(outMess, collapse = "\n"))
       return(list(out = out, toInstall = toInstall))
@@ -544,7 +541,7 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
-  while(length(gitPkgs)) {
+  while (length(gitPkgs)) {
     gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
