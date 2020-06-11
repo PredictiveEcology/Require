@@ -1,4 +1,5 @@
-testit::assert(identical(isInteractive(), interactive()))
+if (Sys.info()["user"] != "emcintir")
+  testit::assert(identical(isInteractive(), interactive()))
 Require:::chooseCRANmirror2(ind = 1)
 
 # Mock the internal functions
@@ -34,7 +35,7 @@ repos2 <- "https://cloud.r-project.org"
 repos["CRAN"] <- repos2
 
 options("repos" = repos) # shouldn't be necessary now
-options("Require.purge" = TRUE)
+options("Require.purge" = FALSE)
 
 # Failure on Travis:
 # cannot open file 'startup.Rs': No such file or directory

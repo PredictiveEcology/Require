@@ -115,15 +115,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
 
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
-        cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-          isOldMac <- (Sys.info()["sysname"] == "Darwin" &&
-                         compareVersion(as.character(getRversion()), "4.0.0") < 0)
-          cap <- available.packages(repos = repos, ignore_repo_cache = isOldMac | !isInteractive())
-          assign("cachedAvailablePackages", cap, envir = .pkgEnv)
-          cap
-        } else {
-          get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
-        }
+        cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
         cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
@@ -328,8 +320,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (is.null(dots$dependencies))
           dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
+        ap <- available.packagesCached(repos, purge = FALSE)
         warn <- tryCatch({
-          out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs),
+          out <- do.call(install.packages, append(append(list(installPkgNames, available = ap), install.packagesArgs),
                                                   dots))
         }, warning = function(condition) condition)
 
@@ -621,4 +614,34 @@ installedVers <- function(pkgDT) {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
   }
   pkgDT[]
+}
+
+available.packagesCached <- function(repos, purge) {
+  if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
+    browser()
+    cap <- list()
+    isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+    isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
+    isWindows <- (tolower(Sys.info()["sysname"]) == "windows")
+
+    types <- if (isOldMac) {
+      c("mac.binary.el-capitan", "source")
+    } else if (!isWindows && !isMac) {
+      c("source")
+    } else {
+      c("binary", "source")
+    }
+
+    for (type in types)
+      cap[[type]] <- available.packages(repos = repos, type = type) #, ignore_repo_cache = isOldMac | !isInteractive())
+    cap <- do.call(rbind, cap)
+    if (length(types) > 1) {
+      dups <- duplicated(cap[, c("Package", "Version")])
+      cap <- cap[!dups,]
+    }
+    assign("cachedAvailablePackages", cap, envir = .pkgEnv)
+    cap
+  } else {
+    get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
+  }
 }
