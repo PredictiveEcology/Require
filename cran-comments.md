@@ -7,14 +7,14 @@ from another pacakge, `reproducible` that became too large. See `NEWS.md`.
 
 ### Previous R versions
 * macOS 10.13.3 High Sierra (travis-ci), R 3.6.3
-* macOS 10.15.5 Catalina    (travis-ci), R 3.6.3
+* macOS 10.15.5 Catalina        (local), R 3.6.3
 * Ubuntu 16.04              (travis-ci), R 3.6.3
 * Windows                    (appveyor), R 3.6.3
 * Windows                 (win-builder), R 3.6.3
 
 ### Current R versions
 * macOS 10.13.3 High Sierra (travis-ci), R 4.0.0
-* macOS 10.15.5 Catalina    (travis-ci), R 4.0.1
+* macOS 10.15.5 Catalina        (local), R 4.0.1
 * Ubuntu 16.04              (travis-ci), R 4.0.0
 * Ubuntu 18.04                  (local), R 4.0.0
 * Windows                    (appveyor), R 4.0.0
