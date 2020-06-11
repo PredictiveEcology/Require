@@ -28,13 +28,13 @@ from another pacakge, `reproducible` that became too large. See `NEWS.md`.
 There were no ERRORs nor WARNINGs.
 
 There is one NOTE and it is about possible mis-spelled words. These are all correct spelling:
+
 ```
 Possibly mis-spelled words in DESCRIPTION:
   github (5:23)
   workflow (7:18)
   workflows (3:59, 6:34)
 ```
-
 
 ## Downstream dependencies
 

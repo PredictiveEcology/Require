@@ -62,4 +62,4 @@ trimVersionNumber <- function(pkgs) {
 
 .grepVersionNumber <- " *\\(.*"
 
-grepExtractPkgs <- ".*\\((<*>*=*) *(.*)\\)"
+grepExtractPkgs <- ".*\\([ \n]*(<*>*=*)[ \n]*(.*)\\)"

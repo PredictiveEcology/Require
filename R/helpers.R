@@ -78,8 +78,7 @@ setMethod("normPath",
 #' such as trailing slashes, etc.
 #'
 #' @note This will not work for paths to files.
-#' To check for existence of files, use \code{\link{file.exists}}, or use
-#' \code{\link[utils]{file_test}} with \code{op = "-f"}.
+#' To check for existence of files, use \code{\link{file.exists}}.
 #' To normalize a path to a file, use \code{\link{normPath}} or \code{\link{normalizePath}}.
 #'
 #' @param path A character string corresponding to a directory path.
@@ -132,7 +131,7 @@ setMethod(
         }
       }
       if (Sys.info()[["sysname"]] == "Darwin")
-        path <- normPath(path) # ensure path re-normalized after creation (see #267)
+        path <- normPath(path) # ensure path re-normalized after creation
 
       return(path)
     }
@@ -179,7 +178,6 @@ setMethod("checkPath",
 #' @param round An optional numeric to pass to \code{round}
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
-#' @export
 messageDF <- function(df, round) {#}, colour = NULL) {
   if (is.matrix(df))
     df <- as.data.frame(df)

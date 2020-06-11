@@ -25,7 +25,7 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
   origLibPaths <- setLibPaths(libPaths, standAlone)
   on.exit({.libPaths(origLibPaths)}, add = TRUE)
 
-  ip <- as.data.table(installed.packages(lib.loc = libPaths))
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths))
   instPkgs <- ip$Package
   instVers <- ip$Version
   names(instPkgs) <- instPkgs

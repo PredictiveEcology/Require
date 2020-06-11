@@ -199,21 +199,16 @@ pkgDep2 <- function(packages, recursive = TRUE,
   return(a)
 }
 
-pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recursive = FALSE,
+#' @importFrom utils compareVersion
+pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
+                       #recursive = FALSE,
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
-  cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-    isOldMac <- ((Sys.info()[["sysname"]] == "Darwin" &&
-                    paste0(version$major, ".", version$minor) == R_system_version("3.6.3")))
-    aa <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
-    assign("cachedAvailablePackages", aa, envir = .pkgEnv)
-    aa
-  } else {
-    get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
-  }
+  cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
 
   capFull <- as.data.table(cachedAvailablePackages)
-  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, keepVersionNumber = keepVersionNumber)
+  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg,
+                          keepVersionNumber = keepVersionNumber)
   # if (recursive) {
   #   i <- 1
   #   pkgsNew <- list()
@@ -314,4 +309,23 @@ whichToDILES <- function(which) {
   which
 }
 
-.basePkgs <- rownames(installed.packages(tail(.libPaths(), 1)))
+.installed.pkgs <- function(lib.loc = .libPaths()) {
+  out <- lapply(lib.loc, function(path) {
+    dirs <- dir(path, full.names = TRUE)
+    areDirs <- dir.exists(dirs)
+    dirs <- dirs[areDirs]
+    files <- file.path(dirs, "DESCRIPTION")
+    filesExist <- file.exists(files)
+    files <- files[filesExist]
+    versions <- unlist(lapply(files, function(file) DESCRIPTIONFileVersion(file)))
+    cbind("Package" = dirs[filesExist], "Version" = versions)
+  })
+  c("Package", "LibPath", "Version")
+  lengths <- unlist(lapply(out, function(x) NROW(x)))
+  out <- do.call(rbind, out)
+  cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
+        "Version" = out[, "Version"])
+}
+
+.basePkgs <- unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
+

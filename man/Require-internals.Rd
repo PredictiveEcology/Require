@@ -37,8 +37,7 @@ requested packages, mimicking a call to e.g., \code{install.packages}. If
 \code{TRUE}, the default, then this function will try to install any
 missing packages or dependencies.}
 
-\item{purge}{Logical. Internally, there are calls to
-\code{installed.packages} and \code{available.packages}}
+\item{purge}{Logical. Internally, there are calls to \code{available.packages}}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
