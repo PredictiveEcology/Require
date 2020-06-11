@@ -22,8 +22,7 @@ testit::assert(isTRUE(all.equal(a$Require, d$Require)))
 
 e <- pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
 testit::assert(length(e) == 3)
-testit::assert(isTRUE(all.equal(e[[pkg]],
-                                d[[pkg]])))
+testit::assert(isTRUE(all.equal(e[[pkg]], d[[pkg]])))
 testit::assert(isTRUE(all.equal(d$Require, e$Require)))
 
 mess <- utils::capture.output(type = "message", f <- pkgDep("Require", depends = TRUE))
