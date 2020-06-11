@@ -16,6 +16,9 @@ isInteractiveOrig <- isInteractive
 isInteractive <- function() TRUE
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
+isOldMac <- (Sys.info()["sysname"] == "Darwin" &&
+               utils::compareVersion(as.character(getRversion()), "4.0.0") < 0)
+
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
 Sys.setenv("CRAN_REPO" = "")
@@ -37,6 +40,9 @@ repos["CRAN"] <- repos2
 options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = FALSE)
 
+if (isTRUE(isOldMac))
+  options("pkgType" = "mac.binary.el-capitan")
+
 # Failure on Travis:
 # cannot open file 'startup.Rs': No such file or directory
 # suggested solution https://stackoverflow.com/a/27994299/3890027
@@ -45,8 +51,6 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-isOldMac <- (Sys.info()["sysname"] == "Darwin" &&
-               utils::compareVersion(as.character(getRversion()), "4.0.0") < 0)
 if (isFALSE(isOldMac)) {
   dir1 <- tempdir2("test1")
   options("Require.verbose" = TRUE)
