@@ -48,3 +48,5 @@ vignettes/Intro-to-Cache\.R
 packageVersions.txt
 
 .cacheAvailablePackages.rda
+
+tests/testit/tmp.txt
