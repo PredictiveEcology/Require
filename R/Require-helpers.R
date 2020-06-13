@@ -458,7 +458,8 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
         }
       }
-      message(paste0(outMess, collapse = "\n"))
+      if (length(outMess) > 0)
+        message(paste0(outMess, collapse = "\n"))
       return(list(out = out, toInstall = toInstall))
     })
     requireOut
