@@ -306,7 +306,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' \code{doInstall} is a wrapper around \code{install.packages},
 #' \code{remotes::install_github}, and \code{remotes::install_version}.
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
-                       install = TRUE, ...) {
+                       install = TRUE, repos = getOption("repos"), ...) {
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
 
@@ -319,7 +319,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (is.null(dots$dependencies))
           dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
-        ap <- available.packagesCached(dots$repos, purge = FALSE)
+        ap <- available.packagesCached(repos, purge = FALSE)
         warn <- tryCatch({
           out <- do.call(install.packages,
                          append(append(list(installPkgNames, available = ap), install.packagesArgs),
