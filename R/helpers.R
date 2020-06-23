@@ -214,7 +214,7 @@ messageDF <- function(df, round) {#}, colour = NULL) {
 #' @rdname tempFilesAndFolders
 #' @export
 tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath())) {
-  checkPath(file.path(tempdir, sub), create = TRUE)
+  checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
 }
 
 #' @param ... passed to \code{tempfile}, e.g., \code{fileext}
