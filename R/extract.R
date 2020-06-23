@@ -4,6 +4,7 @@
 #'
 #' @param pkgs A character string vector of packages with or without GitHub path or versions
 #' @return Just the package names without extraneous info.
+#' @seealso \code{\link{trimVersionNumber}}
 #' @export
 #' @rdname extractPkgName
 #' @examples
@@ -51,7 +52,14 @@ extractPkgGitHub <- function(pkgs) {
   unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
 
-#' @rdname extractPkgName
+#' Trim version number off a compound package name
+#'
+#' The resulting string(s) will have only name (including github.com repository if it exists).
+#'
+#' @inheritParams extractPkgName
+#'
+#' @rdname trimVersionNumber
+#' @seealso \code{\link{extractPkgName}}
 #' @export
 #' @examples
 #' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
