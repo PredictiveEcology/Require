@@ -233,6 +233,139 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
   deps
 }
 
+
+#' Reverse package depends
+#'
+#' This is a wrapper around \code{tools::dependsOnPkgs},
+#' but with the added option of \code{sorted}, which
+#' will sort them such that the packages at the top will have
+#' the least number of dependencies that are in \code{pkgs}.
+#' This is essentially a topological sort, but it is done
+#' heuristically. This can be used to e.g., \code{detach} or
+#' \code{unloadNamespace} packages in order so that they each
+#' of their dependencies are detached or unloaded first.
+#' @param pkgs A vector of package names to evaluate their
+#'   reverse depends (i.e., the packages that \emph{use} each
+#'   of these packages)
+#' @param deps An optional named list of (reverse) dependencies.
+#'   If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)}
+#'   will be used
+#' @param topoSort Logical. If \code{TRUE}, the default, then
+#'   the returned list of packages will be in order with the
+#'   least number of dependencies listed in \code{pkgs} at
+#'   the top of the list.
+#' @param reverse Logical. If \code{TRUE}, then this will use \code{tools::pkgDependsOn}
+#'   to determine which packages depend on the \code{pkgs}
+#' @param useAllInSearch Logical. If \code{TRUE}, then all non-core
+#' R packages in \code{search()} will be appended to \code{pkgs}
+#' to allow those to also be identified
+#' @param returnFull Logical. If \code{TRUE}, then the full reverse
+#'   dependencies will be returned; if \code{FALSE}, the default,
+#'   only the reverse dependencies that are found within the \code{pkgs}
+#'   (and \code{search()} if \code{useAllInSearch = TRUE}) will be returned.
+#'
+#' @export
+#' @rdname pkgDep
+#' @return
+#' A possibly ordered, named (with packages as names) list where list elements
+#' are either full reverse depends.
+#'
+#' @examples
+#' \dontrun{
+#' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+#'
+#' }
+pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllInSearch = FALSE,
+                           returnFull = TRUE, recursive = TRUE) {
+
+  if (isTRUE(useAllInSearch)) {
+    if (missing(deps)) {
+      a <- search()
+      a <- setdiff(a, .defaultPackages)
+      a <- gsub("package:", "", a)
+      pkgs <- unique(c(pkgs, a))
+    } else {
+      message("deps is provided; useAllInSearch will be set to FALSE")
+    }
+  }
+
+  names(pkgs) <- pkgs
+  if (missing(deps)) {
+    aa <- if (isTRUE(reverse)) {
+      ip <- .installed.pkgs()
+      deps <- lapply(ip[,"Dependencies"], extractPkgName)
+      names(deps) <- ip[, "Package"]
+      names(pkgs) <- pkgs
+      deps <- deps[order(names(deps))]
+      revDeps <- lapply(pkgs, function(p) names(unlist(lapply(deps, function(d) if (isTRUE(any(p %in% d))) TRUE else NULL))))
+      if (recursive) {
+        revDeps <- lapply(revDeps, function(p) {
+          if (!is.null(p)) {
+            used <- p
+            repeat({
+              r <- unique(unlist(lapply(p, function(p1)  names(unlist(lapply(deps, function(d) if (isTRUE(any(p1 %in% d))) TRUE else NULL))))))
+              used <- unique(c(r, used))
+              if (length(r) == 0)
+                break
+              p <- r
+            })
+          } else {
+            used <- NULL
+          }
+          sort(used)
+        })
+
+      }
+    } else {
+      pkgDep(pkgs, recursive = TRUE)
+    }
+    testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
+    if (!identical(testVal, aa))
+      stop("new recursive reverse dependencies is not correct")
+
+  }
+  else
+    aa <- deps
+  bb <- list()
+  cc <- lapply(pkgs, function(x) character())
+
+  if (isTRUE(topoSort)) {
+    notInOrder <- TRUE
+    isCorrectOrder <- logical(length(aa))
+    i <- 1
+    newOrd <- numeric(0)
+    for (i in seq_along(aa)) {
+      dif <- setdiff(seq_along(aa), newOrd)
+      for (j in dif) {
+        overlapFull <- aa[[j]] %in% names(aa)[-i]
+        overlap <- aa[[j]] %in% names(aa)[dif]
+        overlapPkgs <- aa[[j]][overlapFull]
+        isCorrectOrder <- !any(overlap)
+        if (isCorrectOrder) {
+          # bb[names(aa)[j]] <- list(overlapPkgs)
+          cc[j] <- list(overlapPkgs)
+          newOrd <- c(newOrd, j)
+          i <- i + 1
+          break
+        }
+      }
+    }
+    aa <- aa[newOrd]
+    cc <- cc[newOrd]
+  }
+  out <- if (isTRUE(returnFull)) {
+    aa
+  } else {
+    cc
+  }
+  return(out)
+}
+
+.defaultPackages <- c(".GlobalEnv", "tools:rstudio", "package:stats", "package:graphics",
+                      "package:grDevices", "package:utils", "package:datasets", "package:methods",
+                      "Autoloads", "package:base", "devtools_shims")
+
+
 pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
   # MUCH faster to use base "ap$Package %in% pkgs" than data.table internal "Package %in% pkgs"
   pkgsNoVersion <- trimVersionNumber(pkgs)
@@ -310,7 +443,7 @@ whichToDILES <- function(which) {
   which
 }
 
-.installed.pkgs <- function(lib.loc = .libPaths()) {
+.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo")) {
   out <- lapply(lib.loc, function(path) {
     dirs <- dir(path, full.names = TRUE)
     areDirs <- dir.exists(dirs)
@@ -319,13 +452,16 @@ whichToDILES <- function(which) {
     filesExist <- file.exists(files)
     files <- files[filesExist]
     versions <- unlist(lapply(files, function(file) DESCRIPTIONFileVersion(file)))
-    cbind("Package" = dirs[filesExist], "Version" = versions)
+    deps <- if (length(which)) lapply(files, function(file) DESCRIPTIONFileDeps(file, which = which)) else NULL
+    cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
   })
-  c("Package", "LibPath", "Version")
   lengths <- unlist(lapply(out, function(x) NROW(x)))
   out <- do.call(rbind, out)
-  cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
+  ret <- cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
         "Version" = out[, "Version"])
+  if (length(which))
+    ret <- cbind(ret, "Dependencies" = out[, "Depends"])
+  ret
 }
 
 .basePkgs <- unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])

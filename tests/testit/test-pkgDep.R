@@ -40,3 +40,16 @@ b <- pkgDep("Require", which = "most", recursive = FALSE)
 d <- pkgDep("Require", which = TRUE, recursive = FALSE)
 testit::assert(isTRUE(all.equal(a, b)))
 testit::assert(isTRUE(all.equal(a, d)))
+
+### pkgDepTopoSort
+out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
+knownRevDeps <- list(Require = c("reproducible", "SpaDES", "SpaDES.addins", "SpaDES.core",
+                                 "SpaDES.experiment", "SpaDES.tools"),
+                     data.table = c("quickPlot",
+                                    "reproducible", "Require", "SpaDES", "SpaDES.addins", "SpaDES.core",
+                                    "SpaDES.experiment", "SpaDES.tools"))
+test <- unlist(lapply(names(out), function(p) {
+  setdiff(out[[p]], knownRevDeps[[p]])
+}))
+
+testit::assert(length(test) == 0)
