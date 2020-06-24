@@ -42,8 +42,8 @@
 #'
 #' @examples
 #' pkgDep("Require")
-#' pkgDep("Require", keepVersionNumber = FALSE) # just names
 #' \dontrun{
+#'   pkgDep("Require", keepVersionNumber = FALSE) # just names
 #'   pkgDep("PredictiveEcology/reproducible") # GitHub
 #'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
 #'   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
@@ -319,9 +319,14 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
     } else {
       pkgDep(pkgs, recursive = TRUE)
     }
-    testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
-    if (!identical(testVal, aa))
-      stop("new recursive reverse dependencies is not correct")
+    # testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
+    # if (!identical(sort(unlist(testVal)), sort(unlist(aa)))) {
+    #   cat(unlist(testVal), file = "c:/Eliot/tmp/test.txt")
+    #   cat("-----------------", file = "c:/Eliot/tmp/test.txt", append = TRUE)
+    #   cat(unlist(aa), file = "c:/Eliot/tmp/test.txt", append = TRUE)
+    #   stop("new recursive reverse dependencies is not correct")
+    # }
+
 
   }
   else

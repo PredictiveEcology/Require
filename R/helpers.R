@@ -200,7 +200,7 @@ messageDF <- function(df, round) {#}, colour = NULL) {
   })
 }
 
-#' Make a temporary sub-directory or file in that subdirectory
+#' Make a temporary (sub-)directory
 #'
 #' Create a temporary subdirectory in \code{.RequireTempPath()}, or a
 #' temporary file in that temporary subdirectory.
@@ -210,16 +210,19 @@ messageDF <- function(df, round) {#}, colour = NULL) {
 #'   directories.
 #' @param tempdir Optional character string where the temporary dir should be placed.
 #'   Defaults to \code{.RequireTempPath()}
-#'
-#' @rdname tempFilesAndFolders
+#' @seealso \code{\link{tempfile2}}
 #' @export
 tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath())) {
   checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
 }
 
+#' Make a temporary subfile in a temporary (sub-)directory
+#'
 #' @param ... passed to \code{tempfile}, e.g., \code{fileext}
 #'
-#' @rdname tempFilesAndFolders
+#' @seealso \code{\link{tempdir2}}
+#' @inheritParams tempdir2
+#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
 #' @export
 tempfile2 <- function(sub = "", ...) {
   normPath(file.path(tempdir2(sub = sub), basename(tempfile(...))))
