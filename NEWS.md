@@ -3,8 +3,13 @@ Known issues: https://github.com/PredictiveEcology/reproducible/issues
 version 0.0.5
 ==============
 
+## New features
+* moved several functions that have to do with package loading and installing from `reproducible` to `Require`, including `pkgDep`, `pkgDepTopoSort`
+
 ## minor
 * errors in `available.packages` on old release on Mac. Worked around by manually running `available.packages` on specific systems.
+* minor changes in non-exported functions
+* handling of bugs in base::available.packages for old Mac machines and R versions
 
 ## bugfixes
 * several minor
