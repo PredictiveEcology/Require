@@ -1,3 +1,7 @@
+utils::globalVariables(c(
+  "PackageTrimmed", "hasVers", "atLeastOneWithVersionSpec", "maxVersionSpec", "Current"
+))
+
 #' Determine package dependencies
 #'
 #' This will first look in local filesystem (in \code{.libPaths()}), then
