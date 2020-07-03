@@ -98,8 +98,34 @@ pkgDep <- function(packages, libPath = .libPaths(),
             pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i-1]]), function(needed) {
               unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber, purge = purge)))
             })
-            pkgsNew[[i]] <- unique(unlist(lapply(pkgsNew[[i]], trimVersionNumber)))
-            pkgsNew[[i]] <- setdiff(pkgsNew[[i]], unlist(pkgsNew[1:(i-1)])) # don't redo ones that are already in the list
+            prevIndices <- 1:(i-1)
+            curPkgs <- unlist(pkgsNew[[i]])
+            prevPkgs <- unlist(pkgsNew[prevIndices])
+            dt <- data.table(Package = c(prevPkgs, curPkgs), Current = c(rep(FALSE, length(prevPkgs)),
+                                                                         rep(TRUE, length(curPkgs))))
+            dt[, PackageTrimmed := extractPkgName(Package)]
+            dt[, versionSpec := extractVersionNumber(Package)]
+            dt[, hasVers := extractPkgName(Package) != versionSpec]
+            dt[hasVers == TRUE, inequality := extractInequality(Package)]
+            dt[hasVers == FALSE, versionSpec := NA]
+            dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
+            dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
+            dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
+            #setorderv(dt, "PackageTrimmed", na.last = TRUE)
+
+            dt1 <- dt[!is.na(versionSpec), list(Package, Current, hasVers, inequality, atLeastOneWithVersionSpec,
+              versionSpec = as.character(package_version(versionSpec)),
+              maxVersionSpec = as.character(max(package_version(versionSpec)))),
+              by = "PackageTrimmed"]
+            dt1 <- dt1[versionSpec == maxVersionSpec]
+            dt1 <- dt1[, lapply(.SD, function(x) x[1]), by = "PackageTrimmed"]
+            dt2 <- dt[is.na(versionSpec)]
+            dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
+            dt3 <- dt[!duplicated(dt$PackageTrimmed)]
+            dt4 <- dt3[Current == TRUE]
+            pkgsNew <- list()
+            pkgsNew[[i - 1]] <- dt3[Current == FALSE]$Package
+            pkgsNew[[i]] <- dt4$Package
           }
           needed <- unique(unlist(pkgsNew))
 
