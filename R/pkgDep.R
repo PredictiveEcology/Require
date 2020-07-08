@@ -109,7 +109,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                                                          rep(TRUE, length(curPkgs))))
             dt[, PackageTrimmed := extractPkgName(Package)]
             dt[, versionSpec := extractVersionNumber(Package)]
-            dt[, hasVers := extractPkgName(Package) != versionSpec]
+            dt[, hasVers := !is.na(versionSpec)]
             dt[hasVers == TRUE, inequality := extractInequality(Package)]
             dt[hasVers == FALSE, versionSpec := NA]
             dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
