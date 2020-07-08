@@ -248,6 +248,7 @@ Require <- function(packages, packageVersionFile,
 
 
   # Create data.table of Require workflow
+  if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
 
   # identify the packages that were asked by user to load -- later dependencies will be in table too
