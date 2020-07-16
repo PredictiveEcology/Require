@@ -107,7 +107,7 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 
 ## Installation
 
-### Current release (not yet on CRAN)
+### Current release
 
 [![Build Status](https://travis-ci.org/PredictiveEcology/Require.svg?branch=master)](https://travis-ci.org/PredictiveEcology/Require)
 [![Appveyor Build status](https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/master?svg=true)](https://ci.appveyor.com/project/achubaty/Require/branch/master)
@@ -115,9 +115,8 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 
 **Install from CRAN:**
 
-Not yet on CRAN
 ```r
-# install.packages("Require")
+install.packages("Require")
 ```
 
 **Install from GitHub:**

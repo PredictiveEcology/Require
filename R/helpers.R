@@ -224,8 +224,10 @@ tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireT
 #' @inheritParams tempdir2
 #' @param ... passed to \code{tempfile}, e.g., \code{fileext}
 #' @export
-tempfile2 <- function(sub = "", ...) {
-  normPath(file.path(tempdir2(sub = sub), basename(tempfile(...))))
+tempfile2 <- function(sub = "",
+                      tempdir = getOption("Require.tempPath", .RequireTempPath()),
+                      ...) {
+  normPath(file.path(tempdir2(sub = sub, tempdir = tempdir), basename(tempfile(...))))
 }
 
 .RequireTempPath <- function() normPath(file.path(tempdir(), "Require"))

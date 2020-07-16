@@ -4,12 +4,19 @@
 \alias{tempfile2}
 \title{Make a temporary subfile in a temporary (sub-)directory}
 \usage{
-tempfile2(sub = "", ...)
+tempfile2(
+  sub = "",
+  tempdir = getOption("Require.tempPath", .RequireTempPath()),
+  ...
+)
 }
 \arguments{
 \item{sub}{Character string, length 1. Can be a result of
 \code{file.path("smth", "smth2")} for nested temporary sub
 directories.}
+
+\item{tempdir}{Optional character string where the temporary dir should be placed.
+Defaults to \code{.RequireTempPath()}}
 
 \item{...}{passed to \code{tempfile}, e.g., \code{fileext}}
 }
