@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>GitHub specific helpers — parseGitHub • Require</title>
+<title>Make a temporary (sub-)directory — tempdir2 • Require</title>
 
 
 <!-- jquery -->
@@ -39,11 +39,9 @@
 
 
 
-<meta property="og:title" content="GitHub specific helpers — parseGitHub" />
-<meta property="og:description" content="install_githubV is a vectorized remotes::install_github.
-This will attempt to identify all dependencies of all supplied packages first,
-then load the packages in the correct order so that each of their dependencies
-are met before each is installed." />
+<meta property="og:title" content="Make a temporary (sub-)directory — tempdir2" />
+<meta property="og:description" content="Create a temporary subdirectory in .RequireTempPath(), or a
+temporary file in that temporary subdirectory." />
 
 
 
@@ -124,60 +122,38 @@ are met before each is installed." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>GitHub specific helpers</h1>
-    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/Require-helpers.R'><code>R/Require-helpers.R</code></a></small>
-    <div class="hidden name"><code>GitHubTools.Rd</code></div>
+    <h1>Make a temporary (sub-)directory</h1>
+    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/helpers.R'><code>R/helpers.R</code></a></small>
+    <div class="hidden name"><code>tempdir2.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p><code>install_githubV</code> is a vectorized <code><a href='https://remotes.r-lib.org/reference/install_github.html'>remotes::install_github</a></code>.
-This will attempt to identify all dependencies of all supplied packages first,
-then load the packages in the correct order so that each of their dependencies
-are met before each is installed.</p>
+    <p>Create a temporary subdirectory in <code>.RequireTempPath()</code>, or a
+temporary file in that temporary subdirectory.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>parseGitHub</span>(<span class='no'>pkgDT</span>)
-
-<span class='fu'>install_githubV</span>(<span class='no'>gitPkgNames</span>, <span class='kw'>install_githubArgs</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(), <span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>tempdir2</span>(<span class='kw'>sub</span> <span class='kw'>=</span> <span class='st'>""</span>, <span class='kw'>tempdir</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.tempPath"</span>, <span class='fu'>.RequireTempPath</span>()))</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>pkgDT</th>
-      <td><p>A character string with full package names or a data.table
-with at least 2 columns <code>"Package"</code> and <code>"packageFullName"</code>.</p></td>
+      <th>sub</th>
+      <td><p>Character string, length 1. Can be a result of
+<code><a href='https://rdrr.io/r/base/file.path.html'>file.path("smth", "smth2")</a></code> for nested temporary sub
+directories.</p></td>
     </tr>
     <tr>
-      <th>gitPkgNames</th>
-      <td><p>Character vector of package to install from GitHub</p></td>
-    </tr>
-    <tr>
-      <th>install_githubArgs</th>
-      <td><p>Any arguments passed to <code>install_github</code></p></td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td><p>Another way to pass arguments to <code>install_github</code></p></td>
+      <th>tempdir</th>
+      <td><p>Optional character string where the temporary dir should be placed.
+Defaults to <code>.RequireTempPath()</code></p></td>
     </tr>
     </table>
 
-    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+    <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
 
-    <p><code>parseGitHub</code> returns a data.table with added columns.</p>
-<p><code>install_githubV</code> returns a named character vector indicating packages
-  successfully installed, unless the word "Failed" is returned, indicating
-  installation failure. The names will be the full GitHub package name,
-  as provided to <code>gitPkgNames</code> in the function call.</p>
-    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
+    <div class='dont-index'><p><code><a href='tempfile2.html'>tempfile2</a></code></p></div>
 
-    <p><code>parseGitHub</code> turns the single character string representation into 3 or 4:
-<code>Account</code>, <code>Repo</code>, <code>Branch</code>, <code>SubFolder</code>.</p>
-
-    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-  <span class='fu'>install_githubV</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/Require"</span>, <span class='st'>"PredictiveEcology/quickPlot"</span>))
-}</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

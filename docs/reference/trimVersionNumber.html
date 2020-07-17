@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>GitHub specific helpers — parseGitHub • Require</title>
+<title>Trim version number off a compound package name — trimVersionNumber • Require</title>
 
 
 <!-- jquery -->
@@ -39,11 +39,8 @@
 
 
 
-<meta property="og:title" content="GitHub specific helpers — parseGitHub" />
-<meta property="og:description" content="install_githubV is a vectorized remotes::install_github.
-This will attempt to identify all dependencies of all supplied packages first,
-then load the packages in the correct order so that each of their dependencies
-are met before each is installed." />
+<meta property="og:title" content="Trim version number off a compound package name — trimVersionNumber" />
+<meta property="og:description" content="The resulting string(s) will have only name (including github.com repository if it exists)." />
 
 
 
@@ -124,60 +121,32 @@ are met before each is installed." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>GitHub specific helpers</h1>
-    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/Require-helpers.R'><code>R/Require-helpers.R</code></a></small>
-    <div class="hidden name"><code>GitHubTools.Rd</code></div>
+    <h1>Trim version number off a compound package name</h1>
+    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/extract.R'><code>R/extract.R</code></a></small>
+    <div class="hidden name"><code>trimVersionNumber.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p><code>install_githubV</code> is a vectorized <code><a href='https://remotes.r-lib.org/reference/install_github.html'>remotes::install_github</a></code>.
-This will attempt to identify all dependencies of all supplied packages first,
-then load the packages in the correct order so that each of their dependencies
-are met before each is installed.</p>
+    <p>The resulting string(s) will have only name (including github.com repository if it exists).</p>
     </div>
 
-    <pre class="usage"><span class='fu'>parseGitHub</span>(<span class='no'>pkgDT</span>)
-
-<span class='fu'>install_githubV</span>(<span class='no'>gitPkgNames</span>, <span class='kw'>install_githubArgs</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(), <span class='no'>...</span>)</pre>
+    <pre class="usage"><span class='fu'>trimVersionNumber</span>(<span class='no'>pkgs</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>pkgDT</th>
-      <td><p>A character string with full package names or a data.table
-with at least 2 columns <code>"Package"</code> and <code>"packageFullName"</code>.</p></td>
-    </tr>
-    <tr>
-      <th>gitPkgNames</th>
-      <td><p>Character vector of package to install from GitHub</p></td>
-    </tr>
-    <tr>
-      <th>install_githubArgs</th>
-      <td><p>Any arguments passed to <code>install_github</code></p></td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td><p>Another way to pass arguments to <code>install_github</code></p></td>
+      <th>pkgs</th>
+      <td><p>A character string vector of packages with or without GitHub path or versions</p></td>
     </tr>
     </table>
 
-    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+    <h2 class="hasAnchor" id="see-also"><a class="anchor" href="#see-also"></a>See also</h2>
 
-    <p><code>parseGitHub</code> returns a data.table with added columns.</p>
-<p><code>install_githubV</code> returns a named character vector indicating packages
-  successfully installed, unless the word "Failed" is returned, indicating
-  installation failure. The names will be the full GitHub package name,
-  as provided to <code>gitPkgNames</code> in the function call.</p>
-    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
-
-    <p><code>parseGitHub</code> turns the single character string representation into 3 or 4:
-<code>Account</code>, <code>Repo</code>, <code>Branch</code>, <code>SubFolder</code>.</p>
+    <div class='dont-index'><p><code><a href='extractPkgName.html'>extractPkgName</a></code></p></div>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-  <span class='fu'>install_githubV</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/Require"</span>, <span class='st'>"PredictiveEcology/quickPlot"</span>))
-}</div></pre>
+    <pre class="examples"><div class='input'><span class='fu'>trimVersionNumber</span>(<span class='st'>"PredictiveEcology/Require (&lt;=0.0.1)"</span>)</div><div class='output co'>#&gt; [1] "PredictiveEcology/Require"</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

@@ -43,6 +43,12 @@
     <loc>https://Require.predictiveecology.org/reference/setLibPaths.html</loc>
   </url>
   <url>
-    <loc>https://Require.predictiveecology.org/reference/tempFilesAndFolders.html</loc>
+    <loc>https://Require.predictiveecology.org/reference/tempdir2.html</loc>
+  </url>
+  <url>
+    <loc>https://Require.predictiveecology.org/reference/tempfile2.html</loc>
+  </url>
+  <url>
+    <loc>https://Require.predictiveecology.org/reference/trimVersionNumber.html</loc>
   </url>
 </urlset>

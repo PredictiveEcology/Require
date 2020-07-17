@@ -10,23 +10,27 @@
 
 
 <!-- jquery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
+
+<!-- bootstrap-toc -->
+<link rel="stylesheet" href="../bootstrap-toc.css">
+<script src="../bootstrap-toc.js"></script>
 
 <!-- Font Awesome icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/all.min.css" integrity="sha256-nAmazAk6vS34Xqo0BSrTb+abbtFlgsFK7NKSi6o7Y78=" crossorigin="anonymous" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/v4-shims.min.css" integrity="sha256-6qHlizsOWFskGlwVOKuns+D1nB6ssZrHQrNj1wGplHc=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous" />
 
 <!-- clipboard.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script>
 
 <!-- headroom.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -38,14 +42,22 @@
 <meta property="og:title" content="Determine package dependencies — pkgDep" />
 <meta property="og:description" content="This will first look in local filesystem (in .libPaths()), then
 CRAN. If the package is in the form of a GitHub package with format
-Account/Repo@branch, it will attempt to get package dependencies from the
-GitHub DESCRIPTION file. Currently, it will not find Remotes.
+account/repo@branch, it will attempt to get package dependencies from
+the GitHub DESCRIPTION file.
+Currently, it will not find Remotes.
 This is intended to replace tools::package_dependencies or
 pkgDep in the miniCRAN package, but with modifications to allow
 multiple sources to be searched in the same function call.
 pkgDep2 is a convenience wrapper of pkgDep that &quot;goes one level in&quot;,
-i.e., the first order dependencies, and runs the pkgDep on those." />
-<meta name="twitter:card" content="summary" />
+i.e., the first order dependencies, and runs the pkgDep on those.
+This is a wrapper around tools::dependsOnPkgs,
+but with the added option of sorted, which
+will sort them such that the packages at the top will have
+the least number of dependencies that are in pkgs.
+This is essentially a topological sort, but it is done
+heuristically. This can be used to e.g., detach or
+unloadNamespace packages in order so that they each
+of their dependencies are detached or unloaded first." />
 
 
 
@@ -73,7 +85,7 @@ i.e., the first order dependencies, and runs the pkgDep on those." />
 
   </head>
 
-  <body>
+  <body data-spy="scroll" data-target="#toc">
     <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -87,7 +99,7 @@ i.e., the first order dependencies, and runs the pkgDep on those." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.5</span>
       </span>
     </div>
 
@@ -108,7 +120,7 @@ i.e., the first order dependencies, and runs the pkgDep on those." />
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li>
-  <a href="https://github.com/PredictiveEcology/Require">
+  <a href="https://github.com/PredictiveEcology/Require/">
     <span class="fab fa fab fa-github fa-lg"></span>
      
   </a>
@@ -134,13 +146,22 @@ i.e., the first order dependencies, and runs the pkgDep on those." />
     <div class="ref-description">
     <p>This will first look in local filesystem (in <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code>), then
 <code>CRAN</code>. If the package is in the form of a GitHub package with format
-Account/Repo@branch, it will attempt to get package dependencies from the
-GitHub DESCRIPTION file. Currently, it will not find <code>Remotes</code>.
+<code>account/repo@branch</code>, it will attempt to get package dependencies from
+the GitHub <code class="file">DESCRIPTION</code> file.
+Currently, it will not find <code>Remotes</code>.
 This is intended to replace <code><a href='https://rdrr.io/r/tools/package_dependencies.html'>tools::package_dependencies</a></code> or
 <code>pkgDep</code> in the <span class="pkg">miniCRAN</span> package, but with modifications to allow
 multiple sources to be searched in the same function call.</p>
 <p><code>pkgDep2</code> is a convenience wrapper of <code>pkgDep</code> that "goes one level in",
 i.e., the first order dependencies, and runs the <code>pkgDep</code> on those.</p>
+<p>This is a wrapper around <code><a href='https://rdrr.io/r/tools/dependsOnPkgs.html'>tools::dependsOnPkgs</a></code>,
+but with the added option of <code>sorted</code>, which
+will sort them such that the packages at the top will have
+the least number of dependencies that are in <code>pkgs</code>.
+This is essentially a topological sort, but it is done
+heuristically. This can be used to e.g., <code>detach</code> or
+<code>unloadNamespace</code> packages in order so that they each
+of their dependencies are detached or unloaded first.</p>
     </div>
 
     <pre class="usage"><span class='fu'>pkgDep</span>(
@@ -169,6 +190,16 @@ i.e., the first order dependencies, and runs the <code>pkgDep</code> on those.</
   <span class='no'>linkingTo</span>,
   <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
   <span class='kw'>sorted</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
+)
+
+<span class='fu'>pkgDepTopoSort</span>(
+  <span class='no'>pkgs</span>,
+  <span class='no'>deps</span>,
+  <span class='kw'>reverse</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
+  <span class='kw'>topoSort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>useAllInSearch</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
+  <span class='kw'>returnFull</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
 )</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -246,8 +277,49 @@ concatenation of the possibly recursive package dependencies.</p></td>
       <td><p>Logical. If <code>TRUE</code>, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.</p></td>
     </tr>
+    <tr>
+      <th>pkgs</th>
+      <td><p>A vector of package names to evaluate their
+reverse depends (i.e., the packages that <em>use</em> each
+of these packages)</p></td>
+    </tr>
+    <tr>
+      <th>deps</th>
+      <td><p>An optional named list of (reverse) dependencies.
+If not supplied, then <code><a href='https://rdrr.io/r/tools/dependsOnPkgs.html'>tools::dependsOnPkgs(..., recursive = TRUE)</a></code>
+will be used</p></td>
+    </tr>
+    <tr>
+      <th>reverse</th>
+      <td><p>Logical. If <code>TRUE</code>, then this will use <code>tools::pkgDependsOn</code>
+to determine which packages depend on the <code>pkgs</code></p></td>
+    </tr>
+    <tr>
+      <th>topoSort</th>
+      <td><p>Logical. If <code>TRUE</code>, the default, then
+the returned list of packages will be in order with the
+least number of dependencies listed in <code>pkgs</code> at
+the top of the list.</p></td>
+    </tr>
+    <tr>
+      <th>useAllInSearch</th>
+      <td><p>Logical. If <code>TRUE</code>, then all non-core
+R packages in <code><a href='https://rdrr.io/r/base/search.html'>search()</a></code> will be appended to <code>pkgs</code>
+to allow those to also be identified</p></td>
+    </tr>
+    <tr>
+      <th>returnFull</th>
+      <td><p>Logical. If <code>TRUE</code>, then the full reverse
+dependencies will be returned; if <code>FALSE</code>, the default,
+only the reverse dependencies that are found within the <code>pkgs</code>
+(and <code><a href='https://rdrr.io/r/base/search.html'>search()</a></code> if <code>useAllInSearch = TRUE</code>) will be returned.</p></td>
+    </tr>
     </table>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>A possibly ordered, named (with packages as names) list where list elements
+are either full reverse depends.</p>
     <h2 class="hasAnchor" id="note"><a class="anchor" href="#note"></a>Note</h2>
 
     <p><code><a href='https://rdrr.io/r/tools/package_dependencies.html'>tools::package_dependencies</a></code> and <code>pkgDep</code> will differ under the following
@@ -261,9 +333,8 @@ circumstances:</p><ol>
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>)</div><div class='output co'>#&gt; $Require
 #&gt; [1] "data.table (&gt;= 1.10.4)" "remotes"               
-#&gt; </div><div class='input'><span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>, <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>) <span class='co'># just names</span></div><div class='output co'>#&gt; $Require
-#&gt; [1] "data.table" "remotes"   
 #&gt; </div><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
+  <span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>, <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>) <span class='co'># just names</span>
   <span class='fu'>pkgDep</span>(<span class='st'>"PredictiveEcology/reproducible"</span>) <span class='co'># GitHub</span>
   <span class='fu'>pkgDep</span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>) <span class='co'># GitHub</span>
   <span class='fu'>pkgDep</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span>)) <span class='co'># GitHub package and local packages</span>
@@ -277,16 +348,16 @@ circumstances:</p><ol>
 #&gt; </div><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
 <span class='co'># much bigger one</span>
 <span class='fu'>pkgDep2</span>(<span class='st'>"reproducible"</span>)
+}
+<span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
+<span class='fu'>pkgDepTopoSort</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Require"</span>, <span class='st'>"data.table"</span>), <span class='kw'>reverse</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)
+
 }</div></pre>
   </div>
-  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
-    <h2>Contents</h2>
-    <ul class="nav nav-pills nav-stacked">
-      <li><a href="#arguments">Arguments</a></li>
-      <li><a href="#note">Note</a></li>
-      <li><a href="#examples">Examples</a></li>
-    </ul>
-
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 </div>
 
@@ -297,7 +368,7 @@ circumstances:</p><ol>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
 </div>
 
       </footer>

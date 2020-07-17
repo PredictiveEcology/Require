@@ -10,23 +10,27 @@
 
 
 <!-- jquery -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.3.7/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha256-U5ZEeKfGNOja007MMD3YBI0A3OSZOQbeG6z2f2Y0hu8=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
+
+<!-- bootstrap-toc -->
+<link rel="stylesheet" href="../bootstrap-toc.css">
+<script src="../bootstrap-toc.js"></script>
 
 <!-- Font Awesome icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/all.min.css" integrity="sha256-nAmazAk6vS34Xqo0BSrTb+abbtFlgsFK7NKSi6o7Y78=" crossorigin="anonymous" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.7.1/css/v4-shims.min.css" integrity="sha256-6qHlizsOWFskGlwVOKuns+D1nB6ssZrHQrNj1wGplHc=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous" />
 
 <!-- clipboard.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js" integrity="sha256-FiZwavyI2V6+EXO1U+xzLG3IKldpiTFf3153ea9zikQ=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script>
 
 <!-- headroom.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/headroom.min.js" integrity="sha256-DJFC1kqIhelURkuza0AvYal5RxMtpzLjFhsnVIeuk+U=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.9.4/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/headroom.min.js" integrity="sha256-AsUX4SJE1+yuDu5+mAVzJbuYNPHj/WroHuZ8Ir/CkE0=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/headroom/0.11.0/jQuery.headroom.min.js" integrity="sha256-ZX/yNShbjqsohH1k95liqY9Gd8uOiE1S4vZc+9KQ1K4=" crossorigin="anonymous"></script>
 
 <!-- pkgdown -->
 <link href="../pkgdown.css" rel="stylesheet">
@@ -63,7 +67,7 @@
 
   </head>
 
-  <body>
+  <body data-spy="scroll" data-target="#toc">
     <div class="container template-news">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
@@ -77,7 +81,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.5</span>
       </span>
     </div>
 
@@ -98,7 +102,7 @@
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li>
-  <a href="https://github.com/PredictiveEcology/Require">
+  <a href="https://github.com/PredictiveEcology/Require/">
     <span class="fab fa fab fa-github fa-lg"></span>
      
   </a>
@@ -116,43 +120,77 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-      <h1>Changelog <small></small></h1>
+      <h1 data-toc-skip>Changelog <small></small></h1>
       <small>Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/NEWS.md'><code>NEWS.md</code></a></small>
     </div>
 
-    <div id="version-004" class="section level1">
-<h1 class="page-header">
-<a href="#version-004" class="anchor"></a>version 0.0.4</h1>
+    <div id="version-005" class="section level1">
+<h1 class="page-header" data-toc-text="0.0.5">
+<a href="#version-005" class="anchor"></a>version 0.0.5<small> Unreleased </small>
+</h1>
+<div id="new-features" class="section level2">
+<h2 class="hasAnchor">
+<a href="#new-features" class="anchor"></a>New features</h2>
+<ul>
+<li>moved several functions that have to do with package loading and installing from <code>reproducible</code> to <code>Require</code>, including <code>pkgDep</code>, <code>pkgDepTopoSort</code>
+</li>
+</ul>
+</div>
 <div id="minor" class="section level2">
 <h2 class="hasAnchor">
 <a href="#minor" class="anchor"></a>minor</h2>
+<ul>
+<li>errors in <code>available.packages</code> on old release on Mac. Worked around by manually running <code>available.packages</code> on specific systems.</li>
+<li>minor changes in non-exported functions</li>
+<li>handling of bugs in base::available.packages for old Mac machines and R versions</li>
+</ul>
+</div>
+<div id="bugfixes" class="section level2">
+<h2 class="hasAnchor">
+<a href="#bugfixes" class="anchor"></a>bugfixes</h2>
+<ul>
+<li>several minor</li>
+<li>recursive pkgDep did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies</li>
+</ul>
+</div>
+</div>
+    <div id="version-004" class="section level1">
+<h1 class="page-header" data-toc-text="0.0.4">
+<a href="#version-004" class="anchor"></a>version 0.0.4<small> 2020-06-05 </small>
+</h1>
+<div id="minor-1" class="section level2">
+<h2 class="hasAnchor">
+<a href="#minor-1" class="anchor"></a>minor</h2>
 <p>remove <code>installed.packages</code> from test code, as per CRAN request</p>
 </div>
 </div>
     <div id="version-003" class="section level1">
-<h1 class="page-header">
-<a href="#version-003" class="anchor"></a>version 0.0.3</h1>
-<div id="minor-1" class="section level2">
+<h1 class="page-header" data-toc-text="0.0.3">
+<a href="#version-003" class="anchor"></a>version 0.0.3<small> Unreleased </small>
+</h1>
+<div id="minor-2" class="section level2">
 <h2 class="hasAnchor">
-<a href="#minor-1" class="anchor"></a>minor</h2>
+<a href="#minor-2" class="anchor"></a>minor</h2>
 <p>Change title to Title Case in DESCRIPTION</p>
 </div>
 </div>
     <div id="version-002" class="section level1">
-<h1 class="page-header">
-<a href="#version-002" class="anchor"></a>version 0.0.2</h1>
-<div id="minor-2" class="section level2">
+<h1 class="page-header" data-toc-text="0.0.2">
+<a href="#version-002" class="anchor"></a>version 0.0.2<small> Unreleased </small>
+</h1>
+<div id="minor-3" class="section level2">
 <h2 class="hasAnchor">
-<a href="#minor-2" class="anchor"></a>minor</h2>
+<a href="#minor-3" class="anchor"></a>minor</h2>
 <p>Change backticks to single quotes in DESCRIPTION</p>
 </div>
 </div>
     <div id="version-001" class="section level1">
-<h1 class="page-header">
-<a href="#version-001" class="anchor"></a>version 0.0.1</h1>
-<div id="new-features" class="section level2">
+<h1 class="page-header" data-toc-text="0.0.1">
+<a href="#version-001" class="anchor"></a>version 0.0.1<small> Unreleased </small>
+</h1>
+<div id="new-features-1" class="section level2">
 <h2 class="hasAnchor">
-<a href="#new-features" class="anchor"></a>New features</h2>
+<a href="#new-features-1" class="anchor"></a>New features</h2>
 <ul>
 <li>This is a rewrite of the function, <code>Require</code> (and helpers) which will be removed from package <code>reproducible</code>
 </li>
@@ -163,16 +201,10 @@
 </div>
   </div>
 
-  <div class="col-md-3 hidden-xs hidden-sm" id="sidebar">
-    <div id="tocnav">
-      <h2>Contents</h2>
-      <ul class="nav nav-pills nav-stacked">
-        <li><a href="#version-004">0.0.4</a></li>
-        <li><a href="#version-003">0.0.3</a></li>
-        <li><a href="#version-002">0.0.2</a></li>
-        <li><a href="#version-001">0.0.1</a></li>
-      </ul>
-    </div>
+  <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
+    <nav id="toc" data-toggle="toc" class="sticky-top">
+      <h2 data-toc-skip>Contents</h2>
+    </nav>
   </div>
 
 </div>
@@ -184,7 +216,7 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.4.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
 </div>
 
       </footer>
