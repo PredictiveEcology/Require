@@ -13,6 +13,7 @@ version 0.0.5
 
 ## bugfixes
 * several minor
+* recursive pkgDep did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies
 
 version 0.0.4
 ==============

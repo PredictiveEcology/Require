@@ -5,7 +5,7 @@
 #' \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
 #'
 #' @details
-#' This code was taken from \url{https://milesmcbain.xyz/hacking-r-library-paths/}.
+#' This code was modified from \url{https://github.com/milesmcbain}.
 #' A different, likely non-approved by CRAN approach that also works is here:
 #' \url{https://stackoverflow.com/a/36873741/3890027}.
 #'

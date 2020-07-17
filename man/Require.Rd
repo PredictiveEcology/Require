@@ -224,7 +224,7 @@ Require::Require("SpaDES") # not necessary to specifify standAlone here because 
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://Require.predictiveecology.org}
+  \item \url{http://Require.predictiveecology.org}
   \item \url{https://github.com/PredictiveEcology/Require}
   \item Report bugs at \url{https://github.com/PredictiveEcology/Require/issues}
 }
