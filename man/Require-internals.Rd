@@ -20,6 +20,7 @@ doInstalls(
   install_githubArgs,
   install.packagesArgs,
   install = TRUE,
+  repos = getOption("repos"),
   ...
 )
 

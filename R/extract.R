@@ -4,6 +4,7 @@
 #'
 #' @param pkgs A character string vector of packages with or without GitHub path or versions
 #' @return Just the package names without extraneous info.
+#' @seealso \code{\link{trimVersionNumber}}
 #' @export
 #' @rdname extractPkgName
 #' @examples
@@ -30,9 +31,16 @@ extractPkgName <- function(pkgs) {
 #' @rdname extractPkgName
 #' @export
 #' @examples
-#' extractVersionNumber("Require (<=0.0.1)")
+#' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))
 extractVersionNumber <- function(pkgs) {
-  gsub(grepExtractPkgs, "\\2", pkgs)
+  if (!missing(pkgs)) {
+  hasVersionNum <- grepl(grepExtractPkgs, pkgs)
+  out <- rep(NA, length(pkgs))
+  out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum])
+  } else {
+    out <- character()
+  }
+  out
 }
 
 #' @rdname extractPkgName
@@ -51,7 +59,14 @@ extractPkgGitHub <- function(pkgs) {
   unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
 
-#' @rdname extractPkgName
+#' Trim version number off a compound package name
+#'
+#' The resulting string(s) will have only name (including github.com repository if it exists).
+#'
+#' @inheritParams extractPkgName
+#'
+#' @rdname trimVersionNumber
+#' @seealso \code{\link{extractPkgName}}
 #' @export
 #' @examples
 #' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
@@ -62,4 +77,4 @@ trimVersionNumber <- function(pkgs) {
 
 .grepVersionNumber <- " *\\(.*"
 
-grepExtractPkgs <- ".*\\((<*>*=*) *(.*)\\)"
+grepExtractPkgs <- ".*\\([ \n]*(<*>*=*)[ \n]*(.*)\\)"

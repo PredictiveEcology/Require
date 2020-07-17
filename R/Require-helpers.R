@@ -89,7 +89,7 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
       pkgDT[!is.na(Version) & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
       pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
       # put FALSE at top of each package -- then take the first one, so we will know if all inequalities are satisfied
-      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L)
+      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L, na.last = TRUE)
       pkgDT <- pkgDT[, .SD[1], by = c("Package")]
     }
   } else {
@@ -104,26 +104,17 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
 #' @inheritParams Require
 #'
 #' @export
-#' @importFrom utils download.file tail
+#' @importFrom utils compareVersion download.file tail
 #' @rdname Require-internals
 getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
   if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)])) {
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     if (NROW(whNotCorrect)) {
-
       notCorrectVersions <- pkgDT[whNotCorrect]
 
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
-        cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-          isOldMac <- ((Sys.info()[["sysname"]] == "Darwin" &&
-                          paste0(version$major, ".", version$minor) == R_system_version("3.6.3")))
-          cap <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
-          assign("cachedAvailablePackages", cap, envir = .pkgEnv)
-          cap
-        } else {
-          get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
-        }
+        cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
         cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
@@ -315,7 +306,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' \code{doInstall} is a wrapper around \code{install.packages},
 #' \code{remotes::install_github}, and \code{remotes::install_version}.
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
-                       install = TRUE, ...) {
+                       install = TRUE, repos = getOption("repos"), ...) {
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
 
@@ -328,9 +319,11 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (is.null(dots$dependencies))
           dots$dependencies <- NA # This should be dealt with manually, but apparently not
 
+        ap <- available.packagesCached(repos, purge = FALSE)
         warn <- tryCatch({
-          out <- do.call(install.packages, append(append(list(installPkgNames), install.packagesArgs),
-                                                  dots))
+          out <- do.call(install.packages,
+                         append(append(list(installPkgNames, available = ap), install.packagesArgs),
+                                dots))
         }, warning = function(condition) condition)
 
         if (!is.null(warn))
@@ -395,7 +388,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
             tryCatch(packageVersion(x), error = function(x) NA_character_))))]
-  pkgDT[toLoad == TRUE, toLoad := is.na(installFrom) | installFrom != "Fail"]
+  pkgDT[toLoad > 0, toLoad := toLoad * as.integer(is.na(installFrom) | installFrom != "Fail")]
 
   pkgDT
 }
@@ -407,73 +400,81 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 #' @importFrom utils capture.output
 #' @rdname Require-internals
 doLoading <- function(pkgDT, require = TRUE, ...) {
-
-  packages <- pkgDT[toLoad == TRUE]$Package
+  packages <- pkgDT[toLoad > 0]$Package
+  packageOrder <- pkgDT[toLoad > 0]$toLoad
   if (isTRUE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
-    outMess <- capture.output({
-      out <- lapply(packages, require, character.only = TRUE)
-    }, type = "message")
-    warn <- warnings()
-    grep3a <- "no package called"
-    grep3b <- "could not be found"
-    missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
+    packages <- packages[order(packageOrder)]
+    requireOut <- lapply(packages, function(pkg) {
+      outMess <- capture.output({
+        out <- require(pkg, character.only = TRUE)
+      }, type = "message")
+      warn <- warnings()
+      grep3a <- "no package called"
+      grep3b <- "could not be found"
+      missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
 
-    grep2 <- "package or namespace load failed for"
-    grep1 <- "onLoad failed in loadNamespace"
-    otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
-    toInstall <- character()
-    if (any(otherErrors) || any(missingDeps)) {
-      if (any(otherErrors)) {
-        error1 <- grepl(.libPaths()[1], outMess)
-        error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
-        packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
-        error2 <- grepl("no such symbol", outMess)
-        if (any(error2)) {
-          pkgs <- paste(packageNames, collapse = "', '")
-          stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-               "-----\n",
-               "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
-               "\n-----\n...before any other packages get loaded")
+      grep2 <- "package or namespace load failed for"
+      grep1 <- "onLoad failed in loadNamespace"
+      otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
+      toInstall <- character()
+      if (any(otherErrors) || any(missingDeps)) {
+        if (any(otherErrors)) {
+          error1 <- grepl(.libPaths()[1], outMess)
+          error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
+          packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
+          error2 <- grepl("no such symbol", outMess)
+          if (any(error2)) {
+            pkgs <- paste(packageNames, collapse = "', '")
+            stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+                 "-----\n",
+                 "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
+                 "\n-----\n...before any other packages get loaded")
+          }
+          error3 <- grepl("is being loaded, but", outMess)
+          packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
+          if (any(error3)) {
+            pkgs <- paste(packageNames, collapse = "', '")
+            stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+                 "-----\n", "install.packages(c('",
+                 paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
+                 "')", "\n-----\n...before any other packages get loaded")
+          }
         }
-        error3 <- grepl("is being loaded, but", outMess)
-        packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
-        if (any(error3)) {
-          pkgs <- paste(packageNames, collapse = "', '")
-          stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-               "-----\n", "install.packages(c('",
-               paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
-               "')", "\n-----\n...before any other packages get loaded")
+        doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
+        if (any(missingDeps) && doDeps) {
+          grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
+          packageNames <- character()
+          if (any(grepl(grep3a, outMess[missingDeps])))
+            packageNames <- unique(gsub(grep3a_1, "\\1", outMess[missingDeps]))
+          grep3b_1 <- paste0(".*package.{2}(.*).{2}required.*$")
+          if (any(grepl(grep3b, outMess[missingDeps])))
+            packageNames <- unique(c(packageNames,
+                                     unique(gsub(grep3b_1, "\\1", outMess[missingDeps]))))
+          toInstall <- c(toInstall, packageNames)
+          outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
+          outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
+          outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
         }
       }
-      doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
-      if (any(missingDeps) && doDeps) {
-        grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
-        packageNames <- character()
-        if (any(grepl(grep3a, outMess[missingDeps])))
-          packageNames <- unique(gsub(grep3a_1, "\\1", outMess[missingDeps]))
-        grep3b_1 <- paste0(".*package.{2}(.*).{2}required.*$")
-        if (any(grepl(grep3b, outMess[missingDeps])))
-          packageNames <- unique(c(packageNames,
-                                   unique(gsub(grep3b_1, "\\1", outMess[missingDeps]))))
-        toInstall <- c(toInstall, packageNames)
-        outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
-        outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
-        outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
-      }
+      if (length(outMess) > 0)
+        message(paste0(outMess, collapse = "\n"))
+      return(list(out = out, toInstall = toInstall))
+    })
+    requireOut
+    out <- unlist(lapply(requireOut, function(x) x$out))
+    toInstall <- unlist(lapply(requireOut, function(x) x$toInstall))
 
+    if (length(toInstall)) {
       out2 <- Require(unique(toInstall), ...)
       out2 <- unlist(out2)
       names(out2) <- unique(toInstall)
 
       out <- c(out, out2)
-    } else {
-      out2 <- character()
     }
-    message(paste0(outMess, collapse = "\n"))
 
-    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad == TRUE)]
+    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad > 0)]
   }
   pkgDT[]
 }
@@ -541,7 +542,7 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
-  while(length(gitPkgs)) {
+  while (length(gitPkgs)) {
     gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
@@ -592,19 +593,53 @@ colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "toLoad", "hasVersionSpec")
 
 installedVers <- function(pkgDT) {
-  pkgs <- pkgDT$Package
-  names(pkgs) <- pkgs
-  installedPkgsCurrent <- lapply(pkgs, function(p) {
-    out <- tryCatch(find.package(p), error = function(x) NA)
-    descV <- if (!is.na(out)) {
-      descV <- DESCRIPTIONFileVersion(file.path(out, "DESCRIPTION"))
-      cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
+  if (NROW(pkgDT)) {
+    pkgs <- unique(pkgDT$Package)
+    names(pkgs) <- pkgs
+    installedPkgsCurrent <- lapply(pkgs, function(p) {
+      out <- tryCatch(find.package(p), error = function(x) NA)
+      descV <- if (!is.na(out)) {
+        descV <- DESCRIPTIONFileVersion(file.path(out, "DESCRIPTION"))
+        cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
+      } else {
+        cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
+      }
+      descV
+    })
+    installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
+    installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
+    pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
+  } else {
+    pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
+  }
+  pkgDT[]
+}
+
+available.packagesCached <- function(repos, purge) {
+  if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
+    cap <- list()
+    isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+    isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
+    isWindows <- (tolower(Sys.info()["sysname"]) == "windows")
+
+    types <- if (isOldMac) {
+      c("mac.binary.el-capitan", "source")
+    } else if (!isWindows && !isMac) {
+      c("source")
     } else {
-      cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
+      c("binary", "source")
     }
-    descV
-  })
-  installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
-  installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
-  installedPkgsCurrent[pkgDT, on = "Package"]
+
+    for (type in types)
+      cap[[type]] <- available.packages(repos = repos, type = type) #, ignore_repo_cache = isOldMac | !isInteractive())
+    cap <- do.call(rbind, cap)
+    if (length(types) > 1) {
+      dups <- duplicated(cap[, c("Package", "Version")])
+      cap <- cap[!dups,]
+    }
+    assign("cachedAvailablePackages", cap, envir = .pkgEnv)
+    cap
+  } else {
+    get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
+  }
 }

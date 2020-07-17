@@ -78,8 +78,7 @@ setMethod("normPath",
 #' such as trailing slashes, etc.
 #'
 #' @note This will not work for paths to files.
-#' To check for existence of files, use \code{\link{file.exists}}, or use
-#' \code{\link[utils]{file_test}} with \code{op = "-f"}.
+#' To check for existence of files, use \code{\link{file.exists}}.
 #' To normalize a path to a file, use \code{\link{normPath}} or \code{\link{normalizePath}}.
 #'
 #' @param path A character string corresponding to a directory path.
@@ -132,7 +131,7 @@ setMethod(
         }
       }
       if (Sys.info()[["sysname"]] == "Darwin")
-        path <- normPath(path) # ensure path re-normalized after creation (see #267)
+        path <- normPath(path) # ensure path re-normalized after creation
 
       return(path)
     }
@@ -179,7 +178,6 @@ setMethod("checkPath",
 #' @param round An optional numeric to pass to \code{round}
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
-#' @export
 messageDF <- function(df, round) {#}, colour = NULL) {
   if (is.matrix(df))
     df <- as.data.frame(df)
@@ -202,7 +200,7 @@ messageDF <- function(df, round) {#}, colour = NULL) {
   })
 }
 
-#' Make a temporary sub-directory or file in that subdirectory
+#' Make a temporary (sub-)directory
 #'
 #' Create a temporary subdirectory in \code{.RequireTempPath()}, or a
 #' temporary file in that temporary subdirectory.
@@ -212,19 +210,24 @@ messageDF <- function(df, round) {#}, colour = NULL) {
 #'   directories.
 #' @param tempdir Optional character string where the temporary dir should be placed.
 #'   Defaults to \code{.RequireTempPath()}
-#'
-#' @rdname tempFilesAndFolders
+#' @seealso \code{\link{tempfile2}}
 #' @export
 tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath())) {
-  checkPath(file.path(tempdir, sub), create = TRUE)
+  checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
 }
 
+#' Make a temporary subfile in a temporary (sub-)directory
+#'
 #' @param ... passed to \code{tempfile}, e.g., \code{fileext}
 #'
-#' @rdname tempFilesAndFolders
+#' @seealso \code{\link{tempdir2}}
+#' @inheritParams tempdir2
+#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
 #' @export
-tempfile2 <- function(sub = "", ...) {
-  normPath(file.path(tempdir2(sub = sub), basename(tempfile(...))))
+tempfile2 <- function(sub = "",
+                      tempdir = getOption("Require.tempPath", .RequireTempPath()),
+                      ...) {
+  normPath(file.path(tempdir2(sub = sub, tempdir = tempdir), basename(tempfile(...))))
 }
 
 .RequireTempPath <- function() normPath(file.path(tempdir(), "Require"))

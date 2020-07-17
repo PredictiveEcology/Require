@@ -1,4 +1,5 @@
-testit::assert(identical(isInteractive(), interactive()))
+if (Sys.info()["user"] != "emcintir")
+  testit::assert(identical(isInteractive(), interactive()))
 Require:::chooseCRANmirror2(ind = 1)
 
 # Mock the internal functions
@@ -13,7 +14,6 @@ assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
 
 isInteractiveOrig <- isInteractive
 isInteractive <- function() TRUE
-on.exit({assignInNamespace("isInteractive", isInteractiveOrig, ns = "Require")})
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
@@ -25,6 +25,7 @@ assignInNamespace("isInteractive", isInteractive, ns = "Require")
 out <- getCRANrepos("")
 Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
+assignInNamespace("isInteractive", isInteractiveOrig, ns = "Require")
 repos <- Require:::getCRANrepos("")
 testit::assert(is.character(repos))
 testit::assert(nchar(repos) > 0)
@@ -34,7 +35,7 @@ repos2 <- "https://cloud.r-project.org"
 repos["CRAN"] <- repos2
 
 options("repos" = repos) # shouldn't be necessary now
-options("Require.purge" = TRUE)
+options("Require.purge" = FALSE)
 
 # Failure on Travis:
 # cannot open file 'startup.Rs': No such file or directory
@@ -44,31 +45,27 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-if (!(Sys.info()[["sysname"]] == "Darwin" &&
-      paste0(version$major, ".", version$minor) == R_system_version("3.6.3"))) {
-  dir1 <- tempdir2("test1")
-  options("Require.verbose" = TRUE)
-  out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
-  testit::assert(data.table::is.data.table(attr(out, "Require")))
-  testit::assert(isTRUE(out))
-  isInstalled <- tryCatch( {
-    out <- find.package("TimeWarp", lib.loc = dir1)
-    if(length(out)) TRUE else FALSE
-    }, error = function(x) FALSE)
-  testit::assert(isTRUE(isInstalled))
-  detach("package:TimeWarp", unload = TRUE)
-  remove.packages("TimeWarp", lib = dir1)
-}
+dir1 <- tempdir2("test1")
+options("Require.verbose" = TRUE)
+out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
+testit::assert(data.table::is.data.table(attr(out, "Require")))
+testit::assert(isTRUE(out))
+isInstalled <- tryCatch({
+  out <- find.package("TimeWarp", lib.loc = dir1)
+  if (length(out)) TRUE else FALSE
+  }, error = function(x) FALSE)
+testit::assert(isTRUE(isInstalled))
+detach("package:TimeWarp", unload = TRUE)
+remove.packages("TimeWarp", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-  cat(Sys.time(), file = "tmp.txt")
   dir2 <- tempdir2("test2")
   pvWant <- "1.0-7"
-  inst <- Require::Require(paste0("TimeWarp (<=",pvWant,")"), standAlone = TRUE,
-                                    libPaths = dir2, dependencies = FALSE)
+  inst <- Require::Require(paste0("TimeWarp (<=", pvWant, ")"), standAlone = TRUE,
+                           libPaths = dir2, dependencies = FALSE)
   pv <- packageVersion("TimeWarp", lib.loc = dir2)
   testit::assert(pv == pvWant)
   detach("package:TimeWarp", unload = TRUE)
@@ -87,7 +84,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
   detach("package:TimeWarp", unload = TRUE)
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
-
 
   setLibPaths(orig)
 
@@ -123,7 +119,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
   unlink(dirname(dir3), recursive = TRUE)
 }
 
-
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
 names(pkg) <- c("MuMIn", "")
@@ -152,11 +147,15 @@ out <- getGitHubDESCRIPTION(pkg = character())
 testit::assert(length(out) == 0)
 
 # Trigger the save available.packages and archiveAvailable
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
+warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
+                                install = "force"),
                  warning = function(x) x)

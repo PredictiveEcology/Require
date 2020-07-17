@@ -7,10 +7,10 @@ Description: A single key function, 'Require' that wraps 'install.packages',
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
 URL: 
-    https://Require.predictiveecology.org,
+    http://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2020-06-02
-Version: 0.0.4
+Date: 2020-07-16
+Version: 0.0.5
 Authors@R: c(
     person("Eliot J B", "McIntire", email = "eliot.mcintire@canada.ca",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6914-8316")),
@@ -31,4 +31,4 @@ Language: en-CA
 License: GPL-3
 BugReports: https://github.com/PredictiveEcology/Require/issues
 ByteCompile: yes
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1

@@ -1,4 +1,4 @@
-out <- utils::capture.output(type = "message", messageDF(cbind(a = 1.1232), round = 2))
+out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))
 testit::assert(is.character(out))
 testit::assert(is.numeric(as.numeric(gsub(".*: ", "", out)[2])))
 
@@ -7,7 +7,6 @@ tmpdir <- Require::tempdir2("test_normPath")
 tmpdir <- normalizePath(tmpdir, winslash = "/", mustWork = FALSE)
 
 setwd(tmpdir)
-
 
 paths <- list("./aaa/zzz",
               "./aaa/zzz/",

@@ -1,9 +1,14 @@
+utils::globalVariables(c(
+  "PackageTrimmed", "hasVers", "atLeastOneWithVersionSpec", "maxVersionSpec", "Current"
+))
+
 #' Determine package dependencies
 #'
 #' This will first look in local filesystem (in \code{.libPaths()}), then
 #' \code{CRAN}. If the package is in the form of a GitHub package with format
-#' Account/Repo@branch, it will attempt to get package dependencies from the
-#' GitHub DESCRIPTION file. Currently, it will not find \code{Remotes}.
+#' \code{account/repo@branch}, it will attempt to get package dependencies from
+#' the GitHub \file{DESCRIPTION} file.
+#' Currently, it will not find \code{Remotes}.
 #' This is intended to replace \code{tools::package_dependencies} or
 #' \code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
 #' multiple sources to be searched in the same function call.
@@ -41,8 +46,8 @@
 #'
 #' @examples
 #' pkgDep("Require")
-#' pkgDep("Require", keepVersionNumber = FALSE) # just names
 #' \dontrun{
+#'   pkgDep("Require", keepVersionNumber = FALSE) # just names
 #'   pkgDep("PredictiveEcology/reproducible") # GitHub
 #'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
 #'   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
@@ -97,8 +102,34 @@ pkgDep <- function(packages, libPath = .libPaths(),
             pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i-1]]), function(needed) {
               unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber, purge = purge)))
             })
-            pkgsNew[[i]] <- unique(unlist(lapply(pkgsNew[[i]], trimVersionNumber)))
-            pkgsNew[[i]] <- setdiff(pkgsNew[[i]], unlist(pkgsNew[1:(i-1)])) # don't redo ones that are already in the list
+            prevIndices <- 1:(i-1)
+            curPkgs <- unlist(pkgsNew[[i]])
+            prevPkgs <- unlist(pkgsNew[prevIndices])
+            dt <- data.table(Package = c(prevPkgs, curPkgs), Current = c(rep(FALSE, length(prevPkgs)),
+                                                                         rep(TRUE, length(curPkgs))))
+            dt[, PackageTrimmed := extractPkgName(Package)]
+            dt[, versionSpec := extractVersionNumber(Package)]
+            dt[, hasVers := !is.na(versionSpec)]
+            dt[hasVers == TRUE, inequality := extractInequality(Package)]
+            dt[hasVers == FALSE, versionSpec := NA]
+            dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
+            dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
+            dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
+            #setorderv(dt, "PackageTrimmed", na.last = TRUE)
+
+            dt1 <- dt[!is.na(versionSpec), list(Package, Current, hasVers, inequality, atLeastOneWithVersionSpec,
+              versionSpec = as.character(package_version(versionSpec)),
+              maxVersionSpec = as.character(max(package_version(versionSpec)))),
+              by = "PackageTrimmed"]
+            dt1 <- dt1[versionSpec == maxVersionSpec]
+            dt1 <- dt1[, lapply(.SD, function(x) x[1]), by = "PackageTrimmed"]
+            dt2 <- dt[is.na(versionSpec)]
+            dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
+            dt3 <- dt[!duplicated(dt$PackageTrimmed)]
+            dt4 <- dt3[Current == TRUE]
+            pkgsNew <- list()
+            pkgsNew[[i - 1]] <- dt3[Current == FALSE]$Package
+            pkgsNew[[i]] <- dt4$Package
           }
           needed <- unique(unlist(pkgsNew))
 
@@ -199,21 +230,16 @@ pkgDep2 <- function(packages, recursive = TRUE,
   return(a)
 }
 
-pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recursive = FALSE,
+#' @importFrom utils compareVersion
+pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
+                       #recursive = FALSE,
                        keepVersionNumber = TRUE, repos = getCRANrepos(),
                        purge = getOption("Require.purge", FALSE)) {
-  cachedAvailablePackages <- if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
-    isOldMac <- ((Sys.info()[["sysname"]] == "Darwin" &&
-                    paste0(version$major, ".", version$minor) == R_system_version("3.6.3")))
-    aa <- available.packages(repos = repos, ignore_repo_cache = isOldMac)
-    assign("cachedAvailablePackages", aa, envir = .pkgEnv)
-    aa
-  } else {
-    get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
-  }
+  cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
 
   capFull <- as.data.table(cachedAvailablePackages)
-  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, keepVersionNumber = keepVersionNumber)
+  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg,
+                          keepVersionNumber = keepVersionNumber)
   # if (recursive) {
   #   i <- 1
   #   pkgsNew <- list()
@@ -236,6 +262,144 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"), #recur
   # }
   deps
 }
+
+
+#' Reverse package depends
+#'
+#' This is a wrapper around \code{tools::dependsOnPkgs},
+#' but with the added option of \code{sorted}, which
+#' will sort them such that the packages at the top will have
+#' the least number of dependencies that are in \code{pkgs}.
+#' This is essentially a topological sort, but it is done
+#' heuristically. This can be used to e.g., \code{detach} or
+#' \code{unloadNamespace} packages in order so that they each
+#' of their dependencies are detached or unloaded first.
+#' @param pkgs A vector of package names to evaluate their
+#'   reverse depends (i.e., the packages that \emph{use} each
+#'   of these packages)
+#' @param deps An optional named list of (reverse) dependencies.
+#'   If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)}
+#'   will be used
+#' @param topoSort Logical. If \code{TRUE}, the default, then
+#'   the returned list of packages will be in order with the
+#'   least number of dependencies listed in \code{pkgs} at
+#'   the top of the list.
+#' @param reverse Logical. If \code{TRUE}, then this will use \code{tools::pkgDependsOn}
+#'   to determine which packages depend on the \code{pkgs}
+#' @param useAllInSearch Logical. If \code{TRUE}, then all non-core
+#' R packages in \code{search()} will be appended to \code{pkgs}
+#' to allow those to also be identified
+#' @param returnFull Logical. If \code{TRUE}, then the full reverse
+#'   dependencies will be returned; if \code{FALSE}, the default,
+#'   only the reverse dependencies that are found within the \code{pkgs}
+#'   (and \code{search()} if \code{useAllInSearch = TRUE}) will be returned.
+#'
+#' @export
+#' @rdname pkgDep
+#' @return
+#' A possibly ordered, named (with packages as names) list where list elements
+#' are either full reverse depends.
+#'
+#' @examples
+#' \dontrun{
+#' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+#'
+#' }
+pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllInSearch = FALSE,
+                           returnFull = TRUE, recursive = TRUE) {
+
+  if (isTRUE(useAllInSearch)) {
+    if (missing(deps)) {
+      a <- search()
+      a <- setdiff(a, .defaultPackages)
+      a <- gsub("package:", "", a)
+      pkgs <- unique(c(pkgs, a))
+    } else {
+      message("deps is provided; useAllInSearch will be set to FALSE")
+    }
+  }
+
+  names(pkgs) <- pkgs
+  if (missing(deps)) {
+    aa <- if (isTRUE(reverse)) {
+      ip <- .installed.pkgs()
+      deps <- lapply(ip[,"Dependencies"], extractPkgName)
+      names(deps) <- ip[, "Package"]
+      names(pkgs) <- pkgs
+      deps <- deps[order(names(deps))]
+      revDeps <- lapply(pkgs, function(p) names(unlist(lapply(deps, function(d) if (isTRUE(any(p %in% d))) TRUE else NULL))))
+      if (recursive) {
+        revDeps <- lapply(revDeps, function(p) {
+          if (!is.null(p)) {
+            used <- p
+            repeat({
+              r <- unique(unlist(lapply(p, function(p1)  names(unlist(lapply(deps, function(d) if (isTRUE(any(p1 %in% d))) TRUE else NULL))))))
+              used <- unique(c(r, used))
+              if (length(r) == 0)
+                break
+              p <- r
+            })
+          } else {
+            used <- NULL
+          }
+          sort(used)
+        })
+
+      }
+    } else {
+      pkgDep(pkgs, recursive = TRUE)
+    }
+    # testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
+    # if (!identical(sort(unlist(testVal)), sort(unlist(aa)))) {
+    #   cat(unlist(testVal), file = "c:/Eliot/tmp/test.txt")
+    #   cat("-----------------", file = "c:/Eliot/tmp/test.txt", append = TRUE)
+    #   cat(unlist(aa), file = "c:/Eliot/tmp/test.txt", append = TRUE)
+    #   stop("new recursive reverse dependencies is not correct")
+    # }
+
+
+  }
+  else
+    aa <- deps
+  bb <- list()
+  cc <- lapply(pkgs, function(x) character())
+
+  if (isTRUE(topoSort)) {
+    notInOrder <- TRUE
+    isCorrectOrder <- logical(length(aa))
+    i <- 1
+    newOrd <- numeric(0)
+    for (i in seq_along(aa)) {
+      dif <- setdiff(seq_along(aa), newOrd)
+      for (j in dif) {
+        overlapFull <- aa[[j]] %in% names(aa)[-i]
+        overlap <- aa[[j]] %in% names(aa)[dif]
+        overlapPkgs <- aa[[j]][overlapFull]
+        isCorrectOrder <- !any(overlap)
+        if (isCorrectOrder) {
+          # bb[names(aa)[j]] <- list(overlapPkgs)
+          cc[j] <- list(overlapPkgs)
+          newOrd <- c(newOrd, j)
+          i <- i + 1
+          break
+        }
+      }
+    }
+    aa <- aa[newOrd]
+    cc <- cc[newOrd]
+  }
+  out <- if (isTRUE(returnFull)) {
+    aa
+  } else {
+    cc
+  }
+  return(out)
+}
+
+.defaultPackages <- c(".GlobalEnv", "tools:rstudio", "package:stats", "package:graphics",
+                      "package:grDevices", "package:utils", "package:datasets", "package:methods",
+                      "Autoloads", "package:base", "devtools_shims")
+
 
 pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
   # MUCH faster to use base "ap$Package %in% pkgs" than data.table internal "Package %in% pkgs"
@@ -314,7 +478,7 @@ whichToDILES <- function(which) {
   which
 }
 
-.installed.pkgs <- function(lib.loc = .libPaths()) {
+.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo")) {
   out <- lapply(lib.loc, function(path) {
     dirs <- dir(path, full.names = TRUE)
     areDirs <- dir.exists(dirs)
@@ -323,13 +487,16 @@ whichToDILES <- function(which) {
     filesExist <- file.exists(files)
     files <- files[filesExist]
     versions <- unlist(lapply(files, function(file) DESCRIPTIONFileVersion(file)))
-    cbind("Package" = dirs[filesExist], "Version" = versions)
+    deps <- if (length(which)) lapply(files, function(file) DESCRIPTIONFileDeps(file, which = which)) else NULL
+    cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
   })
-  c("Package", "LibPath", "Version")
   lengths <- unlist(lapply(out, function(x) NROW(x)))
   out <- do.call(rbind, out)
-  cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
+  ret <- cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
         "Version" = out[, "Version"])
+  if (length(which))
+    ret <- cbind(ret, "Dependencies" = out[, "Depends"])
+  ret
 }
 
 .basePkgs <- unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])

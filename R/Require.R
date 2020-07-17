@@ -230,8 +230,11 @@ Require <- function(packages, packageVersionFile,
   origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
   packagesOrig <- packages
   packageNamesOrig <- packages
+
   if (any(origPackagesHaveNames))
     packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
+  packagesOrder <- seq(packagesOrig)
+  names(packagesOrder) <- extractPkgName(packageNamesOrig)
 
   if (missing(libPaths))
     libPaths <- .libPaths()
@@ -243,11 +246,15 @@ Require <- function(packages, packageVersionFile,
     packages <- getPkgDeps(packages, which = which, purge = purge)
   }
 
+
   # Create data.table of Require workflow
+  if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
   pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
 
   # identify the packages that were asked by user to load -- later dependencies will be in table too
-  pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)), packagesRequired := TRUE]
+
+  pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
+        packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
   pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
 
   if (any(origPackagesHaveNames))
@@ -256,7 +263,7 @@ Require <- function(packages, packageVersionFile,
 
   # Join installed with requested
   pkgDT <- installedVers(pkgDT)
-  pkgDT <- pkgDT[, .SD[1], by = "Package"] # remove duplicates
+  pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
   pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
 
   if (length(packages)) {
@@ -272,8 +279,8 @@ Require <- function(packages, packageVersionFile,
     if (isTRUE(require))
       pkgDT <- doLoading(pkgDT, ...)
   }
-  out <- pkgDT[packagesRequired == TRUE]$loaded
-  names(out) <- pkgDT[packagesRequired == TRUE]$Package
+  out <- pkgDT[packagesRequired > 0]$loaded
+  names(out) <- pkgDT[packagesRequired > 0]$Package
   if (verbose > 0) {
     if (verbose < 2) {
       colsToKeep <- intersect(colsToKeep, colnames(pkgDT))

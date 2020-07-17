@@ -3,6 +3,7 @@
 \name{pkgDep}
 \alias{pkgDep}
 \alias{pkgDep2}
+\alias{pkgDepTopoSort}
 \title{Determine package dependencies}
 \usage{
 pkgDep(
@@ -31,6 +32,16 @@ pkgDep2(
   linkingTo,
   repos = getOption("repos"),
   sorted = TRUE
+)
+
+pkgDepTopoSort(
+  pkgs,
+  deps,
+  reverse = FALSE,
+  topoSort = TRUE,
+  useAllInSearch = FALSE,
+  returnFull = TRUE,
+  recursive = TRUE
 )
 }
 \arguments{
@@ -77,18 +88,57 @@ concatenation of the possibly recursive package dependencies.}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
+
+\item{pkgs}{A vector of package names to evaluate their
+reverse depends (i.e., the packages that \emph{use} each
+of these packages)}
+
+\item{deps}{An optional named list of (reverse) dependencies.
+If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)}
+will be used}
+
+\item{reverse}{Logical. If \code{TRUE}, then this will use \code{tools::pkgDependsOn}
+to determine which packages depend on the \code{pkgs}}
+
+\item{topoSort}{Logical. If \code{TRUE}, the default, then
+the returned list of packages will be in order with the
+least number of dependencies listed in \code{pkgs} at
+the top of the list.}
+
+\item{useAllInSearch}{Logical. If \code{TRUE}, then all non-core
+R packages in \code{search()} will be appended to \code{pkgs}
+to allow those to also be identified}
+
+\item{returnFull}{Logical. If \code{TRUE}, then the full reverse
+dependencies will be returned; if \code{FALSE}, the default,
+only the reverse dependencies that are found within the \code{pkgs}
+(and \code{search()} if \code{useAllInSearch = TRUE}) will be returned.}
+}
+\value{
+A possibly ordered, named (with packages as names) list where list elements
+are either full reverse depends.
 }
 \description{
 This will first look in local filesystem (in \code{.libPaths()}), then
 \code{CRAN}. If the package is in the form of a GitHub package with format
-Account/Repo@branch, it will attempt to get package dependencies from the
-GitHub DESCRIPTION file. Currently, it will not find \code{Remotes}.
+\code{account/repo@branch}, it will attempt to get package dependencies from
+the GitHub \file{DESCRIPTION} file.
+Currently, it will not find \code{Remotes}.
 This is intended to replace \code{tools::package_dependencies} or
 \code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
 multiple sources to be searched in the same function call.
 
 \code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
 i.e., the first order dependencies, and runs the \code{pkgDep} on those.
+
+This is a wrapper around \code{tools::dependsOnPkgs},
+but with the added option of \code{sorted}, which
+will sort them such that the packages at the top will have
+the least number of dependencies that are in \code{pkgs}.
+This is essentially a topological sort, but it is done
+heuristically. This can be used to e.g., \code{detach} or
+\code{unloadNamespace} packages in order so that they each
+of their dependencies are detached or unloaded first.
 }
 \note{
 \code{tools::package_dependencies} and \code{pkgDep} will differ under the following
@@ -101,8 +151,8 @@ circumstances:
 }
 \examples{
 pkgDep("Require")
-pkgDep("Require", keepVersionNumber = FALSE) # just names
 \dontrun{
+  pkgDep("Require", keepVersionNumber = FALSE) # just names
   pkgDep("PredictiveEcology/reproducible") # GitHub
   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
@@ -112,5 +162,9 @@ pkgDep2("Require")
 \dontrun{
 # much bigger one
 pkgDep2("reproducible")
+}
+\dontrun{
+pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+
 }
 }

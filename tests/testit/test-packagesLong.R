@@ -32,7 +32,7 @@ if (interactive()) {
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
-    testit::assert(all(have[toLoad == TRUE & (correctVersion == TRUE | hasVersionSpec == FALSE)]$toLoad))
+    testit::assert(all(have[toLoad > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$toLoad > 0))
     couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
     actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {
       didntLoad <- have[Package %in% couldHaveLoaded & correctVersionAvail == FALSE]
@@ -41,7 +41,7 @@ if (interactive()) {
       couldHaveLoaded
     }
 
-    theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(have[toLoad == TRUE]$Package)))
+    theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(have[toLoad > 0]$Package)))
     browser(expr = !theTest)
   }
   unloadNSRecursive <- function(packages, n = 0) {
@@ -49,7 +49,7 @@ if (interactive()) {
       out <- packages
       browser(expr = "bitops" %in% packages)
     } else {
-      out <- data.table::as.data.table(.installed.pkgs())[[1]]
+      out <- data.table::as.data.table(.installed.pkgs(which = character()))[[1]]
       names(out) <- out
       out <- lapply(out, isNamespaceLoaded)
       out <- unlist(out)
@@ -179,9 +179,11 @@ if (interactive()) {
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
+
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
-    outFromRequire <- Require::Require(pkg, repos = repo, standAlone = FALSE)
-    out <- Require::Require(pkg)
+    #if (i == 11) ._Require_0 <<- 1
+    outFromRequire <- Require(pkg, repos = repo, standAlone = FALSE)
+    out <- Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
@@ -194,7 +196,7 @@ if (interactive()) {
     whMatch <- match(names(normalRequire), names(out2))
     whMatch <- whMatch[!is.na(whMatch)]
     out2 <- out2[whMatch]
-    have2 <- have[toLoad == TRUE]
+    have2 <- have[toLoad > 0]
     normalRequire2 <- if (NROW(have2))
       normalRequire[have2$Package]
     else
