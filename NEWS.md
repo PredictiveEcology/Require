@@ -1,38 +1,40 @@
-Known issues: https://github.com/PredictiveEcology/reproducible/issues
+Known issues: https://github.com/PredictiveEcology/Require/issues
+
+version 0.0.6
+==============
+
+## New features
+* none
+
+## Bug fixes
+* fixed CRAN check issues.
 
 version 0.0.5
 ==============
 
 ## New features
-* moved several functions that have to do with package loading and installing from `reproducible` to `Require`, including `pkgDep`, `pkgDepTopoSort`
+* moved several functions that have to do with package loading and installing from `reproducible` to `Require`, including `pkgDep`, `pkgDepTopoSort`.
 
-## minor
-* errors in `available.packages` on old release on Mac. Worked around by manually running `available.packages` on specific systems.
+## Bug fixes
+* recursive `pkgDep` did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies.
 * minor changes in non-exported functions
-* handling of bugs in base::available.packages for old Mac machines and R versions
-
-## bugfixes
-* several minor
-* recursive pkgDep did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies
+* handling of bugs in `base::available.packages` for old Mac machines and R versions
 
 version 0.0.4
 ==============
 
-## minor
-remove `installed.packages` from test code, as per CRAN request
+## Bug fixes
+* remove `installed.packages` from test code, as per CRAN request
 
 version 0.0.3
 ==============
 
-## minor
-Change title to Title Case in DESCRIPTION
-
+* Change title to Title Case in DESCRIPTION
 
 version 0.0.2
 ==============
 
-## minor
-Change backticks to single quotes in DESCRIPTION
+* Change backticks to single quotes in DESCRIPTION
 
 version 0.0.1
 ==============
