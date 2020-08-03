@@ -41,7 +41,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.6</span>
       </span>
     </div>
 
@@ -83,6 +83,7 @@
 <div id="require" class="section level1">
 <div class="page-header"><h1 class="hasAnchor">
 <a href="#require" class="anchor"></a>Require</h1></div>
+<!-- badges start -->
 
 <p>A simple package for reproducible package management in R. Built on top of <code>git2r</code> and <code>archivist</code>, this package aims at making high-level, robust, machine and OS independent tools for making deeply reproducible package management in R. This extends beyond the package management utilities of <code>packrat</code> and <code>checkpoint</code> by including all in one management for packages in R focused around a single function, <code>Require</code>.</p>
 </div>
@@ -96,9 +97,9 @@
 <h2 class="hasAnchor">
 <a href="#basic-usage" class="anchor"></a>Basic usage</h2>
 <p><code>Require</code> is essentially a wrapper around functions that install packages, e.g., <code>install.packages</code>, <code>install_github</code> and one of the main function to load packages, <code>require</code>.</p>
-<pre><code># install.packages("Require") 
+<pre><code><a href="https://Require.predictiveecology.org/reference"># install.packages("Require") 
 library(Require)
-Require("data.table")</code></pre>
+Require("data.table")</a></code></pre>
 <p>And with version numbering:</p>
 <pre><code><a href="reference/Require.html">Require("data.table (&gt;=1.12.8)")</a></code></pre>
 <p>It is vectorized on package names, and can include mixed github and CRAN, mixed version number and not:</p>
@@ -111,13 +112,13 @@ Require("data.table")</code></pre>
 <h3 class="hasAnchor">
 <a href="#keeping-it-all-isolated" class="anchor"></a>Keeping it all isolated</h3>
 <p>We can keep all packages in an isolated folder for a project, using <code>standAlone = TRUE</code></p>
-<pre><code>setLibPaths("Project_A_Packages", standAlone = TRUE)
+<pre><code><a href="reference/setLibPaths.html">setLibPaths("Project_A_Packages", standAlone = TRUE)
 .libPaths() # this is just to check what happened in the previous line -- there are 2 folders only
-Require("data.table (&gt;=1.12.8)")</code></pre>
+Require("data.table (&gt;=1.12.8)")</a></code></pre>
 <p>Or we can use a hybrid of our main, “personal” library and a project specific one for “extra” packages:</p>
-<pre><code>setLibPaths("Project_A_Packages", standAlone = FALSE)
+<pre><code><a href="reference/setLibPaths.html">setLibPaths("Project_A_Packages", standAlone = FALSE)
 .libPaths() # we have added a library to original ones on this system
-Require("data.table (&gt;=1.12.8)")</code></pre>
+Require("data.table (&gt;=1.12.8)")</a></code></pre>
 </div>
 <div id="installing-old-package-versions" class="section level3">
 <h3 class="hasAnchor">
@@ -129,10 +130,10 @@ Require("data.table (&gt;=1.12.8)")</code></pre>
 <h3 class="hasAnchor">
 <a href="#managing-a-project" class="anchor"></a>Managing a project</h3>
 <p>Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.</p>
-<pre><code>library(Require)
+<pre><code><a href="https://Require.predictiveecology.org/reference">library(Require)
 setLibPaths("ProjectA", standAlone = TRUE)
 Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
-          "PredictiveEcology/SpaDES@development", "raster (&gt;=3.1.5)"))</code></pre>
+          "PredictiveEcology/SpaDES@development", "raster (&gt;=3.1.5)"))</a></code></pre>
 </div>
 <div id="taking-a-snapshot" class="section level3">
 <h3 class="hasAnchor">
@@ -162,18 +163,18 @@ Require(c("data.table (==1.12.8)", "dplyr", "reproducible",
 <p><strong>Install from CRAN:</strong></p>
 <div class="sourceCode" id="cb10"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"Require"</span>)</pre></div>
 <p><strong>Install from GitHub:</strong></p>
-<pre><code>#install.packages("devtools")
+<pre><code><a href="https://devtools.r-lib.org//reference">#install.packages("devtools")
 library("devtools")
-install_github("PredictiveEcology/Require", dependencies = TRUE) </code></pre>
+install_github("PredictiveEcology/Require", dependencies = TRUE) </a></code></pre>
 </div>
 <div id="development-version" class="section level3">
 <h3 class="hasAnchor">
 <a href="#development-version" class="anchor"></a>Development version</h3>
 <p><a href="https://travis-ci.org/PredictiveEcology/Require"><img src="https://travis-ci.org/PredictiveEcology/Require.svg?branch=development" alt="Build Status"></a> <a href="https://ci.appveyor.com/project/achubaty/Require/branch/development"><img src="https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/development?svg=true" alt="Appveyor Build status"></a> <a href="https://coveralls.io/github/PredictiveEcology/Require?branch=development"><img src="https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=development" alt="Coverage Status"></a></p>
 <p><strong>Install from GitHub:</strong></p>
-<pre><code>#install.packages("devtools")
+<pre><code><a href="https://devtools.r-lib.org//reference">#install.packages("devtools")
 library("devtools")
-install_github("PredictiveEcology/Require", ref = "development", dependencies = TRUE) </code></pre>
+install_github("PredictiveEcology/Require", ref = "development", dependencies = TRUE) </a></code></pre>
 </div>
 </div>
 </div>
@@ -227,6 +228,7 @@ install_github("PredictiveEcology/Require", ref = "development", dependencies = 
 <ul class="list-unstyled">
 <li><a href="https://cran.r-project.org/package=Require"><img src="http://www.r-pkg.org/badges/version/Require" alt="CRAN_Status_Badge"></a></li>
 <li><a href="https://cran.r-project.org/package=Require"><img src="http://cranlogs.r-pkg.org/badges/grand-total/Require" alt="CRAN Downloads"></a></li>
+<li><a href="https://github.com/PredictiveEcology/Require/actions"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg" alt="R build status"></a></li>
 </ul>
 </div>
 </div>

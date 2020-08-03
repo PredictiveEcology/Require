@@ -81,7 +81,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.6</span>
       </span>
     </div>
 
@@ -124,33 +124,43 @@
       <small>Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/NEWS.md'><code>NEWS.md</code></a></small>
     </div>
 
-    <div id="version-005" class="section level1">
-<h1 class="page-header" data-toc-text="0.0.5">
-<a href="#version-005" class="anchor"></a>version 0.0.5<small> Unreleased </small>
+    <div id="version-006" class="section level1">
+<h1 class="page-header" data-toc-text="0.0.6">
+<a href="#version-006" class="anchor"></a>version 0.0.6<small> Unreleased </small>
 </h1>
 <div id="new-features" class="section level2">
 <h2 class="hasAnchor">
 <a href="#new-features" class="anchor"></a>New features</h2>
 <ul>
-<li>moved several functions that have to do with package loading and installing from <code>reproducible</code> to <code>Require</code>, including <code>pkgDep</code>, <code>pkgDepTopoSort</code>
-</li>
+<li>none</li>
 </ul>
 </div>
-<div id="minor" class="section level2">
+<div id="bug-fixes" class="section level2">
 <h2 class="hasAnchor">
-<a href="#minor" class="anchor"></a>minor</h2>
+<a href="#bug-fixes" class="anchor"></a>Bug fixes</h2>
 <ul>
-<li>errors in <code>available.packages</code> on old release on Mac. Worked around by manually running <code>available.packages</code> on specific systems.</li>
+<li>fixed CRAN check issues.</li>
+</ul>
+</div>
+</div>
+    <div id="version-005" class="section level1">
+<h1 class="page-header" data-toc-text="0.0.5">
+<a href="#version-005" class="anchor"></a>version 0.0.5<small> 2020-07-17 </small>
+</h1>
+<div id="new-features-1" class="section level2">
+<h2 class="hasAnchor">
+<a href="#new-features-1" class="anchor"></a>New features</h2>
+<ul>
+<li>moved several functions that have to do with package loading and installing from <code>reproducible</code> to <code>Require</code>, including <code>pkgDep</code>, <code>pkgDepTopoSort</code>.</li>
+</ul>
+</div>
+<div id="bug-fixes-1" class="section level2">
+<h2 class="hasAnchor">
+<a href="#bug-fixes-1" class="anchor"></a>Bug fixes</h2>
+<ul>
+<li>recursive <code>pkgDep</code> did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies.</li>
 <li>minor changes in non-exported functions</li>
-<li>handling of bugs in base::available.packages for old Mac machines and R versions</li>
-</ul>
-</div>
-<div id="bugfixes" class="section level2">
-<h2 class="hasAnchor">
-<a href="#bugfixes" class="anchor"></a>bugfixes</h2>
-<ul>
-<li>several minor</li>
-<li>recursive pkgDep did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies</li>
+<li>handling of bugs in <code>base::available.packages</code> for old Mac machines and R versions</li>
 </ul>
 </div>
 </div>
@@ -158,39 +168,37 @@
 <h1 class="page-header" data-toc-text="0.0.4">
 <a href="#version-004" class="anchor"></a>version 0.0.4<small> 2020-06-05 </small>
 </h1>
-<div id="minor-1" class="section level2">
+<div id="bug-fixes-2" class="section level2">
 <h2 class="hasAnchor">
-<a href="#minor-1" class="anchor"></a>minor</h2>
-<p>remove <code>installed.packages</code> from test code, as per CRAN request</p>
+<a href="#bug-fixes-2" class="anchor"></a>Bug fixes</h2>
+<ul>
+<li>remove <code>installed.packages</code> from test code, as per CRAN request</li>
+</ul>
 </div>
 </div>
     <div id="version-003" class="section level1">
 <h1 class="page-header" data-toc-text="0.0.3">
 <a href="#version-003" class="anchor"></a>version 0.0.3<small> Unreleased </small>
 </h1>
-<div id="minor-2" class="section level2">
-<h2 class="hasAnchor">
-<a href="#minor-2" class="anchor"></a>minor</h2>
-<p>Change title to Title Case in DESCRIPTION</p>
-</div>
+<ul>
+<li>Change title to Title Case in DESCRIPTION</li>
+</ul>
 </div>
     <div id="version-002" class="section level1">
 <h1 class="page-header" data-toc-text="0.0.2">
 <a href="#version-002" class="anchor"></a>version 0.0.2<small> Unreleased </small>
 </h1>
-<div id="minor-3" class="section level2">
-<h2 class="hasAnchor">
-<a href="#minor-3" class="anchor"></a>minor</h2>
-<p>Change backticks to single quotes in DESCRIPTION</p>
-</div>
+<ul>
+<li>Change backticks to single quotes in DESCRIPTION</li>
+</ul>
 </div>
     <div id="version-001" class="section level1">
 <h1 class="page-header" data-toc-text="0.0.1">
 <a href="#version-001" class="anchor"></a>version 0.0.1<small> Unreleased </small>
 </h1>
-<div id="new-features-1" class="section level2">
+<div id="new-features-2" class="section level2">
 <h2 class="hasAnchor">
-<a href="#new-features-1" class="anchor"></a>New features</h2>
+<a href="#new-features-2" class="anchor"></a>New features</h2>
 <ul>
 <li>This is a rewrite of the function, <code>Require</code> (and helpers) which will be removed from package <code>reproducible</code>
 </li>
