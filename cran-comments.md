@@ -29,5 +29,7 @@ See `NEWS.md` for complete list of changes.
 
 There were no ERRORs nor WARNINGs.
 
+There was one NOTE regarding possible spelling errors. Each of these is a false positive.
+
 ## Downstream dependencies
 
