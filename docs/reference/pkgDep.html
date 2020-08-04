@@ -173,7 +173,7 @@ of their dependencies are detached or unloaded first.</p>
   <span class='no'>imports</span>,
   <span class='no'>suggests</span>,
   <span class='no'>linkingTo</span>,
-  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'>getCRANrepos</span>(),
+  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
   <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
   <span class='kw'>includeBase</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>sort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
@@ -351,7 +351,6 @@ circumstances:</p><ol>
 }
 <span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
 <span class='fu'>pkgDepTopoSort</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Require"</span>, <span class='st'>"data.table"</span>), <span class='kw'>reverse</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)
-
 }</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">

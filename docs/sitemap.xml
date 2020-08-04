@@ -4,25 +4,19 @@
     <loc>https://Require.predictiveecology.org/index.html</loc>
   </url>
   <url>
-    <loc>https://Require.predictiveecology.org/reference/DESCRIPTION-helpers.html</loc>
-  </url>
-  <url>
-    <loc>https://Require.predictiveecology.org/reference/GitHubTools.html</loc>
-  </url>
-  <url>
-    <loc>https://Require.predictiveecology.org/reference/Require-internals.html</loc>
-  </url>
-  <url>
-    <loc>https://Require.predictiveecology.org/reference/Require.html</loc>
-  </url>
-  <url>
     <loc>https://Require.predictiveecology.org/reference/checkPath.html</loc>
   </url>
   <url>
     <loc>https://Require.predictiveecology.org/reference/chooseCRANmirror2.html</loc>
   </url>
   <url>
+    <loc>https://Require.predictiveecology.org/reference/DESCRIPTION-helpers.html</loc>
+  </url>
+  <url>
     <loc>https://Require.predictiveecology.org/reference/extractPkgName.html</loc>
+  </url>
+  <url>
+    <loc>https://Require.predictiveecology.org/reference/GitHubTools.html</loc>
   </url>
   <url>
     <loc>https://Require.predictiveecology.org/reference/invertList.html</loc>
@@ -38,6 +32,12 @@
   </url>
   <url>
     <loc>https://Require.predictiveecology.org/reference/pkgSnapshot.html</loc>
+  </url>
+  <url>
+    <loc>https://Require.predictiveecology.org/reference/Require-internals.html</loc>
+  </url>
+  <url>
+    <loc>https://Require.predictiveecology.org/reference/Require.html</loc>
   </url>
   <url>
     <loc>https://Require.predictiveecology.org/reference/setLibPaths.html</loc>
