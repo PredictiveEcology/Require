@@ -33,3 +33,4 @@ There was one NOTE regarding possible spelling errors. Each of these is a false 
 
 ## Downstream dependencies
 
+We have tested this verison of the package with several downstream dependencies, and have found no problems.
