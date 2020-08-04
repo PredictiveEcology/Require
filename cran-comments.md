@@ -1,6 +1,7 @@
 ## Updated release
 
 This is a maintenance release which fixes issues during CRAN tests.
+We now default to the user's choice of repo, only setting it when none is set (e.g., in some tests).
 See `NEWS.md` for complete list of changes.
 
 ## Test environments
