@@ -136,7 +136,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
           pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
           names(pkg) <- pkg
           ava <- lapply(pkg, function(p) {
-            as.data.table(archiveVersionsAvailable(p, repos = getCRANrepos()), keep.rownames = "PackageUrl")
+            as.data.table(archiveVersionsAvailable(p, repos = getOption("repos")), keep.rownames = "PackageUrl")
           })
           assign("oldAvailableVersions", ava, envir = .pkgEnv)
           ava
@@ -615,7 +615,10 @@ installedVers <- function(pkgDT) {
   pkgDT[]
 }
 
+#' @importFrom utils available.packages
 available.packagesCached <- function(repos, purge) {
+  repos <- getCRANrepos(repos)
+
   if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
     cap <- list()
     isMac <- tolower(Sys.info()["sysname"]) == "darwin"
