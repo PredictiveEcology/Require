@@ -23,6 +23,7 @@ See `NEWS.md` for complete list of changes.
 
 ### Development R version
 * Ubuntu 16.04              (travis-ci), R 4.1.0 (2020-08-03 r78963)
+* Ubuntu 20.04                  (local), R 4.1.0 (2020-08-03 r78963)
 * Windows                    (appveyor), R 4.1.0 (2020-08-02 r78957)
 * Windows                 (win-builder), R 4.1.0 (2020-08-02 r78957)
 
