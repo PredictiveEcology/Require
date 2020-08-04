@@ -1,6 +1,7 @@
 ## Updated release
 
 This is a maintenance release which fixes issues during CRAN tests.
+We now default to the user's choice of repo, only setting it when none is set (e.g., in some tests).
 See `NEWS.md` for complete list of changes.
 
 ## Test environments
@@ -33,3 +34,4 @@ There was one NOTE regarding possible spelling errors. Each of these is a false 
 
 ## Downstream dependencies
 
+We have tested this verison of the package with several downstream dependencies, and have found no problems.

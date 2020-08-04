@@ -15,7 +15,7 @@ pkgDep(
   imports,
   suggests,
   linkingTo,
-  repos = getCRANrepos(),
+  repos = getOption("repos"),
   keepVersionNumber = TRUE,
   includeBase = FALSE,
   sort = TRUE,
@@ -165,6 +165,5 @@ pkgDep2("reproducible")
 }
 \dontrun{
 pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
-
 }
 }

@@ -8,6 +8,7 @@ version 0.0.6
 
 ## Bug fixes
 * fixed CRAN check issues.
+* default repo now uses option `repos` instead of specifying CRAN repo.
 
 version 0.0.5
 ==============

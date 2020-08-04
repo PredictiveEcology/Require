@@ -56,14 +56,14 @@ utils::globalVariables(c(
 pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
                    depends, imports, suggests, linkingTo,
-                   repos = getCRANrepos(),
+                   repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
 
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
     message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
     if (!missing(depends)) depends <- TRUE
-    if (!missing(imports)) imports = TRUE
+    if (!missing(imports)) imports <- TRUE
     if (!missing(suggests)) suggests <- TRUE
     if (!missing(linkingTo)) linkingTo <- TRUE
   }
@@ -83,15 +83,13 @@ pkgDep <- function(packages, libPath = .libPaths(),
   needGet <- unlist(lapply(neededFull1, is.null))
 
   if (any(needGet)) {
-
-    neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber, purge = purge)
+    neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
+                              purge = purge, repos = repos)
     purge <- FALSE # whatever it was, it was done in line above
     theNulls <- unlist(lapply(neededFull, is.null))
     neededFull2 <- neededFull[!theNulls]
     if (NROW(neededFull2)) {
-
       if (recursive) {
-
         which <- tail(which, 1)[[1]] # take the last of the list of which
         neededFull2 <- lapply(neededFull2, function(needed) {
           i <- 1
@@ -99,14 +97,15 @@ pkgDep <- function(packages, libPath = .libPaths(),
           pkgsNew[[i]] <- needed
           while (length(unlist(pkgsNew[[i]])) > 0) {
             i <- i + 1
-            pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i-1]]), function(needed) {
-              unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber, purge = purge)))
+            pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i - 1]]), function(needed) {
+              unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
+                                        purge = purge, repos = repos)))
             })
-            prevIndices <- 1:(i-1)
+            prevIndices <- 1:(i - 1)
             curPkgs <- unlist(pkgsNew[[i]])
             prevPkgs <- unlist(pkgsNew[prevIndices])
-            dt <- data.table(Package = c(prevPkgs, curPkgs), Current = c(rep(FALSE, length(prevPkgs)),
-                                                                         rep(TRUE, length(curPkgs))))
+            dt <- data.table(Package = c(prevPkgs, curPkgs),
+                             Current = c(rep(FALSE, length(prevPkgs)), rep(TRUE, length(curPkgs))))
             dt[, PackageTrimmed := extractPkgName(Package)]
             dt[, versionSpec := extractVersionNumber(Package)]
             dt[, hasVers := !is.na(versionSpec)]
@@ -117,10 +116,11 @@ pkgDep <- function(packages, libPath = .libPaths(),
             dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
             #setorderv(dt, "PackageTrimmed", na.last = TRUE)
 
-            dt1 <- dt[!is.na(versionSpec), list(Package, Current, hasVers, inequality, atLeastOneWithVersionSpec,
-              versionSpec = as.character(package_version(versionSpec)),
-              maxVersionSpec = as.character(max(package_version(versionSpec)))),
-              by = "PackageTrimmed"]
+            dt1 <- dt[!is.na(versionSpec), list(Package, Current, hasVers, inequality,
+                                                atLeastOneWithVersionSpec,
+                                                versionSpec = as.character(package_version(versionSpec)),
+                                                maxVersionSpec = as.character(max(package_version(versionSpec)))),
+                      by = "PackageTrimmed"]
             dt1 <- dt1[versionSpec == maxVersionSpec]
             dt1 <- dt1[, lapply(.SD, function(x) x[1]), by = "PackageTrimmed"]
             dt2 <- dt[is.na(versionSpec)]
@@ -132,7 +132,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
             pkgsNew[[i]] <- dt4$Package
           }
           needed <- unique(unlist(pkgsNew))
-
         })
       }
     }
@@ -154,11 +153,11 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull1 <- lapply(neededFull1, setdiff, .basePkgs)
   }
   neededFull1
-
 }
 
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
-                        purge = getOption("Require.purge", FALSE)) {
+                        purge = getOption("Require.purge", FALSE),
+                        repos = repos) {
   names(packages) <- packages
   desc_paths <- getDescPath(packages, libPath)
 
@@ -175,10 +174,12 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
           setorderv(pkgDT2, "github", na.last = TRUE)
         }
         needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
-      } else { #if (any("CRAN" %in% pkgDT$repoLocation)) {
-        needed <- unname(unlist(pkgDepCRAN(pkg, #recursive = FALSE,
-                                           which = which, keepVersionNumber = keepVersionNumber,
-                                           purge = purge)))
+      } else {
+        needed <- unname(unlist(pkgDepCRAN(pkg,
+                                           which = which,
+                                           keepVersionNumber = keepVersionNumber,
+                                           purge = purge,
+                                           repos = repos)))
         purge <<- FALSE
         needed
       }
@@ -189,6 +190,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
   })
   needed
 }
+
 getDescPath <- function(packages, libPath) {
   lapply(packages, function(pkg) {
     dp <- sprintf("%s/%s/DESCRIPTION", libPath, pkg) # nolint
@@ -216,11 +218,11 @@ pkgDep2 <- function(packages, recursive = TRUE,
                     repos = getOption("repos"),
                     sorted = TRUE) {
   a <- lapply(pkgDep(packages, recursive = FALSE, which = which, depends = depends,
-                     imports = imports, suggests = suggests,
-                     linkingTo = linkingTo)[[1]],
-              recursive = recursive,
-              pkgDep, depends = depends, imports = imports, suggests = suggests,
-              linkingTo = linkingTo
+                     imports = imports, suggests = suggests, linkingTo = linkingTo,
+                     repos = repos)[[1]],
+              pkgDep,
+              depends = depends, imports = imports, suggests = suggests, linkingTo = linkingTo,
+              repos = repos, recursive = recursive
   )
   a <- unlist(a, recursive = FALSE)
   if (sorted) {
@@ -233,7 +235,7 @@ pkgDep2 <- function(packages, recursive = TRUE,
 #' @importFrom utils compareVersion
 pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
                        #recursive = FALSE,
-                       keepVersionNumber = TRUE, repos = getCRANrepos(),
+                       keepVersionNumber = TRUE, repos = getOption("repos"),
                        purge = getOption("Require.purge", FALSE)) {
   cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
 
@@ -303,7 +305,6 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #' @examples
 #' \dontrun{
 #' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
-#'
 #' }
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllInSearch = FALSE,
                            returnFull = TRUE, recursive = TRUE) {
