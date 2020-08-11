@@ -59,7 +59,7 @@ detach("package:TimeWarp", unload = TRUE)
 remove.packages("TimeWarp", lib = dir1)
 
 # Try older version
-if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis & appveyor
+if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- tempdir2("test2")
