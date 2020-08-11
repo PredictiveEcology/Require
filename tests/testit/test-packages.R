@@ -31,8 +31,8 @@ testit::assert(is.character(repos))
 testit::assert(nchar(repos) > 0)
 
 repos <- NULL
-repos2 <- chooseCRANmirror(ind = 1)
-repos["CRAN"] <- repos2
+chooseCRANmirror(ind = 1)
+repos <- getOption("repos")
 
 options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = FALSE)
