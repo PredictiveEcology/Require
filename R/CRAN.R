@@ -6,7 +6,7 @@ getCRANrepos <- function(repos = NULL) {
   }
 
   # still might be imprecise repository, specifically ""
-  if (isTRUE("" == repos) || is.na(repos)) {
+  if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
     repos <- "@CRAN@"
   }
 
@@ -23,7 +23,7 @@ getCRANrepos <- function(repos = NULL) {
         chooseCRANmirror(ind = 1)
       }
     }
-    if (is.na(repos)) {
+    if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
       warning("Please choose a valid CRAN repo")
       repos <- getCRANrepos(repos)
     }
