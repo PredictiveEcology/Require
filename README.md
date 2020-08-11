@@ -117,6 +117,7 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 
 ### Current release
 
+[![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=master)](https://github.com/PredictiveEcology/Require/actions)
 [![Build Status](https://travis-ci.org/PredictiveEcology/Require.svg?branch=master)](https://travis-ci.org/PredictiveEcology/Require)
 [![Coverage Status](https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=master)](https://coveralls.io/github/PredictiveEcology/Require?branch=master)
 
