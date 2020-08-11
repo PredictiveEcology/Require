@@ -6,7 +6,7 @@ getCRANrepos <- function(repos = NULL) {
   }
 
   # still might be imprecise repository, specifically ""
-  if (isTRUE("" == repos) || is.na(repos)) {
+  if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
     repos <- "@CRAN@"
   }
 
@@ -18,12 +18,12 @@ getCRANrepos <- function(repos = NULL) {
     } else {
       if (isInteractive()) {
         chooseCRANmirror2() ## sets repo option
-        getOption("repos")["CRAN"]
       } else {
-        "https://cloud.r-project.org"
+        chooseCRANmirror(ind = 1)
       }
+      getOption("repos")["CRAN"]
     }
-    if (is.na(repos)) {
+    if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
       warning("Please choose a valid CRAN repo")
       repos <- getCRANrepos(repos)
     }

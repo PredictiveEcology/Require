@@ -1,5 +1,14 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.7
+==============
+
+## New features
+* no longer sets CRAN repository to cloud.r-project.org even if non-interactive with no CRAN repository set. Now uses `chooseCRANmirror(ind = 1)`
+
+## Bug fixes
+* fixes CRAN check issues on Fedora.
+
 version 0.0.6
 ==============
 

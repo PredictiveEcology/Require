@@ -5,7 +5,7 @@ Require:::chooseCRANmirror2(ind = 1)
 # Mock the internal functions
 chooseCRANmirror2 <- function() {
   repos <- NULL
-  repos2 <- "https://cloud.r-project.org"
+  repos2 <- chooseCRANmirror(ind = 1)
   repos["CRAN"] <- repos2
   options("repos" = repos)
   repos
@@ -31,8 +31,8 @@ testit::assert(is.character(repos))
 testit::assert(nchar(repos) > 0)
 
 repos <- NULL
-repos2 <- "https://cloud.r-project.org"
-repos["CRAN"] <- repos2
+chooseCRANmirror(ind = 1)
+repos <- getOption("repos")
 
 options("repos" = repos) # shouldn't be necessary now
 options("Require.purge" = FALSE)
@@ -153,9 +153,11 @@ warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
 warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
                                 install = "force"),
                  warning = function(x) x)
-warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
-                                install = "force"),
-                 warning = function(x) x)
-warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
-                                install = "force"),
-                 warning = function(x) x)
+if (interactive()) {
+  warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
+                                  install = "force"),
+                   warning = function(x) x)
+  warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
+                                  install = "force"),
+                   warning = function(x) x)
+}
