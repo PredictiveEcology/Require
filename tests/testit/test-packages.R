@@ -5,7 +5,7 @@ Require:::chooseCRANmirror2(ind = 1)
 # Mock the internal functions
 chooseCRANmirror2 <- function() {
   repos <- NULL
-  repos2 <- "https://cloud.r-project.org"
+  repos2 <- chooseCRANmirror(ind = 1)
   repos["CRAN"] <- repos2
   options("repos" = repos)
   repos
@@ -31,7 +31,7 @@ testit::assert(is.character(repos))
 testit::assert(nchar(repos) > 0)
 
 repos <- NULL
-repos2 <- "https://cloud.r-project.org"
+repos2 <- chooseCRANmirror(ind = 1)
 repos["CRAN"] <- repos2
 
 options("repos" = repos) # shouldn't be necessary now
