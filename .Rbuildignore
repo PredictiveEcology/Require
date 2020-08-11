@@ -4,9 +4,7 @@
 ^\.cacheAvailablePackages\.rda$
 ^\.lintr$
 ^\.httr-oauth$
-^\.travis\.yml$
 ^_pkgdown\.yml$
-^appveyor\.yml$
 ^cheatsheets$
 ^CONTRIBUTING\.md$
 ^cran-comments\.md$
@@ -15,7 +13,6 @@
 ^LICENSE$
 ^packageVersions\.txt$
 ^revdep$
-^travis_wait_.*\.log$
 ^stickers$
 tests/testthat/\.httr-oauth$
 vignettes/.*_cache$

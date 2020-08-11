@@ -112,8 +112,7 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 
 ### Current release
 
-[![Build Status](https://travis-ci.org/PredictiveEcology/Require.svg?branch=master)](https://travis-ci.org/PredictiveEcology/Require)
-[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/master?svg=true)](https://ci.appveyor.com/project/achubaty/Require/branch/master)
+[![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=master)](https://github.com/PredictiveEcology/Require/actions)
 [![Coverage Status](https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=master)](https://coveralls.io/github/PredictiveEcology/Require?branch=master)
 
 **Install from CRAN:**
@@ -132,8 +131,7 @@ install_github("PredictiveEcology/Require", dependencies = TRUE)
 
 ### Development version
 
-[![Build Status](https://travis-ci.org/PredictiveEcology/Require.svg?branch=development)](https://travis-ci.org/PredictiveEcology/Require)
-[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/2fxqhgk6miv2fytd/branch/development?svg=true)](https://ci.appveyor.com/project/achubaty/Require/branch/development)
+[![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development)](https://github.com/PredictiveEcology/Require/actions)
 [![Coverage Status](https://coveralls.io/repos/github/PredictiveEcology/Require/badge.svg?branch=development)](https://coveralls.io/github/PredictiveEcology/Require?branch=development)
 
 **Install from GitHub:**
