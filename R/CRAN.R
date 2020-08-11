@@ -18,10 +18,10 @@ getCRANrepos <- function(repos = NULL) {
     } else {
       if (isInteractive()) {
         chooseCRANmirror2() ## sets repo option
-        getOption("repos")["CRAN"]
       } else {
         chooseCRANmirror(ind = 1)
       }
+      getOption("repos")["CRAN"]
     }
     if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
       warning("Please choose a valid CRAN repo")
