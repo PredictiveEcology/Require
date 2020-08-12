@@ -150,8 +150,8 @@ circumstances:
 }
 }
 \examples{
-pkgDep("Require")
 \dontrun{
+  pkgDep("Require")
   pkgDep("Require", keepVersionNumber = FALSE) # just names
   pkgDep("PredictiveEcology/reproducible") # GitHub
   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
