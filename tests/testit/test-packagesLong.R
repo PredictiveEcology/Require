@@ -5,7 +5,7 @@ tmpdir <- if (Sys.info()["user"] != "emcintir") {
   "~/TempLib5"
 }
 suppressWarnings(dir.create(tmpdir))
-repo <- chooseCRANmirror(ind = 1)
+# repo <- chooseCRANmirror(ind = 1)
 # if (FALSE) {
 if (interactive()) {
   pkgDepTest1 <- Require::pkgDep("Require")
