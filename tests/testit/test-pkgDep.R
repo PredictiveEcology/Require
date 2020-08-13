@@ -51,5 +51,5 @@ knownRevDeps <- list(Require = c("reproducible", "SpaDES", "SpaDES.addins", "Spa
 test <- unlist(lapply(names(out), function(p) {
   setdiff(out[[p]], knownRevDeps[[p]])
 }))
-
-testit::assert(length(test) == 0)
+if (isTRUE(Sys.info()["sysname"] != "Darwin"))
+  testit::assert(length(test) == 0)
