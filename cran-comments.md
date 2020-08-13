@@ -1,7 +1,7 @@
 ## Updated release
 
 This is a maintenance release which fixes issues during CRAN tests. 
-We have also attempted to remove the overriding of a user-selected CRAN repository.
+We have also removed the overriding of a user-selected CRAN repository.
 We default to the user's choice of repo, only setting it when none is set ("", NULL, or @CRAN@) (e.g., in some tests) and it is non-interactive.
 See `NEWS.md` for complete list of changes.
 
