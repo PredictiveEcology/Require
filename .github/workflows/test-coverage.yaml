@@ -15,8 +15,6 @@ jobs:
     runs-on: macOS-latest
 
     env:
-      CI_NAME: github-actions
-      COVERALLS_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
@@ -48,5 +46,5 @@ jobs:
         shell: Rscript {0}
 
       - name: Test coverage
-        run: covr::coveralls(type = "all", quiet = FALSE)
+        run: covr::codecov()
         shell: Rscript {0}
