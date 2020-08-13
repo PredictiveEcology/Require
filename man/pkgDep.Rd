@@ -150,18 +150,18 @@ circumstances:
 }
 }
 \examples{
-pkgDep("Require")
 \dontrun{
+  pkgDep("Require")
   pkgDep("Require", keepVersionNumber = FALSE) # just names
   pkgDep("PredictiveEcology/reproducible") # GitHub
   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
 }
-pkgDep2("Require")
 \dontrun{
-# much bigger one
-pkgDep2("reproducible")
+  pkgDep2("Require")
+  # much bigger one
+  pkgDep2("reproducible")
 }
 \dontrun{
 pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)

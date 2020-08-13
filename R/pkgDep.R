@@ -45,8 +45,8 @@ utils::globalVariables(c(
 #' @rdname pkgDep
 #'
 #' @examples
-#' pkgDep("Require")
 #' \dontrun{
+#'   pkgDep("Require")
 #'   pkgDep("Require", keepVersionNumber = FALSE) # just names
 #'   pkgDep("PredictiveEcology/reproducible") # GitHub
 #'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
@@ -207,10 +207,10 @@ getDescPath <- function(packages, libPath) {
 #' @param sorted Logical. If \code{TRUE}, the default, the packages will be sorted in
 #'   the returned list from most number of dependencies to least.
 #' @examples
-#' pkgDep2("Require")
 #' \dontrun{
-#' # much bigger one
-#' pkgDep2("reproducible")
+#'   pkgDep2("Require")
+#'   # much bigger one
+#'   pkgDep2("reproducible")
 #' }
 pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),

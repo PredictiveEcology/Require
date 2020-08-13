@@ -1,37 +1,36 @@
 ## Updated release
 
-This is a maintenance release which fixes issues during CRAN tests.
-We now default to the user's choice of repo, only setting it when none is set (e.g., in some tests).
+This is a maintenance release which fixes issues during CRAN tests. 
+We have also attempted to remove the overriding of a user-selected CRAN repository.
+We default to the user's choice of repo, only setting it when none is set ("", NULL, or @CRAN@) (e.g., in some tests) and it is non-interactive.
 See `NEWS.md` for complete list of changes.
 
 ## Test environments
 
-### Previous R versions
-* macOS 10.13.3 High Sierra (travis-ci), R 3.6.3
-* macOS 10.15.5 Catalina        (local), R 3.6.3
-* Ubuntu 16.04              (travis-ci), R 3.6.3
-* Windows                    (appveyor), R 3.6.3
+### GitHub Actions
+- os: macOS-latest,   r: 'release'
+- os: windows-latest, r: 'release'
+- os: windows-latest, r: '3.6'
+- os: ubuntu-18.04,   r: 'devel', 
+- os: ubuntu-18.04,   r: 'release'
+- os: ubuntu-18.04,   r: 'oldrel'
+- os: ubuntu-18.04,   r: '3.5'
+          
+### Winbuilder
 * Windows                 (win-builder), R 3.6.3
-
-### Current R versions
-* macOS 10.13.3 High Sierra (travis-ci), R 4.0.2
-* macOS 10.15.5 Catalina        (local), R 4.0.2
-* Ubuntu 16.04              (travis-ci), R 4.0.2
-* Ubuntu 20.04                  (local), R 4.0.2
-* Windows                    (appveyor), R 4.0.2
 * Windows                 (win-builder), R 4.0.2
+* Windows                 (win-builder), R 4.1.0 (2020-08-12 r78957)
 
-### Development R version
-* Ubuntu 16.04              (travis-ci), R 4.1.0 (2020-08-03 r78963)
-* Ubuntu 20.04                  (local), R 4.1.0 (2020-08-03 r78963)
-* Windows                    (appveyor), R 4.1.0 (2020-08-02 r78957)
-* Windows                 (win-builder), R 4.1.0 (2020-08-02 r78957)
+### rhub
+* Fedora Linux                      (clang, gfortran), R 4.1.0 (2020-08-12)
+* Windows     (Windows Server 2008 R2 SP1, 32/64 bit), R 4.1.0 (2020-08-12 r78957)
+* Ubuntu Linux                             (16.04 LTS, R-release, GCC)
 
 ## R CMD check results
 
 There were no ERRORs nor WARNINGs.
 
-There was one NOTE regarding possible spelling errors. Each of these is a false positive.
+There was one NOTE through about the Maintainer. The correct maintainer is eliot.mcintire@canada.ca, as indicated.
 
 ## Downstream dependencies
 
