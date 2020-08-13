@@ -331,23 +331,18 @@ circumstances:</p><ol>
 
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>)</div><div class='output co'>#&gt; $Require
-#&gt; [1] "data.table (&gt;= 1.10.4)" "remotes"               
-#&gt; </div><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
+    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
+  <span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>)
   <span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>, <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>) <span class='co'># just names</span>
   <span class='fu'>pkgDep</span>(<span class='st'>"PredictiveEcology/reproducible"</span>) <span class='co'># GitHub</span>
   <span class='fu'>pkgDep</span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>) <span class='co'># GitHub</span>
   <span class='fu'>pkgDep</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span>)) <span class='co'># GitHub package and local packages</span>
   <span class='fu'>pkgDep</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span>, <span class='st'>"plyr"</span>)) <span class='co'># GitHub, local, and CRAN packages</span>
 }
-<span class='fu'>pkgDep2</span>(<span class='st'>"Require"</span>)</div><div class='output co'>#&gt; $`data.table (&gt;= 1.10.4)`
-#&gt; character(0)
-#&gt; 
-#&gt; $remotes
-#&gt; character(0)
-#&gt; </div><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-<span class='co'># much bigger one</span>
-<span class='fu'>pkgDep2</span>(<span class='st'>"reproducible"</span>)
+<span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
+  <span class='fu'>pkgDep2</span>(<span class='st'>"Require"</span>)
+  <span class='co'># much bigger one</span>
+  <span class='fu'>pkgDep2</span>(<span class='st'>"reproducible"</span>)
 }
 <span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
 <span class='fu'>pkgDepTopoSort</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Require"</span>, <span class='st'>"data.table"</span>), <span class='kw'>reverse</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)
