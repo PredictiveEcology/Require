@@ -1,8 +1,8 @@
 # Require
 
 <!-- badges start -->
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/Require)](https://cran.r-project.org/package=Require)
-[![CRAN Downloads](http://cranlogs.r-pkg.org/badges/grand-total/Require)](https://cran.r-project.org/package=Require)
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/Require)](https://cran.r-project.org/package=Require)
+[![CRAN Downloads](https://cranlogs.r-pkg.org/badges/grand-total/Require)](https://cran.r-project.org/package=Require)
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg)](https://github.com/PredictiveEcology/Require/actions)
 <!-- badges: end -->
 

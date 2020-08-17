@@ -7,7 +7,7 @@ Description: A single key function, 'Require' that wraps 'install.packages',
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
 URL: 
-    http://Require.predictiveecology.org,
+    https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2020-08-11
 Version: 0.0.7
