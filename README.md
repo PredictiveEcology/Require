@@ -7,8 +7,7 @@
 <!-- badges: end -->
 
 A simple package for reproducible package management in R.
-Built on top of `git2r` and `archivist`, this package aims at making high-level, robust, machine and OS independent tools for making deeply reproducible package management in R.
-This extends beyond the package management utilities of `packrat` and `checkpoint` by including all in one management for packages in R focused around a single function, `Require`.
+This is different than other approaches to package management such as `packrat`, `checkpoint`, and `renv`, by including all-in-one management for packages in R focused around a single function, `Require`.
 
 # Objectives
 
