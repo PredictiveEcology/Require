@@ -411,6 +411,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
         out <- require(pkg, character.only = TRUE)
       }, type = "message")
       warn <- warnings()
+      grep4a <- "version.*cannot be unloaded" # means that prior to changing .libPaths, the package was loaded; .libPaths version is older
       grep3a <- "no package called"
       grep3b <- "could not be found"
       missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
@@ -418,6 +419,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
       grep2 <- "package or namespace load failed for"
       grep1 <- "onLoad failed in loadNamespace"
       otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
+      libPathsVersTooOld <- grepl(grep4a, outMess)
       toInstall <- character()
       if (any(otherErrors) || any(missingDeps)) {
         if (any(otherErrors)) {
@@ -456,6 +458,24 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
           outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
           outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
+        }
+      }
+      if (any(libPathsVersTooOld)) {
+        p <- pkgDT[Package == pkg]
+        libPathsVers <- DESCRIPTIONFileVersion(file.path(.libPaths()[1], "data.table", "DESCRIPTION"))
+        otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
+        firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
+                                "The version in .libPaths() is ", libPathsVers)
+        if (otherIsCorrect) {
+          message(firstPartMess, ". Because the newer version still accommodates the minimum version number (",
+                  p$packageFullName,", updating now.")
+          oo <- Require(pkg, require = FALSE, install = "force")
+          outMessToRm <- grep("Loading required|Failed with error|Error in unloadNamespace", outMess)
+          outMessToRm <- c(outMessToRm, max(outMessToRm) + 1) # There is non ASCII character in the message that can't be explicitly used
+          outMess <- outMess[-outMessToRm]
+        } else {
+          stop(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
+               "or prevent the newer version from loading by changing the .libPaths() prior to any packages being loaded")
         }
       }
       if (length(outMess) > 0)
