@@ -431,7 +431,10 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
 
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
                                 keepVersionNumber = TRUE) {
-  lines <- readLines(desc_path)
+  lines <- if (length(desc_path) == 1)
+    readLines(desc_path)
+  else
+    lines <- desc_path
   Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   on.exit(Sys.setlocale(locale = ""))
   sl <- list()
@@ -461,6 +464,10 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   needed
 }
 
+DESCRIPTIONFile <- function(desc_path) {
+  lines <- readLines(desc_path)
+}
+
 whichToDILES <- function(which) {
   if (identical("all", which) || is.null(which)) {
     which <- list(c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances"))
@@ -487,8 +494,9 @@ whichToDILES <- function(which) {
     files <- file.path(dirs, "DESCRIPTION")
     filesExist <- file.exists(files)
     files <- files[filesExist]
-    versions <- unlist(lapply(files, function(file) DESCRIPTIONFileVersion(file)))
-    deps <- if (length(which)) lapply(files, function(file) DESCRIPTIONFileDeps(file, which = which)) else NULL
+    desc_lines <- lapply(files, function(file) DESCRIPTIONFile(file))
+    versions <- DESCRIPTIONFileVersionV(desc_lines)
+    deps <- if (length(which)) lapply(desc_lines, function(lines) DESCRIPTIONFileDeps(lines, which = which)) else NULL
     cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
   })
   lengths <- unlist(lapply(out, function(x) NROW(x)))
@@ -500,5 +508,10 @@ whichToDILES <- function(which) {
   ret
 }
 
-.basePkgs <- unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
+.basePkgs <- # unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
+  c("base", "boot", "class", "cluster", "codetools", "compiler",
+    "datasets", "foreign", "graphics", "grDevices", "grid", "KernSmooth",
+    "lattice", "MASS", "Matrix", "methods", "mgcv", "nlme", "nnet",
+    "parallel", "rpart", "spatial", "splines", "stats", "stats4",
+    "survival", "tcltk", "tools", "translations", "utils")
 

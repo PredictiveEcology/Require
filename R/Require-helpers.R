@@ -175,7 +175,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
       # do GitHub second
       if (any(notCorrectVersions$repoLocation == "GitHub")) {
         notCorrectVersions <- getGitHubDESCRIPTION(notCorrectVersions)
-        notCorrectVersions[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersion(DESCFile)]
+        notCorrectVersions[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
         notCorrectVersions[repoLocation == "GitHub", compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
         notCorrectVersions[repoLocation == "GitHub", correctVersionAvail :=
                              .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
@@ -228,14 +228,22 @@ installFrom <- function(pkgDT) {
 
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
-DESCRIPTIONFileVersion <- function(file) {
+DESCRIPTIONFileVersionV <- function(file) {
+  origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+  on.exit({
+    Sys.setlocale(local = origLocal)
+  })
   out <- lapply(file, function(f) {
-    lines <- readLines(f);
-    Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+    if (length(f) == 1) {
+      lines <- readLines(f);
+    } else {
+      lines <- f
+    }
     on.exit(Sys.setlocale(locale = ""))
     vers_line <- lines[grep("^Version: *", lines)] # nolint
     gsub("Version: ", "", vers_line)
   })
+
   unlist(out)
 }
 
@@ -464,7 +472,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
       }
       if (any(libPathsVersTooOld)) {
         p <- pkgDT[Package == pkg]
-        libPathsVers <- DESCRIPTIONFileVersion(file.path(.libPaths()[1], pkg, "DESCRIPTION"))
+        libPathsVers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], pkg, "DESCRIPTION"))
         otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
         firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
                                 "The version in .libPaths() is ", libPathsVers)
@@ -621,7 +629,7 @@ installedVers <- function(pkgDT) {
     installedPkgsCurrent <- lapply(pkgs, function(p) {
       out <- tryCatch(find.package(p), error = function(x) NA)
       descV <- if (!is.na(out)) {
-        descV <- DESCRIPTIONFileVersion(file.path(out, "DESCRIPTION"))
+        descV <- DESCRIPTIONFileVersionV(file.path(out, "DESCRIPTION"))
         cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
       } else {
         cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
