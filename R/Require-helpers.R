@@ -464,7 +464,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
       }
       if (any(libPathsVersTooOld)) {
         p <- pkgDT[Package == pkg]
-        libPathsVers <- DESCRIPTIONFileVersion(file.path(.libPaths()[1], "data.table", "DESCRIPTION"))
+        libPathsVers <- DESCRIPTIONFileVersion(file.path(.libPaths()[1], pkg, "DESCRIPTION"))
         otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
         firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
                                 "The version in .libPaths() is ", libPathsVers)
