@@ -317,12 +317,14 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         names(installPkgNames) <- installPkgNames
         dots <- list(...)
         if (is.null(dots$dependencies))
-          dots$dependencies <- NA # This should be dealt with manually, but apparently not
+          dots$dependencies <- FALSE # This was NA; which means let install.packages do it. But, failed in some cases:
+        #  Failed when newer package already loaded, but not in .libPaths() -- occurs when `setLibPaths` is run after packages are loaded
 
-        ap <- available.packagesCached(repos, purge = FALSE)
+        # ap <- available.packagesCached(repos, purge = FALSE)
         warn <- tryCatch({
           out <- do.call(install.packages,
-                         append(append(list(installPkgNames, available = ap), install.packagesArgs),
+                         # using ap meant that it was messing up the src vs bin paths
+                         append(append(list(installPkgNames), install.packagesArgs), # removed , available = ap
                                 dots))
         }, warning = function(condition) condition)
 
