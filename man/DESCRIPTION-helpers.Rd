@@ -15,6 +15,9 @@ getGitHubDESCRIPTION(pkg)
 \arguments{
 \item{file}{A file path to a DESCRIPTION file}
 
+\item{other}{Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
+retrieved.}
+
 \item{pkg}{A character string with a GitHub package specification (c.f. remotes)}
 }
 \description{

@@ -165,9 +165,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
           data.table::setkeyv(oldAvailableVersions, c("Package", "mtime"))
           bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
 
-          aa <- oldAvailableVersions[, .(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
+          aa <- oldAvailableVersions[, list(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
                                                        .I[correctVersionAvail == TRUE & archiveSource == "Archive"] + 1)), by = Package]
-          desiredDates <- oldAvailableVersions[aa$nextRow, .(Package, newMtime = mtime - 60*60*24)]
+          desiredDates <- oldAvailableVersions[aa$nextRow, list(Package, newMtime = mtime - 60*60*24)]
 
 
           oldAvailableVersions <- desiredDates[bb, on = "Package"]
@@ -243,7 +243,7 @@ installFrom <- function(pkgDT) {
 DESCRIPTIONFileVersionV <- function(file) {
   origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   on.exit({
-    Sys.setlocale(local = origLocal)
+    Sys.setlocale(locale = origLocal)
   })
   out <- lapply(file, function(f) {
     if (length(f) == 1) {
@@ -259,10 +259,12 @@ DESCRIPTIONFileVersionV <- function(file) {
 
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
+#' @param other Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
+#'   retrieved.
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   on.exit({
-    Sys.setlocale(local = origLocal)
+    Sys.setlocale(locale = origLocal)
   })
   out <- lapply(file, function(f) {
     if (length(f) == 1) {
