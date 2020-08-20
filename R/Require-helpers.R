@@ -356,7 +356,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     hasRequireDeps <- toInstall$Package %in% extractPkgName(c("Require", pkgDep("Require")[[1]])) # remove
     if (any(hasRequireDeps)) {
       RequireDepsNeeded <- paste0("'", paste(toInstall$Package[hasRequireDeps], collapse = "', '"), "'")
-      stop(RequireDepsNeeded, " are needed, but are dependencies of Require and cannot be installed by Require.\n",
+      message(RequireDepsNeeded, " are needed, but are dependencies of Require and cannot be installed by Require.\n",
               "Please restart R and from a fresh R session, install.packages(c(",
               RequireDepsNeeded,"), lib = '",.libPaths()[1],"')")
     }
