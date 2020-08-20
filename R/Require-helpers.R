@@ -382,6 +382,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
           message("Installing the following packages who have version numbers specified, which are on CRAN; they may however only be available as source packages.",
                   # paste0(toInstall[installFrom == "CRAN" & !is.na(versionSpec), packageFullName], sep = "; "),
                   "\nIf asked if you would like to install from source, you will need to answer 'Yes' to get the correct version")
+        loadedAlready <- sapply(installPkgNames, isNamespaceLoaded)
+        installPkgNames <- names(loadedAlready)[!loadedAlready]
+        names(installPkgNames) <- installPkgNames
         warn <- tryCatch({
           out <- do.call(install.packages,
                          # using ap meant that it was messing up the src vs bin paths
@@ -781,8 +784,9 @@ available.packagesCached <- function(repos, purge) {
 
 currentCRANPkgDates <- function(pkgs) {
   if (!exists("currentCranDates", envir = .pkgEnv)) {
+    message("Getting dates of current CRAN packages")
     tf <- tempfile();
-    download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf)
+    download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE)
     avail <- readLines(tf)
     avail <- sapply(pkgs, function(pkg) grep(paste0("\\<", pkg, "_.*\\.tar\\.gz"), avail, value = TRUE))
     pkgsDateAvail <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", avail)

@@ -1,9 +1,9 @@
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-tmpdir <- #if (Sys.info()["user"] != "emcintir") {
+tmpdir <- if (Sys.info()["user"] != "emcintir") {
   file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-#} else {
-#  "~/TempLib5"
-#}
+} else {
+  "~/TempLib5"
+}
 suppressWarnings(dir.create(tmpdir))
 # repo <- chooseCRANmirror(ind = 1)
 # if (FALSE) {
@@ -176,6 +176,7 @@ if (interactive()) {
 
   i <- 0
   pkg <- pkgs[[1]] # redundant, but kept for interactive use
+ #}
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
