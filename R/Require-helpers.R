@@ -348,6 +348,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' \code{remotes::install_github}, and \code{remotes::install_version}.
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
+  browser(expr = exists("._doInstalls_0"))
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
 
@@ -417,6 +418,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       }
       Archive <- "Archive"
       if (any(Archive %in% toInstall$installFrom)) {
+        browser(expr = exists("._doInstalls_2"))
         message("installing older versions is still experimental and may cause package version conflicts")
         installPkgNames <- toInstall[installFrom == Archive]$Package
         sortedTopographically <- pkgDepTopoSort(installPkgNames)
@@ -429,35 +431,40 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
         installVersions <- toIn$OlderVersionsAvailable
 
-        warns <- list()
-
+        # warns <- list()
         dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
-        out <- Map(p = unname(installPkgNames), date = dateFromMRAN, v = installVersions, function(p, date, v, ...) {
-          warn <- list()
-          tryCatch(
-            install.packages(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)),
-            error = function(x) {
-              warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
-              return(p)
-            },
-            warning = function(w) {
-              w$message
-            })
-        })
-        out <- unlist(out)
-        if (length(out)) lapply(out, warning)
-
-
-        # out <- Map(p = unname(installPkgNames), v = installVersions, function(p, v, ...) {
-        #   warn <- list()
-        #   tryCatch(
-        #     ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
-        #     error = function(x) {
-        #       warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
-        #       return(p)
-        #     })
-        #   warn
-        # })
+        onMRAN <- dateFromMRAN > "2014-12-20"
+        if (any(onMRAN)) {
+          out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
+            warn <- list()
+            tryCatch(
+              install.packages(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)),
+              error = function(x) {
+                warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
+                return(p)
+              },
+              warning = function(w) {
+                w$message
+              })
+            warn
+          })
+          out <- unlist(out)
+          if (length(out)) lapply(out, warning)
+        }
+        if (any(!onMRAN)) {
+          out <- Map(p = unname(installPkgNames)[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
+            warn <- list()
+            tryCatch(
+              ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
+              error = function(x) {
+                warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
+                return(p)
+              })
+            warn
+          })
+          out <- unlist(out)
+          if (length(out)) lapply(out, warning)
+        }
         pkgDT <- updateInstalled(pkgDT, installPkgNames, warnings())
       }
       if (any("GitHub" %in% toInstall$installFrom)) {
