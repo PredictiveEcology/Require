@@ -11,9 +11,9 @@
 \usage{
 getPkgVersions(pkgDT, install = TRUE)
 
-getAvailable(pkgDT, purge = FALSE, repos = repos)
+getAvailable(pkgDT, purge = FALSE, repos = getOption("repos"))
 
-installFrom(pkgDT)
+installFrom(pkgDT, purge = FALSE, repos = getOption("repos"))
 
 doInstalls(
   pkgDT,

@@ -220,7 +220,8 @@ Require <- function(packages, packageVersionFile,
   if (is.null(list(...)$destdir)) {
     if (!is.null(getOption("Require.RPackageCache")))
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
-    install.packagesArgs <- append(list(destdir = getOption("Require.RPackageCache")), install.packagesArgs)
+    install.packagesArgs["destdir"] <- getOption("Require.RPackageCache")
+    install_githubArgs["destdir"]<- getOption("Require.RPackageCache")
   }
 
   if (!missing(packageVersionFile)) {
@@ -238,8 +239,8 @@ Require <- function(packages, packageVersionFile,
     }
     packages <- packages$Package
     which <- NULL
-    install_githubArgs <- list(dependencies = FALSE, upgrade = FALSE)
-    install.packagesArgs <- list(dependencies = FALSE)
+    install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
+    install.packagesArgs["dependencies"] = FALSE
     require <- FALSE
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }

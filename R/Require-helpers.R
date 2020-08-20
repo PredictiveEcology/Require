@@ -237,21 +237,40 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
 
   # Check for local copy of src or binary first
-  localFiles <- dir(getOption("Require.RPackageCache"))
-  if (length(localFiles)) {
-    versionNA <- is.na(pkgDT$Version)
-    neededVersions <- pkgDT[versionNA == FALSE & !is.na(installFrom)][, list(Package, Version)]
-    if (any(versionNA)) {
-      cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
-      cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
-      dontKnowVersion <- cachedAvailablePackages[pkgDT[versionNA == TRUE], on = "Package"][, list(Package, Version)]
-    }
-    neededVersions <- rbindlist(list(neededVersions, dontKnowVersion))
-    neededVersions[, neededFiles := paste0(neededVersions$Package, "_", neededVersions$Version)]
-    neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "Package"]
-    neededVersions <- neededVersions[!is.na(localFileName), list(Package, localFileName)]
-    if (NROW(neededVersions)) {
-      pkgDT[neededVersions, `:=`(installFrom = "Local", localFileName = localFileName), on = "Package"]
+  if (!is.null(getOption("Require.RPackageCache"))) {
+    localFiles <- dir(getOption("Require.RPackageCache"))
+    neededVersions <- pkgDT[!is.na(installFrom) & installFrom != "Fail"]
+    if (length(localFiles) && NROW(neededVersions)) {
+      set(neededVersions, NULL, "neededFiles", character(NROW(neededVersions)))
+      if (any(neededVersions$installFrom == "Archive")) {
+        neededVersions[installFrom == "Archive", neededFiles := paste0(Package, "_", OlderVersionsAvailable)]
+      }
+      if (any(neededVersions$installFrom == "CRAN" && "AvailableVersion" %in% colnames(pkgDT))) {
+        neededVersions[installFrom == "CRAN", neededFiles := paste0(Package, "_", AvailableVersion)]
+      }
+      otherPoss <- nchar(neededVersions$neededFiles) == 0
+      if (any(otherPoss)) {
+        browser()
+
+        # versionNA <- is.na(pkgDT$Version)
+        neededVersions <- neededVersions[!is.na(Version) & otherPoss]
+        if (NROW(neededVersions)) {
+          cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
+          cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
+          dontKnowVersion <- cachedAvailablePackages[pkgDT[versionNA == TRUE], on = "Package"][, list(Package, Version)]
+          neededVersions <- rbindlist(list(neededVersions, dontKnowVersion))
+          neededVersions[, neededFiles := paste0(Package, "_", Version)]
+        }
+
+      }
+
+      if (NROW(neededVersions)) {
+        neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "Package"]
+        neededVersions <- neededVersions[!is.na(localFileName), list(Package, localFileName)]
+        if (NROW(neededVersions)) {
+          pkgDT[neededVersions, `:=`(installFrom = "Local", localFileName = localFileName), on = "Package"]
+        }
+      }
     }
   }
 
@@ -371,6 +390,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   browser(expr = exists("._doInstalls_0"))
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
+    dots <- list(...)
 
     toInstall <- pkgDT[installed == FALSE  | !correctVersion]
     hasRequireDeps <- toInstall$Package %in% extractPkgName(c("Require", pkgDep("Require")[[1]])) # remove
@@ -393,13 +413,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         ord <- match(installPkgNames, toInstall[installFrom == installFromCur]$Package)
         toIn <- toInstall[installFrom == installFromCur][ord]
 
-        dots <- list(...)
         if (is.null(dots$dependencies) & is.null(install.packagesArgs$dependencies))
           dots$dependencies <- FALSE # This was NA; which means let install.packages do it. But, failed in some cases:
-        #  Failed when newer package already loaded, but not in .libPaths() -- occurs when `setLibPaths` is run after packages are loaded
-        loadedAlready <- sapply(toIn$Package, isNamespaceLoaded)
-        toIn <- toIn[loadedAlready == FALSE]
-        message("Using local cache of ", paste(toIn$Package, collapse = ", "))
+
+        message("Using local cache of ", paste(toIn$localFileName, collapse = ", "))
         installPkgNames <- normPath(file.path(getOption("Require.RPackageCache"), toIn$localFileName))
         names(installPkgNames) <- installPkgNames
 
@@ -520,8 +537,13 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (any(onMRAN)) {
           out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
             warn <- list()
+            browser()
             tryCatch(
-              install.packages(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)),
+              out <- do.call(install.packages,
+                             # using ap meant that it was messing up the src vs bin paths
+                             append(append(list(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)), install.packagesArgs), # removed , available = ap
+                                    dots)),
+              # install.packages(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date), ...),
               error = function(x) {
                 warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
                 return(p)
@@ -535,10 +557,16 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
           if (length(out)) lapply(out, warning)
         }
         if (any(!onMRAN)) {
-          out <- Map(p = unname(installPkgNames)[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
+          cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")# , TimeWarp/TimeWarp_1.0-7.tar.gz"
+          out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
             warn <- list()
+            p <- file.path(cranArchivePath, p)
             tryCatch(
-              ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
+              out <- do.call(install.packages,
+                             # using ap meant that it was messing up the src vs bin paths
+                             append(append(list(unname(p), repos = NULL), install.packagesArgs), # removed , available = ap
+                                    dots)),
+              # ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
               error = function(x) {
                 warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
                 return(p)

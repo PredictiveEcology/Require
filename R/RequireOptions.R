@@ -14,19 +14,12 @@
 #'
 #' The following options are likely of interest to most users:
 #' \describe{
-#'   \item{\code{ask}}{
-#'     Default: \code{TRUE}. Used in \code{\link{clearCache}} and \code{\link{keepCache}}.
+#'   \item{\code{RPackageCache}}{
+#'     Default: \code{NULL}. If a folder is provided, then binary and source packages will
+#'       be cached here. Subsequent downloads of same package will use local copy.
 #'   }
 #' }
 #'
-#' @section Advanced:
-#' The following options are likely not needed by a user.
-#' \describe{
-#'   \item{\code{cloudChecksumsFilename}}{
-#'     Default: \code{file.path(dirname(.reproducibleTempCacheDir()), "checksums.rds")}.
-#'     Used in \code{\link{cloudCache}}
-#'   }
-#' }
 RequireOptions <- function() {
   list(Require.RPackageCache = "~/._RPackageCache" # nolint
   )
