@@ -40,6 +40,11 @@ utils::globalVariables(c(
 #' \code{Require} with all packages, then \code{pkgSnapshot}. If a
 #' \code{libPaths} is used, it must be used in both functions.
 #'
+#' When installing new packages, `Require` will put all source and binary files
+#' in `getOption("Require.RPackageCache")` whose default is `~/._RPackageCache`
+#' and will reuse them if needed. To turn
+#' off this feature, set `option("Require.RPackageCache" = NULL)`.
+#'
 #' This function works best if all required packages are called within one
 #' \code{Require} call, as all dependencies can be identified together, and all
 #' package versions will be saved automatically (with \code{standAlone = TRUE}
@@ -212,6 +217,12 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
+  if (is.null(list(...)$destdir)) {
+    if (!is.null(getOption("Require.RPackageCache")))
+      checkPath(getOption("Require.RPackageCache"), create = TRUE)
+    install.packagesArgs <- append(list(destdir = getOption("Require.RPackageCache")), install.packagesArgs)
+  }
+
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
     if (NROW(packages)) {
@@ -232,6 +243,7 @@ Require <- function(packages, packageVersionFile,
     require <- FALSE
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
+
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
   origPackagesHaveNames <- nchar(names(packages)) > 0
@@ -283,7 +295,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
       pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
-      pkgDT <- installFrom(pkgDT)
+      pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
       pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                           install.packagesArgs = install.packagesArgs,
                           install = install, ...)
