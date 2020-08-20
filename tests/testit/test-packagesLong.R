@@ -182,7 +182,7 @@ if (interactive()) {
 
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     #if (i == 11) ._Require_0 <<- 1
-    outFromRequire <- Require(pkg, repos = repo, standAlone = FALSE)
+    outFromRequire <- Require(pkg, standAlone = FALSE)
     out <- Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
     have <- attr(out, "Require")
