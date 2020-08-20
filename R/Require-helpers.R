@@ -433,7 +433,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
         # warns <- list()
         dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
-        onMRAN <- dateFromMRAN > "2014-12-20"
+        onMRAN <- dateFromMRAN > "2015-06-06"
         if (any(onMRAN)) {
           out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
             warn <- list()

@@ -221,7 +221,7 @@ Require <- function(packages, packageVersionFile,
     }
     if (any(grep("github", tolower(colnames(packages))))) {
       haveGit <- nchar(packages[["GithubSHA1"]]) > 0
-      if (sum(haveGit)) {
+      if (sum(haveGit, na.rm = TRUE)) {
         packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1) )]
       }
     }
