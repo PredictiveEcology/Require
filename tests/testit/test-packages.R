@@ -80,7 +80,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                           install = "force")
   testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
                            packageVersion("TimeWarp", lib.loc = dir6)))
-  detach("package:TimeWarp", unload = TRUE)
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
 

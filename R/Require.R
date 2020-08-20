@@ -230,6 +230,7 @@ Require <- function(packages, packageVersionFile,
     install_githubArgs <- list(dependencies = FALSE, upgrade = FALSE)
     install.packagesArgs <- list(dependencies = FALSE)
     require <- FALSE
+    message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
