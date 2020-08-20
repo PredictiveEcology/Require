@@ -147,10 +147,10 @@ testit::assert(length(out) == 0)
 # Trigger the save available.packages and archiveAvailable
 warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
                                 install = "force"),
-                 warning = function(x) x)
+                 error = function(x) x)
 warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
                                 install = "force"),
-                 warning = function(x) x)
+                 error = function(x) x)
 if (interactive()) {
   warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
                                   install = "force"),
