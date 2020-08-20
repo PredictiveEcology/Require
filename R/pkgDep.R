@@ -373,9 +373,9 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
     for (i in seq_along(aa)) {
       dif <- setdiff(seq_along(aa), newOrd)
       for (j in dif) {
-        overlapFull <- aa[[j]] %in% names(aa)[-i]
-        overlap <- aa[[j]] %in% names(aa)[dif]
-        overlapPkgs <- aa[[j]][overlapFull]
+        overlapFull <- extractPkgName(aa[[j]]) %in% extractPkgName(names(aa)[-i])
+        overlap <- extractPkgName(aa[[j]]) %in% extractPkgName(names(aa)[dif])
+        overlapPkgs <- extractPkgName(aa[[j]])[overlapFull]
         isCorrectOrder <- !any(overlap)
         if (isCorrectOrder) {
           # bb[names(aa)[j]] <- list(overlapPkgs)
@@ -486,7 +486,12 @@ whichToDILES <- function(which) {
   which
 }
 
-.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo")) {
+.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL) {
+  if (!is.null(other))
+    if (any(grepl("github", tolower(other)))) {
+      other <- c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")
+    }
+
   out <- lapply(lib.loc, function(path) {
     dirs <- dir(path, full.names = TRUE)
     areDirs <- dir.exists(dirs)
@@ -497,7 +502,16 @@ whichToDILES <- function(which) {
     desc_lines <- lapply(files, function(file) DESCRIPTIONFile(file))
     versions <- DESCRIPTIONFileVersionV(desc_lines)
     deps <- if (length(which)) lapply(desc_lines, function(lines) DESCRIPTIONFileDeps(lines, which = which)) else NULL
-    cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
+    if (!is.null(other)) {
+      names(other) <- other
+      others <- lapply(other, function(oth) DESCRIPTIONFileOtherV(desc_lines, other = oth))
+      # shas <- DESCRIPTIONFileOtherV(desc_lines)
+    }
+    mat <- cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
+    if (!is.null(other)) {
+      mat <- cbind(mat, as.data.frame(others))
+    }
+    mat
   })
   lengths <- unlist(lapply(out, function(x) NROW(x)))
   out <- do.call(rbind, out)
@@ -505,6 +519,10 @@ whichToDILES <- function(which) {
         "Version" = out[, "Version"])
   if (length(which))
     ret <- cbind(ret, "Dependencies" = out[, "Depends"])
+  if (!is.null(other)) {
+    ncolBefore <- NCOL(ret)
+    ret <- cbind(ret, out[, other])
+  }
   ret
 }
 

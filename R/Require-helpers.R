@@ -105,6 +105,7 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
 #'
 #' @export
 #' @importFrom utils compareVersion download.file tail
+#' @importFrom data.table setkeyv
 #' @rdname Require-internals
 getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
   if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)])) {
@@ -127,7 +128,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
       }
 
       # do Older Versions
-
       needOlder <- notCorrectVersions$correctVersionAvail == FALSE & grepl("==|<=|<", notCorrectVersions$inequality)
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
       if (any(needOlderNotGH)) {
@@ -146,7 +146,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
         }
         oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
         # delete unwanted columns
-        set(oldAvailableVersions, NULL, c("size", "isdir", "mode", "mtime",
+        set(oldAvailableVersions, NULL, c("size", "isdir", "mode", #"mtime",
                                           "ctime", "atime", "uid", "gid", "uname", "grname"),
             NULL)
         setDT(oldAvailableVersions)
@@ -154,13 +154,25 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = repos) {
         needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
         oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
 
-        oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE]
+        oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE, allow.cartesian = TRUE]
         oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
         oldAvailableVersions[, correctVersionAvail :=
                                .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
         if (any(oldAvailableVersions$correctVersionAvail)) {
           oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
-          oldAvailableVersions <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
+          currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
+          oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
+          data.table::setkeyv(oldAvailableVersions, c("Package", "mtime"))
+          bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
+
+          aa <- oldAvailableVersions[, .(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
+                                                       .I[correctVersionAvail == TRUE & archiveSource == "Archive"] + 1)), by = Package]
+          desiredDates <- oldAvailableVersions[aa$nextRow, .(Package, newMtime = mtime - 60*60*24)]
+
+
+          oldAvailableVersions <- desiredDates[bb, on = "Package"]
+          oldAvailableVersions[, mtime := newMtime]
+
           oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
           oldAvailableVersions[, repoLocation := archiveSource]
           setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
@@ -239,11 +251,30 @@ DESCRIPTIONFileVersionV <- function(file) {
     } else {
       lines <- f
     }
-    on.exit(Sys.setlocale(locale = ""))
-    vers_line <- lines[grep("^Version: *", lines)] # nolint
-    gsub("Version: ", "", vers_line)
+      vers_line <- lines[grep("^Version: *", lines)] # nolint
+      gsub("Version: ", "", vers_line)
   })
+  unlist(out)
+}
 
+#' @rdname DESCRIPTION-helpers
+#' @param file A file path to a DESCRIPTION file
+DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
+  origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+  on.exit({
+    Sys.setlocale(local = origLocal)
+  })
+  out <- lapply(file, function(f) {
+    if (length(f) == 1) {
+      lines <- readLines(f);
+    } else {
+      lines <- f
+    }
+    vers_line <- lines[grep(paste0("^",other,": *"), lines)] # nolint
+    out <- gsub(paste0(other, ": "), "", vers_line)
+    if (length(out) == 0) out <- ""
+    out
+  })
   unlist(out)
 }
 
@@ -319,16 +350,35 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       (isTRUE(install) || install == "force")) {
 
     toInstall <- pkgDT[installed == FALSE  | !correctVersion]
+    hasRequireDeps <- toInstall$Package %in% extractPkgName(c("Require", pkgDep("Require")[[1]])) # remove
+    if (any(hasRequireDeps)) {
+      RequireDepsNeeded <- paste0("'", paste(toInstall$Package[hasRequireDeps], collapse = "', '"), "'")
+      stop(RequireDepsNeeded, " are needed, but are dependencies of Require and cannot be installed by Require.\n",
+              "Please restart R and from a fresh R session, install.packages(c(",
+              RequireDepsNeeded,"), lib = '",.libPaths()[1],"')")
+    }
     if (any(!toInstall$installFrom %in% "Fail")) {
       if (any("CRAN" %in% toInstall$installFrom)) {
         installPkgNames <- toInstall[installFrom == "CRAN"]$Package
+
+        sortedTopographically <- pkgDepTopoSort(installPkgNames)
+        installPkgNames <- names(sortedTopographically)
+
         names(installPkgNames) <- installPkgNames
+
+        ord <- match(installPkgNames, toInstall[installFrom == "CRAN"]$Package)
+        toIn <- toInstall[installFrom == "CRAN"][ord]
+
         dots <- list(...)
-        if (is.null(dots$dependencies))
+        if (is.null(dots$dependencies) & is.null(install.packagesArgs$dependencies))
           dots$dependencies <- FALSE # This was NA; which means let install.packages do it. But, failed in some cases:
         #  Failed when newer package already loaded, but not in .libPaths() -- occurs when `setLibPaths` is run after packages are loaded
 
         # ap <- available.packagesCached(repos, purge = FALSE)
+        if (NROW(toIn[!is.na(versionSpec)]))
+          message("Installing the following packages who have version numbers specified, which are on CRAN; they may however only be available as source packages.",
+                  # paste0(toInstall[installFrom == "CRAN" & !is.na(versionSpec), packageFullName], sep = "; "),
+                  "\nIf asked if you would like to install from source, you will need to answer 'Yes' to get the correct version")
         warn <- tryCatch({
           out <- do.call(install.packages,
                          # using ap meant that it was messing up the src vs bin paths
@@ -363,6 +413,51 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
           stop(stopMess)
         }
       }
+      Archive <- "Archive"
+      if (any(Archive %in% toInstall$installFrom)) {
+        message("installing older versions is still experimental and may cause package version conflicts")
+        installPkgNames <- toInstall[installFrom == Archive]$Package
+        sortedTopographically <- pkgDepTopoSort(installPkgNames)
+        installPkgNames <- names(sortedTopographically)
+
+        names(installPkgNames) <- installPkgNames
+
+        ord <- match(installPkgNames, toInstall[installFrom == Archive]$Package)
+        toIn <- toInstall[installFrom == Archive][ord]
+
+        installVersions <- toIn$OlderVersionsAvailable
+
+        warns <- list()
+
+        dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
+        out <- Map(p = unname(installPkgNames), date = dateFromMRAN, v = installVersions, function(p, date, v, ...) {
+          warn <- list()
+          tryCatch(
+            install.packages(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)),
+            error = function(x) {
+              warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
+              return(p)
+            },
+            warning = function(w) {
+              w$message
+            })
+        })
+        out <- unlist(out)
+        if (length(out)) lapply(out, warning)
+
+
+        # out <- Map(p = unname(installPkgNames), v = installVersions, function(p, v, ...) {
+        #   warn <- list()
+        #   tryCatch(
+        #     ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
+        #     error = function(x) {
+        #       warn <<- paste0("Version ", v, " of ", p, " could not be installed; perhaps try a newer version")
+        #       return(p)
+        #     })
+        #   warn
+        # })
+        pkgDT <- updateInstalled(pkgDT, installPkgNames, warnings())
+      }
       if (any("GitHub" %in% toInstall$installFrom)) {
         gitPkgNames <- toInstall[installFrom == "GitHub"]
         out5 <- install_githubV(gitPkgNames, install_githubArgs = install_githubArgs, ...)
@@ -374,17 +469,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       #                                     versions = toInstall[installFrom == "Versions"]$OlderVersionsAvailable)
       #   pkgDT <- updateInstalled(pkgDT, installPkgNames, warnings())
       # }
-      Archive <- "Archive"
-      if (any(Archive %in% toInstall$installFrom)) {
-        message("installing older versions is still experimental and may cause package version conflicts")
-        installPkgNames <- toInstall[installFrom == Archive]$Package
-        names(installPkgNames) <- installPkgNames
-        installVersions <- toInstall[installFrom == Archive]$OlderVersionsAvailable
-        out <- Map(p = installPkgNames, v = installVersions, function(p, v, ...) {
-          do.call(remotes::install_version, list(package = p, version = v, ...))
-        })
-        pkgDT <- updateInstalled(pkgDT, installPkgNames, warnings())
-      }
     }
     if (NROW(pkgDT[installFrom == "Fail"])) {
       keepCols <- c("packageFullName", "installed", "correctVersion", "AvailableVersion")
@@ -531,7 +615,8 @@ archiveVersionsAvailable <- function(package, repos) {
       return(info)
     }
   }
-  stop(sprintf("couldn't find package '%s'", package))
+  warning(sprintf("couldn't find package '%s'", package))
+  return(info)
 }
 
 #' GitHub specific helpers
@@ -562,11 +647,19 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), ...) {
     gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
   }
   dots <- list(...)
-  if (is.null(dots$dependencies))
+  if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
     dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
   #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
   #  which has R.oo
+  sortedTopographically <- pkgDepTopoSort(gitPkgNames$packageFullName)
+  installPkgNames <- names(sortedTopographically)
+
+  names(installPkgNames) <- installPkgNames
+
+  ord <- match(extractPkgName(installPkgNames), gitPkgNames$Package)
+  gitPkgNames <- gitPkgNames[ord]
+
   gitPkgs <- trimVersionNumber(gitPkgNames$packageFullName)
   names(gitPkgs) <- gitPkgs
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
@@ -627,7 +720,7 @@ installedVers <- function(pkgDT) {
     pkgs <- unique(pkgDT$Package)
     names(pkgs) <- pkgs
     installedPkgsCurrent <- lapply(pkgs, function(p) {
-      out <- tryCatch(find.package(p), error = function(x) NA)
+      out <- tryCatch(find.package(p, lib.loc = .libPaths()), error = function(x) NA)
       descV <- if (!is.na(out)) {
         descV <- DESCRIPTIONFileVersionV(file.path(out, "DESCRIPTION"))
         cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
@@ -675,4 +768,19 @@ available.packagesCached <- function(repos, purge) {
   } else {
     get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
   }
+}
+
+currentCRANPkgDates <- function(pkgs) {
+  if (!exists("currentCranDates", envir = .pkgEnv)) {
+    tf <- tempfile();
+    download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf)
+    avail <- readLines(tf)
+    avail <- sapply(pkgs, function(pkg) grep(paste0("\\<", pkg, "_.*\\.tar\\.gz"), avail, value = TRUE))
+    pkgsDateAvail <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", avail)
+    currentCranDates <- data.table::data.table(Package = names(pkgsDateAvail), mtime = as.POSIXct(pkgsDateAvail))
+    assign("currentCranDates", currentCranDates, envir = .pkgEnv)
+  } else {
+    currentCranDates <- get("currentCranDates", envir = .pkgEnv)
+  }
+  currentCranDates
 }

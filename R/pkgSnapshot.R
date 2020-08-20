@@ -13,6 +13,7 @@
 #'
 #' @inheritParams Require
 #' @importFrom utils write.table
+#' @importFrom data.table fwrite
 #' @examples
 #' pkgSnapFile <- tempfile()
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
@@ -25,21 +26,20 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
   origLibPaths <- setLibPaths(libPaths, standAlone)
   on.exit({.libPaths(origLibPaths)}, add = TRUE)
 
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character()))
-  instPkgs <- ip$Package
-  instVers <- ip$Version
-  names(instPkgs) <- instPkgs
-  names(instVers) <- instPkgs
-
-  out <- .pkgSnapshot(names(instVers), instVers, packageVersionFile)
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha"))
+  # browser()
+  # instPkgs <- ip$Package
+  # instVers <- ip$Version
+  # GitHub <- ip
+  # names(instPkgs) <- instPkgs
+  # names(instVers) <- instPkgs
+  # names(instShas) <- instPkgs
+  # df <- data.frame(names(instVers), unlist(instVers), stringsAsFactors = FALSE, row.names = NULL)
+  # colnames(df) <- c("instPkgs", "instVers")
+  # if (sum(nchar(instShas)) > 0)
+  #   df <- data.frame(df, "instShas" = unlist(instShas))
+  fwrite(ip, file = packageVersionFile, row.names = FALSE)
   message("package version file saved in ",packageVersionFile)
-  return(invisible(out))
+  return(invisible(ip))
 }
 
-#' @keywords internal
-.pkgSnapshot <- function(instPkgs, instVers, packageVersionFile = "._packageVersionsAuto.txt") {
-  browser(expr = exists("aaaa"))
-  inst <- data.frame(instPkgs, instVers = unlist(instVers), stringsAsFactors = FALSE)
-  write.table(inst, file = packageVersionFile, row.names = FALSE)
-  inst
-}

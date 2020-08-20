@@ -209,17 +209,28 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
   browser(expr = exists("._Require_0"))
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  which <- whichToDILES(doDeps)
+
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
-    packages <- if (NROW(packages)) {
-      paste0(packages$instPkgs, " (==", packages$instVers, ")")
+    if (NROW(packages)) {
+      set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
     } else {
       character()
     }
+    if (any(grep("github", tolower(colnames(packages))))) {
+      haveGit <- nchar(packages[["GithubSHA1"]]) > 0
+      if (sum(haveGit)) {
+        packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1) )]
+      }
+    }
+    packages <- packages$Package
+    which <- NULL
+    install_githubArgs <- list(dependencies = FALSE, upgrade = FALSE)
+    install.packagesArgs <- list(dependencies = FALSE)
+    require <- FALSE
   }
-
-  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
-  which <- whichToDILES(doDeps)
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
   origPackagesHaveNames <- nchar(names(packages)) > 0
@@ -238,8 +249,8 @@ Require <- function(packages, packageVersionFile,
 
   if (missing(libPaths))
     libPaths <- .libPaths()
-  origLibPaths <- setLibPaths(libPaths, standAlone)
-  on.exit({setLibPaths(origLibPaths)}, add = TRUE)
+  suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
+  on.exit({suppressMessages(setLibPaths(origLibPaths))}, add = TRUE)
 
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
