@@ -132,18 +132,31 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
       if (any(needOlderNotGH)) {
 
-        oldAvailableVersions <- if (!exists("oldAvailableVersions", envir = .pkgEnv) || isTRUE(purge)) {
-          pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
-          names(pkg) <- pkg
-          ava <- lapply(pkg, function(p) {
+        pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
+        oldAvailableVersions <- if (!is.null(.pkgEnv$oldAvailableVersions)) {.pkgEnv$oldAvailableVersions} else {list()}
+        pkgsInOAV <- pkg %in% names(oldAvailableVersions)
+        if (!all(pkgsInOAV)) {
+          pkgs <- pkg[!pkgsInOAV]
+          names(pkgs) <- pkgs
+          ava <- lapply(pkgs, function(p) {
             as.data.table(archiveVersionsAvailable(p, repos = getOption("repos")), keep.rownames = "PackageUrl")
           })
-          assign("oldAvailableVersions", ava, envir = .pkgEnv)
-          ava
-          # versions::available.versions(notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package)
-        } else {
-          get("oldAvailableVersions", envir = .pkgEnv, inherits = FALSE)
+          oldAvailableVersions <- append(oldAvailableVersions, ava)
+          assign("oldAvailableVersions", oldAvailableVersions, envir = .pkgEnv)
         }
+
+        # oldAvailableVersions <- if (!exists("oldAvailableVersions", envir = .pkgEnv) || isTRUE(purge)) {
+        #   names(pkg) <- pkg
+        #   ava <- lapply(pkg, function(p) {
+        #     as.data.table(archiveVersionsAvailable(p, repos = getOption("repos")), keep.rownames = "PackageUrl")
+        #   })
+        #   assign("oldAvailableVersions", ava, envir = .pkgEnv)
+        #   ava
+        #   # versions::available.versions(notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package)
+        # } else {
+        #   get("oldAvailableVersions", envir = .pkgEnv, inherits = FALSE)
+        # }
+
         oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
         # delete unwanted columns
         set(oldAvailableVersions, NULL, c("size", "isdir", "mode", #"mtime",
@@ -250,9 +263,6 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
       otherPoss <- nchar(neededVersions$neededFiles) == 0
       if (any(otherPoss)) {
-        browser()
-
-        # versionNA <- is.na(pkgDT$Version)
         neededVersions <- neededVersions[!is.na(Version) & otherPoss]
         if (NROW(neededVersions)) {
           cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
