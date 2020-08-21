@@ -517,12 +517,12 @@ whichToDILES <- function(which) {
   lengths <- unlist(lapply(out, function(x) NROW(x)))
   out <- do.call(rbind, out)
   ret <- cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
-        "Version" = out[, "Version"])
+        "Version" = out[, "Version"], stringsAsFactors = FALSE)
   if (length(which))
-    ret <- cbind(ret, "Dependencies" = out[, "Depends"])
+    ret <- cbind(ret, "Dependencies" = out[, "Depends"], stringsAsFactors = FALSE)
   if (!is.null(other)) {
     ncolBefore <- NCOL(ret)
-    ret <- cbind(ret, out[, other])
+    ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
   }
   ret
 }

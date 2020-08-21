@@ -551,7 +551,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (any(onMRAN)) {
           out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
             warn <- list()
-            browser()
             tryCatch(
               out <- do.call(install.packages,
                              # using ap meant that it was messing up the src vs bin paths
