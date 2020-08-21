@@ -176,13 +176,14 @@ if (interactive()) {
 
   i <- 0
   pkg <- pkgs[[1]] # redundant, but kept for interactive use
+ #}
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
 
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     #if (i == 11) ._Require_0 <<- 1
-    outFromRequire <- Require(pkg, repos = repo, standAlone = FALSE)
+    outFromRequire <- Require(pkg, standAlone = FALSE)
     out <- Require(pkg)
     testit::assert(all.equal(outFromRequire, out))
     have <- attr(out, "Require")
@@ -220,3 +221,5 @@ if (interactive()) {
     }
   }
 }
+
+# unlink(tmpdir, recursive = TRUE)

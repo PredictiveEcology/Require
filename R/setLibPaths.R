@@ -46,5 +46,6 @@ setLibPaths <- function(libPaths, standAlone = TRUE) {
 
   environment(shim_fun) <- shim_env
   shim_fun(unique(libPaths))
-  return(oldLibPaths)
+  message(".libPaths() is now: ", paste(.libPaths(), collapse = ", "))
+  return(invisible(oldLibPaths))
 }

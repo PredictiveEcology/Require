@@ -40,6 +40,11 @@ utils::globalVariables(c(
 #' \code{Require} with all packages, then \code{pkgSnapshot}. If a
 #' \code{libPaths} is used, it must be used in both functions.
 #'
+#' When installing new packages, `Require` will put all source and binary files
+#' in `getOption("Require.RPackageCache")` whose default is `~/._RPackageCache`
+#' and will reuse them if needed. To turn
+#' off this feature, set `option("Require.RPackageCache" = NULL)`.
+#'
 #' This function works best if all required packages are called within one
 #' \code{Require} call, as all dependencies can be identified together, and all
 #' package versions will be saved automatically (with \code{standAlone = TRUE}
@@ -209,17 +214,37 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
   browser(expr = exists("._Require_0"))
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  which <- whichToDILES(doDeps)
+
+  if (is.null(list(...)$destdir)) {
+    if (!is.null(getOption("Require.RPackageCache")))
+      checkPath(getOption("Require.RPackageCache"), create = TRUE)
+    install.packagesArgs["destdir"] <- getOption("Require.RPackageCache")
+    install_githubArgs["destdir"]<- getOption("Require.RPackageCache")
+  }
+
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
-    packages <- if (NROW(packages)) {
-      paste0(packages$instPkgs, " (==", packages$instVers, ")")
+    if (NROW(packages)) {
+      set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
     } else {
       character()
     }
+    if (any(grep("github", tolower(colnames(packages))))) {
+      haveGit <- nchar(packages[["GithubSHA1"]]) > 0
+      if (sum(haveGit, na.rm = TRUE)) {
+        packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1) )]
+      }
+    }
+    packages <- packages$Package
+    which <- NULL
+    install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
+    install.packagesArgs["dependencies"] = FALSE
+    require <- FALSE
+    message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
 
-  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
-  which <- whichToDILES(doDeps)
 
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
   origPackagesHaveNames <- nchar(names(packages)) > 0
@@ -238,8 +263,8 @@ Require <- function(packages, packageVersionFile,
 
   if (missing(libPaths))
     libPaths <- .libPaths()
-  origLibPaths <- setLibPaths(libPaths, standAlone)
-  on.exit({setLibPaths(origLibPaths)}, add = TRUE)
+  suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
+  on.exit({suppressMessages(setLibPaths(origLibPaths))}, add = TRUE)
 
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
@@ -271,7 +296,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- getPkgVersions(pkgDT, install = install)
       pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
-      pkgDT <- installFrom(pkgDT)
+      pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
       pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                           install.packagesArgs = install.packagesArgs,
                           install = install, ...)

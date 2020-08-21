@@ -1,5 +1,6 @@
 utils::globalVariables(c(
-  "PackageTrimmed", "hasVers", "atLeastOneWithVersionSpec", "maxVersionSpec", "Current"
+  "PackageTrimmed", "hasVers", "atLeastOneWithVersionSpec", "maxVersionSpec", "Current",
+  "GithubRepo", "GithubSHA1", "GithubUsername", "mtime", "newMtime"
 ))
 
 #' Determine package dependencies
@@ -373,9 +374,9 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
     for (i in seq_along(aa)) {
       dif <- setdiff(seq_along(aa), newOrd)
       for (j in dif) {
-        overlapFull <- aa[[j]] %in% names(aa)[-i]
-        overlap <- aa[[j]] %in% names(aa)[dif]
-        overlapPkgs <- aa[[j]][overlapFull]
+        overlapFull <- extractPkgName(aa[[j]]) %in% extractPkgName(names(aa)[-i])
+        overlap <- extractPkgName(aa[[j]]) %in% extractPkgName(names(aa)[dif])
+        overlapPkgs <- extractPkgName(aa[[j]])[overlapFull]
         isCorrectOrder <- !any(overlap)
         if (isCorrectOrder) {
           # bb[names(aa)[j]] <- list(overlapPkgs)
@@ -431,7 +432,10 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
 
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
                                 keepVersionNumber = TRUE) {
-  lines <- readLines(desc_path)
+  lines <- if (length(desc_path) == 1)
+    readLines(desc_path)
+  else
+    lines <- desc_path
   Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   on.exit(Sys.setlocale(locale = ""))
   sl <- list()
@@ -461,6 +465,10 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   needed
 }
 
+DESCRIPTIONFile <- function(desc_path) {
+  lines <- readLines(desc_path)
+}
+
 whichToDILES <- function(which) {
   if (identical("all", which) || is.null(which)) {
     which <- list(c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances"))
@@ -479,7 +487,12 @@ whichToDILES <- function(which) {
   which
 }
 
-.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo")) {
+.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL) {
+  if (!is.null(other))
+    if (any(grepl("github", tolower(other)))) {
+      other <- c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")
+    }
+
   out <- lapply(lib.loc, function(path) {
     dirs <- dir(path, full.names = TRUE)
     areDirs <- dir.exists(dirs)
@@ -487,18 +500,37 @@ whichToDILES <- function(which) {
     files <- file.path(dirs, "DESCRIPTION")
     filesExist <- file.exists(files)
     files <- files[filesExist]
-    versions <- unlist(lapply(files, function(file) DESCRIPTIONFileVersion(file)))
-    deps <- if (length(which)) lapply(files, function(file) DESCRIPTIONFileDeps(file, which = which)) else NULL
-    cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
+    desc_lines <- lapply(files, function(file) DESCRIPTIONFile(file))
+    versions <- DESCRIPTIONFileVersionV(desc_lines)
+    deps <- if (length(which)) lapply(desc_lines, function(lines) DESCRIPTIONFileDeps(lines, which = which)) else NULL
+    if (!is.null(other)) {
+      names(other) <- other
+      others <- lapply(other, function(oth) DESCRIPTIONFileOtherV(desc_lines, other = oth))
+      # shas <- DESCRIPTIONFileOtherV(desc_lines)
+    }
+    mat <- cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
+    if (!is.null(other)) {
+      mat <- cbind(mat, as.data.frame(others, stringsAsFactors = FALSE), stringsAsFactors = FALSE)
+    }
+    mat
   })
   lengths <- unlist(lapply(out, function(x) NROW(x)))
   out <- do.call(rbind, out)
   ret <- cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
         "Version" = out[, "Version"])
   if (length(which))
-    ret <- cbind(ret, "Dependencies" = out[, "Depends"])
+    ret <- cbind(ret, "Dependencies" = out[, "Depends"], stringsAsFactors = FALSE)
+  if (!is.null(other)) {
+    ncolBefore <- NCOL(ret)
+    ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
+  }
   ret
 }
 
-.basePkgs <- unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
+.basePkgs <- # unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
+  c("base", "boot", "class", "cluster", "codetools", "compiler",
+    "datasets", "foreign", "graphics", "grDevices", "grid", "KernSmooth",
+    "lattice", "MASS", "Matrix", "methods", "mgcv", "nlme", "nnet",
+    "parallel", "rpart", "spatial", "splines", "stats", "stats4",
+    "survival", "tcltk", "tools", "translations", "utils")
 
