@@ -1,9 +1,10 @@
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-tmpdir <- if (Sys.info()["user"] != "emcintir") {
-  file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-} else {
-  "~/TempLib5"
+#tmpdir <-
+if (Sys.info()["user"] == "emcintir") {
+  options(Require.RPackageCache = "~/._RPackageCache")
 }
+tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+
 suppressWarnings(dir.create(tmpdir))
 # repo <- chooseCRANmirror(ind = 1)
 # if (FALSE) {
@@ -206,7 +207,7 @@ if (interactive()) {
     # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
     if (length(out2)) {
       out2 <- out2[out2]
-      normalRequire2 <- normalRequire2[!is.na(normalRequire2)]
+      normalRequire2 <- normalRequire2[!is.na(normalRequire2)][normalRequire2]
       browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
       testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
       runTests(have, pkg)

@@ -1,5 +1,10 @@
-if (Sys.info()["user"] != "emcintir")
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
+if (Sys.info()["user"] == "emcintir") {
+  options(Require.RPackageCache = "~/._RPackageCache")
+} else {
   testit::assert(identical(isInteractive(), interactive()))
+}
+
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
 #assignInNamespace("isInteractive", isInteractive, ns = "Require")

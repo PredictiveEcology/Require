@@ -21,6 +21,6 @@
 #' }
 #'
 RequireOptions <- function() {
-  list(Require.RPackageCache = "~/._RPackageCache" # nolint
+  list(Require.RPackageCache = NULL # "~/._RPackageCache" # nolint
   )
 }

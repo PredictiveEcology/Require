@@ -41,9 +41,9 @@ utils::globalVariables(c(
 #' \code{libPaths} is used, it must be used in both functions.
 #'
 #' When installing new packages, `Require` will put all source and binary files
-#' in `getOption("Require.RPackageCache")` whose default is `~/._RPackageCache`
+#' in `getOption("Require.RPackageCache")` whose default is `NULL`
 #' and will reuse them if needed. To turn
-#' off this feature, set `option("Require.RPackageCache" = NULL)`.
+#' on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
 #'
 #' This function works best if all required packages are called within one
 #' \code{Require} call, as all dependencies can be identified together, and all
@@ -220,8 +220,10 @@ Require <- function(packages, packageVersionFile,
   if (is.null(list(...)$destdir)) {
     if (!is.null(getOption("Require.RPackageCache")))
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
-    install.packagesArgs["destdir"] <- getOption("Require.RPackageCache")
-    install_githubArgs["destdir"]<- getOption("Require.RPackageCache")
+    install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
+    install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
+  } else {
+    grep()
   }
 
   if (!missing(packageVersionFile)) {
