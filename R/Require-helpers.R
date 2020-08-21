@@ -294,10 +294,10 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersionV <- function(file) {
-  origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
-  on.exit({
-    Sys.setlocale(locale = origLocal)
-  })
+  #origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+  #on.exit({
+  #  Sys.setlocale(locale = origLocal)
+  #})
   out <- lapply(file, function(f) {
     if (length(f) == 1) {
       lines <- readLines(f);
@@ -315,10 +315,10 @@ DESCRIPTIONFileVersionV <- function(file) {
 #' @param other Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
 #'   retrieved.
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
-  origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
-  on.exit({
-    Sys.setlocale(locale = origLocal)
-  })
+  # origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+  # on.exit({
+  #   Sys.setlocale(locale = origLocal)
+  # })
   out <- lapply(file, function(f) {
     if (length(f) == 1) {
       lines <- readLines(f);
