@@ -90,7 +90,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
   testit::assert(is.data.frame(out))
   testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
-  testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
+  out1 <- data.table::as.data.table(out)
+  testit::assert(isTRUE(all.equal(out1, pkgSnapFileRes)))
 
   # Skip on CRAN
   dir3 <- tempdir2("test3")

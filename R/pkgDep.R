@@ -510,7 +510,7 @@ whichToDILES <- function(which) {
     }
     mat <- cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
     if (!is.null(other)) {
-      mat <- cbind(mat, as.data.frame(others))
+      mat <- cbind(mat, as.data.frame(others, stringsAsFactors = FALSE))
     }
     mat
   })

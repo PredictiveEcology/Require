@@ -1,4 +1,8 @@
-#' @details
+utils::globalVariables(c(
+  "localFileName", "neededFiles"
+))
+
+  #' @details
 #' \code{parseGitHub} turns the single character string representation into 3 or 4:
 #' \code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
 #'
@@ -267,7 +271,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         if (NROW(neededVersions)) {
           cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
           cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
-          dontKnowVersion <- cachedAvailablePackages[pkgDT[versionNA == TRUE], on = "Package"][, list(Package, Version)]
+          dontKnowVersion <- cachedAvailablePackages[pkgDT[!is.na(Version) & otherPoss], on = "Package"][, list(Package, Version)]
           neededVersions <- rbindlist(list(neededVersions, dontKnowVersion))
           neededVersions[, neededFiles := paste0(Package, "_", Version)]
         }
@@ -323,7 +327,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
     }
     vers_line <- lines[grep(paste0("^",other,": *"), lines)] # nolint
     out <- gsub(paste0(other, ": "), "", vers_line)
-    if (length(out) == 0) out <- ""
+    if (length(out) == 0) out <- NA
     out
   })
   unlist(out)
