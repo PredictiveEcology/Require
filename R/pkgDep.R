@@ -517,7 +517,7 @@ whichToDILES <- function(which) {
   lengths <- unlist(lapply(out, function(x) NROW(x)))
   out <- do.call(rbind, out)
   ret <- cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
-        "Version" = out[, "Version"], stringsAsFactors = FALSE)
+        "Version" = out[, "Version"])
   if (length(which))
     ret <- cbind(ret, "Dependencies" = out[, "Depends"], stringsAsFactors = FALSE)
   if (!is.null(other)) {

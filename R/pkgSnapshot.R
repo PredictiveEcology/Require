@@ -27,7 +27,7 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
   on.exit({.libPaths(origLibPaths)}, add = TRUE)
 
   ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha"))
-  fwrite(ip, file = packageVersionFile, row.names = FALSE)
+  fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
   message("package version file saved in ",packageVersionFile)
   return(invisible(ip))
 }

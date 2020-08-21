@@ -226,6 +226,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 #' @export
 installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
   cn <- colnames(pkgDT)
+
   if (!"installed" %in% cn) {
     stop("pkgDT needs a column named 'installed' to indicate whether it is installed or not")
   }
@@ -262,7 +263,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       if (any(neededVersions$installFrom == "Archive")) {
         neededVersions[installFrom == "Archive", neededFiles := paste0(Package, "_", OlderVersionsAvailable)]
       }
-      if (any(neededVersions$installFrom == "CRAN" && "AvailableVersion" %in% colnames(pkgDT))) {
+      if (any(neededVersions$installFrom == "CRAN") && "AvailableVersion" %in% colnames(pkgDT)) {
         neededVersions[installFrom == "CRAN", neededFiles := paste0(Package, "_", AvailableVersion)]
       }
       otherPoss <- nchar(neededVersions$neededFiles) == 0
@@ -279,7 +280,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
 
       if (NROW(neededVersions)) {
-        neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "Package"]
+        neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "neededFiles"]
         neededVersions <- neededVersions[!is.na(localFileName), list(Package, localFileName)]
         if (NROW(neededVersions)) {
           pkgDT[neededVersions, `:=`(installFrom = "Local", localFileName = localFileName), on = "Package"]
