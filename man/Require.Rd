@@ -118,9 +118,9 @@ To build a snapshot of the desired packages and their versions, first run
 \code{libPaths} is used, it must be used in both functions.
 
 When installing new packages, `Require` will put all source and binary files
-in `getOption("Require.RPackageCache")` whose default is `~/._RPackageCache`
+in `getOption("Require.RPackageCache")` whose default is `NULL`
 and will reuse them if needed. To turn
-off this feature, set `option("Require.RPackageCache" = NULL)`.
+on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
 
 This function works best if all required packages are called within one
 \code{Require} call, as all dependencies can be identified together, and all

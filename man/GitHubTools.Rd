@@ -7,7 +7,7 @@
 \usage{
 parseGitHub(pkgDT)
 
-install_githubV(gitPkgNames, install_githubArgs = list(), ...)
+install_githubV(gitPkgNames, install_githubArgs = list(), dots = dots)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a data.table
@@ -17,7 +17,7 @@ with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 
 \item{install_githubArgs}{Any arguments passed to \code{install_github}}
 
-\item{...}{Another way to pass arguments to \code{install_github}}
+\item{dots}{A list of ..., e.g., list(...). Only for internal use.}
 }
 \value{
 \code{parseGitHub} returns a data.table with added columns.
