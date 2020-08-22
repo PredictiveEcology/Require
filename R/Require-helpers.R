@@ -1,5 +1,5 @@
 utils::globalVariables(c(
-  "localFileName", "neededFiles"
+  "localFileName", "neededFiles", "i.neededFiles", "installFromFac"
 ))
 
   #' @details
@@ -410,12 +410,13 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     dots <- list(...)
 
     toInstall <- pkgDT[installed == FALSE  | !correctVersion]
-    hasRequireDeps <- toInstall$Package %in% extractPkgName(c("Require", pkgDep("Require")[[1]])) # remove
+    hasRequireDeps <- toInstall$Package %in% "Require" #extractPkgName(c("Require", pkgDep("Require")[[1]])) # remove
     if (any(hasRequireDeps)) {
       RequireDepsNeeded <- paste0("'", paste(toInstall$Package[hasRequireDeps], collapse = "', '"), "'")
-      message(RequireDepsNeeded, " are needed, but are dependencies of Require and cannot be installed by Require.\n",
-              "Please restart R and from a fresh R session, install.packages(c(",
-              RequireDepsNeeded,"), lib = '",.libPaths()[1],"')")
+      message(RequireDepsNeeded, " is needed, but Require cannot be install Require.\n",
+              "You should likely restart R and from a fresh R session, install.packages(c(",
+              RequireDepsNeeded,"), lib = '",.libPaths()[1],"'), then rerun the current call")
+      toInstall <- toInstall[!hasRequireDeps]
     }
     if (any(!toInstall$installFrom %in% "Fail")) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail"))]
@@ -583,7 +584,7 @@ archiveVersionsAvailable <- function(package, repos) {
 #'
 #' @param gitPkgNames Character vector of package to install from GitHub
 #' @param install_githubArgs Any arguments passed to \code{install_github}
-#' @param ... Another way to pass arguments to \code{install_github}
+#' @param dots A list of ..., e.g., list(...). Only for internal use.
 #'
 #' @return
 #' \code{install_githubV} returns a named character vector indicating packages
@@ -602,7 +603,7 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
   }
   if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
-    dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
+    dots$dependencies <- FALSE # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
   #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
   #  which has R.oo
@@ -805,6 +806,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
 }
 
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
+  browser(expr = exists("._installCRAN_0"))
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
 
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
@@ -933,6 +935,7 @@ installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_
 }
 
 installAny <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
+  browser(expr = exists("._installAny_0"))
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
     if (!isTRUE(pkgDT[Package == toInstall$Package]$installed)) {

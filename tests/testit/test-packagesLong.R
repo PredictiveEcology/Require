@@ -2,13 +2,20 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 #tmpdir <-
 if (Sys.info()["user"] == "emcintir") {
   options(Require.RPackageCache = "~/._RPackageCache")
+  tmpdir <- file.path(tempdir(), paste0("RequireTmp"))
+} else {
+  tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
 }
-tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
 
 suppressWarnings(dir.create(tmpdir))
 # repo <- chooseCRANmirror(ind = 1)
 # if (FALSE) {
 if (interactive()) {
+  srcfiles <- dir(.libPaths()[1], pattern = "Require", recursive = TRUE)
+  srcfilesFull <- file.path(.libPaths()[1], srcfiles)
+  endfiles <- file.path(tmpdir, srcfiles)
+  checkPath(file.path(tmpdir, "Require"), create = TRUE)
+  file.copy(srcfilesFull, tmpdir, overwrite = TRUE)
   pkgDepTest1 <- Require::pkgDep("Require")
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
