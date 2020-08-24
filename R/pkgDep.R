@@ -137,8 +137,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
       }
     }
     # Remove "R"
-    neededFull2 <- lapply(neededFull2, function(needed)
-      grep("^\\<R\\>", needed, value = TRUE, invert = TRUE))
+    neededFull2 <- lapply(neededFull2, function(needed) {
+      grep(.grepR, needed, value = TRUE, invert = TRUE)
+    })
 
     Map(sn = saveNames, n = names(saveNames), function(sn, n) {
       assign(sn, neededFull2[[n]], envir = .pkgEnv)
@@ -421,7 +422,7 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
     lapply(ap[[i]], function(x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
       out <- out[!is.na(out)]
-      out <- grep("^\\<R\\>", out, value = TRUE, invert = TRUE) # remove references to R
+      out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
     })
   })
 
@@ -446,6 +447,8 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   sl[["remotes"]] <- grep("^Remotes: *", lines) # nolint
   sl[["colon"]] <- grep(": *", lines) # nolint
 
+  which <- paste0(toupper(substr(which, 1, 1)), substr(which, 2, 1e4))
+  which <- unique(which)
   whichLower <- tolower(which)
   needed <- Map(whLower = whichLower, wh = which, function(whLower, wh) {
     if (length(sl[[whLower]])) {
