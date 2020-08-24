@@ -236,6 +236,20 @@ if (interactive()) {
       remove.packages(c("Holidays", "TimeWarp"))
     }
   }
+  unlink(tmpdir, recursive = TRUE)
+
+  ## Make a clean copy of my main R library
+  Require::setLibPaths(orig)
+  tf <- tempfile2("RequireTmp")
+  snap <- pkgSnapshot(tf)
+
+  tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+  orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
+
+  outOpts1 <- options("install.packages.compile.from.source" = "yes")
+  Require::Require(packageVersionFile = tf)
+  options(outOpts1)
+
 }
 
 # unlink(tmpdir, recursive = TRUE)
