@@ -264,9 +264,16 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
   # Check for local copy of src or binary first
   if (!is.null(getOption("Require.RPackageCache"))) {
-    localFiles <- dir(getOption("Require.RPackageCache"))
+    localFiles <- dir(getOption("Require.RPackageCache"), full.names = TRUE)
+    # sanity check -- there are bad files, quite often
+    fileSizeEq0 <- file.size(localFiles) == 0
+    if (any(fileSizeEq0)) {
+      unlink(localFiles[fileSizeEq0])
+      localFiles <- localFiles[!fileSizeEq0]
+    }
     neededVersions <- pkgDT[!is.na(installFrom) & installFrom != "Fail"]
     if (length(localFiles) && NROW(neededVersions)) {
+      localFiles <- basename(localFiles)
       set(neededVersions, NULL, "neededFiles", character(NROW(neededVersions)))
       if (any(neededVersions$installFrom == "Archive")) {
         neededVersions[installFrom == "Archive", neededFiles := paste0(Package, "_", OlderVersionsAvailable)]
@@ -287,7 +294,16 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
 
       if (NROW(neededVersions)) {
-        neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "neededFiles"]
+        nfs <- neededVersions$neededFiles
+        names(nfs) <- nfs
+        localFileName <- lapply(nfs, function(nf) as.data.table(grep(nf, localFiles, value = TRUE)))
+        nfs <- rbindlist(localFileName, idcol = "neededFiles")
+        setnames(nfs, old = "V1", new = "localFileName")
+        nfs[, localType := c("source", "binary")[endsWith(localFileName, "zip") + 1]]
+        setkeyv(nfs, c("neededFiles", "localType")) # put binary first
+        nfs <- nfs[, .SD[1], by = "neededFiles"]
+        neededVersions <- nfs[neededVersions, on = c("neededFiles")]#, "type")]
+        # neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "neededFiles"]
         neededVersions <- neededVersions[!is.na(localFileName), list(Package, localFileName)]
         if (NROW(neededVersions)) {
           pkgDT[neededVersions, `:=`(installFrom = "Local", localFileName = localFileName), on = "Package"]
