@@ -138,7 +138,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     }
     # Remove "R"
     neededFull2 <- lapply(neededFull2, function(needed) {
-      grep("^ *R( |\\(|$)", needed, value = TRUE, invert = TRUE)
+      grep(.grepR, needed, value = TRUE, invert = TRUE)
     })
 
     Map(sn = saveNames, n = names(saveNames), function(sn, n) {
@@ -422,7 +422,7 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
     lapply(ap[[i]], function(x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
       out <- out[!is.na(out)]
-      out <- grep("^\\<R\\>", out, value = TRUE, invert = TRUE) # remove references to R
+      out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
     })
   })
 

@@ -832,7 +832,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   #  Failed when newer package already loaded, but not in .libPaths() -- occurs when `setLibPaths` is run after packages are loaded
 
   if (is.null(dots$type) && is.null(install.packagesArgs$type) && "type" %in% colnames(toInstall)) {
-    dots$type <- toInstall$type
+    if (!is.na(toInstall$type))
+      dots$type <- toInstall$type
   }
   # ap <- available.packagesCached(repos, purge = FALSE)
   #if (NROW(toIn[hasVersionSpec == TRUE]))

@@ -218,10 +218,11 @@ Require <- function(packages, packageVersionFile,
   which <- whichToDILES(doDeps)
 
   if (is.null(list(...)$destdir)) {
-    if (!is.null(getOption("Require.RPackageCache")))
+    if (!is.null(getOption("Require.RPackageCache"))) {
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
-    install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
-    install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
+      install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
+      install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
+    }
   } else {
     grep()
   }
