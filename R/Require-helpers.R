@@ -305,7 +305,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         localFileName <- lapply(nfs, function(nf) as.data.table(grep(nf, localFiles, value = TRUE)))
         nfs <- rbindlist(localFileName, idcol = "neededFiles")
         setnames(nfs, old = "V1", new = "localFileName")
-        nfs[, localType := c("source", "binary")[endsWith(localFileName, "zip") + 1]]
+        nfs[, localType := ifelse(isBinary(localFileName), "binary", "source")]
         setkeyv(nfs, c("neededFiles", "localType")) # put binary first
         nfs <- nfs[, .SD[1], by = "neededFiles"]
         neededVersions <- nfs[neededVersions, on = c("neededFiles")]#, "type")]
@@ -793,8 +793,18 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   names(installPkgNames) <- installPkgNames
 
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
+
   warn <- lapply(installPkgNamesBoth, function(installPkgNames) {
-    type <- c("source", "binary")[any(endsWith(installPkgNames, "zip")) + 1]
+    # Deal with "binary" mumbo jumbo
+    type <- c("source", "binary")[endsWith(installPkgNames, "zip") + 1]
+    isBin <- isBinary(installPkgNames)
+    buildBinDots <- grepl("--build", dots)
+    buildBinIPA <- grepl("--build", install.packagesArgs)
+    buildBin <- any(buildBinDots, buildBinIPA)
+    if (isBin && buildBin) {
+      if (any(buildBinDots)) dots[buildBinDots] <- gsub("--build", "", dots[buildBinDots])
+      if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- gsub("--build", "", install.packagesArgs[buildBinIPA])
+    }
     warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
       warn <- suppressMessages(tryCatch({
         do.call(install.packages,
@@ -803,9 +813,11 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                        dots))
       }, warning = function(condition) condition)
       )
+      if (!isBin && buildBin) copyTarball(basename(installPkgName), TRUE)
+      warn
     })
-
   })
+
   warn <- unlist(warn)
   if (!is.null(warn))
     warning(warn)
@@ -859,14 +871,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (!is.na(toInstall$type))
       dots$type <- toInstall$type
   }
-  # ap <- available.packagesCached(repos, purge = FALSE)
-  #if (NROW(toIn[hasVersionSpec == TRUE]))
-  #  message("Installing the following packages who have version numbers specified, which are on CRAN; they may however only be available as source packages.",
-  #          # paste0(toInstall[installFrom == "CRAN" & !is.na(versionSpec), packageFullName], sep = "; "),
-  #          "\nIf asked if you would like to install from source, you will need to answer 'Yes' to get the correct version")
-  #loadedAlready <- sapply(installPkgNames, isNamespaceLoaded)
-  #installPkgNames <- names(loadedAlready)[!loadedAlready]
-  #names(installPkgNames) <- installPkgNames
 
   warn <- tryCatch({
     out <- do.call(install.packages,
@@ -874,6 +878,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                    append(append(list(installPkgNames), install.packagesArgs), # removed , available = ap
                           dots))
   }, warning = function(condition) condition)
+  if (any(grepl("--build", c(dots, install.packagesArgs))))
+    copyTarball(installPkgNames, TRUE)
 
   if (!is.null(warn))
     warning(warn)
@@ -973,7 +979,6 @@ installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_
 }
 
 installAny <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
-  browser(expr = exists("._installAny_0"))
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
     if (!isTRUE(pkgDT[Package == toInstall$Package]$installed)) {
@@ -988,4 +993,20 @@ installAny <- function(pkgDT, toInstall, dots, install.packagesArgs, install_git
   if (any("GitHub" %in% toInstall$installFrom))
     pkgDT <- installGitHub(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
   pkgDT
+}
+
+isBinary <- function(fn) {
+  endsWith(fn, "zip") | grepl("R_x86", fn)
+}
+
+copyTarball <- function(pkg, builtBinary) {
+  browser()
+  if (builtBinary) {
+    newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
+    if (length(newFiles)) {
+      file.link(newFiles, file.path(getOption("Require.RPackageCache"), basename(newFiles)))
+      unlink(newFiles)
+    }
+  }
+
 }
