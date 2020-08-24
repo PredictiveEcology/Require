@@ -1,5 +1,6 @@
 utils::globalVariables(c(
-  "localFileName", "neededFiles", "i.neededFiles", "installFromFac"
+  "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
+  ".N", "Archs", "type"
 ))
 
   #' @details
