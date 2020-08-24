@@ -120,7 +120,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
         cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
-        cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
+        cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version", "Archs")])
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
         notCorrectVersions[repoLocation != "GitHub" & is.na(AvailableVersion), AvailableVersion := "10000000"]
@@ -129,6 +129,12 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         notCorrectVersions[repoLocation != "GitHub",
                            correctVersionAvail :=
                              .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+
+        # If package has both a binary and source available on CRAN, there will be 2 entries
+        if  (any(notCorrectVersions[correctVersionAvail == TRUE, .N, by = "packageFullName"]$N > 1)) {
+          notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
+          notCorrectVersions[, type := ifelse(is.na(Archs), "source", "binary")]
+        }
       }
 
       # do Older Versions
@@ -814,21 +820,27 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
   names(installPkgNames) <- installPkgNames
 
-  ord <- match(installPkgNames, toInstall[installFrom == "CRAN"]$Package)
-  toIn <- toInstall[installFrom == "CRAN"][ord]
+  toIn <- toInstall[installFrom == "CRAN"]
+  if (length(installPkgNames) > 1) {
+    ord <- match(installPkgNames, toInstall[installFrom == "CRAN"]$Package)
+    toIn <- toIn[ord]
+  }
 
   if (is.null(dots$dependencies) & is.null(install.packagesArgs$dependencies))
-    dots$dependencies <- FALSE # This was NA; which means let install.packages do it. But, failed in some cases:
+    dots$dependencies <- NA # This was NA; which means let install.packages do it. But, failed in some cases:
   #  Failed when newer package already loaded, but not in .libPaths() -- occurs when `setLibPaths` is run after packages are loaded
 
+  if (is.null(dots$type) && is.null(install.packagesArgs$type) && "type" %in% colnames(toInstall)) {
+    dots$type <- toInstall$type
+  }
   # ap <- available.packagesCached(repos, purge = FALSE)
-  if (NROW(toIn[hasVersionSpec == TRUE]))
-    message("Installing the following packages who have version numbers specified, which are on CRAN; they may however only be available as source packages.",
-            # paste0(toInstall[installFrom == "CRAN" & !is.na(versionSpec), packageFullName], sep = "; "),
-            "\nIf asked if you would like to install from source, you will need to answer 'Yes' to get the correct version")
-  loadedAlready <- sapply(installPkgNames, isNamespaceLoaded)
-  installPkgNames <- names(loadedAlready)[!loadedAlready]
-  names(installPkgNames) <- installPkgNames
+  #if (NROW(toIn[hasVersionSpec == TRUE]))
+  #  message("Installing the following packages who have version numbers specified, which are on CRAN; they may however only be available as source packages.",
+  #          # paste0(toInstall[installFrom == "CRAN" & !is.na(versionSpec), packageFullName], sep = "; "),
+  #          "\nIf asked if you would like to install from source, you will need to answer 'Yes' to get the correct version")
+  #loadedAlready <- sapply(installPkgNames, isNamespaceLoaded)
+  #installPkgNames <- names(loadedAlready)[!loadedAlready]
+  #names(installPkgNames) <- installPkgNames
 
   warn <- tryCatch({
     out <- do.call(install.packages,
