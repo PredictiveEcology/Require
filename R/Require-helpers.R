@@ -132,10 +132,12 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                              .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
-        if  (any(notCorrectVersions[correctVersionAvail == TRUE, .N, by = "packageFullName"]$N > 1)) {
+        notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
+        if (any(notCorrectVersions[correctVersionAvail == TRUE]$N > 1)) {
           notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
-          notCorrectVersions[, type := ifelse(is.na(Archs), "source", "binary")]
+          notCorrectVersions[N > 1, type := ifelse(is.na(Archs), "source", "binary")]
         }
+        set(notCorrectVersions, NULL, "N", NULL)
       }
 
       # do Older Versions
@@ -238,6 +240,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
   if (!"installed" %in% cn) {
     stop("pkgDT needs a column named 'installed' to indicate whether it is installed or not")
   }
+
   pkgDT <- pkgDT[correctVersion == FALSE | is.na(correctVersion) & installed == FALSE, needInstall := TRUE]
   if (NROW(pkgDT[needInstall == TRUE])) {
     pkgDT[needInstall == TRUE & # installed == FALSE &
@@ -444,6 +447,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     if (any(!toInstall$installFrom %in% "Fail")) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail"))]
       setkeyv(toInstall, "installFromFac")
+      if (length(toInstall$packageFullName) > 20)
+        message("Performing a topological sort of packages to install them in the right order; this may take some time")
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       out <- by(toInstall, seq(NROW(toInstall)), installAny, pkgDT = pkgDT, dots = dots,
