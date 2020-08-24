@@ -763,8 +763,10 @@ currentCRANPkgDates <- function(pkgs) {
     tf <- tempfile();
     download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE)
     avail <- readLines(tf)
-    avail <- sapply(pkgs, function(pkg) grep(paste0("\\<", pkg, "_.*\\.tar\\.gz"), avail, value = TRUE))
-    pkgsDateAvail <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", avail)
+    if (is.null(names(pkgs))) names(pkgs) <- pkgs
+    avail <- sapply(pkgs, function(pkg) grep(paste0("\\<", pkg, "\\_.*\\.tar\\.gz"), avail, value = TRUE))
+    pkgsDateAvail <- sapply(avail, function(ava) unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)))
+    pkgsDateAvail <- unlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)])
     currentCranDates <- data.table::data.table(Package = names(pkgsDateAvail), mtime = as.POSIXct(pkgsDateAvail))
     assign("currentCranDates", currentCranDates, envir = .pkgEnv)
   } else {
