@@ -17,7 +17,9 @@ suppressWarnings(dir.create(tmpdir))
 # if (FALSE) {
 if (interactive()) {
   ## Make a clean copy of my main R library
-  Require::setLibPaths(orig)
+  message("###########################################################################")
+  message("Big Package Snapshot")
+  message("###########################################################################")
   tf <- tempfile2("RequireTmp")
   snap <- pkgSnapshot(tf)
   tmpdirA <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
@@ -27,6 +29,9 @@ if (interactive()) {
   options(outOpts1)
   options(orig)
   unlink(tmpdirA)
+  message("###########################################################################")
+  message("End Big Package Snapshot")
+  message("###########################################################################")
 
 
 
