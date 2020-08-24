@@ -133,6 +133,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
         notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
+        setorderv(notCorrectVersions, "correctVersionAvail", order = -1) # put TRUE first
+        notCorrectVersions <- notCorrectVersions[, .SD[1], by = "packageFullName"] # Take first of multiples
+        notCorrectVersions[, N := .N, by = "packageFullName"]
         if (any(notCorrectVersions[correctVersionAvail == TRUE]$N > 1)) {
           notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
           notCorrectVersions[N > 1, type := ifelse(is.na(Archs), "source", "binary")]
