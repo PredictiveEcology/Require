@@ -603,7 +603,7 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
   }
   if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
-    dots$dependencies <- FALSE # This is NA, which under normal circumstances should be irrelevant
+    dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
   #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
   #  which has R.oo
@@ -755,7 +755,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   toIn <- toInstall[installFrom == installFromCur][ord]
 
   if (is.null(dots$dependencies) & is.null(install.packagesArgs$dependencies))
-    dots$dependencies <- FALSE # This was NA; which means let install.packages do it. But, failed in some cases:
+    dots$dependencies <- NA # This was NA; which means let install.packages do it. But, failed in some cases:
 
   message("Using local cache of ", paste(toIn$localFileName, collapse = ", "))
   installPkgNames <- normPath(file.path(getOption("Require.RPackageCache"), toIn$localFileName))
