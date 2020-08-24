@@ -1000,7 +1000,6 @@ isBinary <- function(fn) {
 }
 
 copyTarball <- function(pkg, builtBinary) {
-  browser()
   if (builtBinary) {
     newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
     if (length(newFiles)) {
