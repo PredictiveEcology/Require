@@ -16,9 +16,20 @@ suppressWarnings(dir.create(tmpdir))
 # repo <- chooseCRANmirror(ind = 1)
 # if (FALSE) {
 if (interactive()) {
-  srcfiles <- dir(.libPaths()[1], pattern = "Require", recursive = TRUE)
-  srcfilesFull <- file.path(.libPaths()[1], srcfiles)
-  endfiles <- file.path(tmpdir, srcfiles)
+  ## Make a clean copy of my main R library
+  Require::setLibPaths(orig)
+  tf <- tempfile2("RequireTmp")
+  snap <- pkgSnapshot(tf)
+  tmpdirA <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+  orig <- Require::setLibPaths(tmpdirA, standAlone = TRUE)
+  outOpts1 <- options("install.packages.compile.from.source" = "yes")
+  Require::Require(packageVersionFile = tf)
+  options(outOpts1)
+  options(orig)
+  unlink(tmpdirA)
+
+
+
   pkgDepTest1 <- Require::pkgDep("Require")
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
@@ -237,18 +248,6 @@ if (interactive()) {
     }
   }
   unlink(tmpdir, recursive = TRUE)
-
-  ## Make a clean copy of my main R library
-  Require::setLibPaths(orig)
-  tf <- tempfile2("RequireTmp")
-  snap <- pkgSnapshot(tf)
-
-  tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-  orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
-
-  outOpts1 <- options("install.packages.compile.from.source" = "yes")
-  Require::Require(packageVersionFile = tf)
-  options(outOpts1)
 
 }
 
