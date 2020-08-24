@@ -2,10 +2,15 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 #tmpdir <-
 if (Sys.info()["user"] == "emcintir") {
   options(Require.RPackageCache = "~/._RPackageCache")
-  tmpdir <- file.path(tempdir(), paste0("RequireTmp"))
+  outOpts <- options("install.packages.compile.from.source" = "no")
+  on.exit({
+    options(outOpts)
+  }, add = TRUE)
+  # tmpdir <- file.path(tempdir(), paste0("RequireTmp"))
 } else {
-  tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+  #tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
 }
+tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
 
 suppressWarnings(dir.create(tmpdir))
 # repo <- chooseCRANmirror(ind = 1)
@@ -14,11 +19,14 @@ if (interactive()) {
   srcfiles <- dir(.libPaths()[1], pattern = "Require", recursive = TRUE)
   srcfilesFull <- file.path(.libPaths()[1], srcfiles)
   endfiles <- file.path(tmpdir, srcfiles)
-  checkPath(file.path(tmpdir, "Require"), create = TRUE)
-  file.copy(srcfilesFull, tmpdir, overwrite = TRUE)
   pkgDepTest1 <- Require::pkgDep("Require")
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
+  origDir <- setwd("~/GitHub/");
+  system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+  system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
+  setwd(origDir)
+
   on.exit(Require::setLibPaths(orig))
 
   testit::assert(length(pkgDepTest1) == 1)
@@ -183,7 +191,7 @@ if (interactive()) {
   options("Require.verbose" = TRUE)
 
   i <- 0
-  pkg <- pkgs[[1]] # redundant, but kept for interactive use
+  pkg <- pkgs[[i+1]] # redundant, but kept for interactive use
  #}
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
