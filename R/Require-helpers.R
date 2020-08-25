@@ -154,8 +154,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         if (!all(pkgsInOAV)) {
           pkgs <- pkg[!pkgsInOAV]
           names(pkgs) <- pkgs
+          # if (length(pkgs) > 20) message("Looking which archive versions are available; this could take a while")
           ava <- lapply(pkgs, function(p) {
-            as.data.table(archiveVersionsAvailable(p, repos = getOption("repos")), keep.rownames = "PackageUrl")
+            as.data.table(archiveVersionsAvailable(p, repos = repos), keep.rownames = "PackageUrl")
           })
           oldAvailableVersions <- append(oldAvailableVersions, ava)
           assign("oldAvailableVersions", oldAvailableVersions, envir = .pkgEnv)
@@ -589,20 +590,26 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
 #' \code{remotes:::download_version_url}
 archiveVersionsAvailable <- function(package, repos) {
   for (repo in repos) {
+    archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
     if (length(repos) > 1)
       message("Trying ", repo)
-    archive <- tryCatch({
-      con <- gzcon(url(sprintf("%s/src/contrib/Meta/archive.rds", repo), "rb"))
-      on.exit(close(con))
-      readRDS(con)
-    }, warning = function(e) list(), error = function(e) list())
+    if (!exists(archiveFile, envir = .pkgEnv, inherits = FALSE)) {
+      archive <- tryCatch({
+        con <- gzcon(url(archiveFile, "rb"))
+        on.exit(close(con))
+        readRDS(con)
+      }, warning = function(e) list(), error = function(e) list())
+      .pkgEnv[[archiveFile]] <- archive
+    } else {
+      archive <- get(archiveFile, envir = .pkgEnv)
+    }
     info <- archive[[package]]
     if (!is.null(info)) {
       info$repo <- repo
       return(info)
     }
   }
-  warning(sprintf("couldn't find package '%s'", package))
+  # warning(sprintf("couldn't find package '%s'", package))
   return(info)
 }
 

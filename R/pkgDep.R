@@ -367,6 +367,14 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
   bb <- list()
   cc <- lapply(pkgs, function(x) character())
 
+  firsts <- unlist(lapply(aa, function(ps) {
+    if (length(ps) == 0 || all(ps %in% .basePkgs))
+      "first"
+    else
+      "later"
+  }))
+  aaa <- split(aa, firsts)
+  aa <- aaa$later
   if (isTRUE(topoSort)) {
     notInOrder <- TRUE
     isCorrectOrder <- logical(length(aa))
@@ -391,11 +399,14 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
     aa <- aa[newOrd]
     cc <- cc[newOrd]
   }
+
   out <- if (isTRUE(returnFull)) {
     aa
   } else {
     cc
   }
+  out <- append(aaa$first, out)
+
   return(out)
 }
 
