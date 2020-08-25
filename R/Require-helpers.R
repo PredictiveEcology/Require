@@ -751,7 +751,9 @@ available.packagesCached <- function(repos, purge) {
     }
 
     for (type in types)
-      cap[[type]] <- available.packages(repos = repos, type = type) #, ignore_repo_cache = isOldMac | !isInteractive())
+      cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
+                              error = function(x)
+                                available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))#, ignore_repo_cache = isOldMac | !isInteractive())
     cap <- do.call(rbind, cap)
     if (length(types) > 1) {
       dups <- duplicated(cap[, c("Package", "Version")])
