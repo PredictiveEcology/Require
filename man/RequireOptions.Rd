@@ -23,5 +23,20 @@ The following options are likely of interest to most users:
     Default: \code{NULL}. If a folder is provided, then binary and source packages will
       be cached here. Subsequent downloads of same package will use local copy.
   }
+  \item{\code{buildBinarieis}}{
+    Default: \code{TRUE}. Only relevant on *nix systems and if
+    \code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE}, then
+       \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the
+       package binary will be built and then saved in the
+       \code{getOption("Require.RPackageCache")}. This means that subsequent installs
+       of this package on this or identical system will be faster.
+  }
+  \item{\code{persistentPkgEnv}}{
+    Default: \code{FALSE}. (ADVANCED USE) Require stashes a lot of information in a
+    hidden environment, located at \code{Require:::.pkgEnv}. This gets reset at each
+    restart of R and each reload of Require. To make the stashes more persistent, 
+    set this option to \code{TRUE}. A file will be placed at 
+    \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
+  }
 }
 }
