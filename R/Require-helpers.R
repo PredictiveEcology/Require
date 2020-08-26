@@ -15,8 +15,7 @@ utils::globalVariables(c(
 #' @rdname GitHubTools
 #' @export
 parseGitHub <- function(pkgDT) {
-  if (!is.data.table(pkgDT))
-    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+  pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
   if (is.null(pkgDT$repoLocation)) {
@@ -62,9 +61,8 @@ parseGitHub <- function(pkgDT) {
 #' @rdname Require-internals
 #' @export
 getPkgVersions <- function(pkgDT, install = TRUE) {
-  if (!is.data.table(pkgDT))
-    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
-
+  pkgDT <- toPkgDT(pkgDT)
+  
   pkgDT[, hasVersionSpec := grepl(.grepVersionNumber, packageFullName)]
 
   if (any(pkgDT$hasVersionSpec)) {
@@ -175,7 +173,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         #   get("oldAvailableVersions", envir = .pkgEnv, inherits = FALSE)
         # }
 
-        oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package")
+        oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package", 
+                                          fill = TRUE, use.names = TRUE)
         # delete unwanted columns
         set(oldAvailableVersions, NULL, c("size", "isdir", "mode", #"mtime",
                                           "ctime", "atime", "uid", "gid", "uname", "grname"),
@@ -193,7 +192,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
           currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
           oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
-          data.table::setkeyv(oldAvailableVersions, c("Package", "mtime"))
+          data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
           bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
 
           aa <- oldAvailableVersions[, list(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
@@ -442,11 +441,13 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     toInstall <- pkgDT[installed == FALSE  | !correctVersion]
     hasRequireDeps <- toInstall$Package %in% "Require" #extractPkgName(c("Require", pkgDep("Require")[[1]])) # remove
     if (any(hasRequireDeps)) {
-      RequireDepsNeeded <- paste0("'", paste(toInstall$Package[hasRequireDeps], collapse = "', '"), "'")
-      message(RequireDepsNeeded, " is needed, but Require cannot be installed by Require.\n",
-              "You may need to restart R and from a fresh R session, install.packages(c(",
-              RequireDepsNeeded,"), lib = '",.libPaths()[1],"'), then rerun the current call")
-      toInstall <- toInstall[!hasRequireDeps]
+      installRequire()
+
+      #RequireDepsNeeded <- paste0("'", paste(toInstall$Package[hasRequireDeps], collapse = "', '"), "'")
+      #message(RequireDepsNeeded, " is needed, but Require cannot be installed by Require.\n",
+      #        "You may need to restart R and from a fresh R session, install.packages(c(",
+      #        RequireDepsNeeded,"), lib = '",.libPaths()[1],"'), then rerun the current call")
+      #toInstall <- toInstall[!hasRequireDeps]
     }
     if (any(!toInstall$installFrom %in% "Fail")) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail"))]
@@ -710,6 +711,7 @@ colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
                 "toLoad", "hasVersionSpec")
 
 installedVers <- function(pkgDT) {
+  pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {
     pkgs <- unique(pkgDT$Package)
     names(pkgs) <- pkgs
@@ -773,10 +775,13 @@ currentCRANPkgDates <- function(pkgs) {
     download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE)
     avail <- readLines(tf)
     if (is.null(names(pkgs))) names(pkgs) <- pkgs
-    avail <- sapply(pkgs, function(pkg) grep(paste0("\\<", pkg, "\\_.*\\.tar\\.gz"), avail, value = TRUE))
-    pkgsDateAvail <- sapply(avail, function(ava) unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)))
-    pkgsDateAvail <- unlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)])
-    currentCranDates <- data.table::data.table(Package = names(pkgsDateAvail), mtime = as.POSIXct(pkgsDateAvail))
+    avail <- sapply(pkgs, function(pkg) grep(paste0("\"", pkg, "\\_.*\\.tar\\.gz"), avail, value = TRUE))
+    pkgsDateAvail <- lapply(avail, function(ava) 
+      data.table(date = unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)),
+                 CRANVersion = unique(gsub(paste0("^.+>[[:alnum:]]+\\_(.*)\\.tar\\.gz<.*"), "\\1", ava))))
+    pkgsDateAvail <- rbindlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)], idcol = "Package")
+    currentCranDates <- pkgsDateAvail[, mtime := as.POSIXct(date)]
+    set(currentCranDates, NULL, "date", NULL)
     assign("currentCranDates", currentCranDates, envir = .pkgEnv)
   } else {
     currentCranDates <- get("currentCranDates", envir = .pkgEnv)
@@ -938,14 +943,15 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
   # warns <- list()
   dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
-  onMRAN <- dateFromMRAN > "2015-06-06"
+  onMRAN <- dateFromMRAN > "2015-06-06" && tolower(Sys.info()[["sysname"]]) == "windows"
   if (any(onMRAN)) {
     out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
       warn <- list()
       tryCatch(
         out <- do.call(install.packages,
                        # using ap meant that it was messing up the src vs bin paths
-                       append(append(list(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)), install.packagesArgs), # removed , available = ap
+                       append(append(list(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)), 
+                                     install.packagesArgs), # removed , available = ap
                               dots)),
         # install.packages(p, repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date), ...),
         error = function(x) {
@@ -961,7 +967,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     if (length(out)) lapply(out, warning)
   }
   if (any(!onMRAN)) {
-    cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")# , TimeWarp/TimeWarp_1.0-7.tar.gz"
+    cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
     out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
       warn <- list()
       p <- file.path(cranArchivePath, p)
@@ -1019,4 +1025,39 @@ copyTarball <- function(pkg, builtBinary) {
     }
   }
 
+}
+
+installRequire <- function() {
+  RequireDESCRIPTIONPath <- system.file("DESCRIPTION", package = "Require")
+  DESCRIPTIONFileVersionV(RequireDESCRIPTIONPath)
+  isGitHub <- DESCRIPTIONFileOtherV(RequireDESCRIPTIONPath, other = "github")
+  done <- FALSE
+  if (is.na(isGitHub)) {
+    isLocal <- dir(pattern = "DESCRIPTION")
+    if (length(isLocal)) {
+      currentPackageName <- DESCRIPTIONFileOtherV("DESCRIPTION", "Package")
+      if (identical("Require", currentPackageName)) {
+        origDir <- setwd("..");
+        on.exit(setwd(origDir), add = TRUE)
+        system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
+        done <- TRUE
+      }
+    }
+    if (isFALSE(done)) {
+      system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+      done <- TRUE
+      # system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+    }
+  } else {
+    browser()
+    system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+  }
+
+
+}
+
+toPkgDT <- function(pkgDT) {
+  if (!is.data.table(pkgDT))
+    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+  pkgDT
 }

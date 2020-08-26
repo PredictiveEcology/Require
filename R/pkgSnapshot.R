@@ -23,8 +23,8 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
   browser(expr = exists("aaaa"))
   if (missing(libPaths))
     libPaths <- .libPaths()
-  origLibPaths <- setLibPaths(libPaths, standAlone)
-  on.exit({.libPaths(origLibPaths)}, add = TRUE)
+  origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
   ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha"))
   fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)

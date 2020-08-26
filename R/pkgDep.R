@@ -61,6 +61,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
 
+  if (!includeBase) packages <- packages[!packages %in% .basePkgs]
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
     message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
     if (!missing(depends)) depends <- TRUE
@@ -159,7 +160,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
-                        repos = repos) {
+                        repos = repos, includeBase = FALSE) {
+  if (!isTRUE(includeBase)) packages <- packages[!extractPkgName(packages) %in% .basePkgs]
   names(packages) <- packages
   desc_paths <- getDescPath(packages, libPath)
 
@@ -182,6 +184,36 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                            keepVersionNumber = keepVersionNumber,
                                            purge = purge,
                                            repos = repos)))
+        
+        if (is.null(needed)) { # essesntially, failed
+          pkgName <- extractPkgName(pkg)
+          td <- tempdir2(pkgName)
+          packageTD <- file.path(td, pkgName)
+          if (!dir.exists(packageTD)) {
+            message("available.packages() doesn't have correct information on package dependencies for ", pkgName, 
+                    "; downloading tar.gz")
+            verNum <- extractVersionNumber(pkg)
+            if (is.na(verNum)) {
+              dt <- as.data.table(archiveVersionsAvailable(pkgName, repos = repos), keep.rownames = "packageURL")
+              packageURL <- tail(dt$packageURL, 1)
+            } else {
+              pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
+              packageURL <- file.path(pkgName, pkgFilename)
+            }
+            srcContrib <- "src/contrib"
+            url <- file.path(repos, srcContrib, "/Archive", packageURL) 
+            url2 <- file.path(repos, srcContrib, basename(packageURL))#https://cran.r-project.org/src/contrib/foreign_0.8-80.tar.gz) 
+            tf <- tempfile()
+            suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
+              tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) browser())))
+            untar(tarfile = tf, exdir = td)
+            filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
+            filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
+            unlink(filesToDel, recursive = TRUE)
+          } 
+          needed <- DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"), 
+                                        which = which, keepVersionNumber = keepVersionNumber)
+        }
         purge <<- FALSE
         needed
       }

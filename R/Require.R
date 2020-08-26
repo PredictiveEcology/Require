@@ -249,6 +249,9 @@ Require <- function(packages, packageVersionFile,
     install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
     install.packagesArgs["dependencies"] = FALSE
     require <- FALSE
+    oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
+    Sys.setenv(R_REMOTES_UPGRADE = "never")
+    on.exit({Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)}, add = TRUE)
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
 
@@ -271,7 +274,7 @@ Require <- function(packages, packageVersionFile,
   if (missing(libPaths))
     libPaths <- .libPaths()
   suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
-  on.exit({suppressMessages(setLibPaths(origLibPaths))}, add = TRUE)
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
@@ -281,10 +284,10 @@ Require <- function(packages, packageVersionFile,
 
   # Create data.table of Require workflow
   if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
-  pkgDT <- data.table(Package = extractPkgName(packages), packageFullName = c(packages))
+  
+  pkgDT <- toPkgDT(packages)
 
   # identify the packages that were asked by user to load -- later dependencies will be in table too
-
   pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
         packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
   pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
