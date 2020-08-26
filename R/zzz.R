@@ -14,7 +14,7 @@ utils::globalVariables(c(
 
   if (getOption("Require.persistentPkgEnv")) {
     if (file.exists(.thePersistentFile)) {
-      pkgEnvLast <- readRDS(.thePersistentFile, envir = .pkgEnv)
+      pkgEnvLast <- readRDS(.thePersistentFile)
       list2env(pkgEnvLast, .pkgEnv)
       rm(pkgEnvLast, envir = .pkgEnv)
     }
