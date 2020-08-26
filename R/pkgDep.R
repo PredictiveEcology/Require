@@ -182,6 +182,34 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                            keepVersionNumber = keepVersionNumber,
                                            purge = purge,
                                            repos = repos)))
+        
+        if (is.null(needed)) { # essesntially, failed
+          pkgName <- extractPkgName(pkg)
+          td <- tempdir2(pkgName)
+          packageTD <- file.path(td, pkgName)
+          if (!dir.exists(packageTD)) {
+            message("available.packages() doesn't have correct information on package dependencies for ", pkgName, 
+                    "; downloading tar.gz")
+            verNum <- extractVersionNumber(pkg)
+            if (is.na(verNum)) {
+              dt <- as.data.table(archiveVersionsAvailable(pkgName, repos = repos), keep.rownames = "packageURL")
+              packageURL <- tail(dt$packageURL, 1)
+            } else {
+              pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
+              packageURL <- file.path(pkgName, pkgFilename)
+            }
+            url <- file.path(repos, "src/contrib/Archive", packageURL) 
+            tf <- tempfile()
+            browser()
+            download.file(url, tf, quiet = TRUE)
+            untar(tarfile = tf, exdir = td)
+            filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
+            filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
+            unlink(filesToDel, recursive = TRUE)
+          } 
+          needed <- DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"), 
+                                        which = which, keepVersionNumber = keepVersionNumber)
+        }
         purge <<- FALSE
         needed
       }
