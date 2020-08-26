@@ -16,7 +16,6 @@ utils::globalVariables(c(
     if (file.exists(.thePersistentFile)) {
       pkgEnvLast <- readRDS(.thePersistentFile)
       list2env(pkgEnvLast, .pkgEnv)
-      rm(pkgEnvLast, envir = .pkgEnv)
     }
   }
   invisible()
