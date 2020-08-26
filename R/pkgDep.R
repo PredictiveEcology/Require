@@ -88,7 +88,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
                               purge = purge, repos = repos)
     purge <- FALSE # whatever it was, it was done in line above
-    theNulls <- unlist(lapply(neededFull, is.null))
+    theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
     neededFull2 <- neededFull[!theNulls]
     if (NROW(neededFull2)) {
       if (recursive) {
@@ -138,11 +138,13 @@ pkgDep <- function(packages, libPath = .libPaths(),
       }
     }
     # Remove "R"
+    neededFull2 <- append(neededFull2, neededFull[theNulls])
     neededFull2 <- lapply(neededFull2, function(needed) {
       grep(.grepR, needed, value = TRUE, invert = TRUE)
     })
 
-    Map(sn = saveNames, n = names(saveNames), function(sn, n) {
+    newOnes <- names(saveNames) %in% names(neededFull)
+    Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
       assign(sn, neededFull2[[n]], envir = .pkgEnv)
     })
     neededFull1 <- append(neededFull1[!needGet], neededFull2)
@@ -162,11 +164,18 @@ pkgDep <- function(packages, libPath = .libPaths(),
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
                         repos = repos, includeBase = FALSE) {
-  if (!isTRUE(includeBase)) packages <- packages[!extractPkgName(packages) %in% .basePkgs]
   names(packages) <- packages
-  desc_paths <- getDescPath(packages, libPath)
-
-  needed <- Map(desc_path = desc_paths, pkg = packages, function(desc_path, pkg) {
+  if (!isTRUE(includeBase)) {
+    isBase <- extractPkgName(packages) %in% .basePkgs
+    packagesToCheck <- packages[!isBase]
+    packagesBase <- packages[isBase]
+    packagesBase <- lapply(packagesBase, function(x) character())
+  } else {
+    packagesToCheck <- packages
+  }
+  
+  desc_paths <- getDescPath(packagesToCheck, libPath)
+  needed <- Map(desc_path = desc_paths, pkg = packagesToCheck, function(desc_path, pkg) {
     browser(expr = exists("aaaaa"))
     if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg)
@@ -180,11 +189,11 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         }
         needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
       } else {
-        needed <- unname(unlist(pkgDepCRAN(pkg,
+        needed <- unique(unname(unlist(pkgDepCRAN(pkg,
                                            which = which,
                                            keepVersionNumber = keepVersionNumber,
                                            purge = purge,
-                                           repos = repos)))
+                                           repos = repos))))
         
         if (is.null(needed)) { # essesntially, failed
           pkgName <- extractPkgName(pkg)
@@ -223,6 +232,11 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
     }
     needed
   })
+  if (!isTRUE(includeBase)) {
+    needed1 <- append(needed, packagesBase)
+    needed <- needed1[match(names(packages), names(needed1))]
+  }
+  
   needed
 }
 

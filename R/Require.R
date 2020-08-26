@@ -217,12 +217,14 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
+  install.packagesArgs["INSTALL_opts"] <- '--no-multiarch'
+  install_githubArgs["INSTALL_opts"] <- '--no-multiarch'
   if (is.null(list(...)$destdir)) {
     if (!is.null(getOption("Require.RPackageCache"))) {
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
       install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
       if (tolower(Sys.info()["sysname"]) != "windows" && getOption("Require.buildBinaries", TRUE)) {
-        install.packagesArgs["INSTALL_opts"] <- '--build'
+        install.packagesArgs["INSTALL_opts"] <- c('--build', install.packagesArgs["INSTALL_opts"])
       }
 
       install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
@@ -324,5 +326,21 @@ Require <- function(packages, packageVersionFile,
 
     attr(out, "Require") <- pkgDT[]
   }
-  return(out)
+  stillNeeded <- if (!is.null(pkgDT$installResult)) if (any(grep("No available", pkgDT$installResult))) {
+    pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]
+  } else {
+    pkgDT[0]
+  }
+  if (NROW(stillNeeded)) { 
+    # message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
+            "information and thus will not be installed. ",
+            "These may have been installed locally from source, or are on another",
+            "repository system, such as BioConductor:")
+    messageDF(stillNeeded[, list(Package, packageFullName, installResult)]) 
+  }
+  if (isTRUE(require)) {
+    return(out)
+  } else {
+    return(invisible(out))
+  }
 }
