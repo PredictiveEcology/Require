@@ -61,6 +61,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
 
+  if (!includeBase) packages <- packages[!packages %in% .basePkgs]
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
     message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
     if (!missing(depends)) depends <- TRUE
@@ -159,7 +160,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
-                        repos = repos) {
+                        repos = repos, includeBase = FALSE) {
+  if (!isTRUE(includeBase)) packages <- packages[!extractPkgName(packages) %in% .basePkgs]
   names(packages) <- packages
   desc_paths <- getDescPath(packages, libPath)
 
