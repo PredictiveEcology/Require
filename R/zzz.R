@@ -1,3 +1,7 @@
+utils::globalVariables(c(
+  "pkgEnvLast"
+))
+
 .pkgEnv <- new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
@@ -9,10 +13,9 @@
     checkPath(getOption("Require.RPackageCache"), create = TRUE)
 
   if (getOption("Require.persistentPkgEnv")) {
-    theFile <- file.path("~", "._Require_pkgEnv.rdata")
-    if (file.exists(theFile)) {
-      load(theFile, envir = .pkgEnv)
-      list2env(.pkgEnv$pkgEnvLast, .pkgEnv)
+    if (file.exists(.thePersistentFile)) {
+      pkgEnvLast <- readRDS(.thePersistentFile, envir = .pkgEnv)
+      list2env(pkgEnvLast, .pkgEnv)
       rm(pkgEnvLast, envir = .pkgEnv)
     }
   }
@@ -21,7 +24,9 @@
 
 .onUnload <- function(libpath) {
   if (getOption("Require.persistentPkgEnv")) {
-    pkgEnvLast <- as.list(Require:::.pkgEnv); 
-    save(pkgEnvLast, file = file.path("~", "._Require_pkgEnv.rdata"))
+    pkgEnvLast <- as.list(.pkgEnv); 
+    saveRDS(pkgEnvLast, file = .thePersistentFile)
   }
 }
+
+.thePersistentFile <- file.path("~", "._Require_pkgEnv.rdata")

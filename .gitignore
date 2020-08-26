@@ -50,3 +50,5 @@ packageVersions.txt
 .cacheAvailablePackages.rda
 
 tests/testit/tmp.txt
+
+packageVersionLinux.txt

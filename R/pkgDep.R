@@ -158,6 +158,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
   neededFull1
 }
 
+#' @importFrom utils untar
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
                         repos = repos, includeBase = FALSE) {
