@@ -463,7 +463,13 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   whichLower <- tolower(which)
   needed <- Map(whLower = whichLower, wh = which, function(whLower, wh) {
     if (length(sl[[whLower]])) {
-      allLines <- sl[[whLower]]:(sl[["colon"]][which(sl[["colon"]] %in% sl[[whLower]]) + 1] - 1) # nolint
+      whEnd <- which(sl[["colon"]] %in% sl[[whLower]]) + 1
+      whEnd <- if (length(sl[["colon"]]) < whEnd) {
+        length(lines)
+      } else {
+        (sl[["colon"]][whEnd] - 1)
+      }
+      allLines <- sl[[whLower]]:whEnd # nolint
       needs <- paste(lines[allLines], collapse = "")
       needs <- gsub(paste0(wh, ": *"), "", needs)
       needs <- strsplit(needs, split = ", *")
