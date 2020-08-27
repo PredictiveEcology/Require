@@ -62,7 +62,6 @@ parseGitHub <- function(pkgDT) {
 #' @export
 getPkgVersions <- function(pkgDT, install = TRUE) {
   pkgDT <- toPkgDT(pkgDT)
-  
   pkgDT[, hasVersionSpec := grepl(.grepVersionNumber, packageFullName)]
 
   if (any(pkgDT$hasVersionSpec)) {
@@ -79,7 +78,10 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
     setorderv(pkgDT, c("Package", "versionSpec"), order = -1L)
 
     # any duplicates with different minimum version number to be dealt with here --> only those with > in their inequality
-    pkgDT[hasVersionSpec == TRUE, versionSpec := as.character(max(package_version(versionSpec))), by = "Package"]
+    # pkgDT[hasVersionSpec == TRUE, versionSpec := as.character(max(package_version(versionSpec))), by = "Package"]
+    
+    
+    
     # pkgDT_maxVersion <- pkgDT[hasVersionSpec == TRUE & grepl(">", inequality),
     #                           list(versionSpec = as.character(max(package_version(versionSpec)))),
     #                           by = "Package"]
@@ -93,7 +95,7 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
       pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
       # put FALSE at top of each package -- then take the first one, so we will know if all inequalities are satisfied
       setorderv(pkgDT, c("Package", "correctVersion"), order = 1L, na.last = TRUE)
-      pkgDT <- pkgDT[, .SD[1], by = c("Package")]
+      # pkgDT <- pkgDT[, .SD[1], by = c("Package")]
     }
   } else {
     pkgDT[ , correctVersion := NA]
@@ -265,7 +267,6 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
     pkgDT[, installFrom := NA_character_]
   }
 
-
   # Check for local copy of src or binary first
   if (!is.null(getOption("Require.RPackageCache"))) {
     localFiles <- dir(getOption("Require.RPackageCache"), full.names = TRUE)
@@ -311,9 +312,9 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         nfs <- nfs[, .SD[1], by = "neededFiles"]
         neededVersions <- nfs[neededVersions, on = c("neededFiles")]#, "type")]
         # neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "neededFiles"]
-        neededVersions <- neededVersions[!is.na(localFileName), list(Package, localFileName)]
+        neededVersions <- neededVersions[!is.na(localFileName), list(Package, packageFullName, localFileName)]
         if (NROW(neededVersions)) {
-          pkgDT[neededVersions, `:=`(installFrom = "Local", localFileName = localFileName), on = "Package"]
+          pkgDT[neededVersions, `:=`(installFrom = "Local", localFileName = localFileName), on = "packageFullName"]
         }
       }
     }
@@ -437,6 +438,16 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
   browser(expr = exists("._doInstalls_0"))
+  if (FALSE) {
+    srch <- search(); 
+    srch <- srch[unlist(lapply(gsub("package:", "", srch), function(x) !x %in% c(".GlobalEnv", .basePkgs, "tools:rstudio", "Autoloads")))] # , .defaultPackages
+    loadedPkgs <- gsub("\\_shims|package:|tools:", "", srch)
+    
+    if (length(setdiff(loadedPkgs, c("Require"))) > 0) {
+      stop("There are loaded packages")
+    }
+  }
+  
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
@@ -460,7 +471,11 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         message("Performing a topological sort of packages to install them in the right order; this may take some time")
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
-      out <- by(toInstall, seq(NROW(toInstall)), installAny, pkgDT = pkgDT, dots = dots,
+      message("Installing: ", paste0(toInstall$packageFullName, sep = ", "))
+      toInstall[, installOrder := seq(NROW(toInstall))]
+      startTime <- Sys.time()
+      out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots, numPackages = NROW(toInstall),
+                startTime = startTime, 
                 install.packagesArgs = install.packagesArgs, install_githubArgs = install_githubArgs, repos = repos)
     }
     if (NROW(pkgDT[installFrom == "Fail"])) {
@@ -664,12 +679,15 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
+  browser()
   while (length(gitPkgs)) {
     gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
     outRes <- lapply(gitPkgDeps2, function(p) {
-      try(do.call(remotes::install_github, append(append(list(p), install_githubArgs), dots)))
+      tryCatch(do.call(remotes::install_github, append(append(list(p), install_githubArgs), dots)),
+               warning = function(w) w,
+               error = function(e) e)
     })
     attempts[names(outRes)] <- attempts[names(outRes)] + 1
     maxAttempts <- 0
@@ -778,19 +796,20 @@ currentCRANPkgDates <- function(pkgs) {
     message("Getting dates of current CRAN packages")
     tf <- tempfile();
     download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE)
-    avail <- readLines(tf)
-    if (is.null(names(pkgs))) names(pkgs) <- pkgs
-    avail <- sapply(pkgs, function(pkg) grep(paste0("\"", pkg, "\\_.*\\.tar\\.gz"), avail, value = TRUE))
-    pkgsDateAvail <- lapply(avail, function(ava) 
-      data.table(date = unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)),
-                 CRANVersion = unique(gsub(paste0("^.+>[[:alnum:]]+\\_(.*)\\.tar\\.gz<.*"), "\\1", ava))))
-    pkgsDateAvail <- rbindlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)], idcol = "Package")
-    currentCranDates <- pkgsDateAvail[, mtime := as.POSIXct(date)]
-    set(currentCranDates, NULL, "date", NULL)
+    currentCranDates <- readLines(tf)
     assign("currentCranDates", currentCranDates, envir = .pkgEnv)
   } else {
     currentCranDates <- get("currentCranDates", envir = .pkgEnv)
   }
+  if (is.null(names(pkgs))) names(pkgs) <- pkgs
+  currentCranDates <- sapply(pkgs, function(pkg) grep(paste0("\"", pkg, "\\_.*\\.tar\\.gz"), currentCranDates, value = TRUE))
+  pkgsDateAvail <- lapply(currentCranDates, function(ava) 
+    data.table(date = unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)),
+               CRANVersion = unique(gsub(paste0("^.+>[[:alnum:]]+\\_(.*)\\.tar\\.gz<.*"), "\\1", ava))))
+  pkgsDateAvail <- rbindlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)], idcol = "Package")
+  currentCranDates <- pkgsDateAvail[, mtime := as.POSIXct(date)]
+  set(currentCranDates, NULL, "date", NULL)
+  
   currentCranDates
 }
 
@@ -961,7 +980,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   installVersions <- toIn$OlderVersionsAvailable
 
   # warns <- list()
-  dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime)) + 2
+  dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
   onMRAN <- dateFromMRAN > "2015-06-06" && tolower(Sys.info()[["sysname"]]) == "windows"
   if (any(onMRAN)) {
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
@@ -982,7 +1001,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
           w
         })
     })
-    installedVers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], toInstall$Package, "DESCRIPTION"))
+    installedVers <- try(DESCRIPTIONFileVersionV(file.path(.libPaths()[1], toInstall$Package, "DESCRIPTION")))
     if (!identical(installedVers, installVersions[onMRAN])) {
       message("-- incorrect version installed from MRAN; trying CRAN Archive")
       onMRAN <- FALSE
@@ -1030,8 +1049,15 @@ installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_
   updateInstalled(pkgDT, gitPkgNames$Package, warnings())
 }
 
-installAny <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
+installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs, install_githubArgs,
                        repos = getOption("repos")) {
+  currentTime <- Sys.time()
+  dft <- difftime(currentTime, startTime, units = "secs")
+  timeLeft <- dft/toInstall$installOrder * (numPackages - toInstall$installOrder)
+  # paste0("estimated time left:", format(timeLeft, units = "auto", digits = 0), " (est. finish: ", Sys.time() + timeLeft, ")")
+  
+  message(" -- Installing ", toInstall$packageFullName, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
+          format(timeLeft, units = "auto", digits = 0), "; est. finish: ", Sys.time() + timeLeft, ")")
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
     # if (!isTRUE(pkgDT[Package == toInstall$Package]$installed)) {
@@ -1067,20 +1093,25 @@ copyTarball <- function(pkg, builtBinary) {
 
 installRequire <- function() {
   RequireDESCRIPTIONPath <- system.file("DESCRIPTION", package = "Require")
-  DESCRIPTIONFileVersionV(RequireDESCRIPTIONPath)
+  installedRequireV <- DESCRIPTIONFileVersionV(RequireDESCRIPTIONPath)
   isGitHub <- DESCRIPTIONFileOtherV(RequireDESCRIPTIONPath, other = "github")
   done <- FALSE
   if (is.na(isGitHub)) {
     isLocal <- dir(pattern = "DESCRIPTION")
     if (length(isLocal)) {
+      currentRequireV <- DESCRIPTIONFileVersionV("DESCRIPTION")
       currentPackageName <- DESCRIPTIONFileOtherV("DESCRIPTION", "Package")
       if (identical("Require", currentPackageName)) {
-        origDir <- setwd("..");
-        on.exit(setwd(origDir), add = TRUE)
-        system(paste0("R CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"), wait = TRUE)
+        if (!identical(installedRequireV, currentRequireV)) {
+          origDir <- setwd("..");
+          on.exit(setwd(origDir), add = TRUE)
+          system(paste0("R CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"), wait = TRUE)
+        }
         done <- TRUE
       }
+      
     }
+    
     if (isFALSE(done)) {
       system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
@@ -1090,12 +1121,39 @@ installRequire <- function() {
     stop("Require will need to be installed manually in", .libPaths()[1])
     system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   }
-
-
 }
 
 toPkgDT <- function(pkgDT) {
   if (!is.data.table(pkgDT))
     pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+  pkgDT
+}
+
+rmDuplicatePkgs <- function(pkgDT) {
+  dups <- pkgDT[installed == FALSE, .N, by = "Package"][N > 1]
+  if (NROW(dups))
+    message("Duplicate packages are Required; discarding older, or unavailable")
+  pkgDT <- pkgDT[dups, dup := TRUE, on = "Package"]
+  pkgDT <- pkgDT[is.na(dup) | (dup == TRUE & installFrom != "Fail"), keep := TRUE]
+  
+  pkgDT[installed == FALSE & keep == TRUE, keep2 := {
+    if (.N == 1) {.I[1]
+    } else { 
+      if (anyNA(versionSpec)) {
+        .I[1]
+        } else {
+          .I[which(versionSpec == max(as.package_version(versionSpec)))]
+          }
+      }}, by = "Package"]
+  pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
+  set(pkgDT, NULL, "duplicate", FALSE)
+  pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Fail", duplicate = TRUE)]
+  if (!all(pkgDT$keep)) {
+    summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
+    # summaryOfDups[is.na(keep), keep := FALSE]
+    setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
+    messageDF(summaryOfDups)
+  }
+  pkgDT[, `:=`(keep2 = NULL, keep = NULL, dup = NULL)]
   pkgDT
 }

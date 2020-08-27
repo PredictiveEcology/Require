@@ -213,6 +213,7 @@ Require <- function(packages, packageVersionFile,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
+  
   browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
@@ -309,6 +310,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- getPkgVersions(pkgDT, install = install)
       pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
       pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
+      pkgDT <- rmDuplicatePkgs(pkgDT)
       pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                           install.packagesArgs = install.packagesArgs,
                           install = install, ...)
@@ -332,7 +334,7 @@ Require <- function(packages, packageVersionFile,
     pkgDT[0]
   }
   if (NROW(stillNeeded)) { 
-    # message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
+    message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
             "information and thus will not be installed. ",
             "These may have been installed locally from source, or are on another",
             "repository system, such as BioConductor:")
