@@ -1059,15 +1059,15 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   currentTime <- Sys.time()
   dft <- difftime(currentTime, startTime, units = "secs")
   timeLeft <- dft/toInstall$installOrder * (numPackages - toInstall$installOrder)
-  # paste0("estimated time left:", format(timeLeft, units = "auto", digits = 0), " (est. finish: ", Sys.time() + timeLeft, ")")
   
-  message(" -- Installing ", toInstall$packageFullName, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
-          format(timeLeft, units = "auto", digits = 0), "; est. finish: ", Sys.time() + timeLeft, ")")
+  lotsOfTimeLeft <- timeLeft > 10
+  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 0) else "..."
+  estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
+    
+    message(" -- Installing ", toInstall$packageFullName, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
+            timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
-    # if (!isTRUE(pkgDT[Package == toInstall$Package]$installed)) {
-    #   pkgDT[Package == toInstall$Package, installResult := "Fail"]
-    # }
   }
   if (any("CRAN" %in% toInstall$installFrom))
     pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, 
