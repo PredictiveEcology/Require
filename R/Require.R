@@ -230,12 +230,30 @@ Require <- function(packages, packageVersionFile,
 
       install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
     }
-  } else {
-    grep()
-  }
-
+  } 
+  if (missing(libPaths))
+    libPaths <- .libPaths()
+  suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
+  
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
+    uniqueLibPaths <- unique(packages$LibPath)
+    if (length(uniqueLibPaths) > 1) {
+      dt <- data.table(libPathInSnapshot = uniqueLibPaths, newLibPaths = paste0(libPaths[1], "_", seq(length(uniqueLibPaths))))
+      message("packageVersionFile is covering more than one library; installing packages in reverse order; ",
+              "also -- .libPaths() will be altered to be\n")
+      messageDF(dt)
+      callArgs <- as.list(match.call())[-1]
+      out <- lapply(rev(uniqueLibPaths), function(lib) {
+        tf <- tempfile2("RequireSnapshot")
+        packages <- packages[LibPath == lib]
+        data.table::fwrite(packages, file = tf)
+        callArgs[["packageVersionFile"]] <- tf
+        out <- do.call(Require, args = callArgs)
+      })
+      return(out)
+    }
     if (NROW(packages)) {
       set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
     } else {
@@ -273,11 +291,6 @@ Require <- function(packages, packageVersionFile,
     packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
   packagesOrder <- seq(packagesOrig)
   names(packagesOrder) <- extractPkgName(packageNamesOrig)
-
-  if (missing(libPaths))
-    libPaths <- .libPaths()
-  suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
-  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {

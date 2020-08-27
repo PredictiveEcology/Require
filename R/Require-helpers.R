@@ -1063,9 +1063,9 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   lotsOfTimeLeft <- timeLeft > 10
   timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 0) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
-    
-    message(" -- Installing ", toInstall$packageFullName, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
-            timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
+  message(" -- Installing ", toInstall$packageFullName, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
+          timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
+
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
   }
@@ -1168,15 +1168,18 @@ rmDuplicatePkgs <- function(pkgDT) {
 unloadNamespaces <- function(namespaces) {
   nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
   srch <- search()
-  nsl <- setdiff(nsl, "Require") # remove Require
-  message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
-          paste(nsl, collapse = ", "))
-  message("This may require that the R session be restarted")
-  unloadHistory <- lapply(rev(nsl), function(p) {
-    pkgString <- paste0("package:", p)
-    if (any(grepl(pkgString, srch))) {
-      try(detach(pkgString, unload = TRUE), silent = TRUE)
-    } 
-    try(unloadNamespace(p))
-  })
+  nsl <- setdiff(nsl, c("data.table", "remotes", "Require")) # remove Require & deps
+  if (length(nsl)) {
+    message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
+            paste(nsl, collapse = ", "))
+    message("This may require that the R session be restarted")
+    unloadHistory <- lapply(rev(nsl), function(p) {
+      pkgString <- paste0("package:", p, "|devtools_shims")
+      if (any(grepl(pkgString, srch))) {
+        try(detach(pkgString, unload = TRUE), silent = TRUE)
+      } 
+      try(unloadNamespace(p))
+    })
+  }
+  
 }
