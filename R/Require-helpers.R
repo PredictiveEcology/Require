@@ -473,6 +473,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       message("Installing: ", paste0(toInstall$packageFullName, sep = ", "))
       toInstall[, installOrder := seq(NROW(toInstall))]
+      Package <- toInstall$Package
+      names(Package) <- Package
+      namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
+      if (any(namespacesLoaded)) {
+        unloadNamespaces(namespacesLoaded)
+      }
       startTime <- Sys.time()
       out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots, numPackages = NROW(toInstall),
                 startTime = startTime, 
@@ -679,7 +685,6 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
-  browser()
   while (length(gitPkgs)) {
     gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
@@ -1109,7 +1114,6 @@ installRequire <- function() {
         }
         done <- TRUE
       }
-      
     }
     
     if (isFALSE(done)) {
@@ -1156,4 +1160,20 @@ rmDuplicatePkgs <- function(pkgDT) {
   }
   pkgDT[, `:=`(keep2 = NULL, keep = NULL, dup = NULL)]
   pkgDT
+}
+
+unloadNamespaces <- function(namespaces) {
+  nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
+  srch <- search()
+  nsl <- setdiff(nsl, "Require") # remove Require
+  message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
+          paste(nsl, collapse = ", "))
+  message("This may require that the R session be restarted")
+  unloadHistory <- lapply(rev(nsl), function(p) {
+    pkgString <- paste0("package:", p)
+    if (any(grepl(pkgString, srch))) {
+      try(detach(pkgString, unload = TRUE), silent = TRUE)
+    } 
+    try(unloadNamespace(p))
+  })
 }
