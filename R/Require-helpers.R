@@ -1097,9 +1097,12 @@ copyTarball <- function(pkg, builtBinary) {
 }
 
 installRequire <- function() {
-  RequireDESCRIPTIONPath <- system.file("DESCRIPTION", package = "Require")
-  installedRequireV <- DESCRIPTIONFileVersionV(RequireDESCRIPTIONPath)
-  isGitHub <- DESCRIPTIONFileOtherV(RequireDESCRIPTIONPath, other = "github")
+  RequireDESCRIPTIONPath <- file.path(.libPaths()[1], "Require", "DESCRIPTION") # system.file("DESCRIPTION", package = "Require")
+  haveIt <- file.exists(RequireDESCRIPTIONPath)
+  
+  installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(RequireDESCRIPTIONPath) else NULL
+  isGitHub <- if (haveIt) DESCRIPTIONFileOtherV(RequireDESCRIPTIONPath, other = "github") else NA
+  
   done <- FALSE
   if (is.na(isGitHub)) {
     isLocal <- dir(pattern = "DESCRIPTION")
