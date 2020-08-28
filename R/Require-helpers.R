@@ -308,7 +308,8 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         localFilesWOExt <- gsub("\\.[[:alpha:]]+[[:alnum:]]+$", "", localFiles)
         localFilesWOExt <- gsub("\\.[[:alpha:]]+[[:alnum:]]+$", "", localFilesWOExt)
         
-        localFileName <- lapply(nfs, function(nf) as.data.table(localFiles[grep(paste0("^",nf,"$"), localFilesWOExt)]))
+        localFileName <- lapply(nfs, function(nf) 
+          as.data.table(localFiles[grep(paste0("^",nf,"$|^",nf,"\\_.+$"), localFilesWOExt)]))
         nfs <- rbindlist(localFileName, idcol = "neededFiles")
         setnames(nfs, old = "V1", new = "localFileName")
         nfs[, localType := ifelse(isBinary(localFileName), "binary", "source")]
@@ -330,10 +331,10 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersionV <- function(file) {
-  #origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
-  #on.exit({
-  #  Sys.setlocale(locale = origLocal)
-  #})
+  # origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+  # on.exit({
+  #   Sys.setlocale(locale = origLocal)
+  # })
   out <- lapply(file, function(f) {
     if (length(f) == 1) {
       lines <- readLines(f);
@@ -493,7 +494,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       Package <- toInstall$Package
       names(Package) <- Package
       namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
-      if (any(namespacesLoaded)) {
+      if (any(namespacesLoaded) && getOption("Require.unloadNamespaces", TRUE)) {
         detached <- unloadNamespaces(namespacesLoaded)
         detached <- as.data.table(detached, keep.rownames = "Package")
         pkgDT <- detached[pkgDT, on = "Package"]
@@ -867,8 +868,9 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
     if (isBin && buildBin) {
-      if (any(buildBinDots)) dots[buildBinDots] <- gsub("--build", "", dots[buildBinDots])
-      if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- gsub("--build", "", install.packagesArgs[buildBinIPA])
+      if (any(buildBinDots)) dots[buildBinDots] <- setdiff(dots[buildBinIPA][[1]], "--build")
+      if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- 
+          setdiff(install.packagesArgs[buildBinIPA][[1]], "--build")
     }
     warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
       warn <- suppressMessages(tryCatch({
@@ -1109,7 +1111,9 @@ copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
     newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
     if (length(newFiles)) {
-      file.link(newFiles, file.path(getOption("Require.RPackageCache"), basename(newFiles)))
+      newNames <- file.path(getOption("Require.RPackageCache"), unique(basename(newFiles)))
+      if (all(!file.exists(newNames)))
+        try(file.link(newFiles, newNames))
       unlink(newFiles)
     }
   }
@@ -1186,18 +1190,20 @@ rmDuplicatePkgs <- function(pkgDT) {
 }
 
 unloadNamespaces <- function(namespaces) {
+  unloaded <- character()
   nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
   srch <- search()
   nsl <- setdiff(nsl, c("data.table", "remotes", "Require")) # remove Require & deps
-  unloaded <- character()
   if (length(nsl)) {
     message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
             paste(nsl, collapse = ", "))
     message("This may require that the R session be restarted")
     unloadHistory <- lapply(rev(nsl), function(p) {
-      pkgString <- paste0("package:", p, "|devtools_shims")
-      if (any(grepl(pkgString, srch))) {
-        try(detach(pkgString, unload = TRUE), silent = TRUE)
+      dtshims <- "devtools_shims"
+      pkgString <- paste0("package:", p, "|", dtshims)
+      pkgString <- grep(pkgString, srch, value = TRUE)
+      if (length(pkgString)) {
+        try(detach(pkgString, unload = pkgString != dtshims, character.only = TRUE), silent = TRUE)
       } 
       try(unloadNamespace(p))
     })

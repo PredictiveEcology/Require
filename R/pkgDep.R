@@ -189,8 +189,10 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$DESCFile)
         depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
         depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1", 
-                                         grep("import", depsFromNamespace, value = TRUE)))
+                                         grep("^import", depsFromNamespace, value = TRUE)))
         depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
+        depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
+        depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
         pkgDT2 <- data.table(packageFullName = setdiff(union(depsFromNamespace, needed), .basePkgs))
         # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
         if (NROW(pkgDT2)) {

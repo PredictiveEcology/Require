@@ -35,12 +35,21 @@
 #'     set this option to \code{TRUE}. A file will be placed at 
 #'     \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
 #'   }
-
+#'   \item{\code{unloadNamespaces}}{
+#'     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload
+#'     packages that conflict with the requested package installing via \code{Require}.
+#'     This can be complicated, resulting in broken states that can only be recovered
+#'     by restarting R. Default is to attempt to do this. \code{FALSE} will not attempt
+#'     to do this. User must deal with inability to install packages due to package already 
+#'     being loaded.
+#'   }
+#'   
 #' }
 #'
 RequireOptions <- function() {
-  list(Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
-       Require.buildBinaries = TRUE,
-       Require.persistentPkgEnv = FALSE # TRUE
+  list(Require.buildBinaries = TRUE,
+       Require.persistentPkgEnv = FALSE, # TRUE
+       Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
+       Require.unloadNamespaces = TRUE
   )
 }

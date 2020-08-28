@@ -1,4 +1,6 @@
 if (interactive()) {
+  try(setLibPaths(origLibPaths, standAlone = TRUE), silent = TRUE)
+  devtools::load_all("~/GitHub/Require")
   aa <- pkgSnapshot()
   # googledrive::drive_download(googledrive::as_id("1Yo_7nuIn580rKqBCeycssVBOoe_qb7oY"))
   # library(Require)
@@ -12,9 +14,9 @@ if (interactive()) {
     options("Require.persistentPkgEnv" = TRUE, 
             "Require.RPackageCache" = "~/._RPackageCache/", 
             "install.packages.check.source" = "never", 
-            "install.packages.compile.from.source" = "never")
-    origLibPaths <- list()
-    origLibPaths[[1]] <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
+            "install.packages.compile.from.source" = "never",
+            "Require.unloadNamespaces" = FALSE)
+    origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
     Require(packageVersionFile = fileNames[["fn0"]][["txt"]])   
     
     # Test
