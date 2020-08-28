@@ -21,6 +21,14 @@ utils::globalVariables(c(
   invisible()
 }
 
+.onAttach <- function(libname, pkgname) {
+  if (isInteractive()) {
+    mess <- c("Require version: ", as.character(utils::packageVersion("Require")), ". ")
+    mess <- c(mess, "See ?RequireOptions for additional settings.")
+    packageStartupMessage(mess)
+  }
+}
+
 .onUnload <- function(libpath) {
   if (getOption("Require.persistentPkgEnv")) {
     pkgEnvLast <- as.list(.pkgEnv); 

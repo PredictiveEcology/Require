@@ -16,7 +16,9 @@
 #' \describe{
 #'   \item{\code{RPackageCache}}{
 #'     Default: \code{NULL}. If a folder is provided, then binary and source packages will
-#'       be cached here. Subsequent downloads of same package will use local copy.
+#'       be cached here. Subsequent downloads of same package will use local copy. Default
+#'       is to have packages not be cached locally so each install of the same version will
+#'       be from the original source, e.g., CRAN, GitHub.
 #'   }
 #'   \item{\code{buildBinarieis}}{
 #'     Default: \code{TRUE}. Only relevant on *nix systems and if
@@ -27,7 +29,7 @@
 #'        of this package on this or identical system will be faster.
 #'   }
 #'   \item{\code{persistentPkgEnv}}{
-#'     Default: \code{FALSE}. (ADVANCED USE) Require stashes a lot of information in a
+#'     Default: \code{FALSE}. (ADVANCED USE) \code{Require} stashes a lot of information in a
 #'     hidden environment, located at \code{Require:::.pkgEnv}. This gets reset at each
 #'     restart of R and each reload of Require. To make the stashes more persistent, 
 #'     set this option to \code{TRUE}. A file will be placed at 
@@ -37,8 +39,8 @@
 #' }
 #'
 RequireOptions <- function() {
-  list(Require.RPackageCache = NULL, # "~/._RPackageCache" # nolint
+  list(Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
        Require.buildBinaries = TRUE,
-       Require.persistentPkgEnv = FALSE
+       Require.persistentPkgEnv = FALSE # TRUE
   )
 }
