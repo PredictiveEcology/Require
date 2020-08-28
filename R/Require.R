@@ -244,14 +244,25 @@ Require <- function(packages, packageVersionFile,
               "also -- .libPaths() will be altered to be\n")
       messageDF(dt)
       callArgs <- as.list(match.call())[-1]
-      out <- lapply(rev(uniqueLibPaths), function(lib) {
+      out <- Map(lib = rev(dt$libPathInSnapshot), 
+                 newLib = rev(dt$newLibPaths), function(lib, newLib) {
         tf <- tempfile2("RequireSnapshot")
         packages <- packages[LibPath == lib]
         data.table::fwrite(packages, file = tf)
         callArgs[["packageVersionFile"]] <- tf
+        callArgs[["libPaths"]] <- newLib
+        callArgs[["standAlone"]] <- TRUE
         out <- do.call(Require, args = callArgs)
       })
-      return(out)
+      out <- unlist(out)
+      setLibPaths(dt$newLibPaths, standAlone = TRUE)
+      message(" to echo the multiple paths in ", packageVersionFile)
+      
+      if (isTRUE(require)) {
+        return(out)
+      } else {
+        return(invisible(out))
+      }
     }
     if (NROW(packages)) {
       set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
