@@ -64,7 +64,7 @@ if (interactive()) {
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
-    testit::assert(all(have[toLoad > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$toLoad > 0))
+    testit::assert(all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0))
     couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
     actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {
       didntLoad <- have[Package %in% couldHaveLoaded & correctVersionAvail == FALSE]
@@ -73,7 +73,7 @@ if (interactive()) {
       couldHaveLoaded
     }
 
-    theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(have[toLoad > 0]$Package)))
+    theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(have[loadOrder > 0]$Package)))
     browser(expr = !theTest)
   }
   unloadNSRecursive <- function(packages, n = 0) {
@@ -229,7 +229,7 @@ if (interactive()) {
     whMatch <- match(names(normalRequire), names(out2))
     whMatch <- whMatch[!is.na(whMatch)]
     out2 <- out2[whMatch]
-    have2 <- have[toLoad > 0]
+    have2 <- have[loadOrder > 0]
     normalRequire2 <- if (NROW(have2))
       normalRequire[have2$Package]
     else

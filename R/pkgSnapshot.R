@@ -36,7 +36,8 @@
 #' # get the file from email, slack, cloud etc.
 #' # library(googledrive)
 #' # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
-#' setLibPaths("~/RPackages") # start with an empty folder for new library to minimize package version conflicts
+#' setLibPaths("~/RPackages") # start with an empty folder for new 
+#'                            # library to minimize package version conflicts
 #' Require(packageVersionFile = fileName)
 #' }
 #'

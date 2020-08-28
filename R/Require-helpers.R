@@ -1,6 +1,7 @@
 utils::globalVariables(c(
   "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
-  ".N", "Archs", "type", "localType", "N"
+  ".N", "Archs", "type", "localType", "N", "installOrder", 
+  "installResult", "isGitPkg", "keep", "keep2", "github", "dup"
 ))
 
   #' @details
@@ -511,7 +512,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
             tryCatch(packageVersion(x), error = function(x) NA_character_))))]
-  pkgDT[toLoad > 0, toLoad := toLoad * as.integer(is.na(installFrom) | installFrom != "Fail")]
+  pkgDT[loadOrder > 0, loadOrder := loadOrder * as.integer(is.na(installFrom) | installFrom != "Fail")]
 
   pkgDT
 }
@@ -523,8 +524,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 #' @importFrom utils capture.output
 #' @rdname Require-internals
 doLoading <- function(pkgDT, require = TRUE, ...) {
-  packages <- pkgDT[toLoad > 0]$Package
-  packageOrder <- pkgDT[toLoad > 0]$toLoad
+  packages <- pkgDT[loadOrder > 0]$Package
+  packageOrder <- pkgDT[loadOrder > 0]$loadOrder
   if (isTRUE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
@@ -617,7 +618,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
       out <- c(out, out2)
     }
 
-    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & toLoad > 0)]
+    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & loadOrder > 0)]
   }
   pkgDT[]
 }
@@ -749,9 +750,10 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   dt$packageFullName
 }
 
-colsToKeep <- c("Package", "loaded", "LibPath", "Version", "packageFullName",
-                "installed", "repoLocation", "correctVersion", "correctVersionAvail",
-                "toLoad", "hasVersionSpec")
+colsToKeep <- c("packageFullName", "installed", "loadOrder", "loaded", "installFrom", 
+                "Version", 
+                "repoLocation"
+                )
 
 installedVers <- function(pkgDT) {
   pkgDT <- toPkgDT(pkgDT)

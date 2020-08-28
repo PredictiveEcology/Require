@@ -1,11 +1,11 @@
 utils::globalVariables(c(
-  "..colsToKeep", "..keepCols", "Account", "archiveSource", "AvailableVersion",
+  "..colsToKeep", "..colsToKeep2", "..keepCols", "Account", "archiveSource", "AvailableVersion",
   "bothDepAndOrig", "Branch", "compareVersionAvail", "correctVersion", "correctVersionAvail",
   "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
   "libPaths", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
   "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
-  "Repo", "repoLocation", "RepoWBranch", "toLoad", "Version", "versionSpec"
+  "Repo", "repoLocation", "RepoWBranch", "loadOrder", "Version", "versionSpec","detached", "."
 ))
 
 #' Repeatability-safe install and load packages, optionally with specific versions
@@ -250,7 +250,7 @@ Require <- function(packages, packageVersionFile,
       out <- Map(lib = rev(dt$libPathInSnapshot), 
                  newLib = rev(dt$newLibPaths), function(lib, newLib) {
         tf <- tempfile2("RequireSnapshot")
-        packages <- packages[LibPath == lib]
+        packages <- packages[packages$LibPath == lib]
         data.table::fwrite(packages, file = tf)
         callArgs[["packageVersionFile"]] <- tf
         callArgs[["libPaths"]] <- newLib
@@ -322,7 +322,7 @@ Require <- function(packages, packageVersionFile,
     # identify the packages that were asked by user to load -- later dependencies will be in table too
     pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
-    pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
+    pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
     
     if (any(origPackagesHaveNames))
       pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
@@ -372,12 +372,16 @@ Require <- function(packages, packageVersionFile,
     notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
     if (sum(notCorrectly)) {
       message("The following packages did not get installed correctly. Try to rerun Require call again without any changes...")
-      messageDF(pkgDT[notCorrectly == TRUE, .(packageFullName, Package, LibPath, Version, 
-                                            repoLocation, installFrom, installResult)])
+      colsToKeep2 <- c("packageFullName", "Package", "LibPath", "Version", 
+                       "repoLocation", "installFrom", "installResult")
+      messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
     } else {
-      allInstalled <- pkgDT[needInstall == TRUE & installed == FALSE]
-      if (NROW(allInstalled) == 0)
-        message("All packages appear to have installed correctly")
+      if (!is.null(pkgDT$needInstall)) {
+        allCorrect <- pkgDT$needInstall == TRUE & pkgDT$installed == FALSE
+        allInstalled <- pkgDT[allCorrect]
+        if (NROW(allInstalled) == 0)
+          message("All packages appear to have installed correctly")
+      }
       if ("detached" %in% colnames(pkgDT)) {
         unloaded <- pkgDT[!is.na(detached)]
         if (NROW(unloaded)) {
