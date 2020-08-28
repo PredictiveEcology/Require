@@ -765,7 +765,9 @@ installedVers <- function(pkgDT) {
     pkgs <- unique(pkgDT$Package)
     names(pkgs) <- pkgs
     installedPkgsCurrent <- lapply(pkgs, function(p) {
-      out <- tryCatch(find.package(p, lib.loc = .libPaths()), error = function(x) NA)
+      pkgPath <- file.path(.libPaths(), p)
+      out <- pkgPath[file.exists(pkgPath)][1]
+      # out <- tryCatch(find.package(p, lib.loc = .libPaths()), error = function(x) NA)
       descV <- if (!is.na(out)) {
         descV <- DESCRIPTIONFileVersionV(file.path(out, "DESCRIPTION"))
         cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
@@ -957,7 +959,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                    append(append(list(installPkgNames), install.packagesArgs), # removed , available = ap
                           dots))
   }, warning = function(condition) condition)
-  browser()
   if (any(grepl("--build", c(dots, install.packagesArgs))))
     copyTarball(installPkgNames, TRUE)
 
