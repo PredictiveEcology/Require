@@ -296,7 +296,7 @@ pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
                     depends, imports, suggests, linkingTo,
                     repos = getOption("repos"),
-                    sorted = TRUE) {
+                    sorted = TRUE, purge = getOption("Require.purge", FALSE)) {
   a <- lapply(pkgDep(packages, recursive = FALSE, which = which, depends = depends,
                      imports = imports, suggests = suggests, linkingTo = linkingTo,
                      repos = repos)[[1]],
@@ -387,7 +387,8 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #' }
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllInSearch = FALSE,
-                           returnFull = TRUE, recursive = TRUE) {
+                           returnFull = TRUE, recursive = TRUE, 
+                           purge = getOption("Require.purge", FALSE)) {
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
@@ -428,7 +429,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
 
       }
     } else {
-      pkgDep(pkgs, recursive = TRUE)
+      pkgDep(pkgs, recursive = TRUE, purge = purge)
     }
     # testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
     # if (!identical(sort(unlist(testVal)), sort(unlist(aa)))) {
