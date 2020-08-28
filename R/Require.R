@@ -36,20 +36,23 @@ utils::globalVariables(c(
 #' file in a \code{libPaths}, any call to \code{pkgSnapshot} will make a snapshot
 #' of the most recent call to \code{Require}.
 #'
+#' @section Package Snapshots:
 #' To build a snapshot of the desired packages and their versions, first run
 #' \code{Require} with all packages, then \code{pkgSnapshot}. If a
 #' \code{libPaths} is used, it must be used in both functions.
 #'
-#' When installing new packages, `Require` will put all source and binary files
-#' in `getOption("Require.RPackageCache")` whose default is `NULL`
-#' and will reuse them if needed. To turn
-#' on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
-#'
+#' @section Mutual Dependencies:
 #' This function works best if all required packages are called within one
 #' \code{Require} call, as all dependencies can be identified together, and all
 #' package versions will be saved automatically (with \code{standAlone = TRUE}
 #' or \code{standAlone = FALSE}), allowing a call to \code{pkgSnapshot} when a
 #' more permanent record of versions can be made.
+#'
+#' @section Local Cache of Packages:
+#' When installing new packages, `Require` will put all source and binary files
+#' in `getOption("Require.RPackageCache")` whose default is `NULL`
+#' and will reuse them if needed. To turn
+#' on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
 #'
 #' @note
 #' For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
