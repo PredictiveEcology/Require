@@ -234,19 +234,26 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
               pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
               packageURL <- file.path(pkgName, pkgFilename)
             }
-            srcContrib <- "src/contrib"
-            url <- file.path(repos, srcContrib, "/Archive", packageURL) 
-            url2 <- file.path(repos, srcContrib, basename(packageURL))#https://cran.r-project.org/src/contrib/foreign_0.8-80.tar.gz) 
-            tf <- tempfile()
-            suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
-              tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) browser())))
-            untar(tarfile = tf, exdir = td)
-            filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
-            filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
-            unlink(filesToDel, recursive = TRUE)
+            if (NROW(dt)) {
+              srcContrib <- "src/contrib"
+              url <- file.path(repos, srcContrib, "/Archive", packageURL) 
+              url2 <- file.path(repos, srcContrib, basename(packageURL))#https://cran.r-project.org/src/contrib/foreign_0.8-80.tar.gz) 
+              tf <- tempfile()
+              suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
+                tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) browser())))
+              untar(tarfile = tf, exdir = td)
+              filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
+              filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
+              unlink(filesToDel, recursive = TRUE)
+            }
           } 
-          needed <- DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"), 
+          needed <- if (dir.exists(packageTD))
+            DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"), 
                                         which = which, keepVersionNumber = keepVersionNumber)
+          else {
+            character()
+            message(pkg, " dependencies not found on CRAN; perhaps incomplete description? Is it on GitHub?")
+          }
         }
         purge <<- FALSE
         needed
