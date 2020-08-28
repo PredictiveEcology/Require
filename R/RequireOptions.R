@@ -43,6 +43,12 @@
 #'     to do this. User must deal with inability to install packages due to package already 
 #'     being loaded.
 #'   }
+#'   \item{\code{verbose}}{
+#'     Default: \code{0}. During a \code{Require}, there is a lot of information collected 
+#'     and used. With \code{verbose} set to \code{1} or \code{2}, more of this information
+#'     will be reported as an attribute attached to the return object of \code{Require}.
+#'     This may help diagnosing problems.
+#'   }
 #'   
 #' }
 #'
@@ -50,6 +56,7 @@ RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
-       Require.unloadNamespaces = TRUE
+       Require.unloadNamespaces = TRUE,
+       Require.verbose = 0
   )
 }

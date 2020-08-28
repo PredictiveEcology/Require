@@ -332,7 +332,7 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- installedVers(pkgDT)
     pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
     pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
-    
+   
     if (length(packages)) {
       if (isTRUE(install) || identical(install, "force")) {
         pkgDT <- parseGitHub(pkgDT)
@@ -363,7 +363,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT[0]
     }
     if (NROW(stillNeeded)) { 
-      message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
+      message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking ",
               "information and thus will not be installed. ",
               "These may have been installed locally from source, or are on another ",
               "repository system, such as BioConductor:")

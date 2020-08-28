@@ -957,6 +957,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                    append(append(list(installPkgNames), install.packagesArgs), # removed , available = ap
                           dots))
   }, warning = function(condition) condition)
+  browser()
   if (any(grepl("--build", c(dots, install.packagesArgs))))
     copyTarball(installPkgNames, TRUE)
 
@@ -1067,6 +1068,9 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       pkgDT[Package == toInstall$Package, installResult := unlist(out)[[1]]]
     }
   }
+  if (any(grepl("--build", c(dots, install.packagesArgs))))
+    copyTarball(installPkgNames, TRUE)
+  
   updateInstalled(pkgDT, installPkgNames, warnings())
 }
 
