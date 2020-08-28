@@ -187,8 +187,9 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         #if (FALSE) {
         # Check NAMESPACE too -- because imperfect DESCRIPTION files
         rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$DESCFile)
+        depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
         depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1", 
-                                         grep("import", rr, value = TRUE)))
+                                         grep("import", depsFromNamespace, value = TRUE)))
         depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
         pkgDT2 <- data.table(packageFullName = setdiff(union(depsFromNamespace, needed), .basePkgs))
         # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
