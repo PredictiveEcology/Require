@@ -380,15 +380,28 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' @export
 #' @param pkg A character string with a GitHub package specification (c.f. remotes)
 getGitHubDESCRIPTION <- function(pkg) {
-  ret <- if (length(pkg) > 0) {
-    if (is.data.table(pkg)) {
-      if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
-        if (any(c("packageFullName") %in% colnames(pkg))) {
-          pkg <- pkg$packageFullName
-        }
+  getGitHubFile(pkg, "DESCRIPTION")
+}
+
+getGitHubNamespace <- function(pkg) {
+  getGitHubFile(pkg, "NAMESPACE")
+}
+
+pkgDTtoPackageFullName <- function(pkg) {
+  if (is.data.table(pkg)) {
+    if (!all(c("Account", "Repo", "Branch") %in% colnames(pkg))) {
+      if (any(c("packageFullName") %in% colnames(pkg))) {
+        pkg <- pkg$packageFullName
       }
     }
+  }
+  pkg
+}
 
+getGitHubFile <- function(pkg, filename = "DESCRIPTION") {
+  ret <- if (length(pkg) > 0) {
+    pkg <- pkgDTtoPackageFullName(pkg)
+    
     pkgDT <- parseGitHub(pkg)
     pkgDT[repoLocation == "GitHub",
           url := {
@@ -396,22 +409,22 @@ getGitHubDESCRIPTION <- function(pkg) {
               Branch <- paste0(Branch, "/", GitSubFolder)
             }
             file.path("https://raw.githubusercontent.com", Account,
-                      Repo, Branch, "DESCRIPTION", fsep = "/")
+                      Repo, Branch, filename, fsep = "/")
           },
           by = "Package"]
-
+    
     checkPath(dirname(tempfile()), create = TRUE)
     pkgDT[repoLocation == "GitHub",
-      DESCFile := {
-        destFile <- tempfile()
-        download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
-        destFile
-      }, by = c("Package", "Branch")]
+          DESCFile := {
+            destFile <- tempfile()
+            download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
+            destFile
+          }, by = c("Package", "Branch")]
     pkgDT[]
   } else {
     pkg
   }
-  ret
+  ret    
 }
 
 
