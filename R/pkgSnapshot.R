@@ -19,6 +19,27 @@
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
 #' data.table::fread(pkgSnapFile)
 #'
+#' \dontrun{
+#'
+#' # An example to move this file to a new computer
+#' library(Require)
+#' setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
+#' fileName <- "packageSnapshot.txt"
+#' pkgSnapshot(fileName)
+#' # Get file on another computer -- via email, slack, cloud, etc.
+#' # library(googledrive)
+#' # (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
+#' 
+#' # On new machine 
+#' fileName <- "packageSnapshot.txt"
+#' library(Require)
+#' # get the file from email, slack, cloud etc.
+#' # library(googledrive)
+#' # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
+#' setLibPaths("~/RPackages") # start with an empty folder for new library to minimize package version conflicts
+#' Require(packageVersionFile = fileName)
+#' }
+#'
 pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE) {
   browser(expr = exists("aaaa"))
   if (missing(libPaths))
