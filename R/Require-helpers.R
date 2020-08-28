@@ -287,6 +287,9 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       if (any(neededVersions$installFrom == "CRAN") && "AvailableVersion" %in% colnames(pkgDT)) {
         neededVersions[installFrom == "CRAN", neededFiles := paste0(Package, "_", AvailableVersion)]
       }
+      if (any(neededVersions$installFrom == "GitHub")) {
+        neededVersions[installFrom == "GitHub", neededFiles := paste0(Package, "_", Branch)]
+      }
       otherPoss <- nchar(neededVersions$neededFiles) == 0 | endsWith(neededVersions$neededFiles, "NA")
       if (any(otherPoss)) {
         dontKnowVersion <- neededVersions[otherPoss]
