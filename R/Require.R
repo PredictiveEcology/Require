@@ -353,6 +353,11 @@ Require <- function(packages, packageVersionFile,
             "repository system, such as BioConductor:")
     messageDF(stillNeeded[, list(Package, packageFullName, installResult)]) 
   }
+  if (sum(pkgDT$installed == FALSE)) {
+    message("The following packages did not get installed correctly. Try to rerun Require call again without any changes...")
+    messageDF(pkgDT[installed == FALSE, .(packageFullName, Package, LibPath, Version, 
+                                          repoLocation, installFrom, installResult)])
+  }
   if (isTRUE(require)) {
     return(out)
   } else {
