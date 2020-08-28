@@ -275,8 +275,10 @@ Require <- function(packages, packageVersionFile,
     on.exit({Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)}, add = TRUE)
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
-
-
+  
+  # Rm base packages -- this will happen in getPkgDeps if that is run
+  packages <- packages[!extractPkgName(packages) %in% .basePkgs]
+  
   # Some package names are not derived from their GitHub repo names -- user can supply named packages
   origPackagesHaveNames <- nchar(names(packages)) > 0
   if (any(origPackagesHaveNames))
@@ -286,77 +288,81 @@ Require <- function(packages, packageVersionFile,
   origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
   packagesOrig <- packages
   packageNamesOrig <- packages
-
+  
   if (any(origPackagesHaveNames))
     packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
   packagesOrder <- seq(packagesOrig)
   names(packagesOrder) <- extractPkgName(packageNamesOrig)
-
+  
   browser(expr = exists("._Require_1"))
   if (length(which) && (isTRUE(install) || identical(install, "force"))) {
     packages <- getPkgDeps(packages, which = which, purge = purge)
   }
-
-
+  
+  
   # Create data.table of Require workflow
   if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
   
   pkgDT <- toPkgDT(packages)
-
-  # identify the packages that were asked by user to load -- later dependencies will be in table too
-  pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
-        packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
-  pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
-
-  if (any(origPackagesHaveNames))
-    pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
-          Package := names(packagesOrig[origPackagesHaveNames])]
-
-  # Join installed with requested
-  pkgDT <- installedVers(pkgDT)
-  pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
-  pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
-
-  if (length(packages)) {
-    if (isTRUE(install) || identical(install, "force")) {
-      pkgDT <- parseGitHub(pkgDT)
-      pkgDT <- getPkgVersions(pkgDT, install = install)
-      pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
-      pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
-      pkgDT <- rmDuplicatePkgs(pkgDT)
-      pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
-                          install.packagesArgs = install.packagesArgs,
-                          install = install, ...)
+  if (NROW(pkgDT)) {
+    # identify the packages that were asked by user to load -- later dependencies will be in table too
+    pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
+          packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
+    pkgDT[, toLoad := packagesRequired] # this will start out as toLoad = TRUE, but if install fails, will turn to FALSE
+    
+    if (any(origPackagesHaveNames))
+      pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
+            Package := names(packagesOrig[origPackagesHaveNames])]
+    
+    browser()
+    # Join installed with requested
+    pkgDT <- installedVers(pkgDT)
+    pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
+    pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
+    
+    if (length(packages)) {
+      if (isTRUE(install) || identical(install, "force")) {
+        pkgDT <- parseGitHub(pkgDT)
+        pkgDT <- getPkgVersions(pkgDT, install = install)
+        pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
+        pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
+        pkgDT <- rmDuplicatePkgs(pkgDT)
+        pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
+                            install.packagesArgs = install.packagesArgs,
+                            install = install, ...)
+      }
+      if (isTRUE(require))
+        pkgDT <- doLoading(pkgDT, ...)
     }
-    if (isTRUE(require))
-      pkgDT <- doLoading(pkgDT, ...)
-  }
-  out <- pkgDT[packagesRequired > 0]$loaded
-  names(out) <- pkgDT[packagesRequired > 0]$Package
-  if (verbose > 0) {
-    if (verbose < 2) {
-      colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
-      pkgDT <- pkgDT[, ..colsToKeep]
+    out <- pkgDT[packagesRequired > 0]$loaded
+    names(out) <- pkgDT[packagesRequired > 0]$Package
+    if (verbose > 0) {
+      if (verbose < 2) {
+        colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
+        pkgDT <- pkgDT[, ..colsToKeep]
+      }
+      
+      attr(out, "Require") <- pkgDT[]
     }
-
-    attr(out, "Require") <- pkgDT[]
-  }
-  stillNeeded <- if (!is.null(pkgDT$installResult)) if (any(grep("No available", pkgDT$installResult))) {
-    pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]
+    stillNeeded <- if (!is.null(pkgDT$installResult)) if (any(grep("No available", pkgDT$installResult))) {
+      pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]
+    } else {
+      pkgDT[0]
+    }
+    if (NROW(stillNeeded)) { 
+      message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
+              "information and thus will not be installed. ",
+              "These may have been installed locally from source, or are on another",
+              "repository system, such as BioConductor:")
+      messageDF(stillNeeded[, list(Package, packageFullName, installResult)]) 
+    }
+    if (sum(pkgDT$installed == FALSE)) {
+      message("The following packages did not get installed correctly. Try to rerun Require call again without any changes...")
+      messageDF(pkgDT[installed == FALSE, .(packageFullName, Package, LibPath, Version, 
+                                            repoLocation, installFrom, installResult)])
+    }
   } else {
-    pkgDT[0]
-  }
-  if (NROW(stillNeeded)) { 
-    message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
-            "information and thus will not be installed. ",
-            "These may have been installed locally from source, or are on another",
-            "repository system, such as BioConductor:")
-    messageDF(stillNeeded[, list(Package, packageFullName, installResult)]) 
-  }
-  if (sum(pkgDT$installed == FALSE)) {
-    message("The following packages did not get installed correctly. Try to rerun Require call again without any changes...")
-    messageDF(pkgDT[installed == FALSE, .(packageFullName, Package, LibPath, Version, 
-                                          repoLocation, installFrom, installResult)])
+    out <- logical()
   }
   if (isTRUE(require)) {
     return(out)
