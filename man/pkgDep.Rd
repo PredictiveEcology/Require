@@ -31,7 +31,8 @@ pkgDep2(
   suggests,
   linkingTo,
   repos = getOption("repos"),
-  sorted = TRUE
+  sorted = TRUE,
+  purge = getOption("Require.purge", FALSE)
 )
 
 pkgDepTopoSort(
@@ -41,7 +42,8 @@ pkgDepTopoSort(
   topoSort = TRUE,
   useAllInSearch = FALSE,
   returnFull = TRUE,
-  recursive = TRUE
+  recursive = TRUE,
+  purge = getOption("Require.purge", FALSE)
 )
 }
 \arguments{

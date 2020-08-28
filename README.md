@@ -101,6 +101,10 @@ pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project speci
 Require::Require(packageVersionFile = "mySnapshot.txt")
 ```
 
+### Using local package cache
+
+When installing on many machines on a network, having a local cache can speed up installations. Setting `options("Require.RPackageCache" = someSharedDirectory)` will turn on local cache. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later (turned off with `options("Require.RPackageCache" = someSharedDirectory)`)
+
 # Installing
 
 ## News
