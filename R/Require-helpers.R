@@ -490,7 +490,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       names(Package) <- Package
       namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
       if (any(namespacesLoaded)) {
-        unloadNamespaces(namespacesLoaded)
+        detached <- unloadNamespaces(namespacesLoaded)
+        detached <- as.data.table(detached, keep.rownames = "Package")
+        pkgDT <- detached[pkgDT, on = "Package"]
       }
       startTime <- Sys.time()
       out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots, numPackages = NROW(toInstall),
@@ -1182,6 +1184,7 @@ unloadNamespaces <- function(namespaces) {
   nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
   srch <- search()
   nsl <- setdiff(nsl, c("data.table", "remotes", "Require")) # remove Require & deps
+  unloaded <- character()
   if (length(nsl)) {
     message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
             paste(nsl, collapse = ", "))
@@ -1193,6 +1196,9 @@ unloadNamespaces <- function(namespaces) {
       } 
       try(unloadNamespace(p))
     })
+    unloaded <- nsl[unlist(lapply(unloadHistory, is.null))]
   }
-  
+  names(unloaded) <- unloaded
+  detached <- unlist(lapply(unloaded, function(x) any(grepl(paste0("package:", x), srch))))
+  return(detached)
 }

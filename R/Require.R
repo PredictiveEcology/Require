@@ -234,7 +234,6 @@ Require <- function(packages, packageVersionFile,
   if (missing(libPaths))
     libPaths <- .libPaths()
   suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
-  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
   
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
@@ -275,36 +274,37 @@ Require <- function(packages, packageVersionFile,
     on.exit({Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)}, add = TRUE)
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
   
   # Rm base packages -- this will happen in getPkgDeps if that is run
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
-  
-  # Some package names are not derived from their GitHub repo names -- user can supply named packages
-  origPackagesHaveNames <- nchar(names(packages)) > 0
-  if (any(origPackagesHaveNames))
-    packages <- packages[order(names(packages), decreasing = TRUE)]
-  dups <- duplicated(packages)
-  packages <- packages[!dups] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
-  origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
-  packagesOrig <- packages
-  packageNamesOrig <- packages
-  
-  if (any(origPackagesHaveNames))
-    packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
-  packagesOrder <- seq(packagesOrig)
-  names(packagesOrder) <- extractPkgName(packageNamesOrig)
-  
-  browser(expr = exists("._Require_1"))
-  if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-    packages <- getPkgDeps(packages, which = which, purge = purge)
-  }
-  
-  
-  # Create data.table of Require workflow
-  if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
-  
-  pkgDT <- toPkgDT(packages)
-  if (NROW(pkgDT)) {
+  if (NROW(packages)) {
+    
+    # Some package names are not derived from their GitHub repo names -- user can supply named packages
+    origPackagesHaveNames <- nchar(names(packages)) > 0
+    if (any(origPackagesHaveNames))
+      packages <- packages[order(names(packages), decreasing = TRUE)]
+    dups <- duplicated(packages)
+    packages <- packages[!dups] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
+    origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
+    packagesOrig <- packages
+    packageNamesOrig <- packages
+    
+    if (any(origPackagesHaveNames))
+      packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
+    packagesOrder <- seq(packagesOrig)
+    names(packagesOrder) <- extractPkgName(packageNamesOrig)
+    
+    browser(expr = exists("._Require_1"))
+    if (length(which) && (isTRUE(install) || identical(install, "force"))) {
+      packages <- getPkgDeps(packages, which = which, purge = purge)
+    }
+    
+    
+    # Create data.table of Require workflow
+    if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
+    
+    pkgDT <- toPkgDT(packages)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
     pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
@@ -314,7 +314,6 @@ Require <- function(packages, packageVersionFile,
       pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
             Package := names(packagesOrig[origPackagesHaveNames])]
     
-    browser()
     # Join installed with requested
     pkgDT <- installedVers(pkgDT)
     pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
@@ -352,14 +351,27 @@ Require <- function(packages, packageVersionFile,
     if (NROW(stillNeeded)) { 
       message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
               "information and thus will not be installed. ",
-              "These may have been installed locally from source, or are on another",
+              "These may have been installed locally from source, or are on another ",
               "repository system, such as BioConductor:")
       messageDF(stillNeeded[, list(Package, packageFullName, installResult)]) 
     }
-    if (sum(pkgDT$installed == FALSE)) {
+    notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
+    if (sum(notCorrectly)) {
       message("The following packages did not get installed correctly. Try to rerun Require call again without any changes...")
-      messageDF(pkgDT[installed == FALSE, .(packageFullName, Package, LibPath, Version, 
+      messageDF(pkgDT[notCorrectly == TRUE, .(packageFullName, Package, LibPath, Version, 
                                             repoLocation, installFrom, installResult)])
+    } else {
+      allInstalled <- pkgDT[needInstall == TRUE & installed == FALSE]
+      if (NROW(allInstalled) == 0)
+        message("All packages appear to have installed correctly")
+      if ("detached" %in% colnames(pkgDT)) {
+        unloaded <- pkgDT[!is.na(detached)]
+        if (NROW(unloaded)) {
+          reloaded <- lapply(unloaded$Package, loadNamespace)
+          message("Attempting to reload namespaces that were detached: ", paste(unloaded$Package, collapse = ", "))
+        }
+      }
+        
     }
   } else {
     out <- logical()
