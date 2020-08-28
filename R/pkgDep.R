@@ -181,13 +181,37 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {
         which <- c(which, "Remotes")
+        
         pkgDT <- getGitHubDESCRIPTION(pkgDT)
         needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which)
-        pkgDT2 <- data.table(Package = needed, github = extractPkgGitHub(needed))
-        if ("github" %in% colnames(pkgDT2)) {
-          setorderv(pkgDT2, "github", na.last = TRUE)
+        #if (FALSE) {
+        # Check NAMESPACE too -- because imperfect DESCRIPTION files
+        rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$DESCFile)
+        depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1", 
+                                         grep("import", rr, value = TRUE)))
+        depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
+        pkgDT2 <- data.table(packageFullName = setdiff(union(depsFromNamespace, needed), .basePkgs))
+        # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
+        if (NROW(pkgDT2)) {
+          pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
+          setorderv(pkgDT2, "isGitPkg", order = -1)
+          pkgDT2[, Package := extractPkgName(packageFullName)]
+          pkgDT2[, dup := duplicated(Package)]
+          pkgDT2 <- pkgDT2[dup == FALSE]
+          differences <- setdiff(extractPkgName(pkgDT2$packageFullName), extractPkgName(needed))
+          if (length(differences)) {
+            message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
+                    paste(differences, collapse = ", "), " --) ")
+          }
+          pkgDT2[, github := extractPkgGitHub(packageFullName)]
         }
-        needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
+        needed <- pkgDT2$packageFullName
+        #}
+        #pkgDT2 <- data.table(Package = needed, github = extractPkgGitHub(needed))
+        #if ("github" %in% colnames(pkgDT2)) {
+        #  setorderv(pkgDT2, "github", na.last = TRUE)
+        #}
+        #needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
       } else {
         needed <- unique(unname(unlist(pkgDepCRAN(pkg,
                                            which = which,
