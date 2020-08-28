@@ -252,7 +252,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                         which = which, keepVersionNumber = keepVersionNumber)
           else {
             character()
-            message(pkg, " dependencies not found on CRAN; perhaps incomplete description? Is it on GitHub?")
+            message(pkg, " dependencies not found on CRAN; perhaps incomplete description? On GitHub?")
           }
         }
         purge <<- FALSE
