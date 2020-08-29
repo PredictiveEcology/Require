@@ -116,16 +116,20 @@ pkgDep <- function(packages, libPath = .libPaths(),
             dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
             dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
             dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
-            #setorderv(dt, "PackageTrimmed", na.last = TRUE)
-
-            dt1 <- dt[!is.na(versionSpec), list(Package, Current, hasVers, inequality,
-                                                atLeastOneWithVersionSpec,
-                                                versionSpec = as.character(package_version(versionSpec)),
-                                                maxVersionSpec = as.character(max(package_version(versionSpec)))),
-                      by = "PackageTrimmed"]
-            dt1 <- dt1[versionSpec == maxVersionSpec]
-            dt1 <- dt1[, lapply(.SD, function(x) x[1]), by = "PackageTrimmed"]
-            dt2 <- dt[is.na(versionSpec)]
+            
+            keepCols3 <- c("PackageTrimmed", "Package", "Current", 
+                           "hasVers", "inequality", "atLeastOneWithVersionSpec", "versionSpec")
+            
+            versionSpecNA <- is.na(dt$versionSpec)
+            dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
+            if (NROW(dt1)) {
+              ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
+              dt1 <- dt1[ord]
+              dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
+            }
+            
+            dt2 <- dt[versionSpecNA]
+            
             dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
             dt3 <- dt[!duplicated(dt$PackageTrimmed)]
             dt4 <- dt3[Current == TRUE]
@@ -183,7 +187,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         which <- c(which, "Remotes")
         
         pkgDT <- getGitHubDESCRIPTION(pkgDT)
-        needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which)
+        needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
         #if (FALSE) {
         # Check NAMESPACE too -- because imperfect DESCRIPTION files
         rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$DESCFile)
@@ -252,7 +256,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
           } 
           needed <- if (dir.exists(packageTD))
             DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"), 
-                                        which = which, keepVersionNumber = keepVersionNumber)
+                                which = which, keepVersionNumber = keepVersionNumber,
+                                purge = purge)
           else {
             character()
             message(pkg, " dependencies not found on CRAN; perhaps incomplete description? On GitHub?")
@@ -525,45 +530,51 @@ pkgDepCRANInner <- function(ap, which, pkgs, keepVersionNumber) {
 }
 
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
-                                keepVersionNumber = TRUE) {
-  lines <- if (length(desc_path) == 1)
-    readLines(desc_path)
-  else
-    lines <- desc_path
-  Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
-  on.exit(Sys.setlocale(locale = ""))
-  sl <- list()
-  sl[["depends"]] <- grep("^Depends: *", lines) # nolint
-  sl[["suggests"]] <- grep("^Suggests: *", lines) # nolint
-  sl[["imports"]] <- grep("^Imports: *", lines) # nolint
-  sl[["linkingto"]] <- grep("^LinkingTo: *", lines) # nolint
-  sl[["remotes"]] <- grep("^Remotes: *", lines) # nolint
-  sl[["colon"]] <- grep(": *", lines) # nolint
-
-  which <- paste0(toupper(substr(which, 1, 1)), substr(which, 2, 1e4))
-  which <- unique(which)
-  whichLower <- tolower(which)
-  needed <- Map(whLower = whichLower, wh = which, function(whLower, wh) {
-    if (length(sl[[whLower]])) {
-      whEnd <- which(sl[["colon"]] %in% sl[[whLower]]) + 1
-      whEnd <- if (length(sl[["colon"]]) < whEnd) {
-        length(lines)
-      } else {
-        (sl[["colon"]][whEnd] - 1)
+                                keepVersionNumber = TRUE, purge = getOption("Require.purge", FALSE)) {
+  objName <- paste0(desc_path, paste(collapse = "_", which, "_", keepVersionNumber))
+  if (is.null(.pkgEnv[["DESCRIPTIONFile"]][[objName]])) {
+    lines <- if (length(desc_path) == 1)
+      readLines(desc_path)
+    else
+      lines <- desc_path
+    Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
+    on.exit(Sys.setlocale(locale = ""))
+    sl <- list()
+    sl[["depends"]] <- grep("^Depends: *", lines) # nolint
+    sl[["suggests"]] <- grep("^Suggests: *", lines) # nolint
+    sl[["imports"]] <- grep("^Imports: *", lines) # nolint
+    sl[["linkingto"]] <- grep("^LinkingTo: *", lines) # nolint
+    sl[["remotes"]] <- grep("^Remotes: *", lines) # nolint
+    sl[["colon"]] <- grep(": *", lines) # nolint
+    
+    which <- paste0(toupper(substr(which, 1, 1)), substr(which, 2, 1e4))
+    which <- unique(which)
+    whichLower <- tolower(which)
+    needed <- Map(whLower = whichLower, wh = which, function(whLower, wh) {
+      if (length(sl[[whLower]])) {
+        whEnd <- which(sl[["colon"]] %in% sl[[whLower]]) + 1
+        whEnd <- if (length(sl[["colon"]]) < whEnd) {
+          length(lines)
+        } else {
+          (sl[["colon"]][whEnd] - 1)
+        }
+        allLines <- sl[[whLower]]:whEnd # nolint
+        needs <- paste(lines[allLines], collapse = "")
+        needs <- gsub(paste0(wh, ": *"), "", needs)
+        needs <- strsplit(needs, split = ", *")
+        needs <- gsub(" *$", "", needs[[1]]) # remove trailing spaces
+        if (isFALSE(keepVersionNumber))
+          needs <- trimVersionNumber(needs)
+        needs
       }
-      allLines <- sl[[whLower]]:whEnd # nolint
-      needs <- paste(lines[allLines], collapse = "")
-      needs <- gsub(paste0(wh, ": *"), "", needs)
-      needs <- strsplit(needs, split = ", *")
-      needs <- gsub(" *$", "", needs[[1]]) # remove trailing spaces
-      if (isFALSE(keepVersionNumber))
-        needs <- trimVersionNumber(needs)
-      needs
-    }
-  })
-  needed <- unname(unlist(needed))
-  needed <- grep("^R[\\( ]", needed, value = TRUE, invert = TRUE)
-
+    })
+    needed <- unname(unlist(needed))
+    needed <- grep("^R[\\( ]", needed, value = TRUE, invert = TRUE)
+    
+    assign(objName, needed, envir = .pkgEnv)
+  } else {
+    needed <- .pkgEnv[["DESCRIPTIONFile"]][[objName]]
+  }
   needed
 }
 
@@ -589,7 +600,8 @@ whichToDILES <- function(which) {
   which
 }
 
-.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL) {
+.installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL,
+                            purge = getOption("Require.purge", FALSE)) {
   if (!is.null(other))
     if (any(grepl("github", tolower(other)))) {
       other <- c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")
@@ -604,7 +616,8 @@ whichToDILES <- function(which) {
     files <- files[filesExist]
     desc_lines <- lapply(files, function(file) DESCRIPTIONFile(file))
     versions <- DESCRIPTIONFileVersionV(desc_lines)
-    deps <- if (length(which)) lapply(desc_lines, function(lines) DESCRIPTIONFileDeps(lines, which = which)) else NULL
+    deps <- if (length(which)) lapply(desc_lines, function(lines) 
+      DESCRIPTIONFileDeps(lines, which = which, purge = purge)) else NULL
     if (!is.null(other)) {
       names(other) <- other
       others <- lapply(other, function(oth) DESCRIPTIONFileOtherV(desc_lines, other = oth))

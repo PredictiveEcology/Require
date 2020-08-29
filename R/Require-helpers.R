@@ -487,6 +487,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       setkeyv(toInstall, "installFromFac")
       if (length(toInstall$packageFullName) > 20)
         message("Performing a topological sort of packages to install them in the right order; this may take some time")
+      browser()
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       message("Installing: ", paste0(toInstall$packageFullName, sep = ", "))
