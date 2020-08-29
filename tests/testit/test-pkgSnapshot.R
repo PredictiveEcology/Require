@@ -7,7 +7,7 @@ if (interactive()) {
   if (file.exists("packageVersions.txt")) {
     fileNames <- list()
     baseFN <- "packageVersions"
-    tmpLibPath <- "~/tmpLibPath1"
+    tmpLibPath <- "~/tmpLibPath2"
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]]))
