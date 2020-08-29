@@ -240,14 +240,17 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
             } else {
               pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
               packageURL <- file.path(pkgName, pkgFilename)
+              dt <- numeric()
             }
             if (NROW(dt)) {
               srcContrib <- "src/contrib"
               url <- file.path(repos, srcContrib, "/Archive", packageURL) 
               url2 <- file.path(repos, srcContrib, basename(packageURL))#https://cran.r-project.org/src/contrib/foreign_0.8-80.tar.gz) 
               tf <- tempfile()
-              suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
-                tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) browser())))
+              haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
+                tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
+              if (!file.exists(tf))
+                browser()
               untar(tarfile = tf, exdir = td)
               filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
               filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
@@ -325,9 +328,10 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
                        #recursive = FALSE,
                        keepVersionNumber = TRUE, repos = getOption("repos"),
                        purge = getOption("Require.purge", FALSE)) {
-  cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
-
-  capFull <- as.data.table(cachedAvailablePackages)
+  capFull <- available.packagesCached(repos = repos, purge = purge)
+  # cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
+  # 
+  # capFull <- as.data.table(cachedAvailablePackages)
   deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg,
                           keepVersionNumber = keepVersionNumber)
   # if (recursive) {

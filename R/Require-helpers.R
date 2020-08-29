@@ -20,8 +20,10 @@ parseGitHub <- function(pkgDT) {
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
   if (is.null(pkgDT$repoLocation)) {
-    pkgDT[isGH, repoLocation := "GitHub"]
-    pkgDT[!isGH, repoLocation := "CRAN"]
+    set(pkgDT, which(isGH), "repoLocation", "GitHub")
+    set(pkgDT, which(!isGH), "repoLocation", "CRAN")
+    # pkgDT[isGH, repoLocation := "GitHub"]
+    # pkgDT[!isGH, repoLocation := "CRAN"]
   }
 
   if (any(pkgDT$repoLocation == "GitHub")) {
@@ -122,7 +124,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
         cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
-        cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version", "Archs")])
+        cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version", "Archs")]
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
         notCorrectVersions[repoLocation != "GitHub" & is.na(AvailableVersion), AvailableVersion := "10000000"]
@@ -295,7 +297,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         dontKnowVersion <- neededVersions[otherPoss]
         if (NROW(dontKnowVersion)) {
           cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
-          cachedAvailablePackages <- as.data.table(cachedAvailablePackages[, c("Package", "Version")])
+          cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version")]
           dontKnowVersion <- cachedAvailablePackages[dontKnowVersion, on = "Package"][, list(Package, Version)]
           dontKnowVersion[, neededFiles := paste0(Package, "_", Version)][, Version := NULL]
           neededVersions[dontKnowVersion, neededFiles := i.neededFiles , on = "Package"] # join -- keeping dontKnowVersion column
@@ -812,6 +814,7 @@ available.packagesCached <- function(repos, purge) {
       dups <- duplicated(cap[, c("Package", "Version")])
       cap <- cap[!dups,]
     }
+    cap <- as.data.table(cap)
     assign("cachedAvailablePackages", cap, envir = .pkgEnv)
     cap
   } else {
