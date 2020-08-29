@@ -11,9 +11,9 @@ if (interactive()) {
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]]))
-    options("Require.persistentPkgEnv" = TRUE, 
-            "Require.RPackageCache" = "~/._RPackageCache/", 
-            "install.packages.check.source" = "never", 
+    options("Require.persistentPkgEnv" = TRUE,
+            "Require.RPackageCache" = "~/._RPackageCache/",
+            "install.packages.check.source" = "never",
             "install.packages.compile.from.source" = "never",
             "Require.unloadNamespaces" = FALSE)
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
