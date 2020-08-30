@@ -85,8 +85,11 @@ extractPkgGitHub <- function(pkgs) {
 trimVersionNumber <- function(pkgs) {
   ew <- endsWith(pkgs, ")")
   if (any(ew)) {
-    out <- gsub(.grepVersionNumber, "", pkgs[ew], perl = FALSE) # faster perl = TRUE
-    pkgs[ew] <- gsub("\n|\t", "", out, perl = FALSE)
+    pkgs[ew] <- gsub(paste0("\n|\t|",.grepVersionNumber), "", pkgs[ew])
+    #out <- gsub(.grepVersionNumber, "", pkgs[ew], perl = FALSE) # faster perl = TRUE
+    #pkgs[ew] <- gsub("\n|\t", "", out, perl = FALSE)
+    #if (!identical(pkgs[ew], out1))
+    #  browser()
   }
   pkgs
 }

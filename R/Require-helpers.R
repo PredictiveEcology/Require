@@ -443,7 +443,8 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- warn$message
     warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn)))
     if (any(!warnOut) | length(warnOut) == 0) {
-      pkgDT[Package %in% installPkgNames, `:=`(installed = TRUE)]
+      set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
+      # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
     }
   }
   pkgDT[]
@@ -833,11 +834,23 @@ currentCRANPkgDates <- function(pkgs) {
     currentCranDates <- get("currentCranDates", envir = .pkgEnv)
   }
   if (is.null(names(pkgs))) names(pkgs) <- pkgs
-  currentCranDates <- sapply(pkgs, function(pkg) grep(paste0("\"", pkg, "\\_.*\\.tar\\.gz"), currentCranDates, value = TRUE))
-  pkgsDateAvail <- lapply(currentCranDates, function(ava) 
-    data.table(date = unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)),
-               CRANVersion = unique(gsub(paste0("^.+>[[:alnum:]]+\\_(.*)\\.tar\\.gz<.*"), "\\1", ava))))
-  pkgsDateAvail <- rbindlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)], idcol = "Package")
+
+  aa <- substring(currentCranDates, nchar("      <a href=\"")+1, 200)
+  bb <- unlist(lapply(paste0(pkgs, "_"), function(p) which(startsWith(aa, p))))
+  currentCranDates2 <- aa[bb]
+  dd <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", currentCranDates2)
+  ee <- gsub(paste0("^.+>[[:alnum:]\\.]+\\_(.*)\\.tar\\.gz<.*"), "\\1", currentCranDates2)
+  ff <- gsub(paste0("^.+>([[:alnum:]\\.]+)\\_.*\\.tar\\.gz<.*"), "\\1", currentCranDates2)
+  pkgsDateAvail <- data.table(Package = ff, date = dd, CRANVersion = ee)
+
+  # currentCranDates1 <- sapply(pkgs, function(pkg) 
+  #   grep(paste0("\"", pkg, "\\_.*\\.tar\\.gz"), currentCranDates, value = TRUE))
+  # 
+  # 
+  # pkgsDateAvail <- lapply(currentCranDates1, function(ava) 
+  #   data.table(date = unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)),
+  #              CRANVersion = unique(gsub(paste0("^.+>[[:alnum:]\\.]+\\_(.*)\\.tar\\.gz<.*"), "\\1", ava))))
+  # pkgsDateAvail <- rbindlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)], idcol = "Package")
   currentCranDates <- pkgsDateAvail[, mtime := as.POSIXct(date)]
   set(currentCranDates, NULL, "date", NULL)
   
@@ -1163,8 +1176,14 @@ installRequire <- function() {
 }
 
 toPkgDT <- function(pkgDT) {
-  if (!is.data.table(pkgDT))
-    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+  if (!is.data.table(pkgDT)) {
+    # pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+    dt <- data.table::copy(NULLdt)
+    set(dt, NULL, "Package", extractPkgName(pkgDT))
+    set(dt, NULL, "packageFullName", pkgDT)
+    pkgDT <- dt
+  }
+    
   pkgDT
 }
 
@@ -1221,3 +1240,5 @@ unloadNamespaces <- function(namespaces) {
   detached <- unlist(lapply(unloaded, function(x) any(grepl(paste0("package:", x), srch))))
   return(detached)
 }
+
+NULLdt <- data.table(Package = character(), packageFullName = character())
