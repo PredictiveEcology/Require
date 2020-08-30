@@ -1177,11 +1177,11 @@ installRequire <- function() {
 
 toPkgDT <- function(pkgDT) {
   if (!is.data.table(pkgDT)) {
-    # pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
-    dt <- data.table::copy(NULLdt)
-    set(dt, NULL, "Package", extractPkgName(pkgDT))
-    set(dt, NULL, "packageFullName", pkgDT)
-    pkgDT <- dt
+    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+    #dt <- data.table::copy(NULLdt)
+    #set(dt, NULL, "Package", extractPkgName(pkgDT))
+    #set(dt, NULL, "packageFullName", pkgDT)
+    #pkgDT <- dt
   }
     
   pkgDT
