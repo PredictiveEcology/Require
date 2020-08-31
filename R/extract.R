@@ -34,9 +34,9 @@ extractPkgName <- function(pkgs) {
 #' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))
 extractVersionNumber <- function(pkgs) {
   if (!missing(pkgs)) {
-  hasVersionNum <- grepl(grepExtractPkgs, pkgs)
-  out <- rep(NA, length(pkgs))
-  out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum])
+    hasVersionNum <- grepl(grepExtractPkgs, pkgs, perl = FALSE)
+    out <- rep(NA, length(pkgs))
+    out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum], perl = FALSE)
   } else {
     out <- character()
   }
@@ -77,6 +77,6 @@ trimVersionNumber <- function(pkgs) {
 
 .grepVersionNumber <- " *\\(.*"
 
-grepExtractPkgs <- ".*\\([ \n]*(<*>*=*)[ \n]*(.*)\\)"
+grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
 
 .grepR <- "^ *R( |\\(|$)"
