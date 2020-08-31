@@ -219,7 +219,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
       # do GitHub second
       if (any(notCorrectVersions$repoLocation == "GitHub")) {
-        notCorrectVersions <- getGitHubDESCRIPTION(notCorrectVersions)
+        notCorrectVersions <- getGitHubDESCRIPTION(notCorrectVersions, purge = purge)
         notCorrectVersions[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
         notCorrectVersions[repoLocation == "GitHub", compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
         notCorrectVersions[repoLocation == "GitHub", correctVersionAvail :=
@@ -386,12 +386,13 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' @rdname DESCRIPTION-helpers
 #' @export
 #' @param pkg A character string with a GitHub package specification (c.f. remotes)
-getGitHubDESCRIPTION <- function(pkg) {
-  getGitHubFile(pkg, "DESCRIPTION")
+getGitHubDESCRIPTION <- function(pkg, purge = getOption("Require.purge", FALSE)) {
+  getGitHubFile(pkg, "DESCRIPTION", purge = purge)
 }
 
-getGitHubNamespace <- function(pkg) {
-  getGitHubFile(pkg, "NAMESPACE")
+
+getGitHubNamespace <- function(pkg, purge = getOption("Require.purge", FALSE)) {
+  getGitHubFile(pkg, "NAMESPACE", purge = purge)
 }
 
 pkgDTtoPackageFullName <- function(pkg) {
@@ -405,14 +406,22 @@ pkgDTtoPackageFullName <- function(pkg) {
   pkg
 }
 
-getGitHubFile <- function(pkg, filename = "DESCRIPTION") {
+getGitHubFile <- function(pkg, filename = "DESCRIPTION", 
+                          purge = getOption("Require.purge", FALSE)) {
   ret <- if (length(pkg) > 0) {
-    pkg <- pkgDTtoPackageFullName(pkg)
-    
-    pkgDT <- parseGitHub(pkg)
+    needsParse <- TRUE
+    cn <- colnames(pkg)
+    if (!is.null(cn)) 
+      needsParse <- !all(c("hasSubFolder", "Repo", "Branch", "Account") %in% cn)
+    if (needsParse) {
+      pkg <- pkgDTtoPackageFullName(pkg)
+      pkgDT <- parseGitHub(pkg)
+    } else {
+      pkgDT <- pkg
+    }
     pkgDT[repoLocation == "GitHub",
           url := {
-            if (hasSubFolder) {
+            if (any(hasSubFolder)) {
               Branch <- paste0(Branch, "/", GitSubFolder)
             }
             file.path("https://raw.githubusercontent.com", Account,
@@ -422,11 +431,16 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION") {
     
     checkPath(dirname(tempfile()), create = TRUE)
     pkgDT[repoLocation == "GitHub",
-          DESCFile := {
-            destFile <- tempfile()
-            download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
+          filepath := {
+            destFile <- file.path(tempdir(), paste0(Package, "_", Version, "_", filename))
+            if (!all(file.exists(destFile)))
+              download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
             destFile
           }, by = c("Package", "Branch")]
+    if (identical("DESCRIPTION", filename))
+      setnames(pkgDT, old = "filepath", new = "DESCFile")
+    else 
+      setnames(pkgDT, old = "filepath", new = filename)
     pkgDT[]
   } else {
     pkg
@@ -652,7 +666,7 @@ archiveVersionsAvailable <- function(package, repos) {
     } else {
       archive <- get(archiveFile, envir = .pkgEnv)
     }
-    info <- archive[[package]]
+    info <- archive[package]
     if (!is.null(info)) {
       info$repo <- repo
       return(info)

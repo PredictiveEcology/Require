@@ -236,11 +236,11 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       if ("GitHub" %in% pkgDT$repoLocation) {
         which <- c(which, "Remotes")
         
-        pkgDT <- getGitHubDESCRIPTION(pkgDT)
+        pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
         needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
         #if (FALSE) {
         # Check NAMESPACE too -- because imperfect DESCRIPTION files
-        rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$DESCFile)
+        rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE)
         depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
         depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1", 
                                          grep("^import", depsFromNamespace, value = TRUE)))
@@ -560,7 +560,8 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
                       "Autoloads", "package:base", "devtools_shims")
 
 
-pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber) {
+pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
+                            keepSeparate = FALSE) {
   # MUCH faster to use base "ap$Package %in% pkgs" than data.table internal "Package %in% pkgs"
   if (missing(pkgsNoVersion))
     pkgsNoVersion <- trimVersionNumber(pkgs)
@@ -579,19 +580,24 @@ pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber) {
     lapply(ap[[i]], function(x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
       out <- out[!is.na(out)]
-      out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
+      # out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
     })
   })
 
   ss <- seq_along(pkgsNoVersion1)
   names(ss) <- pkgsNoVersion1
-  deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
+  if (isFALSE(keepSeparate))
+    deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
+  deps
 }
 
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
-                                keepVersionNumber = TRUE, purge = getOption("Require.purge", FALSE)) {
-  objName <- paste0(desc_path, paste(collapse = "_", which, "_", keepVersionNumber))
-  if (is.null(.pkgEnv[["DESCRIPTIONFile"]][[objName]])) {
+                                keepVersionNumber = TRUE, 
+                                purge = getOption("Require.purge", FALSE),
+                                keepSeparate = FALSE) {
+  objName <- paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
+  if (is.null(.pkgEnv[["DESCRIPTIONFile"]])) .pkgEnv[["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
+  if (is.null(.pkgEnv[["DESCRIPTIONFile"]][[objName]]) || isTRUE(purge)) {
     lines <- if (length(desc_path) == 1)
       readLines(desc_path)
     else
@@ -627,12 +633,13 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
         needs
       }
     })
-    needed <- unname(unlist(needed))
-    needed <- grep("^R[\\( ]", needed, value = TRUE, invert = TRUE)
-    
-    assign(objName, needed, envir = .pkgEnv)
+    assign(objName, needed, envir = .pkgEnv[["DESCRIPTIONFile"]])
   } else {
     needed <- .pkgEnv[["DESCRIPTIONFile"]][[objName]]
+  }
+  if (!keepSeparate) {
+    needed <- unname(unlist(needed))
+    needed <- grep("^R[\\( ]", needed, value = TRUE, invert = TRUE)
   }
   needed
 }
@@ -707,4 +714,6 @@ whichToDILES <- function(which) {
     "lattice", "MASS", "Matrix", "methods", "mgcv", "nlme", "nnet",
     "parallel", "rpart", "spatial", "splines", "stats", "stats4",
     "survival", "tcltk", "tools", "translations", "utils")
+
+DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_path", SIMPLIFY = FALSE)
 
