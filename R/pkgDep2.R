@@ -22,14 +22,17 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   maxIterations <- if (isTRUE(recursive)) Inf else 1
   
   iterations <- 0
-  pkgDTs <- list()
   pkgDTDeps <- list()
   pkgDTComplete <- list()
   i <- 1
   pkgDTDeps[[i]] <- pkgDT
   set(pkgDTDeps[[i]], NULL, "PackageTopLevel", pkgDTDeps[[i]]$Package)
-  pkgDTComplete[[i]] <- pkgDTDeps[[i]] 
+  set(pkgDTDeps[[i]], NULL, "PackageVersion", concatPkgVersion(pkgDTDeps[[i]]$Package, pkgDTDeps[[i]]$Version))
+  pkgDTComplete[[i]] <- data.table::copy(pkgDTDeps[[i]] )
+  set(pkgDTComplete[[i]], NULL, "Package", NULL)
+  
   while(NROW(pkgDTDeps[[i]])) {
+    pkgDTs <- list()
     if (NROW(pkgDTDeps[[i]])) {
       pkgDTDeps[[i]] <- installedVers(pkgDTDeps[[i]])
       pkgDTDeps[[i]] <- parseGitHub(pkgDTDeps[[i]])
@@ -50,6 +53,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
                                               which = whichAllGitHub,
                                               keepSeparate = TRUE)
     } 
+    
     pkgDTOther <- pkgDTDeps[[i]][!locals | is.na(locals)]
     if (NROW(pkgDTOther)) {
       pkgDTs[["GitHub"]] <- pkgDTOther[pkgDTOther$repoLocation == "GitHub"]
@@ -78,7 +82,10 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
                                       keepVersionNumber = TRUE, repos = getOption("repos"),
                                       purge = getOption("Require.purge", FALSE),
                                       keepSeparate = TRUE) 
-        browser()
+        pp <- gsub("^(.+)\\_.+", "\\1", names(deps[["CRAN"]]))
+        deps[["CRAN"]] <- deps[["CRAN"]][match(pkgDTs[["CRAN"]]$Package, pp)]
+        pkgDTs[["CRAN"]]$Package
+        
         # names(deps[["CRAN"]]) <- paste0(pkgDTs[["CRAN"]]$Package, "_", "00Latest")
       }
       
@@ -89,6 +96,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
         deps[["Archive"]] <- pkgDepArchive(pkgDTs[["Archive"]], repos = repos, purge = purge)
       }
     }
+
     depsList <- do.call(c, unname(deps))
     pkgDTDeps[[i+1]] <- rbindlist(
       Map(x = depsList, PackageTopLevel = unlist(lapply(pkgDTs, function(x) x$PackageTopLevel)),
@@ -118,14 +126,20 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       unlist(lapply(pkgDTDeps[seq(i)], function(x) x$packageFullName))
     set(pkgDTDeps[[i+1]], NULL, "Package", extractPkgName(pkgDTDeps[[i+1]]$packageFullName))
     
-    
-    
     if (any(!alreadyDone))
       # if (all(alreadyDone))
         pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][alreadyDone == FALSE]
+    else 
+      pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][0]
     i <- i + 1
     
   }
+  ll <- rbindlist(pkgDTComplete, use.names = TRUE)
+  setkeyv(ll, "PackageTopLevel")
+  set(ll, NULL, "Package", extractPkgName(ll$packageFullName))
+  ll1 <- unique(ll, by = c("PackageTopLevel", "Package"))
+  bb <- split(ll1, ll1$PackageTopLevel)
+  
 }
 
 
@@ -161,7 +175,7 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
   packageTD <- tempdir2(Package)
   # packageTD <- file.path(td, Package)
   dirsExist <- dir.exists(packageTD)
-  pkgDTNeedNew <- pkgDT[dirsExist == FALSE]
+  pkgDTNeedNew <- if (isTRUE(purge)) pkgDT else pkgDT[dirsExist == FALSE] 
   if (NROW(pkgDTNeedNew)) {
     message("available.packages() doesn't have correct information on package dependencies for ",
             paste(Package, collapse = ", "), 
@@ -202,20 +216,25 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
     }
   })
   
-  names(deps) <- paste0(pkgDT$Package, "_", pkgDT$OlderVersionsAvailable)
+  names(deps) <- concatPkgVersion(pkgDT$Package, pkgDT$OlderVersionsAvailable)
   deps
   
 
 }
   
-whichAll <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
+whichAll <- c("Depends", "Imports")
+#whichAll <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
 whichAllGitHub <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances", "Remotes")
   
 pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, PackageTopLevel,
                              keepVersionNumber,
                              keepSeparate = FALSE) {
   # MUCH faster to use base "ap$Package %in% packageFullName" than data.table internal "Package %in% packageFullName"
-  browser(expr = NROW(packageFullName) > 50)
+  dups <- duplicated(Package)
+  packageFullName <- packageFullName[!dups]
+  Package <- Package[!dups]
+  PackageTopLevel <- PackageTopLevel[!dups]
+  
   if (missing(Package))
     Package <- trimVersionNumber(packageFullName)
   if (isFALSE(keepVersionNumber)) {
@@ -246,7 +265,6 @@ pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, PackageTopLeve
   if (length(anyMissing))
     deps[anyMissing] <- lapply(anyMissing, function(am) 
       list(Depends = NA, Imports = NA, Suggests = NA, LinkingTo = NA, Enhances = NA))
-  browser()
   
   deps
 }
@@ -265,4 +283,8 @@ cleanUp <- function(pkgDT) {
   set(pkgDT, whTooManySpaces, "packageFullName", gsub(" {2,}", " ", pkgDT$packageFullName[whTooManySpaces]))
   pkgDT
   # pkgDT <- pkgDT[!duplicated(pkgDT$packageFullName)]
+}
+
+concatPkgVersion <- function(Package, Version) {
+  paste0(Package, "_", Version) 
 }

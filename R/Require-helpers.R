@@ -158,16 +158,14 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           pkgs <- pkg[!pkgsInOAV]
           names(pkgs) <- pkgs
           # if (length(pkgs) > 20) message("Looking which archive versions are available; this could take a while")
-          ava <- lapply(pkgs, function(p) {
-#            as.data.table(
-              archiveVersionsAvailable(p, repos = repos)
- #             , keep.rownames = "PackageUrl")
+          ava <- lapply(archiveVersionsAvailable(pkgs, repos = repos), function(d) {
+            as.data.table(d, keep.rownames = "PackageUrl")
           })
+          
           oldAvailableVersions <- append(oldAvailableVersions, ava)
           assign("oldAvailableVersions", oldAvailableVersions, envir = .pkgEnv)
         }
         oldAvailableVersions <- oldAvailableVersions[pkg]
-        browser()
         
         oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package", 
                                           fill = TRUE, use.names = TRUE)
