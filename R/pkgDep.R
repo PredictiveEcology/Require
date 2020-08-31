@@ -715,5 +715,6 @@ whichToDILES <- function(which) {
     "parallel", "rpart", "spatial", "splines", "stats", "stats4",
     "survival", "tcltk", "tools", "translations", "utils")
 
-DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_path", SIMPLIFY = FALSE)
+DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_path", 
+                                  SIMPLIFY = FALSE)
 

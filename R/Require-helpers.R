@@ -159,13 +159,16 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           names(pkgs) <- pkgs
           # if (length(pkgs) > 20) message("Looking which archive versions are available; this could take a while")
           ava <- lapply(pkgs, function(p) {
-            as.data.table(archiveVersionsAvailable(p, repos = repos), keep.rownames = "PackageUrl")
+#            as.data.table(
+              archiveVersionsAvailable(p, repos = repos)
+ #             , keep.rownames = "PackageUrl")
           })
           oldAvailableVersions <- append(oldAvailableVersions, ava)
           assign("oldAvailableVersions", oldAvailableVersions, envir = .pkgEnv)
         }
         oldAvailableVersions <- oldAvailableVersions[pkg]
-
+        browser()
+        
         oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package", 
                                           fill = TRUE, use.names = TRUE)
         # delete unwanted columns
@@ -430,9 +433,12 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
           by = "Package"]
     
     checkPath(dirname(tempfile()), create = TRUE)
+    set(pkgDT, NULL, "destFile", 
+        file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Version, "_", pkgDT$filename)))
+    # if (colnames(pkgDT))
     pkgDT[repoLocation == "GitHub",
           filepath := {
-            destFile <- file.path(tempdir(), paste0(Package, "_", Version, "_", filename))
+            # destFile <- file.path(tempdir(), paste0(Package, "_", Version, "_", filename))
             if (!all(file.exists(destFile)))
               download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
             destFile
@@ -668,7 +674,12 @@ archiveVersionsAvailable <- function(package, repos) {
     }
     info <- archive[package]
     if (!is.null(info)) {
-      info$repo <- repo
+      info <- lapply(info, function(x) {
+        x$repo <- repo
+        x
+        })
+      if (length(package) == 1)
+      # info$repo <- repo
       return(info)
     }
   }

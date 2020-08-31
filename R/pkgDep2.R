@@ -1,4 +1,4 @@
-pkgDep2 <- function(packages, libPath = .libPaths(),
+pkgDep3 <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
                    depends, imports, suggests, linkingTo, enhances,
                    repos = getOption("repos"),
@@ -19,132 +19,112 @@ pkgDep2 <- function(packages, libPath = .libPaths(),
   }
   which <- whichToDILES(which)
   
-  if (NROW(packages)) {
-    
-    # Some package names are not derived from their GitHub repo names -- user can supply named packages
-    # origPackagesHaveNames <- nchar(names(packages)) > 0
-    # if (any(origPackagesHaveNames))
-    #   packages <- packages[order(names(packages), decreasing = TRUE)]
-    # dups <- duplicated(packages)
-    # packages <- packages[!dups] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
-    # origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
-    # packagesOrig <- packages
-    # packageNamesOrig <- packages
-    # 
-    # if (any(origPackagesHaveNames))
-    #   packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
-    # packagesOrder <- seq(packagesOrig)
-    # names(packagesOrder) <- extractPkgName(packageNamesOrig)
-    
-    browser(expr = exists("._Require_1"))
-    
-    # Create data.table of Require workflow
-    # if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
-    # 
-    # pkgDT <- toPkgDT(packages)
-    # identify the packages that were asked by user to load -- later dependencies will be in table too
-    # pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
-    #       packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
-    # 
-    # if (any(origPackagesHaveNames))
-    #   pkgDT[packageFullName %in% packagesOrig[origPackagesHaveNames],
-    #         Package := names(packagesOrig[origPackagesHaveNames])]
-    
-
-    if (NROW(pkgDT)) {
-      pkgDT <- installedVers(pkgDT)
-      pkgDT <- parseGitHub(pkgDT)
-      pkgDT <- getPkgVersions(pkgDT, install = TRUE)
-      pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
-      #pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
-    }}
+  maxIterations <- if (isTRUE(recursive)) Inf else 1
   
-  #
-  # Check Local -- either correct version available or no version spec & installed
-  locals <- pkgDT$correctVersion == TRUE | 
-    (is.na(pkgDT$correctVersion) & !is.na(pkgDT$Version))
-  pkgDTLocal <- pkgDT[locals]
-  if (NROW(pkgDTLocal)) {
-    desc_paths <- file.path(pkgDTLocal$LibPath, pkgDTLocal$Package, "DESCRIPTION")
-    names(desc_paths) <- paste0(pkgDTLocal$Package, "_", pkgDTLocal$Version)
-    depsLocal <- DESCRIPTIONFileDepsV(desc_paths, keepVersionNumber = TRUE, purge = purge, 
-                                which = whichAll,
-                                keepSeparate = TRUE)
-  } 
-  pkgDTOther <- pkgDT[!locals | is.na(locals)]
-  if (NROW(pkgDTOther)) {
-    pkgDTGitHub <- pkgDTOther[pkgDTOther$repoLocation == "GitHub"]
-    pkgDTGitHub <- getGitHubDESCRIPTION(pkgDTGitHub, purge = purge)
-    depsGitHub <- DESCRIPTIONFileDepsV(pkgDTGitHub$DESCFile, which = whichAll, purge = purge,
-                                      keepSeparate = TRUE)
-    pkgDTGitHub <- getGitHubNamespace(pkgDTGitHub, purge = purge)
-    depsGitHub2 <- NAMESPACEFileDepsV(pkgDTGitHub$NAMESPACE, purge = purge)
-    depsGitHub <- Map(d1 = depsGitHub, d2 = depsGitHub2, function(d2, d1) {
-      d1$imports <- setdiff(union(d2, d1$imports), .basePkgs)
-      d1
-    })
-    
-    pkgDTCRAN <- pkgDTOther[pkgDTOther$repoLocation == "CRAN"]
-    depsCRAN <- pkgDepCRAN2(packageFullName = pkgDTCRAN$packageFullName, which = whichAll,
-                Package = pkgDTCRAN$Package, 
-               keepVersionNumber = TRUE, repos = getOption("repos"),
-               purge = getOption("Require.purge", FALSE),
-               keepSeparate = TRUE) 
-    
-    #############
-    pkgDTArchive <- pkgDTOther[pkgDTOther$repoLocation == "Archive"]
-    ava <- archiveVersionsAvailable(pkgDTArchive$Package, repos = repos)
-    depsArchive <- pkgDepArchive(pkgDTArchive, repos = repos, purge = purge)
-    browser()
-    deps <- c(depsLocal, depsGitHub, depsCRAN, depsArchive)
-    
-    #############
-    depsGitHub <- Map(d1 = depsGitHub, d2 = depsGitHub2, function(d2, d1) {
-      d1$imports <- setdiff(union(d2, d1$imports), .basePkgs)
-      d1
-    })
-    
-    
-    pkgDT2 <- data.table(packageFullName = setdiff(union(depsGitHub2, depsGitHub), .basePkgs))
-    # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
-    if (NROW(pkgDT2)) {
-      pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
-      setorderv(pkgDT2, "isGitPkg", order = -1)
-      pkgDT2[, Package := extractPkgName(packageFullName)]
-      pkgDT2[, dup := duplicated(Package)]
-      pkgDT2 <- pkgDT2[dup == FALSE]
-      differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
-      if (length(differences)) {
-        message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
-                paste(differences, collapse = ", "), " --) ")
-      }
-      pkgDT2[, github := extractPkgGitHub(packageFullName)]
-    }
-    needed <- pkgDT2$packageFullName
-    
-    #############
-    
-    pkgDTGitHub <- getGitHubNamespace(pkgDTGitHub)
-  }
-  #if ()
-  
-  browser()
-  
-  DepsList <- pkgDepInner(pkgDT[correctVersion != FALSE]$Package, 
-                          libPath, which = c("Depends", "Imports", "LinkingTo", "Suggests"), 
-                          keepVersionNumber = TRUE,
-                          purge = purge, repos = repos)
-  Deps <- unlist(DepsList, use.names = FALSE)
-  Package <- unlist(Map(pkg = DepsList, name = names(DepsList), function(pkg, name) {
-    rep(name, length(pkg))
-  }), use.names = FALSE)
+  iterations <- 0
+  pkgDTs <- list()
   pkgDTDeps <- list()
+  pkgDTComplete <- list()
   i <- 1
-  pkgDTDeps[[i]] <- data.table(Package, Deps)
-  if (recursive) {
+  pkgDTDeps[[i]] <- pkgDT
+  set(pkgDTDeps[[i]], NULL, "PackageTopLevel", pkgDTDeps[[i]]$Package)
+  pkgDTComplete[[i]] <- pkgDTDeps[[i]] 
+  while(NROW(pkgDTDeps[[i]])) {
+    if (NROW(pkgDTDeps[[i]])) {
+      pkgDTDeps[[i]] <- installedVers(pkgDTDeps[[i]])
+      pkgDTDeps[[i]] <- parseGitHub(pkgDTDeps[[i]])
+      pkgDTDeps[[i]] <- getPkgVersions(pkgDTDeps[[i]], install = TRUE)
+      pkgDTDeps[[i]] <- getAvailable(pkgDTDeps[[i]], purge = purge, repos = repos)
+      #pkgDTDeps[[i]] <- installFrom(pkgDTDeps[[i]], purge = purge, repos = repos)
+    }
+    
+    # Check Local -- either correct version available or no version spec & installed
+    locals <- pkgDTDeps[[i]]$correctVersion == TRUE | 
+      (is.na(pkgDTDeps[[i]]$correctVersion) & !is.na(pkgDTDeps[[i]]$Version))
+    pkgDTs[["Local"]] <- pkgDTDeps[[i]][locals]
+    deps <- list()
+    if (NROW(pkgDTs[["Local"]])) {
+      desc_paths <- file.path(pkgDTs[["Local"]]$LibPath, pkgDTs[["Local"]]$Package, "DESCRIPTION")
+      names(desc_paths) <- paste0(pkgDTs[["Local"]]$Package, "_", pkgDTs[["Local"]]$Version)
+      deps[["Local"]] <- DESCRIPTIONFileDepsV(desc_paths, keepVersionNumber = TRUE, purge = purge, 
+                                              which = whichAllGitHub,
+                                              keepSeparate = TRUE)
+    } 
+    pkgDTOther <- pkgDTDeps[[i]][!locals | is.na(locals)]
+    if (NROW(pkgDTOther)) {
+      pkgDTs[["GitHub"]] <- pkgDTOther[pkgDTOther$repoLocation == "GitHub"]
+      if (NROW(pkgDTs[["GitHub"]])) {
+        pkgDTs[["GitHub"]] <- getGitHubDESCRIPTION(pkgDTs[["GitHub"]], purge = purge)
+        desc_paths <- pkgDTs[["GitHub"]]$DESCFile
+        bnDESCFile <- basename(desc_paths)
+        names(desc_paths) <- paste0(pkgDTs[["GitHub"]]$Package, "_", pkgDTs[["GitHub"]]$AvailableVersion)
+        deps[["GitHub"]] <- DESCRIPTIONFileDepsV(desc_paths, which = whichAllGitHub, purge = purge,
+                                                 keepSeparate = TRUE)
+        pkgDTs[["GitHub"]] <- getGitHubNamespace(pkgDTs[["GitHub"]], purge = purge)
+        depsGitHub2 <- NAMESPACEFileDepsV(pkgDTs[["GitHub"]]$NAMESPACE, purge = purge)
+        deps[["GitHub"]] <- Map(d1 = deps[["GitHub"]], d2 = depsGitHub2, function(d2, d1) {
+          d1$imports <- setdiff(union(d2, d1$imports), .basePkgs)
+          d1
+        })
+      }
+      
+      pkgDTs[["CRAN"]] <- pkgDTOther[pkgDTOther$repoLocation == "CRAN"]
+      if (NROW(pkgDTs[["CRAN"]])) {
+        pkgs <- pkgDTs[["CRAN"]]$packageFullName
+        names(pkgs) <- paste0(pkgDTs[["CRAN"]]$Package, "_", "00Latest")
+        deps[["CRAN"]] <- pkgDepCRAN2(packageFullName = pkgs, which = whichAll,
+                                      Package = pkgDTs[["CRAN"]]$Package, 
+                                      PackageTopLevel = pkgDTs[["CRAN"]]$PackageTopLevel,
+                                      keepVersionNumber = TRUE, repos = getOption("repos"),
+                                      purge = getOption("Require.purge", FALSE),
+                                      keepSeparate = TRUE) 
+        browser()
+        # names(deps[["CRAN"]]) <- paste0(pkgDTs[["CRAN"]]$Package, "_", "00Latest")
+      }
+      
+      #############
+      pkgDTs[["Archive"]] <- pkgDTOther[pkgDTOther$repoLocation == "Archive"]
+      if (NROW(pkgDTs[["Archive"]])) {
+        ava <- archiveVersionsAvailable(pkgDTs[["Archive"]]$Package, repos = repos)
+        deps[["Archive"]] <- pkgDepArchive(pkgDTs[["Archive"]], repos = repos, purge = purge)
+      }
+    }
+    depsList <- do.call(c, unname(deps))
+    pkgDTDeps[[i+1]] <- rbindlist(
+      Map(x = depsList, PackageTopLevel = unlist(lapply(pkgDTs, function(x) x$PackageTopLevel)),
+          function(x, PackageTopLevel) {
+      nams <- names(x)
+      nams <- match(tolower(nams), c("depends", "imports", "linkingto", "remotes"))
+      l <- list(packageFullName = unlist(x[nams], recursive = FALSE))
+      l[["PackageTopLevel"]] = rep(PackageTopLevel, length(l[["packageFullName"]]))
+      l
+      }
+      
+    ), 
+    idcol = "PackageVersion")
+    
+    # Clean up -- R, \n\t
+    pkgDTDeps[[i+1]] <- cleanUp(pkgDTDeps[[i+1]])
+    
+    if (!("PackageTopLevel" %in% colnames(pkgDTDeps[[i]])))
+      set(pkgDTDeps[[i+1]], NULL, "PackageTopLevel", 
+          gsub("^(.+)\\_[[:digit:]].+$", "\\1", pkgDTDeps[[i+1]]$PackageVersion))
+    
+    pkgDTComplete[[i+1]] <- pkgDTDeps[[i+1]]
+    pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][!duplicated(pkgDTDeps[[i+1]]$packageFullName)]
+    
+    
+    alreadyDone <- pkgDTDeps[[i+1]]$packageFullName %in% 
+      unlist(lapply(pkgDTDeps[seq(i)], function(x) x$packageFullName))
+    set(pkgDTDeps[[i+1]], NULL, "Package", extractPkgName(pkgDTDeps[[i+1]]$packageFullName))
+    
+    
+    
+    if (any(!alreadyDone))
+      # if (all(alreadyDone))
+        pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][alreadyDone == FALSE]
     i <- i + 1
-    pkgDTDeps[[i]] <- pkgDTDeps[!pkgDTDeps$Deps %in% pkgDTDeps$Package]
-    return(pkgDT)
+    
   }
 }
 
@@ -163,13 +143,14 @@ NAMESPACEFileDepsV <- Vectorize(NAMESPACEFileDeps, SIMPLIFY = FALSE, vectorize.a
 
 pkgDepCRAN2 <- function(packageFullName, which = c("Depends", "Imports", "LinkingTo"),
                        #recursive = FALSE,
-                       Package, 
+                       Package, PackageTopLevel,
                        keepVersionNumber = TRUE, repos = getOption("repos"),
                        purge = getOption("Require.purge", FALSE), 
                        keepSeparate = TRUE) {
   capFull <- available.packagesCached(repos = repos, purge = purge)
   deps <- pkgDepCRANInner2(capFull, which = which, 
                           packageFullName = packageFullName, Package = Package,
+                          PackageTopLevel = PackageTopLevel,
                           keepVersionNumber = keepVersionNumber, keepSeparate = keepSeparate)
 }
 
@@ -228,28 +209,30 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
 }
   
 whichAll <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
+whichAllGitHub <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances", "Remotes")
   
-pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, keepVersionNumber,
+pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, PackageTopLevel,
+                             keepVersionNumber,
                              keepSeparate = FALSE) {
   # MUCH faster to use base "ap$Package %in% packageFullName" than data.table internal "Package %in% packageFullName"
+  browser(expr = NROW(packageFullName) > 50)
   if (missing(Package))
     Package <- trimVersionNumber(packageFullName)
   if (isFALSE(keepVersionNumber)) {
     packageFullName <- Package
   }
-  browser()
   P <- Package
-  ap <- ap[ap$Package %in% P]
-  keep <- match(ap$Package, P)
+  apShort <- ap[ap$Package %in% P]
+  keep <- match(apShort$Package, P)
   keep <- keep[!is.na(keep)]
   Package1 <- P[keep]
   packageFullName <- packageFullName[keep]
-  ap <- ap[order(Package1)]
+  PackageTopLevel <- PackageTopLevel[keep]
   
   names(which) <- which
-  names(Package1) <- Package1
+  names(Package1) <- names(packageFullName)
   deps <- lapply(Package1, function(p) {
-    l <- as.list(ap[1, ..whichAll])
+    l <- as.list(apShort[apShort$Package == p, ..whichAll])
     l <- lapply(l, function(i)
       strsplit(i, split = "(, {0,1})|(,\n)")[[1]]
     )
@@ -259,6 +242,27 @@ pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, keepVersionNum
       dd <- unname(unlist(d, recursive = FALSE))
       dd <- dd[!is.na(dd)]
     })
-  # deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
+  anyMissing <- P[!P %in% ap$Package]
+  if (length(anyMissing))
+    deps[anyMissing] <- lapply(anyMissing, function(am) 
+      list(Depends = NA, Imports = NA, Suggests = NA, LinkingTo = NA, Enhances = NA))
+  browser()
+  
   deps
+}
+
+cleanUp <- function(pkgDT) {
+  pkgDT <- pkgDT[which(!is.na(pkgDT$packageFullName))]
+  whWeird <- grep("\n|\t", pkgDT$packageFullName)
+  set(pkgDT, whWeird, "packageFullName", gsub("\n|\t", "", pkgDT$packageFullName[whWeird]))
+  Rs <- which(startsWith(pkgDT$packageFullName, "R"))
+  if (length(Rs)) {
+    drop1 <- grep("^R[\\( ]", pkgDT$packageFullName[Rs])
+    Rs <- Rs[drop1]
+    pkgDT <- pkgDT[-Rs]
+  }
+  whTooManySpaces <- grep(" {2,}", pkgDT$packageFullName)
+  set(pkgDT, whTooManySpaces, "packageFullName", gsub(" {2,}", " ", pkgDT$packageFullName[whTooManySpaces]))
+  pkgDT
+  # pkgDT <- pkgDT[!duplicated(pkgDT$packageFullName)]
 }
