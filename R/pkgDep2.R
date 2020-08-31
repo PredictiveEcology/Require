@@ -96,7 +96,7 @@ pkgDep2 <- function(packages, libPath = .libPaths(),
     ava <- archiveVersionsAvailable(pkgDTArchive$Package, repos = repos)
     depsArchive <- pkgDepArchive(pkgDTArchive, repos = repos, purge = purge)
     browser()
-    
+    deps <- c(depsLocal, depsGitHub, depsCRAN, depsArchive)
     
     #############
     depsGitHub <- Map(d1 = depsGitHub, d2 = depsGitHub2, function(d2, d1) {
@@ -168,8 +168,8 @@ pkgDepCRAN2 <- function(packageFullName, which = c("Depends", "Imports", "Linkin
                        purge = getOption("Require.purge", FALSE), 
                        keepSeparate = TRUE) {
   capFull <- available.packagesCached(repos = repos, purge = purge)
-  deps <- pkgDepCRANInner(capFull, which = which, pkgs = packageFullName, 
-                          pkgsNoVersion = Package,
+  deps <- pkgDepCRANInner2(capFull, which = which, 
+                          packageFullName = packageFullName, Package = Package,
                           keepVersionNumber = keepVersionNumber, keepSeparate = keepSeparate)
 }
 
@@ -229,3 +229,36 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
   
 whichAll <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
   
+pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, keepVersionNumber,
+                             keepSeparate = FALSE) {
+  # MUCH faster to use base "ap$Package %in% packageFullName" than data.table internal "Package %in% packageFullName"
+  if (missing(Package))
+    Package <- trimVersionNumber(packageFullName)
+  if (isFALSE(keepVersionNumber)) {
+    packageFullName <- Package
+  }
+  browser()
+  P <- Package
+  ap <- ap[ap$Package %in% P]
+  keep <- match(ap$Package, P)
+  keep <- keep[!is.na(keep)]
+  Package1 <- P[keep]
+  packageFullName <- packageFullName[keep]
+  ap <- ap[order(Package1)]
+  
+  names(which) <- which
+  names(Package1) <- Package1
+  deps <- lapply(Package1, function(p) {
+    l <- as.list(ap[1, ..whichAll])
+    l <- lapply(l, function(i)
+      strsplit(i, split = "(, {0,1})|(,\n)")[[1]]
+    )
+  })
+  if (isFALSE(keepSeparate))
+    deps <- lapply(deps, function(d) {
+      dd <- unname(unlist(d, recursive = FALSE))
+      dd <- dd[!is.na(dd)]
+    })
+  # deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
+  deps
+}
