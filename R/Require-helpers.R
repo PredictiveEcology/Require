@@ -338,14 +338,26 @@ DESCRIPTIONFileVersionV <- function(file) {
   # on.exit({
   #   Sys.setlocale(locale = origLocal)
   # })
+  if (is.null(.pkgEnv[["DESCRIPTIONFile"]])) .pkgEnv[["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
   out <- lapply(file, function(f) {
-    if (length(f) == 1) {
-      lines <- readLines(f);
-    } else {
-      lines <- f
-    }
+    out <- get0(f, envir = .pkgEnv$DESCRIPTIONFile)
+    if (is.null(out)) {
+      if (length(f) == 1) {
+        lines <- try(readLines(f))
+        if (is(lines, "try-error")) { 
+          warning(lines)
+          lines <- character()
+        }
+        
+      } else {
+        lines <- f
+      }
       vers_line <- lines[grep("^Version: *", lines)] # nolint
-      gsub("Version: ", "", vers_line)
+      out <- gsub("Version: ", "", vers_line)
+      if (length(out) == 0) out <- NA
+      assign(f, out, envir = .pkgEnv$DESCRIPTIONFile)
+    }
+    out
   })
   unlist(out)
 }
