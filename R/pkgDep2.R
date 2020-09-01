@@ -1,6 +1,7 @@
+#' @export
 pkgDep3 <- function(packages, libPath = .libPaths(),
-                   which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
-                   depends, imports, suggests, linkingTo, enhances,
+                   which = c("Depends", "Imports", "LinkingTo", "Remotes"), recursive = FALSE,
+                   depends, imports, suggests, linkingTo, enhances, remotes,
                    repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
@@ -11,13 +12,15 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   if (!includeBase) pkgDT <- pkgDT[!pkgDT$Package %in% .basePkgs]
   
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
-    message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
+    message("Please use 'which' instead of 'imports', 'suggests', 'depends', 'linkingTo' and 'remotes'")
     if (!missing(depends)) depends <- TRUE
     if (!missing(imports)) imports <- TRUE
     if (!missing(suggests)) suggests <- TRUE
     if (!missing(linkingTo)) linkingTo <- TRUE
+    if (!missing(linkingTo)) remotes <- TRUE
   }
   which <- whichToDILES(which)
+  whichLC <- tolower(which[[1]])
   
   maxIterations <- if (isTRUE(recursive)) Inf else 1
   
@@ -26,13 +29,16 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   pkgDTComplete <- list()
   i <- 1
   pkgDTDeps[[i]] <- pkgDT
-  set(pkgDTDeps[[i]], NULL, "PackageTopLevel", pkgDTDeps[[i]]$Package)
+  set(pkgDTDeps[[i]], NULL, "PackageTopLevel", pkgDTDeps[[i]]$packageFullName)
   set(pkgDTDeps[[i]], NULL, "PackageVersion", concatPkgVersion(pkgDTDeps[[i]]$Package, pkgDTDeps[[i]]$Version))
+  set(pkgDTDeps[[i]], NULL, "which", "TopLevel")
+  set(pkgDTDeps[[i]], NULL, "Package", extractPkgName(pkgDTDeps[[i]]$packageFullName))
   pkgDTComplete[[i]] <- data.table::copy(pkgDTDeps[[i]] )
   set(pkgDTComplete[[i]], NULL, "Package", NULL)
   
-  while(NROW(pkgDTDeps[[i]])) {
+  while((NROW(pkgDTDeps[[i]]) & recursive) || (recursive == FALSE & NROW(pkgDTDeps) == 1)) {
     pkgDTs <- list()
+    browser(expr = exists("._pkgDep3_2"))
     if (NROW(pkgDTDeps[[i]])) {
       pkgDTDeps[[i]] <- installedVers(pkgDTDeps[[i]])
       pkgDTDeps[[i]] <- parseGitHub(pkgDTDeps[[i]])
@@ -42,13 +48,15 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
     }
     
     # Check Local -- either correct version available or no version spec & installed
-    locals <- pkgDTDeps[[i]]$correctVersion == TRUE | 
-      (is.na(pkgDTDeps[[i]]$correctVersion) & !is.na(pkgDTDeps[[i]]$Version))
+    locals <- (pkgDTDeps[[i]]$correctVersion == TRUE | 
+      (is.na(pkgDTDeps[[i]]$correctVersion) & !is.na(pkgDTDeps[[i]]$Version))) & 
+      pkgDTDeps[[i]]$repoLocation != "GitHub"
     pkgDTs[["Local"]] <- pkgDTDeps[[i]][locals]
     deps <- list()
     if (NROW(pkgDTs[["Local"]])) {
       desc_paths <- file.path(pkgDTs[["Local"]]$LibPath, pkgDTs[["Local"]]$Package, "DESCRIPTION")
-      names(desc_paths) <- paste0(pkgDTs[["Local"]]$Package, "_", pkgDTs[["Local"]]$Version)
+      names(desc_paths) <- concatPkgVersion(pkgDTs[["Local"]]$Package, pkgDTs[["Local"]]$Version, 
+                                  pkgDTs[["Local"]]$PackageTopLevel)
       deps[["Local"]] <- DESCRIPTIONFileDepsV(desc_paths, keepVersionNumber = TRUE, purge = purge, 
                                               which = whichAllGitHub,
                                               keepSeparate = TRUE)
@@ -61,13 +69,17 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
         pkgDTs[["GitHub"]] <- getGitHubDESCRIPTION(pkgDTs[["GitHub"]], purge = purge)
         desc_paths <- pkgDTs[["GitHub"]]$DESCFile
         bnDESCFile <- basename(desc_paths)
-        names(desc_paths) <- paste0(pkgDTs[["GitHub"]]$Package, "_", pkgDTs[["GitHub"]]$AvailableVersion)
+        names(desc_paths) <- concatPkgVersion(pkgDTs[["GitHub"]]$Package, 
+                                              pkgDTs[["GitHub"]]$AvailableVersion,
+                                              pkgDTs[["GitHub"]]$PackageTopLevel)
         deps[["GitHub"]] <- DESCRIPTIONFileDepsV(desc_paths, which = whichAllGitHub, purge = purge,
                                                  keepSeparate = TRUE)
         pkgDTs[["GitHub"]] <- getGitHubNamespace(pkgDTs[["GitHub"]], purge = purge)
         depsGitHub2 <- NAMESPACEFileDepsV(pkgDTs[["GitHub"]]$NAMESPACE, purge = purge)
         deps[["GitHub"]] <- Map(d1 = deps[["GitHub"]], d2 = depsGitHub2, function(d2, d1) {
-          d1$imports <- setdiff(union(d2, d1$imports), .basePkgs)
+          d1$imports <- union(d2, d1$imports)
+          if (!includeBase)
+            d1$imports <- setdiff(d1$imports, .basePkgs)
           d1
         })
       }
@@ -75,16 +87,17 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       pkgDTs[["CRAN"]] <- pkgDTOther[pkgDTOther$repoLocation == "CRAN"]
       if (NROW(pkgDTs[["CRAN"]])) {
         pkgs <- pkgDTs[["CRAN"]]$packageFullName
-        names(pkgs) <- paste0(pkgDTs[["CRAN"]]$Package, "_", "00Latest")
+        names(pkgs) <- concatPkgVersion(pkgDTs[["CRAN"]]$Package, "00Latest",
+                              pkgDTs[["CRAN"]]$PackageTopLevel)
         deps[["CRAN"]] <- pkgDepCRAN2(packageFullName = pkgs, which = whichAll,
                                       Package = pkgDTs[["CRAN"]]$Package, 
                                       PackageTopLevel = pkgDTs[["CRAN"]]$PackageTopLevel,
                                       keepVersionNumber = TRUE, repos = getOption("repos"),
                                       purge = getOption("Require.purge", FALSE),
                                       keepSeparate = TRUE) 
-        pp <- gsub("^(.+)\\_.+", "\\1", names(deps[["CRAN"]]))
-        deps[["CRAN"]] <- deps[["CRAN"]][match(pkgDTs[["CRAN"]]$Package, pp)]
-        pkgDTs[["CRAN"]]$Package
+        #pp <- gsub("^(.+)\\_.+", "\\1", names(deps[["CRAN"]]))
+        #deps[["CRAN"]] <- deps[["CRAN"]][match(pkgDTs[["CRAN"]]$Package, pp)]
+        #pkgDTs[["CRAN"]]$Package
         
         # names(deps[["CRAN"]]) <- paste0(pkgDTs[["CRAN"]]$Package, "_", "00Latest")
       }
@@ -98,47 +111,73 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
     }
 
     depsList <- do.call(c, unname(deps))
+    
     pkgDTDeps[[i+1]] <- rbindlist(
-      Map(x = depsList, PackageTopLevel = unlist(lapply(pkgDTs, function(x) x$PackageTopLevel)),
+      Map(x = depsList, PackageTopLevel = gsub("^.+\\___.*\\___(.*)", "\\1", names(depsList)),
           function(x, PackageTopLevel) {
       nams <- names(x)
-      nams <- match(tolower(nams), c("depends", "imports", "linkingto", "remotes"))
+      nams <- match(tolower(which[[1]]), tolower(nams))
       l <- list(packageFullName = unlist(x[nams], recursive = FALSE))
       l[["PackageTopLevel"]] = rep(PackageTopLevel, length(l[["packageFullName"]]))
+      l[["which"]] = rep(names(x[nams]), unlist(lapply(x[nams], length)))
       l
       }
-      
     ), 
     idcol = "PackageVersion")
     
     # Clean up -- R, \n\t
-    pkgDTDeps[[i+1]] <- cleanUp(pkgDTDeps[[i+1]])
+    if (NROW(pkgDTDeps[[i+1]]) > 0) { # browser()
+      pkgDTDeps[[i+1]] <- cleanUp(pkgDTDeps[[i+1]], includeBase = includeBase)
+    }
     
-    if (!("PackageTopLevel" %in% colnames(pkgDTDeps[[i]])))
-      set(pkgDTDeps[[i+1]], NULL, "PackageTopLevel", 
-          gsub("^(.+)\\_[[:digit:]].+$", "\\1", pkgDTDeps[[i+1]]$PackageVersion))
+    if (NROW(pkgDTDeps[[i+1]])) {
+      # Put "remotes" first, because it has more information than all others
+      if (length(unique(pkgDTDeps[[i+1]]$which)) > 1) {
+        set(pkgDTDeps[[i+1]], NULL, "whichFac", 
+            factor(pkgDTDeps[[i+1]]$which, 
+                   levels = c("remotes", "depends", "imports", "suggests", "linkingto", "enhances")))
+        setorderv(pkgDTDeps[[i+1]], "whichFac")
+        set(pkgDTDeps[[i+1]], NULL, "whichFac", NULL)
+      }
+      
+      # if there are duplicates within a 
+      set(pkgDTDeps[[i+1]], NULL, "hasVersionSpec", grepl(.grepVersionNumber, pkgDTDeps[[i+1]]$packageFullName))
+      
+      pkgDTDeps[[i+1]] <- keepOnlyMaxVersion(pkgDTDeps[[i+1]])
+    }
+    pkgDTComplete[[i+1]] <- data.table::copy(pkgDTDeps[[i+1]])
     
-    pkgDTComplete[[i+1]] <- pkgDTDeps[[i+1]]
-    pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][!duplicated(pkgDTDeps[[i+1]]$packageFullName)]
+    if (NROW(pkgDTComplete[[i+1]]) == 0)  {
+      break
+    }
+    # Deal with duplicates
     
+    # alreadyDone <- pkgDTDeps[[i+1]]$packageFullName %in% 
+    #   unlist(lapply(pkgDTDeps[seq(i)], function(x) x$packageFullName))
     
-    alreadyDone <- pkgDTDeps[[i+1]]$packageFullName %in% 
-      unlist(lapply(pkgDTDeps[seq(i)], function(x) x$packageFullName))
-    set(pkgDTDeps[[i+1]], NULL, "Package", extractPkgName(pkgDTDeps[[i+1]]$packageFullName))
-    
-    if (any(!alreadyDone))
-      # if (all(alreadyDone))
-        pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][alreadyDone == FALSE]
-    else 
-      pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][0]
+    # if (any(alreadyDone)) { 
+    #   pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][alreadyDone == FALSE]
+    # } else if (all(alreadyDone)) { 
+    #   pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][0] 
+    # }
+    # pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][!duplicated(pkgDTDeps[[i+1]]$Package)] # remove imports where there is remotes
     i <- i + 1
     
   }
-  ll <- rbindlist(pkgDTComplete, use.names = TRUE)
+  
+  ll <- rbindlist(pkgDTComplete[-1], use.names = TRUE, fill = TRUE)
+  browser(expr = any(is.na(ll$hasVersionSpec)))
+  ll <- keepOnlyMaxVersion(ll)
+  
   setkeyv(ll, "PackageTopLevel")
-  set(ll, NULL, "Package", extractPkgName(ll$packageFullName))
+  wh <- which(is.na(ll$Package))
+  set(ll, wh, "Package", extractPkgName(ll$packageFullName[wh]))
   ll1 <- unique(ll, by = c("PackageTopLevel", "Package"))
-  bb <- split(ll1, ll1$PackageTopLevel)
+  if (!includeBase)
+    ll1 <- ll1[!Package %in% .basePkgs]
+  ll2 <- ll1[base::order(ll1$Package)]
+  final <- split(ll2$packageFullName, ll2$PackageTopLevel)
+  final[]
   
 }
 
@@ -216,7 +255,7 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
     }
   })
   
-  names(deps) <- concatPkgVersion(pkgDT$Package, pkgDT$OlderVersionsAvailable)
+  names(deps) <- concatPkgVersion(pkgDT$Package, pkgDT$OlderVersionsAvailable, pkgDT$PackageTopLevel)
   deps
   
 
@@ -269,11 +308,12 @@ pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, PackageTopLeve
   deps
 }
 
-cleanUp <- function(pkgDT) {
+cleanUp <- function(pkgDT, includeBase = FALSE) {
   pkgDT <- pkgDT[which(!is.na(pkgDT$packageFullName))]
   whWeird <- grep("\n|\t", pkgDT$packageFullName)
   set(pkgDT, whWeird, "packageFullName", gsub("\n|\t", "", pkgDT$packageFullName[whWeird]))
-  Rs <- which(startsWith(pkgDT$packageFullName, "R"))
+  Rs <- try(which(startsWith(pkgDT$packageFullName, "R")))
+  if (is(Rs, "try-error")) browser()
   if (length(Rs)) {
     drop1 <- grep("^R[\\( ]", pkgDT$packageFullName[Rs])
     Rs <- Rs[drop1]
@@ -281,10 +321,31 @@ cleanUp <- function(pkgDT) {
   }
   whTooManySpaces <- grep(" {2,}", pkgDT$packageFullName)
   set(pkgDT, whTooManySpaces, "packageFullName", gsub(" {2,}", " ", pkgDT$packageFullName[whTooManySpaces]))
+  set(pkgDT, NULL, "Package", extractPkgName(pkgDT$packageFullName))
+  if (!includeBase) 
+    pkgDT <- pkgDT[!pkgDT$Package %in% .basePkgs]
   pkgDT
   # pkgDT <- pkgDT[!duplicated(pkgDT$packageFullName)]
 }
 
-concatPkgVersion <- function(Package, Version) {
-  paste0(Package, "_", Version) 
+concatPkgVersion <- function(...) {
+  do.call(paste, args = list(..., sep = "___"))
+}
+
+keepOnlyMaxVersion <- function(PDT) {
+  hasVersionSpec <- PDT$hasVersionSpec
+  if (any(hasVersionSpec)) {
+    set(PDT, which(hasVersionSpec), "versionSpec", 
+        extractVersionNumber(PDT$packageFullName[hasVersionSpec]))
+    # browser(expr = any(startsWith(PDT$Package , "Rcpp")))
+    PDT[hasVersionSpec, 
+                     hasMaxVersion := .I[(package_version(versionSpec) == 
+                                            max(package_version(versionSpec)))][1], 
+                     by = c("PackageTopLevel", "Package")]
+  }
+  keeper <- unique(PDT[ , if (any(hasVersionSpec)) hasMaxVersion[hasVersionSpec == TRUE][1] else .I[1], 
+                                     by = c("Package", "PackageTopLevel")]$V1)
+  if (any(hasVersionSpec))
+    set(PDT, NULL, "hasMaxVersion", NULL)
+  PDT <- PDT[keeper] 
 }
