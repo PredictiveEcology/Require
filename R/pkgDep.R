@@ -580,7 +580,7 @@ pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
     lapply(ap[[i]], function(x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
       out <- out[!is.na(out)]
-      # out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
+      out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
     })
   })
 
