@@ -1,6 +1,6 @@
 if (interactive()) {
   try(setLibPaths(origLibPaths, standAlone = TRUE), silent = TRUE)
-  devtools::load_all("~/GitHub/Require")
+  # devtools::load_all("~/GitHub/Require")
   # library(profvis)
   aa <- pkgSnapshot()
   # googledrive::drive_download(googledrive::as_id("1Yo_7nuIn580rKqBCeycssVBOoe_qb7oY"))
