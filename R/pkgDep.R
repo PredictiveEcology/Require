@@ -60,7 +60,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
-
+  if (isTRUE(purge)) .pkgEnv[["pkgDep"]] <- new.env(parent = emptyenv())
+  if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
+  
   if (!includeBase) packages <- packages[!packages %in% .basePkgs]
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
     message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
@@ -599,9 +601,10 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   if (is.null(.pkgEnv[["DESCRIPTIONFile"]])) .pkgEnv[["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
   if (is.null(.pkgEnv[["DESCRIPTIONFile"]][[objName]]) || isTRUE(purge)) {
     lines <- if (length(desc_path) == 1)
-      readLines(desc_path)
+      try(readLines(desc_path))
     else
       lines <- desc_path
+    if (is(lines, "try-error")) browser()
     Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
     on.exit(Sys.setlocale(locale = ""))
     sl <- list()

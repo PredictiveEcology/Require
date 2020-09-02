@@ -152,7 +152,11 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       if (any(needOlderNotGH)) {
 
         pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
-        oldAvailableVersions <- if (!is.null(.pkgEnv$oldAvailableVersions)) {.pkgEnv$oldAvailableVersions} else {list()}
+        oldAvailableVersions <- if (!is.null(.pkgEnv[["pkgDep"]][["oldAvailableVersions"]])) {
+          .pkgEnv[["pkgDep"]][["oldAvailableVersions"]]
+        } else {
+            list()
+          }
         pkgsInOAV <- pkg %in% names(oldAvailableVersions)
         if (!all(pkgsInOAV)) {
           pkgs <- pkg[!pkgsInOAV]
@@ -163,7 +167,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           })
           
           oldAvailableVersions <- append(oldAvailableVersions, ava)
-          assign("oldAvailableVersions", oldAvailableVersions, envir = .pkgEnv)
+          assign("oldAvailableVersions", oldAvailableVersions, envir = .pkgEnv[["pkgDep"]])
         }
         oldAvailableVersions <- oldAvailableVersions[pkg]
         
@@ -338,9 +342,9 @@ DESCRIPTIONFileVersionV <- function(file) {
   # on.exit({
   #   Sys.setlocale(locale = origLocal)
   # })
-  if (is.null(.pkgEnv[["DESCRIPTIONFile"]])) .pkgEnv[["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
+  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
   out <- lapply(file, function(f) {
-    out <- get0(f, envir = .pkgEnv$DESCRIPTIONFile)
+    out <- get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
     if (is.null(out)) {
       if (length(f) == 1) {
         lines <- try(readLines(f))
@@ -355,7 +359,7 @@ DESCRIPTIONFileVersionV <- function(file) {
       vers_line <- lines[grep("^Version: *", lines)] # nolint
       out <- gsub("Version: ", "", vers_line)
       if (length(out) == 0) out <- NA
-      assign(f, out, envir = .pkgEnv$DESCRIPTIONFile)
+      assign(f, out, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
     }
     out
   })
@@ -672,15 +676,15 @@ archiveVersionsAvailable <- function(package, repos) {
     archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
     if (length(repos) > 1)
       message("Trying ", repo)
-    if (!exists(archiveFile, envir = .pkgEnv, inherits = FALSE)) {
+    if (!exists(archiveFile, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)) {
       archive <- tryCatch({
         con <- gzcon(url(archiveFile, "rb"))
         on.exit(close(con))
         readRDS(con)
       }, warning = function(e) list(), error = function(e) list())
-      .pkgEnv[[archiveFile]] <- archive
+      .pkgEnv[["pkgDep"]][[archiveFile]] <- archive
     } else {
-      archive <- get(archiveFile, envir = .pkgEnv)
+      archive <- get(archiveFile, envir = .pkgEnv[["pkgDep"]])
     }
     info <- archive[package]
     if (!is.null(info)) {
@@ -827,7 +831,7 @@ installedVers <- function(pkgDT) {
 available.packagesCached <- function(repos, purge) {
   repos <- getCRANrepos(repos)
 
-  if (!exists("cachedAvailablePackages", envir = .pkgEnv) || isTRUE(purge)) {
+  if (!exists("cachedAvailablePackages", envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
     cap <- list()
     isMac <- tolower(Sys.info()["sysname"]) == "darwin"
     isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
@@ -851,22 +855,22 @@ available.packagesCached <- function(repos, purge) {
       cap <- cap[!dups,]
     }
     cap <- as.data.table(cap)
-    assign("cachedAvailablePackages", cap, envir = .pkgEnv)
+    assign("cachedAvailablePackages", cap, envir = .pkgEnv[["pkgDep"]])
     cap
   } else {
-    get("cachedAvailablePackages", envir = .pkgEnv, inherits = FALSE)
+    get("cachedAvailablePackages", envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
   }
 }
 
 currentCRANPkgDates <- function(pkgs) {
-  if (!exists("currentCranDates", envir = .pkgEnv)) {
+  if (!exists("currentCranDates", envir = .pkgEnv[["pkgDep"]])) {
     message("Getting dates of current CRAN packages")
     tf <- tempfile();
     download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE)
     currentCranDates <- readLines(tf)
-    assign("currentCranDates", currentCranDates, envir = .pkgEnv)
+    assign("currentCranDates", currentCranDates, envir = .pkgEnv[["pkgDep"]])
   } else {
-    currentCranDates <- get("currentCranDates", envir = .pkgEnv)
+    currentCranDates <- get("currentCranDates", envir = .pkgEnv[["pkgDep"]])
   }
   if (is.null(names(pkgs))) names(pkgs) <- pkgs
 
@@ -997,7 +1001,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   }
   
   # manually override "type = 'both'" because it gets it wrong some of the time
-  ap <- as.data.table(.pkgEnv$cachedAvailablePackages)
+  ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
   if (NROW(ap) > 1 && tolower(Sys.info()["sysname"]) == "windows") {
     ap <- ap[Package == installPkgNames]
     type <- c("source", "binary")[grepl("bin", ap[toInstall, on = c("Package", "Version" = "versionSpec")]$Repository) + 1]
