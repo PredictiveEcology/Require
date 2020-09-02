@@ -77,7 +77,6 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       get0(paste0(x), envir = .pkgEnv[["pkgDep"]][["deps"]])
     })
     stillNeed <- unlist(lapply(stashed, is.null))
-    browser()
     if (any(!stillNeed))
       names(stashed)[!stillNeed] <- concatPkgVersion(
         names(stashed)[!stillNeed], pkgDTDeps[[i]][!stillNeed]$PackageTopLevel)
