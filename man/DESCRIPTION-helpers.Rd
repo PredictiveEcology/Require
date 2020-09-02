@@ -10,7 +10,7 @@ DESCRIPTIONFileVersionV(file)
 
 DESCRIPTIONFileOtherV(file, other = "RemoteSha")
 
-getGitHubDESCRIPTION(pkg)
+getGitHubDESCRIPTION(pkg, purge = getOption("Require.purge", FALSE))
 }
 \arguments{
 \item{file}{A file path to a DESCRIPTION file}

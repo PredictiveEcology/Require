@@ -1,4 +1,5 @@
 ##' @export
+##' @rdname pkgDep
 pkgDep3 <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo", "Remotes"), recursive = FALSE,
                    depends, imports, suggests, linkingTo, enhances, remotes,
@@ -8,7 +9,12 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   origDTThreads <- data.table::setDTthreads(1)
   on.exit(data.table::setDTthreads(origDTThreads))
 
-  if (isTRUE(purge)) .pkgEnv[["pkgDep"]] <- new.env(parent = emptyenv())
+  purge <- autoPurge(purge)
+  
+  if (isTRUE(purge)) {
+    .pkgEnv[["pkgDep"]] <- new.env(parent = emptyenv())
+    .pkgEnv[["startTime"]] <- Sys.time()
+  }
   if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
   
   pkgDT <- list(packageFullName = packages, Package = extractPkgName(packages))
@@ -237,7 +243,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       gsub(paste0("\\_", recursive), "", names(stashed_recursive)[!stillNeed_recursive])
     final[names(stashed_recursive)[!stillNeed_recursive]] <- stashed_recursive[!stillNeed_recursive]
   }
-  
+  final <- final[match(packages, names(final))]
   final[]
   
 }
@@ -271,13 +277,16 @@ pkgDepCRAN2 <- function(packageFullName, which = c("Depends", "Imports", "Linkin
 pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE, 
                           purge = getOption("Require.purge", FALSE)) {
   # pkgName <- extractPkgName(pkg)
+  browser()
+  objsExist <- unlist(lapply(
+    pkgDT$packageFullName, function(pfn) exists(pfn, envir = .pkgEnv[["pkgDep"]][["deps"]])))
   Package <- pkgDT$Package
-  packageTD <- tempdir2(Package)
+  packageTD <- file.path(tempdir2(paste(collapse = "", sample(LETTERS, 6))), Package)
   # packageTD <- file.path(td, Package)
   # dirsExist <- dir.exists(packageTD)
   DESCRIPTIONpaths <- file.path(packageTD, "DESCRIPTION")
-  filesExist <- file.exists(DESCRIPTIONpaths)
-  pkgDTNeedNew <- if (isTRUE(purge)) pkgDT else pkgDT[filesExist == FALSE] 
+  # objsExist <- file.exists(DESCRIPTIONpaths)
+  pkgDTNeedNew <- pkgDT[objsExist == FALSE] 
   if (NROW(pkgDTNeedNew)) {
     message("available.packages() doesn't have correct information on package dependencies for ",
             paste(Package, collapse = ", "), 
@@ -309,6 +318,7 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
       character()
       message(pkg, " dependencies not found on CRAN; perhaps incomplete description? On GitHub?")
     }
+    needed
   })
   
   names(deps) <- concatPkgVersion(pkgDT$packageFullName, pkgDT$PackageTopLevel)
@@ -317,8 +327,8 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
 
 }
   
-whichAll <- c("Depends", "Imports")
-#whichAll <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
+# whichAll <- c("Depends", "Imports")
+whichAll <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")
 whichAllGitHub <- c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances", "Remotes")
   
 pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, PackageTopLevel,
@@ -421,4 +431,19 @@ keepOnlyMaxVersion <- function(PDT) {
     # PDT <- PDT[keeper]
   }
   PDT
+}
+
+autoPurge <- function(purge) {
+  if (!isTRUE(purge)) {
+    purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
+    if (is.null(.pkgEnv[["startTime"]])) {
+      purge = TRUE
+    } else {
+      purgeDiff <- if (nchar(purgeDiff) == 0) 3600 else purgeDiff
+      autoPurge <- purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec")) 
+      purge <- purge || autoPurge
+    }
+    
+  }
+  purge
 }
