@@ -1,4 +1,4 @@
-#' @export
+##' @export
 pkgDep3 <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo", "Remotes"), recursive = FALSE,
                    depends, imports, suggests, linkingTo, enhances, remotes,
@@ -37,15 +37,17 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   set(pkgDTDeps[[i]], NULL, "PackageVersion", concatPkgVersion(pkgDTDeps[[i]]$Package, pkgDTDeps[[i]]$Version))
   set(pkgDTDeps[[i]], NULL, "which", "TopLevel")
   set(pkgDTDeps[[i]], NULL, "Package", extractPkgName(pkgDTDeps[[i]]$packageFullName))
+  set(pkgDTDeps[[i]], NULL, "hasVersionSpec", grepl(.grepVersionNumber, pkgDTDeps[[i]]$packageFullName))
   
   pkgDTComplete[[i]] <- data.table::copy(pkgDTDeps[[i]] )
   set(pkgDTComplete[[i]], NULL, "Package", NULL)
   final <- list()
   
   # If a complete version previous, then use it
-  nams <- paste0(pkgDTDeps[[i]]$packageFullName, "_", recursive)
-  stashed_recursive <- by(pkgDTDeps[[i]], nams, function(x) {
-    get0(paste0(pkgDTDeps[[i]]$packageFullName, "_", recursive), envir = .pkgEnv[["pkgDep"]][["deps"]])
+  namSR <- paste0(pkgDTDeps[[i]]$packageFullName, "_", recursive)
+  names(namSR) <- namSR
+  stashed_recursive <- lapply(namSR, function(x) {
+    get0(x, envir = .pkgEnv[["pkgDep"]][["deps"]])
   })
   stillNeed_recursive <- unlist(lapply(stashed_recursive, is.null))
   if (sum(stillNeed_recursive) > 0) {
@@ -71,8 +73,9 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       if (sum(!stillNeed) > 0) {
         pkgDTDeps[[i]] <- pkgDTDeps[[i]][stillNeed]
       }
-    } else 
+    } else {
       pkgDTDeps[[i]] <- pkgDTDeps[[i]][0]
+    }
     
     
     deps <- list()
@@ -170,7 +173,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       idcol = "PackageVersion")
     
     # Clean up -- R, \n\t
-    if (NROW(pkgDTDeps[[i+1]]) > 0) { # browser()
+    if (NROW(pkgDTDeps[[i+1]]) > 0) { 
       pkgDTDeps[[i+1]] <- cleanUp(pkgDTDeps[[i+1]], includeBase = includeBase)
     }
     
@@ -210,7 +213,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   }
   
   if (NROW(pkgDTComplete[-1])) {
-    ll <- rbindlist(pkgDTComplete[-1], use.names = TRUE, fill = TRUE)
+    ll <- rbindlist(pkgDTComplete, use.names = TRUE, fill = TRUE)
     ll <- keepOnlyMaxVersion(ll)
     
     setkeyv(ll, "PackageTopLevel")
@@ -221,13 +224,20 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       ll1 <- ll1[!Package %in% .basePkgs]
     ll2 <- ll1[base::order(ll1$Package)]
     final <- split(ll2$packageFullName, ll2$PackageTopLevel)
+    final <- Map(pkg = final, nam = names(final), function(pkg, nam) if (identical(pkg, nam)) character() else pkg)
   }
+  if (sum(stillNeed_recursive) > 0) {
+    final2Save <- final
+    names(final2Save) <- paste0(names(final2Save), "_", recursive)
+    list2env(final2Save, envir = .pkgEnv[["pkgDep"]][["deps"]])
+  }
+  
   if (sum(!stillNeed_recursive) > 0) {
-    final <- append(final, stashed_recursive)
-    final <- final[match(packages, names(final))]
-    # saved <- Map(dep = final, nam = names(final), function(dep, nam) 
-    #   assign(nam, dep, envir = .pkgEnv[["pkgDep"]][["deps"]]))
+    names(stashed_recursive)[!stillNeed_recursive] <- 
+      gsub(paste0("\\_", recursive), "", names(stashed_recursive)[!stillNeed_recursive])
+    final[names(stashed_recursive)[!stillNeed_recursive]] <- stashed_recursive[!stillNeed_recursive]
   }
+  
   final[]
   
 }
