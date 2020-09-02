@@ -867,7 +867,8 @@ currentCRANPkgDates <- function(pkgs) {
   if (!exists("currentCranDates", envir = .pkgEnv[["pkgDep"]])) {
     message("Getting dates of current CRAN packages")
     tf <- tempfile();
-    download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE)
+    out <- try(download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE))
+    if (is(out, "try-error")) stop(out, "Download from CRAN failed momentarily. Please try again shortly")
     currentCranDates <- readLines(tf)
     assign("currentCranDates", currentCranDates, envir = .pkgEnv[["pkgDep"]])
   } else {
