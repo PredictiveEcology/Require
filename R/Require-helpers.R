@@ -324,14 +324,15 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         nfs <- nfs[, .SD[1], by = "neededFiles"]
         neededVersions <- nfs[neededVersions, on = c("neededFiles")]#, "type")]
         if (isWindows() && interactive() && NROW(nfs[localType == "source"])) {
-          if (NROW(neededVersions[installFrom == "CRAN" & localType == "source"])) {
-            messageDF(neededVersions[, c("packageFullName", "Package", "localFileName")])
+          srcFromCRAN <- neededVersions$installFrom == "CRAN" & neededVersions$localType == "source"
+          if (NROW(neededVersions[srcFromCRAN])) {
+            messageDF(neededVersions[srcFromCRAN, c("packageFullName", "Package", "localFileName")])
             message(paste0("Local *source* file(s) exist for the above package(s).\nWould you like to delete it/them ",
                            "and let Require try to find the binary on MRAN? Y or N: "))
             out <- readline()
             if (identical("y", tolower(out))) {
               unlink(file.path(getOption("Require.RPackageCache"), 
-                               neededVersions[installFrom == "CRAN" & localType == "source"]$localFileName))
+                               neededVersions[srcFromCRAN]$localFileName))
             }
           }
         }
