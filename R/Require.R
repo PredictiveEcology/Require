@@ -228,6 +228,7 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
   
+  purge <- dealWithCache(purge)
   browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)

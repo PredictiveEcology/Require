@@ -68,7 +68,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE)) {
 
-  purge <- dealWithPurge(purge)
+  purge <- dealWithCache(purge)
   
   if (!includeBase) packages <- packages[!packages %in% .basePkgs]
   if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
@@ -605,8 +605,7 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
                                 purge = getOption("Require.purge", FALSE),
                                 keepSeparate = FALSE) {
   objName <- paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
-  if (is.null(.pkgEnv[["DESCRIPTIONFile"]])) .pkgEnv[["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
-  if (!exists(objName, envir = .pkgEnv[["DESCRIPTIONFile"]]) || isTRUE(purge)) {
+  if (!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || isTRUE(purge)) {
     lines <- if (length(desc_path) == 1)
       try(readLines(desc_path))
     else
@@ -643,9 +642,9 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
         needs
       }
     })
-    assign(objName, needed, envir = .pkgEnv[["DESCRIPTIONFile"]])
+    assign(objName, needed, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
   } else {
-    needed <- get(objName, envir = .pkgEnv[["DESCRIPTIONFile"]])
+    needed <- get(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
   }
   if (!keepSeparate) {
     needed <- unname(unlist(needed))
@@ -678,6 +677,7 @@ whichToDILES <- function(which) {
 
 .installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL,
                             purge = getOption("Require.purge", FALSE)) {
+  purge <- dealWithCache(purge)
   if (!is.null(other))
     if (any(grepl("github", tolower(other)))) {
       other <- c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")

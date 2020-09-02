@@ -342,7 +342,6 @@ DESCRIPTIONFileVersionV <- function(file) {
   # on.exit({
   #   Sys.setlocale(locale = origLocal)
   # })
-  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
   out <- lapply(file, function(f) {
     out <- get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
     if (is.null(out)) {
@@ -359,7 +358,8 @@ DESCRIPTIONFileVersionV <- function(file) {
       vers_line <- lines[grep("^Version: *", lines)] # nolint
       out <- gsub("Version: ", "", vers_line)
       if (length(out) == 0) out <- NA
-      assign(f, out, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+      if (length(f) == 1) 
+        assign(f, out, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
     }
     out
   })
@@ -523,8 +523,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     if (any(!toInstall$installFrom %in% "Fail")) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail"))]
       setkeyv(toInstall, "installFromFac")
-      if (length(toInstall$packageFullName) > 20)
-        message("Performing a topological sort of packages to install them in the right order; this may take some time")
+      # if (length(toInstall$packageFullName) > 20)
+      #   message("Performing a topological sort of packages to install them in the right order; this may take some time")
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       message("Installing: ", paste0(toInstall$packageFullName, sep = ", "))

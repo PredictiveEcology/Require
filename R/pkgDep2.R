@@ -19,7 +19,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
   origDTThreads <- data.table::setDTthreads(1)
   on.exit(data.table::setDTthreads(origDTThreads))
 
-  purge <- dealWithPurge(purge)
+  purge <- dealWithCache(purge)
   
   pkgDT <- list(packageFullName = packages, Package = extractPkgName(packages))
   pkgDT <- setDT(pkgDT)
@@ -77,6 +77,7 @@ pkgDep3 <- function(packages, libPath = .libPaths(),
       get0(paste0(x), envir = .pkgEnv[["pkgDep"]][["deps"]])
     })
     stillNeed <- unlist(lapply(stashed, is.null))
+    browser()
     if (any(!stillNeed))
       names(stashed)[!stillNeed] <- concatPkgVersion(
         names(stashed)[!stillNeed], pkgDTDeps[[i]][!stillNeed]$PackageTopLevel)
@@ -428,7 +429,7 @@ keepOnlyMaxVersion <- function(PDT) {
   PDT
 }
 
-dealWithPurge <- function(purge) {
+dealWithCache <- function(purge) {
   if (!isTRUE(purge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
@@ -438,14 +439,16 @@ dealWithPurge <- function(purge) {
       autoPurge <- purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec")) 
       purge <- purge || autoPurge
     }
-    
   }
   
-  if (isTRUE(purge)) {
+  if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
     .pkgEnv[["pkgDep"]] <- new.env(parent = emptyenv())
     .pkgEnv[["startTime"]] <- Sys.time()
   }
+  
   if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
+  if (!exists("DESCRIPTIONFile", envir = .pkgEnv[["pkgDep"]])) 
+    .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
   
   purge
 }

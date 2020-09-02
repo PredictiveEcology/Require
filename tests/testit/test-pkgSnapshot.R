@@ -1,6 +1,6 @@
 if (interactive()) {
   try(setLibPaths(origLibPaths, standAlone = TRUE), silent = TRUE)
-  # devtools::load_all("~/GitHub/Require")
+  devtools::load_all("~/GitHub/Require")
   # library(profvis)
   aa <- pkgSnapshot()
   # googledrive::drive_download(googledrive::as_id("1Yo_7nuIn580rKqBCeycssVBOoe_qb7oY"))
@@ -8,7 +8,7 @@ if (interactive()) {
   if (file.exists("packageVersions.txt")) {
     fileNames <- list()
     baseFN <- "packageVersions"
-    tmpLibPath <- "~/tmpLibPath9"
+    tmpLibPath <- "~/tmpLibPath11"
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]]))
@@ -19,6 +19,7 @@ if (interactive()) {
             "Require.unloadNamespaces" = FALSE)
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
     out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], purge = TRUE)   
+    browser()
 
     st <- system.time(out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])   )
     print(st)
