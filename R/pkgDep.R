@@ -527,6 +527,8 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
   }))
   aaa <- split(aa, firsts)
   aa <- aaa$later
+  lengths <- unlist(lapply(aa, length))
+  aa <- aa[order(lengths)]
   if (isTRUE(topoSort)) {
     notInOrder <- TRUE
     isCorrectOrder <- logical(length(aa))
@@ -534,9 +536,9 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
     newOrd <- numeric(0)
     for (i in seq_along(aa)) {
       dif <- setdiff(seq_along(aa), newOrd)
+      pkgNameNames <- extractPkgName(names(aa))
       for (j in dif) {
         pkgName <- extractPkgName(aa[[j]])
-        pkgNameNames <- extractPkgName(names(aa))
         overlapFull <- pkgName %in% pkgNameNames[-i]
         overlap <- pkgName %in% pkgNameNames[dif]
         overlapPkgs <- pkgName[overlapFull]
