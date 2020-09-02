@@ -323,6 +323,18 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         setkeyv(nfs, c("neededFiles", "localType")) # put binary first
         nfs <- nfs[, .SD[1], by = "neededFiles"]
         neededVersions <- nfs[neededVersions, on = c("neededFiles")]#, "type")]
+        if (isWindows() && interactive() && NROW(nfs[localType == "source"])) {
+          if (NROW(neededVersions[installFrom == "CRAN" & localType == "source"])) {
+            messageDF(neededVersions[, c("packageFullName", "Package", "localFileName")])
+            message(paste0("Local *source* file(s) exist for the above package(s).\nWould you like to delete it/them ",
+                           "and let Require try to find the binary on MRAN? Y or N: "))
+            out <- readline()
+            if (identical("y", tolower(out))) {
+              unlink(file.path(getOption("Require.RPackageCache"), 
+                               neededVersions[installFrom == "CRAN" & localType == "source"]$localFileName))
+            }
+          }
+        }
         # neededVersions[, localFileName := grep(neededFiles, localFiles, value = TRUE), by = "neededFiles"]
         neededVersions <- neededVersions[!is.na(localFileName), list(Package, packageFullName, localFileName)]
         if (NROW(neededVersions)) {
@@ -337,12 +349,13 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
-DESCRIPTIONFileVersionV <- function(file) {
+DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FALSE)) {
   # origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   # on.exit({
   #   Sys.setlocale(locale = origLocal)
   # })
   out <- lapply(file, function(f) {
+    if (purge && length(f) == 1) suppressWarnings(rm(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]))
     out <- get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
     if (is.null(out)) {
       if (length(f) == 1) {
@@ -542,11 +555,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                 startTime = startTime, 
                 install.packagesArgs = install.packagesArgs, install_githubArgs = install_githubArgs, repos = repos)
     }
-    if (NROW(pkgDT[installFrom == "Fail"])) {
+    failedToInstall <- pkgDT$installFrom == "Fail"
+    if (NROW(pkgDT[failedToInstall]) ) {
       keepCols <- c("packageFullName", "installed", "correctVersion", "AvailableVersion")
       message("The following packages could not be installed because could not find a correct version")
-      messageDF(pkgDT[installFrom == "Fail", ..keepCols])
-      pkgDTFail <- pkgDT[installFrom == "Fail"]
+      messageDF(pkgDT[failedToInstall, ..keepCols])
+      pkgDTFail <- pkgDT[failedToInstall]
     }
   }
 
@@ -628,7 +642,8 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
       }
       if (any(libPathsVersTooOld)) {
         p <- pkgDT[Package == pkg]
-        libPathsVers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], pkg, "DESCRIPTION"))
+        libPathsVers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], pkg, "DESCRIPTION"),
+                                                purge = TRUE)
         otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
         firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
                                 "The version in .libPaths() is ", libPathsVers)
@@ -1071,6 +1086,10 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   if (any(onMRAN)) {
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
     install.packagesArgs["ignore_repo_cache"] <- TRUE
+    installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onMRAN])
+    if (dir.exists(installedPkgs)) {
+      try(unlink(installedPkgs, recursive = TRUE))
+    }
     out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
       warn <- list()
       tryCatch(
@@ -1087,7 +1106,8 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
           w
         })
     })
-    installedVers <- try(DESCRIPTIONFileVersionV(file.path(.libPaths()[1], toInstall$Package, "DESCRIPTION")))
+    installedVers <- try(DESCRIPTIONFileVersionV(
+      file.path(.libPaths()[1], toInstall$Package, "DESCRIPTION"), purge = TRUE))
     if (!identical(installedVers, installVersions[onMRAN])) {
       message("-- incorrect version installed from MRAN; trying CRAN Archive")
       onMRAN <- FALSE
@@ -1246,7 +1266,7 @@ rmDuplicatePkgs <- function(pkgDT) {
       }}, by = "Package"]
   pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
   set(pkgDT, NULL, "duplicate", FALSE)
-  pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Fail", duplicate = TRUE)]
+  pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)]
   if (!all(pkgDT$keep)) {
     summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
     # summaryOfDups[is.na(keep), keep := FALSE]

@@ -6,7 +6,7 @@
 \alias{getGitHubDESCRIPTION}
 \title{GitHub package tools}
 \usage{
-DESCRIPTIONFileVersionV(file)
+DESCRIPTIONFileVersionV(file, purge = getOption("Require.purge", FALSE))
 
 DESCRIPTIONFileOtherV(file, other = "RemoteSha")
 
@@ -14,11 +14,6 @@ getGitHubDESCRIPTION(pkg, purge = getOption("Require.purge", FALSE))
 }
 \arguments{
 \item{file}{A file path to a DESCRIPTION file}
-
-\item{other}{Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
-retrieved.}
-
-\item{pkg}{A character string with a GitHub package specification (c.f. remotes)}
 
 \item{purge}{Logical. Should all caches be purged Default is 
 \code{getOption("Require.purge", FALSE)}.
@@ -32,6 +27,11 @@ defaults to 3600  (one hour -- see
 \code{\link[utils]{available.packages}}).
 
 Internally, there are calls to \code{available.packages}}
+
+\item{other}{Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
+retrieved.}
+
+\item{pkg}{A character string with a GitHub package specification (c.f. remotes)}
 }
 \description{
 A series of helpers to access and deal with GitHub packages

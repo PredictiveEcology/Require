@@ -696,7 +696,7 @@ whichToDILES <- function(which) {
     filesExist <- file.exists(files)
     files <- files[filesExist]
     desc_lines <- lapply(files, function(file) DESCRIPTIONFile(file))
-    versions <- DESCRIPTIONFileVersionV(desc_lines)
+    versions <- DESCRIPTIONFileVersionV(desc_lines, purge = FALSE)
     deps <- if (length(which)) lapply(desc_lines, function(lines) 
       DESCRIPTIONFileDeps(lines, which = which, purge = purge)) else NULL
     if (!is.null(other)) {
