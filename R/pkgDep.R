@@ -295,7 +295,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                     "; downloading tar.gz")
             verNum <- extractVersionNumber(pkg)
             if (is.na(verNum)) {
-              dt <- as.data.table(archiveVersionsAvailable(pkgName, repos = repos), keep.rownames = "packageURL")
+              ava <- archiveVersionsAvailable(pkgName, repos = repos)
+              dt <- if (is(ava, "list")) rbindlist(ava, idcol = "packageURL") else as.data.table(, keep.rownames = "packageURL")
               packageURL <- tail(dt$packageURL, 1)
             } else {
               pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
@@ -305,7 +306,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
             if (NROW(dt)) {
               srcContrib <- "src/contrib"
               url <- file.path(repos, srcContrib, "/Archive", packageURL) 
-              url2 <- file.path(repos, srcContrib, basename(packageURL))#https://cran.r-project.org/src/contrib/foreign_0.8-80.tar.gz) 
+              url2 <- file.path(repos, srcContrib, basename(packageURL))
               tf <- tempfile()
               haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
                 tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
@@ -527,33 +528,35 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
   }))
   aaa <- split(aa, firsts)
   aa <- aaa$later
-  lengths <- unlist(lapply(aa, length))
-  aa <- aa[order(lengths)]
-  if (isTRUE(topoSort)) {
-    notInOrder <- TRUE
-    isCorrectOrder <- logical(length(aa))
-    i <- 1
-    newOrd <- numeric(0)
-    for (i in seq_along(aa)) {
-      dif <- setdiff(seq_along(aa), newOrd)
-      pkgNameNames <- extractPkgName(names(aa))
-      for (j in dif) {
-        pkgName <- extractPkgName(aa[[j]])
-        overlapFull <- pkgName %in% pkgNameNames[-i]
-        overlap <- pkgName %in% pkgNameNames[dif]
-        overlapPkgs <- pkgName[overlapFull]
-        isCorrectOrder <- !any(overlap)
-        if (isCorrectOrder) {
-          # bb[names(aa)[j]] <- list(overlapPkgs)
-          cc[j] <- list(overlapPkgs)
-          newOrd <- c(newOrd, j)
-          i <- i + 1
-          break
+  if (length(aa)) {
+    lengths <- unlist(lapply(aa, length))
+    aa <- aa[order(lengths)]
+    if (isTRUE(topoSort)) {
+      notInOrder <- TRUE
+      isCorrectOrder <- logical(length(aa))
+      i <- 1
+      newOrd <- numeric(0)
+      for (i in seq_along(aa)) {
+        dif <- setdiff(seq_along(aa), newOrd)
+        pkgNameNames <- extractPkgName(names(aa))
+        for (j in dif) {
+          pkgName <- extractPkgName(aa[[j]])
+          overlapFull <- pkgName %in% pkgNameNames[-i]
+          overlap <- pkgName %in% pkgNameNames[dif]
+          overlapPkgs <- pkgName[overlapFull]
+          isCorrectOrder <- !any(overlap)
+          if (isCorrectOrder) {
+            # bb[names(aa)[j]] <- list(overlapPkgs)
+            cc[j] <- list(overlapPkgs)
+            newOrd <- c(newOrd, j)
+            i <- i + 1
+            break
+          }
         }
       }
+      aa <- aa[newOrd]
+      cc <- cc[newOrd]
     }
-    aa <- aa[newOrd]
-    cc <- cc[newOrd]
   }
 
   out <- if (isTRUE(returnFull)) {
