@@ -58,7 +58,6 @@ if (interactive()) {
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
                    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr", "Require")
   pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)), RequireDeps)
-  message("Deleting: ", paste(basename(pkgsToRm), collapse = ", "))
   out <- unlink(pkgsToRm, recursive = TRUE)
 
   runTests <- function(have, pkgs) {

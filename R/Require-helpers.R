@@ -541,7 +541,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       #   message("Performing a topological sort of packages to install them in the right order; this may take some time")
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
-      message("Installing: ", paste0(toInstall$packageFullName, sep = ", "))
+      pkgsCleaned <- gsub(.grepTooManySpaces, " ", toInstall$packageFullName)
+      pkgsCleaned <- gsub(.grepTabCR, "", pkgsCleaned)
+      message("Installing: ", paste0(pkgsCleaned, sep = ", "))
       toInstall[, installOrder := seq(NROW(toInstall))]
       Package <- toInstall$Package
       names(Package) <- Package

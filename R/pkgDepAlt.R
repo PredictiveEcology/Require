@@ -377,8 +377,8 @@ pkgDepCRANInner2 <- function(ap, which, packageFullName, Package, PackageTopLeve
 
 cleanUp <- function(pkgDT, includeBase = FALSE) {
   pkgDT <- pkgDT[which(!is.na(pkgDT$packageFullName))]
-  whWeird <- grep("\n|\t", pkgDT$packageFullName)
-  set(pkgDT, whWeird, "packageFullName", gsub("\n|\t", "", pkgDT$packageFullName[whWeird]))
+  whWeird <- grep(.grepTabCR, pkgDT$packageFullName)
+  set(pkgDT, whWeird, "packageFullName", gsub(.grepTabCR, "", pkgDT$packageFullName[whWeird]))
   Rs <- try(which(startsWith(pkgDT$packageFullName, "R")))
   if (is(Rs, "try-error")) browser()
   if (length(Rs)) {
@@ -457,3 +457,6 @@ dealWithCache <- function(purge) {
   
   purge
 }
+
+.grepTooManySpaces <- " {2,}"
+.grepTabCR <- "\n|\t"
