@@ -3,13 +3,19 @@ utils::globalVariables(c(
 ))
 
 
-#' pkgDep3 is a newer, still experimental approach to \code{pkgDep}, which has different
+#' @description 
+#' 
+#' \code{pkgDepAlt} is a newer, still experimental approach to \code{pkgDep}, which has different
 #' internal algorithms. With current testing, it appears to be slightly more accurate for
-#' (some unknown, as of yet) edge cases. This function may eventually replace \code{pkgDep}.
+#' (some unknown, as of yet) edge cases. One known case is when the a \code{package} is
+#' installed locally package, but is 
+#' not the version that is requested with \code{pkgDep}, the function will default to the
+#' local, installed, and incorrect package dependencies. \code{pkgDepAlt} gets this case 
+#' correct. This function may eventually replace \code{pkgDep}.
 #' 
 #' @export
 #' @rdname pkgDep
-pkgDep3 <- function(packages, libPath = .libPaths(),
+pkgDepAlt <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo", "Remotes"), recursive = FALSE,
                    depends, imports, suggests, linkingTo, enhances, remotes,
                    repos = getOption("repos"),
