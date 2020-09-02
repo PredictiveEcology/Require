@@ -284,7 +284,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       unlink(localFiles[fileSizeEq0])
       localFiles <- localFiles[!fileSizeEq0]
     }
-    neededVersions <- pkgDT[!is.na(installFrom) & installFrom != "Fail"]
+    neededVersions <- pkgDT[!is.na(installFrom) & !(installFrom %in% c("Fail", "Duplicate"))]
     if (length(localFiles) && NROW(neededVersions)) {
       localFiles <- basename(localFiles)
       set(neededVersions, NULL, "neededFiles", character(NROW(neededVersions)))
@@ -522,7 +522,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
 
-    toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & installFrom != "Fail"] 
+    toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & !(installFrom %in% c("Fail", "Duplicate"))] 
     hasRequireDeps <- pkgDT[(installed == FALSE  | !correctVersion) & Package == "Require"] 
     if (NROW(hasRequireDeps)) {
       installRequire()
@@ -534,8 +534,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       #        RequireDepsNeeded,"), lib = '",.libPaths()[1],"'), then rerun the current call")
       #toInstall <- toInstall[!hasRequireDeps]
     }
-    if (any(!toInstall$installFrom %in% "Fail")) {
-      toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail"))]
+    if (any(!toInstall$installFrom %in% c("Fail", "Duplicate"))) {
+      toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail", "Duplicate"))]
       setkeyv(toInstall, "installFromFac")
       # if (length(toInstall$packageFullName) > 20)
       #   message("Performing a topological sort of packages to install them in the right order; this may take some time")
@@ -571,7 +571,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
             tryCatch(packageVersion(x), error = function(x) NA_character_))))]
-  pkgDT[loadOrder > 0, loadOrder := loadOrder * as.integer(is.na(installFrom) | installFrom != "Fail")]
+  pkgDT[loadOrder > 0, loadOrder := loadOrder * as.integer(is.na(installFrom) | !(installFrom %in% c("Fail", "Duplicate")))]
 
   pkgDT
 }
@@ -1269,7 +1269,7 @@ rmDuplicatePkgs <- function(pkgDT) {
       }}, by = "Package"]
   pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
   set(pkgDT, NULL, "duplicate", FALSE)
-  pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)]
+  pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
   if (!all(pkgDT$keep)) {
     summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
     # summaryOfDups[is.na(keep), keep := FALSE]
