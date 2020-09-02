@@ -28,7 +28,7 @@ if (interactive()) {
     anyMissing <- there[!here, on = c("Package", "Version")]
     anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
     anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
-    if (tolower(Sys.info()["sysname"]) == "windows")
+    if (isWindows())
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
     testit::assert(NROW(anyMissing) == 0)

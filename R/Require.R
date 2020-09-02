@@ -239,7 +239,7 @@ Require <- function(packages, packageVersionFile,
     if (!is.null(getOption("Require.RPackageCache"))) {
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
       install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
-      if (tolower(Sys.info()["sysname"]) != "windows" && getOption("Require.buildBinaries", TRUE)) {
+      if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
         install.packagesArgs[["INSTALL_opts"]] <- c('--build', install.packagesArgs[["INSTALL_opts"]])
       }
 

@@ -836,7 +836,7 @@ available.packagesCached <- function(repos, purge) {
     cap <- list()
     isMac <- tolower(Sys.info()["sysname"]) == "darwin"
     isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
-    isWindows <- (tolower(Sys.info()["sysname"]) == "windows")
+    isWindows <- isWindows()
 
     types <- if (isOldMac) {
       c("mac.binary.el-capitan", "source")
@@ -1004,7 +1004,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   
   # manually override "type = 'both'" because it gets it wrong some of the time
   ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
-  if (NROW(ap) > 1 && tolower(Sys.info()["sysname"]) == "windows") {
+  if (NROW(ap) > 1 && isWindows()) {
     ap <- ap[Package == installPkgNames]
     type <- c("source", "binary")[grepl("bin", ap[toInstall, on = c("Package", "Version" = "versionSpec")]$Repository) + 1]
     install.packagesArgs["type"] <- type
@@ -1067,7 +1067,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
   # warns <- list()
   dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
-  onMRAN <- dateFromMRAN > "2015-06-06" && tolower(Sys.info()[["sysname"]]) == "windows"
+  onMRAN <- dateFromMRAN > "2015-06-06" && isWindows()
   if (any(onMRAN)) {
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
     install.packagesArgs["ignore_repo_cache"] <- TRUE
@@ -1283,3 +1283,7 @@ unloadNamespaces <- function(namespaces) {
 }
 
 NULLdt <- data.table(Package = character(), packageFullName = character())
+
+isWindows <- function() {
+  tolower(Sys.info()["sysname"]) == "windows"
+}
