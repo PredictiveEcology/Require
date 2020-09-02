@@ -35,6 +35,10 @@
 #'     set this option to \code{TRUE}. A file will be placed at 
 #'     \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
 #'   }
+#'   \item{\code{purge}}{
+#'     Default: \code{FALSE}. If set to \code{(almost) all internal caches used by \code{Require}
+#'     will be deleted and rebuilt. This should not generally be necessary}
+#'   }
 #'   \item{\code{unloadNamespaces}}{
 #'     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload
 #'     packages that conflict with the requested package installing via \code{Require}.

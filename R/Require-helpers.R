@@ -1,7 +1,7 @@
 utils::globalVariables(c(
   "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
   ".N", "Archs", "type", "localType", "N", "installOrder", 
-  "installResult", "isGitPkg", "keep", "keep2", "github", "dup"
+  "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile"
 ))
 
   #' @details
@@ -403,6 +403,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' @rdname DESCRIPTION-helpers
 #' @export
 #' @param pkg A character string with a GitHub package specification (c.f. remotes)
+#' @inheritParams pkgDep
 getGitHubDESCRIPTION <- function(pkg, purge = getOption("Require.purge", FALSE)) {
   getGitHubFile(pkg, "DESCRIPTION", purge = purge)
 }

@@ -18,9 +18,8 @@ if (interactive()) {
             "install.packages.compile.from.source" = "never",
             "Require.unloadNamespaces" = FALSE)
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
-    profvis(out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], purge = TRUE)   )
-  }    
-    
+    out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], purge = TRUE)   
+
     st <- system.time(out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])   )
     print(st)
     

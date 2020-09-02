@@ -96,7 +96,18 @@ utils::globalVariables(c(
 #'                   This can be create dramatically faster
 #' installs if the user has a substantial number of the packages already in
 #' their personal library. Default \code{FALSE} to minimize package installing.
-#' @param purge Logical. Internally, there are calls to \code{available.packages}
+#' @param purge Logical. Should all caches be purged Default is 
+#'   \code{getOption("Require.purge", FALSE)}.
+#'   There is a lot of internal caching of results throughout 
+#'   the \code{Require} package. These help with speed and reduce calls to internet sources.
+#'   However, sometimes these caches must be purged. The cached values are renewed 
+#'   when found to be too old, with the age limit. 
+#'   This maximum age can be set in seconds with the environment variable 
+#'   \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
+#'   defaults to 3600  (one hour -- see
+#'   \code{\link[utils]{available.packages}}).
+#'   
+#'   Internally, there are calls to \code{available.packages}
 #' @param verbose Numeric. If \code{1} (less) or \code{2} (more), there will be
 #'   a data.table with many details attached to the output
 #' @param ... Passed to \emph{all} of \code{install_github},
