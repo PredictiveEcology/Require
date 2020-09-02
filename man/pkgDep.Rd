@@ -156,11 +156,15 @@ A possibly ordered, named (with packages as names) list where list elements
 are either full reverse depends.
 }
 \description{
-This will first look in local filesystem (in \code{.libPaths()}), then
-\code{CRAN}. If the package is in the form of a GitHub package with format
-\code{account/repo@branch}, it will attempt to get package dependencies from
+This will first look in local filesystem (in \code{.libPaths()}) and will use
+a local package to find its dependencies. If the package doesn't exist locally, 
+including whether it is the correct version, then it will look in (currently) 
+\code{CRAN} and its archives (if the current \code{CRAN} version is not
+the desired version to check). It will also look on \code{GitHub} if the 
+package description is of the form of a GitHub package with format
+\code{account/repo@branch} or \code{account/repo@commit}. For this, 
+it will attempt to get package dependencies from
 the GitHub \file{DESCRIPTION} file.
-Currently, it will not find \code{Remotes}.
 This is intended to replace \code{tools::package_dependencies} or
 \code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
 multiple sources to be searched in the same function call.

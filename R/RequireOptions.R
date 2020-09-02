@@ -36,8 +36,10 @@
 #'     \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
 #'   }
 #'   \item{\code{purge}}{
-#'     Default: \code{FALSE}. If set to \code{(almost) all internal caches used by \code{Require}
-#'     will be deleted and rebuilt. This should not generally be necessary}
+#'     Default: \code{FALSE}. If set to (almost) all internal caches used by \code{Require}
+#'     will be deleted and rebuilt. This should not generally be necessary as it will 
+#'     automatically be deleted after (by default) 1 hour (set via 
+#'     \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
 #'   }
 #'   \item{\code{unloadNamespaces}}{
 #'     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload

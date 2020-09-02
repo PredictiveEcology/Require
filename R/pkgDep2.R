@@ -434,7 +434,7 @@ dealWithPurge <- function(purge) {
     if (is.null(.pkgEnv[["startTime"]])) {
       purge = TRUE
     } else {
-      purgeDiff <- if (nchar(purgeDiff) == 0) 3600 else purgeDiff
+      purgeDiff <- if (identical(purgeDiff, "")  || is.na(purgeDiff)) 3600 else purgeDiff
       autoPurge <- purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec")) 
       purge <- purge || autoPurge
     }
