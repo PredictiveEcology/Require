@@ -31,6 +31,7 @@ if (interactive()) {
     if (isWindows())
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
+    if (NROW(anyMissing) != 0) browser()
     testit::assert(NROW(anyMissing) == 0)
     
     
