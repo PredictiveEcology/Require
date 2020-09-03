@@ -63,7 +63,8 @@ if (interactive()) {
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
-    testit::assert(all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0))
+    out <- try(testit::assert(all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)))
+    if (is(out, "try-error")) browser()
     couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
     actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {
       didntLoad <- have[Package %in% couldHaveLoaded & correctVersionAvail == FALSE]
@@ -72,7 +73,7 @@ if (interactive()) {
       couldHaveLoaded
     }
 
-    theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(have[loadOrder > 0]$Package)))
+    theTest <- isTRUE(all.equal(sort(actuallyLoaded), sort(unique(have[loadOrder > 0]$Package))))
     browser(expr = !theTest)
   }
   unloadNSRecursive <- function(packages, n = 0) {

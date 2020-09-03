@@ -815,11 +815,6 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   dt$packageFullName
 }
 
-colsToKeep <- c("packageFullName", "installed", "loadOrder", "loaded", "installFrom", 
-                "Version", 
-                "repoLocation"
-                )
-
 installedVers <- function(pkgDT) {
   pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {

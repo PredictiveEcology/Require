@@ -27,6 +27,17 @@ utils::globalVariables(c(
 #' otherwise not installed in \code{.libPaths()[1]}, i.e., the current active
 #' R package directory. Any packages or dependencies that are not yet installed will
 #' be installed in \code{libPaths}. 
+#' 
+#' @section GitHub Package:
+#' Follows \code{remotes::install_github} standard as this is what is used internally.
+#' As with \code{remotes::install_github}, it is not possible to specify a past
+#' version of a GitHub package, without supplying a SHA that had that package
+#' version. Similarly, if a developer does a local install e.g., via 
+#' \code{devtools::install}, of an active project, this package will not be able 
+#' know of the GitHub state, and thus \code{pkgSnapshot} will not be able to 
+#' recover this state as there is no SHA associated with a local
+#' installation. Use \code{Require} or \code{install_github} to create
+#' a record of the GitHub state.
 #'
 #' @section Package Snapshots:
 #' To build a snapshot of the desired packages and their versions, first run
@@ -358,6 +369,9 @@ Require <- function(packages, packageVersionFile,
     names(out) <- pkgDT[packagesRequired > 0]$Package
     if (verbose > 0) {
       if (verbose < 2) {
+        colsToKeep <- c("packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom", 
+                         "Version", "repoLocation", "correctVersion", "hasVersionSpec",
+                        "correctVersionAvail")
         colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
         pkgDT <- pkgDT[, ..colsToKeep]
       }
@@ -401,6 +415,7 @@ Require <- function(packages, packageVersionFile,
   } else {
     out <- logical()
   }
+
   if (isTRUE(require)) {
     return(out)
   } else {
