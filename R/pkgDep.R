@@ -609,7 +609,15 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
                                 keepVersionNumber = TRUE, 
                                 purge = getOption("Require.purge", FALSE),
                                 keepSeparate = FALSE) {
-  objName <- paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
+  objName <- if (length(desc_path) == 1)
+    paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
+  else {
+    grepPackage <- "Package *: *"
+    grepVersion <- "Version *: *"
+    pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE))
+    vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE))
+    paste(pkg, vers, sep = "_", paste0(which, "_", keepVersionNumber, collapse = "_"))
+  }
   if (!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || isTRUE(purge)) {
     lines <- if (length(desc_path) == 1)
       try(readLines(desc_path))
