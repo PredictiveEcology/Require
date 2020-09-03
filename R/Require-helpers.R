@@ -554,7 +554,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       names(Package) <- Package
       namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
       if (any(namespacesLoaded) && getOption("Require.unloadNamespaces", TRUE)) {
-        browser(expr = "cli" %in% names(namespacesLoaded[namespacesLoaded]))
         
         si <- sessionInfo()
         allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
