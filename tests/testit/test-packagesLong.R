@@ -40,7 +40,22 @@ if (interactive()) {
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
   origDir <- setwd("~/GitHub/");
-  system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+  localDir <- dir(getOption("Require.RPackageCache"))
+  localDirFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE)
+  localBins <- localDir[startsWith(localDir, c("data.table", "remotes"))]
+  localBinsFull <- localDirFull[startsWith(localDir, c("data.table", "remotes"))]
+  localBinsOrd <- order(basename(localBins), decreasing = TRUE)
+  localBins <- localBins[localBinsOrd]
+  localBinsFull <- localBinsFull[localBinsOrd]
+  dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
+  localBins <- localBins[!dups]
+  localBinsFull <- localBinsFull[!dups]
+  if (length(localBinsFull) == 2) {
+    system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+  } else {
+    system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+  }
+  
   system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
   setwd(origDir)
   
@@ -69,7 +84,7 @@ if (interactive()) {
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
     out <- try(testit::assert(all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)))
     if (is(out, "try-error")) browser()
-    couldHaveLoaded <- setdiff(unique(pkgs) , "mumin")
+    couldHaveLoaded <- grep("\\<mumin\\>", unique(pkgs), value = TRUE, invert = TRUE)
     # couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
     
     actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {

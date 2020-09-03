@@ -1300,6 +1300,25 @@ rmDuplicatePkgs <- function(pkgDT) {
   pkgDT
 }
 
+detachAll <- function(pkgs, dontTry = NULL) {
+  depsToUnload <- pkgDep(pkgs, recursive = TRUE)[[1]]
+  out <- pkgDepTopoSort(depsToUnload)
+  if ("devtools" %in% pkgs) {
+    dontTryDevtools <- c("glue", "rlang", "ps", "ellipsis", "processx")
+    message("some of devtools's dependencies don't seem to unload their dlls correctly. ",
+            "These will not be unloaded: ", paste(dontTryDevtools, collapse = ", "))
+    dontTry <- c(dontTry, dontTryDevtools)
+  }
+  pkgs <- c(pkgs, rev(names(out)))
+  pkgs <- Require:::extractPkgName(pkgs)
+  pkgs <- unique(pkgs)
+  names(pkgs) <- pkgs
+  dontTry <- c(c("Require", "remotes", "data.table"), dontTry)
+  pkgs <- setdiff(pkgs, dontTry)
+  pkgs <- unique(pkgs)
+  sapply(pkgs, unloadNamespace)
+}
+
 unloadNamespaces <- function(namespaces) {
   unloaded <- character()
   nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
