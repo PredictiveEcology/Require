@@ -613,7 +613,6 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
                                 keepVersionNumber = TRUE, 
                                 purge = getOption("Require.purge", FALSE),
                                 keepSeparate = FALSE) {
-  
   objName <- if (length(desc_path) == 1)
     paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
   else {
