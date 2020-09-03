@@ -553,7 +553,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         
         si <- sessionInfo()
         allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
-        topoSortedAllLoaded <- names(pkgDepTopoSort(allLoaded))
+        topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded)))
+        if (is(topoSortedAllLoaded, "try-error")) 
+          stop("The attempt to unload loaded packages failed. Please restart R and run again")
         topoSortedAllLoaded <- setdiff(topoSortedAllLoaded, c("Require", "testit", "remotes", "data.table", "glue", "rlang"))
         detached <- unloadNamespaces(topoSortedAllLoaded)
         if (NROW(detached)) {
