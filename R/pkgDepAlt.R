@@ -434,8 +434,8 @@ keepOnlyMaxVersion <- function(PDT) {
   PDT
 }
 
-dealWithCache <- function(purge) {
-  if (!isTRUE(purge)) {
+dealWithCache <- function(purge, checkAge = TRUE) {
+  if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
       purge = TRUE
@@ -452,7 +452,7 @@ dealWithCache <- function(purge) {
   }
   
   if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
-  if (!exists("DESCRIPTIONFile", envir = .pkgEnv[["pkgDep"]])) 
+  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge) 
     .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
   
   purge

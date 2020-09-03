@@ -613,8 +613,13 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
                                 keepVersionNumber = TRUE, 
                                 purge = getOption("Require.purge", FALSE),
                                 keepSeparate = FALSE) {
+  
   objName <- paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
-  if (!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || isTRUE(purge)) {
+  
+  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) purge <- dealWithCache(purge, checkAge = FALSE)
+  
+  if (!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || isTRUE(purge) ||
+      length(desc_path) > 1) {
     lines <- if (length(desc_path) == 1)
       try(readLines(desc_path))
     else
@@ -651,7 +656,8 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
         needs
       }
     })
-    assign(objName, needed, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+    if (length(objName) == 1)
+      assign(objName, needed, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
   } else {
     needed <- get(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
   }

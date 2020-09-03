@@ -355,9 +355,14 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
   # on.exit({
   #   Sys.setlocale(locale = origLocal)
   # })
+  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) purge <- dealWithCache(purge, checkAge = FALSE)
   out <- lapply(file, function(f) {
-    if (purge && length(f) == 1) suppressWarnings(rm(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]))
-    out <- get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+    out <- if (!is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) {
+      if (purge && length(f) == 1) suppressWarnings(rm(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]))
+      get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+    } else {
+      NULL
+    }
     if (is.null(out)) {
       if (length(f) == 1) {
         lines <- try(readLines(f))
@@ -615,6 +620,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
       otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
       libPathsVersTooOld <- grepl(grep4a, outMess)
       toInstall <- character()
+      pkgsWarned <- c()
       if (any(otherErrors) || any(missingDeps)) {
         if (any(otherErrors)) {
           error1 <- grepl(.libPaths()[1], outMess)
@@ -623,19 +629,17 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           error2 <- grepl("no such symbol", outMess)
           if (any(error2)) {
             pkgs <- paste(packageNames, collapse = "', '")
-            stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-                 "-----\n",
-                 "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",libPaths[1],"')",
-                 "\n-----\n...before any other packages get loaded")
+            pkgsWarned <- c(pkgsWarned, pkgs)
+            warningCantInstall(pkgs)
           }
           error3 <- grepl("is being loaded, but", outMess)
           packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
           if (any(error3)) {
             pkgs <- paste(packageNames, collapse = "', '")
-            stop("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
-                 "-----\n", "install.packages(c('",
-                 paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1],
-                 "')", "\n-----\n...before any other packages get loaded")
+            if (length(setdiff(pkgs, pkgsWarned)) > 0)
+              warningCantInstall(pkgs)
+            else 
+              pkgsWarned <- c(pkgsWarned, pkgs)
           }
         }
         doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
@@ -1214,30 +1218,36 @@ copyTarball <- function(pkg, builtBinary) {
 
 }
 
-installRequire <- function() {
-  RequireDESCRIPTIONPath <- file.path(.libPaths()[1], "Require", "DESCRIPTION") # system.file("DESCRIPTION", package = "Require")
-  haveIt <- file.exists(RequireDESCRIPTIONPath)
-  
-  installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(RequireDESCRIPTIONPath) else NULL
-  isGitHub <- if (haveIt) DESCRIPTIONFileOtherV(RequireDESCRIPTIONPath, other = "github") else NA
-  
+installRequire <- function(requireHome = getOption("Require.Home")) {
+  dFileAtInstalledRequire <- file.path(.libPaths()[1], "Require", "DESCRIPTION") # system.file("DESCRIPTION", package = "Require")
+  haveIt <- file.exists(dFileAtInstalledRequire)
+  installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(dFileAtInstalledRequire) else NULL
+  isGitHub <- if (haveIt) DESCRIPTIONFileOtherV(dFileAtInstalledRequire, other = "github") else NA
   done <- FALSE
   if (is.na(isGitHub)) {
-    isLocal <- dir(pattern = "DESCRIPTION")
-    if (length(isLocal)) {
-      currentRequireV <- DESCRIPTIONFileVersionV("DESCRIPTION")
-      currentPackageName <- DESCRIPTIONFileOtherV("DESCRIPTION", "Package")
-      if (identical("Require", currentPackageName)) {
-        if (!identical(installedRequireV, currentRequireV)) {
-          origDir <- setwd("..");
-          on.exit(setwd(origDir), add = TRUE)
-          system(paste0("R CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"), wait = TRUE)
+    if (!is.null(requireHome)) {
+      dFile <- dir(requireHome, pattern = "DESCRIPTION", full.names = TRUE)
+      pkgNameAtRequireHome <- DESCRIPTIONFileOtherV(dFile, "Package")
+      pkgVersionAtRequireHome <- DESCRIPTIONFileVersionV(dFile)
+      if (!is.null(pkgNameAtRequireHome)) {
+        if (identical(pkgNameAtRequireHome, "Require")) {
+          if (!identical(installedRequireV, pkgVersionAtRequireHome)) {
+            origDir <- setwd(dirname(dirname(dFile)))
+            on.exit(setwd(origDir), add = TRUE)
+            message("Installing Require ver: ", pkgVersionAtRequireHome," from source at ", requireHome)
+            system(paste0("R CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"), wait = TRUE)
+          }
         }
         done <- TRUE
+        
+      } else {
+        if (!is.null(requireHome))
+          message(pkgNameAtRequireHome, " did not contain Require source code")
       }
     }
     
     if (isFALSE(done)) {
+      browser()
       system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
       # system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
@@ -1262,30 +1272,31 @@ toPkgDT <- function(pkgDT) {
 
 rmDuplicatePkgs <- function(pkgDT) {
   dups <- pkgDT[installed == FALSE, .N, by = "Package"][N > 1]
-  if (NROW(dups))
+  if (NROW(dups)) {
     message("Duplicate packages are Required; discarding older, or unavailable")
-  pkgDT <- pkgDT[dups, dup := TRUE, on = "Package"]
-  pkgDT <- pkgDT[is.na(dup) | (dup == TRUE & installFrom != "Fail"), keep := TRUE]
-  
-  pkgDT[installed == FALSE & keep == TRUE, keep2 := {
-    if (.N == 1) {.I[1]
-    } else { 
-      if (anyNA(versionSpec)) {
-        .I[1]
+    pkgDT <- pkgDT[dups, dup := TRUE, on = "Package"]
+    pkgDT <- pkgDT[is.na(dup) | (dup == TRUE & installFrom != "Fail"), keep := TRUE]
+    
+    pkgDT[installed == FALSE & keep == TRUE, keep2 := {
+      if (.N == 1) {.I[1]
+      } else { 
+        if (anyNA(versionSpec)) {
+          .I[1]
         } else {
           .I[which(versionSpec == max(as.package_version(versionSpec)))]
-          }
+        }
       }}, by = "Package"]
-  pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
-  set(pkgDT, NULL, "duplicate", FALSE)
-  pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
-  if (!all(pkgDT$keep)) {
-    summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
-    # summaryOfDups[is.na(keep), keep := FALSE]
-    setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
-    messageDF(summaryOfDups)
+    pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
+    set(pkgDT, NULL, "duplicate", FALSE)
+    pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
+    if (!all(pkgDT$keep)) {
+      summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
+      # summaryOfDups[is.na(keep), keep := FALSE]
+      setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
+      messageDF(summaryOfDups)
+    }
+    pkgDT[, `:=`(keep2 = NULL, keep = NULL, dup = NULL)]
   }
-  pkgDT[, `:=`(keep2 = NULL, keep = NULL, dup = NULL)]
   pkgDT
 }
 
@@ -1318,4 +1329,12 @@ NULLdt <- data.table(Package = character(), packageFullName = character())
 
 isWindows <- function() {
   tolower(Sys.info()["sysname"]) == "windows"
+}
+
+warningCantInstall <- function(pkgs) {
+  warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
+          "-----\n",
+          "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",.libPaths()[1],"')",
+          "\n-----\n...before any other packages get loaded")
+  
 }

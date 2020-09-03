@@ -1,21 +1,22 @@
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
-#tmpdir <-
-if (Sys.info()["user"] == "emcintir") {
-  options(Require.RPackageCache = "~/._RPackageCache")
-  outOpts <- options("install.packages.compile.from.source" = "no")
-  on.exit({
-    options(outOpts)
-  }, add = TRUE)
-  # tmpdir <- file.path(tempdir(), paste0("RequireTmp"))
-} else {
-  #tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-}
-tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-
-suppressWarnings(dir.create(tmpdir))
-# repo <- chooseCRANmirror(ind = 1)
-# if (FALSE) {
 if (interactive()) {
+  Sys.setenv("R_REMOTES_UPGRADE" = "never")
+  #tmpdir <-
+  if (Sys.info()["user"] == "emcintir") {
+    outOpts <- options(Require.Home = "~/GitHub/Require",
+                       Require.RPackageCache = "~/._RPackageCache",
+                       "install.packages.compile.from.source" = "no")
+    on.exit({
+      options(outOpts)
+    }, add = TRUE)
+    # tmpdir <- file.path(tempdir(), paste0("RequireTmp"))
+  } else {
+    #tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+  }
+  tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+  
+  suppressWarnings(dir.create(tmpdir))
+  # repo <- chooseCRANmirror(ind = 1)
+  # if (FALSE) {
   ## Make a clean copy of my main R library
   # message("###########################################################################")
   # message("Big Package Snapshot")
@@ -43,7 +44,10 @@ if (interactive()) {
   system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
   setwd(origDir)
   
-  on.exit(Require::setLibPaths(orig))
+  on.exit({
+    message(".libPaths during packagesLong: ", .libPaths())
+    Require::setLibPaths(orig)
+    })
   
   testit::assert(length(pkgDepTest1) == 1)
   testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes"))
@@ -79,7 +83,7 @@ if (interactive()) {
     theTest <- isTRUE(all.equal(unique(sort(extractPkgName(actuallyLoaded))), 
                                 sort(unique(have[loadOrder > 0]$Package))))
     browser(expr = !theTest)
-    testit::assert(theTest)
+    testit::assert(isTRUE(theTest))
   }
   unloadNSRecursive <- function(packages, n = 0) {
     if (!missing(packages)) {
@@ -205,8 +209,7 @@ if (interactive()) {
                "Holidays (>=1000.3.1)",
                c("Holidays (>=1.0.1)", "fpCompare"),
                "Holidays (>=1.3.1)",
-               c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "PredictiveEcology/LandR",
-                 "PredictiveEcology/LandR@development", "A3")
+               c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
   options("Require.verbose" = TRUE)
@@ -217,7 +220,6 @@ if (interactive()) {
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
-    
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     #if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE)
