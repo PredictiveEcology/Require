@@ -8,7 +8,7 @@ if (interactive()) {
   if (file.exists("packageVersions.txt")) {
     fileNames <- list()
     baseFN <- "packageVersions"
-    tmpLibPath <- "~/tmpLibPath12"
+    tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]]))
