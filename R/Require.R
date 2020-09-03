@@ -234,6 +234,9 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
   
+  origDTThreads <- data.table::setDTthreads(1)
+  on.exit(data.table::setDTthreads(origDTThreads))
+  
   purge <- dealWithCache(purge)
   browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
