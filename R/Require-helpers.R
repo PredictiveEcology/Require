@@ -715,6 +715,9 @@ archiveVersionsAvailable <- function(package, repos) {
       archive <- get(archiveFile, envir = .pkgEnv[["pkgDep"]])
     }
     info <- archive[package]
+    naNames <- is.na(names(info))
+    if (any(naNames))
+      names(info)[naNames] <- package[naNames]
     if (!is.null(info)) {
       info <- lapply(info, function(x) {
         x$repo <- repo
