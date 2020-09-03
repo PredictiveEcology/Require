@@ -296,26 +296,30 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
             verNum <- extractVersionNumber(pkg)
             if (is.na(verNum)) {
               ava <- archiveVersionsAvailable(pkgName, repos = repos)
-              dt <- if (is(ava, "list")) rbindlist(ava, idcol = "packageURL") else as.data.table(, keep.rownames = "packageURL")
-              packageURL <- tail(dt$packageURL, 1)
+              dt <- if (is(ava, "list")) 
+                rbindlist(lapply(ava, as.data.table, keep.rownames = "packageURL")) 
+              else 
+                as.data.table(ava, keep.rownames = "packageURL")
+              packageURL <- if (NROW(dt)) tail(dt$packageURL, 1) else character()
+              
             } else {
               pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
               packageURL <- file.path(pkgName, pkgFilename)
               dt <- numeric()
             }
-            if (NROW(dt)) {
+            if (endsWith(packageURL, "tar.gz")) {
               srcContrib <- "src/contrib"
               url <- file.path(repos, srcContrib, "/Archive", packageURL) 
               url2 <- file.path(repos, srcContrib, basename(packageURL))
               tf <- tempfile()
               haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x) 
                 tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
-              if (!file.exists(tf))
-                browser()
-              untar(tarfile = tf, exdir = td)
-              filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
-              filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
-              unlink(filesToDel, recursive = TRUE)
+              if (file.exists(tf)) {
+                untar(tarfile = tf, exdir = td)
+                filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
+                filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
+                unlink(filesToDel, recursive = TRUE)
+              }
             }
           } 
           needed <- if (dir.exists(packageTD))
@@ -655,7 +659,8 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
         needs
       }
     })
-    assign(objName, needed, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+    if (length(objName) == 1)
+      assign(objName, needed, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
   } else {
     needed <- get(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
   }
