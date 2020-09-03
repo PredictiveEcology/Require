@@ -32,9 +32,9 @@ if (interactive()) {
   # message("###########################################################################")
   # message("End Big Package Snapshot")
   # message("###########################################################################")
-
-
-
+  
+  
+  
   pkgDepTest1 <- Require::pkgDep("Require")
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
@@ -42,15 +42,15 @@ if (interactive()) {
   system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
   setwd(origDir)
-
+  
   on.exit(Require::setLibPaths(orig))
-
+  
   testit::assert(length(pkgDepTest1) == 1)
   testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes"))
-
+  
   testit::assert(length(pkgDepTest2) == 2)
   testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
-
+  
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
   RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
                    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
@@ -101,7 +101,7 @@ if (interactive()) {
       out <- unique(setdiff(out, keepLoaded))
     }
     if (length(out) > 0) {
-
+      
       names(out) <- out
       out1 <- lapply(out, function(pInner) {
         names(pInner) <- pInner
@@ -111,14 +111,14 @@ if (interactive()) {
           out
         }
       })
-
+      
       out2 <- unlist(out1)
       if (sum(out2) > 0) {
         out3 <- out2[out2]
         sam <- sample(names(out3), size = n)
         if (n > 0) {
           message("removing ", paste(sam, collapse = ", "))
-
+          
           files <- dir(.libPaths()[1], recursive = TRUE, full.names = TRUE)
           origDir <- Require::normPath(file.path(.libPaths()[1]))
           origDirWithPkg <- file.path(origDir, sam)
@@ -131,7 +131,7 @@ if (interactive()) {
           #dir.create(dirname(td))
           #dir.create(td)
           out <- lapply(newDirs, dir.create)
-
+          
           outFC <- file.copy(files, newFiles)
           if (any(outFC == FALSE)) {
             file.copy(newFiles, files)
@@ -158,13 +158,13 @@ if (interactive()) {
     }
     return(out2)
   }
-
+  
   pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
                  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
                  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
                  "PredictiveEcology/map@development (>= 4.0.9)",
-
+                 
                  "achubaty/amc@development (>=0.1.5)", "data.table (>=100.0)",
                  "digest (>=0.6.23)", "PredictiveEcology/LandR@development (>= 1.0.2)",
                  "versions (>=0.3)",
@@ -210,14 +210,14 @@ if (interactive()) {
   )
   #   options("reproducible.Require.install" = TRUE)
   options("Require.verbose" = TRUE)
-
+  
   i <- 0
   pkg <- pkgs[[i+1]] # redundant, but kept for interactive use
- #}
+  #}
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
-
+    
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     #if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE)
@@ -239,7 +239,7 @@ if (interactive()) {
       normalRequire[have2$Package]
     else
       normalRequire
-
+    
     # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
     if (length(out2)) {
       out2 <- out2[out2]
@@ -258,7 +258,7 @@ if (interactive()) {
     }
   }
   unlink(tmpdir, recursive = TRUE)
-
+  
 }
 
 # unlink(tmpdir, recursive = TRUE)
