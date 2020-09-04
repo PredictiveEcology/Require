@@ -1261,14 +1261,18 @@ installRequire <- function(requireHome = getOption("Require.Home")) {
 
 toPkgDT <- function(pkgDT) {
   if (!is.data.table(pkgDT)) {
-    pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
-    #dt <- data.table::copy(NULLdt)
-    #set(dt, NULL, "Package", extractPkgName(pkgDT))
-    #set(dt, NULL, "packageFullName", pkgDT)
-    #pkgDT <- dt
+    pkgDT <- toDT(Package = extractPkgName(pkgDT), packageFullName = pkgDT)
+    # pkgDT2 <- setDT(list(Package = extractPkgName(pkgDT)))
+    # set(pkgDT2, NULL, "packageFullName", pkgDT)
+    # pkgDT <- pkgDT2
+    # pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
   }
     
   pkgDT
+}
+
+toDT <- function(...) {
+  setDT(list(...))
 }
 
 rmDuplicatePkgs <- function(pkgDT) {
