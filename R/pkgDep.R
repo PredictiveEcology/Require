@@ -572,6 +572,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
   }
   out <- append(aaa$first, out)
 
+  out <- out[match(pkgs, names(out))]
   return(out)
 }
 
