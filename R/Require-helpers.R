@@ -1038,8 +1038,10 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
   if (NROW(ap) > 1 && isWindows()) {
     ap <- ap[Package == installPkgNames]
-    type <- c("source", "binary")[grepl("bin", ap[toInstall, on = c("Package", "Version" = "versionSpec")]$Repository) + 1]
-    install.packagesArgs["type"] <- type
+    if (NROW(ap)) {
+      type <- c("source", "binary")[grepl("bin", ap[toInstall, on = c("Package", "Version" = "versionSpec")]$Repository) + 1]
+      install.packagesArgs["type"] <- type
+    }
   }
   
   warn <- tryCatch({

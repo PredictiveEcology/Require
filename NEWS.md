@@ -13,6 +13,7 @@ version 0.0.8
 * New function: `detachAll` that attempts to detach and unload packages and all their dependencies, in reverse topological order.
 * Speed improvements, especially with `pkgDep` and `pkgDepTopoSort`
 * New function `pkgDepAlt` which is an alternative to `pkgDep`, yet easier to maintain and still experimental. It is not yet the workhorse inside `Require`, but it may become that.
+* Now correctly removes spaces and tab characters within a package version description -- this was creating an error such as `Error: invalid version specification ' 	3.3-13'`
 
 ## Bug fixes
 * `pkgDepTopoSort` now appears to be correct for all types of package descriptions currently allowed by `Require`, namely, packages with no version specification, packages with version specification (including older versions), and GitHub packages.
