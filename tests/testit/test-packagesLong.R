@@ -40,11 +40,10 @@ if (interactive()) {
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
   origDir <- setwd("~/GitHub/");
-  localDir <- dir(getOption("Require.RPackageCache"))
-  localDirFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE)
-  localBins <- localDir[startsWith(localDir, c("data.table", "remotes"))]
-  localBinsFull <- localDirFull[startsWith(localDir, c("data.table", "remotes"))]
-  localBinsOrd <- order(basename(localBins), decreasing = TRUE)
+  localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
+  localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
+  vers <- gsub("^.+\\_(.+)\\.[[:alnum:]]+", "\\1", basename(localBins))
+  localBinsOrd <- order(package_version(vers), decreasing = TRUE)
   localBins <- localBins[localBinsOrd]
   localBinsFull <- localBinsFull[localBinsOrd]
   dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))

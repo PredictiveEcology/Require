@@ -673,6 +673,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMess <- outMess[-outMessToRm]
         } else {
           stop(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
+          warning(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
                "or prevent the newer version from loading by changing the .libPaths() prior to any packages being loaded")
         }
       }
