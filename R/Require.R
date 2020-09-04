@@ -339,7 +339,7 @@ Require <- function(packages, packageVersionFile,
     # Create data.table of Require workflow
     if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
     
-    pkgDT <- toPkgDT(packages)
+    pkgDT <- toPkgDT(packages, deepCopy = TRUE)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
     pkgDT[packageFullName %in% unique(packageNamesOrig),
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]

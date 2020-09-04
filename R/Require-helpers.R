@@ -1261,9 +1261,12 @@ installRequire <- function(requireHome = getOption("Require.Home")) {
   }
 }
 
-toPkgDT <- function(pkgDT) {
+toPkgDT <- function(pkgDT, deepCopy = FALSE) {
   if (!is.data.table(pkgDT)) {
-    pkgDT <- toDT(Package = extractPkgName(pkgDT), packageFullName = pkgDT)
+    pkgDT <- if (deepCopy) 
+      data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+    else 
+      toDT(Package = extractPkgName(pkgDT), packageFullName = pkgDT)
     # pkgDT2 <- setDT(list(Package = extractPkgName(pkgDT)))
     # set(pkgDT2, NULL, "packageFullName", pkgDT)
     # pkgDT <- pkgDT2
