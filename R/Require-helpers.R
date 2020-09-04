@@ -672,9 +672,8 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMessToRm <- c(outMessToRm, max(outMessToRm) + 1) # There is non ASCII character in the message that can't be explicitly used
           outMess <- outMess[-outMessToRm]
         } else {
-          stop(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
           warning(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
-               "or prevent the newer version from loading by changing the .libPaths() prior to any packages being loaded")
+                  "or prevent the newer version from loading by changing the .libPaths() prior to any packages being loaded")
         }
       }
       if (length(outMess) > 0)

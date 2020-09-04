@@ -236,8 +236,8 @@ if (interactive()) {
     i <- i + 1
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     #if (i == 11) ._Require_0 <<- 1
-    outFromRequire <- Require(pkg, standAlone = FALSE)
-    out <- Require(pkg)
+    outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
+    out <- Require(pkg, require = FALSE)
     testit::assert(all.equal(outFromRequire, out))
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
