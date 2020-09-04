@@ -40,5 +40,26 @@ The following options are likely of interest to most users:
     set this option to \code{TRUE}. A file will be placed at 
     \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
   }
+  \item{\code{purge}}{
+    Default: \code{FALSE}. If set to (almost) all internal caches used by \code{Require}
+    will be deleted and rebuilt. This should not generally be necessary as it will 
+    automatically be deleted after (by default) 1 hour (set via 
+    \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
+  }
+  \item{\code{unloadNamespaces}}{
+    Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload
+    packages that conflict with the requested package installing via \code{Require}.
+    This can be complicated, resulting in broken states that can only be recovered
+    by restarting R. Default is to attempt to do this. \code{FALSE} will not attempt
+    to do this. User must deal with inability to install packages due to package already 
+    being loaded.
+  }
+  \item{\code{verbose}}{
+    Default: \code{0}. During a \code{Require}, there is a lot of information collected 
+    and used. With \code{verbose} set to \code{1} or \code{2}, more of this information
+    will be reported as an attribute attached to the return object of \code{Require}.
+    This may help diagnosing problems.
+  }
+  
 }
 }

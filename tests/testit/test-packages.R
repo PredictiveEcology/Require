@@ -1,7 +1,8 @@
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 if (Sys.info()["user"] == "emcintir") {
-  options(Require.RPackageCache = "~/._RPackageCache")
-  outOpts <- options("install.packages.compile.from.source" = "no")
+  outOpts <- options(Require.Home = "~/GitHub/Require",
+                              Require.RPackageCache = "~/._RPackageCache",
+                              "install.packages.compile.from.source" = "no")
   on.exit({
     options(outOpts)
   }, add = TRUE)
@@ -155,12 +156,12 @@ out <- getGitHubDESCRIPTION(pkg = character())
 testit::assert(length(out) == 0)
 
 # Trigger the save available.packages and archiveAvailable
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
-                                install = "force"),
-                 error = function(x) x)
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
-                                install = "force"),
-                 error = function(x) x)
+# warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+#                                 install = "force"),
+#                  error = function(x) x)
+# warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+#                                 install = "force"),
+#                  error = function(x) x)
 if (interactive()) {
   warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
                                   install = "force"),

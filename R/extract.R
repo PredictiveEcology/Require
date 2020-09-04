@@ -48,7 +48,7 @@ extractVersionNumber <- function(pkgs) {
 #' @examples
 #' extractInequality("Require (<=0.0.1)")
 extractInequality <- function(pkgs) {
-  gsub(grepExtractPkgs, "\\1", pkgs)
+  gsub(grepExtractPkgs, "\\1", pkgs, perl = FALSE)
 }
 
 #' @rdname extractPkgName
@@ -56,7 +56,19 @@ extractInequality <- function(pkgs) {
 #' @examples
 #' extractPkgGitHub("PredictiveEcology/Require")
 extractPkgGitHub <- function(pkgs) {
-  unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
+  isGH <- grepl("/", pkgs, perl = FALSE)
+  if (any(isGH)) {
+    a <- trimVersionNumber(pkgs[isGH])
+    a <- strsplit(a, split = "/|@")
+    a <- lapply(a, function(x) x[2])
+    pkgs[isGH] <- unlist(a)
+    if (any(!isGH))
+      pkgs[!isGH] <- NA
+  } else {
+    pkgs <- rep(NA, length(pkgs))
+  }
+  pkgs
+  #unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
 
 #' Trim version number off a compound package name
@@ -71,8 +83,15 @@ extractPkgGitHub <- function(pkgs) {
 #' @examples
 #' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 trimVersionNumber <- function(pkgs) {
-  out <- gsub(.grepVersionNumber, "", pkgs)
-  gsub("\n|\t", "", out)
+  ew <- endsWith(pkgs, ")")
+  if (any(ew)) {
+    pkgs[ew] <- gsub(paste0("\n|\t|",.grepVersionNumber), "", pkgs[ew])
+    #out <- gsub(.grepVersionNumber, "", pkgs[ew], perl = FALSE) # faster perl = TRUE
+    #pkgs[ew] <- gsub("\n|\t", "", out, perl = FALSE)
+    #if (!identical(pkgs[ew], out1))
+    #  browser()
+  }
+  pkgs
 }
 
 .grepVersionNumber <- " *\\(.*"

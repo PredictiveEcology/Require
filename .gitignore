@@ -45,10 +45,9 @@ vignettes/Intro-to-Cache\.R
 *.xdy
 *.tdo
 
-packageVersions.txt
+packageVersions*.txt
 
 .cacheAvailablePackages.rda
 
 tests/testit/tmp.txt
 
-packageVersionLinux.txt

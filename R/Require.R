@@ -13,8 +13,10 @@ utils::globalVariables(c(
 #' This is an "all in one" function that will run \code{install.packages} for
 #' CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
 #' will install specific versions of each package if versions are specified either
-#' via an inequality (e.g., \code{"Holidays (>=1.0.0)"}) or with a
-#' \code{packageVersionFile}. The function will then run \code{require} on all
+#' via an (in)equality (e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for 
+#' an exact version) or with a
+#' \code{packageVersionFile}. If \code{require = TRUE}, the default, 
+#' the function will then run \code{require} on all
 #' named packages that satisfy their version requirements. If packages are already installed
 #' (\code{packages} supplied), and their optional version numbers are satisfied,
 #' then the "install" component will be skipped.
@@ -22,19 +24,20 @@ utils::globalVariables(c(
 #' \code{standAlone} will either put the \code{Require}d packages and their
 #' dependencies \emph{all} within the \code{libPaths} (if \code{TRUE}) or if
 #' \code{FALSE} will only install packages and their dependencies that are
-#' otherwise not installed in \code{.libPaths()}, i.e., the personal or base
-#' library paths. Any packages or dependencies that are not yet installed will
-#' be installed in \code{libPaths}. Importantly, a small hidden file (named
-#' \code{._packageVersionsAuto.txt}) will be saved in \code{libPaths} that will
-#' store the \emph{information} about the packages and their dependencies, even
-#' if the version used is located in \code{.libPaths()}, i.e., not the
-#' \code{libPaths} provided. This hidden file will be used if a user runs
-#' \code{pkgSnapshot}, enabling a new user to rebuild the entire dependency
-#' chain, without having to install all packages in an isolated directory (as
-#' does \pkg{packrat}). This will save potentially a lot of time and disk space,
-#' and yet maintain reproducibility. \emph{NOTE}: since there is only one hidden
-#' file in a \code{libPaths}, any call to \code{pkgSnapshot} will make a snapshot
-#' of the most recent call to \code{Require}.
+#' otherwise not installed in \code{.libPaths()[1]}, i.e., the current active
+#' R package directory. Any packages or dependencies that are not yet installed will
+#' be installed in \code{libPaths}. 
+#' 
+#' @section GitHub Package:
+#' Follows \code{remotes::install_github} standard as this is what is used internally.
+#' As with \code{remotes::install_github}, it is not possible to specify a past
+#' version of a GitHub package, without supplying a SHA that had that package
+#' version. Similarly, if a developer does a local install e.g., via 
+#' \code{devtools::install}, of an active project, this package will not be able 
+#' know of the GitHub state, and thus \code{pkgSnapshot} will not be able to 
+#' recover this state as there is no SHA associated with a local
+#' installation. Use \code{Require} or \code{install_github} to create
+#' a record of the GitHub state.
 #'
 #' @section Package Snapshots:
 #' To build a snapshot of the desired packages and their versions, first run
@@ -44,13 +47,14 @@ utils::globalVariables(c(
 #' @section Mutual Dependencies:
 #' This function works best if all required packages are called within one
 #' \code{Require} call, as all dependencies can be identified together, and all
-#' package versions will be saved automatically (with \code{standAlone = TRUE}
-#' or \code{standAlone = FALSE}), allowing a call to \code{pkgSnapshot} when a
-#' more permanent record of versions can be made.
+#' package versions will be addressed (if there are no conflicts), 
+#' allowing a call to \code{\link{pkgSnapshot}} to take a snapshot or "record" of 
+#' the current collection of packages and versions.
 #'
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
-#' in `getOption("Require.RPackageCache")` whose default is `NULL`
+#' in `getOption("Require.RPackageCache")` whose default is `NULL`, meaning 
+#' \emph{do not cache packages locally},
 #' and will reuse them if needed. To turn
 #' on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
 #'
@@ -96,7 +100,18 @@ utils::globalVariables(c(
 #'                   This can be create dramatically faster
 #' installs if the user has a substantial number of the packages already in
 #' their personal library. Default \code{FALSE} to minimize package installing.
-#' @param purge Logical. Internally, there are calls to \code{available.packages}
+#' @param purge Logical. Should all caches be purged Default is 
+#'   \code{getOption("Require.purge", FALSE)}.
+#'   There is a lot of internal caching of results throughout 
+#'   the \code{Require} package. These help with speed and reduce calls to internet sources.
+#'   However, sometimes these caches must be purged. The cached values are renewed 
+#'   when found to be too old, with the age limit. 
+#'   This maximum age can be set in seconds with the environment variable 
+#'   \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
+#'   defaults to 3600  (one hour -- see
+#'   \code{\link[utils]{available.packages}}).
+#'   
+#'   Internally, there are calls to \code{available.packages}
 #' @param verbose Numeric. If \code{1} (less) or \code{2} (more), there will be
 #'   a data.table with many details attached to the output
 #' @param ... Passed to \emph{all} of \code{install_github},
@@ -179,7 +194,9 @@ utils::globalVariables(c(
 #' library(Require)
 #' ProjectPackageFolder <- file.path("~", "ProjectA")
 #' setLibPaths(ProjectPackageFolder)
-#' Require("PredictiveEcology/SpaDES@development")
+#' Require("PredictiveEcology/SpaDES@development") # the latest version on GitHub
+#' Require("PredictiveEcology/SpaDES@23002b2a92a92df4ccba7f51cdd82798800b2fa7") 
+#'                               # a specific commit (by using the SHA)
 #'
 #'
 #' ############################################################################
@@ -217,6 +234,10 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
   
+  origDTThreads <- data.table::setDTthreads(1)
+  on.exit(data.table::setDTthreads(origDTThreads))
+  
+  purge <- dealWithCache(purge)
   browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
@@ -227,8 +248,8 @@ Require <- function(packages, packageVersionFile,
     if (!is.null(getOption("Require.RPackageCache"))) {
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
       install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
-      if (tolower(Sys.info()["sysname"]) != "windows" && getOption("Require.buildBinaries", TRUE)) {
-        install.packagesArgs["INSTALL_opts"] <- c('--build', install.packagesArgs["INSTALL_opts"])
+      if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
+        install.packagesArgs[["INSTALL_opts"]] <- c('--build', install.packagesArgs[["INSTALL_opts"]])
       }
 
       install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
@@ -320,7 +341,7 @@ Require <- function(packages, packageVersionFile,
     
     pkgDT <- toPkgDT(packages)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
-    pkgDT[Package %in% unique(extractPkgName(packageNamesOrig)),
+    pkgDT[packageFullName %in% unique(packageNamesOrig),
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
     pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
     
@@ -332,7 +353,7 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- installedVers(pkgDT)
     pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
     pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
-    
+   
     if (length(packages)) {
       if (isTRUE(install) || identical(install, "force")) {
         pkgDT <- parseGitHub(pkgDT)
@@ -351,6 +372,9 @@ Require <- function(packages, packageVersionFile,
     names(out) <- pkgDT[packagesRequired > 0]$Package
     if (verbose > 0) {
       if (verbose < 2) {
+        colsToKeep <- c("packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom", 
+                         "Version", "repoLocation", "correctVersion", "hasVersionSpec",
+                        "correctVersionAvail")
         colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
         pkgDT <- pkgDT[, ..colsToKeep]
       }
@@ -363,7 +387,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT[0]
     }
     if (NROW(stillNeeded)) { 
-      message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking",
+      message("Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking ",
               "information and thus will not be installed. ",
               "These may have been installed locally from source, or are on another ",
               "repository system, such as BioConductor:")
@@ -394,6 +418,7 @@ Require <- function(packages, packageVersionFile,
   } else {
     out <- logical()
   }
+
   if (isTRUE(require)) {
     return(out)
   } else {

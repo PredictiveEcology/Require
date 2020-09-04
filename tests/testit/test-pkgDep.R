@@ -49,7 +49,10 @@ knownRevDeps <- list(Require = c("reproducible", "SpaDES", "SpaDES.addins", "Spa
                                     "reproducible", "Require", "SpaDES", "SpaDES.addins", "SpaDES.core",
                                     "SpaDES.experiment", "SpaDES.tools"))
 test <- unlist(lapply(names(out), function(p) {
-  setdiff(out[[p]], knownRevDeps[[p]])
+  setdiff(knownRevDeps[[p]], out[[p]])
 }))
-if (interactive())
+if (interactive()) {
   testit::assert(length(test) == 0)
+}
+
+  

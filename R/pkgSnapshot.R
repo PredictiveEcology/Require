@@ -41,14 +41,15 @@
 #' Require(packageVersionFile = fileName)
 #' }
 #'
-pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE) {
-  browser(expr = exists("aaaa"))
+pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
+                        purge = getOption("Require.purge", FALSE)) {
   if (missing(libPaths))
     libPaths <- .libPaths()
   origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
   on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha"))
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha",
+                                      purge = purge))
   fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
   message("package version file saved in ",packageVersionFile)
   return(invisible(ip))
