@@ -506,6 +506,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 
 #' @inheritParams Require
 #' @rdname Require-internals
+#' @importFrom utils sessionInfo
 #' @export
 #' @details
 #' \code{doInstall} is a wrapper around \code{install.packages},
@@ -1309,7 +1310,7 @@ detachAll <- function(pkgs, dontTry = NULL) {
     dontTry <- c(dontTry, dontTryDevtools)
   }
   pkgs <- c(pkgs, rev(names(out)))
-  pkgs <- Require:::extractPkgName(pkgs)
+  pkgs <- extractPkgName(pkgs)
   pkgs <- unique(pkgs)
   names(pkgs) <- pkgs
   dontTry <- c(c("Require", "remotes", "data.table"), dontTry)

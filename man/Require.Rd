@@ -122,6 +122,19 @@ For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
 attache an attribute \code{attr(obj, "Require")} to the output of this
 function.
 }
+\section{GitHub Package}{
+
+Follows \code{remotes::install_github} standard as this is what is used internally.
+As with \code{remotes::install_github}, it is not possible to specify a past
+version of a GitHub package, without supplying a SHA that had that package
+version. Similarly, if a developer does a local install e.g., via 
+\code{devtools::install}, of an active project, this package will not be able 
+know of the GitHub state, and thus \code{pkgSnapshot} will not be able to 
+recover this state as there is no SHA associated with a local
+installation. Use \code{Require} or \code{install_github} to create
+a record of the GitHub state.
+}
+
 \section{Package Snapshots}{
 
 To build a snapshot of the desired packages and their versions, first run
