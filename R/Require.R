@@ -411,10 +411,13 @@ Require <- function(packages, packageVersionFile,
       messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
     } else {
       if (!is.null(pkgDT$needInstall)) {
-        allCorrect <- pkgDT$needInstall == TRUE & pkgDT$installed == FALSE
-        allInstalled <- pkgDT[allCorrect]
-        if (NROW(allInstalled) == 0)
-          message("All packages appear to have installed correctly")
+        nas <- is.na(pkgDT$needInstall)
+        allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
+        if (length(allCorrect)) {
+          allInstalled <- pkgDT[allCorrect]
+          if (NROW(allInstalled) == 0)
+            message("All packages appear to have installed correctly")
+        }
       }
     }
   } else {
