@@ -132,8 +132,8 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
           depsGitHub2 <- NAMESPACEFileDepsV(pkgDTSrc[["GitHub"]]$NAMESPACE, purge = FALSE)
           deps[["GitHub"]] <- Map(d1 = deps[["GitHub"]], d2 = depsGitHub2, function(d2, d1) {
             d1$imports <- union(d2, d1$imports)
-            if (!includeBase)
-              d1$imports <- setdiff(d1$imports, .basePkgs)
+            # if (!includeBase)
+            #   d1$imports <- setdiff(d1$imports, .basePkgs)
             d1
           })
         }
@@ -232,11 +232,9 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
     wh <- which(is.na(ll$Package))
     set(ll, wh, "Package", extractPkgName(ll$packageFullName[wh]))
     ll1 <- unique(ll, by = c("PackageTopLevel", "Package"))
-    if (!includeBase)
-      ll1 <- ll1[!Package %in% .basePkgs]
     ll2 <- ll1[base::order(ll1$Package)]
     final <- split(ll2$packageFullName, ll2$PackageTopLevel)
-    final <- Map(pkg = final, nam = names(final), function(pkg, nam) if (identical(pkg, nam)) character() else pkg)
+    final <- Map(pkg = final, nam = names(final), function(pkg, nam) setdiff(pkg, nam))
   }
   if (sum(stillNeed_recursive) > 0) {
     final2Save <- final
@@ -250,6 +248,9 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
     final[names(stashed_recursive)[!stillNeed_recursive]] <- stashed_recursive[!stillNeed_recursive]
   }
   final <- final[match(packages, names(final))]
+  if (!includeBase)
+    final <- lapply(final, function(x) x[!x %in% .basePkgs])
+  
   final[]
   
 }
