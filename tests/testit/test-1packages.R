@@ -64,8 +64,11 @@ isInstalled <- tryCatch({
   if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
 testit::assert(isTRUE(isInstalled))
-browser()
-detachAll("TimeWarp")
+out <- detachAll(c("Require", "TimeWarp", "sdfd"))
+testit::assert(identical(sort(out), 
+                         sort(c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1))))
+testit::assert(names(out)[out == 2] == "TimeWarp")
+
 # detach("package:TimeWarp", unload = TRUE)
 remove.packages("TimeWarp", lib = dir1)
 

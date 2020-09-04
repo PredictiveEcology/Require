@@ -451,10 +451,11 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #' @param useAllInSearch Logical. If \code{TRUE}, then all non-core
 #' R packages in \code{search()} will be appended to \code{pkgs}
 #' to allow those to also be identified
-#' @param returnFull Logical. If \code{TRUE}, then the full reverse
-#'   dependencies will be returned; if \code{FALSE}, the default,
-#'   only the reverse dependencies that are found within the \code{pkgs}
-#'   (and \code{search()} if \code{useAllInSearch = TRUE}) will be returned.
+#' @param returnFull Logical. Primarily useful when \code{reverse = TRUE}. 
+#'   If \code{TRUE}, then then all installed packages will be searched. 
+#'   If \code{FALSE}, the default, only packages that are currently in 
+#'   the \code{search()} path and passed in \code{pkgs} will be included
+#'   in the possible reverse dependencies.
 #'
 #' @export
 #' @rdname pkgDep
@@ -466,7 +467,8 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #' \dontrun{
 #' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #' }
-pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllInSearch = FALSE,
+pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, 
+                           useAllInSearch = FALSE,
                            returnFull = TRUE, recursive = TRUE, 
                            purge = getOption("Require.purge", FALSE)) {
 
@@ -534,7 +536,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE, useAllI
   }))
   aaa <- split(aa, firsts)
   aa <- aaa$later
-  if (length(aa)) {
+  if (length(aa) > 1) {
     lengths <- unlist(lapply(aa, length))
     aa <- aa[order(lengths)]
     if (isTRUE(topoSort)) {

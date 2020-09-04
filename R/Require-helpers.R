@@ -514,16 +514,6 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
   browser(expr = exists("._doInstalls_0"))
-  if (FALSE) {
-    srch <- search(); 
-    srch <- srch[unlist(lapply(gsub("package:", "", srch), function(x) !x %in% c(".GlobalEnv", .basePkgs, "tools:rstudio", "Autoloads")))] # , .defaultPackages
-    loadedPkgs <- gsub("\\_shims|package:|tools:", "", srch)
-    
-    if (length(setdiff(loadedPkgs, c("Require"))) > 0) {
-      stop("There are loaded packages")
-    }
-  }
-  
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
@@ -533,19 +523,13 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     if (NROW(hasRequireDeps)) {
       installRequire()
       pkgDT[Package == "Require", installed := TRUE]
-      
-      #RequireDepsNeeded <- paste0("'", paste(toInstall$Package[hasRequireDeps], collapse = "', '"), "'")
-      #message(RequireDepsNeeded, " is needed, but Require cannot be installed by Require.\n",
-      #        "You may need to restart R and from a fresh R session, install.packages(c(",
-      #        RequireDepsNeeded,"), lib = '",.libPaths()[1],"'), then rerun the current call")
-      #toInstall <- toInstall[!hasRequireDeps]
     }
     if (any(!toInstall$installFrom %in% c("Fail", "Duplicate"))) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail", "Duplicate"))]
       setkeyv(toInstall, "installFromFac")
       # if (length(toInstall$packageFullName) > 20)
       #   message("Performing a topological sort of packages to install them in the right order; this may take some time")
-      topoSorted <- pkgDepTopoSort(toInstall$packageFullName)
+      topoSorted <- pkgDepTopoSort(toInstall$packageFullName, returnFull = TRUE)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       pkgsCleaned <- gsub(.grepTooManySpaces, " ", toInstall$packageFullName)
       pkgsCleaned <- gsub(.grepTabCR, "", pkgsCleaned)
@@ -707,10 +691,9 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
 #' It has been borrowed from a sub-set of the code in a non-exported function:
 #' \code{remotes:::download_version_url}
 archiveVersionsAvailable <- function(package, repos) {
+  info <- NULL
   for (repo in repos) {
     archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
-    if (length(repos) > 1)
-      message("Trying ", repo)
     if (!exists(archiveFile, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)) {
       archive <- tryCatch({
         con <- gzcon(url(archiveFile, "rb"))
@@ -730,9 +713,8 @@ archiveVersionsAvailable <- function(package, repos) {
         x$repo <- repo
         x
         })
-      if (length(package) == 1)
-      # info$repo <- repo
-      return(info)
+      # if (length(package) == 1)
+      # return(info)
     }
   }
   # warning(sprintf("couldn't find package '%s'", package))
@@ -763,9 +745,10 @@ archiveVersionsAvailable <- function(package, repos) {
 #' }
 #'
 install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dots) {
-  if (!is.data.table(gitPkgNames)) {
-    gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
-  }
+  gitPkgNames <- toPkgDT(gitPkgNames)
+  # if (!is.data.table(gitPkgNames)) {
+  #   gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
+  # }
   if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
     dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
@@ -1039,7 +1022,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (NROW(ap) > 1 && isWindows()) {
     ap <- ap[Package == installPkgNames]
     if (NROW(ap)) {
-      type <- c("source", "binary")[grepl("bin", ap[toInstall, on = c("Package", "Version" = "versionSpec")]$Repository) + 1]
+      onVec <- if (is.null(toInstall$versionSpec)) c("Package") else c("Package", "Version" = "versionSpec")
+      type <- c("source", "binary")[grepl("bin", ap[toInstall, on = onVec]$Repository) + 1]
       install.packagesArgs["type"] <- type
     }
   }
@@ -1250,7 +1234,6 @@ installRequire <- function(requireHome = getOption("Require.Home")) {
     }
     
     if (isFALSE(done)) {
-      browser()
       system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
       # system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
@@ -1337,15 +1320,17 @@ rmDuplicatePkgs <- function(pkgDT) {
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   srch <- search()
   pkgsOrig <- pkgs
-  depsToUnload <- pkgDep(pkgs, recursive = TRUE)[[1]]
-  out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
+  depsToUnload <- c(pkgs, unlist(pkgDep(pkgs, recursive = TRUE)))
   if ("devtools" %in% pkgs) {
     dontTryDevtools <- c("glue", "rlang", "ps", "ellipsis", "processx")
     message("some of devtools's dependencies don't seem to unload their dlls correctly. ",
             "These will not be unloaded: ", paste(dontTryDevtools, collapse = ", "))
     dontTry <- c(dontTry, dontTryDevtools)
   }
-  pkgs <- rev(c(names(out), pkgs))
+  if (length(depsToUnload) > 0) {
+    out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
+    pkgs <- rev(c(names(out), pkgs))
+  }
   pkgs <- extractPkgName(pkgs)
   pkgs <- unique(pkgs)
   names(pkgs) <- pkgs
@@ -1354,50 +1339,33 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   pkgs <- setdiff(pkgs, dontTry)
   pkgs <- unique(pkgs)
   names(pkgs) <- pkgs
-  detached <- sapply(pkgs, unloadNamespace)
-  detached <- sapply(detached, is.null)
+  isLoaded <- unlist(lapply(pkgs, isNamespaceLoaded))
+  dontNeedToUnload <- rep(NA, sum(!isLoaded))
+  names(dontNeedToUnload) <- pkgs[!isLoaded]
+  pkgs <- pkgs[isLoaded]
+  detached <- c()
+  if (length(pkgs)) {
+    detached <- sapply(pkgs, unloadNamespace)
+    detached <- sapply(detached, is.null)
+  }
   if (length(didntDetach)) {
     notDetached <- rep(FALSE, length(didntDetach))
     names(notDetached) <- didntDetach
     detached <- c(detached, notDetached)
   }
+  detached <- c(dontNeedToUnload, detached)
   inSearchPath <- unlist(lapply(rev(pkgsOrig), function(p) {
     pkgGrp <- "package:"
     pkgString <- paste0(pkgGrp, p)
     pkgString <- grep(pkgString, srch, value = TRUE)
     pkgString <- gsub(pkgGrp, "", pkgString)
   }))
-  detached[inSearchPath] <- NA
+  # detached[inSearchPath] <- NA
   detached[detached] <- 2
   detached[!detached] <- 1
   detached[is.na(detached)] <- 3
   detached
 }
-
-# unloadNamespaces <- function(namespaces) {
-#   unloaded <- character()
-#   nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
-#   srch <- search()
-#   nsl <- setdiff(nsl, c("data.table", "remotes", "Require")) # remove Require & deps
-#   if (length(nsl)) {
-#     message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
-#             paste(nsl, collapse = ", "))
-#     message("This may require that the R session be restarted")
-#     unloadHistory <- lapply(rev(nsl), function(p) {
-#       dtshims <- "devtools_shims"
-#       pkgString <- paste0("package:", p, "|", dtshims)
-#       pkgString <- grep(pkgString, srch, value = TRUE)
-#       if (length(pkgString)) {
-#         try(detach(pkgString, unload = pkgString != dtshims, character.only = TRUE), silent = TRUE)
-#       } 
-#       try(unloadNamespace(p))
-#     })
-#     unloaded <- nsl[unlist(lapply(unloadHistory, is.null))]
-#   }
-#   names(unloaded) <- unloaded
-#   detached <- unlist(lapply(unloaded, function(x) any(grepl(paste0("package:", x), srch))))
-#   return(detached)
-# }
 
 isWindows <- function() {
   tolower(Sys.info()["sysname"]) == "windows"
