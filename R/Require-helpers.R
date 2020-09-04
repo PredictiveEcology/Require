@@ -562,7 +562,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (is(topoSortedAllLoaded, "try-error")) 
           stop("The attempt to unload loaded packages failed. Please restart R and run again")
         topoSortedAllLoaded <- setdiff(topoSortedAllLoaded, c("Require", "testit", "remotes", "data.table", "glue", "rlang"))
-        detached <- unloadNamespaces(topoSortedAllLoaded)
+        detached <- detachAll(topoSortedAllLoaded, doSort = FALSE)
+        # detached1 <- unloadNamespaces(topoSortedAllLoaded)
         if (NROW(detached)) {
           detached <- as.data.table(detached, keep.rownames = "Package")
           pkgDT <- detached[pkgDT, on = "Package"]
@@ -1300,51 +1301,94 @@ rmDuplicatePkgs <- function(pkgDT) {
   pkgDT
 }
 
-detachAll <- function(pkgs, dontTry = NULL) {
+#' Detach and unload all packages
+#' 
+#' This uses \code{pkgDepTopoSort} internally so that the package
+#' dependency tree is determined, and then packages are unloaded
+#' in the reverse order. Some packages don't unload successfully for 
+#' a variety of reasons. Several known packages that have this problem
+#' are identified internally and *not* unloaded. Currently, these are
+#' \code{glue}, \code{rlang}, \code{ps}, \code{ellipsis}, and, \code{processx}.
+#' 
+#' @return 
+#' A numeric named vector, with names of the packages that were attempted. 
+#' \code{2} means the package was successfully unloaded, \code{1} it was 
+#' tried, but failed, \code{3} it was in the search path and was detached 
+#' and unloaded.  
+#' @export
+#' @param pkgs A character vector of packages to detach. Will be topologically sorted
+#'   unless \code{doSort} is \code{FALSE}.
+#' @param dontTry A character vector of packages to not try. This can be used
+#'   by a user if they find a package fails in attempts to unload it, e.g., "ps"
+#' @param doSort If \code{TRUE} (the default), then the \code{pkgs} will be 
+#'   topologically sorted. If \code{FALSE}, then it won't. Useful if the 
+#'   \code{pkgs} are already sorted.
+#' 
+#' 
+detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
+  srch <- search()
+  pkgsOrig <- pkgs
   depsToUnload <- pkgDep(pkgs, recursive = TRUE)[[1]]
-  out <- pkgDepTopoSort(depsToUnload)
+  out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
   if ("devtools" %in% pkgs) {
     dontTryDevtools <- c("glue", "rlang", "ps", "ellipsis", "processx")
     message("some of devtools's dependencies don't seem to unload their dlls correctly. ",
             "These will not be unloaded: ", paste(dontTryDevtools, collapse = ", "))
     dontTry <- c(dontTry, dontTryDevtools)
   }
-  pkgs <- c(pkgs, rev(names(out)))
+  pkgs <- rev(c(names(out), pkgs))
   pkgs <- extractPkgName(pkgs)
   pkgs <- unique(pkgs)
   names(pkgs) <- pkgs
   dontTry <- c(c("Require", "remotes", "data.table"), dontTry)
+  didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
   pkgs <- unique(pkgs)
-  sapply(pkgs, unloadNamespace)
-}
-
-unloadNamespaces <- function(namespaces) {
-  unloaded <- character()
-  nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
-  srch <- search()
-  nsl <- setdiff(nsl, c("data.table", "remotes", "Require")) # remove Require & deps
-  if (length(nsl)) {
-    message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
-            paste(nsl, collapse = ", "))
-    message("This may require that the R session be restarted")
-    unloadHistory <- lapply(rev(nsl), function(p) {
-      dtshims <- "devtools_shims"
-      pkgString <- paste0("package:", p, "|", dtshims)
-      pkgString <- grep(pkgString, srch, value = TRUE)
-      if (length(pkgString)) {
-        try(detach(pkgString, unload = pkgString != dtshims, character.only = TRUE), silent = TRUE)
-      } 
-      try(unloadNamespace(p))
-    })
-    unloaded <- nsl[unlist(lapply(unloadHistory, is.null))]
+  names(pkgs) <- pkgs
+  detached <- sapply(pkgs, unloadNamespace)
+  detached <- sapply(detached, is.null)
+  if (length(didntDetach)) {
+    notDetached <- rep(FALSE, length(didntDetach))
+    names(notDetached) <- didntDetach
+    detached <- c(detached, notDetached)
   }
-  names(unloaded) <- unloaded
-  detached <- unlist(lapply(unloaded, function(x) any(grepl(paste0("package:", x), srch))))
-  return(detached)
+  inSearchPath <- unlist(lapply(rev(pkgsOrig), function(p) {
+    pkgGrp <- "package:"
+    pkgString <- paste0(pkgGrp, p)
+    pkgString <- grep(pkgString, srch, value = TRUE)
+    pkgString <- gsub(pkgGrp, "", pkgString)
+  }))
+  detached[inSearchPath] <- NA
+  detached[detached] <- 2
+  detached[!detached] <- 1
+  detached[is.na(detached)] <- 3
+  detached
 }
 
-NULLdt <- data.table(Package = character(), packageFullName = character())
+# unloadNamespaces <- function(namespaces) {
+#   unloaded <- character()
+#   nsl <- if (!is.null(names(namespaces))) names(namespaces)[namespaces] else namespaces
+#   srch <- search()
+#   nsl <- setdiff(nsl, c("data.table", "remotes", "Require")) # remove Require & deps
+#   if (length(nsl)) {
+#     message("Currently, several packages are loaded that conflict with installs. Detaching:\n",
+#             paste(nsl, collapse = ", "))
+#     message("This may require that the R session be restarted")
+#     unloadHistory <- lapply(rev(nsl), function(p) {
+#       dtshims <- "devtools_shims"
+#       pkgString <- paste0("package:", p, "|", dtshims)
+#       pkgString <- grep(pkgString, srch, value = TRUE)
+#       if (length(pkgString)) {
+#         try(detach(pkgString, unload = pkgString != dtshims, character.only = TRUE), silent = TRUE)
+#       } 
+#       try(unloadNamespace(p))
+#     })
+#     unloaded <- nsl[unlist(lapply(unloadHistory, is.null))]
+#   }
+#   names(unloaded) <- unloaded
+#   detached <- unlist(lapply(unloaded, function(x) any(grepl(paste0("package:", x), srch))))
+#   return(detached)
+# }
 
 isWindows <- function() {
   tolower(Sys.info()["sysname"]) == "windows"

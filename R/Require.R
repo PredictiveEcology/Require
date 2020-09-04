@@ -365,8 +365,18 @@ Require <- function(packages, packageVersionFile,
                             install.packagesArgs = install.packagesArgs,
                             install = install, ...)
       }
-      if (isTRUE(require))
+      if ("detached" %in% colnames(pkgDT)) {
+        unloaded <- pkgDT[!is.na(detached)]
+        if (NROW(unloaded)) {
+          reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
+          relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
+          message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+          message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+        }
+      }
+      if (isTRUE(require)) {
         pkgDT <- doLoading(pkgDT, ...)
+      }
     }
     out <- pkgDT[packagesRequired > 0]$loaded
     names(out) <- pkgDT[packagesRequired > 0]$Package
@@ -406,14 +416,6 @@ Require <- function(packages, packageVersionFile,
         if (NROW(allInstalled) == 0)
           message("All packages appear to have installed correctly")
       }
-      if ("detached" %in% colnames(pkgDT)) {
-        unloaded <- pkgDT[!is.na(detached)]
-        if (NROW(unloaded)) {
-          reloaded <- lapply(unloaded$Package, loadNamespace)
-          message("Attempting to reload namespaces that were detached: ", paste(unloaded$Package, collapse = ", "))
-        }
-      }
-        
     }
   } else {
     out <- logical()
