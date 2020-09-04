@@ -17,7 +17,7 @@ if (interactive()) {
             "Require.RPackageCache" = "~/._RPackageCache/",
             "install.packages.check.source" = "never",
             "install.packages.compile.from.source" = "never",
-            "Require.unloadNamespaces" = FALSE)
+            "Require.unloadNamespaces" = TRUE)
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
     
     localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
