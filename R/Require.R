@@ -353,31 +353,31 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- installedVers(pkgDT)
     pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
     pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
-   
-    #if (length(packages)) {
-    if (isTRUE(install) || identical(install, "force")) {
-      pkgDT <- parseGitHub(pkgDT)
-      pkgDT <- getPkgVersions(pkgDT, install = install)
-      pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
-      pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
-      pkgDT <- rmDuplicatePkgs(pkgDT)
-      pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
-                          install.packagesArgs = install.packagesArgs,
-                          install = install, ...)
-    }
-    if ("detached" %in% colnames(pkgDT)) {
-      unloaded <- pkgDT[!is.na(detached)]
-      if (NROW(unloaded)) {
-        reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
-        relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
-        message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
-        message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+    
+    if (length(packages)) {
+      if (isTRUE(install) || identical(install, "force")) {
+        pkgDT <- parseGitHub(pkgDT)
+        pkgDT <- getPkgVersions(pkgDT, install = install)
+        pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
+        pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
+        pkgDT <- rmDuplicatePkgs(pkgDT)
+        pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
+                            install.packagesArgs = install.packagesArgs,
+                            install = install, ...)
+      }
+      if ("detached" %in% colnames(pkgDT)) {
+        unloaded <- pkgDT[!is.na(detached)]
+        if (NROW(unloaded)) {
+          reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
+          relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
+          message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+          message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+        }
+      }
+      if (isTRUE(require)) {
+        pkgDT <- doLoading(pkgDT, ...)
       }
     }
-    # if (isTRUE(require)) {
-    #   pkgDT <- doLoading(pkgDT, ...)
-    # }
-    #}
     out <- pkgDT[packagesRequired > 0]$loaded
     names(out) <- pkgDT[packagesRequired > 0]$Package
     if (verbose > 0) {
@@ -421,10 +421,6 @@ Require <- function(packages, packageVersionFile,
           }
         }
       }
-    }
-    
-    if (isTRUE(require)) {
-      pkgDT <- doLoading(pkgDT, ...)
     }
     
   } else {
