@@ -31,17 +31,16 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
   pkgDT <- setDT(pkgDT)
   if (!includeBase) pkgDT <- pkgDT[!pkgDT$Package %in% .basePkgs]
   
-  if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
-    message("Please use 'which' instead of 'imports', 'suggests', 'depends', 'linkingTo' and 'remotes'")
-    if (!missing(depends)) depends <- TRUE
-    if (!missing(imports)) imports <- TRUE
-    if (!missing(suggests)) suggests <- TRUE
-    if (!missing(linkingTo)) linkingTo <- TRUE
-    if (!missing(linkingTo)) remotes <- TRUE
-  }
+  
+  if (!includeBase) packages <- packages[!packages %in% .basePkgs]
+  #if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
+  if (!missing(depends)) {wh <- "Depends"; if (isTRUE(depends)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  if (!missing(imports)) {wh <- "Imports"; if (isTRUE(imports)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  if (!missing(suggests)) {wh <- "Suggests"; if (isTRUE(suggests)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  if (!missing(linkingTo)) {wh <- "LinkingTo"; if (isTRUE(linkingTo)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  
   which <- whichToDILES(which)
   whichLC <- tolower(which[[1]])
-  
   maxIterations <- if (isTRUE(recursive)) Inf else 1
   
   # Initiate pkgDTDeps
@@ -62,19 +61,23 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
   final <- list()
   
   # If a complete version previous, then use it
-  namSR <- paste0(pkgDTDeps[[i]]$packageFullName, "_", recursive)
+  namSR <- saveNameOuter(pkgDTDeps[[i]]$packageFullName, recursive, which) 
   names(namSR) <- namSR
   stashed_recursive <- lapply(namSR, function(x) {
     get0(x, envir = .pkgEnv[["pkgDep"]][["deps"]])
   })
   stillNeed_recursive <- unlist(lapply(stashed_recursive, is.null))
   if (sum(stillNeed_recursive) > 0) {
-    if (sum(!stillNeed_recursive) > 0)
+    if (sum(!stillNeed_recursive) > 0) {
       pkgDTDeps[[i]] <- pkgDTDeps[[i]][stillNeed_recursive]
-  } else 
+      pkgDTComplete[[i]] <- pkgDTComplete[[i]][stillNeed_recursive]
+    }
+  } else {
     pkgDTDeps[[i]] <- pkgDTDeps[[i]][0]
+    pkgDTComplete[[i]] <- pkgDTComplete[[i]][0]
+  }
   
-  while((NROW(pkgDTDeps[[i]]) & recursive) || (recursive == FALSE & NROW(pkgDTDeps) == 1)) {
+  while((NROW(pkgDTDeps[[i]]) & recursive) || (recursive == FALSE & NROW(pkgDTDeps[[i]]) == 1)) {
     pkgDTSrc <- list()
     browser(expr = exists("._pkgDep3_2"))
     pfn <- pkgDTDeps[[i]]$packageFullName
@@ -238,13 +241,13 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
   }
   if (sum(stillNeed_recursive) > 0) {
     final2Save <- final
-    names(final2Save) <- paste0(names(final2Save), "_", recursive)
+    names(final2Save) <- saveNameOuter(names(final2Save), recursive, which) 
     list2env(final2Save, envir = .pkgEnv[["pkgDep"]][["deps"]])
   }
   
   if (sum(!stillNeed_recursive) > 0) {
     names(stashed_recursive)[!stillNeed_recursive] <- 
-      gsub(paste0("\\_", recursive), "", names(stashed_recursive)[!stillNeed_recursive])
+      gsub(paste0("^(.+)\\_", recursive, "\\_.+"), "\\1", names(stashed_recursive)[!stillNeed_recursive])
     final[names(stashed_recursive)[!stillNeed_recursive]] <- stashed_recursive[!stillNeed_recursive]
   }
   final <- final[match(packages, names(final))]
@@ -461,3 +464,7 @@ dealWithCache <- function(purge, checkAge = TRUE) {
 
 .grepTooManySpaces <- " {2,}"
 .grepTabCR <- "\n|\t"
+
+saveNameOuter <- function(package, recursive, which) {
+  paste0(package, "_", recursive, "_",  paste(which[[1]], collapse = "_"))
+}

@@ -83,15 +83,16 @@ extractPkgGitHub <- function(pkgs) {
 #' @examples
 #' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 trimVersionNumber <- function(pkgs) {
-  ew <- endsWith(pkgs, ")")
-  if (any(ew)) {
-    pkgs[ew] <- gsub(paste0("\n|\t|",.grepVersionNumber), "", pkgs[ew])
-    #out <- gsub(.grepVersionNumber, "", pkgs[ew], perl = FALSE) # faster perl = TRUE
-    #pkgs[ew] <- gsub("\n|\t", "", out, perl = FALSE)
-    #if (!identical(pkgs[ew], out1))
-    #  browser()
+  if (!is.null(pkgs)) {
+    nas <- is.na(pkgs)
+    if (any(!nas)) {
+      ew <- endsWith(pkgs[!nas], ")")
+      if (any(ew)) {
+        pkgs[!nas][ew] <- gsub(paste0("\n|\t|",.grepVersionNumber), "", pkgs[!nas][ew])
+      }
+    }
+    pkgs
   }
-  pkgs
 }
 
 .grepVersionNumber <- " *\\(.*"

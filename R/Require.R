@@ -339,7 +339,7 @@ Require <- function(packages, packageVersionFile,
     # Create data.table of Require workflow
     if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
     
-    pkgDT <- toPkgDT(packages)
+    pkgDT <- toPkgDT(packages, deepCopy = TRUE)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
     pkgDT[packageFullName %in% unique(packageNamesOrig),
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
@@ -353,7 +353,7 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- installedVers(pkgDT)
     pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
     pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
-   
+    
     if (length(packages)) {
       if (isTRUE(install) || identical(install, "force")) {
         pkgDT <- parseGitHub(pkgDT)
@@ -365,8 +365,18 @@ Require <- function(packages, packageVersionFile,
                             install.packagesArgs = install.packagesArgs,
                             install = install, ...)
       }
-      if (isTRUE(require))
+      if ("detached" %in% colnames(pkgDT)) {
+        unloaded <- pkgDT[!is.na(detached)]
+        if (NROW(unloaded)) {
+          reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
+          relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
+          message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+          message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+        }
+      }
+      if (isTRUE(require)) {
         pkgDT <- doLoading(pkgDT, ...)
+      }
     }
     out <- pkgDT[packagesRequired > 0]$loaded
     names(out) <- pkgDT[packagesRequired > 0]$Package
@@ -401,20 +411,18 @@ Require <- function(packages, packageVersionFile,
       messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
     } else {
       if (!is.null(pkgDT$needInstall)) {
-        allCorrect <- pkgDT$needInstall == TRUE & pkgDT$installed == FALSE
-        allInstalled <- pkgDT[allCorrect]
-        if (NROW(allInstalled) == 0)
-          message("All packages appear to have installed correctly")
-      }
-      if ("detached" %in% colnames(pkgDT)) {
-        unloaded <- pkgDT[!is.na(detached)]
-        if (NROW(unloaded)) {
-          reloaded <- lapply(unloaded$Package, loadNamespace)
-          message("Attempting to reload namespaces that were detached: ", paste(unloaded$Package, collapse = ", "))
+        nas <- is.na(pkgDT$needInstall)
+        if (!all(nas)) {
+          allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
+          if (length(allCorrect)) {
+            allInstalled <- pkgDT[!nas][allCorrect]
+            if (NROW(allInstalled) == 0)
+              message("All packages appear to have installed correctly")
+          }
         }
       }
-        
     }
+    
   } else {
     out <- logical()
   }

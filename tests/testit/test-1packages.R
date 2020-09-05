@@ -64,7 +64,12 @@ isInstalled <- tryCatch({
   if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
 testit::assert(isTRUE(isInstalled))
-detach("package:TimeWarp", unload = TRUE)
+out <- detachAll(c("Require", "TimeWarp", "sdfd"))
+testit::assert(identical(sort(out), 
+                         sort(c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1))))
+testit::assert(names(out)[out == 2] == "TimeWarp")
+
+# detach("package:TimeWarp", unload = TRUE)
 remove.packages("TimeWarp", lib = dir1)
 
 # Try older version
@@ -92,7 +97,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                            packageVersion("TimeWarp", lib.loc = dir6)))
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
-
+  
   setLibPaths(orig)
 
   # Test snapshot file with no args

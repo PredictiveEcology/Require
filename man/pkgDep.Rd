@@ -141,10 +141,11 @@ the top of the list.}
 R packages in \code{search()} will be appended to \code{pkgs}
 to allow those to also be identified}
 
-\item{returnFull}{Logical. If \code{TRUE}, then the full reverse
-dependencies will be returned; if \code{FALSE}, the default,
-only the reverse dependencies that are found within the \code{pkgs}
-(and \code{search()} if \code{useAllInSearch = TRUE}) will be returned.}
+\item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}. 
+If \code{TRUE}, then then all installed packages will be searched. 
+If \code{FALSE}, the default, only packages that are currently in 
+the \code{search()} path and passed in \code{pkgs} will be included
+in the possible reverse dependencies.}
 
 \item{enhances}{Logical. Include packages listed in "Enhances". Default \code{FALSE}.}
 
