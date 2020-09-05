@@ -32,8 +32,10 @@ pkg <- c("data.table", "data.table")
 pkgDT <- toPkgDT(pkg)
 set(pkgDT, NULL, "installFrom", "CRAN")
 set(pkgDT, NULL, "installed", FALSE)
-set(pkgDT, NULL, "versionSpec", NA)
 set(pkgDT, NULL, "installResult", TRUE)
+rmDuplicatePkgs(pkgDT)
+
+set(pkgDT, NULL, "versionSpec", NA)
 rmDuplicatePkgs(pkgDT)
 
 out <- detachAll("data.table")

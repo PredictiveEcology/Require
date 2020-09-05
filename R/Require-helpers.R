@@ -1271,14 +1271,16 @@ rmDuplicatePkgs <- function(pkgDT) {
     pkgDT <- pkgDT[is.na(dup) | (dup == TRUE & installFrom != "Fail"), keep := TRUE]
     
     pkgDT[installed == FALSE & keep == TRUE, keep2 := {
-      if (.N == 1) {.I[1]
-      } else { 
-        if (anyNA(versionSpec)) {
-          .I[1]
-        } else {
-          .I[which(versionSpec == max(as.package_version(versionSpec)))]
+      out <- .I[1]
+      if (!is.null(pkgDT$versionSpec)) {
+        if (.N > 1) {
+          if (all(!is.na(versionSpec))) {
+            out <- .I[which(versionSpec == max(as.package_version(versionSpec)))]
+          }
         }
-      }}, by = "Package"]
+      }
+      out
+    }, by = "Package"]
     pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
     set(pkgDT, NULL, "duplicate", FALSE)
     pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
@@ -1337,14 +1339,16 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   dontTry <- c(c("Require", "remotes", "data.table"), dontTry)
   didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
-  pkgs <- unique(pkgs)
-  names(pkgs) <- pkgs
-  isLoaded <- unlist(lapply(pkgs, isNamespaceLoaded))
-  dontNeedToUnload <- rep(NA, sum(!isLoaded))
-  names(dontNeedToUnload) <- pkgs[!isLoaded]
-  pkgs <- pkgs[isLoaded]
+  dontNeedToUnload <- logical()
   detached <- c()
   if (length(pkgs)) {
+    pkgs <- unique(pkgs)
+    names(pkgs) <- pkgs
+    isLoaded <- unlist(lapply(pkgs, isNamespaceLoaded))
+    dontNeedToUnload <- rep(NA, sum(!isLoaded))
+    names(dontNeedToUnload) <- pkgs[!isLoaded]
+    pkgs <- pkgs[isLoaded]
+    #if (length(pkgs)) {
     detached <- sapply(pkgs, unloadNamespace)
     detached <- sapply(detached, is.null)
   }
