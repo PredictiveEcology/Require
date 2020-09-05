@@ -650,7 +650,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
         otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
         firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
                                 "The version in .libPaths() is ", libPathsVers)
-        if (otherIsCorrect) {
+        if (isTRUE(otherIsCorrect)) {
           message(firstPartMess, ". Because the newer version still accommodates the minimum version number (",
                   p$packageFullName,", updating now.")
           oo <- Require(pkg, require = FALSE, install = "force")
