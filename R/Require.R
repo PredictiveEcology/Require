@@ -241,7 +241,7 @@ Require <- function(packages, packageVersionFile,
   browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
-
+  
   install.packagesArgs["INSTALL_opts"] <- '--no-multiarch'
   install_githubArgs["INSTALL_opts"] <- '--no-multiarch'
   if (is.null(list(...)$destdir)) {
@@ -251,7 +251,7 @@ Require <- function(packages, packageVersionFile,
       if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
         install.packagesArgs[["INSTALL_opts"]] <- c('--build', install.packagesArgs[["INSTALL_opts"]])
       }
-
+      
       install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
     }
   } 
@@ -270,14 +270,14 @@ Require <- function(packages, packageVersionFile,
       callArgs <- as.list(match.call())[-1]
       out <- Map(lib = rev(dt$libPathInSnapshot), 
                  newLib = rev(dt$newLibPaths), function(lib, newLib) {
-        tf <- tempfile2("RequireSnapshot")
-        packages <- packages[packages$LibPath == lib]
-        data.table::fwrite(packages, file = tf)
-        callArgs[["packageVersionFile"]] <- tf
-        callArgs[["libPaths"]] <- newLib
-        callArgs[["standAlone"]] <- TRUE
-        out <- do.call(Require, args = callArgs)
-      })
+                   tf <- tempfile2("RequireSnapshot")
+                   packages <- packages[packages$LibPath == lib]
+                   data.table::fwrite(packages, file = tf)
+                   callArgs[["packageVersionFile"]] <- tf
+                   callArgs[["libPaths"]] <- newLib
+                   callArgs[["standAlone"]] <- TRUE
+                   out <- do.call(Require, args = callArgs)
+                 })
       out <- unlist(out)
       setLibPaths(dt$newLibPaths, standAlone = TRUE)
       message(" to echo the multiple paths in ", packageVersionFile)
@@ -383,7 +383,7 @@ Require <- function(packages, packageVersionFile,
     if (verbose > 0) {
       if (verbose < 2) {
         colsToKeep <- c("packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom", 
-                         "Version", "repoLocation", "correctVersion", "hasVersionSpec",
+                        "Version", "repoLocation", "correctVersion", "hasVersionSpec",
                         "correctVersionAvail")
         colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
         pkgDT <- pkgDT[, ..colsToKeep]
@@ -422,11 +422,10 @@ Require <- function(packages, packageVersionFile,
         }
       }
     }
-    
   } else {
     out <- logical()
   }
-
+  
   if (isTRUE(require)) {
     return(out)
   } else {
