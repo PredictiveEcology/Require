@@ -25,16 +25,6 @@ testit::assert(length(e) == 3)
 testit::assert(isTRUE(all.equal(e[[pkg]], d[[pkg]])))
 testit::assert(isTRUE(all.equal(d$Require, e$Require)))
 
-mess <- utils::capture.output(type = "message", f <- pkgDep("Require", depends = TRUE))
-testit::assert(isTRUE(any(grepl("Please use", mess))))
-
-mess <- utils::capture.output(type = "message", f <- pkgDep("Require", linkingTo = TRUE))
-testit::assert(isTRUE(any(grepl("Please use", mess))))
-mess <- utils::capture.output(type = "message", f <- pkgDep("Require", imports = TRUE))
-testit::assert(isTRUE(any(grepl("Please use", mess))))
-mess <- utils::capture.output(type = "message", f <- pkgDep("Require", suggests = TRUE))
-testit::assert(isTRUE(any(grepl("Please use", mess))))
-
 a <- pkgDep("Require", which = "all", recursive = FALSE)
 b <- pkgDep("Require", which = "most", recursive = FALSE)
 d <- pkgDep("Require", which = TRUE, recursive = FALSE)
