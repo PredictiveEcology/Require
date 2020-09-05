@@ -40,3 +40,6 @@ rmDuplicatePkgs(pkgDT)
 
 out <- detachAll("data.table")
 testit::assert(isTRUE(out == 1))
+
+warn <- tryCatch(warningCantInstall("devtolls"), warning = function(w) w$message)
+testit::assert(grepl("you will likely", warn))
