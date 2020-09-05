@@ -74,3 +74,6 @@ if (interactive()) {
   testit::assert(length(test) == 0)
 }
 
+pkg <- c("Require (==0.0.6)")
+d <- pkgDepAlt(pkg) # GitHub package and local packages
+testit::assert(identical(sort(c("data.table (>= 1.10.4)", "remotes")), sort(d[[1]])))
