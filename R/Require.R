@@ -412,11 +412,13 @@ Require <- function(packages, packageVersionFile,
     } else {
       if (!is.null(pkgDT$needInstall)) {
         nas <- is.na(pkgDT$needInstall)
-        allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
-        if (length(allCorrect)) {
-          allInstalled <- pkgDT[allCorrect]
-          if (NROW(allInstalled) == 0)
-            message("All packages appear to have installed correctly")
+        if (!all(nas)) {
+          allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
+          if (length(allCorrect)) {
+            allInstalled <- pkgDT[!nas][allCorrect]
+            if (NROW(allInstalled) == 0)
+              message("All packages appear to have installed correctly")
+          }
         }
       }
     }
