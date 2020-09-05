@@ -71,13 +71,12 @@ pkgDep <- function(packages, libPath = .libPaths(),
   purge <- dealWithCache(purge)
   
   if (!includeBase) packages <- packages[!packages %in% .basePkgs]
-  if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
-    message("Please use 'which' instead of 'imports', 'suggests', 'depends' and 'linkingTo'")
-    if (!missing(depends)) depends <- TRUE
-    if (!missing(imports)) imports <- TRUE
-    if (!missing(suggests)) suggests <- TRUE
-    if (!missing(linkingTo)) linkingTo <- TRUE
-  }
+  #if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
+  if (!missing(depends)) {wh <- "Depends"; if (isTRUE(depends)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  if (!missing(imports)) {wh <- "Imports"; if (isTRUE(imports)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  if (!missing(suggests)) {wh <- "Suggests"; if (isTRUE(suggests)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  if (!missing(linkingTo)) {wh <- "LinkingTo"; if (isTRUE(linkingTo)) which <- unique(c(which, wh)) else setdiff(which, wh)}
+  
   which <- whichToDILES(which)
 
   # Only deal with first one of "which"... deal with second later
