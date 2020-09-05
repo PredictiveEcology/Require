@@ -64,7 +64,6 @@ isInstalled <- tryCatch({
   if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
 testit::assert(isTRUE(isInstalled))
-browser()
 detachAll("TimeWarp")
 # detach("package:TimeWarp", unload = TRUE)
 remove.packages("TimeWarp", lib = dir1)
