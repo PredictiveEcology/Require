@@ -426,6 +426,7 @@ Require <- function(packages, packageVersionFile,
     out <- logical()
   }
   
+  out <- out[names(packagesOrder)]
   if (isTRUE(require)) {
     return(out)
   } else {
