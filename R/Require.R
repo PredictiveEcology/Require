@@ -326,7 +326,7 @@ Require <- function(packages, packageVersionFile,
     packageNamesOrig <- packages
     
     if (any(origPackagesHaveNames))
-      packageNamesOrig[origPackagesHaveNames] <- names(packagesOrig)[origPackagesHaveNames]
+      packageNamesOrig[origPackagesHaveNames] <- packagesOrig[origPackagesHaveNames]
     packagesOrder <- seq(packagesOrig)
     names(packagesOrder) <- extractPkgName(packageNamesOrig)
     
@@ -341,7 +341,8 @@ Require <- function(packages, packageVersionFile,
     
     pkgDT <- toPkgDT(packages, deepCopy = TRUE)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
-    pkgDT[packageFullName %in% unique(packageNamesOrig),
+    # some cases, original was without version, but due to a dependency that does have a version, it is no longer the same as orig package name
+    pkgDT[packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig), 
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
     pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
     
@@ -379,7 +380,16 @@ Require <- function(packages, packageVersionFile,
       }
     }
     out <- pkgDT[packagesRequired > 0]$loaded
-    names(out) <- pkgDT[packagesRequired > 0]$Package
+    # outOrder <- pkgDT[packagesRequired > 0]$packagesRequired
+    names(out) <- pkgDT[packagesRequired > 0]$packageFullName
+    
+    # put back in original order
+    outOrder <- match(pkgDT[packagesRequired > 0]$packageFullName, packagesOrig)
+    orderNAs <- is.na(outOrder)
+    if (any(orderNAs))
+      outOrder[orderNAs] <- match( pkgDT[packagesRequired > 0][orderNAs]$Package, packagesOrig)
+    out <- out[order(outOrder)]
+    
     if (verbose > 0) {
       if (verbose < 2) {
         colsToKeep <- c("packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom", 
@@ -426,8 +436,6 @@ Require <- function(packages, packageVersionFile,
     out <- logical()
   }
   
-  # keep attr -- need to assign to only the elements of the list
-  out[seq(packagesOrder)] <- out[names(packagesOrder)]
   if (isTRUE(require)) {
     return(out)
   } else {
