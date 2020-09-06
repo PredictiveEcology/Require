@@ -426,7 +426,8 @@ Require <- function(packages, packageVersionFile,
     out <- logical()
   }
   
-  out <- out[names(packagesOrder)]
+  # keep attr -- need to assign to only the elements of the list
+  out[seq(packagesOrder)] <- out[names(packagesOrder)]
   if (isTRUE(require)) {
     return(out)
   } else {
