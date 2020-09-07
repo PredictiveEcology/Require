@@ -474,7 +474,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
           filepath := {
             # destFile <- file.path(tempdir(), paste0(Package, "_", Version, "_", filename))
             if (!all(file.exists(destFile)))
-              download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
+              download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE)
             destFile
           }, by = c("Package", "Branch")]
     if (identical("DESCRIPTION", filename))
