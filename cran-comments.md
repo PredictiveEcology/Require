@@ -19,10 +19,10 @@ See `NEWS.md` for complete list of changes.
 * Windows                 (win-builder), R 4.0.2
 * Windows                 (win-builder), R 4.1.0
 
-### rhub
-* Fedora Linux                      (clang, gfortran), R 4.1.0 (2020-08-12)
-* Windows     (Windows Server 2008 R2 SP1, 32/64 bit), R 4.1.0 (2020-08-12 r78957)
-* Ubuntu Linux                             (16.04 LTS, R-release, GCC)
+### rhub -- all passed Sept 8, 2020
+* Fedora Linux                      (clang, gfortran)
+* Windows     (Windows Server 2008 R2 SP1, 32/64 bit)
+* Ubuntu Linux            (16.04 LTS, R-release, GCC)
 
 ## R CMD check results
 
