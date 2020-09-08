@@ -1,5 +1,25 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.8
+==============
+
+## New features
+* GitHub SHA is now stored during `pkgSnapshot`, meaning that a new system can be built with exact versions and SHAs of GitHub packages.
+* For GitHub packages, now uses both DESCRIPTION and NAMESPACE files to determine dependencies. GitHub packages are generally for packages in some state of development. This may include missing declarations in DESCRIPTION. NAMESPACE is what R uses to actually determine package dependencies upon installation.
+* Now keeps the binary/source package locally if `options("Require.RPackageCache" = "someLocalDir")` is set to a local folder. Currently defaults to NULL, meaning no local cache.
+* `Require` and `pkgSnapshot` can now understand and work with GitHub SHAs and thus packages installed from GitHub, e.g., `Require("PredictiveEcology/Require@development")` will install the development version. When using `pkgSnapshot`, the exact SHA will be used to restore that package at the exact version with `Require(packageVersionFile = "packageVersions.txt")`.
+* If a package is already loaded prior to changing running `setLibPaths`, it is possible to create a version conflict. `base::require` will error if the version in the `.libPaths()` is older than the version whose namespace is already loaded. To accommodate this, there is a check for this error, and if the newer version (that is already loaded) does not violate the `Require('package (versionSpecification)')`, then it will install the newer version. If it does violate the version specification, it will error cleanly with a message describing the possible solutions.
+* Much better messaging and reporting
+* New function: `detachAll` that attempts to detach and unload packages and all their dependencies, in reverse topological order.
+* Speed improvements, especially with `pkgDep` and `pkgDepTopoSort`
+* New function `pkgDepAlt` which is an alternative to `pkgDep`, yet easier to maintain and still experimental. It is not yet the workhorse inside `Require`, but it may become that.
+* Now correctly removes spaces and tab characters within a package version description -- this was creating an error such as `Error: invalid version specification ' 	3.3-13'`
+
+## Bug fixes
+* `pkgDepTopoSort` now appears to be correct for all types of package descriptions currently allowed by `Require`, namely, packages with no version specification, packages with version specification (including older versions), and GitHub packages.
+* many minor edge cases
+
+
 version 0.0.7
 ==============
 

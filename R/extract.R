@@ -34,9 +34,9 @@ extractPkgName <- function(pkgs) {
 #' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))
 extractVersionNumber <- function(pkgs) {
   if (!missing(pkgs)) {
-  hasVersionNum <- grepl(grepExtractPkgs, pkgs)
-  out <- rep(NA, length(pkgs))
-  out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum])
+    hasVersionNum <- grepl(grepExtractPkgs, pkgs, perl = FALSE)
+    out <- rep(NA, length(pkgs))
+    out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum], perl = FALSE)
   } else {
     out <- character()
   }
@@ -48,7 +48,7 @@ extractVersionNumber <- function(pkgs) {
 #' @examples
 #' extractInequality("Require (<=0.0.1)")
 extractInequality <- function(pkgs) {
-  gsub(grepExtractPkgs, "\\1", pkgs)
+  gsub(grepExtractPkgs, "\\1", pkgs, perl = FALSE)
 }
 
 #' @rdname extractPkgName
@@ -56,7 +56,19 @@ extractInequality <- function(pkgs) {
 #' @examples
 #' extractPkgGitHub("PredictiveEcology/Require")
 extractPkgGitHub <- function(pkgs) {
-  unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
+  isGH <- grepl("/", pkgs, perl = FALSE)
+  if (any(isGH)) {
+    a <- trimVersionNumber(pkgs[isGH])
+    a <- strsplit(a, split = "/|@")
+    a <- lapply(a, function(x) x[2])
+    pkgs[isGH] <- unlist(a)
+    if (any(!isGH))
+      pkgs[!isGH] <- NA
+  } else {
+    pkgs <- rep(NA, length(pkgs))
+  }
+  pkgs
+  #unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
 
 #' Trim version number off a compound package name
@@ -71,10 +83,20 @@ extractPkgGitHub <- function(pkgs) {
 #' @examples
 #' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 trimVersionNumber <- function(pkgs) {
-  out <- gsub(.grepVersionNumber, "", pkgs)
-  gsub("\n|\t", "", out)
+  if (!is.null(pkgs)) {
+    nas <- is.na(pkgs)
+    if (any(!nas)) {
+      ew <- endsWith(pkgs[!nas], ")")
+      if (any(ew)) {
+        pkgs[!nas][ew] <- gsub(paste0("\n|\t|",.grepVersionNumber), "", pkgs[!nas][ew])
+      }
+    }
+    pkgs
+  }
 }
 
 .grepVersionNumber <- " *\\(.*"
 
-grepExtractPkgs <- ".*\\([ \n]*(<*>*=*)[ \n]*(.*)\\)"
+grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
+
+.grepR <- "^ *R( |\\(|$)"

@@ -13,33 +13,45 @@
 #'
 #' @inheritParams Require
 #' @importFrom utils write.table
+#' @importFrom data.table fwrite
 #' @examples
 #' pkgSnapFile <- tempfile()
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
 #' data.table::fread(pkgSnapFile)
 #'
-pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE) {
-  browser(expr = exists("aaaa"))
+#' \dontrun{
+#'
+#' # An example to move this file to a new computer
+#' library(Require)
+#' setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
+#' fileName <- "packageSnapshot.txt"
+#' pkgSnapshot(fileName)
+#' # Get file on another computer -- via email, slack, cloud, etc.
+#' # library(googledrive)
+#' # (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
+#' 
+#' # On new machine 
+#' fileName <- "packageSnapshot.txt"
+#' library(Require)
+#' # get the file from email, slack, cloud etc.
+#' # library(googledrive)
+#' # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
+#' setLibPaths("~/RPackages") # start with an empty folder for new 
+#'                            # library to minimize package version conflicts
+#' Require(packageVersionFile = fileName)
+#' }
+#'
+pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
+                        purge = getOption("Require.purge", FALSE)) {
   if (missing(libPaths))
     libPaths <- .libPaths()
-  origLibPaths <- setLibPaths(libPaths, standAlone)
-  on.exit({.libPaths(origLibPaths)}, add = TRUE)
+  origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character()))
-  instPkgs <- ip$Package
-  instVers <- ip$Version
-  names(instPkgs) <- instPkgs
-  names(instVers) <- instPkgs
-
-  out <- .pkgSnapshot(names(instVers), instVers, packageVersionFile)
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha",
+                                      purge = purge))
+  fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
   message("package version file saved in ",packageVersionFile)
-  return(invisible(out))
+  return(invisible(ip))
 }
 
-#' @keywords internal
-.pkgSnapshot <- function(instPkgs, instVers, packageVersionFile = "._packageVersionsAuto.txt") {
-  browser(expr = exists("aaaa"))
-  inst <- data.frame(instPkgs, instVers = unlist(instVers), stringsAsFactors = FALSE)
-  write.table(inst, file = packageVersionFile, row.names = FALSE)
-  inst
-}

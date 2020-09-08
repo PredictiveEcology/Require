@@ -1,5 +1,15 @@
-if (Sys.info()["user"] != "emcintir")
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
+if (Sys.info()["user"] == "emcintir") {
+  outOpts <- options(Require.Home = "~/GitHub/Require",
+                              Require.RPackageCache = "~/._RPackageCache",
+                              "install.packages.compile.from.source" = "no")
+  on.exit({
+    options(outOpts)
+  }, add = TRUE)
+} else {
   testit::assert(identical(isInteractive(), interactive()))
+}
+
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
 #assignInNamespace("isInteractive", isInteractive, ns = "Require")
@@ -54,7 +64,12 @@ isInstalled <- tryCatch({
   if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
 testit::assert(isTRUE(isInstalled))
-detach("package:TimeWarp", unload = TRUE)
+out <- detachAll(c("Require", "TimeWarp", "sdfd"))
+testit::assert(identical(sort(out), 
+                         sort(c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1))))
+testit::assert(names(out)[out == 2] == "TimeWarp")
+
+# detach("package:TimeWarp", unload = TRUE)
 remove.packages("TimeWarp", lib = dir1)
 
 # Try older version
@@ -80,10 +95,9 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                           install = "force")
   testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
                            packageVersion("TimeWarp", lib.loc = dir6)))
-  detach("package:TimeWarp", unload = TRUE)
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
-
+  
   setLibPaths(orig)
 
   # Test snapshot file with no args
@@ -91,7 +105,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
   testit::assert(is.data.frame(out))
   testit::assert(file.exists(formals("pkgSnapshot")$packageVersionFile))
-  testit::assert(isTRUE(all.equal(data.table::as.data.table(out), pkgSnapFileRes)))
+  out1 <- data.table::as.data.table(out)
+  testit::assert(isTRUE(all.equal(out1, pkgSnapFileRes)))
 
   # Skip on CRAN
   dir3 <- tempdir2("test3")
@@ -146,12 +161,12 @@ out <- getGitHubDESCRIPTION(pkg = character())
 testit::assert(length(out) == 0)
 
 # Trigger the save available.packages and archiveAvailable
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
-                                install = "force"),
-                 warning = function(x) x)
-warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
-                                install = "force"),
-                 warning = function(x) x)
+# warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+#                                 install = "force"),
+#                  error = function(x) x)
+# warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+#                                 install = "force"),
+#                  error = function(x) x)
 if (interactive()) {
   warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE,
                                   install = "force"),

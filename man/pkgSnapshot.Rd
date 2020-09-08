@@ -7,7 +7,8 @@
 pkgSnapshot(
   packageVersionFile = "packageVersions.txt",
   libPaths,
-  standAlone = FALSE
+  standAlone = FALSE,
+  purge = getOption("Require.purge", FALSE)
 )
 }
 \arguments{
@@ -25,6 +26,19 @@ Defaults to the \code{.libPaths()[1]}.}
                   This can be create dramatically faster
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
+
+\item{purge}{Logical. Should all caches be purged Default is 
+\code{getOption("Require.purge", FALSE)}.
+There is a lot of internal caching of results throughout 
+the \code{Require} package. These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged. The cached values are renewed 
+when found to be too old, with the age limit. 
+This maximum age can be set in seconds with the environment variable 
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
+defaults to 3600  (one hour -- see
+\code{\link[utils]{available.packages}}).
+
+Internally, there are calls to \code{available.packages}}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.
@@ -37,5 +51,27 @@ This can later be passed to \code{Require}.
 pkgSnapFile <- tempfile()
 pkgSnapshot(pkgSnapFile, .libPaths()[1])
 data.table::fread(pkgSnapFile)
+
+\dontrun{
+
+# An example to move this file to a new computer
+library(Require)
+setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
+fileName <- "packageSnapshot.txt"
+pkgSnapshot(fileName)
+# Get file on another computer -- via email, slack, cloud, etc.
+# library(googledrive)
+# (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
+
+# On new machine 
+fileName <- "packageSnapshot.txt"
+library(Require)
+# get the file from email, slack, cloud etc.
+# library(googledrive)
+# drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
+setLibPaths("~/RPackages") # start with an empty folder for new 
+                           # library to minimize package version conflicts
+Require(packageVersionFile = fileName)
+}
 
 }

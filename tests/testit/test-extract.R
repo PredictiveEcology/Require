@@ -22,7 +22,7 @@ testit::assert(isTRUE(all.equal("Require", a)))
 a <- extractPkgGitHub("PredictiveEcology/Require (>=0.0.1)")
 testit::assert(isTRUE(all.equal("Require", a)))
 a <- extractPkgGitHub("Require (>=0.0.1)")
-testit::assert(isTRUE(all.equal(NA_character_, a)))
+testit::assert(identical(is.na(NA), is.na(a))) # Seems to be different class under different conditions
 
 a <- trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 testit::assert(isTRUE(all.equal("PredictiveEcology/Require", a)))
