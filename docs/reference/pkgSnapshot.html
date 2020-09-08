@@ -82,7 +82,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.7</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
       </span>
     </div>
 
@@ -133,7 +133,8 @@
     <pre class="usage"><span class='fu'>pkgSnapshot</span>(
   <span class='kw'>packageVersionFile</span> <span class='kw'>=</span> <span class='st'>"packageVersions.txt"</span>,
   <span class='no'>libPaths</span>,
-  <span class='kw'>standAlone</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>
+  <span class='kw'>standAlone</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
+  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
 )</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -160,6 +161,20 @@ Defaults to the <code>.libPaths()[1]</code>.</p></td>
 installs if the user has a substantial number of the packages already in
 their personal library. Default <code>FALSE</code> to minimize package installing.</p></td>
     </tr>
+    <tr>
+      <th>purge</th>
+      <td><p>Logical. Should all caches be purged Default is 
+<code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.purge", FALSE)</a></code>.
+There is a lot of internal caching of results throughout 
+the <code>Require</code> package. These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged. The cached values are renewed 
+when found to be too old, with the age limit. 
+This maximum age can be set in seconds with the environment variable 
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, 
+defaults to 3600  (one hour -- see
+<code><a href='https://rdrr.io/r/utils/available.packages.html'>available.packages</a></code>).</p>
+<p>Internally, there are calls to <code>available.packages</code></p></td>
+    </tr>
     </table>
 
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
@@ -169,9 +184,28 @@ This can later be passed to <code>Require</code>.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='no'>pkgSnapFile</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempfile</a></span>()
-<span class='fu'>pkgSnapshot</span>(<span class='no'>pkgSnapFile</span>, <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>()[<span class='fl'>1</span>])</div><div class='output co'>#&gt; <span class='message'>package version file saved in C:\Users\EMCINT~1.L-V\AppData\Local\Temp\RtmpG0GNKK\file4b402a6b55ff</span></div><div class='input'><span class='kw pkg'>data.table</span><span class='kw ns'>::</span><span class='fu'><a href='https://Rdatatable.gitlab.io/data.table/reference/fread.html'>fread</a></span>(<span class='no'>pkgSnapFile</span>)</div><div class='output co'>#&gt;    instPkgs instVers
-#&gt; 1:  Require    0.0.7</div><div class='input'>
-</div></pre>
+<span class='fu'>pkgSnapshot</span>(<span class='no'>pkgSnapFile</span>, <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>()[<span class='fl'>1</span>])</div><div class='output co'>#&gt; <span class='error'>Error in `[.data.frame`(out, , other): undefined columns selected</span></div><div class='input'><span class='kw pkg'>data.table</span><span class='kw ns'>::</span><span class='fu'><a href='https://Rdatatable.gitlab.io/data.table/reference/fread.html'>fread</a></span>(<span class='no'>pkgSnapFile</span>)</div><div class='output co'>#&gt; <span class='error'>Error in data.table::fread(pkgSnapFile): File 'C:\Users\EMCINT~1.L-V\AppData\Local\Temp\RtmpOQkOgb\file48bc162a1ba7' does not exist or is non-readable. getwd()=='C:/Eliot/GitHub/Require/docs/reference'</span></div><div class='input'>
+<span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
+
+<span class='co'># An example to move this file to a new computer</span>
+<span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>Require</span>)
+<span class='fu'><a href='setLibPaths.html'>setLibPaths</a></span>(<span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>()[<span class='fl'>1</span>])  <span class='co'># this will only do a snapshot of the main user library</span>
+<span class='no'>fileName</span> <span class='kw'>&lt;-</span> <span class='st'>"packageSnapshot.txt"</span>
+<span class='fu'>pkgSnapshot</span>(<span class='no'>fileName</span>)
+<span class='co'># Get file on another computer -- via email, slack, cloud, etc.</span>
+<span class='co'># library(googledrive)</span>
+<span class='co'># (out &lt;- googledrive::drive_upload(fileName)) # copy the file id to clipboard</span>
+
+<span class='co'># On new machine </span>
+<span class='no'>fileName</span> <span class='kw'>&lt;-</span> <span class='st'>"packageSnapshot.txt"</span>
+<span class='fu'><a href='https://rdrr.io/r/base/library.html'>library</a></span>(<span class='no'>Require</span>)
+<span class='co'># get the file from email, slack, cloud etc.</span>
+<span class='co'># library(googledrive)</span>
+<span class='co'># drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)</span>
+<span class='fu'><a href='setLibPaths.html'>setLibPaths</a></span>(<span class='st'>"~/RPackages"</span>) <span class='co'># start with an empty folder for new </span>
+                           <span class='co'># library to minimize package version conflicts</span>
+<span class='fu'><a href='Require.html'>Require</a></span>(<span class='kw'>packageVersionFile</span> <span class='kw'>=</span> <span class='no'>fileName</span>)
+}</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

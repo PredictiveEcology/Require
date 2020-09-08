@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Invert a 2-level list — invertList • Require</title>
+<title>Detach and unload all packages — detachAll • Require</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,13 @@
 
 
 
-<meta property="og:title" content="Invert a 2-level list — invertList" />
-<meta property="og:description" content="This is a simple version of purrr::transpose, only for lists with 2 levels." />
+<meta property="og:title" content="Detach and unload all packages — detachAll" />
+<meta property="og:description" content="This uses pkgDepTopoSort internally so that the package
+dependency tree is determined, and then packages are unloaded
+in the reverse order. Some packages don't unload successfully for 
+a variety of reasons. Several known packages that have this problem
+are identified internally and *not* unloaded. Currently, these are
+glue, rlang, ps, ellipsis, and, processx." />
 
 
 
@@ -121,57 +126,50 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Invert a 2-level list</h1>
-    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/helpers.R'><code>R/helpers.R</code></a></small>
-    <div class="hidden name"><code>invertList.Rd</code></div>
+    <h1>Detach and unload all packages</h1>
+    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/Require-helpers.R'><code>R/Require-helpers.R</code></a></small>
+    <div class="hidden name"><code>detachAll.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>This is a simple version of <code><a href='https://purrr.tidyverse.org/reference/transpose.html'>purrr::transpose</a></code>, only for lists with 2 levels.</p>
+    <p>This uses <code>pkgDepTopoSort</code> internally so that the package
+dependency tree is determined, and then packages are unloaded
+in the reverse order. Some packages don't unload successfully for 
+a variety of reasons. Several known packages that have this problem
+are identified internally and *not* unloaded. Currently, these are
+<code>glue</code>, <code>rlang</code>, <code>ps</code>, <code>ellipsis</code>, and, <code>processx</code>.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>invertList</span>(<span class='no'>l</span>)</pre>
+    <pre class="usage"><span class='fu'>detachAll</span>(<span class='no'>pkgs</span>, <span class='kw'>dontTry</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>doSort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>l</th>
-      <td><p>A list with 2 levels. If some levels are absent, they will be <code>NULL</code></p></td>
+      <th>pkgs</th>
+      <td><p>A character vector of packages to detach. Will be topologically sorted
+unless <code>doSort</code> is <code>FALSE</code>.</p></td>
+    </tr>
+    <tr>
+      <th>dontTry</th>
+      <td><p>A character vector of packages to not try. This can be used
+by a user if they find a package fails in attempts to unload it, e.g., "ps"</p></td>
+    </tr>
+    <tr>
+      <th>doSort</th>
+      <td><p>If <code>TRUE</code> (the default), then the <code>pkgs</code> will be 
+topologically sorted. If <code>FALSE</code>, then it won't. Useful if the 
+<code>pkgs</code> are already sorted.</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>A list with 2 levels deep, inverted from <code>l</code></p>
+    <p>A numeric named vector, with names of the packages that were attempted. 
+<code>2</code> means the package was successfully unloaded, <code>1</code> it was 
+tried, but failed, <code>3</code> it was in the search path and was detached 
+and unloaded.</p>
 
-    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='co'># create a 2-deep, 2 levels in first, 3 levels in second</span>
-<span class='no'>a</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>a</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>d</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>e</span> <span class='kw'>=</span> <span class='fl'>2</span>:<span class='fl'>3</span>, <span class='kw'>f</span> <span class='kw'>=</span> <span class='fl'>4</span>:<span class='fl'>6</span>), <span class='kw'>b</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>d</span> <span class='kw'>=</span> <span class='fl'>5</span>, <span class='kw'>e</span> <span class='kw'>=</span> <span class='fl'>55</span>))
-<span class='fu'>invertList</span>(<span class='no'>a</span>) <span class='co'># creates 2-deep, now 3 levels outer --&gt; 2 levels inner</span></div><div class='output co'>#&gt; $d
-#&gt; $d$a
-#&gt; [1] 1
-#&gt; 
-#&gt; $d$b
-#&gt; [1] 5
-#&gt; 
-#&gt; 
-#&gt; $e
-#&gt; $e$a
-#&gt; [1] 2 3
-#&gt; 
-#&gt; $e$b
-#&gt; [1] 55
-#&gt; 
-#&gt; 
-#&gt; $f
-#&gt; $f$a
-#&gt; [1] 4 5 6
-#&gt; 
-#&gt; $f$b
-#&gt; NULL
-#&gt; 
-#&gt; </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

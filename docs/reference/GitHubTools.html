@@ -85,7 +85,7 @@ are met before each is installed." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.7</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
       </span>
     </div>
 
@@ -138,7 +138,7 @@ are met before each is installed.</p>
 
     <pre class="usage"><span class='fu'>parseGitHub</span>(<span class='no'>pkgDT</span>)
 
-<span class='fu'>install_githubV</span>(<span class='no'>gitPkgNames</span>, <span class='kw'>install_githubArgs</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(), <span class='no'>...</span>)</pre>
+<span class='fu'>install_githubV</span>(<span class='no'>gitPkgNames</span>, <span class='kw'>install_githubArgs</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(), <span class='kw'>dots</span> <span class='kw'>=</span> <span class='no'>dots</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -157,8 +157,8 @@ with at least 2 columns <code>"Package"</code> and <code>"packageFullName"</code
       <td><p>Any arguments passed to <code>install_github</code></p></td>
     </tr>
     <tr>
-      <th>...</th>
-      <td><p>Another way to pass arguments to <code>install_github</code></p></td>
+      <th>dots</th>
+      <td><p>A list of ..., e.g., list(...). Only for internal use.</p></td>
     </tr>
     </table>
 

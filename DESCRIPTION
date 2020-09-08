@@ -6,11 +6,12 @@ Description: A single key function, 'Require' that wraps 'install.packages',
     that allows for reproducible workflows. As with other functions in a
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
+    Maturing.
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2020-09-06
-Version: 0.0.8.9031
+Date: 2020-09-08
+Version: 0.0.8
 Authors@R: c(
     person("Eliot J B", "McIntire", email = "eliot.mcintire@canada.ca",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6914-8316")),

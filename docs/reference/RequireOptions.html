@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Invert a 2-level list — invertList • Require</title>
+<title><code>Require</code> options — RequireOptions • Require</title>
 
 
 <!-- jquery -->
@@ -39,8 +39,10 @@
 
 
 
-<meta property="og:title" content="Invert a 2-level list — invertList" />
-<meta property="og:description" content="This is a simple version of purrr::transpose, only for lists with 2 levels." />
+<meta property="og:title" content="<code>Require</code> options — RequireOptions" />
+<meta property="og:description" content="These provide top-level, powerful settings for a comprehensive
+reproducible workflow. To see defaults, run RequireOptions().
+See Details below." />
 
 
 
@@ -121,57 +123,61 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Invert a 2-level list</h1>
-    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/helpers.R'><code>R/helpers.R</code></a></small>
-    <div class="hidden name"><code>invertList.Rd</code></div>
+    <h1><code>Require</code> options</h1>
+    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/RequireOptions.R'><code>R/RequireOptions.R</code></a></small>
+    <div class="hidden name"><code>RequireOptions.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>This is a simple version of <code><a href='https://purrr.tidyverse.org/reference/transpose.html'>purrr::transpose</a></code>, only for lists with 2 levels.</p>
+    <p>These provide top-level, powerful settings for a comprehensive
+reproducible workflow. To see defaults, run <code>RequireOptions()</code>.
+See Details below.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>invertList</span>(<span class='no'>l</span>)</pre>
+    <pre class="usage"><span class='fu'>RequireOptions</span>()</pre>
 
-    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
-    <table class="ref-arguments">
-    <colgroup><col class="name" /><col class="desc" /></colgroup>
-    <tr>
-      <th>l</th>
-      <td><p>A list with 2 levels. If some levels are absent, they will be <code>NULL</code></p></td>
-    </tr>
-    </table>
 
-    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
-    <p>A list with 2 levels deep, inverted from <code>l</code></p>
+    <p>Below are options that can be set with <code><a href='https://rdrr.io/r/base/options.html'>options("Require.xxx" = newValue)</a></code>,
+where <code>xxx</code> is one of the values below, and <code>newValue</code> is a new value to
+give the option. Sometimes these options can be placed in the user's <code>.Rprofile</code>
+file so they persist between sessions.</p>
+<p>The following options are likely of interest to most users:</p><dl'>
+  <dt><code>RPackageCache</code></dt><dd><p>Default: <code>NULL</code>. If a folder is provided, then binary and source packages will
+      be cached here. Subsequent downloads of same package will use local copy. Default
+      is to have packages not be cached locally so each install of the same version will
+      be from the original source, e.g., CRAN, GitHub.</p></dd>
+  <dt><code>buildBinarieis</code></dt><dd><p>Default: <code>TRUE</code>. Only relevant on *nix systems and if
+    <code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.RPackageCache")</a></code> is set to a  path. If <code>TRUE</code>, then
+       <code>Require</code> will pass <code>INSTALL_OPTS = "--build"</code>, meaning the
+       package binary will be built and then saved in the
+       <code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.RPackageCache")</a></code>. This means that subsequent installs
+       of this package on this or identical system will be faster.</p></dd>
+  <dt><code>persistentPkgEnv</code></dt><dd><p>Default: <code>FALSE</code>. (ADVANCED USE) <code>Require</code> stashes a lot of information in a
+    hidden environment, located at <code>Require:::.pkgEnv</code>. This gets reset at each
+    restart of R and each reload of Require. To make the stashes more persistent, 
+    set this option to <code>TRUE</code>. A file will be placed at 
+    <code><a href='https://rdrr.io/r/base/file.path.html'>file.path("~", "._Require_pkgEnv.rdata")</a></code>, which will be restored at package load</p></dd>
+  <dt><code>purge</code></dt><dd><p>Default: <code>FALSE</code>. If set to (almost) all internal caches used by <code>Require</code>
+    will be deleted and rebuilt. This should not generally be necessary as it will 
+    automatically be deleted after (by default) 1 hour (set via 
+    <code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code> environment variable in seconds)</p></dd>
+  <dt><code>unloadNamespaces</code></dt><dd><p>Default: <code>TRUE</code>. (ADVANCED USE) <code>Require</code> will attempt to detach and unload
+    packages that conflict with the requested package installing via <code>Require</code>.
+    This can be complicated, resulting in broken states that can only be recovered
+    by restarting R. Default is to attempt to do this. <code>FALSE</code> will not attempt
+    to do this. User must deal with inability to install packages due to package already 
+    being loaded.</p></dd>
+  <dt><code>verbose</code></dt><dd><p>Default: <code>0</code>. During a <code>Require</code>, there is a lot of information collected 
+    and used. With <code>verbose</code> set to <code>1</code> or <code>2</code>, more of this information
+    will be reported as an attribute attached to the return object of <code>Require</code>.
+    This may help diagnosing problems.</p></dd>
+  
 
-    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='co'># create a 2-deep, 2 levels in first, 3 levels in second</span>
-<span class='no'>a</span> <span class='kw'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>a</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>d</span> <span class='kw'>=</span> <span class='fl'>1</span>, <span class='kw'>e</span> <span class='kw'>=</span> <span class='fl'>2</span>:<span class='fl'>3</span>, <span class='kw'>f</span> <span class='kw'>=</span> <span class='fl'>4</span>:<span class='fl'>6</span>), <span class='kw'>b</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span>(<span class='kw'>d</span> <span class='kw'>=</span> <span class='fl'>5</span>, <span class='kw'>e</span> <span class='kw'>=</span> <span class='fl'>55</span>))
-<span class='fu'>invertList</span>(<span class='no'>a</span>) <span class='co'># creates 2-deep, now 3 levels outer --&gt; 2 levels inner</span></div><div class='output co'>#&gt; $d
-#&gt; $d$a
-#&gt; [1] 1
-#&gt; 
-#&gt; $d$b
-#&gt; [1] 5
-#&gt; 
-#&gt; 
-#&gt; $e
-#&gt; $e$a
-#&gt; [1] 2 3
-#&gt; 
-#&gt; $e$b
-#&gt; [1] 55
-#&gt; 
-#&gt; 
-#&gt; $f
-#&gt; $f$a
-#&gt; [1] 4 5 6
-#&gt; 
-#&gt; $f$b
-#&gt; NULL
-#&gt; 
-#&gt; </div></pre>
+</dl>
+
+
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

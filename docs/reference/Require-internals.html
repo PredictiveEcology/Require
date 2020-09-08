@@ -83,7 +83,7 @@ of some use for advanced users." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.7</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
       </span>
     </div>
 
@@ -134,9 +134,9 @@ of some use for advanced users.</p>
 
     <pre class="usage"><span class='fu'>getPkgVersions</span>(<span class='no'>pkgDT</span>, <span class='kw'>install</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)
 
-<span class='fu'>getAvailable</span>(<span class='no'>pkgDT</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>repos</span> <span class='kw'>=</span> <span class='no'>repos</span>)
+<span class='fu'>getAvailable</span>(<span class='no'>pkgDT</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>))
 
-<span class='fu'>installFrom</span>(<span class='no'>pkgDT</span>)
+<span class='fu'>installFrom</span>(<span class='no'>pkgDT</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>))
 
 <span class='fu'>doInstalls</span>(
   <span class='no'>pkgDT</span>,
@@ -169,7 +169,17 @@ missing packages or dependencies.</p></td>
     </tr>
     <tr>
       <th>purge</th>
-      <td><p>Logical. Internally, there are calls to <code>available.packages</code></p></td>
+      <td><p>Logical. Should all caches be purged Default is 
+<code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.purge", FALSE)</a></code>.
+There is a lot of internal caching of results throughout 
+the <code>Require</code> package. These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged. The cached values are renewed 
+when found to be too old, with the age limit. 
+This maximum age can be set in seconds with the environment variable 
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, 
+defaults to 3600  (one hour -- see
+<code><a href='https://rdrr.io/r/utils/available.packages.html'>available.packages</a></code>).</p>
+<p>Internally, there are calls to <code>available.packages</code></p></td>
     </tr>
     <tr>
       <th>repos</th>

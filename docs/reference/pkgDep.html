@@ -40,11 +40,15 @@
 
 
 <meta property="og:title" content="Determine package dependencies — pkgDep" />
-<meta property="og:description" content="This will first look in local filesystem (in .libPaths()), then
-CRAN. If the package is in the form of a GitHub package with format
-account/repo@branch, it will attempt to get package dependencies from
+<meta property="og:description" content="This will first look in local filesystem (in .libPaths()) and will use
+a local package to find its dependencies. If the package doesn't exist locally, 
+including whether it is the correct version, then it will look in (currently) 
+CRAN and its archives (if the current CRAN version is not
+the desired version to check). It will also look on GitHub if the 
+package description is of the form of a GitHub package with format
+account/repo@branch or account/repo@commit. For this, 
+it will attempt to get package dependencies from
 the GitHub DESCRIPTION file.
-Currently, it will not find Remotes.
 This is intended to replace tools::package_dependencies or
 pkgDep in the miniCRAN package, but with modifications to allow
 multiple sources to be searched in the same function call.
@@ -57,7 +61,14 @@ the least number of dependencies that are in pkgs.
 This is essentially a topological sort, but it is done
 heuristically. This can be used to e.g., detach or
 unloadNamespace packages in order so that they each
-of their dependencies are detached or unloaded first." />
+of their dependencies are detached or unloaded first.
+pkgDepAlt is a newer, still experimental approach to pkgDep, which has different
+internal algorithms. With current testing, it appears to be slightly more accurate for
+(some unknown, as of yet) edge cases. One known case is when the a package is
+installed locally package, but is 
+not the version that is requested with pkgDep, the function will default to the
+local, installed, and incorrect package dependencies. pkgDepAlt gets this case 
+correct. This function may eventually replace pkgDep." />
 
 
 
@@ -99,7 +110,7 @@ of their dependencies are detached or unloaded first." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.7</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
       </span>
     </div>
 
@@ -139,16 +150,20 @@ of their dependencies are detached or unloaded first." />
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Determine package dependencies</h1>
-    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/pkgDep.R'><code>R/pkgDep.R</code></a></small>
+    <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/pkgDep.R'><code>R/pkgDep.R</code></a>, <a href='https://github.com/PredictiveEcology/Require/blob/master/R/pkgDepAlt.R'><code>R/pkgDepAlt.R</code></a></small>
     <div class="hidden name"><code>pkgDep.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>This will first look in local filesystem (in <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code>), then
-<code>CRAN</code>. If the package is in the form of a GitHub package with format
-<code>account/repo@branch</code>, it will attempt to get package dependencies from
+    <p>This will first look in local filesystem (in <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code>) and will use
+a local package to find its dependencies. If the package doesn't exist locally, 
+including whether it is the correct version, then it will look in (currently) 
+<code>CRAN</code> and its archives (if the current <code>CRAN</code> version is not
+the desired version to check). It will also look on <code>GitHub</code> if the 
+package description is of the form of a GitHub package with format
+<code>account/repo@branch</code> or <code>account/repo@commit</code>. For this, 
+it will attempt to get package dependencies from
 the GitHub <code class="file">DESCRIPTION</code> file.
-Currently, it will not find <code>Remotes</code>.
 This is intended to replace <code><a href='https://rdrr.io/r/tools/package_dependencies.html'>tools::package_dependencies</a></code> or
 <code>pkgDep</code> in the <span class="pkg">miniCRAN</span> package, but with modifications to allow
 multiple sources to be searched in the same function call.</p>
@@ -162,6 +177,13 @@ This is essentially a topological sort, but it is done
 heuristically. This can be used to e.g., <code>detach</code> or
 <code>unloadNamespace</code> packages in order so that they each
 of their dependencies are detached or unloaded first.</p>
+<p><code>pkgDepAlt</code> is a newer, still experimental approach to <code>pkgDep</code>, which has different
+internal algorithms. With current testing, it appears to be slightly more accurate for
+(some unknown, as of yet) edge cases. One known case is when the a <code>package</code> is
+installed locally package, but is 
+not the version that is requested with <code>pkgDep</code>, the function will default to the
+local, installed, and incorrect package dependencies. <code>pkgDepAlt</code> gets this case 
+correct. This function may eventually replace <code>pkgDep</code>.</p>
     </div>
 
     <pre class="usage"><span class='fu'>pkgDep</span>(
@@ -189,7 +211,8 @@ of their dependencies are detached or unloaded first.</p>
   <span class='no'>suggests</span>,
   <span class='no'>linkingTo</span>,
   <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
-  <span class='kw'>sorted</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
+  <span class='kw'>sorted</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
 )
 
 <span class='fu'>pkgDepTopoSort</span>(
@@ -199,7 +222,26 @@ of their dependencies are detached or unloaded first.</p>
   <span class='kw'>topoSort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
   <span class='kw'>useAllInSearch</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
   <span class='kw'>returnFull</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
+  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
+)
+
+<span class='fu'>pkgDepAlt</span>(
+  <span class='no'>packages</span>,
+  <span class='kw'>libPath</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>(),
+  <span class='kw'>which</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span>, <span class='st'>"Remotes"</span>),
+  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
+  <span class='no'>depends</span>,
+  <span class='no'>imports</span>,
+  <span class='no'>suggests</span>,
+  <span class='no'>linkingTo</span>,
+  <span class='no'>enhances</span>,
+  <span class='no'>remotes</span>,
+  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
+  <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>includeBase</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
+  <span class='kw'>sort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
+  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
 )</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
@@ -270,7 +312,17 @@ concatenation of the possibly recursive package dependencies.</p></td>
     </tr>
     <tr>
       <th>purge</th>
-      <td><p>Logical. Internally, there are calls to <code>available.packages</code></p></td>
+      <td><p>Logical. Should all caches be purged Default is 
+<code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.purge", FALSE)</a></code>.
+There is a lot of internal caching of results throughout 
+the <code>Require</code> package. These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged. The cached values are renewed 
+when found to be too old, with the age limit. 
+This maximum age can be set in seconds with the environment variable 
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, 
+defaults to 3600  (one hour -- see
+<code><a href='https://rdrr.io/r/utils/available.packages.html'>available.packages</a></code>).</p>
+<p>Internally, there are calls to <code>available.packages</code></p></td>
     </tr>
     <tr>
       <th>sorted</th>
@@ -309,10 +361,20 @@ to allow those to also be identified</p></td>
     </tr>
     <tr>
       <th>returnFull</th>
-      <td><p>Logical. If <code>TRUE</code>, then the full reverse
-dependencies will be returned; if <code>FALSE</code>, the default,
-only the reverse dependencies that are found within the <code>pkgs</code>
-(and <code><a href='https://rdrr.io/r/base/search.html'>search()</a></code> if <code>useAllInSearch = TRUE</code>) will be returned.</p></td>
+      <td><p>Logical. Primarily useful when <code>reverse = TRUE</code>. 
+If <code>TRUE</code>, then then all installed packages will be searched. 
+If <code>FALSE</code>, the default, only packages that are currently in 
+the <code><a href='https://rdrr.io/r/base/search.html'>search()</a></code> path and passed in <code>pkgs</code> will be included
+in the possible reverse dependencies.</p></td>
+    </tr>
+    <tr>
+      <th>enhances</th>
+      <td><p>Logical. Include packages listed in "Enhances". Default <code>FALSE</code>.</p></td>
+    </tr>
+    <tr>
+      <th>remotes</th>
+      <td><p>Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages. 
+Default <code>TRUE</code>.</p></td>
     </tr>
     </table>
 

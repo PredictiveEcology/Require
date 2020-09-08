@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>GitHub package tools — DESCRIPTIONFileVersion • Require</title>
+<title>GitHub package tools — DESCRIPTIONFileVersionV • Require</title>
 
 
 <!-- jquery -->
@@ -39,7 +39,7 @@
 
 
 
-<meta property="og:title" content="GitHub package tools — DESCRIPTIONFileVersion" />
+<meta property="og:title" content="GitHub package tools — DESCRIPTIONFileVersionV" />
 <meta property="og:description" content="A series of helpers to access and deal with GitHub packages" />
 
 
@@ -82,7 +82,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.7</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
       </span>
     </div>
 
@@ -130,9 +130,11 @@
     <p>A series of helpers to access and deal with GitHub packages</p>
     </div>
 
-    <pre class="usage"><span class='fu'>DESCRIPTIONFileVersion</span>(<span class='no'>file</span>)
+    <pre class="usage"><span class='fu'>DESCRIPTIONFileVersionV</span>(<span class='no'>file</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>))
 
-<span class='fu'>getGitHubDESCRIPTION</span>(<span class='no'>pkg</span>)</pre>
+<span class='fu'>DESCRIPTIONFileOtherV</span>(<span class='no'>file</span>, <span class='kw'>other</span> <span class='kw'>=</span> <span class='st'>"RemoteSha"</span>)
+
+<span class='fu'>getGitHubDESCRIPTION</span>(<span class='no'>pkg</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>))</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -140,6 +142,25 @@
     <tr>
       <th>file</th>
       <td><p>A file path to a DESCRIPTION file</p></td>
+    </tr>
+    <tr>
+      <th>purge</th>
+      <td><p>Logical. Should all caches be purged Default is 
+<code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.purge", FALSE)</a></code>.
+There is a lot of internal caching of results throughout 
+the <code>Require</code> package. These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged. The cached values are renewed 
+when found to be too old, with the age limit. 
+This maximum age can be set in seconds with the environment variable 
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, 
+defaults to 3600  (one hour -- see
+<code><a href='https://rdrr.io/r/utils/available.packages.html'>available.packages</a></code>).</p>
+<p>Internally, there are calls to <code>available.packages</code></p></td>
+    </tr>
+    <tr>
+      <th>other</th>
+      <td><p>Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
+retrieved.</p></td>
     </tr>
     <tr>
       <th>pkg</th>

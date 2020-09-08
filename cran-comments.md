@@ -1,8 +1,6 @@
 ## Updated release
 
-This is a maintenance release which fixes issues during CRAN tests. 
-We have also removed the overriding of a user-selected CRAN repository.
-We default to the user's choice of repo, only setting it when none is set ("", NULL, or @CRAN@) (e.g., in some tests) and it is non-interactive.
+This is a feature enhancement and bugfix release. 
 See `NEWS.md` for complete list of changes.
 
 ## Test environments
@@ -16,10 +14,10 @@ See `NEWS.md` for complete list of changes.
 - os: ubuntu-18.04,   r: 'oldrel'
 - os: ubuntu-18.04,   r: '3.5'
           
-### Winbuilder
+### Winbuilder -- all passed Sept 8, 2020
 * Windows                 (win-builder), R 3.6.3
 * Windows                 (win-builder), R 4.0.2
-* Windows                 (win-builder), R 4.1.0 (2020-08-12 r78957)
+* Windows                 (win-builder), R 4.1.0
 
 ### rhub
 * Fedora Linux                      (clang, gfortran), R 4.1.0 (2020-08-12)
@@ -28,9 +26,12 @@ See `NEWS.md` for complete list of changes.
 
 ## R CMD check results
 
-There were no ERRORs nor WARNINGs.
+There were no ERRORs, or WARNINGs.  The only NOTE concerns the "unable to verify current time".
 
-There was one NOTE through about the Maintainer. The correct maintainer is eliot.mcintire@canada.ca, as indicated.
+```
+* checking for future file timestamps ... NOTE
+unable to verify current time
+```
 
 ## Downstream dependencies
 
