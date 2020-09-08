@@ -9,8 +9,8 @@ Description: A single key function, 'Require' that wraps 'install.packages',
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2020-09-04
-Version: 0.0.8.9029
+Date: 2020-09-06
+Version: 0.0.8.9030
 Authors@R: c(
     person("Eliot J B", "McIntire", email = "eliot.mcintire@canada.ca",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6914-8316")),

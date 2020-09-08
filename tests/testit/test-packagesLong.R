@@ -83,7 +83,7 @@ if (interactive()) {
     testit::assert(all(!is.na(have[installed == TRUE]$Version)))
     out <- try(testit::assert(all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)))
     if (is(out, "try-error")) browser()
-    couldHaveLoaded <- grep("\\<mumin\\>", unique(pkgs), value = TRUE, invert = TRUE)
+    couldHaveLoaded <- gsub(".*\\<mumin\\>.*", "MuMIn", unique(pkgs))
     # couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
     
     actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {

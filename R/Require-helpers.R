@@ -474,7 +474,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
           filepath := {
             # destFile <- file.path(tempdir(), paste0(Package, "_", Version, "_", filename))
             if (!all(file.exists(destFile)))
-              download.file(url, destFile, overwrite = TRUE, quiet = TRUE) ## TODO: overwrite?
+              download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE)
             destFile
           }, by = c("Package", "Branch")]
     if (identical("DESCRIPTION", filename))
@@ -800,7 +800,7 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   out1 <- unique(unname(unlist(out1)))
   out2 <- c(out1, pkgs)
   out3 <- c(out1, packages)
-  dt <- data.table(github = extractPkgGitHub(out2), Package = out2,
+  dt <- data.table(github = extractPkgGitHub(out2), Package = extractPkgName(out2),
                    depOrOrig = c(rep("dep", length(out1)), rep("orig", length(pkgs))),
                    packageFullName = out3)
   set(dt, NULL, "origOrder", seq_along(dt$github))
@@ -814,7 +814,13 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   haveNoVersion <- dt[Package == packageFullName] # have no version number or are github
   dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package][!duplicated(Package)]))
   setorderv(dt, "origOrder")
-  dt$packageFullName
+  ret <- dt$packageFullName
+  if (!is.null(names(packages))) {
+    dt[depOrOrig == "orig", Names := names(packages)[match(packageFullName, packages)]]
+    dt[is.na(Names), Names := ""]
+    names(ret) <- dt$Names
+  }
+  ret
 }
 
 installedVers <- function(pkgDT) {
