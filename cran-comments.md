@@ -30,8 +30,8 @@ See `NEWS.md` for complete list of changes.
 
 There were no ERRORs nor WARNINGs.
 
-There was one NOTE through about the Maintainer. The correct maintainer is eliot.mcintire@canada.ca, as indicated.
+There was one NOTE through about the Maintainer. The correct maintainer is <eliot.mcintire@canada.ca>, as indicated.
 
 ## Downstream dependencies
 
-We have tested this verison of the package with several downstream dependencies, and have found no problems.
+We have tested this version of the package with several downstream dependencies, and have found no problems.
