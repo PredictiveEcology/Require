@@ -1,5 +1,12 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+
+version 0.0.9
+==============
+
+## Bug fixes
+* captures and deals with a bug in `install.packages` (`argument "av2" is missing, with no default`) on R-devel for Windows (on Sept 09, 2020). May be transient.
+
 version 0.0.8
 ==============
 
