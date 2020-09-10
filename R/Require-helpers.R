@@ -1040,7 +1040,15 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                    # using ap meant that it was messing up the src vs bin paths
                    append(append(list(installPkgNames), install.packagesArgs), # removed , available = ap
                           dots))
-  }, warning = function(condition) condition)
+  }, warning = function(condition) condition,
+  error = function(e) {
+    if (grepl('argument \\"av2\\" is missing', e)) 
+      tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ",R.version.string,")")),
+               warning = function(w) w)
+    else 
+      stop(e)
+  })
+  
   if (any(grepl("--build", c(dots, install.packagesArgs))))
     copyTarball(installPkgNames, TRUE)
 
