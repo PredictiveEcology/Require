@@ -625,7 +625,7 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
             warningCantInstall(pkgs)
           }
           error3 <- grepl("is being loaded, but", outMess)
-          packageNames <- gsub(paste0("^.*namespace.{2,2}(.*)[[:punct:]]{1} .*$"), "\\1", outMess[error3])
+          packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"), "\\1", outMess[error3])
           if (any(error3)) {
             pkgs <- paste(packageNames, collapse = "', '")
             if (length(setdiff(pkgs, pkgsWarned)) > 0)
