@@ -1344,12 +1344,20 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   srch <- search()
   pkgsOrig <- pkgs
   depsToUnload <- c(pkgs, unlist(pkgDep(pkgs, recursive = TRUE)))
-  if ("devtools" %in% pkgs) {
-    dontTryDevtools <- c("glue", "rlang", "ps", "ellipsis", "processx")
-    message("some of devtools's dependencies don't seem to unload their dlls correctly. ",
-            "These will not be unloaded: ", paste(dontTryDevtools, collapse = ", "))
-    dontTry <- c(dontTry, dontTryDevtools)
-  }
+  si <- sessionInfo()
+  allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
+  others <- pkgDepTopoSort(pkgs, deps = allLoaded, reverse = TRUE)
+  names(others) <- others
+  depsToUnload <- c(others, depsToUnload)
+  depsToUnload <- depsToUnload[!duplicated(depsToUnload)]
+  
+#  if ("devtools" %in% depsToUnload) {
+    dontTryExtra <- c("glue", "rlang", "ps", "ellipsis", "processx", "vctrs")
+    message("some packages don't seem to unload their dlls correctly. ",
+            "These will not be unloaded: ", paste(dontTryExtra, collapse = ", "))
+    dontTry <- c(dontTry, dontTryExtra)
+ # }
+  
   if (length(depsToUnload) > 0) {
     out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
     pkgs <- rev(c(names(out), pkgs))
