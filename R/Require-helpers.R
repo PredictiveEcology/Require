@@ -1029,7 +1029,11 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (NROW(ap) > 1 && isWindows()) {
     ap <- ap[Package == installPkgNames]
     if (NROW(ap)) {
-      onVec <- if (is.null(toInstall$versionSpec)) c("Package") else c("Package", "Version" = "versionSpec")
+      onVec <- c("Package") 
+      if (!is.null(toInstall$versionSpec)) 
+        if (!is.na(toInstall$versionSpec)) 
+          onVec <- c("Package", "Version" = "versionSpec")
+      
       type <- c("source", "binary")[grepl("bin", ap[toInstall, on = onVec]$Repository) + 1]
       install.packagesArgs["type"] <- type
     }
