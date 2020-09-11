@@ -292,8 +292,14 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       if (any(neededVersions$installFrom == "Archive")) {
         neededVersions[installFrom == "Archive", neededFiles := paste0(Package, "_", OlderVersionsAvailable)]
       }
-      if (any(neededVersions$installFrom == "CRAN") && "AvailableVersion" %in% colnames(pkgDT)) {
-        neededVersions[installFrom == "CRAN", neededFiles := paste0(Package, "_", AvailableVersion)]
+      if (any(neededVersions$installFrom == "CRAN" & is.na(neededVersions$correctVersionAvail))) {
+        wh <- neededVersions[, which(installFrom == "CRAN")]
+        nf <- if ("AvailableVersion" %in% colnames(pkgDT)) { 
+          paste0(neededVersions$Package[wh], "_", neededVersions$AvailableVersion[wh]) 
+        } else {
+          neededVersions$Package[wh]
+        }
+        neededVersions[installFrom == "CRAN", neededFiles := nf]
       }
       if (any(neededVersions$installFrom == "GitHub")) {
         neededVersions[installFrom == "GitHub", neededFiles := paste0(Package, "_", Branch)]
@@ -1034,7 +1040,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (NROW(ap)) {
       onVec <- c("Package") 
       if (!is.null(toInstall$versionSpec)) 
-        if (!is.na(toInstall$versionSpec)) 
+        if (!is.na(toInstall$versionSpec) && !isTRUE(toInstall$correctVersionAvail)) 
           onVec <- c("Package", "Version" = "versionSpec")
       
       type <- c("source", "binary")[grepl("bin", ap[toInstall, on = onVec]$Repository) + 1]
