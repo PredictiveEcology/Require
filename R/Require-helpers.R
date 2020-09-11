@@ -335,7 +335,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           if (NROW(neededVersions[srcFromCRAN])) {
             messageDF(neededVersions[srcFromCRAN, c("packageFullName", "Package", "localFileName")])
             message(paste0("Local *source* file(s) exist for the above package(s).\nWould you like to delete it/them ",
-                           "and let Require try to find the binary on MRAN? Y or N: "))
+                           "and let Require try to find the binary on CRAN (or MRAN if older)? Y or N: "))
             out <- readline()
             if (identical("y", tolower(out))) {
               unlink(file.path(getOption("Require.RPackageCache"), 
