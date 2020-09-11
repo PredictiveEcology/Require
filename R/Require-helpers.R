@@ -1341,15 +1341,18 @@ rmDuplicatePkgs <- function(pkgDT) {
 #' 
 #' 
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
+  message("Detaching is fraught with many potential problems; you may have to restart your session if things aren't working")
   srch <- search()
   pkgsOrig <- pkgs
-  depsToUnload <- c(pkgs, unlist(pkgDep(pkgs, recursive = TRUE)))
-  if ("devtools" %in% pkgs) {
-    dontTryDevtools <- c("glue", "rlang", "ps", "ellipsis", "processx")
-    message("some of devtools's dependencies don't seem to unload their dlls correctly. ",
-            "These will not be unloaded: ", paste(dontTryDevtools, collapse = ", "))
-    dontTry <- c(dontTry, dontTryDevtools)
-  }
+  origDeps <- pkgDep(pkgs, recursive = TRUE)
+  depsToUnload <- c(pkgs, unname(unlist(origDeps)))
+  si <- sessionInfo()
+  allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
+  others <- pkgDepTopoSort(pkgs, deps = allLoaded, reverse = TRUE)
+  names(others) <- others
+  depsToUnload <- c(others, depsToUnload)
+  depsToUnload <- depsToUnload[!duplicated(depsToUnload)]
+  
   if (length(depsToUnload) > 0) {
     out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
     pkgs <- rev(c(names(out), pkgs))
@@ -1357,7 +1360,17 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   pkgs <- extractPkgName(pkgs)
   pkgs <- unique(pkgs)
   names(pkgs) <- pkgs
-  dontTry <- c(c("Require", "remotes", "data.table"), dontTry)
+
+  dontTryExtra <- intersect(c("glue", "rlang", "ps", "ellipsis", "processx", "vctrs", "RCurl", "bitops"), 
+                            pkgs)
+                            
+  if (length(dontTryExtra)) {
+    message("some packages don't seem to unload their dlls correctly. ",
+            "These will not be unloaded: ", paste(dontTryExtra, collapse = ", "))
+    dontTry <- c(dontTry, dontTryExtra)
+  }
+  
+  dontTry <- unique(c(c("Require", "remotes", "data.table"), dontTry))
   didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
   dontNeedToUnload <- logical()
