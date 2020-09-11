@@ -247,6 +247,17 @@ Require <- function(packages, packageVersionFile,
   install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
   if (is.null(list(...)$destdir)) {
     if (!is.null(getOption("Require.RPackageCache"))) {
+      ip <- .installed.pkgs()
+      isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
+      if (isTRUE(isCranCacheInstalled)) {
+        message("Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
+                "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
+                "To use only crancache's caching mechanism, set both:", 
+                "\noptions('Require.RPackageCache' = NULL)\n",
+                "Sys.setenv('CRANCACHE_DISABLE' = '')")
+        Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+      }
+      
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
       install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
       if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
