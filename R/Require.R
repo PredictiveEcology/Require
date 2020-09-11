@@ -242,14 +242,15 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
   
-  install.packagesArgs["INSTALL_opts"] <- '--no-multiarch'
-  install_githubArgs["INSTALL_opts"] <- '--no-multiarch'
+  
+  install.packagesArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install.packagesArgs[["INSTALL_opts"]]))
+  install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
   if (is.null(list(...)$destdir)) {
     if (!is.null(getOption("Require.RPackageCache"))) {
       checkPath(getOption("Require.RPackageCache"), create = TRUE)
       install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
       if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
-        install.packagesArgs[["INSTALL_opts"]] <- c('--build', install.packagesArgs[["INSTALL_opts"]])
+        install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))
       }
       
       install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
