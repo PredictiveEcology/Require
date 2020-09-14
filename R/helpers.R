@@ -25,13 +25,21 @@ setMethod("normPath",
           signature(path = "character"),
           definition = function(path) {
             if (length(path) > 0) {
-              path <- lapply(path, function(x) {
-                if (is.na(x)) {
-                  NA_character_
-                } else {
-                  normalizePath(x, winslash = "/", mustWork = FALSE)
-                }
-              })
+              nas <- is.na(path)
+              if (any(!nas)) {
+                path[!nas] <- normalizePath(path[!nas], winslash = "/", mustWork = FALSE)
+              }
+              if (any(nas)) {
+                path[nas] <- NA_character_
+              }
+              
+              # path <- lapply(path, function(x) {
+              #   if (is.na(x)) {
+              #     NA_character_
+              #   } else {
+              #     normalizePath(x, winslash = "/", mustWork = FALSE)
+              #   }
+              # })
               # Eliot changed this Sept 24, 2019 because weird failures with getwd()
               # in non-interactive testing
               path <- unlist(path)
@@ -111,9 +119,7 @@ setMethod(
     if (isTRUE(all(is.na(path)))) {
       stop("Invalid path: cannot be NA.")
     } else {
-
       path <- normPath(path) # this is necessary to cover Windows double slash used on non-Windows
-
       dirsThatExist <- dir.exists(path)
       if (any(!dirsThatExist)) {
         isExistingFile <- file.exists(path)
