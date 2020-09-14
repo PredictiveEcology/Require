@@ -10,5 +10,9 @@ modifyList2(...)
 \item{...}{One or more named lists.}
 }
 \description{
+Simply a convenience around 
+\code{Reduce(modifyList, list(...))}
+}
+\details{
 
 }

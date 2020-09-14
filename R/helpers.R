@@ -266,6 +266,11 @@ invertList <- function(l) {
 #' \code{\link[base]{Reduce}}, so it can handle >2 lists. The 
 #' subsequent list elements that share a name will override 
 #' previous list elements with that same name.
+#' 
+#' @description 
+#' Simply a convenience around 
+#' \code{Reduce(modifyList, list(...))}
+#' 
 #' @export
 #' @param ... One or more named lists.
 #' @importFrom utils modifyList
