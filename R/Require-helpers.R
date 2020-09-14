@@ -1152,7 +1152,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     }
   }
   if (any(!onMRAN)) {
-    install.packagesArgs["type"] <- "source"
+    install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
     cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
     out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
       warn <- list()
@@ -1161,7 +1161,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       warn <- tryCatch(
         out <- do.call(install.packages,
                        # using ap meant that it was messing up the src vs bin paths
-                       append(list(unname(p), ipa))),
+                       append(list(unname(p)), ipa)),
         # ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
         error = function(x) {
           x$message
