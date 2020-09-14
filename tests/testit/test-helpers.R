@@ -81,3 +81,13 @@ testit::assert(length(b) == length(a[[1]]))
 out <- Require::tempfile2("rand")
 testit::assert(isTRUE(all.equal(Require::normPath(dirname(out)),
                                 Require::normPath(file.path(Require::tempdir2(), "rand")))))
+
+f1 <- list(a = 1, e= 3)
+f2 <- list(a = 2, b = 3)
+f3 <- list(d = 3, b = 5)
+a <- modifyList2(f1)
+b <- modifyList2(f1, f2)
+d <- modifyList2(f1, f2, f3)
+testit::assert(identical(a, f1))
+testit::assert(identical(modifyList(f1, f2), b))
+testit::assert(identical(modifyList(modifyList(f1, f2), f3), d))

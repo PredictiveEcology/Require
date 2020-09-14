@@ -779,7 +779,7 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
-    ipa <- Reduce(modifyList, list(install_githubArgs, dots))
+    ipa <- modifyList2(install_githubArgs, dots)
     outRes <- lapply(gitPkgDeps2, function(p) {
       tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
                warning = function(w) w,
@@ -892,7 +892,6 @@ available.packagesCached <- function(repos, purge) {
   }
 }
 
-#' @importFrom utils modifyList
 currentCRANPkgDates <- function(pkgs) {
   if (!exists("currentCranDates", envir = .pkgEnv[["pkgDep"]])) {
     message("Getting dates of current CRAN packages")
@@ -928,7 +927,6 @@ currentCRANPkgDates <- function(pkgs) {
   currentCranDates
 }
 
-#' @importFrom utils modifyList
 installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
   installFromCur <- "Local"
   installPkgNames <- toInstall[installFrom == installFromCur]$Package
@@ -962,7 +960,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
       if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- 
           setdiff(install.packagesArgs[buildBinIPA][[1]], "--build")
     }
-    ipa <- Reduce(modifyList, list(list(type = type), install.packagesArgs, dots, list(repos = NULL)))
+    ipa <- modifyList2(list(type = type), install.packagesArgs, dots, list(repos = NULL))
     warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
       warn <- suppressMessages(tryCatch({
         do.call(install.packages,
@@ -1033,7 +1031,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       dots$type <- toInstall$type
   }
 
-  ipa <- Reduce(modifyList, list(install.packagesArgs, dots))
+  ipa <- modifyList2(install.packagesArgs, dots)
   
   # manually override "type = 'both'" because it gets it wrong some of the time
   ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
@@ -1047,7 +1045,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       
       type <- c("source", "binary")[grepl("bin", ap[toInstall, on = onVec]$Repository) + 1]
       install.packagesArgs["type"] <- type
-      ipa <- modifyList(list(type = type), ipa)
+      ipa <- modifyList2(list(type = type), ipa)
     }
   }
   
@@ -1125,8 +1123,8 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     }
     out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN], v = installVersions[onMRAN], function(p, date, v, ...) {
       warn <- list()
-      ipa <- Reduce(modifyList, list(list(type = type), install.packagesArgs, dots, 
-                                     list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date))))
+      ipa <- modifyList2(install.packagesArgs, dots, 
+                         list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
       
       tryCatch(
         do.call(install.packages, append(list(p), ipa)),
@@ -1159,7 +1157,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
       warn <- list()
       p <- file.path(cranArchivePath, p)
-      ipa <- Reduce(modifyList, list(list(type = type), install.packagesArgs, dots, list(repos = NULL)))
+      ipa <- modifyList2(install.packagesArgs, dots, list(repos = NULL))
       warn <- tryCatch(
         out <- do.call(install.packages,
                        # using ap meant that it was messing up the src vs bin paths

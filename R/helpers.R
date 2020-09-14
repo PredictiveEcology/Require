@@ -259,3 +259,16 @@ invertList <- function(l) {
     lapply(indices[[1]], function(j) l[[j]][[i]])
   })
 }
+
+#' \code{modifyList} for >2 lists
+#' 
+#' This calls \code{\link[utils](modifyList)} iteratively using 
+#' \code{\link[base]{Reduce}}, so it can handle >2 lists. The 
+#' subsequent list elements that share a name will override 
+#' previous list elements with that same name.
+#' @export
+#' @param ... One or more named lists.
+#' @importFrom utils modifyList
+modifyList2 <- function(...) {
+  Reduce(modifyList, list(...))
+}
