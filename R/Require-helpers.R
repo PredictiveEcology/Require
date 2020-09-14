@@ -1032,6 +1032,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (!is.na(toInstall$type))
       dots$type <- toInstall$type
   }
+
+  ipa <- Reduce(modifyList, list(install.packagesArgs, dots))
   
   # manually override "type = 'both'" because it gets it wrong some of the time
   ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
@@ -1045,10 +1047,9 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       
       type <- c("source", "binary")[grepl("bin", ap[toInstall, on = onVec]$Repository) + 1]
       install.packagesArgs["type"] <- type
+      ipa <- modifyList(list(type = type), ipa)
     }
   }
-  
-  ipa <- Reduce(modifyList, list(list(type = type), install.packagesArgs, dots))
   
   warn <- tryCatch({
     out <- do.call(install.packages,
