@@ -10,11 +10,15 @@ modifyList2(...)
 \item{...}{One or more named lists.}
 }
 \description{
-Simply a convenience around 
-\code{Reduce(modifyList, list(...))}, with some checks.
+This calls \code{\link[utils]{modifyList}} iteratively using 
+\code{\link[base]{Reduce}}, so it can handle >2 lists. The 
+subsequent list elements that share a name will override 
+previous list elements with that same name. It also 
+will handle the case where any list is a \code{NULL}
 }
 \details{
-
+Simply a convenience around 
+\code{Reduce(modifyList, list(...))}, with some checks.
 }
 \examples{
 modifyList2(list(a = 1), list(a = 2, b = 2))

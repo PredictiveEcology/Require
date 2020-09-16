@@ -262,15 +262,17 @@ invertList <- function(l) {
 
 #' \code{modifyList} for >2 lists
 #' 
-#' This calls \code{\link[utils](modifyList)}} iteratively using 
+#' @description 
+#' This calls \code{\link[utils]{modifyList}} iteratively using 
 #' \code{\link[base]{Reduce}}, so it can handle >2 lists. The 
 #' subsequent list elements that share a name will override 
 #' previous list elements with that same name. It also 
 #' will handle the case where any list is a \code{NULL}
 #' 
-#' @description 
+#' @details 
 #' Simply a convenience around 
 #' \code{Reduce(modifyList, list(...))}, with some checks.
+#' 
 #' 
 #' @export
 #' @param ... One or more named lists.
