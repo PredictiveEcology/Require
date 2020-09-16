@@ -5,6 +5,7 @@ version 0.0.9
 ==============
 
 ## New features
+* `modifyList2`, a generalization of `utils::modifyList` for >2 lists. Also, can handle NULL lists.
 * slight improvements in speed for some internal functions
 * `detachAll` now unloads reverse depends of the depends, if they are loaded
 

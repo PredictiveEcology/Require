@@ -11,8 +11,13 @@ modifyList2(...)
 }
 \description{
 Simply a convenience around 
-\code{Reduce(modifyList, list(...))}
+\code{Reduce(modifyList, list(...))}, with some checks.
 }
 \details{
 
+}
+\examples{
+modifyList2(list(a = 1), list(a = 2, b = 2))
+modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
+modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
 }
