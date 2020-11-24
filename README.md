@@ -140,7 +140,8 @@ install_github("PredictiveEcology/Require", dependencies = TRUE)
 ### Development version
 
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development)](https://github.com/PredictiveEcology/Require/actions)
-[![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg)](https://codecov.io/gh/PredictiveEcology/Require) [![Join the chat at https://gitter.im/PredictiveEcology/Require](https://badges.gitter.im/PredictiveEcology/Require.svg)](https://gitter.im/PredictiveEcology/Require?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg)](https://codecov.io/gh/PredictiveEcology/Require)
+[![Join the chat at https://gitter.im/PredictiveEcology/Require](https://badges.gitter.im/PredictiveEcology/Require.svg)](https://gitter.im/PredictiveEcology/Require?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **Install from GitHub:**
 
