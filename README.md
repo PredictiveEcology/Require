@@ -4,6 +4,7 @@
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/Require)](https://cran.r-project.org/package=Require)
 [![CRAN Downloads](https://cranlogs.r-pkg.org/badges/grand-total/Require)](https://cran.r-project.org/package=Require)
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg)](https://github.com/PredictiveEcology/Require/actions)
+[![Join the chat at https://gitter.im/PredictiveEcology/Require](https://badges.gitter.im/PredictiveEcology/Require.svg)](https://gitter.im/PredictiveEcology/Require?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 <!-- badges: end -->
 
 A simple package for reproducible package management in R.
@@ -136,7 +137,6 @@ install_github("PredictiveEcology/Require", dependencies = TRUE)
 
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development)](https://github.com/PredictiveEcology/Require/actions)
 [![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg)](https://codecov.io/gh/PredictiveEcology/Require)
-[![Join the chat at https://gitter.im/PredictiveEcology/Require](https://badges.gitter.im/PredictiveEcology/Require.svg)](https://gitter.im/PredictiveEcology/Require?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **Install from GitHub:**
 
