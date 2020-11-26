@@ -506,7 +506,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- names(warn)
     }
     warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
-    if (any(!warnOut) | length(warnOut) == 0) {
+    if (any(!warnOut) || length(warnOut) == 0) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
     }
