@@ -53,10 +53,10 @@ utils::globalVariables(c(
 #'
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
-#' in `getOption("Require.RPackageCache")` whose default is `NULL`, meaning 
+#' in \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
 #' \emph{do not cache packages locally},
 #' and will reuse them if needed. To turn
-#' on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
+#' on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
 #'
 #' @note
 #' For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
