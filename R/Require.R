@@ -376,8 +376,9 @@ Require <- function(packages, packageVersionFile,
               
               checkPath(getOption("Require.RPackageCache"), create = TRUE)
               install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
-              if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
-                install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))
+              if (getOption("Require.buildBinaries", TRUE)) {
+                # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
+                  install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))
               }
               
               install_githubArgs["destdir"]<- install.packagesArgs["destdir"]

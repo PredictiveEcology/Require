@@ -506,7 +506,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- names(warn)
     }
     warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
-    if (isTRUE(any(!warnOut) || length(warnOut) == 0)) {
+    if (isTRUE(any(!warnOut) || length(warnOut) == 0) || is.null(warn)) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
     }
@@ -529,7 +529,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
     toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & !(installFrom %in% c("Fail", "Duplicate"))] 
     hasRequireDeps <- pkgDT[(installed == FALSE  | !correctVersion) & Package == "Require"] 
-    if (NROW(hasRequireDeps)) {
+    if (NROW(hasRequireDeps) && NROW(pkgDT[Package == "Require" & installed != TRUE])) {
       installRequire()
       pkgDT[Package == "Require", installed := TRUE]
     }
@@ -957,10 +957,10 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
-    if (isBin && buildBin) {
+    if (buildBin && !isBin) {
       if (any(buildBinDots)) dots[buildBinDots] <- setdiff(dots[buildBinIPA][[1]], "--build")
       if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- 
-          setdiff(install.packagesArgs[buildBinIPA][[1]], "--build")
+          list(union(install.packagesArgs[buildBinIPA][[1]], "--build"))
     }
     ipa <- modifyList2(list(type = type), install.packagesArgs, dots, list(repos = NULL))
     warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
