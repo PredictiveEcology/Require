@@ -366,11 +366,15 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
   out <- lapply(file, function(f) {
     out <- if (!is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) {
       if (purge && length(f) == 1) suppressWarnings(rm(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]))
-      get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+      if (length(f) == 1) {
+        get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])  
+      } else {
+        f
+      }
     } else {
       NULL
     }
-    if (is.null(out)) {
+    #if (is.null(out)) {
       if (length(f) == 1) {
         lines <- try(readLines(f))
         if (is(lines, "try-error")) { 
@@ -386,7 +390,7 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       if (length(out) == 0) out <- NA
       if (length(f) == 1) 
         assign(f, out, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
-    }
+    #}
     out
   })
   unlist(out)
