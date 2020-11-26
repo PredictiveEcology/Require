@@ -248,6 +248,15 @@ Require <- function(packages, packageVersionFile,
   
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
+    packages[, LibPath := checkPath(LibPath)]
+    if  (!any(packages$Package == "Require")) {
+      # Doesn't list Require
+      packages <- rbindlist(list(packages, 
+                                 data.table(Package = "Require", LibPath = .libPaths()[1], 
+                                            Version = as.character(packageVersion("Require")))), 
+                            fill = TRUE, use.names = TRUE)
+    }
+    packages <- packages[!packages$Package %in% .basePkgs]
     uniqueLibPaths <- unique(packages$LibPath)
     if (length(uniqueLibPaths) > 1) {
       dt <- data.table(libPathInSnapshot = uniqueLibPaths, newLibPaths = paste0(libPaths[1], "_", seq(length(uniqueLibPaths))))
@@ -433,6 +442,16 @@ Require <- function(packages, packageVersionFile,
       colsToKeep2 <- c("packageFullName", "Package", "LibPath", "Version", 
                        "repoLocation", "installFrom", "installResult")
       messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
+      nonZeroExit <- grepl("had non-zero", pkgDT[notCorrectly == TRUE, ..colsToKeep2]$installResult)
+      if (any(nonZeroExit)) {
+        nonZ <- pkgDT[notCorrectly == TRUE, ..colsToKeep2]
+        message("It may be necessary to simply run:\ninstall.packages(c('",paste(nonZ$Package, collapse = "', '"),"'))",
+                "\nbut this will cause a different version to be installed.")
+        if (!missing(packageVersionFile)) {
+          message("If packages are installed as per above, you may wish to rerun pkgSnapshot('",packageVersionFile,"') to update with the new version")
+        }
+      }
+      
     } else {
       if (!is.null(pkgDT$needInstall)) {
         nas <- is.na(pkgDT$needInstall)

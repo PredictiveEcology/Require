@@ -381,7 +381,7 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       } else {
         lines <- f
       }
-      vers_line <- lines[grep("^Version: *", lines)] # nolint
+      suppressWarnings(vers_line <- lines[grep("^Version: *", lines)]) # nolint
       out <- gsub("Version: ", "", vers_line)
       if (length(out) == 0) out <- NA
       if (length(f) == 1) 
@@ -407,7 +407,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
     } else {
       lines <- f
     }
-    vers_line <- lines[grep(paste0("^",other,": *"), lines)] # nolint
+    suppressWarnings(vers_line <- lines[grep(paste0("^",other,": *"), lines)]) # nolint
     out <- gsub(paste0(other, ": "), "", vers_line)
     if (length(out) == 0) out <- NA
     out
@@ -502,7 +502,10 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
     if (missing(warn)) warn <- warnings()
     if (is(warn, "simpleWarning"))
       warn <- warn$message
-    warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn)))
+    if (is(warn, "warnings")) {
+      warn <- names(warn)
+    }
+    warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
     if (any(!warnOut) | length(warnOut) == 0) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
@@ -520,7 +523,6 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' \code{remotes::install_github}, and \code{remotes::install_version}.
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
-  browser(expr = exists("._doInstalls_0"))
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
@@ -1008,7 +1010,6 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
 
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, 
                         repos = getOption("repos")) {
-  browser(expr = exists("._installCRAN_0"))
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
 
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
@@ -1098,7 +1099,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
 installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, repos = getOption("repos")) {
   Archive <- "Archive"
-  browser(expr = exists("._doInstalls_2"))
   message("installing older versions is still experimental and may cause package version conflicts")
   installPkgNames <- toInstall[installFrom == Archive]$Package
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
