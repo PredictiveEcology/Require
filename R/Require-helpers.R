@@ -961,10 +961,10 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
-    if (buildBin && !isBin) {
+    if (buildBin && isBin) {
       if (any(buildBinDots)) dots[buildBinDots] <- setdiff(dots[buildBinIPA][[1]], "--build")
       if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- 
-          list(union(install.packagesArgs[buildBinIPA][[1]], "--build"))
+          list(setdiff(install.packagesArgs[buildBinIPA][[1]], "--build"))
     }
     ipa <- modifyList2(list(type = type), install.packagesArgs, dots, list(repos = NULL))
     warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
