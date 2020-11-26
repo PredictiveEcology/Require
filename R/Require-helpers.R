@@ -179,49 +179,49 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                                           "ctime", "atime", "uid", "gid", "uname", "grname"),
             NULL)
         setDT(oldAvailableVersions)
-        tryCatch(
-        oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)],
-        error = function(x) browser())
-        needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
-        oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
-
-        oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE, allow.cartesian = TRUE]
-        oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
-        oldAvailableVersions[, correctVersionAvail :=
-                               .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
-        if (any(oldAvailableVersions$correctVersionAvail)) {
-          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
-          currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
-          oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
-          data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
-          bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
-
-          aa <- oldAvailableVersions[, list(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
-                                                       .I[correctVersionAvail == TRUE & archiveSource == "Archive"] + 1)), by = Package]
-          desiredDates <- oldAvailableVersions[aa$nextRow, list(Package, newMtime = mtime - 60*60*24)]
-
-          oldAvailableVersions <- desiredDates[bb, on = "Package"]
-          oldAvailableVersions[, mtime := newMtime]
-
-          oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
-          oldAvailableVersions[, repoLocation := archiveSource]
-          setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
-        }
-
-        oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
-        set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
-
-        notCorrectVersions1 <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
-                                             oldAvailableVersions), fill = TRUE, use.names = TRUE)
-        if (!identical(NROW(notCorrectVersions1), NROW(notCorrectVersions))) {
-          stillDontHave <- notCorrectVersions[!notCorrectVersions1, on = "packageFullName"]
-          if (NROW(stillDontHave)) {
-            stillDontHave[, repoLocation := "Unknown"]
-            notCorrectVersions1 <- rbindlist(list(notCorrectVersions1, stillDontHave), fill = TRUE, use.names = TRUE)
+        if (NROW(oldAvailableVersions)) {
+          oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)]
+          needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
+          oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
+          
+          oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE, allow.cartesian = TRUE]
+          oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
+          oldAvailableVersions[, correctVersionAvail :=
+                                 .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+          if (any(oldAvailableVersions$correctVersionAvail)) {
+            oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
+            currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
+            oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
+            data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
+            bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
+            
+            aa <- oldAvailableVersions[, list(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
+                                                            .I[correctVersionAvail == TRUE & archiveSource == "Archive"] + 1)), by = Package]
+            desiredDates <- oldAvailableVersions[aa$nextRow, list(Package, newMtime = mtime - 60*60*24)]
+            
+            oldAvailableVersions <- desiredDates[bb, on = "Package"]
+            oldAvailableVersions[, mtime := newMtime]
+            
+            oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
+            oldAvailableVersions[, repoLocation := archiveSource]
+            setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
           }
+          
+          oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
+          set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
+          
+          notCorrectVersions1 <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
+                                                oldAvailableVersions), fill = TRUE, use.names = TRUE)
+          if (!identical(NROW(notCorrectVersions1), NROW(notCorrectVersions))) {
+            stillDontHave <- notCorrectVersions[!notCorrectVersions1, on = "packageFullName"]
+            if (NROW(stillDontHave)) {
+              stillDontHave[, repoLocation := "Unknown"]
+              notCorrectVersions1 <- rbindlist(list(notCorrectVersions1, stillDontHave), fill = TRUE, use.names = TRUE)
+            }
+          }
+          
+          notCorrectVersions <- notCorrectVersions1
         }
-        
-        notCorrectVersions <- notCorrectVersions1
       }
       # do GitHub second
       if (any(notCorrectVersions$repoLocation == "GitHub")) {
