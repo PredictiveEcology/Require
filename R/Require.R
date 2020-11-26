@@ -3,7 +3,7 @@ utils::globalVariables(c(
   "bothDepAndOrig", "Branch", "compareVersionAvail", "correctVersion", "correctVersionAvail",
   "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
-  "libPaths", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
+  "libPaths", "LibPath", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
   "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
   "Repo", "repoLocation", "RepoWBranch", "loadOrder", "Version", "versionSpec","detached", "."
 ))
