@@ -621,8 +621,8 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   else {
     grepPackage <- "Package *: *"
     grepVersion <- "Version *: *"
-    pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE))
-    vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE))
+    suppressWarnings(pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE)))
+    suppressWarnings(vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE)))
     paste(pkg, vers, sep = "_", paste0(which, "_", keepVersionNumber, collapse = "_"))
   }
   if (!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || isTRUE(purge)) {

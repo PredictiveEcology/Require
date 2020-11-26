@@ -179,49 +179,49 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                                           "ctime", "atime", "uid", "gid", "uname", "grname"),
             NULL)
         setDT(oldAvailableVersions)
-        tryCatch(
-        oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)],
-        error = function(x) browser())
-        needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
-        oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
-
-        oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE, allow.cartesian = TRUE]
-        oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
-        oldAvailableVersions[, correctVersionAvail :=
-                               .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
-        if (any(oldAvailableVersions$correctVersionAvail)) {
-          oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
-          currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
-          oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
-          data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
-          bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
-
-          aa <- oldAvailableVersions[, list(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
-                                                       .I[correctVersionAvail == TRUE & archiveSource == "Archive"] + 1)), by = Package]
-          desiredDates <- oldAvailableVersions[aa$nextRow, list(Package, newMtime = mtime - 60*60*24)]
-
-          oldAvailableVersions <- desiredDates[bb, on = "Package"]
-          oldAvailableVersions[, mtime := newMtime]
-
-          oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
-          oldAvailableVersions[, repoLocation := archiveSource]
-          setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
-        }
-
-        oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
-        set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
-
-        notCorrectVersions1 <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
-                                             oldAvailableVersions), fill = TRUE, use.names = TRUE)
-        if (!identical(NROW(notCorrectVersions1), NROW(notCorrectVersions))) {
-          stillDontHave <- notCorrectVersions[!notCorrectVersions1, on = "packageFullName"]
-          if (NROW(stillDontHave)) {
-            stillDontHave[, repoLocation := "Unknown"]
-            notCorrectVersions1 <- rbindlist(list(notCorrectVersions1, stillDontHave), fill = TRUE, use.names = TRUE)
+        if (NROW(oldAvailableVersions)) {
+          oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)]
+          needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
+          oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
+          
+          oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE, allow.cartesian = TRUE]
+          oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
+          oldAvailableVersions[, correctVersionAvail :=
+                                 .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+          if (any(oldAvailableVersions$correctVersionAvail)) {
+            oldAvailableVersions[correctVersionAvail == TRUE, archiveSource := "Archive"]
+            currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
+            oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
+            data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
+            bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
+            
+            aa <- oldAvailableVersions[, list(nextRow = min(na.rm = TRUE, max(.I, na.rm = TRUE),
+                                                            .I[correctVersionAvail == TRUE & archiveSource == "Archive"] + 1)), by = Package]
+            desiredDates <- oldAvailableVersions[aa$nextRow, list(Package, newMtime = mtime - 60*60*24)]
+            
+            oldAvailableVersions <- desiredDates[bb, on = "Package"]
+            oldAvailableVersions[, mtime := newMtime]
+            
+            oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
+            oldAvailableVersions[, repoLocation := archiveSource]
+            setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
           }
+          
+          oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
+          set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
+          
+          notCorrectVersions1 <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
+                                                oldAvailableVersions), fill = TRUE, use.names = TRUE)
+          if (!identical(NROW(notCorrectVersions1), NROW(notCorrectVersions))) {
+            stillDontHave <- notCorrectVersions[!notCorrectVersions1, on = "packageFullName"]
+            if (NROW(stillDontHave)) {
+              stillDontHave[, repoLocation := "Unknown"]
+              notCorrectVersions1 <- rbindlist(list(notCorrectVersions1, stillDontHave), fill = TRUE, use.names = TRUE)
+            }
+          }
+          
+          notCorrectVersions <- notCorrectVersions1
         }
-        
-        notCorrectVersions <- notCorrectVersions1
       }
       # do GitHub second
       if (any(notCorrectVersions$repoLocation == "GitHub")) {
@@ -366,11 +366,15 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
   out <- lapply(file, function(f) {
     out <- if (!is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])) {
       if (purge && length(f) == 1) suppressWarnings(rm(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]))
-      get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+      if (length(f) == 1) {
+        get0(f, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])  
+      } else {
+        f
+      }
     } else {
       NULL
     }
-    if (is.null(out)) {
+    #if (is.null(out)) {
       if (length(f) == 1) {
         lines <- try(readLines(f))
         if (is(lines, "try-error")) { 
@@ -381,12 +385,12 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       } else {
         lines <- f
       }
-      vers_line <- lines[grep("^Version: *", lines)] # nolint
+      suppressWarnings(vers_line <- lines[grep("^Version: *", lines)]) # nolint
       out <- gsub("Version: ", "", vers_line)
       if (length(out) == 0) out <- NA
       if (length(f) == 1) 
         assign(f, out, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
-    }
+    #}
     out
   })
   unlist(out)
@@ -407,7 +411,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
     } else {
       lines <- f
     }
-    vers_line <- lines[grep(paste0("^",other,": *"), lines)] # nolint
+    suppressWarnings(vers_line <- lines[grep(paste0("^",other,": *"), lines)]) # nolint
     out <- gsub(paste0(other, ": "), "", vers_line)
     if (length(out) == 0) out <- NA
     out
@@ -502,8 +506,11 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
     if (missing(warn)) warn <- warnings()
     if (is(warn, "simpleWarning"))
       warn <- warn$message
-    warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn)))
-    if (any(!warnOut) | length(warnOut) == 0) {
+    if (is(warn, "warnings")) {
+      warn <- names(warn)
+    }
+    warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
+    if (isTRUE(any(!warnOut) || length(warnOut) == 0) || is.null(warn)) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
     }
@@ -520,14 +527,13 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' \code{remotes::install_github}, and \code{remotes::install_version}.
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
-  browser(expr = exists("._doInstalls_0"))
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
 
     toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & !(installFrom %in% c("Fail", "Duplicate"))] 
     hasRequireDeps <- pkgDT[(installed == FALSE  | !correctVersion) & Package == "Require"] 
-    if (NROW(hasRequireDeps)) {
+    if (NROW(hasRequireDeps) && NROW(pkgDT[Package == "Require" & installed != TRUE])) {
       installRequire()
       pkgDT[Package == "Require", installed := TRUE]
     }
@@ -955,10 +961,10 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
-    if (isBin && buildBin) {
+    if (buildBin && !isBin) {
       if (any(buildBinDots)) dots[buildBinDots] <- setdiff(dots[buildBinIPA][[1]], "--build")
       if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <- 
-          setdiff(install.packagesArgs[buildBinIPA][[1]], "--build")
+          list(union(install.packagesArgs[buildBinIPA][[1]], "--build"))
     }
     ipa <- modifyList2(list(type = type), install.packagesArgs, dots, list(repos = NULL))
     warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
@@ -1008,7 +1014,6 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
 
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, 
                         repos = getOption("repos")) {
-  browser(expr = exists("._installCRAN_0"))
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
 
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
@@ -1098,7 +1103,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
 installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, repos = getOption("repos")) {
   Archive <- "Archive"
-  browser(expr = exists("._doInstalls_2"))
   message("installing older versions is still experimental and may cause package version conflicts")
   installPkgNames <- toInstall[installFrom == Archive]$Package
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
