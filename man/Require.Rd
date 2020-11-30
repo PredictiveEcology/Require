@@ -154,10 +154,10 @@ the current collection of packages and versions.
 \section{Local Cache of Packages}{
 
 When installing new packages, `Require` will put all source and binary files
-in `getOption("Require.RPackageCache")` whose default is `NULL`, meaning 
+in \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
 \emph{do not cache packages locally},
 and will reuse them if needed. To turn
-on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
+on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
 }
 
 \examples{
@@ -250,7 +250,19 @@ Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
 # Persistent separate packages
 ############################################################################
 setLibPaths("~/TempLib2", standAlone = TRUE)
-Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
+Require::Require("SpaDES") # not necessary to specify standAlone here because .libPaths are set
+
+############################################################################
+# Installing on many machines that are connected by a shared drive
+############################################################################
+options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly. 
+                                                       # Put thes in a shared location.
+# May need to install Require in main user library before setting library paths for project
+if (!require("Require")) install.packages("Require") 
+setLibPaths("./packages") # not shared location for library path; no longer using main user lib
+Require::Require(packageVersionFile = "./packageVersions.txt",
+                 standAlone = TRUE)
+
 }
 
 }

@@ -3,7 +3,7 @@ utils::globalVariables(c(
   "bothDepAndOrig", "Branch", "compareVersionAvail", "correctVersion", "correctVersionAvail",
   "DESCFile", "depOrOrig", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
-  "libPaths", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
+  "libPaths", "LibPath", "loaded", "needInstall", "OlderVersionsAvailable", "OlderVersionsAvailableCh",
   "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
   "Repo", "repoLocation", "RepoWBranch", "loadOrder", "Version", "versionSpec","detached", "."
 ))
@@ -53,10 +53,10 @@ utils::globalVariables(c(
 #'
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
-#' in `getOption("Require.RPackageCache")` whose default is `NULL`, meaning 
+#' in \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
 #' \emph{do not cache packages locally},
 #' and will reuse them if needed. To turn
-#' on this feature, set `option("Require.RPackageCache" = "someExistingFolder")`.
+#' on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
 #'
 #' @note
 #' For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
@@ -219,7 +219,19 @@ utils::globalVariables(c(
 #' # Persistent separate packages
 #' ############################################################################
 #' setLibPaths("~/TempLib2", standAlone = TRUE)
-#' Require::Require("SpaDES") # not necessary to specifify standAlone here because .libPaths are set
+#' Require::Require("SpaDES") # not necessary to specify standAlone here because .libPaths are set
+#' 
+#' ############################################################################
+#' # Installing on many machines that are connected by a shared drive
+#' ############################################################################
+#' options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly. 
+#'                                                        # Put thes in a shared location.
+#' # May need to install Require in main user library before setting library paths for project
+#' if (!require("Require")) install.packages("Require") 
+#' setLibPaths("./packages") # not shared location for library path; no longer using main user lib
+#' Require::Require(packageVersionFile = "./packageVersions.txt",
+#'                  standAlone = TRUE)
+#' 
 #' }
 #'
 Require <- function(packages, packageVersionFile,
@@ -242,25 +254,21 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
   
-  install.packagesArgs["INSTALL_opts"] <- '--no-multiarch'
-  install_githubArgs["INSTALL_opts"] <- '--no-multiarch'
-  if (is.null(list(...)$destdir)) {
-    if (!is.null(getOption("Require.RPackageCache"))) {
-      checkPath(getOption("Require.RPackageCache"), create = TRUE)
-      install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
-      if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
-        install.packagesArgs[["INSTALL_opts"]] <- c('--build', install.packagesArgs[["INSTALL_opts"]])
-      }
-      
-      install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
-    }
-  } 
   if (missing(libPaths))
     libPaths <- .libPaths()
   suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
   
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
+    packages[, LibPath := checkPath(LibPath)]
+    # if  (!any(packages$Package == "Require")) {
+    #   # Doesn't list Require
+    #   packages <- rbindlist(list(packages, 
+    #                              data.table(Package = "Require", LibPath = .libPaths()[1], 
+    #                                         Version = as.character(packageVersion("Require")))), 
+    #                         fill = TRUE, use.names = TRUE)
+    # }
+    packages <- packages[!packages$Package %in% .basePkgs]
     uniqueLibPaths <- unique(packages$LibPath)
     if (length(uniqueLibPaths) > 1) {
       dt <- data.table(libPathInSnapshot = uniqueLibPaths, newLibPaths = paste0(libPaths[1], "_", seq(length(uniqueLibPaths))))
@@ -362,6 +370,34 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
         pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
         pkgDT <- rmDuplicatePkgs(pkgDT)
+        if (any(!is.na(pkgDT$needInstall))) {
+          install.packagesArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install.packagesArgs[["INSTALL_opts"]]))
+          install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
+          if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
+            if (!is.null(getOption("Require.RPackageCache"))) {
+              ip <- .installed.pkgs()
+              isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
+              if (isTRUE(isCranCacheInstalled)) {
+                message("Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
+                        "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
+                        "To use only crancache's caching mechanism, set both:", 
+                        "\noptions('Require.RPackageCache' = NULL)\n",
+                        "Sys.setenv('CRANCACHE_DISABLE' = '')")
+                Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+              }
+              
+              checkPath(getOption("Require.RPackageCache"), create = TRUE)
+              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
+              if (getOption("Require.buildBinaries", TRUE)) {
+                # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
+                  install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))
+              }
+              
+              install_githubArgs["destdir"]<- install.packagesArgs["destdir"]
+            }
+          }
+        }
+        
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs,
                             install = install, ...)
@@ -419,6 +455,16 @@ Require <- function(packages, packageVersionFile,
       colsToKeep2 <- c("packageFullName", "Package", "LibPath", "Version", 
                        "repoLocation", "installFrom", "installResult")
       messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
+      nonZeroExit <- grepl("had non-zero", pkgDT[notCorrectly == TRUE, ..colsToKeep2]$installResult)
+      if (any(nonZeroExit)) {
+        nonZ <- pkgDT[notCorrectly == TRUE, ..colsToKeep2]
+        message("It may be necessary to simply run:\ninstall.packages(c('",paste(nonZ$Package, collapse = "', '"),"'))",
+                "\nbut this will cause a different version to be installed.")
+        if (!missing(packageVersionFile)) {
+          message("If packages are installed as per above, you may wish to rerun pkgSnapshot('",packageVersionFile,"') to update with the new version")
+        }
+      }
+      
     } else {
       if (!is.null(pkgDT$needInstall)) {
         nas <- is.na(pkgDT$needInstall)

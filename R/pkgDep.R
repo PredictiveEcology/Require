@@ -621,8 +621,8 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   else {
     grepPackage <- "Package *: *"
     grepVersion <- "Version *: *"
-    pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE))
-    vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE))
+    suppressWarnings(pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE)))
+    suppressWarnings(vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE)))
     paste(pkg, vers, sep = "_", paste0(which, "_", keepVersionNumber, collapse = "_"))
   }
   if (!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || isTRUE(purge)) {
@@ -749,3 +749,33 @@ whichToDILES <- function(which) {
 DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_path", 
                                   SIMPLIFY = FALSE)
 
+#' Package dependencies when one or more packages removed
+#' 
+#' This is primarily for package developers. It allows the testing
+#' of what the recursive dependencies would be if a package was removed
+#' from the immediate dependencies.
+#' @param pkg A package name to be testing the dependencies
+#' @param depsRemoved A vector of package names who are to be "removed"
+#'   from the \code{pkg} immediate dependencies
+#' @export
+#' @return 
+#' A character vector of the packages that would removed from recursive dependencies 
+#' of \code{pkg}
+#' if \code{depsRemoved} were removed from first level dependencies
+#' @examples 
+#' pkgDepIfDepRemoved("Require", "remotes")
+pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
+  if (length(pkg)) {
+    p2 <- pkgDep2(pkg, recursive = TRUE)
+    p1 <- sort(extractPkgName(pkgDep(pkg, recursive = TRUE)[[1]]))
+    p2Clean <- sort(
+      unique(
+        extractPkgName(
+          setdiff(
+            c(extractPkgName(names(p2)), 
+              unlist(unname(p2[!extractPkgName(names(p2)) %in% depsRemoved]))), 
+            depsRemoved))))
+    pkg <- paste(paste(setdiff(p1, p2Clean), collapse = ", "))
+  }
+  return(pkg)
+}

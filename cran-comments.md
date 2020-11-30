@@ -1,6 +1,6 @@
 ## Updated release
 
-This is a feature enhancement and bugfix release. 
+This is a update that deals with new CRAN failures as well as minor updates. 
 See `NEWS.md` for complete list of changes.
 
 ## Test environments
@@ -17,22 +17,14 @@ See `NEWS.md` for complete list of changes.
 ### Winbuilder -- all passed Sept 8, 2020
 * Windows                 (win-builder), R 3.6.3
 * Windows                 (win-builder), R 4.0.2
-* Windows                 (win-builder), R 4.1.0
-
-### rhub -- all passed Sept 8, 2020
-* Fedora Linux                      (clang, gfortran)
-* Windows     (Windows Server 2008 R2 SP1, 32/64 bit)
-* Ubuntu Linux            (16.04 LTS, R-release, GCC)
+* Windows                 (win-builder), R 4.1.0 (2020-11-30)
 
 ## R CMD check results
 
 There were no ERRORs, or WARNINGs.  The only NOTE concerns the "unable to verify current time".
 
-```
-* checking for future file timestamps ... NOTE
-unable to verify current time
-```
+There was one NOTE through about the Maintainer. The correct maintainer is <eliot.mcintire@canada.ca>, as indicated.
 
 ## Downstream dependencies
 
-We have tested this verison of the package with several downstream dependencies, and have found no problems.
+We have tested this version of the package with several downstream dependencies. There are minor updates related to function documentation updates. These will be pushed to dependencies after CRAN acceptance.

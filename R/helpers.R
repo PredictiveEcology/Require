@@ -25,13 +25,21 @@ setMethod("normPath",
           signature(path = "character"),
           definition = function(path) {
             if (length(path) > 0) {
-              path <- lapply(path, function(x) {
-                if (is.na(x)) {
-                  NA_character_
-                } else {
-                  normalizePath(x, winslash = "/", mustWork = FALSE)
-                }
-              })
+              nas <- is.na(path)
+              if (any(!nas)) {
+                path[!nas] <- normalizePath(path[!nas], winslash = "/", mustWork = FALSE)
+              }
+              if (any(nas)) {
+                path[nas] <- NA_character_
+              }
+              
+              # path <- lapply(path, function(x) {
+              #   if (is.na(x)) {
+              #     NA_character_
+              #   } else {
+              #     normalizePath(x, winslash = "/", mustWork = FALSE)
+              #   }
+              # })
               # Eliot changed this Sept 24, 2019 because weird failures with getwd()
               # in non-interactive testing
               path <- unlist(path)
@@ -111,9 +119,7 @@ setMethod(
     if (isTRUE(all(is.na(path)))) {
       stop("Invalid path: cannot be NA.")
     } else {
-
       path <- normPath(path) # this is necessary to cover Windows double slash used on non-Windows
-
       dirsThatExist <- dir.exists(path)
       if (any(!dirsThatExist)) {
         isExistingFile <- file.exists(path)
@@ -252,4 +258,31 @@ invertList <- function(l) {
   lapply(indices[[2]], function(i) {
     lapply(indices[[1]], function(j) l[[j]][[i]])
   })
+}
+
+#' \code{modifyList} for >2 lists
+#' 
+#' @description 
+#' This calls \code{\link[utils]{modifyList}} iteratively using 
+#' \code{\link[base]{Reduce}}, so it can handle >2 lists. The 
+#' subsequent list elements that share a name will override 
+#' previous list elements with that same name. It also 
+#' will handle the case where any list is a \code{NULL}
+#' 
+#' @details 
+#' Simply a convenience around 
+#' \code{Reduce(modifyList, list(...))}, with some checks.
+#' 
+#' 
+#' @export
+#' @param ... One or more named lists.
+#' @importFrom utils modifyList
+#' @examples 
+#' modifyList2(list(a = 1), list(a = 2, b = 2))
+#' modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
+#' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
+modifyList2 <- function(...) {
+  dots <- list(...)
+  dots <- dots[!unlist(lapply(dots, is.null))]
+  do.call(Reduce, alist(modifyList, dots))
 }

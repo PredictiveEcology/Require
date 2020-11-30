@@ -1,5 +1,24 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+
+version 0.0.9
+==============
+
+## New features
+* `modifyList2`, a generalization of `utils::modifyList` for >2 lists. Also, can handle NULL lists.
+* slight improvements in speed for some internal functions
+* `detachAll` now unloads reverse depends of the depends, if they are loaded
+
+## Bug fixes
+* deals with more cases of installing arbitrary packages from a packageVersion.txt file
+* Doesn't mistakenly create a new, empty directory of packages to accommodate 2 LibPaths from packageVersion.txt file, *if the second (or more) LibPath* is full of base packages.
+* Handles better false positives (packages didn't install properly when they did) and some false negatives (no error collected at end when there was an error in installing)
+* better suggestion of what to do in some edge cases of failed package installs
+* captures and deals with a bug in `install.packages` (`argument "av2" is missing, with no default`) on R-devel for Windows (on Sept 09, 2020). May be transient.
+* Was, by default, installing from `source` on Windows. Fixed.
+
+
+
 version 0.0.8
 ==============
 

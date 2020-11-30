@@ -65,8 +65,12 @@ isInstalled <- tryCatch({
   }, error = function(x) FALSE)
 testit::assert(isTRUE(isInstalled))
 out <- detachAll(c("Require", "TimeWarp", "sdfd"))
+out <- out[names(out) != "testit"]
+expectedPkgs <- c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1)
+keep <- intersect(names(expectedPkgs), names(out))
+out <- out[keep]
 testit::assert(identical(sort(out), 
-                         sort(c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1))))
+                         sort(expectedPkgs)))
 testit::assert(names(out)[out == 2] == "TimeWarp")
 
 # detach("package:TimeWarp", unload = TRUE)
