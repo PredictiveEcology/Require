@@ -1,5 +1,8 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.10
+==============
+
 
 version 0.0.9
 ==============
