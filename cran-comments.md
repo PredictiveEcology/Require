@@ -27,4 +27,4 @@ There was one NOTE through about the Maintainer. The correct maintainer is <elio
 
 ## Downstream dependencies
 
-We have tested this version of the package with several downstream dependencies. There are minor updates related to function documentation updates. These will be pushed to dependencies after CRAN acceptance.
+We have tested this version of the package with several downstream dependencies. There are no downstream problems.
