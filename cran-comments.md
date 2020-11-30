@@ -1,8 +1,6 @@
 ## Updated release
 
-This is a maintenance release which fixes issues during CRAN tests. 
-We have also removed the overriding of a user-selected CRAN repository.
-We default to the user's choice of repo, only setting it when none is set ("", NULL, or @CRAN@) (e.g., in some tests) and it is non-interactive.
+This is a update that deals with new CRAN failures as well as minor updates. 
 See `NEWS.md` for complete list of changes.
 
 ## Test environments
@@ -19,12 +17,7 @@ See `NEWS.md` for complete list of changes.
 ### Winbuilder
 * Windows                 (win-builder), R 3.6.3
 * Windows                 (win-builder), R 4.0.2
-* Windows                 (win-builder), R 4.1.0 (2020-08-12 r78957)
-
-### rhub
-* Fedora Linux                      (clang, gfortran), R 4.1.0 (2020-08-12)
-* Windows     (Windows Server 2008 R2 SP1, 32/64 bit), R 4.1.0 (2020-08-12 r78957)
-* Ubuntu Linux                             (16.04 LTS, R-release, GCC)
+* Windows                 (win-builder), R 4.1.0 (2020-11-30)
 
 ## R CMD check results
 
@@ -34,4 +27,4 @@ There was one NOTE through about the Maintainer. The correct maintainer is <elio
 
 ## Downstream dependencies
 
-We have tested this version of the package with several downstream dependencies, and have found no problems.
+We have tested this version of the package with several downstream dependencies. There are minor updates related to function documentation updates. These will be pushed to dependencies after CRAN acceptance.
