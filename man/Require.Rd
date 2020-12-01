@@ -96,6 +96,7 @@ A single key function, 'Require' that wraps 'install.packages',
     that allows for reproducible workflows. As with other functions in a
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
+    Maturing.
 
 This is an "all in one" function that will run \code{install.packages} for
 CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
