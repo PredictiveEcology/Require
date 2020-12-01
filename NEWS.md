@@ -1,5 +1,12 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.10
+==============
+
+## Bug fixes
+* CRAN error on one flavour of Linux
+* erroneous checkPath error creating `Specified path xxxx doesn't exist` even though it does.
+
 
 version 0.0.9
 ==============
