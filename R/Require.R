@@ -260,7 +260,6 @@ Require <- function(packages, packageVersionFile,
   
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
-    packages[, LibPath := checkPath(LibPath)]
     # if  (!any(packages$Package == "Require")) {
     #   # Doesn't list Require
     #   packages <- rbindlist(list(packages, 
@@ -295,6 +294,7 @@ Require <- function(packages, packageVersionFile,
       } else {
         return(invisible(out))
       }
+      packages[, LibPath := .libPaths()[1]]  
     }
     if (NROW(packages)) {
       set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
