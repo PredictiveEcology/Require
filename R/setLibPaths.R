@@ -12,8 +12,10 @@
 #' @param libPaths A new path to append to, or replace all existing user
 #'   components of \code{.libPath()}
 #' @param RprofileToUpdate Logical or Character string. If \code{TRUE}, then
-#'   this function will put several lines of code in the default ~/.Rprofile file
-#'   setting up the package libraries for this and all future sessions. To reset back 
+#'   this function will put several lines of code in the default \code{~/.Rprofile} 
+#'   file setting up the package libraries for this and all future sessions. If
+#'   a character string, then this should be the path to an \code{.Rprofile} file.
+#'   To reset back 
 #'   to normal, run \code{setLibPaths(RprofileToUpdate = TRUE)} without a libPath.
 #' @inheritParams Require
 #' @return
@@ -94,7 +96,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, RprofileToUpd
   
 }
 
-checkMissingLibPaths <- function(libPaths, RprofileToUpdate) {
+checkMissingLibPaths <- function(libPaths, RprofileToUpdate = NULL) {
   if (!is.null(RprofileToUpdate)) {
     if (isTRUE(RprofileToUpdate)) RprofileToUpdate <- "~/.Rprofile"
     ll <- readLines(RprofileToUpdate)
@@ -114,6 +116,6 @@ checkMissingLibPaths <- function(libPaths, RprofileToUpdate) {
   stop("libPaths cannot be missing; please supply a folder to install R packages to")
 }
 
-resetRprofileMessage <- function(RprofileToUpdate) {
+resetRprofileMessage <- function(RprofileToUpdate = "~/.Rprofile") {
   paste0("message(\"To reset libPaths to default, type: \nRequire::setLibPaths(RprofileToUpdate = '",RprofileToUpdate,"')\") ")
 }

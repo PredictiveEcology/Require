@@ -20,8 +20,10 @@ installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 
 \item{RprofileToUpdate}{Logical or Character string. If \code{TRUE}, then
-this function will put several lines of code in the default ~/.Rprofile file
-setting up the package libraries for this and all future sessions. To reset back 
+this function will put several lines of code in the default \code{~/.Rprofile} 
+file setting up the package libraries for this and all future sessions. If
+a character string, then this should be the path to an \code{.Rprofile} file.
+To reset back 
 to normal, run \code{setLibPaths(RprofileToUpdate = TRUE)} without a libPath.}
 }
 \value{
