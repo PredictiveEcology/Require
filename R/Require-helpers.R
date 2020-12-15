@@ -1048,7 +1048,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
         if (!is.na(toInstall$versionSpec) && !isTRUE(toInstall$correctVersionAvail)) 
           onVec <- c("Package", "Version" = "versionSpec")
       
-      type <- c("source", "binary")[grepl("bin", ap[toInstall, on = onVec]$Repository) + 1]
+      type <- c("source", "binary")[any(grepl("bin", ap[toInstall, on = onVec]$Repository)) + 1]
       install.packagesArgs["type"] <- type
       ipa <- modifyList2(list(type = type), ipa)
     }
@@ -1305,7 +1305,7 @@ rmDuplicatePkgs <- function(pkgDT) {
       if (!is.null(pkgDT$versionSpec)) {
         if (.N > 1) {
           if (all(!is.na(versionSpec))) {
-            out <- .I[which(versionSpec == max(as.package_version(versionSpec)))]
+            out <- .I[which(versionSpec == max(as.package_version(versionSpec)))[1]]
           }
         }
       }
