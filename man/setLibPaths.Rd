@@ -4,7 +4,7 @@
 \alias{setLibPaths}
 \title{Set \code{.libPaths}}
 \usage{
-setLibPaths(libPaths, standAlone = TRUE, RprofileToUpdate = NULL)
+setLibPaths(libPaths, standAlone = TRUE, updateRprofile = NULL)
 }
 \arguments{
 \item{libPaths}{A new path to append to, or replace all existing user
@@ -19,12 +19,12 @@ components of \code{.libPath()}}
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{RprofileToUpdate}{Logical or Character string. If \code{TRUE}, then
+\item{updateRprofile}{Logical or Character string. If \code{TRUE}, then
 this function will put several lines of code in the default \code{~/.Rprofile} 
 file setting up the package libraries for this and all future sessions. If
 a character string, then this should be the path to an \code{.Rprofile} file.
 To reset back 
-to normal, run \code{setLibPaths(RprofileToUpdate = TRUE)} without a libPath.}
+to normal, run \code{setLibPaths(updateRprofile = TRUE)} without a libPath.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which
@@ -52,6 +52,14 @@ setLibPaths(orig) # reset
 
 # will have 2 or more paths
 setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
+
+# update the .libPaths(); update in the ~/.Rprofile file, so it persists following R restart
+# add .libPaths() updates to Rprofile file
+setLibPaths("~/newProjectLib", UpdateRprofile = TRUE) 
+# Can restart R, and changes will stay
+
+# remove the custom .libPaths()
+setLibPaths(UpdateRprofile= TRUE) # remove from Rprofile because libPath arg is empty
 
 }
 }
