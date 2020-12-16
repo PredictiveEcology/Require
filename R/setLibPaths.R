@@ -11,7 +11,7 @@
 #'
 #' @param libPaths A new path to append to, or replace all existing user
 #'   components of \code{.libPath()}
-#' @param updateRprofile Logical or Character string. If \code{TRUE}, then
+#' @param updateRprofile Logical or Character string. If \code{TRUE}, the default, then
 #'   this function will put several lines of code in the default \code{.Rprofile} 
 #'   file setting up the package libraries for this and all future sessions. If
 #'   a character string, then this should be the path to an \code{.Rprofile} file.
@@ -37,7 +37,6 @@
 #' setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
 #' 
 #' # update the .libPaths(); update in the project-local .Rprofile file, so it persists following R restart
-#' # add .libPaths() updates to Rprofile file
 #' Require::setLibPaths("~/newProjectLib", updateRprofile = TRUE) 
 #' # Can restart R, and changes will stay
 #' 
@@ -45,13 +44,16 @@
 #' Require::setLibPaths(updateRprofile= TRUE) # remove from Rprofile because libPath arg is empty
 #'
 #' }
-setLibPaths <- function(libPaths, standAlone = TRUE, updateRprofile = NULL) {
+setLibPaths <- function(libPaths, standAlone = TRUE, updateRprofile = TRUE) {
   oldLibPaths <- .libPaths()
   if (missing(libPaths)) {
     return(checkMissingLibPaths(libPaths, updateRprofile))
   } ## End missing
   libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
-
+  if (!is.null(updateRprofile)) {
+    setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
+  }
+  
   shim_fun <- .libPaths
   shim_env <- new.env(parent = environment(shim_fun))
   if (isTRUE(standAlone)) {
@@ -64,45 +66,50 @@ setLibPaths <- function(libPaths, standAlone = TRUE, updateRprofile = NULL) {
   environment(shim_fun) <- shim_env
   shim_fun(unique(libPaths))
   message(".libPaths() is now: ", paste(.libPaths(), collapse = ", "))
-  if (!is.null(updateRprofile)) {
-    setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
-  }
   return(invisible(oldLibPaths))
 }
 
 setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofile = NULL) {
   updateRprofile <- checkTRUERprofile(updateRprofile)
-  if (!file.exists(updateRprofile))
-    file.create(updateRprofile)
-  if (any(grepl("setLibPaths start", readLines(".Rprofile")))) {
-    message("There is already a setLibPaths in the .Rprofile, skipping")
-  } else {
-    bodyFn <- format(body(Require::setLibPaths))
-    lineWCheckPath <- grepl("checkPath.normPath", bodyFn)
-    bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths)) dir.create(libPaths)"
-    lineWReturn <- grepl("return.*oldLibPaths", bodyFn)
-    bodyFn <- bodyFn[!lineWReturn] 
-    bodyFn <- gsub("tail", "utils::tail", bodyFn)
-    bodyFn <- gsub("shim_env", ".shim_env", bodyFn)
-    bodyFn <- gsub("shim_fun", ".shim_fun", bodyFn)
-    bodyFn <- gsub("oldLibPaths", ".oldLibPaths", bodyFn)
-    lineWMissing <- which(grepl("missing.libPaths", bodyFn))
-    bodyFn <- bodyFn[-(lineWMissing:(lineWMissing+2))] 
-    lineWRprofileToUpdate <- which(grepl("is\\.null\\(updateRprofile\\)", bodyFn))
-    bodyFn <- bodyFn[-(lineWRprofileToUpdate:(lineWRprofileToUpdate+2))] 
-    bodyFn <- gsub("\\<standAlone\\>", "._standAlone", bodyFn)
-    bodyFn <- gsub("\\.libPaths", "origDotlibPaths", bodyFn)
-    bodyFn <- gsub("\\<libPaths\\>", "._libPaths", bodyFn)
-    bodyFn <- gsub("origDotlibPaths", ".libPaths", bodyFn)
-    bodyFn <- c("\n#### setLibPaths start #### DO NOT EDIT BETWEEN THESE LINES",
-                "### DELETE THESE LINES BELOW TO RESTORE STANDARD R Package LIBRARY", 
-                paste0("._libPaths <- '", libPaths, "'"), 
-                paste0("._standAlone <- ", standAlone), 
-                bodyFn, 
-                resetRprofileMessage(updateRprofile),
-                "#### setLibPaths end ####")
-    message("Updating ", updateRprofile, "; this will set new libPaths for R packages even after restarting R")
-    cat(bodyFn, file = ".Rprofile", append = TRUE, sep = "\n")
+  if (is.character(updateRprofile)) {
+    if (!file.exists(updateRprofile)) {
+      file.create(updateRprofile)
+      if (file.exists(".gitignore")) {
+        if (!isTRUE(any(grepl(".Rprofile", readLines(".gitignore")))))
+          cat(".Rprofile", file = ".gitignore", append = TRUE)
+      }
+    }
+    if (any(grepl("setLibPaths start", readLines(".Rprofile")))) {
+      message("There is already a setLibPaths in the .Rprofile, skipping")
+    } else {
+      bodyFn <- format(body(Require::setLibPaths))
+      lineWCheckPath <- grepl("checkPath.normPath", bodyFn)
+      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths)) dir.create(libPaths)"
+      lineWReturn <- grepl("return.*oldLibPaths", bodyFn)
+      bodyFn <- bodyFn[!lineWReturn] 
+      bodyFn <- gsub("tail", "utils::tail", bodyFn)
+      bodyFn <- gsub("shim_env", ".shim_env", bodyFn)
+      bodyFn <- gsub("shim_fun", ".shim_fun", bodyFn)
+      bodyFn <- gsub("oldLibPaths", ".oldLibPaths", bodyFn)
+      lineWMissing <- which(grepl("missing.libPaths", bodyFn))
+      bodyFn <- bodyFn[-(lineWMissing:(lineWMissing+2))] 
+      lineWRprofileToUpdate <- which(grepl("is\\.null\\(updateRprofile\\)", bodyFn))
+      bodyFn <- bodyFn[-(lineWRprofileToUpdate:(lineWRprofileToUpdate+2))] 
+      bodyFn <- gsub("\\<standAlone\\>", "._standAlone", bodyFn)
+      bodyFn <- gsub("\\.libPaths", "origDotlibPaths", bodyFn)
+      bodyFn <- gsub("\\<libPaths\\>", "._libPaths", bodyFn)
+      bodyFn <- gsub("origDotlibPaths", ".libPaths", bodyFn)
+      bodyFn <- c("\n#### setLibPaths start #### DO NOT EDIT BETWEEN THESE LINES",
+                  "### DELETE THESE LINES BELOW TO RESTORE STANDARD R Package LIBRARY", 
+                  paste0("### ", prevLibPathsText, paste(.libPaths(), collapse = ", ")),
+                  paste0("._libPaths <- '", libPaths, "'"), 
+                  paste0("._standAlone <- ", standAlone), 
+                  bodyFn, 
+                  resetRprofileMessage(updateRprofile),
+                  "#### setLibPaths end ####")
+      message("Updating ", updateRprofile, "; this will set new libPaths for R packages even after restarting R")
+      cat(bodyFn, file = ".Rprofile", append = TRUE, sep = "\n")
+    }
   }
   
 }
@@ -110,28 +117,37 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
 checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
   if (!is.null(updateRprofile)) {
     updateRprofile <- checkTRUERprofile(updateRprofile)
-    ll <- readLines(updateRprofile)
-    bounds <- which(grepl("#### setLibPaths", ll))
-    if (length(bounds)) {
-      message("removing custom libPaths in .Rprofile")
-      if (identical("", ll[bounds[1] - 1])) {
-        bounds[1] <- bounds[1] - 1
+    if (is.character(updateRprofile)) {
+      ll <- readLines(updateRprofile)
+      bounds <- which(grepl("#### setLibPaths", ll))
+      if (length(bounds)) {
+        message("removing custom libPaths in .Rprofile")
+        if (identical("", ll[bounds[1] - 1])) {
+          bounds[1] <- bounds[1] - 1
+        }
+        prevLines <- grepl(prevLibPathsText, ll)
+        prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
+        setLibPaths(prevLibPaths)
+        ll <- ll[-(bounds[1]:bounds[2])]
+        writeLines(ll, con = updateRprofile)
+      } else {
+        message("There was no custom libPaths setting in .Rprofile; nothing changed")
       }
-      ll <- ll[-(bounds[1]:bounds[2])]
-      writeLines(ll, con = updateRprofile)
-    } else {
-      message("There was no custom libPaths setting in .Rprofile; nothing changed")
+      return(invisible())
     }
-    return(invisible())
-  }
+  } 
   stop("libPaths cannot be missing; please supply a folder to install R packages to")
+  return(invisible())
 }
 
 resetRprofileMessage <- function(updateRprofile = ".Rprofile") {
-  paste0("message(\"To reset libPaths to default, run: Require::setLibPaths(updateRprofile = '",updateRprofile,"')\") ")
+  paste0("message(\"To reset libPaths to previous state, run: Require::setLibPaths(updateRprofile = TRUE)\") ")
 }
 
 checkTRUERprofile <- function(updateRprofile) {
   if (isTRUE(updateRprofile)) updateRprofile <- ".Rprofile"
   updateRprofile
 }
+
+
+prevLibPathsText <- "Previous .libPaths: "
