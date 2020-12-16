@@ -38,11 +38,11 @@
 #' 
 #' # update the .libPaths(); update in the project-local .Rprofile file, so it persists following R restart
 #' # add .libPaths() updates to Rprofile file
-#' setLibPaths("~/newProjectLib", updateRprofile = TRUE) 
+#' Require::setLibPaths("~/newProjectLib", updateRprofile = TRUE) 
 #' # Can restart R, and changes will stay
 #' 
 #' # remove the custom .libPaths()
-#' setLibPaths(updateRprofile= TRUE) # remove from Rprofile because libPath arg is empty
+#' Require::setLibPaths(updateRprofile= TRUE) # remove from Rprofile because libPath arg is empty
 #'
 #' }
 setLibPaths <- function(libPaths, standAlone = TRUE, updateRprofile = NULL) {
@@ -109,7 +109,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
 
 checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
   if (!is.null(updateRprofile)) {
-    updatRprofile <- checkTRUERprofile(updateRprofile)
+    updateRprofile <- checkTRUERprofile(updateRprofile)
     ll <- readLines(updateRprofile)
     bounds <- which(grepl("#### setLibPaths", ll))
     if (length(bounds)) {
