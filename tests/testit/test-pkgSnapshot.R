@@ -1,5 +1,5 @@
 if (interactive() && FALSE) {
-  try(setLibPaths(origLibPaths, standAlone = TRUE), silent = TRUE)
+  try(setLibPaths(origLibPaths, standAlone = TRUE, updateRprofile = FALSE), silent = TRUE)
   # devtools::load_all("~/GitHub/Require")
   # library(profvis)
   aa <- pkgSnapshot()
@@ -11,14 +11,14 @@ if (interactive() && FALSE) {
     tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
-    try(setLibPaths(origLibPaths[[1]]))
+    try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE))
     options("Require.persistentPkgEnv" = TRUE,
             "Require.Home" = "~/GitHub/Require",
             "Require.RPackageCache" = "~/._RPackageCache/",
             "install.packages.check.source" = "never",
             "install.packages.compile.from.source" = "never",
             "Require.unloadNamespaces" = TRUE)
-    origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]))
+    origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
     
     localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
     localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")

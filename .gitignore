@@ -52,3 +52,4 @@ packageVersions*.txt
 tests/testit/tmp.txt
 
 tmp*
+.Rprofile

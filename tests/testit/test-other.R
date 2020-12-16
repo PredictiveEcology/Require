@@ -44,6 +44,12 @@ testit::assert(isTRUE(out['data.table'] == 1))
 warn <- tryCatch(warningCantInstall("devtolls"), warning = function(w) w$message)
 testit::assert(grepl("you will likely", warn))
 
-origLP <- setLibPaths(tempdir2(basename(tempdir())))
+origLP <- setLibPaths(tempdir2(basename(tempdir())), updateRprofile = FALSE)
 warn <- tryCatch(Require("data.table"), warning = function(w) w$message)
-setLibPaths(origLP)
+setLibPaths(origLP, updateRprofile = FALSE)
+
+# Test the setLibPaths with changed .Rprofile
+origDir <- setwd(tempdir())
+setLibPaths("newProjectLib") # set a new R package library locally
+setLibPaths() # reset it to original
+setwd(origDir)
