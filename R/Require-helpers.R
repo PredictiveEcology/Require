@@ -798,13 +798,18 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     maxAttempts <- 0
     
     warn <- outRes
-    if (is(warn[[1]], "simpleWarning")) {
+    if (is(warn[[1]], "simpleWarning") || is(warn[[1]], "install_error")) {
       warning(warn)
     }
     
     if (any(attempts >= maxAttempts)) {
       failedAttempts <- attempts[attempts >= maxAttempts]
-      outRes[attempts >= maxAttempts] <- "Failed"
+      if (is.character(warn[[1]]$message)) {
+        outRes[attempts >= maxAttempts] <- warn[[1]]$message
+      } else {
+        outRes[attempts >= maxAttempts] <- "Failed"  
+      }
+      
     }
     isTryError <- unlist(lapply(outRes, is, "try-error"))
     gitPkgs1 <- gitPkgs[!names(gitPkgs) %in% names(outRes)[!isTryError]]
