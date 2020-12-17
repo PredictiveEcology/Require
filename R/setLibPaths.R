@@ -134,12 +134,15 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
           newFileLine <- grepl(newFileTrigger, ll)
           newFile <- gsub(paste0(".*", newFileTrigger, "([[:alpha:]]+) .*"), "\\1", ll[newFileLine])
           wasNew <- as.logical(newFile)
-          if (isTRUE(wasNew)) file.remove(updateRprofile)
           prevLines <- grepl(prevLibPathsText, ll)
           prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
           setLibPaths(prevLibPaths, updateRprofile = FALSE)
-          ll <- ll[-(bounds[1]:bounds[2])]
-          writeLines(ll, con = updateRprofile)
+          if (isTRUE(wasNew) && which(newFileLine) == 2) { # needs to be NEW and starts on 2nd line
+            file.remove(updateRprofile) 
+          } else {
+            ll <- ll[-(bounds[1]:bounds[2])]
+            writeLines(ll, con = updateRprofile)
+          }
         } else {
           noChange <- TRUE
         }
