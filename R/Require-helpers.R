@@ -510,9 +510,12 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- names(warn)
     }
     warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
-    if (isTRUE(any(!warnOut) || length(warnOut) == 0) || is.null(warn)) {
+    if (isTRUE(any(!warnOut) || length(warnOut) == 0) && is.null(warn)) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
+    }
+    if (!is.null(warn)) {
+      set(pkgDT, which(pkgDT$Package %in% extractPkgName(names(warn))), "installed", FALSE)
     }
   }
   pkgDT[]
@@ -793,6 +796,12 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     })
     attempts[names(outRes)] <- attempts[names(outRes)] + 1
     maxAttempts <- 0
+    
+    warn <- outRes
+    if (is(warn[[1]], "simpleWarning")) {
+      warning(warn)
+    }
+    
     if (any(attempts >= maxAttempts)) {
       failedAttempts <- attempts[attempts >= maxAttempts]
       outRes[attempts >= maxAttempts] <- "Failed"
@@ -1188,7 +1197,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
   gitPkgNames <- toInstall[installFrom == "GitHub"]
   out5 <- install_githubV(gitPkgNames, install_githubArgs = install_githubArgs, dots = dots)
-  updateInstalled(pkgDT, gitPkgNames$Package, warnings())
+  updateInstalled(pkgDT, gitPkgNames$Package, out5)
 }
 
 installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs, install_githubArgs,
