@@ -38,7 +38,7 @@ if (interactive()) {
   
   pkgDepTest1 <- Require::pkgDep("Require")
   pkgDepTest2 <- Require::pkgDep2("Require")
-  orig <- Require::setLibPaths(tmpdir, standAlone = TRUE)
+  orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
   origDir <- setwd("~/GitHub/");
   localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
   localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
@@ -60,7 +60,7 @@ if (interactive()) {
   
   on.exit({
     message(".libPaths during packagesLong: ", .libPaths())
-    Require::setLibPaths(orig)
+    Require::setLibPaths(orig, updateRprofile = FALSE)
     })
   
   testit::assert(length(pkgDepTest1) == 1)

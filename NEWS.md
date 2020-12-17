@@ -1,5 +1,15 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.11
+==============
+
+## New features
+* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to .libPaths() to persist through an R restart
+
+## Bug fixes
+* minor edge cases with complex loading of many packages
+
+
 version 0.0.10
 ==============
 

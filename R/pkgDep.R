@@ -238,7 +238,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
   needed <- Map(desc_path = desc_paths, pkg = packagesToCheck, 
                 pkgNoVersion = pkgsNoVersionToCheck, 
                 function(desc_path, pkg, pkgNoVersion) {
-    browser(expr = exists("aaaaa"))
     if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {

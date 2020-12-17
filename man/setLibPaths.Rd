@@ -4,7 +4,7 @@
 \alias{setLibPaths}
 \title{Set \code{.libPaths}}
 \usage{
-setLibPaths(libPaths, standAlone = TRUE)
+setLibPaths(libPaths, standAlone = TRUE, updateRprofile = TRUE)
 }
 \arguments{
 \item{libPaths}{A new path to append to, or replace all existing user
@@ -18,6 +18,12 @@ components of \code{.libPath()}}
                   This can be create dramatically faster
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
+
+\item{updateRprofile}{Logical or Character string. If \code{TRUE}, the default, then
+this function will put several lines of code in the current directory's \code{.Rprofile} 
+file setting up the package libraries for this and future sessions. If
+a character string, then this should be the path to an \code{.Rprofile} file.
+To reset back to normal, run \code{setLibPaths()} without a libPath.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which
@@ -28,23 +34,32 @@ As when setting \code{options}, this will return the previous state of
 \description{
 This will set the \code{.libPaths()} by either adding a new path to
 it if \code{standAlone = FALSE}, or will concatenate
-\code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
+\code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}. Currently,
+the default is to make this new \code{.libPaths()} "sticky", meaning it beomces 
+associated with the current directory even through a restart of R. It does this
+by adding and/updating the .Rprofile file in the current directory. If this
+current director is a project, then the project will have the new \code{.libPaths()}
+associated with it, even through an R restart.
 }
 \details{
-This code was modified from \url{https://github.com/milesmcbain}.
+This details of this code were modified from \url{https://github.com/milesmcbain}.
 A different, likely non-approved by CRAN approach that also works is here:
 \url{https://stackoverflow.com/a/36873741/3890027}.
 }
 \examples{
+origDir <- setwd(tempdir())
+setLibPaths("newProjectLib") # set a new R package library locally
+setLibPaths() # reset it to original
+setwd(origDir)
 \dontrun{
-orig <- setLibPaths("~/newProjectLib") # will only have 2 paths,
-                                       # this and the last one in .libPaths()
-.libPaths() # see the 2 paths
-setLibPaths(orig) # reset
-.libPaths() # see the 2 original paths back
-
-# will have 2 or more paths
+# Using standAlone = FALSE means that newly installed packages will be installed
+#   in the new package library, but loading packages can come from any of the ones
+#   listed in .libPaths()
 setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
+# Can restart R, and changes will stay
+
+# remove the custom .libPaths()
+Require::setLibPaths() # reset to previous; remove from Rprofile because libPath arg is empty
 
 }
 }

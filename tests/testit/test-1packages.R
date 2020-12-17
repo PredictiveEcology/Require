@@ -89,7 +89,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   detach("package:TimeWarp", unload = TRUE)
 
   # Test snapshot file
-  orig <- setLibPaths(dir2, standAlone = TRUE)
+  orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
   pkgSnapFile <- tempfile()
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
@@ -102,7 +102,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
   
-  setLibPaths(orig)
+  setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
   out <- pkgSnapshot()
