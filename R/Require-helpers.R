@@ -804,12 +804,12 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     
     if (any(attempts >= maxAttempts)) {
       failedAttempts <- attempts[attempts >= maxAttempts]
-      if (is.character(warn[[1]]$message)) {
-        outRes[attempts >= maxAttempts] <- warn[[1]]$message
-      } else {
-        outRes[attempts >= maxAttempts] <- "Failed"  
+      outRes[attempts >= maxAttempts] <- "Failed"  
+      if (any(identical("message", names(warn[[1]]) ))) {
+        if (is.character(warn[[1]]$message)) {
+          outRes[attempts >= maxAttempts] <- warn[[1]]$message
+        }   
       }
-      
     }
     isTryError <- unlist(lapply(outRes, is, "try-error"))
     gitPkgs1 <- gitPkgs[!names(gitPkgs) %in% names(outRes)[!isTryError]]
