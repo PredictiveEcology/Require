@@ -87,7 +87,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
     } else {
       bodyFn <- format(body(Require::setLibPaths))
       lineWCheckPath <- grepl("checkPath.normPath", bodyFn)
-      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths)) dir.create(libPaths)"
+      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths[1])) dir.create(libPaths[1])"
       lineWReturn <- grepl("return.*oldLibPaths", bodyFn)
       bodyFn <- bodyFn[!lineWReturn] 
       bodyFn <- gsub("tail", "utils::tail", bodyFn)
