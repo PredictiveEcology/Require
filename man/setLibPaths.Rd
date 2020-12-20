@@ -4,7 +4,11 @@
 \alias{setLibPaths}
 \title{Set \code{.libPaths}}
 \usage{
-setLibPaths(libPaths, standAlone = TRUE, updateRprofile = TRUE)
+setLibPaths(
+  libPaths,
+  standAlone = TRUE,
+  updateRprofile = getOption("Require.updateRprofile", FALSE)
+)
 }
 \arguments{
 \item{libPaths}{A new path to append to, or replace all existing user
@@ -19,11 +23,13 @@ components of \code{.libPath()}}
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{updateRprofile}{Logical or Character string. If \code{TRUE}, the default, then
+\item{updateRprofile}{Logical or Character string. If \code{TRUE}, then
 this function will put several lines of code in the current directory's \code{.Rprofile} 
 file setting up the package libraries for this and future sessions. If
 a character string, then this should be the path to an \code{.Rprofile} file.
-To reset back to normal, run \code{setLibPaths()} without a libPath.}
+To reset back to normal, run \code{setLibPaths()} without a libPath. Default:
+\code{getOption("Require.updateRprofile", FALSE)}, meaning \code{FALSE}, but it
+can be set with an option or within a single call.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which

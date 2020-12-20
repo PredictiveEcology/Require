@@ -63,6 +63,7 @@ RequireOptions <- function() {
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
        Require.unloadNamespaces = TRUE,
+       Require.updateRprofile = FALSE,
        Require.verbose = 0
   )
 }
