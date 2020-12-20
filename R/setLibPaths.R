@@ -106,7 +106,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
                          " # DO NOT EDIT BETWEEN THESE LINES"),
                   "### DELETE THESE LINES BELOW TO RESTORE STANDARD R Package LIBRARY", 
                   paste0("### ", prevLibPathsText, paste(.libPaths(), collapse = ", ")),
-                  paste0("._libPaths <- '", libPaths, "'"), 
+                  paste0("._libPaths <- c('", paste(libPaths, collapse = "', '"), "')"), 
                   paste0("._standAlone <- ", standAlone), 
                   bodyFn, 
                   resetRprofileMessage(updateRprofile),
