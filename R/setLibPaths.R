@@ -123,6 +123,8 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
 
 checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
   if (!is.null(updateRprofile)) {
+    if (updateRprofile == FALSE && missing(libPaths))
+      updateRprofile <- TRUE
     updateRprofile <- checkTRUERprofile(updateRprofile)
     noChange <- FALSE
     if (is.character(updateRprofile)) {
