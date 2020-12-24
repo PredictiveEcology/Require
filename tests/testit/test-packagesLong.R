@@ -268,9 +268,9 @@ if (interactive()) {
     }
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
     if (any("TimeWarp" %in% Require::extractPkgName(pkg))) {
-      unloadNamespace("Holidays")
-      unloadNamespace("TimeWarp")
-      remove.packages(c("Holidays", "TimeWarp"))
+      try(unloadNamespace("Holidays"))
+      try(unloadNamespace("TimeWarp"))
+      try(remove.packages(c("Holidays", "TimeWarp")))
     }
   }
   unlink(tmpdir, recursive = TRUE)

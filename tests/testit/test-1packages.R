@@ -1,8 +1,8 @@
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 if (Sys.info()["user"] == "emcintir") {
   outOpts <- options(Require.Home = "~/GitHub/Require",
-                              Require.RPackageCache = "~/._RPackageCache",
-                              "install.packages.compile.from.source" = "no")
+                     Require.RPackageCache = "~/.cache",
+                     "install.packages.compile.from.source" = "no")
   on.exit({
     options(outOpts)
   }, add = TRUE)
