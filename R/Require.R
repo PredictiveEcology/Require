@@ -53,7 +53,8 @@ utils::globalVariables(c(
 #'
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
-#' in \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
+#' in an R-version specific subfolder of 
+#' \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
 #' \emph{do not cache packages locally},
 #' and will reuse them if needed. To turn
 #' on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
@@ -374,7 +375,7 @@ Require <- function(packages, packageVersionFile,
           install.packagesArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install.packagesArgs[["INSTALL_opts"]]))
           install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
           if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-            if (!is.null(getOption("Require.RPackageCache"))) {
+            if (!is.null(rpackageFolder(getOption("Require.RpackageCache")))) {
               ip <- .installed.pkgs()
               isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
               if (isTRUE(isCranCacheInstalled)) {
@@ -386,8 +387,8 @@ Require <- function(packages, packageVersionFile,
                 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
               }
               
-              checkPath(getOption("Require.RPackageCache"), create = TRUE)
-              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
+              checkPath(rpackageFolder(getOption("Require.RpackageCache")), create = TRUE)
+              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RpackageCache"))), "/")
               if (getOption("Require.buildBinaries", TRUE)) {
                 # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
                   install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))

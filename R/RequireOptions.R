@@ -20,7 +20,7 @@
 #'       is to have packages not be cached locally so each install of the same version will
 #'       be from the original source, e.g., CRAN, GitHub.
 #'   }
-#'   \item{\code{buildBinarieis}}{
+#'   \item{\code{buildBinaries}}{
 #'     Default: \code{TRUE}. Only relevant on *nix systems and if
 #'     \code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE}, then
 #'        \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the

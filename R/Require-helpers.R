@@ -277,8 +277,8 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
   }
 
   # Check for local copy of src or binary first
-  if (!is.null(getOption("Require.RPackageCache"))) {
-    localFiles <- dir(getOption("Require.RPackageCache"), full.names = TRUE)
+  if (!is.null(rpackageFolder(getOption("Require.RpackageCache")))) {
+    localFiles <- dir(rpackageFolder(getOption("Require.RpackageCache")), full.names = TRUE)
     # sanity check -- there are bad files, quite often
     fileSizeEq0 <- file.size(localFiles) == 0
     if (any(fileSizeEq0)) {
@@ -338,7 +338,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                            "and let Require try to find the binary on CRAN (or MRAN if older)? Y or N: "))
             out <- readline()
             if (identical("y", tolower(out))) {
-              unlink(file.path(getOption("Require.RPackageCache"), 
+              unlink(file.path(rpackageFolder(getOption("Require.RpackageCache")), 
                                neededVersions[srcFromCRAN]$localFileName))
             }
           }
@@ -963,7 +963,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     dots$dependencies <- NA # This was NA; which means let install.packages do it. But, failed in some cases:
 
   message("Using local cache of ", paste(toIn$localFileName, collapse = ", "))
-  installPkgNames <- normPath(file.path(getOption("Require.RPackageCache"), toIn$localFileName))
+  installPkgNames <- normPath(file.path(rpackageFolder(getOption("Require.RpackageCache")), toIn$localFileName))
   names(installPkgNames) <- installPkgNames
 
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
@@ -1240,7 +1240,7 @@ copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
     newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
     if (length(newFiles)) {
-      newNames <- file.path(getOption("Require.RPackageCache"), unique(basename(newFiles)))
+      newNames <- file.path(rpackageFolder(getOption("Require.RpackageCache")), unique(basename(newFiles)))
       if (all(!file.exists(newNames)))
         try(file.link(newFiles, newNames))
       unlink(newFiles)
@@ -1439,3 +1439,6 @@ warningCantInstall <- function(pkgs) {
           "\n-----\n...before any other packages get loaded")
   
 }
+
+rpackageFolder <- function(path = getOption("Require.RPackageCache")) 
+  file.path(path, paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1]))
