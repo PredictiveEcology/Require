@@ -50,6 +50,6 @@ setLibPaths(origLP, updateRprofile = FALSE)
 
 # Test the setLibPaths with changed .Rprofile
 origDir <- setwd(tempdir())
-setLibPaths("newProjectLib") # set a new R package library locally
+setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package library locally
 setLibPaths() # reset it to original
 setwd(origDir)
