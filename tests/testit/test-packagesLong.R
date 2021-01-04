@@ -45,7 +45,7 @@ if (interactive()) {
   
   vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
   vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
-  vers <- gsub("^(.+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
+  vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
   
   localBinsOrd <- order(package_version(vers), decreasing = TRUE)
   localBins <- localBins[localBinsOrd]
