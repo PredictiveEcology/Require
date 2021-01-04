@@ -319,7 +319,8 @@ Require <- function(packages, packageVersionFile,
     on.exit({Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)}, add = TRUE)
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
-  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))}, 
+          add = TRUE)
   
   # Rm base packages -- this will happen in getPkgDeps if that is run
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]

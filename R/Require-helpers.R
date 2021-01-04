@@ -1440,8 +1440,10 @@ warningCantInstall <- function(pkgs) {
   
 }
 
-rpackageFolder <- function(path = getOption("Require.RPackageCache"))  {
+rpackageFolder <- function(path = getOption("Require.RPackageCache"), exact = FALSE)  {
   if (!is.null(path)) {
+    if (isTRUE(exact))
+      return(path)
     path <- path[1]
     rversion <- paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1])
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
@@ -1457,15 +1459,17 @@ rpackageFolder <- function(path = getOption("Require.RPackageCache"))  {
   }
 }
 
-checkLibPaths <- function(libPaths, ifMissing) {
+checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
   if (missing(libPaths)) {
     if (missing(ifMissing))
       return(.libPaths())
     else {
       # rpackageFolder(unlist(lapply(ifMissing, checkPath, create = TRUE)))
-      unlist(lapply(ifMissing, function(lp) rpackageFolder(checkPath(lp, create = TRUE))))
+      unlist(lapply(ifMissing, function(lp) 
+        rpackageFolder(checkPath(lp, create = TRUE), exact = exact)))
     }
   } else {
-    unlist(lapply(libPaths, function(lp) rpackageFolder(checkPath(lp, create = TRUE))))
+    unlist(lapply(libPaths, function(lp) 
+      rpackageFolder(checkPath(lp, create = TRUE), exact = exact)))
   }
 }

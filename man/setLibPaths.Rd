@@ -7,7 +7,8 @@
 setLibPaths(
   libPaths,
   standAlone = TRUE,
-  updateRprofile = getOption("Require.updateRprofile", FALSE)
+  updateRprofile = getOption("Require.updateRprofile", FALSE),
+  exact = FALSE
 )
 }
 \arguments{
@@ -30,6 +31,12 @@ a character string, then this should be the path to an \code{.Rprofile} file.
 To reset back to normal, run \code{setLibPaths()} without a libPath. Default:
 \code{getOption("Require.updateRprofile", FALSE)}, meaning \code{FALSE}, but it
 can be set with an option or within a single call.}
+
+\item{exact}{Logical. This function will automatically append the R version number to the
+\code{libPaths} to maintain separate R package libraries for each R version
+on the system. There are some cases where this behaviour is not desireable. 
+Set \code{exact} to \code{TRUE} to override this automatic appending and use
+the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which
