@@ -1,3 +1,5 @@
+origLibPathsAllTests <- .libPaths()
+
 #library(Require)
 a <- pkgDep("Require", recursive = TRUE)
 testit::assert(length(a) == 1)
@@ -77,3 +79,6 @@ if (interactive()) {
 pkg <- c("Require (==0.0.6)")
 d <- pkgDepAlt(pkg) # GitHub package and local packages
 testit::assert(identical(sort(c("data.table (>= 1.10.4)", "remotes")), sort(d[[1]])))
+
+if (!identical(origLibPathsAllTests, .libPaths()))
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)

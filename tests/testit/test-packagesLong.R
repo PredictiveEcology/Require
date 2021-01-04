@@ -1,3 +1,5 @@
+origLibPathsAllTests <- .libPaths()
+
 if (interactive()) {
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   #tmpdir <-
@@ -280,5 +282,7 @@ if (interactive()) {
   unlink(tmpdir, recursive = TRUE)
   
 }
+if (!identical(origLibPathsAllTests, .libPaths()))
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 
 # unlink(tmpdir, recursive = TRUE)

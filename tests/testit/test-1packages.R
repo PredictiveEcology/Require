@@ -1,3 +1,5 @@
+origLibPathsAllTests <- .libPaths()
+
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 if (Sys.info()["user"] == "emcintir") {
   outOpts <- options(Require.Home = "~/GitHub/Require",
@@ -180,5 +182,6 @@ if (interactive()) {
                    warning = function(x) x)
 }
 
-
 options(opt)
+if (!identical(origLibPathsAllTests, .libPaths()))
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)

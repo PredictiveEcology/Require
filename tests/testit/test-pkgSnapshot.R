@@ -1,5 +1,5 @@
 if (interactive() && FALSE) {
-  try(setLibPaths(origLibPaths, standAlone = TRUE, updateRprofile = FALSE), silent = TRUE)
+  origLibPathsAllTests <- .libPaths()
   # devtools::load_all("~/GitHub/Require")
   # library(profvis)
   aa <- pkgSnapshot()
@@ -58,6 +58,8 @@ if (interactive() && FALSE) {
     testit::assert(NROW(anyMissing) == 0)
   
   }
+  if (!identical(origLibPathsAllTests, .libPaths()))
+    Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 } else {
   message("Please run test-pkgSnapshot manually")
 }

@@ -1,3 +1,5 @@
+origLibPathsAllTests <- .libPaths()
+
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))
 testit::assert(is.character(out))
 testit::assert(is.numeric(as.numeric(gsub(".*: ", "", out)[2])))
@@ -91,3 +93,6 @@ d <- modifyList2(f1, f2, f3)
 testit::assert(identical(a, f1))
 testit::assert(identical(modifyList(f1, f2), b))
 testit::assert(identical(modifyList(modifyList(f1, f2), f3), d))
+
+if (!identical(origLibPathsAllTests, .libPaths()))
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)

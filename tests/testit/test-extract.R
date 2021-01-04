@@ -1,3 +1,5 @@
+origLibPathsAllTests <- .libPaths()
+
 library(Require)
 
 a <- extractPkgName("Require (>=0.0.1)")
@@ -35,3 +37,6 @@ testit::assert("hasSubFolder" %in% colnames(out))
 out <- getPkgVersions("Require (>=0.0.1)")
 testit::assert(is.data.table(out))
 testit::assert(all(c("versionSpec", "hasVersionSpec") %in% colnames(out)))
+
+if (!identical(origLibPathsAllTests, .libPaths()))
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)

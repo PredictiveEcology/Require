@@ -1,3 +1,5 @@
+origLibPathsAllTests <- .libPaths()
+
 # Test misspelled
 out <- tryCatch(Require("data.tt"), warning = function(w) w)
 testit::assert(is(out, "simpleWarning"))
@@ -53,3 +55,6 @@ origDir <- setwd(tempdir())
 setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package library locally
 setLibPaths() # reset it to original
 setwd(origDir)
+
+if (!identical(origLibPathsAllTests, .libPaths()))
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
