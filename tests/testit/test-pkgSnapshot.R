@@ -11,7 +11,7 @@ if (interactive() && FALSE) {
     tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
-    try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE))
+    try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
     options("Require.persistentPkgEnv" = TRUE,
             "Require.Home" = "~/GitHub/Require",
             "Require.RPackageCache" = "~/._RPackageCache/",
