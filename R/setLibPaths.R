@@ -50,10 +50,12 @@
 setLibPaths <- function(libPaths, standAlone = TRUE, 
                         updateRprofile = getOption("Require.updateRprofile", FALSE)) {
   oldLibPaths <- .libPaths()
+  
   if (missing(libPaths)) {
     return(checkMissingLibPaths(libPaths, updateRprofile))
   } ## End missing
-  libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
+  libPaths <- checkLibPaths(libPaths)
+  #libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
   if (!is.null(updateRprofile)) {
     setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
   }

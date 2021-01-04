@@ -255,8 +255,9 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
   
-  if (missing(libPaths))
-    libPaths <- .libPaths()
+  libPaths <- checkLibPaths(libPaths = libPaths)
+  # if (missing(libPaths))
+  #   libPaths <- .libPaths()
   suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
   
   if (!missing(packageVersionFile)) {
@@ -489,3 +490,4 @@ Require <- function(packages, packageVersionFile,
     return(invisible(out))
   }
 }
+

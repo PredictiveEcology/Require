@@ -54,7 +54,7 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-dir1 <- tempdir2("test1")
+dir1 <- Require:::rpackageFolder(tempdir2("test1"))
 options("Require.verbose" = TRUE)
 out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
 testit::assert(data.table::is.data.table(attr(out, "Require")))
@@ -80,7 +80,7 @@ remove.packages("TimeWarp", lib = dir1)
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-  dir2 <- tempdir2("test2")
+  dir2 <- Require:::rpackageFolder(tempdir2("test2"))
   pvWant <- "1.0-7"
   inst <- Require::Require(paste0("TimeWarp (<=", pvWant, ")"), standAlone = TRUE,
                            libPaths = dir2, dependencies = FALSE)
@@ -94,7 +94,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
-  dir6 <- tempdir2("test6")
+  dir6 <- Require:::rpackageFolder(tempdir2("test6"))
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
   testit::assert(identical(packageVersion("TimeWarp", lib.loc = dir2),
@@ -113,7 +113,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert(isTRUE(all.equal(out1, pkgSnapFileRes)))
 
   # Skip on CRAN
-  dir3 <- tempdir2("test3")
+  dir3 <- Require:::rpackageFolder(tempdir2("test3"))
   # Try github
   try(inst <- Require::Require("achubaty/fpCompare", install = "force",
                                require = FALSE, standAlone = TRUE, libPaths = dir3), silent = TRUE)
@@ -126,7 +126,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert(isTRUE(isInstalled))
 
   # Try github with version
-  dir4 <- Require::tempdir2("test4")
+  dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                              require = FALSE, standAlone = FALSE, libPaths = dir4)

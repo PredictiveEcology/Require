@@ -1440,5 +1440,27 @@ warningCantInstall <- function(pkgs) {
   
 }
 
-rpackageFolder <- function(path = getOption("Require.RPackageCache")) 
-  file.path(path, paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1]))
+rpackageFolder <- function(path = getOption("Require.RPackageCache"))  {
+  if (!is.null(path)) {
+    path <- path[1]
+    rversion <- paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1])
+    if (!endsWith(path, rversion))
+      file.path(path, rversion)
+    else 
+      path
+  } else {
+    NULL
+  }
+}
+
+checkLibPaths <- function(libPaths, ifMissing) {
+  if (missing(libPaths)) {
+    if (missing(ifMissing))
+      return(.libPaths())
+    else {
+      unlist(lapply(rpackageFolder(ifMissing), checkPath, create = TRUE))
+    }
+  } else {
+    unlist(lapply(rpackageFolder(libPaths), checkPath, create = TRUE))
+  }
+}
