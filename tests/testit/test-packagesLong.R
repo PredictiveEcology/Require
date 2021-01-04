@@ -42,7 +42,11 @@ if (interactive()) {
   origDir <- setwd("~/GitHub/");
   localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
   localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
-  vers <- gsub("^.+\\_(.+)\\.[[:alnum:]]+", "\\1", basename(localBins))
+  
+  vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
+  vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
+  vers <- gsub("^(.+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
+  
   localBinsOrd <- order(package_version(vers), decreasing = TRUE)
   localBins <- localBins[localBinsOrd]
   localBinsFull <- localBinsFull[localBinsOrd]
