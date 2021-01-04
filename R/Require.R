@@ -377,7 +377,7 @@ Require <- function(packages, packageVersionFile,
           install.packagesArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install.packagesArgs[["INSTALL_opts"]]))
           install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
           if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-            if (!is.null(rpackageFolder(getOption("Require.RpackageCache")))) {
+            if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
               ip <- .installed.pkgs()
               isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
               if (isTRUE(isCranCacheInstalled)) {
@@ -389,8 +389,8 @@ Require <- function(packages, packageVersionFile,
                 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
               }
               
-              checkPath(rpackageFolder(getOption("Require.RpackageCache")), create = TRUE)
-              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RpackageCache"))), "/")
+              checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
+              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
               if (getOption("Require.buildBinaries", TRUE)) {
                 # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
                   install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))
