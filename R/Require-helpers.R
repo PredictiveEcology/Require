@@ -182,7 +182,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         if (NROW(oldAvailableVersions)) {
           oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)]
           needOlderDT <- notCorrectVersions[needOlder & repoLocation != "GitHub"]
-          oldAvailableVersions[, OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
+          
+          # packages installed locally via devtools::install will have no known source -- will be NA
+          oldAvailableVersions[!is.na(OlderVersionsAvailable), OlderVersionsAvailableCh := as.character(package_version(OlderVersionsAvailable))]
           
           oldAvailableVersions <- needOlderDT[oldAvailableVersions, on = c("Package"), roll = TRUE, allow.cartesian = TRUE]
           oldAvailableVersions[, compareVersionAvail := .compareVersionV(OlderVersionsAvailableCh, versionSpec)]
