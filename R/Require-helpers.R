@@ -1458,9 +1458,10 @@ checkLibPaths <- function(libPaths, ifMissing) {
     if (missing(ifMissing))
       return(.libPaths())
     else {
-      unlist(lapply(rpackageFolder(ifMissing), checkPath, create = TRUE))
+      # rpackageFolder(unlist(lapply(ifMissing, checkPath, create = TRUE)))
+      unlist(lapply(ifMissing, function(lp) rpackageFolder(checkPath(lp, create = TRUE))))
     }
   } else {
-    unlist(lapply(rpackageFolder(libPaths), checkPath, create = TRUE))
+    unlist(lapply(libPaths, function(lp) rpackageFolder(checkPath(lp, create = TRUE))))
   }
 }
