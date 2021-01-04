@@ -1444,10 +1444,14 @@ rpackageFolder <- function(path = getOption("Require.RPackageCache"))  {
   if (!is.null(path)) {
     path <- path[1]
     rversion <- paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1])
-    if (!endsWith(path, rversion))
-      file.path(path, rversion)
-    else 
+    if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
+    } else {
+      if (!endsWith(path, rversion))
+        file.path(path, rversion)
+      else 
+        path
+    }
   } else {
     NULL
   }
