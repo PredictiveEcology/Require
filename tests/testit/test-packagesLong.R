@@ -69,11 +69,11 @@ if (interactive()) {
     Require::setLibPaths(orig, updateRprofile = FALSE)
     })
   
-  testit::assert(length(pkgDepTest1) == 1)
-  testit::assert(sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes"))
+  testit::assert({length(pkgDepTest1) == 1})
+  testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes")})
   
-  testit::assert(length(pkgDepTest2) == 2)
-  testit::assert(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
+  testit::assert({length(pkgDepTest2) == 2})
+  testit::assert({sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)})
   
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
   RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
@@ -86,8 +86,10 @@ if (interactive()) {
   
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
-    testit::assert(all(!is.na(have[installed == TRUE]$Version)))
-    out <- try(testit::assert(all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)))
+    testit::assert({all(!is.na(have[installed == TRUE]$Version))})
+    out <- try(testit::assert({
+      all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)
+    }))
     if (is(out, "try-error")) browser()
     couldHaveLoaded <- gsub(".*\\<mumin\\>.*", "MuMIn", unique(pkgs))
     # couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
@@ -103,7 +105,7 @@ if (interactive()) {
     theTest <- isTRUE(all.equal(unique(sort(extractPkgName(actuallyLoaded))), 
                                 sort(unique(have[loadOrder > 0]$Package))))
     browser(expr = !theTest)
-    testit::assert(isTRUE(theTest))
+    testit::assert({isTRUE(theTest)})
   }
   unloadNSRecursive <- function(packages, n = 0) {
     if (!missing(packages)) {
@@ -235,7 +237,7 @@ if (interactive()) {
   options("Require.verbose" = TRUE)
   
   i <- 0
-  pkg <- pkgs[[i+1]] # redundant, but kept for interactive use
+  pkg <- pkgs[[i + 1]] # redundant, but kept for interactive use
   #}
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
@@ -244,7 +246,7 @@ if (interactive()) {
     #if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
     out <- Require(pkg, require = FALSE)
-    testit::assert(all.equal(outFromRequire, out))
+    testit::assert({all.equal(outFromRequire, out)})
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
@@ -267,7 +269,7 @@ if (interactive()) {
       out2 <- out2[out2]
       normalRequire2 <- normalRequire2[!is.na(normalRequire2)][normalRequire2]
       browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
-      testit::assert(all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
+      testit::assert({all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))])})
       runTests(have, pkg)
     } else {
       # TODO: what goes here?

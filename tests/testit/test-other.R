@@ -2,7 +2,7 @@ origLibPathsAllTests <- .libPaths()
 
 # Test misspelled
 out <- tryCatch(Require("data.tt"), warning = function(w) w)
-testit::assert(is(out, "simpleWarning"))
+testit::assert({is(out, "simpleWarning")})
 
 # for coverages that were missing
 pkgDTEmpty <- Require:::toPkgDT(character())
@@ -28,7 +28,8 @@ Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 options("Require.RPackageCache" = tempdir2(basename(tempdir())),
         "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir())))
-suppressWarnings(Require("Require", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir()))))
+suppressWarnings(Require("Require", install = "force", require = FALSE,
+                         libPaths = tempdir2(basename(tempdir()))))
 
 pkg <- c("data.table", "data.table")
 pkgDT <- Require:::toPkgDT(pkg)
@@ -41,10 +42,10 @@ data.table::set(pkgDT, NULL, "versionSpec", NA)
 Require:::rmDuplicatePkgs(pkgDT)
 
 out <- detachAll("data.table")
-testit::assert(isTRUE(out['data.table'] == 1))
+testit::assert({isTRUE(out['data.table'] == 1)})
 
 warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w) w$message)
-testit::assert(grepl("you will likely", warn))
+testit::assert({grepl("you will likely", warn)})
 
 origLP <- setLibPaths(tempdir2(basename(tempdir())), updateRprofile = FALSE)
 warn <- tryCatch(Require("data.table"), warning = function(w) w$message)

@@ -33,9 +33,11 @@ if (interactive() && forceRun) {
     localBins <- localBins[!dups]
     localBinsFull <- localBinsFull[!dups]
     if (length(localBinsFull) == 2) {
-      system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+      system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1],"', '", localBinsFull[2],
+                    "'), type = 'binary', lib ='", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
     } else {
-      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",
+                    .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
     
     # oldDir <- getwd()
@@ -44,7 +46,7 @@ if (interactive() && forceRun) {
     # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
     #setwd(oldDir)
     
-    st <- system.time(out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])   )
+    st <- system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])})
     print(st)
     
     # Test
@@ -58,7 +60,7 @@ if (interactive() && forceRun) {
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
     if (NROW(anyMissing) != 0) browser()
-    testit::assert(NROW(anyMissing) == 0)
+    testit::assert({NROW(anyMissing) == 0})
   
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
