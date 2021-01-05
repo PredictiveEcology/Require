@@ -512,11 +512,10 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- names(warn)
     }
     warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
-    if (isTRUE(any(!warnOut) || length(warnOut) == 0) && is.null(warn)) {
+    if (isTRUE(any(!warnOut) || length(warnOut) == 0 || is.na(warnOut)) && is.null(warn) ) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
-    }
-    if (!is.null(warn)) {
+    } else if (!is.null(warn)) {
       set(pkgDT, which(pkgDT$Package %in% extractPkgName(names(warn))), "installed", FALSE)
     }
   }
@@ -557,7 +556,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       names(Package) <- Package
       namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
       if (any(namespacesLoaded) && getOption("Require.unloadNamespaces", TRUE)) {
-        
         si <- sessionInfo()
         allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
         topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded)))
@@ -792,9 +790,12 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     }))]
     ipa <- modifyList2(install_githubArgs, dots)
     outRes <- lapply(gitPkgDeps2, function(p) {
-      tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+      out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
                warning = function(w) w,
                error = function(e) e)
+      if (identical(out, extractPkgName(p))) 
+        out <- NULL
+      out
     })
     attempts[names(outRes)] <- attempts[names(outRes)] + 1
     maxAttempts <- 0
@@ -803,23 +804,24 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     if (is(warn[[1]], "simpleWarning") || is(warn[[1]], "install_error")) {
       warning(warn)
     }
-    
-    if (any(attempts >= maxAttempts)) {
-      failedAttempts <- attempts[attempts >= maxAttempts]
-      outRes[attempts >= maxAttempts] <- "Failed"  
-      if (any(identical("message", names(warn[[1]]) ))) {
-        if (is.character(warn[[1]]$message)) {
-          outRes[attempts >= maxAttempts] <- warn[[1]]$message
-        }   
-      }
-    }
+    # if (any(attempts >= maxAttempts)) {
+    #   failedAttempts <- attempts[attempts >= maxAttempts]
+    #   outRes[attempts >= maxAttempts] <- "Failed"  
+    #   if (any(identical("message", names(warn[[1]]) ))) {
+    #     if (is.character(warn[[1]]$message)) {
+    #       outRes[attempts >= maxAttempts] <- warn[[1]]$message
+    #     }   
+    #   }
+    # }
     isTryError <- unlist(lapply(outRes, is, "try-error"))
     gitPkgs1 <- gitPkgs[!names(gitPkgs) %in% names(outRes)[!isTryError]]
     if (identical(gitPkgs1, gitPkgs)) {
-      failedAttempts <- names(gitPkgs)
+      # failedAttempts <- names(gitPkgs)
       gitPkgs <- character()
     }
     gitPkgs <- gitPkgs1
+    outRes <- unlist(outRes)
+    
   }
   outRes
 }
