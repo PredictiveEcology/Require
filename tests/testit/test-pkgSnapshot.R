@@ -1,4 +1,4 @@
-forceRun <- TRUE
+forceRun <- FALSE
 if (interactive() && forceRun) {
   library(Require)
   origLibPathsAllTests <- .libPaths()
@@ -52,16 +52,18 @@ if (interactive() && forceRun) {
     anyMissing <- there[!here, on = c("Package", "Version")]
     anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
     anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
+    anyMissing <- anyMissing[GithubUsername != "PredictiveEcology"] # even though they have GitHub info,
+                           # they are likely missing because of the previous line of local installs 
     if (Require:::isWindows())
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
-    if (NROW(anyMissing[GithubUsername != "PredictiveEcology"]) != 0) browser()
+    if (NROW(anyMissing) != 0) browser()
     testit::assert(NROW(anyMissing) == 0)
   
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+  options(opts)
 } else {
   message("Please run test-pkgSnapshot manually")
 }
-options(opts)
