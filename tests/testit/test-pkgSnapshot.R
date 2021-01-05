@@ -10,13 +10,18 @@ if (interactive() && forceRun) {
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
+    Sys.setenv("R_REMOTES_UPGRADE" = "never")
     Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-    opts <- options("Require.persistentPkgEnv" = TRUE,
-            "Require.Home" = "~/GitHub/Require",
-            "Require.RPackageCache" = "~/._RPackageCache/",
-            "install.packages.check.source" = "never",
-            "install.packages.compile.from.source" = "never",
-            "Require.unloadNamespaces" = TRUE)
+    outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                       "install.packages.check.source" = "never",
+                       "install.packages.compile.from.source" = "never",
+                       "Require.unloadNamespaces" = TRUE)
+    if (Sys.info()["user"] == "emcintir") {
+      outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                          "Require.RPackageCache" = "~/._RPackageCache/")
+    } else {
+      outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+    }
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
     
     theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))

@@ -3,17 +3,14 @@ origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                   "Require.Home" = "~/GitHub/Require",
-                   "Require.RPackageCache" = "~/._RPackageCache/",
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                      "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
-  stop("Please set folder location for options('Require.Home'), then comment out this line")
   outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-  testit::assert(identical(isInteractive(), interactive()))
 }
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE

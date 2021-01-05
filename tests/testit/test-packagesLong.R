@@ -1,16 +1,17 @@
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
+  Sys.setenv("R_REMOTES_UPGRADE" = "never")
+  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                     "install.packages.check.source" = "never",
+                     "install.packages.compile.from.source" = "never",
+                     "Require.unloadNamespaces" = TRUE)
   if (Sys.info()["user"] == "emcintir") {
-    Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-    outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                       "Require.Home" = "~/GitHub/Require",
-                       "Require.RPackageCache" = "~/._RPackageCache/",
-                       "install.packages.check.source" = "never",
-                       "install.packages.compile.from.source" = "never",
-                       "Require.unloadNamespaces" = TRUE)
+    outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                        "Require.RPackageCache" = "~/._RPackageCache/")
   } else {
-    testit::assert(identical(isInteractive(), interactive()))
+    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
   }
   tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
   
@@ -65,7 +66,7 @@ if (interactive()) {
   }
   
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
-  Require:::installRequire(getOption("Require.Home"))
+    Require:::installRequire(getOption("Require.Home"))
   
   # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
   setwd(origDir)
