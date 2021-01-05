@@ -296,12 +296,16 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
       if (any(neededVersions$installFrom == "CRAN" & is.na(neededVersions$correctVersionAvail))) {
         wh <- neededVersions[, which(installFrom == "CRAN")]
-        nf <- if ("AvailableVersion" %in% colnames(pkgDT)) { 
-          paste0(neededVersions$Package[wh], "_", neededVersions$AvailableVersion[wh]) 
+        if ("AvailableVersion" %in% colnames(pkgDT)) { 
+          av <- which(!is.na(neededVersions$AvailableVersion))
+          av <- intersect(av, wh)
+          nf <- paste0(neededVersions$Package[av], "_", neededVersions$AvailableVersion[av]) 
+          neededVersions[av, neededFiles := nf]
         } else {
-          neededVersions$Package[wh]
+          nf <- neededVersions$Package[wh]
+          neededVersions[installFrom == "CRAN", neededFiles := nf]
         }
-        neededVersions[installFrom == "CRAN", neededFiles := nf]
+        
       }
       if (any(neededVersions$installFrom == "GitHub")) {
         neededVersions[installFrom == "GitHub", neededFiles := paste0(Package, "_", Branch)]
@@ -314,33 +318,43 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version")]
           dontKnowVersion <- cachedAvailablePackages[dontKnowVersion, on = "Package"][, list(Package, Version)]
           dontKnowVersion[, neededFiles := paste0(Package, "_", Version)]
-          set(neededVersions, NULL, "lineNumber", seq(NROW(neededVersions)))
-          nv <- data.table::copy(neededVersions)
+          # Here, we don't know what version it should be, so take latest from CRAN as the needed version
           neededVersions[dontKnowVersion, neededFiles := i.neededFiles , 
-                         on = c("Package", "versionSpec" = "Version")] # join -- keeping dontKnowVersion column
-          # Checks -- if there is no versionSpec, it will be NA --> check "Version" next
-          naVS <- is.na(neededVersions$versionSpec)
-          if (any(naVS)) {
-            neededVersions <- neededVersions[!naVS]
-            nv <- nv[naVS]
-            nv[dontKnowVersion, neededFiles := i.neededFiles , 
-                           on = c("Package", "Version" = "Version")] # join -- keeping dontKnowVersion column
-            neededVersions <- rbindlist(list(neededVersions, nv))
-            setorderv(neededVersions, "lineNumber")
-            set(neededVersions, NULL, "lineNumber", NULL)
-          }
-          # Checks -- if there is no versionSpec or Version, it will be "" --> check "AvailableVersion" next
-          stillEmpty <- nchar(neededVersions$neededFiles) == 0
-          if (any(stillEmpty & neededVersions$correctVersionAvail)) { # means version number is not precise, but CRAN fulfills the inequality
-            neededVersions <- neededVersions[!stillEmpty]
-            nv <- nv[stillEmpty]
-            nv[dontKnowVersion, neededFiles := i.neededFiles , 
-               on = c("Package", "AvailableVersion" = "Version")] # join -- keeping dontKnowVersion column]
-            neededVersions <- rbindlist(list(neededVersions, nv))
-            setorderv(neededVersions, "lineNumber")
-            set(neededVersions, NULL, "lineNumber", NULL)
-          }
+              on = c("Package")] # join -- keeping dontKnowVersion column
+          
+          otherPoss1 <- nchar(neededVersions$neededFiles) == 0 | endsWith(neededVersions$neededFiles, "NA")
+          if (any(otherPoss1)) {
+            browser()
+            dontKnowVersion <- neededVersions[otherPoss1]
             
+            set(neededVersions, NULL, "lineNumber", seq(NROW(neededVersions)))
+            nv <- data.table::copy(neededVersions)
+            neededVersions[dontKnowVersion, neededFiles := i.neededFiles , 
+                           on = c("Package", "versionSpec" = "Version")] # join -- keeping dontKnowVersion column
+            # Checks -- if there is no versionSpec, it will be NA --> check "Version" next
+            naVS <- is.na(neededVersions$versionSpec)
+            if (any(naVS)) {
+              neededVersions1 <- neededVersions[!naVS]
+              nv1 <- nv[naVS]
+              nv1[dontKnowVersion, neededFiles := i.neededFiles , 
+                             on = c("Package", "Version" = "Version")] # join -- keeping dontKnowVersion column
+              neededVersions <- rbindlist(list(neededVersions1, nv1))
+              setorderv(neededVersions, "lineNumber")
+            }
+            
+            # Checks -- if there is no versionSpec or Version, it will be "" --> check "AvailableVersion" next
+            stillEmpty <- nchar(neededVersions$neededFiles) == 0
+            if (any(stillEmpty & neededVersions$correctVersionAvail)) { # means version number is not precise, but CRAN fulfills the inequality
+              neededVersions <- neededVersions[!stillEmpty]
+              nv <- nv[stillEmpty]
+              nv[dontKnowVersion, neededFiles := i.neededFiles , 
+                 on = c("Package", "AvailableVersion" = "Version")] # join -- keeping dontKnowVersion column]
+              neededVersions <- rbindlist(list(neededVersions, nv))
+              setorderv(neededVersions, "lineNumber")
+            }
+            set(neededVersions, NULL, "lineNumber", NULL)
+          }
+          
         }
       }
 
