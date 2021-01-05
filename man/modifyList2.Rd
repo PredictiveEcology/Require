@@ -2,7 +2,7 @@
 % Please edit documentation in R/helpers.R
 \name{modifyList2}
 \alias{modifyList2}
-\title{\code{modifyList} for >2 lists}
+\title{\code{modifyList} for multiple lists}
 \usage{
 modifyList2(...)
 }
@@ -11,10 +11,10 @@ modifyList2(...)
 }
 \description{
 This calls \code{\link[utils]{modifyList}} iteratively using 
-\code{\link[base]{Reduce}}, so it can handle >2 lists. The 
-subsequent list elements that share a name will override 
-previous list elements with that same name. It also 
-will handle the case where any list is a \code{NULL}
+\code{\link[base]{Reduce}}, so it can handle >2 lists.
+The subsequent list elements that share a name will override 
+previous list elements with that same name.
+It also will handle the case where any list is a \code{NULL}
 }
 \details{
 Simply a convenience around 
