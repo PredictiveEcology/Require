@@ -1,5 +1,20 @@
 origLibPathsAllTests <- .libPaths()
 
+if (Sys.info()["user"] == "emcintir") {
+  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                     "Require.Home" = "~/GitHub/Require",
+                     "Require.RPackageCache" = "~/._RPackageCache/",
+                     "install.packages.check.source" = "never",
+                     "install.packages.compile.from.source" = "never",
+                     "Require.unloadNamespaces" = TRUE)
+  on.exit({
+    options(outOpts)
+  }, add = TRUE)
+} else {
+  testit::assert(identical(isInteractive(), interactive()))
+}
+
 #library(Require)
 a <- pkgDep("Require", recursive = TRUE)
 testit::assert(length(a) == 1)

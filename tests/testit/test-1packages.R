@@ -2,9 +2,13 @@ origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 if (Sys.info()["user"] == "emcintir") {
-  outOpts <- options(Require.Home = "~/GitHub/Require",
-                     Require.RPackageCache = "~/.cache",
-                     "install.packages.compile.from.source" = "no")
+  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                     "Require.Home" = "~/GitHub/Require",
+                     "Require.RPackageCache" = "~/._RPackageCache/",
+                     "install.packages.check.source" = "never",
+                     "install.packages.compile.from.source" = "never",
+                     "Require.unloadNamespaces" = TRUE)
   on.exit({
     options(outOpts)
   }, add = TRUE)

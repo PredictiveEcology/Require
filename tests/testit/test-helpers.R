@@ -1,5 +1,20 @@
 origLibPathsAllTests <- .libPaths()
 
+if (Sys.info()["user"] == "emcintir") {
+  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                     "Require.Home" = "~/GitHub/Require",
+                     "Require.RPackageCache" = "~/._RPackageCache/",
+                     "install.packages.check.source" = "never",
+                     "install.packages.compile.from.source" = "never",
+                     "Require.unloadNamespaces" = TRUE)
+  on.exit({
+    options(outOpts)
+  }, add = TRUE)
+} else {
+  testit::assert(identical(isInteractive(), interactive()))
+}
+
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))
 testit::assert(is.character(out))
 testit::assert(is.numeric(as.numeric(gsub(".*: ", "", out)[2])))

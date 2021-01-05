@@ -1,18 +1,19 @@
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  #tmpdir <-
   if (Sys.info()["user"] == "emcintir") {
-    outOpts <- options(Require.Home = "~/GitHub/Require",
-                       Require.RPackageCache = "~/._RPackageCache",
-                       "install.packages.compile.from.source" = "no")
+    Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+    outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                       "Require.Home" = "~/GitHub/Require",
+                       "Require.RPackageCache" = "~/._RPackageCache/",
+                       "install.packages.check.source" = "never",
+                       "install.packages.compile.from.source" = "never",
+                       "Require.unloadNamespaces" = TRUE)
     on.exit({
       options(outOpts)
     }, add = TRUE)
-    # tmpdir <- file.path(tempdir(), paste0("RequireTmp"))
   } else {
-    #tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+    testit::assert(identical(isInteractive(), interactive()))
   }
   tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
   
@@ -42,9 +43,14 @@ if (interactive()) {
   pkgDepTest2 <- Require::pkgDep2("Require")
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
   origDir <- setwd("~/GitHub/");
-  localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
-  localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
   
+  theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
+  localBins <- dir(theDir, pattern = "data.table|remotes")
+  localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
+  
+  # localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
+  # localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
+  # 
   vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
   vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
   vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
@@ -61,7 +67,10 @@ if (interactive()) {
     system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   }
   
-  system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
+  if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
+  Require:::installRequire(getOption("Require.Home"))
+  
+  # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
   setwd(origDir)
   
   on.exit({

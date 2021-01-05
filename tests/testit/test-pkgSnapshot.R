@@ -1,19 +1,16 @@
-forceRun <- FALSE
+forceRun <- TRUE
 if (interactive() && forceRun) {
   library(Require)
   origLibPathsAllTests <- .libPaths()
-  # devtools::load_all("~/GitHub/Require")
-  # library(profvis)
   aa <- pkgSnapshot()
-  # googledrive::drive_download(googledrive::as_id("1Yo_7nuIn580rKqBCeycssVBOoe_qb7oY"))
   if (file.exists("packageVersions.txt")) {
     fileNames <- list()
-    Sys.setenv('CRANCACHE_DISABLE' = TRUE)
     baseFN <- "packageVersions"
     tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
+    Sys.setenv('CRANCACHE_DISABLE' = TRUE)
     options("Require.persistentPkgEnv" = TRUE,
             "Require.Home" = "~/GitHub/Require",
             "Require.RPackageCache" = "~/._RPackageCache/",
@@ -39,7 +36,8 @@ if (interactive() && forceRun) {
     }
     
     # oldDir <- getwd()
-    Require:::installRequire("~/GitHub/Require")
+    if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
+    Require:::installRequire(getOption("Require.Home"))
     # on.exit(setwd(oldDir))
     # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
     #setwd(oldDir)
