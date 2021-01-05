@@ -68,7 +68,8 @@ if (interactive() && forceRun) {
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-  options(opts)
+  options(outOpts)
+  options(outOpts2)
 } else {
   message("Please run test-pkgSnapshot manually")
 }

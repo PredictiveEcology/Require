@@ -287,10 +287,11 @@ if (interactive()) {
     }
   }
   unlink(tmpdir, recursive = TRUE)
+  options(outOpts)
+  options(outOpts2)
+  if (!identical(origLibPathsAllTests, .libPaths()))
+    Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   
 }
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 
-options(outOpts)
 # unlink(tmpdir, recursive = TRUE)

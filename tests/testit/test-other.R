@@ -70,3 +70,5 @@ setwd(origDir)
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+options(outOpts)
+options(outOpts2)
