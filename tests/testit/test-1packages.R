@@ -1,17 +1,17 @@
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
+Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                   "install.packages.check.source" = "never",
+                   "install.packages.compile.from.source" = "never",
+                   "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir") {
-  outOpts <- options(Require.Home = "~/GitHub/Require",
-                     Require.RPackageCache = "~/.cache",
-                     "install.packages.compile.from.source" = "no")
-  on.exit({
-    options(outOpts)
-  }, add = TRUE)
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                      "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
-  testit::assert({identical(isInteractive(), interactive())})
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
-
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
 #assignInNamespace("isInteractive", isInteractive, ns = "Require")
@@ -183,5 +183,7 @@ if (interactive()) {
 }
 
 options(opt)
+options(outOpts)
+options(outOpts2)
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)

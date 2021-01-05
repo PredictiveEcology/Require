@@ -1,5 +1,18 @@
 origLibPathsAllTests <- .libPaths()
 
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
+Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                   "install.packages.check.source" = "never",
+                   "install.packages.compile.from.source" = "never",
+                   "Require.unloadNamespaces" = TRUE)
+if (Sys.info()["user"] == "emcintir") {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                      "Require.RPackageCache" = "~/._RPackageCache/")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+}
+
 #library(Require)
 a <- pkgDep("Require", recursive = TRUE)
 testit::assert({length(a) == 1})
@@ -80,3 +93,5 @@ testit::assert({identical(sort(c("data.table (>= 1.10.4)", "remotes")), sort(d[[
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+options(outOpts)
+options(outOpts2)

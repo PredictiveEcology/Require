@@ -1,4 +1,16 @@
 origLibPathsAllTests <- .libPaths()
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
+Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                   "install.packages.check.source" = "never",
+                   "install.packages.compile.from.source" = "never",
+                   "Require.unloadNamespaces" = TRUE)
+if (Sys.info()["user"] == "emcintir") {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                      "Require.RPackageCache" = "~/._RPackageCache/")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+}
 
 # Test misspelled
 out <- tryCatch(Require("data.tt"), warning = function(w) w)
@@ -25,7 +37,7 @@ pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE,
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
-options("Require.RPackageCache" = tempdir2(basename(tempdir())),
+options("Require.RPackageCache" = "~/._RPackageCache/",
         "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir())))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
@@ -59,3 +71,5 @@ setwd(origDir)
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+options(outOpts)
+options(outOpts2)

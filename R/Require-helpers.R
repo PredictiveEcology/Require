@@ -296,12 +296,16 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
       if (any(neededVersions$installFrom == "CRAN" & is.na(neededVersions$correctVersionAvail))) {
         wh <- neededVersions[, which(installFrom == "CRAN")]
-        nf <- if ("AvailableVersion" %in% colnames(pkgDT)) { 
-          paste0(neededVersions$Package[wh], "_", neededVersions$AvailableVersion[wh]) 
+        if ("AvailableVersion" %in% colnames(pkgDT)) { 
+          av <- which(!is.na(neededVersions$AvailableVersion))
+          av <- intersect(av, wh)
+          nf <- paste0(neededVersions$Package[av], "_", neededVersions$AvailableVersion[av]) 
+          neededVersions[av, neededFiles := nf]
         } else {
-          neededVersions$Package[wh]
+          nf <- neededVersions$Package[wh]
+          neededVersions[installFrom == "CRAN", neededFiles := nf]
         }
-        neededVersions[installFrom == "CRAN", neededFiles := nf]
+        
       }
       if (any(neededVersions$installFrom == "GitHub")) {
         neededVersions[installFrom == "GitHub", neededFiles := paste0(Package, "_", Branch)]
@@ -313,8 +317,44 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
           cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version")]
           dontKnowVersion <- cachedAvailablePackages[dontKnowVersion, on = "Package"][, list(Package, Version)]
-          dontKnowVersion[, neededFiles := paste0(Package, "_", Version)][, Version := NULL]
-          neededVersions[dontKnowVersion, neededFiles := i.neededFiles , on = "Package"] # join -- keeping dontKnowVersion column
+          dontKnowVersion[, neededFiles := paste0(Package, "_", Version)]
+          # Here, we don't know what version it should be, so take latest from CRAN as the needed version
+          neededVersions[dontKnowVersion, neededFiles := i.neededFiles , 
+              on = c("Package")] # join -- keeping dontKnowVersion column
+          
+          otherPoss1 <- nchar(neededVersions$neededFiles) == 0 | endsWith(neededVersions$neededFiles, "NA")
+          if (any(otherPoss1)) {
+            browser()
+            dontKnowVersion <- neededVersions[otherPoss1]
+            
+            set(neededVersions, NULL, "lineNumber", seq(NROW(neededVersions)))
+            nv <- data.table::copy(neededVersions)
+            neededVersions[dontKnowVersion, neededFiles := i.neededFiles , 
+                           on = c("Package", "versionSpec" = "Version")] # join -- keeping dontKnowVersion column
+            # Checks -- if there is no versionSpec, it will be NA --> check "Version" next
+            naVS <- is.na(neededVersions$versionSpec)
+            if (any(naVS)) {
+              neededVersions1 <- neededVersions[!naVS]
+              nv1 <- nv[naVS]
+              nv1[dontKnowVersion, neededFiles := i.neededFiles , 
+                             on = c("Package", "Version" = "Version")] # join -- keeping dontKnowVersion column
+              neededVersions <- rbindlist(list(neededVersions1, nv1))
+              setorderv(neededVersions, "lineNumber")
+            }
+            
+            # Checks -- if there is no versionSpec or Version, it will be "" --> check "AvailableVersion" next
+            stillEmpty <- nchar(neededVersions$neededFiles) == 0
+            if (any(stillEmpty & neededVersions$correctVersionAvail)) { # means version number is not precise, but CRAN fulfills the inequality
+              neededVersions <- neededVersions[!stillEmpty]
+              nv <- nv[stillEmpty]
+              nv[dontKnowVersion, neededFiles := i.neededFiles , 
+                 on = c("Package", "AvailableVersion" = "Version")] # join -- keeping dontKnowVersion column]
+              neededVersions <- rbindlist(list(neededVersions, nv))
+              setorderv(neededVersions, "lineNumber")
+            }
+            set(neededVersions, NULL, "lineNumber", NULL)
+          }
+          
         }
       }
 
@@ -338,7 +378,10 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
             messageDF(neededVersions[srcFromCRAN, c("packageFullName", "Package", "localFileName")])
             message(paste0("Local *source* file(s) exist for the above package(s).\nWould you like to delete it/them ",
                            "and let Require try to find the binary on CRAN (or MRAN if older)? Y or N: "))
-            out <- readline()
+            out <- if (interactive())
+              readline()
+            else 
+              "Y"
             if (identical("y", tolower(out))) {
               unlink(file.path(rpackageFolder(getOption("Require.RPackageCache")), 
                                neededVersions[srcFromCRAN]$localFileName))
@@ -1223,6 +1266,11 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
 
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
+    anyFaultyBinaries <- grepl("error 1 in extracting from zip file", pkgDT$installResult)
+    if (isTRUE(anyFaultyBinaries)) {
+      message("Local cache of ", paste(pkgDT[anyFaultyBinaries]$localFileName, collapse = ", "), " faulty; deleting")
+      unlink(file.path(rpackageFolder(getOption("Require.RPackageCache")), pkgDT[anyFaultyBinaries]$localFileName))
+    }
   }
   if (any("CRAN" %in% toInstall$installFrom))
     pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, 
