@@ -8,9 +8,6 @@ if (Sys.info()["user"] == "emcintir") {
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
                      "Require.unloadNamespaces" = TRUE)
-  on.exit({
-    options(outOpts)
-  }, add = TRUE)
 } else {
   testit::assert(identical(isInteractive(), interactive()))
 }
@@ -97,3 +94,4 @@ testit::assert(identical(sort(c("data.table (>= 1.10.4)", "remotes")), sort(d[[1
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+options(outOpts)

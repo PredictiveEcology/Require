@@ -9,9 +9,6 @@ if (interactive()) {
                        "install.packages.check.source" = "never",
                        "install.packages.compile.from.source" = "never",
                        "Require.unloadNamespaces" = TRUE)
-    on.exit({
-      options(outOpts)
-    }, add = TRUE)
   } else {
     testit::assert(identical(isInteractive(), interactive()))
   }
@@ -294,4 +291,5 @@ if (interactive()) {
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 
+options(outOpts)
 # unlink(tmpdir, recursive = TRUE)

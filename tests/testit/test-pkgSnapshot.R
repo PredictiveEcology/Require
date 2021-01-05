@@ -11,7 +11,7 @@ if (interactive() && forceRun) {
     fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
     Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-    options("Require.persistentPkgEnv" = TRUE,
+    opts <- options("Require.persistentPkgEnv" = TRUE,
             "Require.Home" = "~/GitHub/Require",
             "Require.RPackageCache" = "~/._RPackageCache/",
             "install.packages.check.source" = "never",
@@ -55,7 +55,7 @@ if (interactive() && forceRun) {
     if (Require:::isWindows())
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
-    if (NROW(anyMissing) != 0) browser()
+    if (NROW(anyMissing[GithubUsername != "PredictiveEcology"]) != 0) browser()
     testit::assert(NROW(anyMissing) == 0)
   
   }
@@ -64,3 +64,4 @@ if (interactive() && forceRun) {
 } else {
   message("Please run test-pkgSnapshot manually")
 }
+options(opts)

@@ -1,4 +1,15 @@
 origLibPathsAllTests <- .libPaths()
+if (Sys.info()["user"] == "emcintir") {
+  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                     "Require.Home" = "~/GitHub/Require",
+                     "Require.RPackageCache" = "~/._RPackageCache/",
+                     "install.packages.check.source" = "never",
+                     "install.packages.compile.from.source" = "never",
+                     "Require.unloadNamespaces" = TRUE)
+} else {
+  testit::assert(identical(isInteractive(), interactive()))
+}
 
 # Test misspelled
 out <- tryCatch(Require("data.tt"), warning = function(w) w)
@@ -25,7 +36,7 @@ pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE,
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
-options("Require.RPackageCache" = tempdir2(basename(tempdir())),
+options("Require.RPackageCache" = "~/._RPackageCache/",
         "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir())))
 suppressWarnings(Require("Require", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir()))))
