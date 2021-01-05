@@ -46,7 +46,14 @@ defaults to 3600  (one hour -- see
 Internally, there are calls to \code{available.packages}}
 
 \item{exact}{Logical. If \code{TRUE}, the default, then for GitHub packages, it
-will install the exact SHA, rather than the head of the account/repo@branch.}
+will install the exact SHA, rather than the head of the account/repo@branch. For
+CRAN packages, it will install the exact version. If \code{FALSE}, then GitHub
+packages will identify their branch if that had been specified upon installation, 
+not a SHA. If the package had been installed with reference to a SHA, then it
+will return the SHA as it does not know what branch it came from. 
+Similarly, CRAN packages will
+report their version and specify with a \code{>=}, allowing a subsequent user
+to install with a minimum version number, as opposed to an exact version number.}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.
@@ -90,6 +97,8 @@ sink("packages2.R")
 pkgSnapshot(NULL, libPaths = .libPaths()[1])
 sink()
 
+# Will show "minimum package version"
+pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 }
 
 }

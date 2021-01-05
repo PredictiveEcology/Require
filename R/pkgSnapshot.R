@@ -12,7 +12,14 @@
 #' @param libPaths The path to the local library where packages are installed.
 #'        Defaults to the \code{.libPaths()[1]}.
 #' @param exact Logical. If \code{TRUE}, the default, then for GitHub packages, it
-#'        will install the exact SHA, rather than the head of the account/repo@branch.
+#'        will install the exact SHA, rather than the head of the account/repo@branch. For
+#'        CRAN packages, it will install the exact version. If \code{FALSE}, then GitHub
+#'        packages will identify their branch if that had been specified upon installation, 
+#'        not a SHA. If the package had been installed with reference to a SHA, then it
+#'        will return the SHA as it does not know what branch it came from. 
+#'        Similarly, CRAN packages will
+#'        report their version and specify with a \code{>=}, allowing a subsequent user
+#'        to install with a minimum version number, as opposed to an exact version number.
 #' @details
 #' A file is written with the package names and versions of all packages within \code{libPaths}.
 #' This can later be passed to \code{Require}.
@@ -55,6 +62,8 @@
 #' pkgSnapshot(NULL, libPaths = .libPaths()[1])
 #' sink()
 #' 
+#' # Will show "minimum package version"
+#' pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 #' }
 #'
 pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
@@ -74,13 +83,15 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
                 purge = purge))
     cc <- data.table::fread(tmpPkgSnapshotFile)
     # cc <- bb[bb$Package %in% extractPkgName(aa$SpaDES) & bb$LibPath == bb$LibPath[1],]
-    ref <- if (isTRUE(exact)) {
-      cc$GithubSHA1
+    if (isTRUE(exact)) {
+      ref <- cc$GithubSHA1
+      dd <- paste0(ifelse(!is.na(cc$GithubRepo), paste0(cc$GithubUsername, "/", cc$GithubRepo, "@", ref), 
+                          paste0(cc$Package, " (==", cc$Version, ")")))
     } else {
-      cc$GithubRef
+      ref <- cc$GithubRef
+      dd <- paste0(ifelse(!is.na(cc$GithubRepo), paste0(cc$GithubUsername, "/", cc$GithubRepo, "@", ref), 
+                          paste0(cc$Package, " (>=", cc$Version, ")")))
     }
-    dd <- paste0(ifelse(!is.na(cc$GithubRepo), paste0(cc$GithubUsername, "/", cc$GithubRepo, "@", ref), 
-                        paste0(cc$Package, " (==", cc$Version, ")")))
     ee <- paste0("Require(c('", paste(dd, collapse = "',\n'"), "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
     cat(ee)
     # cat(ee, file = "packages.R")
