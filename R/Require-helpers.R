@@ -314,8 +314,33 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version")]
           dontKnowVersion <- cachedAvailablePackages[dontKnowVersion, on = "Package"][, list(Package, Version)]
           dontKnowVersion[, neededFiles := paste0(Package, "_", Version)]
+          set(neededVersions, NULL, "lineNumber", seq(NROW(neededVersions)))
+          nv <- data.table::copy(neededVersions)
           neededVersions[dontKnowVersion, neededFiles := i.neededFiles , 
                          on = c("Package", "versionSpec" = "Version")] # join -- keeping dontKnowVersion column
+          # Checks -- if there is no versionSpec, it will be NA --> check "Version" next
+          naVS <- is.na(neededVersions$versionSpec)
+          if (any(naVS)) {
+            neededVersions <- neededVersions[!naVS]
+            nv <- nv[naVS]
+            nv[dontKnowVersion, neededFiles := i.neededFiles , 
+                           on = c("Package", "Version" = "Version")] # join -- keeping dontKnowVersion column
+            neededVersions <- rbindlist(list(neededVersions, nv))
+            setorderv(neededVersions, "lineNumber")
+            set(neededVersions, NULL, "lineNumber", NULL)
+          }
+          # Checks -- if there is no versionSpec or Version, it will be "" --> check "AvailableVersion" next
+          stillEmpty <- nchar(neededVersions$neededFiles) == 0
+          if (any(stillEmpty & neededVersions$correctVersionAvail)) { # means version number is not precise, but CRAN fulfills the inequality
+            neededVersions <- neededVersions[!stillEmpty]
+            nv <- nv[stillEmpty]
+            nv[dontKnowVersion, neededFiles := i.neededFiles , 
+               on = c("Package", "AvailableVersion" = "Version")] # join -- keeping dontKnowVersion column]
+            neededVersions <- rbindlist(list(neededVersions, nv))
+            setorderv(neededVersions, "lineNumber")
+            set(neededVersions, NULL, "lineNumber", NULL)
+          }
+            
         }
       }
 
