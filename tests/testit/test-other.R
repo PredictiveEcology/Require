@@ -5,11 +5,11 @@ out <- tryCatch(Require("data.tt"), warning = function(w) w)
 testit::assert(is(out, "simpleWarning"))
 
 # for coverages that were missing
-pkgDTEmpty <- toPkgDT(character())
-out <- installedVers(pkgDTEmpty) # 
+pkgDTEmpty <- Require:::toPkgDT(character())
+out <- Require:::installedVers(pkgDTEmpty) # 
 
 # test warn missing
-out <- updateInstalled(pkgDTEmpty, installPkgNames = "package") 
+out <- Require:::updateInstalled(pkgDTEmpty, installPkgNames = "package") 
 
 pkgDep("data.table", purge = FALSE)
 pkgDep("data.table", purge = TRUE)
@@ -22,7 +22,7 @@ pkgDepTopoSort(c("Require", "data.table", "remotes"))
 pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE, 
                deps = "Require", returnFull = FALSE, reverse = TRUE)
 
-pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
+Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
 options("Require.RPackageCache" = tempdir2(basename(tempdir())),
@@ -31,19 +31,19 @@ Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(ba
 suppressWarnings(Require("Require", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir()))))
 
 pkg <- c("data.table", "data.table")
-pkgDT <- toPkgDT(pkg)
-set(pkgDT, NULL, "installFrom", "CRAN")
-set(pkgDT, NULL, "installed", FALSE)
-set(pkgDT, NULL, "installResult", TRUE)
-rmDuplicatePkgs(pkgDT)
+pkgDT <- Require:::toPkgDT(pkg)
+data.table::set(pkgDT, NULL, "installFrom", "CRAN")
+data.table::set(pkgDT, NULL, "installed", FALSE)
+data.table::set(pkgDT, NULL, "installResult", TRUE)
+Require:::rmDuplicatePkgs(pkgDT)
 
-set(pkgDT, NULL, "versionSpec", NA)
-rmDuplicatePkgs(pkgDT)
+data.table::set(pkgDT, NULL, "versionSpec", NA)
+Require:::rmDuplicatePkgs(pkgDT)
 
 out <- detachAll("data.table")
 testit::assert(isTRUE(out['data.table'] == 1))
 
-warn <- tryCatch(warningCantInstall("devtolls"), warning = function(w) w$message)
+warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w) w$message)
 testit::assert(grepl("you will likely", warn))
 
 origLP <- setLibPaths(tempdir2(basename(tempdir())), updateRprofile = FALSE)
