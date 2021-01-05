@@ -313,8 +313,9 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
           cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version")]
           dontKnowVersion <- cachedAvailablePackages[dontKnowVersion, on = "Package"][, list(Package, Version)]
-          dontKnowVersion[, neededFiles := paste0(Package, "_", Version)][, Version := NULL]
-          neededVersions[dontKnowVersion, neededFiles := i.neededFiles , on = "Package"] # join -- keeping dontKnowVersion column
+          dontKnowVersion[, neededFiles := paste0(Package, "_", Version)]
+          neededVersions[dontKnowVersion, neededFiles := i.neededFiles , 
+                         on = c("Package", "versionSpec" = "Version")] # join -- keeping dontKnowVersion column
         }
       }
 
