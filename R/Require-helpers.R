@@ -1252,6 +1252,11 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
 
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
+    anyFaultyBinaries <- grepl("error 1 in extracting from zip file", pkgDT$installResult)
+    if (isTRUE(anyFaultyBinaries)) {
+      message("Local cache of ", paste(pkgDT[anyFaultyBinaries]$localFileName, collapse = ", "), " faulty; deleting")
+      unlink(file.path(rpackageFolder(getOption("Require.RPackageCache")), pkgDT[anyFaultyBinaries]$localFileName))
+    }
   }
   if (any("CRAN" %in% toInstall$installFrom))
     pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, 
