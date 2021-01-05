@@ -352,7 +352,8 @@ Require <- function(packages, packageVersionFile,
     
     pkgDT <- toPkgDT(packages, deepCopy = TRUE)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
-    # some cases, original was without version, but due to a dependency that does have a version, it is no longer the same as orig package name
+    # some cases, original was without version, but due to a dependency that does have a version, 
+    # it is no longer the same as orig package name
     pkgDT[packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig), 
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
     pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
