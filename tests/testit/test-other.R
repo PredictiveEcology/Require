@@ -1,14 +1,15 @@
 origLibPathsAllTests <- .libPaths()
+Sys.setenv("R_REMOTES_UPGRADE" = "never")
+Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
+                   "install.packages.check.source" = "never",
+                   "install.packages.compile.from.source" = "never",
+                   "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir") {
-  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                     "Require.Home" = "~/GitHub/Require",
-                     "Require.RPackageCache" = "~/._RPackageCache/",
-                     "install.packages.check.source" = "never",
-                     "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = TRUE)
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
+                      "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
-  testit::assert(identical(isInteractive(), interactive()))
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 
 # Test misspelled
