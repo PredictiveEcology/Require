@@ -1,6 +1,10 @@
 if (!exists("forceRun")) forceRun <- FALSE
 if (interactive() && forceRun) {
   library(Require)
+  srch <- search()
+  anyNamespaces <- srch[!gsub("package:", "", srch) %in% 
+                          c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads")]
+  if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
   origLibPathsAllTests <- .libPaths()
   aa <- pkgSnapshot()
   if (file.exists("packageVersions.txt")) {
@@ -20,7 +24,7 @@ if (interactive() && forceRun) {
       outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                           "Require.RPackageCache" = "~/._RPackageCache/")
     } else {
-      outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
     }
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
     
@@ -52,7 +56,8 @@ if (interactive() && forceRun) {
       else 
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
-      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",
+                    .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
     
     # oldDir <- getwd()
@@ -62,7 +67,7 @@ if (interactive() && forceRun) {
     # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
     #setwd(oldDir)
     
-    st <- system.time(out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])   )
+    st <- system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])})
     print(st)
     
     # Test
@@ -79,13 +84,12 @@ if (interactive() && forceRun) {
     # here[!there, on = "Package"]
     if (NROW(anyMissing) != 0) browser()
     testit::assert(NROW(anyMissing) == 0)
-    
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   options(outOpts)
   options(outOpts2)
 } else {
-  message("Please run test-pkgSnapshot manually:\n",
+  message("Please restart R, then run test-pkgSnapshot manually:\n",
           "forceRun <- TRUE; source('tests/testit/test-pkgSnapshot.R', echo=TRUE)")
 }
