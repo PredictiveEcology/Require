@@ -272,7 +272,10 @@ Require <- function(packages, packageVersionFile,
     packages <- packages[!packages$Package %in% .basePkgs]
     uniqueLibPaths <- unique(packages$LibPath)
     if (length(uniqueLibPaths) > 1) {
-      dt <- data.table(libPathInSnapshot = uniqueLibPaths, newLibPaths = paste0(libPaths[1], "_", seq(length(uniqueLibPaths))))
+      dt <- data.table(libPathInSnapshot = uniqueLibPaths, 
+                       newLibPaths = normPath(c(libPaths[1], 
+                                                file.path(libPaths[1], 
+                                                          gsub(":", "", uniqueLibPaths[-1])))))
       message("packageVersionFile is covering more than one library; installing packages in reverse order; ",
               "also -- .libPaths() will be altered to be\n")
       messageDF(dt)
