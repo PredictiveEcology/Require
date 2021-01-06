@@ -251,7 +251,6 @@ Require <- function(packages, packageVersionFile,
   on.exit(data.table::setDTthreads(origDTThreads))
   
   purge <- dealWithCache(purge)
-  browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
   
@@ -344,7 +343,6 @@ Require <- function(packages, packageVersionFile,
     packagesOrder <- seq(packagesOrig)
     names(packagesOrder) <- extractPkgName(packageNamesOrig)
     
-    browser(expr = exists("._Require_1"))
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
       packages <- getPkgDeps(packages, which = which, purge = purge)
     }

@@ -324,7 +324,6 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           
           otherPoss1 <- nchar(neededVersions$neededFiles) == 0 | endsWith(neededVersions$neededFiles, "NA")
           if (any(otherPoss1)) {
-            browser()
             dontKnowVersion <- neededVersions[otherPoss1]
             
             set(neededVersions, NULL, "lineNumber", seq(NROW(neededVersions)))
@@ -591,9 +590,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       #   message("Performing a topological sort of packages to install them in the right order; this may take some time")
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName, returnFull = TRUE)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
-      pkgsCleaned <- gsub(.grepTooManySpaces, " ", toInstall$packageFullName)
-      pkgsCleaned <- gsub(.grepTabCR, "", pkgsCleaned)
-      message("Installing: ", paste0(pkgsCleaned, sep = ", "))
+      
+      pkgsCleaned <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
+      
+      message("Installing: ", paste(pkgsCleaned, collapse = ", "))
       toInstall[, installOrder := seq(NROW(toInstall))]
       Package <- toInstall$Package
       names(Package) <- Package
@@ -817,13 +817,14 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
   #installPkgNames <- names(sortedTopologically)
   installPkgNames <- gitPkgNames$packageFullName
 
-  names(installPkgNames) <- installPkgNames
+  names(installPkgNames) <- gitPkgNames$Package
 
   ord <- match(extractPkgName(installPkgNames), gitPkgNames$Package)
   gitPkgNames <- gitPkgNames[ord]
+  installPkgNames <- installPkgNames[ord]
 
   gitPkgs <- trimVersionNumber(gitPkgNames$packageFullName)
-  names(gitPkgs) <- gitPkgs
+  names(gitPkgs) <- gitPkgNames$Package
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
@@ -857,7 +858,9 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     #   }
     # }
     isTryError <- unlist(lapply(outRes, is, "try-error"))
-    gitPkgs1 <- gitPkgs[!names(gitPkgs) %in% names(outRes)[!isTryError]]
+    whichDone <- !names(gitPkgs) %in% names(outRes)[!isTryError]
+    gitPkgs1 <- gitPkgs[whichDone]
+    outRes <- outRes[whichDone]
     if (identical(gitPkgs1, gitPkgs)) {
       # failedAttempts <- names(gitPkgs)
       gitPkgs <- character()
@@ -1261,7 +1264,8 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   lotsOfTimeLeft <- dft > 10
   timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 0) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
-  message(" -- Installing ", toInstall$packageFullName, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
+  pkgToReport <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
+  message(" -- Installing ", pkgToReport, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ", 
           timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
 
   if (any("Local" %in% toInstall$installFrom)) {
@@ -1523,4 +1527,14 @@ checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
   }
   unlist(lapply(pathsToCheck, function(lp) 
     checkPath(rpackageFolder(lp, exact = exact), create = TRUE)))
+}
+
+preparePkgNameToReport <- function(Package, packageFullName) {
+  pkgsCleaned <- gsub(.grepTooManySpaces, " ", packageFullName)
+  pkgsCleaned <- gsub(.grepTabCR, "", pkgsCleaned)
+  pkgNameInPkgFullName <- unlist(Map(pkg = Package, pfn = packageFullName, 
+                                     function(pkg, pfn) grepl(pkg, pfn)))
+  Package[!pkgNameInPkgFullName] <- paste0(Package[!pkgNameInPkgFullName], " (", 
+                                               packageFullName[!pkgNameInPkgFullName], ")")
+  Package
 }
