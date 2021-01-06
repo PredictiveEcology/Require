@@ -10,7 +10,7 @@ if (Sys.info()["user"] == "emcintir") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE

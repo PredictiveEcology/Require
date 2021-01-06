@@ -11,7 +11,7 @@ if (interactive()) {
     outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                         "Require.RPackageCache" = "~/._RPackageCache/")
   } else {
-    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
   }
   tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
   

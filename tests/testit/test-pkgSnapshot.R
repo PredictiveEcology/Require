@@ -24,7 +24,7 @@ if (interactive() && forceRun) {
       outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                           "Require.RPackageCache" = "~/._RPackageCache/")
     } else {
-      outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
     }
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
     

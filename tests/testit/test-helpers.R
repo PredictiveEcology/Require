@@ -10,7 +10,7 @@ if (Sys.info()["user"] == "emcintir") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))
