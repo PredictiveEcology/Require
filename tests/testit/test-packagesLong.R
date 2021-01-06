@@ -1,6 +1,8 @@
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
+  library(testit)
+  library(Require)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv('CRANCACHE_DISABLE' = TRUE)
   outOpts <- options("Require.persistentPkgEnv" = TRUE,
@@ -59,8 +61,19 @@ if (interactive()) {
   dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
   localBins <- localBins[!dups]
   localBinsFull <- localBinsFull[!dups]
+  if (any(grepl("tar.gz", localBinsFull))) {
+    localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
+  }
+  # THere might be more than one version
+  dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+  rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+  localBinsFull <- c(dts, rems)
+  
   if (length(localBinsFull) == 2) {
-    system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+    if (Require:::isWindows())
+      system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+    else 
+      system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
   } else {
     system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   }
@@ -257,9 +270,9 @@ if (interactive()) {
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
-    normalRequire <- unlist(lapply(pkgsToTest,
+    suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
                                    function(p) tryCatch(require(p, character.only = TRUE),
-                                                        error = function(x) FALSE)))
+                                                        error = function(x) FALSE))))
     out2 <- out
     out2 <- out2[names(out2) %in% names(normalRequire)]
     whMatch <- match(names(normalRequire), names(out2))
