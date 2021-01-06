@@ -1,4 +1,4 @@
-forceRun <- FALSE
+if (!exists("forceRun")) forceRun <- FALSE
 if (interactive() && forceRun) {
   library(Require)
   origLibPathsAllTests <- .libPaths()
@@ -27,15 +27,30 @@ if (interactive() && forceRun) {
     theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
     localBins <- dir(theDir, pattern = "data.table|remotes")
     localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
-    vers <- gsub("^.+\\_(.+)\\.[[:alnum:]]+", "\\1", basename(localBins))
+    vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
+    vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
+    vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
+    
+    # vers <- gsub("^.+\\_(.+)\\.[[:alnum:]]+", "\\1", basename(localBins))
+    
     localBinsOrd <- order(package_version(vers), decreasing = TRUE)
     localBins <- localBins[localBinsOrd]
     localBinsFull <- localBinsFull[localBinsOrd]
     dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
     localBins <- localBins[!dups]
     localBinsFull <- localBinsFull[!dups]
+    if (any(grepl("tar.gz", localBinsFull))) {
+      localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
+    }
+    # THere might be more than one version
+    dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+    rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+    localBinsFull <- c(dts, rems)
     if (length(localBinsFull) == 2) {
-      system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+      if (Require:::isWindows())
+        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+      else 
+        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
       system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
@@ -58,18 +73,19 @@ if (interactive() && forceRun) {
     anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
     anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
     anyMissing <- anyMissing[GithubUsername != "PredictiveEcology"] # even though they have GitHub info,
-                           # they are likely missing because of the previous line of local installs 
+    # they are likely missing because of the previous line of local installs 
     if (Require:::isWindows())
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
     if (NROW(anyMissing) != 0) browser()
     testit::assert(NROW(anyMissing) == 0)
-  
+    
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   options(outOpts)
   options(outOpts2)
 } else {
-  message("Please run test-pkgSnapshot manually")
+  message("Please run test-pkgSnapshot manually:\n",
+          "forceRun <- TRUE; source('tests/testit/test-pkgSnapshot.R', echo=TRUE)")
 }
