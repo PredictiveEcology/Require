@@ -5,8 +5,25 @@ if (interactive() && forceRun) {
   anyNamespaces <- srch[!gsub("package:", "", srch) %in% 
                           c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads")]
   if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
+  library(testit)
   origLibPathsAllTests <- .libPaths()
-  aa <- pkgSnapshot()
+  pkgVF <- "packageVersions.txt"
+  aa <- pkgSnapshot(packageVersionFile = pkgVF)
+  bb <- list()
+  for (lp in unique(aa$LibPath)) {
+    pack <- aa$Package[aa$LibPath == lp]
+    if (!all(pack %in% Require:::.basePkgs)) {
+      deps <- pkgDep(pack)
+      haveNoDeps <- unlist(lapply(deps, length)) == 2
+      sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 10))
+      pkgs <- c(names(deps[haveNoDeps][sam]), Require::extractPkgName(unname(unlist(deps[haveNoDeps][sam]))))
+      bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
+    }
+  }
+  bb <- data.table::rbindlist(bb)
+  data.table::fwrite(x = bb, file = pkgVF)
+  
+  
   if (file.exists("packageVersions.txt")) {
     fileNames <- list()
     baseFN <- "packageVersions"
@@ -67,7 +84,7 @@ if (interactive() && forceRun) {
     # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
     #setwd(oldDir)
     
-    st <- system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])})
+    try(st <- system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
     print(st)
     
     # Test
