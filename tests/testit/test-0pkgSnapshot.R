@@ -1,5 +1,4 @@
-if (!exists("forceRun")) forceRun <- FALSE
-if (interactive() && forceRun) {
+if (interactive()) {
   library(Require)
   srch <- search()
   anyNamespaces <- srch[!gsub("package:", "", srch) %in% 
@@ -13,7 +12,7 @@ if (interactive() && forceRun) {
   for (lp in unique(aa$LibPath)) {
     pack <- aa$Package[aa$LibPath == lp]
     if (!all(pack %in% Require:::.basePkgs)) {
-      deps <- pkgDep(pack)
+      deps <- pkgDep(pack, recursive = TRUE)
       haveNoDeps <- unlist(lapply(deps, length)) == 2
       sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 10))
       pkgs <- c(names(deps[haveNoDeps][sam]), Require::extractPkgName(unname(unlist(deps[haveNoDeps][sam]))))
@@ -106,7 +105,4 @@ if (interactive() && forceRun) {
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   options(outOpts)
   options(outOpts2)
-} else {
-  message("Please restart R, then run test-pkgSnapshot manually:\n",
-          "forceRun <- TRUE; source('tests/testit/test-pkgSnapshot.R', echo=TRUE)")
-}
+} 
