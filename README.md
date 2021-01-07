@@ -33,7 +33,7 @@ This means that by default, projects are somewhat more fluid, defined by no pack
 From this perspective, `renv` is more "top-down", and `Require` is more "bottom-up", though they can each emulate the other's behaviour.
 
 We define a reproducible workflow as a workflow that can be run from the start to any point in the project, without having to "skip over" or "comment out" or "jump to" particular lines or chunks of code. 
-`Require` does that. 
+`Require` does that -- you can leave all lines of code in a script and they will work efficiently from any starting point.
 
 ## Basic usage
 
@@ -52,11 +52,38 @@ Require("data.table (>=1.12.8)")
 Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 
-## Advanced usage
+## Setup a project
+
+To have a reproducible project, add `Require::setup()` at the start of a script. This will
+set the default R package library to a folder called `"R"` within the (project) working directory.
+It will also set a package cache directory in the `.cache` subfolder of
+the user's home directory (so it can) be used by every project on that machine. This could
+be set to a folder shared across machines in, say, a network. This will also set
+several options. Rather than "run this once", the function is designed to be run
+"every" time, ensuring reproducibility if the script is given to somebody else. 
+
+By default, this will add or modify the `.Rprofile` file in the (project) working directory so that each time the project is loaded, it will be run with the R package folder set up previously.
+
+```{r setup}
+Require::setup()
+```
+
+The above will set up a completely isolated folder (other than base R packages). This 
+means that all packages will have to be re-installed. This may be the right behaviour,
+for a fully reproducible system. However, there other situations, namely, there are 
+already packages installed in the user or system libraries that can be re-used and 
+only a few additional packages are needed for the project and should be isolated from
+the other packages on the machine. 
+
+```{r setup-standAloneF}
+Require::setup(standAlone = FALSE)
+```
+
+## Advanced
 
 ### Keeping it all isolated
 
-We can keep all packages in an isolated folder for a project, using `standAlone = TRUE`
+Rather than using `Require::setup()`, we can use the internal functions directly: `setLibPaths`, and various `options`. 
 
 ```{r standALone}
 setLibPaths("Project_A_Packages", standAlone = TRUE)
