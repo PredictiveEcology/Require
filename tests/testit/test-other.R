@@ -75,6 +75,7 @@ options(outOpts)
 options(outOpts2)
 
 ## setup
+options(RequireOptions())
 setupTestDir <- tempdir2("setupTests")
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 setup(setupTestDir, RPackageCache = ccc)
