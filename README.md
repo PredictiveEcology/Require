@@ -79,6 +79,13 @@ the other packages on the machine.
 Require::setup(standAlone = FALSE)
 ```
 
+## Turn setup off
+
+To reset your project to how it was, use `setupOff()`, then remove any cases of `Require::setup()` that are in your scripts.
+
+```{r setupOff}
+setupOff()
+```
 ## Advanced
 
 ### Keeping it all isolated
