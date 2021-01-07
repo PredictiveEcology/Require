@@ -120,7 +120,7 @@ Because it is vectorized, there can be a long list of packages at the top of a p
 
 ```{r LongPackageList}
 library(Require)
-setLibPaths("ProjectA", standAlone = TRUE)
+setup("ProjectA", standAlone = TRUE)
 Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
           "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"))
 ```
@@ -138,7 +138,7 @@ Require::Require(packageVersionFile = "mySnapshot.txt")
 
 ### Using local package cache
 
-When installing on many machines on a network, having a local cache can speed up installations. Setting `options("Require.RPackageCache" = someSharedDirectory)` will turn on local cache. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later (turned off with `options("Require.RPackageCache" = someSharedDirectory)`)
+When installing on many machines on a network, having a local cache can speed up installations. Setting `options("Require.RPackageCache" = someSharedDirectory)` will turn on local cache. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later (turned off with `options("Require.RPackageCache" = NULL)`)
 
 # Installing
 
@@ -182,8 +182,8 @@ install_github("PredictiveEcology/Require", ref = "development", dependencies = 
 
 # Conclusion
 
-`Require` package offers a simple, lightweight, package focused around a single function.
-The package has very few dependencies and so can be used to install packages without interfering with itself.
+`Require` package offers a simple, lightweight, package focused around a single function that is resilient to being called multiple times (unlike `install.packages`).
+The package has two dependencies (`data.table` and `remotes`) and so can be used to install packages without interfering with itself.
 
 ## Contributions
 
