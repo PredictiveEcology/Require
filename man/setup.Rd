@@ -46,6 +46,11 @@ and arguments in \code{setLibPaths} and \code{Require}.
 }
 \examples{
 # Place this as the first line of a project
+\dontrun{
 Require::setup()
+
+# To turn it off and return to normal
+Require::setupOff()
+}
   
 }

@@ -15,7 +15,12 @@
 #' 
 #' @examples 
 #' # Place this as the first line of a project
+#' \dontrun{
 #' Require::setup()
+#' 
+#' # To turn it off and return to normal
+#' Require::setupOff()
+#' }
 #'   
 setup <- function(RPackageFolders = getOption("RPackageFolders", "R"), 
                   RPackageCache = getOption("RPackageCache", "~/.cache"), 
@@ -26,14 +31,34 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
   
   copyRequireAndDeps(RPackageFolders)
   
+  opts <- options("Require.RPackageCache" = RPackageCache,
+                  "Require.buildBinaries" = buildBinaries)
   co <- capture.output(type = "message", 
                        setLibPaths(RPackageFolders, standAlone = standAlone, 
                                    updateRprofile = TRUE))
   if (!any(grepl(alreadyInRprofileMessage, co)))
-    silence <- lapply(co, message)
-  options("Require.RPackageCache" = RPackageCache,
-          "Require.buildBinaries" = buildBinaries)
-
+    if (getOption("Require.setupVerbose", TRUE)) 
+      silence <- lapply(co, message)
+  ro <- RequireOptions()
+  roNames <- names(opts)
+  names(roNames) <- roNames
+  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
+  if (any(nonStandardOpt)) {
+    rp <- readLines(".Rprofile")
+    lineWithPrevious <- grepl("### Previous", rp)
+    if (any(lineWithPrevious)) {
+      lineWithPrevious <- which(lineWithPrevious)
+      post <- seq(length(rp) - lineWithPrevious) + lineWithPrevious
+      pre <- seq(lineWithPrevious)
+      nameNonStandards <- names(nonStandardOpt)[nonStandardOpt]
+      optsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
+        paste0("### Previous option: ", nns, " = ", opts[[nns]])
+      }))
+      newRP <- c(rp[pre], optsToAdd, rp[post])
+      cat(newRP, file = ".Rprofile", sep = "\n")
+    }
+  }
+    
 }
 
 #' @rdname setup
@@ -45,9 +70,22 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
 #'   deletions.
 setupOff <- function(removePackages = FALSE) {
   lps <- .libPaths()
+  rp <- readLines(".Rprofile")
+  lineWithPrevious <- grepl("### Previous option", rp)
+  options(RequireOptions())
+  if (any(lineWithPrevious)) {
+    lineWithPrevious <- which(lineWithPrevious)
+    silence <- lapply(lineWithPrevious, function(lwp) {
+      opt <- gsub("### Previous option: ", "", rp[lwp])
+      opt <- strsplit(opt, " = ")[[1]]
+      newOpt <- list(opt[2])
+      names(newOpt) <- opt[1]
+      options(newOpt)
+    })
+  }
   setLibPaths()
   if (isTRUE(removePackages)) {
-    if (interactive()) {
+    if (interactive() && getOption("Require.setupVerbose", TRUE) ) {
       message("You have requested to remove all packages in ", lps[1])
       out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
       if (identical(tolower(out), "n"))
@@ -56,7 +94,6 @@ setupOff <- function(removePackages = FALSE) {
     if (isTRUE(removePackages))
       unlink(lps[1], recursive = TRUE)
   }
-  
 }
 
 copyRequireAndDeps <- function(RPackageFolders) {
@@ -72,7 +109,8 @@ copyRequireAndDeps <- function(RPackageFolders) {
       if (isTRUE(pkgInstalledAlready)) {
         fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
         if (!newPathExists) {
-          message("Placing copy of ", pkg, " in ", RPackageFolders)
+          if (getOption("Require.setupVerbose", TRUE)) 
+            message("Placing copy of ", pkg, " in ", RPackageFolders)
           dirs <- unique(dirname(fromFiles))
           dirs <- gsub(thePath, theNewPath, dirs)
           lapply(dirs, checkPath, create = TRUE)
@@ -85,7 +123,8 @@ copyRequireAndDeps <- function(RPackageFolders) {
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          message("Updating version of ", pkg, " in ", RPackageFolders)
+          if (getOption("Require.setupVerbose", TRUE)) 
+            message("Updating version of ", pkg, " in ", RPackageFolders)
           unlink(toFiles)
         }
         file.link(fromFiles, toFiles)
