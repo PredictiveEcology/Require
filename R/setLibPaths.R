@@ -94,11 +94,11 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
       }
     }
     if (any(grepl(setLibPathsStartText, readLines(".Rprofile")))) {
-      message("There is already a setLibPaths in the .Rprofile, skipping")
+      message(alreadyInRprofileMessage)
     } else {
       bodyFn <- format(body(Require::setLibPaths))
-      lineWCheckPath <- grepl("checkPath.normPath", bodyFn)
-      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths[1])) dir.create(libPaths[1])"
+      lineWCheckPath <- grepl("checkPath.normPath|checkLibPaths", bodyFn)
+      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths[1])) dir.create(libPaths[1], recursive = TRUE)"
       lineWReturn <- grepl("return.*oldLibPaths", bodyFn)
       bodyFn <- bodyFn[!lineWReturn] 
       bodyFn <- gsub("tail", "utils::tail", bodyFn)
@@ -149,7 +149,7 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
           wasNew <- as.logical(newFile)
           prevLines <- grepl(prevLibPathsText, ll)
           prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
-          setLibPaths(prevLibPaths, updateRprofile = FALSE)
+          setLibPaths(prevLibPaths, updateRprofile = FALSE, exact = TRUE)
           if (isTRUE(wasNew) && which(newFileLine) == 2) { # needs to be NEW and starts on 2nd line
             file.remove(updateRprofile) 
           } else {
@@ -172,7 +172,7 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
 }
 
 resetRprofileMessage <- function(updateRprofile = ".Rprofile") {
-  paste0("message(\"To reset libPaths to previous state, run: Require::setLibPaths()\") ")
+  paste0("message(\"To reset libPaths to previous state, run: Require::setLibPaths() (or delete section in .Rprofile)\") ")
 }
 
 checkTRUERprofile <- function(updateRprofile) {
@@ -185,3 +185,4 @@ prevLibPathsText <- "Previous .libPaths: "
 commentCharsForSetLibPaths <- "#### setLibPaths "
 setLibPathsStartText <- paste0(commentCharsForSetLibPaths, "start")
 newFileTrigger <- "New File:"
+alreadyInRprofileMessage <- "There is already a setLibPaths in the .Rprofile, skipping"
