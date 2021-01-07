@@ -291,7 +291,7 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
   DESCRIPTIONpaths <- file.path(packageTD, "DESCRIPTION")
   pkgDTNeedNew <- pkgDT[objsExist == FALSE] 
   if (NROW(pkgDTNeedNew)) {
-    message("available.packages() doesn't have correct information on package dependencies for ",
+    message("available.packages() does not have correct information on package dependencies for ",
             paste(Package, collapse = ", "), 
             " because they are Archive versions; downloading their respective tar.gz files")
     pkgFilename <- paste0(pkgDTNeedNew$Package, "_", 

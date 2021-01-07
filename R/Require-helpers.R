@@ -442,7 +442,7 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
 
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
-#' @param other Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
+#' @param other Any other keyword in a DESCRIPTION file that precedes a ":". The rest of the line will be
 #'   retrieved.
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   # origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names

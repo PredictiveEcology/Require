@@ -1,6 +1,6 @@
 ## Updated release
 
-This is a update that deals with new CRAN failures as well as minor updates. 
+This is a feature update with several minor bugfixes.
 See `NEWS.md` for complete list of changes.
 
 ## Test environments

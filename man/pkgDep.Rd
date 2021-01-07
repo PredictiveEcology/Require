@@ -158,7 +158,7 @@ are either full reverse depends.
 }
 \description{
 This will first look in local filesystem (in \code{.libPaths()}) and will use
-a local package to find its dependencies. If the package doesn't exist locally, 
+a local package to find its dependencies. If the package does not exist locally, 
 including whether it is the correct version, then it will look in (currently) 
 \code{CRAN} and its archives (if the current \code{CRAN} version is not
 the desired version to check). It will also look on \code{GitHub} if the 
