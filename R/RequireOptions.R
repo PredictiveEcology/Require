@@ -55,10 +55,6 @@
 #'     to do this. User must deal with inability to install packages due to package already 
 #'     being loaded.
 #'   }
-#'   \item{\code{useCranCache}}{
-#'     Default: \code{FALSE}. Experimental. If \code{TRUE}, a user can try 
-#'     to use the same cache folder as the crancache package (for binaries only). .
-#'   }
 #'   \item{\code{verbose}}{
 #'     Default: \code{0}. During a \code{Require}, there is a lot of information collected 
 #'     and used. With \code{verbose} set to \code{1} or \code{2}, more of this information
@@ -77,7 +73,12 @@ RequireOptions <- function() {
        Require.standAlone = TRUE, 
        Require.unloadNamespaces = TRUE,
        Require.updateRprofile = FALSE,
-       Require.useCranCache = FALSE,
+       # Require.useCranCache = NULL,
        Require.verbose = 0
   )
 }
+
+#   \item{\code{useCranCache}}{
+#     Default: \code{NULL}. Experimental. If \code{TRUE}, a user can try 
+#     to use the same cache folder as the crancache package (for binaries only). .
+#   }

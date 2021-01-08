@@ -28,33 +28,35 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
                   standAlone = getOption("standAlone", TRUE)) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
   RPackageCache <- checkPath(RPackageCache, create = TRUE)
-  hasCranCache <- any(dir.exists(file.path(.libPaths(), "crancache")))
-  usingCranCache <- FALSE
-  
-  if (hasCranCache) {
-    rvn <- paste0(R.version$major, '.', strsplit(R.version$minor, split = '\\.')[[1]][1])
-    os <- tolower(.Platform$OS.type)
-    extra <- file.path('cran','bin', os,'contrib', rvn, fsep = "/")
-    usingCranCache <- !endsWith(RPackageCache, extra)
-    if (usingCranCache) {
-      if (interactive()) {
-        message("crancache is installed; would you like to have Require and ",
-                "crancache share the cache? If N, then Require will use ",
-                RPackageCache)
-        useSameCache <- readline("Use same cache? (Y or N)")
-        if (identical(tolower(useSameCache), "y")) {
-          stop(paste0("To use crancache cached packages, please rerun:\n",
-                      "setup(RPackageCache = normalizePath(file.path(crancache::get_cache_dir(),'",extra,"'),
-                             winslash = '/'))"))
-        }
-      }
-    }
-  }
+  # hasCranCache <- any(dir.exists(file.path(.libPaths(), "crancache")))
+  # usingCranCache <- FALSE
+  # 
+  # if (hasCranCache && !isFALSE(getOption("Require.useCranCache"))) { # if NULL or TRUE go here
+  #   rvn <- paste0(R.version$major, '.', strsplit(R.version$minor, split = '\\.')[[1]][1])
+  #   os <- tolower(.Platform$OS.type)
+  #   extra <- file.path('cran','bin', os,'contrib', rvn, fsep = "/")
+  #   usingCranCache <- !endsWith(RPackageCache, extra)
+  #   if (usingCranCache) {
+  #     if (interactive()) {
+  #       message("crancache is installed; would you like to have Require and ",
+  #               "crancache share the cache? If N, then Require will use ",
+  #               RPackageCache)
+  #       useSameCache <- readline("Use same cache? (Y or N)")
+  #       if (identical(tolower(useSameCache), "y")) {
+  #         stop(paste0("To use crancache cached packages, please rerun:\n",
+  #                     "setup(RPackageCache = normalizePath(file.path(crancache::get_cache_dir(),'",extra,"'),
+  #                            winslash = '/'))"))
+  #       }
+  #     }
+  #   } else {
+  #     usingCranCache <- TRUE
+  #   }
+  # }
   copyRequireAndDeps(RPackageFolders)
   
   newOpts <- list("Require.RPackageCache" = RPackageCache,
-                  "Require.buildBinaries" = buildBinaries,
-                  "Require.useCranCache" = usingCranCache)
+                  "Require.buildBinaries" = buildBinaries)#,
+                  #"Require.useCranCache" = usingCranCache)
   opts <- options(newOpts)
   co <- capture.output(type = "message", 
                        setLibPaths(RPackageFolders, standAlone = standAlone, 
