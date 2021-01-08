@@ -6,7 +6,7 @@ utils::globalVariables(c(
 #' Determine package dependencies
 #'
 #' This will first look in local filesystem (in \code{.libPaths()}) and will use
-#' a local package to find its dependencies. If the package doesn't exist locally, 
+#' a local package to find its dependencies. If the package does not exist locally, 
 #' including whether it is the correct version, then it will look in (currently) 
 #' \code{CRAN} and its archives (if the current \code{CRAN} version is not
 #' the desired version to check). It will also look on \code{GitHub} if the 
@@ -238,7 +238,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
   needed <- Map(desc_path = desc_paths, pkg = packagesToCheck, 
                 pkgNoVersion = pkgsNoVersionToCheck, 
                 function(desc_path, pkg, pkgNoVersion) {
-    browser(expr = exists("aaaaa"))
     if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {
@@ -290,7 +289,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
           td <- tempdir2(pkgName)
           packageTD <- file.path(td, pkgName)
           if (!dir.exists(packageTD)) {
-            message("available.packages() doesn't have correct information on package dependencies for ", pkgName, 
+            message("available.packages() does not have correct information on package dependencies for ", pkgName, 
                     "; downloading tar.gz")
             verNum <- extractVersionNumber(pkg)
             if (is.na(verNum)) {

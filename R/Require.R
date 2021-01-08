@@ -53,7 +53,8 @@ utils::globalVariables(c(
 #'
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
-#' in \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
+#' in an R-version specific subfolder of 
+#' \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
 #' \emph{do not cache packages locally},
 #' and will reuse them if needed. To turn
 #' on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
@@ -250,12 +251,12 @@ Require <- function(packages, packageVersionFile,
   on.exit(data.table::setDTthreads(origDTThreads))
   
   purge <- dealWithCache(purge)
-  browser(expr = exists("._Require_0"))
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
   
-  if (missing(libPaths))
-    libPaths <- .libPaths()
+  libPaths <- checkLibPaths(libPaths = libPaths)
+  # if (missing(libPaths))
+  #   libPaths <- .libPaths()
   suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
   
   if (!missing(packageVersionFile)) {
@@ -270,7 +271,10 @@ Require <- function(packages, packageVersionFile,
     packages <- packages[!packages$Package %in% .basePkgs]
     uniqueLibPaths <- unique(packages$LibPath)
     if (length(uniqueLibPaths) > 1) {
-      dt <- data.table(libPathInSnapshot = uniqueLibPaths, newLibPaths = paste0(libPaths[1], "_", seq(length(uniqueLibPaths))))
+      dt <- data.table(libPathInSnapshot = uniqueLibPaths, 
+                       newLibPaths = normPath(c(libPaths[1], 
+                                                file.path(libPaths[1], 
+                                                          gsub(":", "", uniqueLibPaths[-1])))))
       message("packageVersionFile is covering more than one library; installing packages in reverse order; ",
               "also -- .libPaths() will be altered to be\n")
       messageDF(dt)
@@ -317,7 +321,8 @@ Require <- function(packages, packageVersionFile,
     on.exit({Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)}, add = TRUE)
     message("Using ", packageVersionFile, "; setting `require = FALSE`")
   }
-  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
+  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))}, 
+          add = TRUE)
   
   # Rm base packages -- this will happen in getPkgDeps if that is run
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
@@ -338,7 +343,6 @@ Require <- function(packages, packageVersionFile,
     packagesOrder <- seq(packagesOrig)
     names(packagesOrder) <- extractPkgName(packageNamesOrig)
     
-    browser(expr = exists("._Require_1"))
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
       packages <- getPkgDeps(packages, which = which, purge = purge)
     }
@@ -349,7 +353,8 @@ Require <- function(packages, packageVersionFile,
     
     pkgDT <- toPkgDT(packages, deepCopy = TRUE)
     # identify the packages that were asked by user to load -- later dependencies will be in table too
-    # some cases, original was without version, but due to a dependency that does have a version, it is no longer the same as orig package name
+    # some cases, original was without version, but due to a dependency that does have a version, 
+    # it is no longer the same as orig package name
     pkgDT[packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig), 
           packagesRequired := packagesOrder[match(Package, names(packagesOrder))]]
     pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
@@ -374,7 +379,7 @@ Require <- function(packages, packageVersionFile,
           install.packagesArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install.packagesArgs[["INSTALL_opts"]]))
           install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
           if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-            if (!is.null(getOption("Require.RPackageCache"))) {
+            if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
               ip <- .installed.pkgs()
               isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
               if (isTRUE(isCranCacheInstalled)) {
@@ -386,8 +391,8 @@ Require <- function(packages, packageVersionFile,
                 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
               }
               
-              checkPath(getOption("Require.RPackageCache"), create = TRUE)
-              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", getOption("Require.RPackageCache")), "/")
+              checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
+              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
               if (getOption("Require.buildBinaries", TRUE)) {
                 # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
                   install.packagesArgs[["INSTALL_opts"]] <- unique(c('--build', install.packagesArgs[["INSTALL_opts"]]))
@@ -488,3 +493,4 @@ Require <- function(packages, packageVersionFile,
     return(invisible(out))
   }
 }
+

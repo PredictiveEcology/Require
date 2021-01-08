@@ -155,7 +155,8 @@ the current collection of packages and versions.
 \section{Local Cache of Packages}{
 
 When installing new packages, `Require` will put all source and binary files
-in \code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
+in an R-version specific subfolder of 
+\code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning 
 \emph{do not cache packages locally},
 and will reuse them if needed. To turn
 on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.

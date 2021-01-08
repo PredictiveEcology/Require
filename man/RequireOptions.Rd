@@ -25,7 +25,7 @@ The following options are likely of interest to most users:
       is to have packages not be cached locally so each install of the same version will
       be from the original source, e.g., CRAN, GitHub.
   }
-  \item{\code{buildBinarieis}}{
+  \item{\code{buildBinaries}}{
     Default: \code{TRUE}. Only relevant on *nix systems and if
     \code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE}, then
        \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the
@@ -45,6 +45,12 @@ The following options are likely of interest to most users:
     will be deleted and rebuilt. This should not generally be necessary as it will 
     automatically be deleted after (by default) 1 hour (set via 
     \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
+  }
+  \item{\code{setupVerbose}}{
+    Default: \code{TRUE}. Logical. Once \code{setup} is called, there are several important
+    changes that are made to the user's experience. For beginners with \code{Require},
+    the messages that are written are important to see. However, these can be turned off
+    setting this to \code{FALSE}
   }
   \item{\code{unloadNamespaces}}{
     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload

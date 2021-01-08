@@ -2,7 +2,6 @@ utils::globalVariables(c(
   "..whichAll", "destFile", "filepath", "pkg"
 ))
 
-
 #' @description 
 #' 
 #' \code{pkgDepAlt} is a newer, still experimental approach to \code{pkgDep}, which has different
@@ -77,7 +76,7 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
     pkgDTComplete[[i]] <- pkgDTComplete[[i]][0]
   }
   
-  while((NROW(pkgDTDeps[[i]]) & recursive) || (recursive == FALSE & NROW(pkgDTDeps[[i]]) == 1)) {
+  while ((NROW(pkgDTDeps[[i]]) & recursive) || (recursive == FALSE & NROW(pkgDTDeps[[i]]) == 1)) {
     pkgDTSrc <- list()
     browser(expr = exists("._pkgDep3_2"))
     pfn <- pkgDTDeps[[i]]$packageFullName
@@ -96,7 +95,6 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
     } else {
       pkgDTDeps[[i]] <- pkgDTDeps[[i]][0]
     }
-    
     
     deps <- list()
     
@@ -174,7 +172,7 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
       depsList <- append(depsList, stashed[!stillNeed])
     }
     # message(sum(!stillNeed), " not rerun, out of ", length(stillNeed))
-    pkgDTDeps[[i+1]] <- rbindlist(
+    pkgDTDeps[[i + 1]] <- rbindlist(
       Map(x = depsList, PackageTopLevel = gsub("^.+\\___(.*)", "\\1", names(depsList)),
           function(x, PackageTopLevel) {
             nams <- names(x)
@@ -188,41 +186,41 @@ pkgDepAlt <- function(packages, libPath = .libPaths(),
       idcol = "PackageVersion")
     
     # Clean up -- R, \n\t
-    if (NROW(pkgDTDeps[[i+1]]) > 0) { 
-      pkgDTDeps[[i+1]] <- cleanUp(pkgDTDeps[[i+1]], includeBase = includeBase)
+    if (NROW(pkgDTDeps[[i + 1]]) > 0) { 
+      pkgDTDeps[[i + 1]] <- cleanUp(pkgDTDeps[[i + 1]], includeBase = includeBase)
     }
     
-    if (NROW(pkgDTDeps[[i+1]])) {
+    if (NROW(pkgDTDeps[[i + 1]])) {
       # Put "remotes" first, because it has more information than all others
-      if (length(unique(pkgDTDeps[[i+1]]$which)) > 1) {
-        set(pkgDTDeps[[i+1]], NULL, "whichFac", 
-            factor(pkgDTDeps[[i+1]]$which, 
+      if (length(unique(pkgDTDeps[[i + 1]]$which)) > 1) {
+        set(pkgDTDeps[[i + 1]], NULL, "whichFac", 
+            factor(pkgDTDeps[[i + 1]]$which, 
                    levels = c("remotes", "depends", "imports", "suggests", "linkingto", "enhances")))
-        setorderv(pkgDTDeps[[i+1]], "whichFac")
-        set(pkgDTDeps[[i+1]], NULL, "whichFac", NULL)
+        setorderv(pkgDTDeps[[i + 1]], "whichFac")
+        set(pkgDTDeps[[i + 1]], NULL, "whichFac", NULL)
       }
       
       # if there are duplicates within a 
-      set(pkgDTDeps[[i+1]], NULL, "hasVersionSpec", grepl(.grepVersionNumber, pkgDTDeps[[i+1]]$packageFullName))
+      set(pkgDTDeps[[i + 1]], NULL, "hasVersionSpec", grepl(.grepVersionNumber, pkgDTDeps[[i + 1]]$packageFullName))
       
-      pkgDTDeps[[i+1]] <- keepOnlyMaxVersion(pkgDTDeps[[i+1]])
+      pkgDTDeps[[i + 1]] <- keepOnlyMaxVersion(pkgDTDeps[[i + 1]])
     }
-    pkgDTComplete[[i+1]] <- data.table::copy(pkgDTDeps[[i+1]])
+    pkgDTComplete[[i + 1]] <- data.table::copy(pkgDTDeps[[i + 1]])
     
-    if (NROW(pkgDTComplete[[i+1]]) == 0)  {
+    if (NROW(pkgDTComplete[[i + 1]]) == 0)  {
       break
     }
     # Deal with duplicates
     
-    # alreadyDone <- pkgDTDeps[[i+1]]$packageFullName %in% 
+    # alreadyDone <- pkgDTDeps[[i + 1]]$packageFullName %in% 
     #   unlist(lapply(pkgDTDeps[seq(i)], function(x) x$packageFullName))
     
     # if (any(alreadyDone)) { 
-    #   pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][alreadyDone == FALSE]
+    #   pkgDTDeps[[i + 1]] <- pkgDTDeps[[i + 1]][alreadyDone == FALSE]
     # } else if (all(alreadyDone)) { 
-    #   pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][0] 
+    #   pkgDTDeps[[i + 1]] <- pkgDTDeps[[i + 1]][0] 
     # }
-    # pkgDTDeps[[i+1]] <- pkgDTDeps[[i+1]][!duplicated(pkgDTDeps[[i+1]]$Package)] # remove imports where there is remotes
+    # pkgDTDeps[[i + 1]] <- pkgDTDeps[[i + 1]][!duplicated(pkgDTDeps[[i + 1]]$Package)] # remove imports where there is remotes
     i <- i + 1
     
   }
@@ -293,7 +291,7 @@ pkgDepArchive <- function(pkgDT, repos, keepVersionNumber = TRUE,
   DESCRIPTIONpaths <- file.path(packageTD, "DESCRIPTION")
   pkgDTNeedNew <- pkgDT[objsExist == FALSE] 
   if (NROW(pkgDTNeedNew)) {
-    message("available.packages() doesn't have correct information on package dependencies for ",
+    message("available.packages() does not have correct information on package dependencies for ",
             paste(Package, collapse = ", "), 
             " because they are Archive versions; downloading their respective tar.gz files")
     pkgFilename <- paste0(pkgDTNeedNew$Package, "_", 

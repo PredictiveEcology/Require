@@ -10,7 +10,7 @@ utils::globalVariables(c(
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
   if (!is.null(getOption("Require.RPackageCache")))
-    checkPath(getOption("Require.RPackageCache"), create = TRUE)
+    checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
 
   if (getOption("Require.persistentPkgEnv")) {
     if (file.exists(.thePersistentFile)) {

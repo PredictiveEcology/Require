@@ -8,12 +8,17 @@ pkgSnapshot(
   packageVersionFile = "packageVersions.txt",
   libPaths,
   standAlone = FALSE,
-  purge = getOption("Require.purge", FALSE)
+  purge = getOption("Require.purge", FALSE),
+  exact = TRUE
 )
 }
 \arguments{
 \item{packageVersionFile}{A filename to save the packages and their currently
-installed version numbers. Defaults to \code{".packageVersions.txt"}.}
+installed version numbers. Defaults to \code{".packageVersions.txt"}.
+If this is specified to be \code{NULL}, the function will return the exact
+\code{Require} call needed to install all the packages at their current
+versions. This can be useful to add to a script to allow for reproducibility of
+a script.}
 
 \item{libPaths}{The path to the local library where packages are installed.
 Defaults to the \code{.libPaths()[1]}.}
@@ -39,6 +44,16 @@ defaults to 3600  (one hour -- see
 \code{\link[utils]{available.packages}}).
 
 Internally, there are calls to \code{available.packages}}
+
+\item{exact}{Logical. If \code{TRUE}, the default, then for GitHub packages, it
+will install the exact SHA, rather than the head of the account/repo@branch. For
+CRAN packages, it will install the exact version. If \code{FALSE}, then GitHub
+packages will identify their branch if that had been specified upon installation, 
+not a SHA. If the package had been installed with reference to a SHA, then it
+will return the SHA as it does not know what branch it came from. 
+Similarly, CRAN packages will
+report their version and specify with a \code{>=}, allowing a subsequent user
+to install with a minimum version number, as opposed to an exact version number.}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.
@@ -72,6 +87,18 @@ library(Require)
 setLibPaths("~/RPackages") # start with an empty folder for new 
                            # library to minimize package version conflicts
 Require(packageVersionFile = fileName)
+
+# Passing NULL --> results in output to console with exact Require call to 
+#   achieve the packages installations
+pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
+
+# Or shunt it to a file
+sink("packages2.R")
+pkgSnapshot(NULL, libPaths = .libPaths()[1])
+sink()
+
+# Will show "minimum package version"
+pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 }
 
 }

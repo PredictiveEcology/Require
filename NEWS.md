@@ -1,5 +1,17 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.11
+==============
+
+## New features
+* `setup`: new function for creating a new project. See `readme.md`
+* `setLibPath` and package caching (via `options("RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.
+* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to .libPaths() to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
+
+## Bug fixes
+* several edge cases with complex loading of many packages
+
+
 version 0.0.10
 ==============
 
@@ -18,8 +30,8 @@ version 0.0.9
 
 ## Bug fixes
 * deals with more cases of installing arbitrary packages from a packageVersion.txt file
-* Doesn't mistakenly create a new, empty directory of packages to accommodate 2 LibPaths from packageVersion.txt file, *if the second (or more) LibPath* is full of base packages.
-* Handles better false positives (packages didn't install properly when they did) and some false negatives (no error collected at end when there was an error in installing)
+* Does not mistakenly create a new, empty directory of packages to accommodate 2 LibPaths from packageVersion.txt file, *if the second (or more) LibPath* is full of base packages.
+* Handles better false positives (packages did not install properly when they did) and some false negatives (no error collected at end when there was an error in installing)
 * better suggestion of what to do in some edge cases of failed package installs
 * captures and deals with a bug in `install.packages` (`argument "av2" is missing, with no default`) on R-devel for Windows (on Sept 09, 2020). May be transient.
 * Was, by default, installing from `source` on Windows. Fixed.

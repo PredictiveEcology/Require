@@ -2,9 +2,9 @@
 
 |field    |value                        |
 |:--------|:----------------------------|
-|version  |R version 4.0.2 (2020-06-22) |
-<<<<<<< HEAD
+|version  |R version 4.0.3 (2020-10-10) |
 |os       |Windows 10 x64               |
+|system   |x86_64, mingw32              |
 |system   |x86_64, mingw32              |
 |ui       |RStudio                      |
 |language |(EN)                         |
@@ -30,22 +30,20 @@
 |reproducible |?       |      |        |     |
 |SpaDES.core  |?       |      |        |     |
 =======
-|os       |Ubuntu 20.04.1 LTS           |
-|system   |x86_64, linux-gnu            |
 |ui       |RStudio                      |
-|language |en_CA:en                     |
-|collate  |en_CA.UTF-8                  |
-|ctype    |en_CA.UTF-8                  |
-|tz       |America/Edmonton             |
-|date     |2020-09-10                   |
+|language |(EN)                         |
+|collate  |English_Canada.1252          |
+|ctype    |English_Canada.1252          |
+|tz       |America/Los_Angeles          |
+|date     |2021-01-07                   |
 
 # Dependencies
 
-|package    |old    |new        |Δ  |
-|:----------|:------|:----------|:--|
-|Require    |0.0.7  |0.0.8.9031 |*  |
-|data.table |1.13.0 |1.13.0     |   |
-|remotes    |2.2.0  |2.2.0      |   |
+|package    |old    |new    |<U+0394>  |
+|:----------|:------|:------|:--|
+|Require    |0.0.10 |0.0.11 |*  |
+|data.table |1.13.6 |1.13.6 |   |
+|remotes    |2.2.0  |2.2.0  |   |
 
 # Revdeps
 
@@ -53,6 +51,6 @@
 
 |package                               |version |error  |warning |note |
 |:-------------------------------------|:-------|:------|:-------|:----|
-|[SpaDES.core](problems.md#spadescore) |1.0.2   |__+2__ |        |1    |
+|[SpaDES.core](problems.md#spadescore) |1.0.5   |__+1__ |        |     |
 >>>>>>> development
 
