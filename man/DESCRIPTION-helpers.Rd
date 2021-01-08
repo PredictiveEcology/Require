@@ -28,7 +28,7 @@ defaults to 3600  (one hour -- see
 
 Internally, there are calls to \code{available.packages}}
 
-\item{other}{Any other keyword in a DESCRIPTION file that preceeds a ":". The rest of the line will be
+\item{other}{Any other keyword in a DESCRIPTION file that precedes a ":". The rest of the line will be
 retrieved.}
 
 \item{pkg}{A character string with a GitHub package specification (c.f. remotes)}

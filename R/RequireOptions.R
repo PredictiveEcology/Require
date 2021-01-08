@@ -41,6 +41,12 @@
 #'     automatically be deleted after (by default) 1 hour (set via 
 #'     \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
 #'   }
+#'   \item{\code{setupVerbose}}{
+#'     Default: \code{TRUE}. Logical. Once \code{setup} is called, there are several important
+#'     changes that are made to the user's experience. For beginners with \code{Require},
+#'     the messages that are written are important to see. However, these can be turned off
+#'     setting this to \code{FALSE}
+#'   }
 #'   \item{\code{unloadNamespaces}}{
 #'     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload
 #'     packages that conflict with the requested package installing via \code{Require}.
@@ -63,9 +69,16 @@ RequireOptions <- function() {
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL, #"~/._RPackageCache", # nolint
        Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
+       Require.setupVerbose = TRUE,
        Require.standAlone = TRUE, 
        Require.unloadNamespaces = TRUE,
        Require.updateRprofile = FALSE,
+       # Require.useCranCache = NULL,
        Require.verbose = 0
   )
 }
+
+#   \item{\code{useCranCache}}{
+#     Default: \code{NULL}. Experimental. If \code{TRUE}, a user can try 
+#     to use the same cache folder as the crancache package (for binaries only). .
+#   }

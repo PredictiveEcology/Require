@@ -46,6 +46,12 @@ The following options are likely of interest to most users:
     automatically be deleted after (by default) 1 hour (set via 
     \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
   }
+  \item{\code{setupVerbose}}{
+    Default: \code{TRUE}. Logical. Once \code{setup} is called, there are several important
+    changes that are made to the user's experience. For beginners with \code{Require},
+    the messages that are written are important to see. However, these can be turned off
+    setting this to \code{FALSE}
+  }
   \item{\code{unloadNamespaces}}{
     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload
     packages that conflict with the requested package installing via \code{Require}.

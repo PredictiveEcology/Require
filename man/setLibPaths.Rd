@@ -48,7 +48,7 @@ As when setting \code{options}, this will return the previous state of
 This will set the \code{.libPaths()} by either adding a new path to
 it if \code{standAlone = FALSE}, or will concatenate
 \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}. Currently,
-the default is to make this new \code{.libPaths()} "sticky", meaning it beomces 
+the default is to make this new \code{.libPaths()} "sticky", meaning it becomes 
 associated with the current directory even through a restart of R. It does this
 by adding and/updating the .Rprofile file in the current directory. If this
 current director is a project, then the project will have the new \code{.libPaths()}

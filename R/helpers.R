@@ -131,7 +131,7 @@ setMethod(
               dir.create(file.path(pth), recursive = TRUE, showWarnings = FALSE)
             })
           } else {
-            stop(paste("Specified path", normPath(path), "doesn't exist.",
+            stop(paste("Specified path", normPath(path), "does not exist.",
                        "Create it and try again."))
           }
         }
