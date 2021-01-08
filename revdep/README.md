@@ -5,7 +5,6 @@
 |version  |R version 4.0.3 (2020-10-10) |
 |os       |Windows 10 x64               |
 |system   |x86_64, mingw32              |
-|system   |x86_64, mingw32              |
 |ui       |RStudio                      |
 |language |(EN)                         |
 |collate  |English_Canada.1252          |
