@@ -178,7 +178,7 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
 }
 
 resetRprofileMessage <- function(updateRprofile = ".Rprofile") {
-  paste0("message(\"To reset libPaths to previous state, run: Require::setLibPaths() (or delete section in .Rprofile)\") ")
+  paste0("message(\"To reset libPaths to previous state, run: Require::setupOff() (or delete section in .Rprofile file)\") ")
 }
 
 checkTRUERprofile <- function(updateRprofile) {
