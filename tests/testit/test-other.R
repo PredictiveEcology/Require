@@ -76,7 +76,7 @@ options(outOpts2)
 
 ## setup
 options(RequireOptions())
-setupTestDir <- tempdir2("setupTests")
+setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 setup(setupTestDir, RPackageCache = ccc)
 testit::assert(identical(getOption("Require.RPackageCache"), ccc))
@@ -94,3 +94,4 @@ testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
 testit::assert(identical(getOption("Require.RPackageCache"), secondTry))
 options(opt22)
+

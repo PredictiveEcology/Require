@@ -67,7 +67,7 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
   ro <- RequireOptions()
   roNames <- names(newOpts)
   names(roNames) <- roNames
-  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], newOpts[[optNam]])))
+  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
   if (any(nonStandardOpt)) {
     rp <- readLines(".Rprofile")
     lineWithPrevious <- grepl("### Previous", rp)
@@ -77,7 +77,7 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
       pre <- seq(lineWithPrevious)
       nameNonStandards <- names(nonStandardOpt)[nonStandardOpt]
       optsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
-        paste0("### Previous option: ", nns, " = ", newOpts[[nns]])
+        paste0("### Previous option: ", nns, " = ", opts[[nns]])
       }))
       newOptsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
         paste0("options('", nns, "' = '", newOpts[[nns]], "')")
