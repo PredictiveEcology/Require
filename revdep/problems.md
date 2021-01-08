@@ -2,11 +2,11 @@
 
 <details>
 
-* Version: 1.0.2
+* Version: 1.0.5
 * GitHub: https://github.com/PredictiveEcology/SpaDES.core
 * Source code: https://github.com/cran/SpaDES.core
-* Date/Publication: 2020-08-28 08:00:02 UTC
-* Number of recursive dependencies: 158
+* Date/Publication: 2021-01-07 20:20:14 UTC
+* Number of recursive dependencies: 132
 
 Run `revdep_details(, "SpaDES.core")` for more info
 
@@ -16,57 +16,26 @@ Run `revdep_details(, "SpaDES.core")` for more info
 
 *   checking examples ... ERROR
     ```
+    Running examples in 'SpaDES.core-Ex.R' failed
+    The error most likely occurred in:
+    
+    > ### Name: moduleVersion
+    > ### Title: Parse and extract a module's version
+    > ### Aliases: moduleVersion moduleVersion,character,character,missing-method
+    > ###   moduleVersion,character,missing,missing-method
+    > ###   moduleVersion,character,missing,simList-method
+    > 
+    > ### ** Examples
     ...
-    > # set modulePath
-    > setPaths(modulePath = system.file("sampleModules", package = "SpaDES.core"))
-    Setting:
-      options(
-        spades.modulePath = '/home/achubaty/Documents/GitHub/PredictiveEcology/Require/revdep/checks/SpaDES.core/new/SpaDES.core.Rcheck/SpaDES.core/sampleModules'
-      )
-    Paths set to:
-      options(
-        rasterTmpDir = '/tmp/Rtmpfz8H41/raster'
-        reproducible.cachePath = '/tmp/Rtmpfz8H41/myProject/cache'
-        spades.inputPath = '/tmp/Rtmpfz8H41/myProject/inputs'
-        spades.outputPath = '/tmp/Rtmpfz8H41/myProject/outputs'
-        spades.modulePath = '/home/achubaty/Documents/GitHub/PredictiveEcology/Require/revdep/checks/SpaDES.core/new/SpaDES.core.Rcheck/SpaDES.core/sampleModules'
-      )
-    > # use Require and reqdPkgs
-    > if (!interactive()) chooseCRANmirror(ind = 1) #
-    > Require(unlist(reqdPkgs(module = c("caribouMovement", "randomLandscapes", "fireSpread"))))
-    Error in `[.data.table`(pkgDT, packageFullName %in% packagesOrig[origPackagesHaveNames],  : 
-      Supplied 7 items to be assigned to 8 items of column 'Package'. If you wish to 'recycle' the RHS please use rep() to make this intent clear to readers of your code.
-    Calls: Require -> [ -> [.data.table
+    downloaded 1.1 MB
+    
+    package 'SpaDES.tools' successfully unpacked and MD5 sums checked
+    
+    The downloaded binary packages are in
+    	C:\Users\emcintir.W-VIC-A144916\AppData\Local\Temp\RtmpOGZRKQ\downloaded_packages
+    Error in .doLoadActions(where, attach) : 
+      error in load action .__A__.1 for package raster: loadModule(module = "spmod", what = TRUE, env = ns, loadNow = TRUE): Unable to load module "spmod": object of type 'closure' is not subsettable
+    Calls: simInit ... asNamespace -> loadNamespace -> <Anonymous> -> .doLoadActions
     Execution halted
-    ```
-
-*   checking tests ...
-    ```
-     ERROR
-    Running the tests in ‘tests/test-all.R’ failed.
-    Last 13 lines of output:
-      
-          citation
-      
-      [31m──[39m [31m1. Error: /home/achubaty/Documents/GitHub/PredictiveEcology/Require/revdep/ch[39m
-      Supplied 7 items to be assigned to 8 items of column 'Package'. If you wish to 'recycle' the RHS please use rep() to make this intent clear to readers of your code.
-      [1mBacktrace:[22m
-      [90m 1. [39mRequire::Require(...)
-      [90m 3. [39mdata.table:::`[.data.table`(...)
-      
-      ══ testthat results  ═══════════════════════════════════════════════════════════
-      [ OK: 513 | SKIPPED: 18 | WARNINGS: 2 | FAILED: 1 ]
-      1. Error: /home/achubaty/Documents/GitHub/PredictiveEcology/Require/revdep/checks/SpaDES.core/new/SpaDES.core.Rcheck/00_pkg_src/SpaDES.core/man/simList-accessors-metadata.Rd 
-      
-      Error: testthat unit tests failed
-      Execution halted
-    ```
-
-## In both
-
-*   checking dependencies in R code ... NOTE
-    ```
-    Namespace in Imports field not imported from: ‘RCurl’
-      All declared Imports should be used.
     ```
 

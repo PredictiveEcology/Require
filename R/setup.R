@@ -27,12 +27,35 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
                   buildBinaries = getOption("buildBinaries", TRUE), 
                   standAlone = getOption("standAlone", TRUE)) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
-  checkPath(RPackageFolders, create = TRUE)
+  RPackageCache <- checkPath(RPackageCache, create = TRUE)
+  hasCranCache <- any(dir.exists(file.path(.libPaths(), "crancache")))
+  usingCranCache <- FALSE
   
+  if (hasCranCache) {
+    rvn <- paste0(R.version$major, '.', strsplit(R.version$minor, split = '\\.')[[1]][1])
+    os <- tolower(.Platform$OS.type)
+    extra <- file.path('cran','bin', os,'contrib', rvn, fsep = "/")
+    usingCranCache <- !endsWith(RPackageCache, extra)
+    if (usingCranCache) {
+      if (interactive()) {
+        message("crancache is installed; would you like to have Require and ",
+                "crancache share the cache? If N, then Require will use ",
+                RPackageCache)
+        useSameCache <- readline("Use same cache? (Y or N)")
+        if (identical(tolower(useSameCache), "y")) {
+          stop(paste0("To use crancache cached packages, please rerun:\n",
+                      "setup(RPackageCache = normalizePath(file.path(crancache::get_cache_dir(),'",extra,"'),
+                             winslash = '/'))"))
+        }
+      }
+    }
+  }
   copyRequireAndDeps(RPackageFolders)
   
-  opts <- options("Require.RPackageCache" = RPackageCache,
-                  "Require.buildBinaries" = buildBinaries)
+  newOpts <- list("Require.RPackageCache" = RPackageCache,
+                  "Require.buildBinaries" = buildBinaries,
+                  "Require.useCranCache" = usingCranCache)
+  opts <- options(newOpts)
   co <- capture.output(type = "message", 
                        setLibPaths(RPackageFolders, standAlone = standAlone, 
                                    updateRprofile = TRUE))
@@ -40,9 +63,9 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
     if (getOption("Require.setupVerbose", TRUE)) 
       silence <- lapply(co, message)
   ro <- RequireOptions()
-  roNames <- names(opts)
+  roNames <- names(newOpts)
   names(roNames) <- roNames
-  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
+  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], newOpts[[optNam]])))
   if (any(nonStandardOpt)) {
     rp <- readLines(".Rprofile")
     lineWithPrevious <- grepl("### Previous", rp)
@@ -52,9 +75,12 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
       pre <- seq(lineWithPrevious)
       nameNonStandards <- names(nonStandardOpt)[nonStandardOpt]
       optsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
-        paste0("### Previous option: ", nns, " = ", opts[[nns]])
+        paste0("### Previous option: ", nns, " = ", newOpts[[nns]])
       }))
-      newRP <- c(rp[pre], optsToAdd, rp[post])
+      newOptsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
+        paste0("options('", nns, "' = '", newOpts[[nns]], "')")
+      }))
+      newRP <- c(rp[pre], optsToAdd, newOptsToAdd, rp[post])
       cat(newRP, file = ".Rprofile", sep = "\n")
     }
   }
@@ -70,29 +96,33 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
 #'   deletions.
 setupOff <- function(removePackages = FALSE) {
   lps <- .libPaths()
-  rp <- readLines(".Rprofile")
-  lineWithPrevious <- grepl("### Previous option", rp)
-  options(RequireOptions())
-  if (any(lineWithPrevious)) {
-    lineWithPrevious <- which(lineWithPrevious)
-    silence <- lapply(lineWithPrevious, function(lwp) {
-      opt <- gsub("### Previous option: ", "", rp[lwp])
-      opt <- strsplit(opt, " = ")[[1]]
-      newOpt <- list(opt[2])
-      names(newOpt) <- opt[1]
-      options(newOpt)
-    })
-  }
-  setLibPaths()
-  if (isTRUE(removePackages)) {
-    if (interactive() && getOption("Require.setupVerbose", TRUE) ) {
-      message("You have requested to remove all packages in ", lps[1])
-      out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
-      if (identical(tolower(out), "n"))
-        removePackages <- FALSE
-    } 
-    if (isTRUE(removePackages))
-      unlink(lps[1], recursive = TRUE)
+  if (file.exists(".Rprofile")) {
+    rp <- readLines(".Rprofile")
+    lineWithPrevious <- grepl("### Previous option", rp)
+    options(RequireOptions())
+    if (any(lineWithPrevious)) {
+      lineWithPrevious <- which(lineWithPrevious)
+      silence <- lapply(lineWithPrevious, function(lwp) {
+        opt <- gsub("### Previous option: ", "", rp[lwp])
+        opt <- strsplit(opt, " = ")[[1]]
+        newOpt <- list(opt[2])
+        names(newOpt) <- opt[1]
+        options(newOpt)
+      })
+    }
+    setLibPaths()
+    if (isTRUE(removePackages)) {
+      if (interactive() && getOption("Require.setupVerbose", TRUE) ) {
+        message("You have requested to remove all packages in ", lps[1])
+        out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
+        if (identical(tolower(out), "n"))
+          removePackages <- FALSE
+      } 
+      if (isTRUE(removePackages))
+        unlink(lps[1], recursive = TRUE)
+    }
+  } else {
+    message("Project is not setup yet; nothing to do")
   }
 }
 
