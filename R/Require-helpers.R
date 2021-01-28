@@ -834,6 +834,8 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     }))]
     ipa <- modifyList2(install_githubArgs, dots)
     outRes <- lapply(gitPkgDeps2, function(p) {
+      browser()
+      installGithubPackage
       out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
                warning = function(w) w,
                error = function(e) e)
@@ -1538,3 +1540,51 @@ preparePkgNameToReport <- function(Package, packageFullName) {
                                                packageFullName[!pkgNameInPkgFullName], ")")
   Package
 }
+
+
+splitGitRepo <- function(gitRepo) {
+  grSplit <- strsplit(gitRepo, "/|@")[[1]]
+  acct <- grSplit[[1]]
+  repo <- grSplit[[2]]
+  if (length(grSplit) > 2) {
+    br <- grSplit[[3]]
+  } else {
+    br <- "master"
+  }
+  list(acct = acct, repo = repo, br = br)
+}
+
+#' Install R Package from GitHub source code
+#'
+#' A lightweight alternative to \code{devtools::install_github}. All dependencies
+#' must have been installed already for this to work.
+#'
+#' @param gitRepo A repository in the form: Account/Repository@Branch or Account/Repository@SHA
+#' @param libPath The folder where you would like the package installed. Defaults
+#'   to \code{.libPaths()[1]}
+#' @export
+installGithubPackage <- function(gitRepo, libPath = .libPaths()[1]) {
+  gr <- splitGitRepo(gitRepo)
+  modulePath <- file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = ""))
+  dir.create(modulePath, recursive = TRUE)
+  out <- getModule(gitRepo, overwrite = TRUE, modulePath = modulePath)
+  orig <- setwd(modulePath)
+  on.exit({
+    setwd(orig)
+  })
+  if (nchar(Sys.which("R")) > 0) {
+    out1 <- system(paste("R CMD build ", gr$repo), intern = TRUE)
+    buildingLine <- grep("building", out1, value = TRUE)
+    packageTarName <- strsplit(buildingLine, "'")[[1]][2]
+    if (is.na(packageTarName)) { # linux didn't have that character
+      packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
+    }
+    system(paste0("R CMD INSTALL --library=", normalizePath(libPath, winslash = "/"), " ",packageTarName), wait = TRUE)
+  } else {
+    message("Can't install packages this way because R is not on the search path")
+  }
+}
+
+#' @rdname installGithubPackage
+#' @export
+installGitHubPackage <- installGithubPackage
