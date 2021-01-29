@@ -25,6 +25,7 @@ Imports:
     utils
 Suggests:
     remotes,
+    covr,
     testit
 Encoding: UTF-8
 Language: en-CA
