@@ -569,8 +569,8 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' @importFrom utils sessionInfo
 #' @export
 #' @details
-#' \code{doInstall} is a wrapper around \code{install.packages},
-#' \code{remotes::install_github}, and \code{remotes::install_version}.
+#' \code{doInstall} is a wrapper around \code{utils::install.packages}, 
+#' \code{installGithub}, and \code{installCRAN}, and \code{installArchive}
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
@@ -782,7 +782,7 @@ archiveVersionsAvailable <- function(package, repos) {
 
 #' GitHub specific helpers
 #'
-#' \code{install_githubV} is a vectorized \code{remotes::install_github}.
+#' \code{install_githubV} is a vectorized \code{installGithubPackages}.
 #' This will attempt to identify all dependencies of all supplied packages first,
 #' then load the packages in the correct order so that each of their dependencies
 #' are met before each is installed.
@@ -834,11 +834,21 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     }))]
     ipa <- modifyList2(install_githubArgs, dots)
     outRes <- lapply(gitPkgDeps2, function(p) {
-      browser()
-      installGithubPackage
-      out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-               warning = function(w) w,
-               error = function(e) e)
+      out <- tryCatch(do.call(installGithubPackage, append(list(p), ipa)),
+                      warning = function(w) w,
+                      error = function(e) e)
+      if (is(out, "simpleWarning") || identical(out, 1L)) {
+        if (requireNamespace("remotes")) {
+          message("Require::installGithubPackage is still experimental and it failed; ",
+                  "Trying remotes::install_github instead")
+          out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+                          warning = function(w) w,
+                          error = function(e) e)
+        } else {
+          warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
+                  "install.packages('remotes')")
+        }
+      }
       if (identical(out, extractPkgName(p))) 
         out <- NULL
       out
@@ -1562,12 +1572,13 @@ splitGitRepo <- function(gitRepo) {
 #' @param gitRepo A repository in the form: Account/Repository@Branch or Account/Repository@SHA
 #' @param libPath The folder where you would like the package installed. Defaults
 #'   to \code{.libPaths()[1]}
+#' @param ... Passed to R CMD INSTALL
 #' @export
-installGithubPackage <- function(gitRepo, libPath = .libPaths()[1]) {
+installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
   gr <- splitGitRepo(gitRepo)
   modulePath <- file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = ""))
   dir.create(modulePath, recursive = TRUE)
-  out <- getModule(gitRepo, overwrite = TRUE, modulePath = modulePath)
+  out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = modulePath)
   orig <- setwd(modulePath)
   on.exit({
     setwd(orig)
@@ -1579,7 +1590,13 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1]) {
     if (is.na(packageTarName)) { # linux didn't have that character
       packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
     }
-    system(paste0("R CMD INSTALL --library=", normalizePath(libPath, winslash = "/"), " ",packageTarName), wait = TRUE)
+    opts2 <- append(list(...), 
+                    list(packageTarName, 
+                         repos = NULL, 
+                         lib = normalizePath(libPath, winslash = "/")))
+    do.call(install.packages, opts2)
+    # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
+    # system(cmd, wait = TRUE)
   } else {
     message("Can't install packages this way because R is not on the search path")
   }
@@ -1588,3 +1605,34 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1]) {
 #' @rdname installGithubPackage
 #' @export
 installGitHubPackage <- installGithubPackage
+
+downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
+  if (!dir.exists(modulePath)) dir.create(modulePath, recursive = TRUE)
+  gr <- splitGitRepo(gitRepo)
+  ar <- file.path(gr$acct, gr$repo)
+  repoFull <- file.path(modulePath, gr$repo)
+  zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
+  for (i in 1:2) {
+    url <- paste0("http://github.com/",ar,"/archive/",gr$br,".zip")
+    out <- try(download.file(url, destfile = zipFileName))
+    if (is(out, "try-error") && identical(gr$br, "master"))
+      gr$br <- "main"
+    else
+      break
+  }
+  out <- unzip(zipFileName, exdir = modulePath) # unzip it
+  if (dir.exists(repoFull))
+    if (isTRUE(overwrite)) {
+      unlink(repoFull, recursive = TRUE)
+    } else {
+      stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
+    }
+  badDirname <- unique(dirname(out))[1]
+  file.rename(badDirname, gsub(basename(badDirname), gr$repo, badDirname)) # it was downloaded with a branch suffix
+  unlink(zipFileName)
+  message(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"))
+  # possRmd <- normalizePath(winslash = "/", file.path(repoFull, paste0(gr$repo, ".Rmd")), mustWork = FALSE)
+  # if (file.exists(possRmd))
+  #   message("To run it, try: \nfile.edit('", possRmd,"')")
+  return(normalizePath(repoFull))
+}
