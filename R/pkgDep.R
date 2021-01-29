@@ -99,6 +99,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
     neededFull2 <- neededFull[!theNulls]
     if (NROW(neededFull2)) {
+      
       if (recursive) {
         which <- tail(which, 1)[[1]] # take the last of the list of which
         neededFull2 <- lapply(neededFull2, function(needed) {
@@ -260,14 +261,37 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
           pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
           setorderv(pkgDT2, "isGitPkg", order = -1)
           pkgDT2[, Package := extractPkgName(packageFullName)]
-          pkgDT2[, dup := duplicated(Package)]
+          
+          # Here, GitHub package specification in a DESCRIPTION file Remotes section
+          #   won't have version numbering --> Need to merge the two fields
+          pkgDT2[, Version := extractVersionNumber(packageFullName)]
+          if (any(!is.na(pkgDT2$Version))) {
+            pkgDT2[!is.na(Version), inequality := extractInequality(packageFullName)]
+            pkgDT2[, Version := {
+              if (all(is.na(Version))) NA_character_ else as.character(max(as.package_version(Version[!is.na(Version)])))
+            }, by = "Package"]
+            pkgDT2[, inequality := {
+              if (all(is.na(inequality))) NA_character_ else inequality[!is.na(inequality)][[1]]
+            }, by = "Package"]
+            pkgDT2[, github := extractPkgGitHub(packageFullName)]
+            if (any(pkgDT2$isGitPkg == TRUE & !is.na(pkgDT2$Version))) {
+              pkgDT2[isGitPkg == TRUE & !is.na(Version), newPackageFullName:= 
+                       if (is.na(extractVersionNumber(packageFullName))) 
+                         paste0(packageFullName, " (", inequality, Version, ")") else NA ]
+              whGitNeedVersion <- !is.na(pkgDT2$newPackageFullName)
+              if (any(whGitNeedVersion)) {
+                pkgDT2[whGitNeedVersion == TRUE, packageFullName := newPackageFullName]
+              }
+            }
+          }
+          dup <- duplicated(pkgDT2, by = c("Package", "Version"))
           pkgDT2 <- pkgDT2[dup == FALSE]
           differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
           if (length(differences)) {
             message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
                     paste(differences, collapse = ", "), " --) ")
           }
-          pkgDT2[, github := extractPkgGitHub(packageFullName)]
+          
         }
         needed <- pkgDT2$packageFullName
         #}
