@@ -1,27 +1,27 @@
 #' Setup a project library, cache, options
-#' 
+#'
 #' This can be placed as the first line of any/all scripts and it will
-#' be create a reproducible, self-contained project with R packages. 
+#' be create a reproducible, self-contained project with R packages.
 #' Some of these have direct relationships with \code{RequireOptions}
 #' and arguments in \code{setLibPaths} and \code{Require}.
-#' @param RPackageFolders One or more folders where R packages are 
-#'   installed to and loaded from. In the case of more than one 
+#' @param RPackageFolders One or more folders where R packages are
+#'   installed to and loaded from. In the case of more than one
 #'   folder provided, installation will only happen in the first one.
 #' @param RPackageCache See \code{?RequireOptions}.
 #' @param buildBinaries See \code{?RequireOptions}.
 #' @inheritParams setLibPaths
 #' @export
 #' @rdname setup
-#' 
-#' @examples 
-#' # Place this as the first line of a project
+#'
+#' @examples
 #' \dontrun{
+#' # Place this as the first line of a project
 #' Require::setup()
-#' 
+#'
 #' # To turn it off and return to normal
 #' Require::setupOff()
 #' }
-#'   
+#'
 setup <- function(RPackageFolders = getOption("RPackageFolders", "R"), 
                   RPackageCache = getOption("RPackageCache", "~/.cache/R/RequirePkgCache"), 
                   buildBinaries = getOption("buildBinaries", TRUE), 
@@ -30,7 +30,7 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
   RPackageCache <- checkPath(RPackageCache, create = TRUE)
   # hasCranCache <- any(dir.exists(file.path(.libPaths(), "crancache")))
   # usingCranCache <- FALSE
-  # 
+  #
   # if (hasCranCache && !isFALSE(getOption("Require.useCranCache"))) { # if NULL or TRUE go here
   #   rvn <- paste0(R.version$major, '.', strsplit(R.version$minor, split = '\\.')[[1]][1])
   #   os <- tolower(.Platform$OS.type)
@@ -53,16 +53,16 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
   #   }
   # }
   copyRequireAndDeps(RPackageFolders)
-  
+
   newOpts <- list("Require.RPackageCache" = RPackageCache,
                   "Require.buildBinaries" = buildBinaries)#,
                   #"Require.useCranCache" = usingCranCache)
   opts <- options(newOpts)
-  co <- capture.output(type = "message", 
-                       setLibPaths(RPackageFolders, standAlone = standAlone, 
+  co <- capture.output(type = "message",
+                       setLibPaths(RPackageFolders, standAlone = standAlone,
                                    updateRprofile = TRUE))
   if (!any(grepl(alreadyInRprofileMessage, co)))
-    if (getOption("Require.setupVerbose", TRUE)) 
+    if (getOption("Require.setupVerbose", TRUE))
       silence <- lapply(co, message)
   ro <- RequireOptions()
   roNames <- names(newOpts)
@@ -86,7 +86,6 @@ setup <- function(RPackageFolders = getOption("RPackageFolders", "R"),
       cat(newRP, file = ".Rprofile", sep = "\n")
     }
   }
-    
 }
 
 #' @rdname setup
@@ -119,7 +118,7 @@ setupOff <- function(removePackages = FALSE) {
         out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
         if (identical(tolower(out), "n"))
           removePackages <- FALSE
-      } 
+      }
       if (isTRUE(removePackages))
         unlink(lps[1], recursive = TRUE)
     }
@@ -141,21 +140,21 @@ copyRequireAndDeps <- function(RPackageFolders) {
       if (isTRUE(pkgInstalledAlready)) {
         fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
         if (!newPathExists) {
-          if (getOption("Require.setupVerbose", TRUE)) 
+          if (getOption("Require.setupVerbose", TRUE))
             message("Placing copy of ", pkg, " in ", RPackageFolders)
           dirs <- unique(dirname(fromFiles))
           dirs <- gsub(thePath, theNewPath, dirs)
           lapply(dirs, checkPath, create = TRUE)
         }
-        
+
         toFiles <- gsub(thePath, theNewPath, fromFiles)
-        
+
         if (newPathExists) {
           newPathVersion <- DESCRIPTIONFileVersionV(file.path(theNewPath, "DESCRIPTION"))
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          if (getOption("Require.setupVerbose", TRUE)) 
+          if (getOption("Require.setupVerbose", TRUE))
             message("Updating version of ", pkg, " in ", RPackageFolders)
           unlink(toFiles)
         }
@@ -164,6 +163,4 @@ copyRequireAndDeps <- function(RPackageFolders) {
       }
     }
   }
-
-
 }

@@ -16,16 +16,16 @@ setLibPaths(
 components of \code{.libPath()}}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-                  the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-                  be prepended to \code{.libPaths()} during the \code{Require} call,
-                  resulting in shared packages, i.e.,
-                  it will include the user's default package folder(s).
-                  This can be create dramatically faster
+the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
+be prepended to \code{.libPaths()} during the \code{Require} call,
+resulting in shared packages, i.e.,
+it will include the user's default package folder(s).
+This can be create dramatically faster
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 
 \item{updateRprofile}{Logical or Character string. If \code{TRUE}, then
-this function will put several lines of code in the current directory's \code{.Rprofile} 
+this function will put several lines of code in the current directory's \code{.Rprofile}
 file setting up the package libraries for this and future sessions. If
 a character string, then this should be the path to an \code{.Rprofile} file.
 To reset back to normal, run \code{setLibPaths()} without a libPath. Default:
@@ -34,7 +34,7 @@ can be set with an option or within a single call.}
 
 \item{exact}{Logical. This function will automatically append the R version number to the
 \code{libPaths} to maintain separate R package libraries for each R version
-on the system. There are some cases where this behaviour is not desireable. 
+on the system. There are some cases where this behaviour is not desireable.
 Set \code{exact} to \code{TRUE} to override this automatic appending and use
 the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 }
@@ -48,7 +48,7 @@ As when setting \code{options}, this will return the previous state of
 This will set the \code{.libPaths()} by either adding a new path to
 it if \code{standAlone = FALSE}, or will concatenate
 \code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}. Currently,
-the default is to make this new \code{.libPaths()} "sticky", meaning it becomes 
+the default is to make this new \code{.libPaths()} "sticky", meaning it becomes
 associated with the current directory even through a restart of R. It does this
 by adding and/updating the .Rprofile file in the current directory. If this
 current director is a project, then the project will have the new \code{.libPaths()}
