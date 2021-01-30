@@ -1,12 +1,21 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.11.9000
+==============
+
+## New features
+*
+
+## Bug fixes
+* fix use of options in `setup()`
+
 version 0.0.11
 ==============
 
 ## New features
-* `setup`: new function for creating a new project. See `readme.md`
-* `setLibPath` and package caching (via `options("RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.
-* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to .libPaths() to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
+* `setup`: new function for creating a new project. See `README.md`
+* `setLibPath` and package caching (via `options("Require.RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.
+* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to `.libPaths()` to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
 
 ## Bug fixes
 * several edge cases with complex loading of many packages
