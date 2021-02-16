@@ -1,8 +1,7 @@
 utils::globalVariables(c(
-  "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
-  ".N", "Archs", "type", "localType", "N", "installOrder",
-  "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile",
-  "Names"
+  "Archs", "destFile", "dup", "filepath",  "github",
+  "i.neededFiles", "installFromFac", "installOrder", "installResult", "isGitPkg",
+  "keep", "keep2", "localType", "localFileName", "neededFiles", ".N", "N", "Names", "type"
 ))
 
   #' @details
@@ -1492,7 +1491,7 @@ warningCantInstall <- function(pkgs) {
   warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
           "-----\n",
           "install.packages(c('", paste(pkgs, collapse = ", "),"'), lib = '", .libPaths()[1],"')",
-          "\n-----\n...before any other packages get loaded")
+      "\n-----\n...before any other packages get loaded")
 }
 
 rpackageFolder <- function(path = getOption("Require.RPackageCache"), exact = FALSE)  {
