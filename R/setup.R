@@ -22,10 +22,10 @@
 #' Require::setupOff()
 #' }
 #'
-setup <- function(RPackageFolders = getOption("RPackageFolders", "R"), 
-                  RPackageCache = getOption("RPackageCache", "~/.cache/R/RequirePkgCache"), 
-                  buildBinaries = getOption("buildBinaries", TRUE), 
-                  standAlone = getOption("standAlone", TRUE)) {
+setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
+                  RPackageCache = getOption("Require.RPackageCache", "~/.cache/R/RequirePkgCache"),
+                  buildBinaries = getOption("Require.buildBinaries", TRUE),
+                  standAlone = getOption("Require.standAlone", TRUE)) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
   RPackageCache <- checkPath(RPackageCache, create = TRUE)
   # hasCranCache <- any(dir.exists(file.path(.libPaths(), "crancache")))
