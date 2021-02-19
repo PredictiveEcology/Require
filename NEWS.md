@@ -11,6 +11,7 @@ version 0.0.12
 ## Bug fixes
 * several edge cases with complex loading of many packages
 * was incorrectly (not) loading base packages, e.g., `parallel`
+* In cases where a DESCRIPTION file had both a package with a minimum version (e.g., in Imports) and a REMOTES: for that package (without a minimum version, but with a branch, say), `Require` would use the REMOTES: entry. But since that means there is no minimum package version, and `Require` does not automatically install a package that is not violating a minimum version number, it would not install anything. Now, it harmonizes the 2 entries for a given package, and uses both the minimum version number and the git branch as the potential source to find that version number.
 
 
 version 0.0.10
