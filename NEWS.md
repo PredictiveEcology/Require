@@ -1,6 +1,6 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
-version 0.0.11
+version 0.0.12
 ==============
 
 ## New features
@@ -10,6 +10,7 @@ version 0.0.11
 
 ## Bug fixes
 * several edge cases with complex loading of many packages
+* was incorrectly (not) loading base packages, e.g., `parallel`
 
 
 version 0.0.10
