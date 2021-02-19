@@ -72,7 +72,7 @@ if (interactive()) {
       else 
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
-      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",
+      system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
                     .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
     
