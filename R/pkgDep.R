@@ -81,138 +81,143 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
-  saveNames <- paste(packages, paste(whichCat, "recursive", recursive, sep = "_")[1], sep = "_")
-  saveNames <- gsub("[[:punct:]]| ", "_", saveNames)
-  names(saveNames) <- packages
-  if (isTRUE(purge)) {
-    whExist <- unlist(lapply(saveNames, exists, envir = .pkgEnv))
-    if (any(whExist))
-      suppressWarnings(rm(list = saveNames[whExist], envir = .pkgEnv))
-  }
-  neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
-  needGet <- unlist(lapply(neededFull1, is.null))
-
-  if (any(needGet)) {
-    neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
-                              purge = purge, repos = repos)
-    purge <- FALSE # whatever it was, it was done in line above
-    theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
-    neededFull2 <- neededFull[!theNulls]
-    if (NROW(neededFull2)) {
-      if (recursive) {
-        which <- tail(which, 1)[[1]] # take the last of the list of which
-        neededFull2 <- lapply(neededFull2, function(needed) {
-          i <- 1
-          pkgsNew <- list()
-          pkgsNew[[i]] <- needed
-          while (length(unlist(pkgsNew[[i]])) > 0) {
-            i <- i + 1
-            pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i - 1]]), function(needed) {
-              unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
-                                        purge = purge, repos = repos)))
-            })
-            prevIndices <- 1:(i - 1)
-            curPkgs <- unlist(pkgsNew[[i]])
-            prevPkgs <- unlist(pkgsNew[prevIndices])
-            dt <- data.table(Package = c(prevPkgs, curPkgs),
-                             Current = c(rep(FALSE, length(prevPkgs)), rep(TRUE, length(curPkgs))))
-            # rdtOrig <- data.table::copy(dt)
-            # if (TRUE) {
-            #   dt[, PackageTrimmed := extractPkgName(Package)]
-            #   dt[, versionSpec := extractVersionNumber(Package)]
-            #   dt[, hasVers := !is.na(versionSpec)]
-            #   dt[hasVers == TRUE, inequality := extractInequality(Package)]
-            #   dt[hasVers == FALSE, versionSpec := NA]
-            #   dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
-            #   dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
-            #   dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
-            #   keepCols3 <- c("PackageTrimmed", "Package", "Current", 
-            #                  "hasVers", "inequality", "atLeastOneWithVersionSpec", "versionSpec")
-            #   
-            #   versionSpecNA <- is.na(dt$versionSpec)
-            #   dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
-            #   if (NROW(dt1)) {
-            #     ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
-            #     dt1 <- dt1[ord]
-            #     dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
-            #   }
-            #   
-            #   dt2 <- dt[versionSpecNA]
-            #   
-            #   dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
-            #   dt3 <- dt[!duplicated(dt$PackageTrimmed)]
-            #   dt4 <- dt3[Current == TRUE]
-            #   dt4Stable <- data.table::copy(dt4)
-            # #} else {
-            #dt <- data.table::copy(rdtOrig)
-            
-            set(dt, NULL, "PackageTrimmed", extractPkgName(dt$Package))
-            set(dt, NULL, "versionSpec", extractVersionNumber(dt$Package))
-            set(dt, NULL, "hasVers", !is.na(dt$versionSpec))
-            hasV <- dt$hasVers == TRUE
-            # set(dt, which(hasV), "inequality", extractInequality(dt$Package[hasV]))
-            # set(dt, which(!hasV), "versionSpec", NA)
-            # browser(expr = any(duplicated(dt$PackageTrimmed)))
-            dt[, `:=`(atLeastOneWithVersionSpec = any(hasVers),
-                      Current = all(Current == TRUE)), by = "PackageTrimmed"]
-            dt <- dt[!(dt$atLeastOneWithVersionSpec == TRUE & dt$hasVers == FALSE)] # remove cases where no version spec >1 case
-            
-            versionSpecNA <- is.na(dt$versionSpec)
-            #keepCols3 <- c("PackageTrimmed", "Package", "Current", 
-            #               "hasVers", #"inequality", 
-            #               "atLeastOneWithVersionSpec", "versionSpec")
-            # keepCols3 <- intersect(colnames(dt), keepCols3)
-            
-            #if (length(setdiff(keepCols3, colnames(dt))))
-              # dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
-            dt1 <- dt[versionSpecNA == FALSE]
-              
-            if (NROW(dt1)) {
-              dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
-              ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
-              dt1 <- dt1[ord]
-            }
-            dt2 <- if (all(versionSpecNA)) dt else dt[versionSpecNA]
-            dt <- if (NROW(dt1)) rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE) else dt2
-            
-            dups <- duplicated(dt$PackageTrimmed)
-            dt3 <- if (any(dups)) dt[!dups] else dt
-            
-            curTrue <- dt3$Current == TRUE
-            dt4 <- if (any(curTrue)) if (all(curTrue)) dt3 else dt3[curTrue] else dt3[0]
-            # if (!(identical(dt4[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)],
-            #                 dt4Stable[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)])))
-            #   browser()
-            #dt4 <- rdt4
-            #}
-            pkgsNew <- list()
-            pkgsNew[[i - 1]] <- dt3[dt3$Current == FALSE]$Package
-            pkgsNew[[i]] <- dt4$Package
-          }
-          needed <- unique(unlist(pkgsNew))
-        })
-      }
+  if (length(packages)) {
+    saveNames <- paste(packages, paste(whichCat, "recursive", recursive, sep = "_")[1], sep = "_")
+    saveNames <- gsub("[[:punct:]]| ", "_", saveNames)
+    names(saveNames) <- packages
+    if (isTRUE(purge)) {
+      whExist <- unlist(lapply(saveNames, exists, envir = .pkgEnv))
+      if (any(whExist))
+        suppressWarnings(rm(list = saveNames[whExist], envir = .pkgEnv))
     }
-    # Remove "R"
-    neededFull2 <- append(neededFull2, neededFull[theNulls])
-    neededFull2 <- lapply(neededFull2, function(needed) {
-      grep(.grepR, needed, value = TRUE, invert = TRUE)
-    })
-
-    newOnes <- names(saveNames) %in% names(neededFull)
-    Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
-      assign(sn, neededFull2[[n]], envir = .pkgEnv)
-    })
-    neededFull1 <- append(neededFull1[!needGet], neededFull2)
-  }
-
-  if (isTRUE(sort))
-    neededFull1 <- lapply(neededFull1, function(x) sort(x))
-  if (isFALSE(keepVersionNumber)) {
-    neededFull1 <- lapply(neededFull1, trimVersionNumber)
-  }
-  if (!isTRUE(includeBase)) {
-    neededFull1 <- lapply(neededFull1, setdiff, .basePkgs)
+    neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
+    needGet <- unlist(lapply(neededFull1, is.null))
+  
+    if (any(needGet)) {
+      neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
+                                purge = purge, repos = repos)
+      purge <- FALSE # whatever it was, it was done in line above
+      theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
+      neededFull2 <- neededFull[!theNulls]
+      if (NROW(neededFull2)) {
+        
+        if (recursive) {
+          which <- tail(which, 1)[[1]] # take the last of the list of which
+          neededFull2 <- lapply(neededFull2, function(needed) {
+            i <- 1
+            pkgsNew <- list()
+            pkgsNew[[i]] <- needed
+            while (length(unlist(pkgsNew[[i]])) > 0) {
+              i <- i + 1
+              pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i - 1]]), function(needed) {
+                unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
+                                          purge = purge, repos = repos)))
+              })
+              prevIndices <- 1:(i - 1)
+              curPkgs <- unlist(pkgsNew[[i]])
+              prevPkgs <- unlist(pkgsNew[prevIndices])
+              dt <- data.table(Package = c(prevPkgs, curPkgs),
+                               Current = c(rep(FALSE, length(prevPkgs)), rep(TRUE, length(curPkgs))))
+              # rdtOrig <- data.table::copy(dt)
+              # if (TRUE) {
+              #   dt[, PackageTrimmed := extractPkgName(Package)]
+              #   dt[, versionSpec := extractVersionNumber(Package)]
+              #   dt[, hasVers := !is.na(versionSpec)]
+              #   dt[hasVers == TRUE, inequality := extractInequality(Package)]
+              #   dt[hasVers == FALSE, versionSpec := NA]
+              #   dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
+              #   dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
+              #   dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
+              #   keepCols3 <- c("PackageTrimmed", "Package", "Current", 
+              #                  "hasVers", "inequality", "atLeastOneWithVersionSpec", "versionSpec")
+              #   
+              #   versionSpecNA <- is.na(dt$versionSpec)
+              #   dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
+              #   if (NROW(dt1)) {
+              #     ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
+              #     dt1 <- dt1[ord]
+              #     dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
+              #   }
+              #   
+              #   dt2 <- dt[versionSpecNA]
+              #   
+              #   dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
+              #   dt3 <- dt[!duplicated(dt$PackageTrimmed)]
+              #   dt4 <- dt3[Current == TRUE]
+              #   dt4Stable <- data.table::copy(dt4)
+              # #} else {
+              #dt <- data.table::copy(rdtOrig)
+              
+              set(dt, NULL, "PackageTrimmed", extractPkgName(dt$Package))
+              set(dt, NULL, "versionSpec", extractVersionNumber(dt$Package))
+              set(dt, NULL, "hasVers", !is.na(dt$versionSpec))
+              hasV <- dt$hasVers == TRUE
+              # set(dt, which(hasV), "inequality", extractInequality(dt$Package[hasV]))
+              # set(dt, which(!hasV), "versionSpec", NA)
+              # browser(expr = any(duplicated(dt$PackageTrimmed)))
+              dt[, `:=`(atLeastOneWithVersionSpec = any(hasVers),
+                        Current = all(Current == TRUE)), by = "PackageTrimmed"]
+              dt <- dt[!(dt$atLeastOneWithVersionSpec == TRUE & dt$hasVers == FALSE)] # remove cases where no version spec >1 case
+              
+              versionSpecNA <- is.na(dt$versionSpec)
+              #keepCols3 <- c("PackageTrimmed", "Package", "Current", 
+              #               "hasVers", #"inequality", 
+              #               "atLeastOneWithVersionSpec", "versionSpec")
+              # keepCols3 <- intersect(colnames(dt), keepCols3)
+              
+              #if (length(setdiff(keepCols3, colnames(dt))))
+                # dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
+              dt1 <- dt[versionSpecNA == FALSE]
+                
+              if (NROW(dt1)) {
+                dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
+                ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
+                dt1 <- dt1[ord]
+              }
+              dt2 <- if (all(versionSpecNA)) dt else dt[versionSpecNA]
+              dt <- if (NROW(dt1)) rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE) else dt2
+              
+              dups <- duplicated(dt$PackageTrimmed)
+              dt3 <- if (any(dups)) dt[!dups] else dt
+              
+              curTrue <- dt3$Current == TRUE
+              dt4 <- if (any(curTrue)) if (all(curTrue)) dt3 else dt3[curTrue] else dt3[0]
+              # if (!(identical(dt4[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)],
+              #                 dt4Stable[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)])))
+              #   browser()
+              #dt4 <- rdt4
+              #}
+              pkgsNew <- list()
+              pkgsNew[[i - 1]] <- dt3[dt3$Current == FALSE]$Package
+              pkgsNew[[i]] <- dt4$Package
+            }
+            needed <- unique(unlist(pkgsNew))
+          })
+        }
+      }
+      # Remove "R"
+      neededFull2 <- append(neededFull2, neededFull[theNulls])
+      neededFull2 <- lapply(neededFull2, function(needed) {
+        grep(.grepR, needed, value = TRUE, invert = TRUE)
+      })
+  
+      newOnes <- names(saveNames) %in% names(neededFull)
+      Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
+        assign(sn, neededFull2[[n]], envir = .pkgEnv)
+      })
+      neededFull1 <- append(neededFull1[!needGet], neededFull2)
+    }
+  
+    if (isTRUE(sort))
+      neededFull1 <- lapply(neededFull1, function(x) sort(x))
+    if (isFALSE(keepVersionNumber)) {
+      neededFull1 <- lapply(neededFull1, trimVersionNumber)
+    }
+    if (!isTRUE(includeBase)) {
+      neededFull1 <- lapply(neededFull1, setdiff, .basePkgs)
+    }
+  } else {
+    neededFull1 <- list()
   }
   neededFull1
 }
@@ -260,14 +265,37 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
           pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
           setorderv(pkgDT2, "isGitPkg", order = -1)
           pkgDT2[, Package := extractPkgName(packageFullName)]
-          pkgDT2[, dup := duplicated(Package)]
+          
+          # Here, GitHub package specification in a DESCRIPTION file Remotes section
+          #   won't have version numbering --> Need to merge the two fields
+          pkgDT2[, Version := extractVersionNumber(packageFullName)]
+          if (any(!is.na(pkgDT2$Version))) {
+            pkgDT2[!is.na(Version), inequality := extractInequality(packageFullName)]
+            pkgDT2[, Version := {
+              if (all(is.na(Version))) NA_character_ else as.character(max(as.package_version(Version[!is.na(Version)])))
+            }, by = "Package"]
+            pkgDT2[, inequality := {
+              if (all(is.na(inequality))) NA_character_ else inequality[!is.na(inequality)][[1]]
+            }, by = "Package"]
+            pkgDT2[, github := extractPkgGitHub(packageFullName)]
+            if (any(pkgDT2$isGitPkg == TRUE & !is.na(pkgDT2$Version))) {
+              pkgDT2[isGitPkg == TRUE & !is.na(Version), newPackageFullName:= 
+                       if (is.na(extractVersionNumber(packageFullName))) 
+                         paste0(packageFullName, " (", inequality, Version, ")") else NA ]
+              whGitNeedVersion <- !is.na(pkgDT2$newPackageFullName)
+              if (any(whGitNeedVersion)) {
+                pkgDT2[whGitNeedVersion == TRUE, packageFullName := newPackageFullName]
+              }
+            }
+          }
+          dup <- duplicated(pkgDT2, by = c("Package", "Version"))
           pkgDT2 <- pkgDT2[dup == FALSE]
           differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
           if (length(differences)) {
             message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
                     paste(differences, collapse = ", "), " --) ")
           }
-          pkgDT2[, github := extractPkgGitHub(packageFullName)]
+          
         }
         needed <- pkgDT2$packageFullName
         #}
