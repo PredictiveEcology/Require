@@ -66,8 +66,9 @@ if (interactive()) {
   }
   # THere might be more than one version
   dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-  rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-  localBinsFull <- c(dts, rems)
+  #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+  #localBinsFull <- c(dts, rems)
+  localBinsFull <- dts
   
   if (length(localBinsFull) == 2) {
     if (Require:::isWindows())
@@ -139,7 +140,7 @@ if (interactive()) {
       out <- out[out]
       keepLoaded1 <- c("Require", "testit", "base64enc", "RCurl", "dismo", "units",
                        "fastmatch", "raster", "Rcpp", "rstudioapi", "crayon", "data.table",
-                       "remotes", "tools", "utils", "versions", "fastdigest",
+                       "tools", "utils", "versions", "fastdigest",
                        "grDevices", "methods", "stats", "graphics", "dplyr", "stringi")
       keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
       out <- names(out)

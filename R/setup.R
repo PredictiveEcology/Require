@@ -131,7 +131,7 @@ setupOff <- function(removePackages = FALSE) {
 copyRequireAndDeps <- function(RPackageFolders) {
   lps <- .libPaths()
   names(lps) <- lps
-  pkgs <- c("Require", "remotes", "data.table")
+  pkgs <- c("Require", "data.table")
   for (pkg in pkgs) {
     theNewPath <- file.path(rpackageFolder(RPackageFolders), pkg)
     newPathExists <- dir.exists(theNewPath)

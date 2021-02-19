@@ -604,7 +604,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded)))
         if (is(topoSortedAllLoaded, "try-error")) 
           stop("The attempt to unload loaded packages failed. Please restart R and run again")
-        topoSortedAllLoaded <- setdiff(topoSortedAllLoaded, c("Require", "testit", "remotes", "data.table", "glue", "rlang"))
+        topoSortedAllLoaded <- setdiff(topoSortedAllLoaded, c("Require", "testit", "data.table", "glue", "rlang"))
         detached <- detachAll(topoSortedAllLoaded, doSort = FALSE)
         # detached1 <- unloadNamespaces(topoSortedAllLoaded)
         if (NROW(detached)) {
@@ -1461,7 +1461,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
     dontTry <- c(dontTry, dontTryExtra)
   }
   
-  dontTry <- unique(c(c("Require", "remotes", "data.table"), dontTry))
+  dontTry <- unique(c(c("Require", "data.table"), dontTry))
   didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
   dontNeedToUnload <- logical()
