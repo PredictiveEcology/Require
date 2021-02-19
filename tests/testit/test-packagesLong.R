@@ -90,13 +90,13 @@ if (interactive()) {
     })
   
   testit::assert({length(pkgDepTest1) == 1})
-  testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes")})
+  testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)")})
   
   testit::assert({length(pkgDepTest2) == 2})
   testit::assert({sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)})
   
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
-  RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
+  RequireDeps <- c("data.table", "utils", "callr", "cli", "covr",
                    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
