@@ -280,8 +280,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
             pkgDT2[, github := extractPkgGitHub(packageFullName)]
             if (any(pkgDT2$isGitPkg == TRUE & !is.na(pkgDT2$Version))) {
               pkgDT2[isGitPkg == TRUE & !is.na(Version), newPackageFullName:= 
-                       if (is.na(extractVersionNumber(packageFullName))) 
-                         paste0(packageFullName, " (", inequality, Version, ")") else NA ]
+                       ifelse (is.na(extractVersionNumber(packageFullName)), 
+                         paste0(packageFullName, " (", inequality, Version, ")"), NA) ]
               whGitNeedVersion <- !is.na(pkgDT2$newPackageFullName)
               if (any(whGitNeedVersion)) {
                 pkgDT2[whGitNeedVersion == TRUE, packageFullName := newPackageFullName]
