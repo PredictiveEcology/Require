@@ -591,6 +591,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName, returnFull = TRUE)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       
+      toInstall <- unique(toInstall, by = c("Package"))
       pkgsCleaned <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
       
       message("Installing: ", paste(pkgsCleaned, collapse = ", "))
