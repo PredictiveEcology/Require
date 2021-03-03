@@ -101,7 +101,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                             packageVersion("TimeWarp", lib.loc = dir6))})
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
-  
+
   setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
@@ -128,7 +128,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert({isTRUE(isInstalled)})
 
   # Try github with version
-  dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
+  dir4 <- Require:::rpackageFolder(tempdir2("test4"))
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
