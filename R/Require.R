@@ -325,7 +325,6 @@ Require <- function(packages, packageVersionFile,
           add = TRUE)
 
   # Rm base packages -- this will happen in getPkgDeps if that is run
-  packages <- packages[!extractPkgName(packages) %in% .basePkgs]
   if (NROW(packages)) {
 
     # Some package names are not derived from their GitHub repo names -- user can supply named packages
@@ -375,6 +374,10 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
         pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
         pkgDT <- rmDuplicatePkgs(pkgDT)
+        
+        # Remove base packages from the installation step
+        pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
+        
         if (any(!is.na(pkgDT$needInstall))) {
           install.packagesArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install.packagesArgs[["INSTALL_opts"]]))
           install_githubArgs["INSTALL_opts"] <- unique(c('--no-multiarch', install_githubArgs[["INSTALL_opts"]]))
