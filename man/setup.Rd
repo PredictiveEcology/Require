@@ -7,7 +7,7 @@
 \usage{
 setup(
   RPackageFolders = getOption("Require.RPackageFolders", "R"),
-  RPackageCache = getOption("Require.RPackageCache", "~/.cache/R/RequirePkgCache"),
+  RPackageCache = getOption("Require.RPackageCache", RequirePkgCacheDir()),
   buildBinaries = getOption("Require.buildBinaries", TRUE),
   standAlone = getOption("Require.standAlone", TRUE)
 )

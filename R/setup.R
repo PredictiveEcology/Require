@@ -1,3 +1,29 @@
+rversion <- function() {
+  paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
+}
+
+#' Path to (package) cache directory
+#'
+#' @export
+#' @rdname RequireCacheDir
+RequireCacheDir <- function() {
+  ## cache dirs based on rappdirs::user_cache_dir()
+  appName <- "R-Require"
+  cacheDir <- switch(
+    Sys.info()[["sysname"]],
+    Darwin = file.path("~", "Library", "Caches", appName),
+    Linux = file.path("~", ".cache", appName),
+    Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", appName, appName, "Cache")
+  )
+  checkPath(cacheDir, create = TRUE)
+}
+
+#' @export
+#' @rdname RequireCacheDir
+RequirePkgCacheDir <- function() {
+  checkPath(file.path(RequireCacheDir(), "packages", rversion()), create = TRUE)
+}
+
 #' Setup a project library, cache, options
 #'
 #' This can be placed as the first line of any/all scripts and it will
@@ -23,7 +49,7 @@
 #' }
 #'
 setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
-                  RPackageCache = getOption("Require.RPackageCache", "~/.cache/R/RequirePkgCache"),
+                  RPackageCache = getOption("Require.RPackageCache", RequirePkgCacheDir()),
                   buildBinaries = getOption("Require.buildBinaries", TRUE),
                   standAlone = getOption("Require.standAlone", TRUE)) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)

@@ -1494,17 +1494,16 @@ warningCantInstall <- function(pkgs) {
       "\n-----\n...before any other packages get loaded")
 }
 
-rpackageFolder <- function(path = getOption("Require.RPackageCache"), exact = FALSE)  {
+rpackageFolder <- function(path = getOption("Require.RPackageCache", RequirePkgCacheDir()), exact = FALSE)  {
   if (!is.null(path)) {
     if (isTRUE(exact))
       return(path)
     path <- path[1]
-    rversion <- paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1])
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (!endsWith(path, rversion))
-        file.path(path, rversion)
+      if (!endsWith(path, rversion()))
+        file.path(path, rversion())
       else
         path
     }
