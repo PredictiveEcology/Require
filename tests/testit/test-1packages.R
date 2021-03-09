@@ -1,7 +1,7 @@
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+Sys.setenv("CRANCACHE_DISABLE" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
@@ -63,7 +63,7 @@ testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
   out <- find.package("TimeWarp", lib.loc = dir1)
   if (length(out)) TRUE else FALSE
-  }, error = function(x) FALSE)
+}, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
 out <- detachAll(c("Require", "TimeWarp", "sdfd"))
 out <- out[names(out) != "testit"]

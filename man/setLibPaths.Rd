@@ -16,13 +16,12 @@ setLibPaths(
 components of \code{.libPath()}}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e.,
-it will include the user's default package folder(s).
-This can be create dramatically faster
-installs if the user has a substantial number of the packages already in
-their personal library. Default \code{FALSE} to minimize package installing.}
+the \code{libPaths} only.
+If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
+resulting in shared packages, i.e., it will include the user's default package folder(s).
+This can be create dramatically faster installs if the user has a substantial number of
+the packages already in their personal library.
+Default \code{FALSE} to minimize package installing.}
 
 \item{updateRprofile}{Logical or Character string. If \code{TRUE}, then
 this function will put several lines of code in the current directory's \code{.Rprofile}

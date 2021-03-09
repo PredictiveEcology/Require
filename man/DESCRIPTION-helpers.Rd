@@ -13,23 +13,22 @@ DESCRIPTIONFileOtherV(file, other = "RemoteSha")
 getGitHubDESCRIPTION(pkg, purge = getOption("Require.purge", FALSE))
 }
 \arguments{
-\item{file}{A file path to a DESCRIPTION file}
+\item{file}{A file path to a \code{DESCRIPTION} file}
 
-\item{purge}{Logical. Should all caches be purged Default is
-\code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout
-the \code{Require} package. These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged. The cached values are renewed
-when found to be too old, with the age limit.
+\item{purge}{Logical. Should all caches be purged?
+Default is \code{getOption("Require.purge", FALSE)}.
+There is a lot of internal caching of results throughout the \code{Require} package.
+These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged.
+The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see
-\code{\link[utils]{available.packages}}).
+defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}}
+Internally, there are calls to \code{available.packages}.}
 
-\item{other}{Any other keyword in a DESCRIPTION file that precedes a ":". The rest of the line will be
-retrieved.}
+\item{other}{Any other keyword in a \code{DESCRIPTION} file that precedes a ":".
+The rest of the line will be retrieved.}
 
 \item{pkg}{A character string with a GitHub package specification (c.f. remotes)}
 }

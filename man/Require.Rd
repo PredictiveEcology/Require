@@ -39,26 +39,25 @@ used to create isolated, stand alone package installations, if used with
 \code{standAlone = TRUE}. Currently, the path supplied here will be
 prepended to \code{.libPaths()} (temporarily during this call) to
 \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
-\code{.libPaths()} to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
+\code{.libPaths()} to \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e.,
-it will include the user's default package folder(s).
-This can be create dramatically faster
-installs if the user has a substantial number of the packages already in
-their personal library. Default \code{FALSE} to minimize package installing.}
+the \code{libPaths} only.
+If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
+resulting in shared packages, i.e., it will include the user's default package folder(s).
+This can be create dramatically faster installs if the user has a substantial number of
+the packages already in their personal library.
+Default \code{FALSE} to minimize package installing.}
 
-\item{install}{Logical or "force". If \code{FALSE}, this will not try to
-install anything. If \code{"force"}, then it will force installation of
-requested packages, mimicking a call to e.g., \code{install.packages}. If
-\code{TRUE}, the default, then this function will try to install any
-missing packages or dependencies.}
+\item{install}{Logical or "force". If \code{FALSE}, this will not try to install anything.
+If \code{"force"}, then it will force installation of requested packages,
+mimicking a call to e.g., \code{install.packages}.
+If \code{TRUE}, the default, then this function will try to install any missing
+packages or dependencies.}
 
 \item{require}{Logical. If \code{TRUE}, the default, then the function will
 attempt to call \code{require} on all requested \code{packages}, possibly
@@ -67,21 +66,20 @@ after they are installed.}
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
-\item{purge}{Logical. Should all caches be purged Default is
-\code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout
-the \code{Require} package. These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged. The cached values are renewed
-when found to be too old, with the age limit.
+\item{purge}{Logical. Should all caches be purged?
+Default is \code{getOption("Require.purge", FALSE)}.
+There is a lot of internal caching of results throughout the \code{Require} package.
+These help with speed and reduce calls to internet sources.
+However, sometimes these caches must be purged.
+The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see
-\code{\link[utils]{available.packages}}).
+defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}}
+Internally, there are calls to \code{available.packages}.}
 
 \item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a data.table with many details attached to the output}
+a \code{data.table} with many details attached to the output.}
 
 \item{...}{Passed to \emph{all} of \code{install_github},
 \code{install.packages}, and \code{remotes::install_version}, i.e., the
@@ -97,13 +95,12 @@ A single key function, 'Require' that wraps 'install.packages',
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
 
-This is an "all in one" function that will run \code{install.packages} for
-CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
-will install specific versions of each package if versions are specified either
-via an (in)equality (e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for
-an exact version) or with a
-\code{packageVersionFile}. If \code{require = TRUE}, the default,
-the function will then run \code{require} on all
+This is an "all in one" function that will run \code{install.packages} for CRAN packages,
+\code{remotes::install_github} for \url{https://github.com/} packages and will install
+specific versions of each package if versions are specified either via an (in)equality
+(e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for an exact version) or with a
+\code{packageVersionFile}.
+If \code{require = TRUE}, the default, the function will then run \code{require} on all
 named packages that satisfy their version requirements. If packages are already installed
 (\code{packages} supplied), and their optional version numbers are satisfied,
 then the "install" component will be skipped.
@@ -137,9 +134,9 @@ a record of the GitHub state.
 
 \section{Package Snapshots}{
 
-To build a snapshot of the desired packages and their versions, first run
-\code{Require} with all packages, then \code{pkgSnapshot}. If a
-\code{libPaths} is used, it must be used in both functions.
+To build a snapshot of the desired packages and their versions,
+first run \code{Require} with all packages, then \code{pkgSnapshot}.
+If a \code{libPaths} is used, it must be used in both functions.
 }
 
 \section{Mutual Dependencies}{
@@ -166,7 +163,7 @@ on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder
 # simple usage, like conditional install.packages then library
 library(Require)
 Require("stats") # analogous to require(stats), but it checks for
-                 #   pkg dependencies, and installs them, if missing
+#   pkg dependencies, and installs them, if missing
 tempPkgFolder <- file.path(tempdir(), "Packages")
 
 # use standAlone, means it will put it in libPaths, even if it already exists
@@ -186,23 +183,27 @@ Require(packageVersionFile = packageVersionFile, libPaths = tempPkgFolder, stand
 
 # Create mismatching versions -- desired version is older than current installed
 # This will try to install the older version, overwriting the newer version
-desiredVersion <- data.frame(instPkgs="crayon", instVers = "1.3.2", stringsAsFactors = FALSE)
+desiredVersion <- data.frame(instPkgs = "crayon", instVers = "1.3.2", stringsAsFactors = FALSE)
 write.table(file = packageVersionFile, desiredVersion, row.names = FALSE)
 newTempPkgFolder <- file.path(tempdir(), "Packages2")
 
 # Note this will install the 1.3.2 version (older that current on CRAN), but
 #   because crayon is still loaded in memory, it will return TRUE, using the current version
 #   of crayon. To start using the older 1.3.2, need to unload or restart R
-Require("crayon", packageVersionFile = packageVersionFile,
-        libPaths = newTempPkgFolder, standAlone = TRUE)
+Require("crayon",
+  packageVersionFile = packageVersionFile,
+  libPaths = newTempPkgFolder, standAlone = TRUE
+)
 
 # restart R again to get access to older version
 # run again, this time, correct "older" version installs in place of newer one
 library(Require)
 packageVersionFile <- "_.packageVersionTest.txt"
 newTempPkgFolder <- file.path(tempdir(), "Packages3")
-Require("crayon", packageVersionFile = packageVersionFile,
-        libPaths = newTempPkgFolder, standAlone = TRUE)
+Require("crayon",
+  packageVersionFile = packageVersionFile,
+  libPaths = newTempPkgFolder, standAlone = TRUE
+)
 
 # Mutual dependencies, only installs once -- e.g., httr
 tempPkgFolder <- file.path(tempdir(), "Packages")
@@ -218,7 +219,8 @@ ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
 #    reuse already installed packages --> this won't allow as much control
 #    of package versioning
 Require("PredictiveEcology/SpaDES@development",
-        libPaths = ProjectPackageFolder, standAlone = FALSE)
+  libPaths = ProjectPackageFolder, standAlone = FALSE
+)
 
 # To keep totally isolated: use standAlone = TRUE
 #   --> setting .libPaths() directly means standAlone is not necessary; it will only
@@ -228,16 +230,18 @@ ProjectPackageFolder <- file.path("~", "ProjectA")
 setLibPaths(ProjectPackageFolder)
 Require("PredictiveEcology/SpaDES@development") # the latest version on GitHub
 Require("PredictiveEcology/SpaDES@23002b2a92a92df4ccba7f51cdd82798800b2fa7")
-                              # a specific commit (by using the SHA)
+# a specific commit (by using the SHA)
 
 
 ############################################################################
 # Mixing and matching GitHub, CRAN, with and without version numbering
 ############################################################################
 # Restart R -- when installing/loading packages, start fresh
-pkgs <- c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
-          "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
-          "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)")
+pkgs <- c(
+  "Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
+  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
+)
 Require::Require(pkgs)
 
 ############################################################################
@@ -257,13 +261,14 @@ Require::Require("SpaDES") # not necessary to specify standAlone here because .l
 # Installing on many machines that are connected by a shared drive
 ############################################################################
 options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly.
-                                                       # Put thes in a shared location.
+# Put thes in a shared location.
 # May need to install Require in main user library before setting library paths for project
 if (!require("Require")) install.packages("Require")
 setLibPaths("./packages") # not shared location for library path; no longer using main user lib
-Require::Require(packageVersionFile = "./packageVersions.txt",
-                 standAlone = TRUE)
-
+Require::Require(
+  packageVersionFile = "./packageVersions.txt",
+  standAlone = TRUE
+)
 }
 
 }
