@@ -9,12 +9,16 @@ rversion <- function() {
 RequireCacheDir <- function() {
   ## cache dirs based on rappdirs::user_cache_dir()
   appName <- "R-Require"
-  cacheDir <- switch(
-    Sys.info()[["sysname"]],
-    Darwin = file.path("~", "Library", "Caches", appName),
-    Linux = file.path("~", ".cache", appName),
-    Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", appName, appName, "Cache")
-  )
+  cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
+    Sys.getenv("R_USER_CACHE_DIR")
+  } else {
+    switch(
+      Sys.info()[["sysname"]],
+      Darwin = file.path("~", "Library", "Caches", appName),
+      Linux = file.path("~", ".cache", appName),
+      Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", appName, appName, "Cache")
+    )
+  }
   checkPath(cacheDir, create = TRUE)
 }
 
