@@ -1,8 +1,9 @@
 utils::globalVariables(c(
   "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
-  ".N", "Archs", "type", "localType", "N", "installOrder", 
+  ".N", ".I", "Archs", "type", "localType", "N", "installOrder", 
   "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile",
-  "Names"
+  "Names", "packageFullName", "Version", "hasVersionSpec", "correctVersion", "repoLocation",
+  "inequality", " AvailableVersion", "Package", "mtime", "newMtime"
 ))
 
   #' @details
