@@ -1377,10 +1377,13 @@ rmDuplicatePkgs <- function(pkgDT) {
         if (.N > 1) {
           if (all(!is.na(versionSpec))) {
             out <- .I[which(versionSpec == max(as.package_version(versionSpec)))[1]]
+            if (length(out) > 1) {
+              out <- out[1]
+            }
           }
         }
       }
-      out
+      rep(out, times = length(.I))
     }, by = "Package"]
     pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
     set(pkgDT, NULL, "duplicate", FALSE)
