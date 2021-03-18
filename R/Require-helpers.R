@@ -1,7 +1,8 @@
 utils::globalVariables(c(
-  "Archs", "destFile", "dup", "filepath",  "github",
-  "i.neededFiles", "installFromFac", "installOrder", "installResult", "isGitPkg",
-  "keep", "keep2", "localType", "localFileName", "neededFiles", ".N", "N", "Names", "type"
+  "Archs", "AvailableVersion, "correctVersion", "destFile", "dup", "filepath",  "github", "hasVersionSpec",
+  ".I", "i.neededFiles", "inequality, "installFromFac", "installOrder", "installResult", "isGitPkg",
+  "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "newMtime",
+  "Package, "packageFullName", "repoLocation", "type", "version"
 ))
 
   #' @details
@@ -1375,10 +1376,13 @@ rmDuplicatePkgs <- function(pkgDT) {
         if (.N > 1) {
           if (all(!is.na(versionSpec))) {
             out <- .I[which(versionSpec == max(as.package_version(versionSpec)))[1]]
+            if (length(out) > 1) {
+              out <- out[1]
+            }
           }
         }
       }
-      out
+      rep(out, times = length(.I))
     }, by = "Package"]
     pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
     set(pkgDT, NULL, "duplicate", FALSE)
