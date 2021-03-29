@@ -1,8 +1,9 @@
 utils::globalVariables(c(
   "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
-  ".N", "Archs", "type", "localType", "N", "installOrder", 
+  ".N", ".I", "Archs", "type", "localType", "N", "installOrder", 
   "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile",
-  "Names"
+  "Names", "packageFullName", "Version", "hasVersionSpec", "correctVersion", "repoLocation",
+  "inequality", " AvailableVersion", "Package", "mtime", "newMtime"
 ))
 
   #' @details
@@ -591,6 +592,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       topoSorted <- pkgDepTopoSort(toInstall$packageFullName, returnFull = TRUE)
       toInstall <- toInstall[match(names(topoSorted), packageFullName)]
       
+      toInstall <- unique(toInstall, by = c("Package"))
       pkgsCleaned <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
       
       message("Installing: ", paste(pkgsCleaned, collapse = ", "))
@@ -1388,10 +1390,13 @@ rmDuplicatePkgs <- function(pkgDT) {
         if (.N > 1) {
           if (all(!is.na(versionSpec))) {
             out <- .I[which(versionSpec == max(as.package_version(versionSpec)))[1]]
+            if (length(out) > 1) {
+              out <- out[1]
+            }
           }
         }
       }
-      out
+      rep(out, times = length(.I))
     }, by = "Package"]
     pkgDT[installed == FALSE & keep == TRUE & seq(NROW(pkgDT)) != keep2, keep := NA]
     set(pkgDT, NULL, "duplicate", FALSE)
