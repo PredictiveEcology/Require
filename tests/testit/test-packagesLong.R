@@ -66,8 +66,9 @@ if (interactive()) {
   }
   # THere might be more than one version
   dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-  rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-  localBinsFull <- c(dts, rems)
+  #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+  #localBinsFull <- c(dts, rems)
+  localBinsFull <- dts
   
   if (length(localBinsFull) == 2) {
     if (Require:::isWindows())
@@ -75,7 +76,7 @@ if (interactive()) {
     else 
       system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
   } else {
-    system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+    system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   }
   
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
@@ -90,13 +91,13 @@ if (interactive()) {
     })
   
   testit::assert({length(pkgDepTest1) == 1})
-  testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)", "remotes")})
+  testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)")})
   
-  testit::assert({length(pkgDepTest2) == 2})
+  testit::assert({length(pkgDepTest2) == 1})
   testit::assert({sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)})
   
   pkgsInstalled <- dir(tmpdir, full.names = TRUE)
-  RequireDeps <- c("data.table", "remotes", "utils", "callr", "cli", "covr",
+  RequireDeps <- c("data.table", "utils", "callr", "cli", "covr",
                    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
@@ -139,7 +140,7 @@ if (interactive()) {
       out <- out[out]
       keepLoaded1 <- c("Require", "testit", "base64enc", "RCurl", "dismo", "units",
                        "fastmatch", "raster", "Rcpp", "rstudioapi", "crayon", "data.table",
-                       "remotes", "tools", "utils", "versions", "fastdigest",
+                       "tools", "utils", "versions", "fastdigest",
                        "grDevices", "methods", "stats", "graphics", "dplyr", "stringi")
       keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
       out <- names(out)

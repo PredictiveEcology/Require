@@ -67,7 +67,7 @@ isInstalled <- tryCatch({
 testit::assert({isTRUE(isInstalled)})
 out <- detachAll(c("Require", "TimeWarp", "sdfd"))
 out <- out[names(out) != "testit"]
-expectedPkgs <- c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1)
+expectedPkgs <- c(sdfd = 3, TimeWarp = 2, Require = 1, data.table = 1)
 keep <- intersect(names(expectedPkgs), names(out))
 out <- out[keep]
 testit::assert({identical(sort(out), sort(expectedPkgs))})

@@ -11,7 +11,7 @@ utils::globalVariables(c(
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
 #' This is an "all in one" function that will run \code{install.packages} for
-#' CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
+#' CRAN packages, \code{installGithub} for \url{https://github.com/} packages and
 #' will install specific versions of each package if versions are specified either
 #' via an (in)equality (e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for 
 #' an exact version) or with a
@@ -29,7 +29,7 @@ utils::globalVariables(c(
 #' be installed in \code{libPaths}. 
 #' 
 #' @section GitHub Package:
-#' Follows \code{remotes::install_github} standard as this is what is used internally.
+#' Attempts to follow \code{remotes::installGithub} standard.
 #' As with \code{remotes::install_github}, it is not possible to specify a past
 #' version of a GitHub package, without supplying a SHA that had that package
 #' version. Similarly, if a developer does a local install e.g., via 
@@ -91,7 +91,10 @@ utils::globalVariables(c(
 #'        \code{.libPaths()} to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              \code{install.packages}, \code{install_github} or \code{installVersions}.
-#' @param install_githubArgs List of optional named arguments, passed to \code{install_github}.
+#' @param install_githubArgs List of optional named arguments, passed to \code{installGithub},
+#'   which uses \code{install.packages}, so accepts a character string in a list element 
+#'   called \code{INSTALL_opts} e.g., \code{list(INSTALL_opts = list("--no-multiarch"))}. Can also 
+#'   pass such named arguments via \code{...} directly.
 #' @param install.packagesArgs List of optional named arguments, passed to \code{install.packages}.
 #' @param standAlone Logical. If \code{TRUE}, all packages will be installed to and loaded from
 #'                   the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
@@ -116,7 +119,7 @@ utils::globalVariables(c(
 #' @param verbose Numeric. If \code{1} (less) or \code{2} (more), there will be
 #'   a data.table with many details attached to the output
 #' @param ... Passed to \emph{all} of \code{install_github},
-#'   \code{install.packages}, and \code{remotes::install_version}, i.e., the
+#'   \code{install.packages}, i.e., the
 #'   function will error if all of these functions can not use the ... argument.
 #'   Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 #'   used with \code{install_githubArgs} or \code{install.packageArgs} which
@@ -126,7 +129,6 @@ utils::globalVariables(c(
 #' @importFrom data.table data.table as.data.table setDT set is.data.table
 #'   rbindlist
 #' @importFrom data.table  :=  .I .SD setnames setorderv
-#' @importFrom remotes install_github install_version
 #' @importFrom utils available.packages capture.output compareVersion
 #' @importFrom utils install.packages packageVersion
 #'

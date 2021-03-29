@@ -41,7 +41,10 @@ prepended to \code{.libPaths()} (temporarily during this call) to
 \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
      \code{.libPaths()} to \code{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
-\item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
+\item{install_githubArgs}{List of optional named arguments, passed to \code{installGithub},
+which uses \code{install.packages}, so accepts a character string in a list element 
+called \code{INSTALL_opts} e.g., \code{list(INSTALL_opts = list("--no-multiarch"))}. Can also 
+pass such named arguments via \code{...} directly.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
@@ -84,7 +87,7 @@ Internally, there are calls to \code{available.packages}}
 a data.table with many details attached to the output}
 
 \item{...}{Passed to \emph{all} of \code{install_github},
-\code{install.packages}, and \code{remotes::install_version}, i.e., the
+\code{install.packages}, i.e., the
 function will error if all of these functions can not use the ... argument.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
@@ -98,7 +101,7 @@ A single key function, 'Require' that wraps 'install.packages',
     same result whether it is the first or subsequent times running the function.
 
 This is an "all in one" function that will run \code{install.packages} for
-CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
+CRAN packages, \code{installGithub} for \url{https://github.com/} packages and
 will install specific versions of each package if versions are specified either
 via an (in)equality (e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for 
 an exact version) or with a
@@ -124,7 +127,7 @@ function.
 }
 \section{GitHub Package}{
 
-Follows \code{remotes::install_github} standard as this is what is used internally.
+Attempts to follow \code{remotes::installGithub} standard.
 As with \code{remotes::install_github}, it is not possible to specify a past
 version of a GitHub package, without supplying a SHA that had that package
 version. Similarly, if a developer does a local install e.g., via 
