@@ -613,12 +613,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
           detached <- as.data.table(detached, keep.rownames = "Package")
           pkgDT <- detached[pkgDT, on = "Package"]
         }
-        
       }
       startTime <- Sys.time()
-      out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots, numPackages = NROW(toInstall),
-                startTime = startTime, 
-                install.packagesArgs = install.packagesArgs, install_githubArgs = install_githubArgs, repos = repos)
+      out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots,
+                numPackages = NROW(toInstall), startTime = startTime, 
+                install.packagesArgs = install.packagesArgs,
+                install_githubArgs = install_githubArgs, repos = repos)
     }
     failedToInstall <- pkgDT$installFrom == "Fail"
     if (NROW(pkgDT[failedToInstall]) ) {
@@ -633,7 +633,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   pkgDT[needInstall == TRUE & installed == TRUE, Version :=
           unlist(lapply(Package, function(x) as.character(
             tryCatch(packageVersion(x), error = function(x) NA_character_))))]
-  pkgDT[loadOrder > 0, loadOrder := loadOrder * as.integer(is.na(installFrom) | !(installFrom %in% c("Fail", "Duplicate")))]
+  pkgDT[loadOrder > 0, loadOrder := loadOrder * as.integer(is.na(installFrom) |
+                                                             !(installFrom %in% c("Fail", "Duplicate")))]
 
   pkgDT
 }
@@ -679,7 +680,8 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
             warningCantInstall(pkgs)
           }
           error3 <- grepl("is being loaded, but", outMess)
-          packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"), "\\1", outMess[error3])
+          packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"),
+                               "\\1", outMess[error3])
           if (any(error3)) {
             pkgs <- paste(packageNames, collapse = "', '")
             if (length(setdiff(pkgs, pkgsWarned)) > 0)
@@ -719,8 +721,10 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMessToRm <- c(outMessToRm, max(outMessToRm) + 1) # There is non ASCII character in the message that can't be explicitly used
           outMess <- outMess[-outMessToRm]
         } else {
-          warning(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
-                  "or prevent the newer version from loading by changing the .libPaths() prior to any packages being loaded")
+          warning(firstPartMess, ". The newer version fails the version number test.",
+                  " Please either change the version number requested,",
+                  " or prevent the newer version from loading by changing the .libPaths() prior",
+                  " to any packages being loaded.")
         }
       }
       if (length(outMess) > 0)
