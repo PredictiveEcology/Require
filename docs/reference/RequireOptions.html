@@ -6,14 +6,14 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title><code>Require</code> options — RequireOptions • Require</title>
+<title>Require options — RequireOptions • Require</title>
 
 
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
 
@@ -39,7 +39,7 @@
 
 
 
-<meta property="og:title" content="<code>Require</code> options — RequireOptions" />
+<meta property="og:title" content="Require options — RequireOptions" />
 <meta property="og:description" content="These provide top-level, powerful settings for a comprehensive
 reproducible workflow. To see defaults, run RequireOptions().
 See Details below." />
@@ -56,16 +56,6 @@ See Details below." />
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
 
-
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-58633549-5"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-58633549-5');
-</script>
 
 
   </head>
@@ -84,7 +74,7 @@ See Details below." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
       </span>
     </div>
 
@@ -92,7 +82,7 @@ See Details below." />
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -106,7 +96,7 @@ See Details below." />
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/PredictiveEcology/Require/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -134,7 +124,7 @@ reproducible workflow. To see defaults, run <code>RequireOptions()</code>.
 See Details below.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>RequireOptions</span>()</pre>
+    <pre class="usage"><span class='fu'>RequireOptions</span><span class='op'>(</span><span class='op'>)</span></pre>
 
 
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
@@ -143,12 +133,12 @@ See Details below.</p>
 where <code>xxx</code> is one of the values below, and <code>newValue</code> is a new value to
 give the option. Sometimes these options can be placed in the user's <code>.Rprofile</code>
 file so they persist between sessions.</p>
-<p>The following options are likely of interest to most users:</p><dl'>
+<p>The following options are likely of interest to most users:</p><dl>
   <dt><code>RPackageCache</code></dt><dd><p>Default: <code>NULL</code>. If a folder is provided, then binary and source packages will
       be cached here. Subsequent downloads of same package will use local copy. Default
       is to have packages not be cached locally so each install of the same version will
       be from the original source, e.g., CRAN, GitHub.</p></dd>
-  <dt><code>buildBinarieis</code></dt><dd><p>Default: <code>TRUE</code>. Only relevant on *nix systems and if
+  <dt><code>buildBinaries</code></dt><dd><p>Default: <code>TRUE</code>. Only relevant on *nix systems and if
     <code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.RPackageCache")</a></code> is set to a  path. If <code>TRUE</code>, then
        <code>Require</code> will pass <code>INSTALL_OPTS = "--build"</code>, meaning the
        package binary will be built and then saved in the
@@ -163,6 +153,10 @@ file so they persist between sessions.</p>
     will be deleted and rebuilt. This should not generally be necessary as it will 
     automatically be deleted after (by default) 1 hour (set via 
     <code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code> environment variable in seconds)</p></dd>
+  <dt><code>setupVerbose</code></dt><dd><p>Default: <code>TRUE</code>. Logical. Once <code>setup</code> is called, there are several important
+    changes that are made to the user's experience. For beginners with <code>Require</code>,
+    the messages that are written are important to see. However, these can be turned off
+    setting this to <code>FALSE</code></p></dd>
   <dt><code>unloadNamespaces</code></dt><dd><p>Default: <code>TRUE</code>. (ADVANCED USE) <code>Require</code> will attempt to detach and unload
     packages that conflict with the requested package installing via <code>Require</code>.
     This can be complicated, resulting in broken states that can only be recovered
@@ -193,7 +187,7 @@ file so they persist between sessions.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

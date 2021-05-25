@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Installing and Loading R Packages for Reproducible Workflows • Require</title>
-<!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script><!-- Bootstrap --><link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+<!-- jquery --><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script><!-- Bootstrap --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script><!-- bootstrap-toc --><link rel="stylesheet" href="bootstrap-toc.css">
 <script src="bootstrap-toc.js"></script><!-- Font Awesome icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/v4-shims.min.css" integrity="sha256-wZjR52fzng1pJHwx4aV2AO3yyTOXrcDW7jBpJtTwVxw=" crossorigin="anonymous">
@@ -21,13 +21,7 @@
 <!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js" integrity="sha256-nvJJv9wWKEm88qvoQl9ekL2J+k/RWIsaSScxxlsrv8k=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/config/TeX-AMS-MML_HTMLorMML.js" integrity="sha256-84DKXVJXs0/F8OTMzX4UR909+jtl4G7SPypPavF+GfA=" crossorigin="anonymous"></script><!--[if lt IE 9]>
 <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-<![endif]--><!-- Global site tag (gtag.js) - Google Analytics --><script async src="https://www.googletagmanager.com/gtag/js?id=UA-58633549-5"></script><script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-58633549-5');
-</script>
+<![endif]-->
 </head>
 <body data-spy="scroll" data-target="#toc">
     <div class="container template-home">
@@ -42,7 +36,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
       </span>
     </div>
 
@@ -50,7 +44,7 @@
       <ul class="nav navbar-nav">
 <li>
   <a href="index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -64,7 +58,7 @@
 <ul class="nav navbar-nav navbar-right">
 <li>
   <a href="https://github.com/PredictiveEcology/Require/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -93,48 +87,63 @@
 <a href="#objectives" class="anchor"></a>Objectives</h1>
 <p>Some packages, including those in our PredictiveEcology repository, have <em>many</em> package dependencies. Some of them are on CRAN, but some are still in development and so are hosted elsewhere. Mixing many package dependencies that are constantly evolving creates challenges with standard R package management. For example, what is the best way to move analyses from one machine to another, or set up a series of High Performance Compute nodes? How should we use functions like <code>install.packages</code> in a reproducible workflow that are clearly intended to be used once or very few times? How do we deal with many packages on GitHub that have many common dependencies? Finally, how do we do all this for many concurrent projects without installing hundreds of packages in a new directory for every project?</p>
 <p>The <code>Require</code> package attempts to address these issues and others. It is different than <code>packrat</code> in that it is much simpler and is closer to base R package management. <code>Require</code> <em>can</em> use hierarchical library paths, as in base R, with many paths in the <code><a href="https://rdrr.io/r/base/libPaths.html">.libPaths()</a></code>, or can set a single library path to be <code>standAlone</code>. This allows “system” packages to be used as well as “project-specific” packages to be used together, as in base R. It is different than other packages like <code>renv</code> in that it is focused around a single function, <code>Require</code>, that can be used in a reproducible workflow. <code>renv</code> uses a notion of package versions, the “snapshot”, <em>as installed</em> at its foundation; any changes to package versions by a user then updates this snapshot. <code>renv</code> does not keep this information in the source code of the project. <code>Require</code> uses the notion of a “snapshot” as a decision to make by a user when it is time to <em>set</em> the package versions. Package versions are primarily updated by the code developer by stating the minimum (or maximum) package version <em>in the source code</em>. This means that by default, projects are somewhat more fluid, defined by no package version if none is required or minimum (or maximum) package versions if required until it is time to freeze it, say when publishing or needing to set up virtual machines with identical setup. From this perspective, <code>renv</code> is more “top-down”, and <code>Require</code> is more “bottom-up”, though they can each emulate the other’s behaviour.</p>
-<p>We define a reproducible workflow as a workflow that can be run from the start to any point in the project, without having to “skip over” or “comment out” or “jump to” particular lines or chunks of code. <code>Require</code> does that.</p>
+<p>We define a reproducible workflow as a workflow that can be run from the start to any point in the project, without having to “skip over” or “comment out” or “jump to” particular lines or chunks of code. <code>Require</code> does that – you can leave all lines of code in a script and they will work efficiently from any starting point.</p>
 <div id="basic-usage" class="section level2">
 <h2 class="hasAnchor">
 <a href="#basic-usage" class="anchor"></a>Basic usage</h2>
 <p><code>Require</code> is essentially a wrapper around functions that install packages, e.g., <code>install.packages</code>, <code>install_github</code> and one of the main function to load packages, <code>require</code>.</p>
-<pre><code># install.packages("Require") 
+<pre><code><a href="https://Require.predictiveecology.org"># install.packages("Require") 
 library(Require)
-Require("data.table")</code></pre>
+Require("data.table")</a></code></pre>
 <p>And with version numbering:</p>
-<pre><code><a href="reference/Require.html">Require("data.table (&gt;=1.12.8)")</a></code></pre>
+<pre><code><a href="reference/Require-package.html">Require("data.table (&gt;=1.12.8)")</a></code></pre>
 <p>It is vectorized on package names, and can include mixed github and CRAN, mixed version number and not:</p>
-<pre><code><a href="reference/Require.html">Require(c("data.table (&gt;=1.12.8)", "PredictiveEcology/quickPlot"))</a></code></pre>
+<pre><code><a href="reference/Require-package.html">Require(c("data.table (&gt;=1.12.8)", "PredictiveEcology/quickPlot"))</a></code></pre>
 </div>
-<div id="advanced-usage" class="section level2">
+<div id="setup-a-project" class="section level2">
 <h2 class="hasAnchor">
-<a href="#advanced-usage" class="anchor"></a>Advanced usage</h2>
+<a href="#setup-a-project" class="anchor"></a>Setup a project</h2>
+<p>To have a reproducible project, add <code><a href="reference/setup.html">Require::setup()</a></code> at the start of a script. This will set the default R package library to a folder called <code>"R"</code> within the (project) working directory. It will also set a package cache directory in the <code>.cache</code> subfolder of the user’s home directory (so it can) be used by every project on that machine. This could be set to a folder shared across machines in, say, a network. This will also set several options. Rather than “run this once”, the function is designed to be run “every” time, ensuring reproducibility if the script is given to somebody else.</p>
+<p>By default, this will add or modify the <code>.Rprofile</code> file in the (project) working directory so that each time the project is loaded, it will be run with the R package folder set up previously.</p>
+<p><code>{r setup} Require::setup()</code></p>
+<p>The above will set up a completely isolated folder (other than base R packages). This means that all packages will have to be re-installed. This may be the right behaviour, for a fully reproducible system. However, there other situations, namely, there are already packages installed in the user or system libraries that can be re-used and only a few additional packages are needed for the project and should be isolated from the other packages on the machine.</p>
+<p><code>{r setup-standAloneF} Require::setup(standAlone = FALSE)</code></p>
+</div>
+<div id="turn-setup-off" class="section level2">
+<h2 class="hasAnchor">
+<a href="#turn-setup-off" class="anchor"></a>Turn setup off</h2>
+<p>To reset your project to how it was, use <code><a href="reference/setup.html">setupOff()</a></code>, then remove any cases of <code><a href="reference/setup.html">Require::setup()</a></code> that are in your scripts.</p>
+<p><code>{r setupOff} setupOff()</code></p>
+</div>
+<div id="advanced" class="section level2">
+<h2 class="hasAnchor">
+<a href="#advanced" class="anchor"></a>Advanced</h2>
 <div id="keeping-it-all-isolated" class="section level3">
 <h3 class="hasAnchor">
 <a href="#keeping-it-all-isolated" class="anchor"></a>Keeping it all isolated</h3>
-<p>We can keep all packages in an isolated folder for a project, using <code>standAlone = TRUE</code></p>
-<pre><code>setLibPaths("Project_A_Packages", standAlone = TRUE)
+<p>Rather than using <code><a href="reference/setup.html">Require::setup()</a></code>, we can use the internal functions directly: <code>setLibPaths</code>, and various <code>options</code>.</p>
+<pre><code><a href="reference/setLibPaths.html">setLibPaths("Project_A_Packages", standAlone = TRUE)
 .libPaths() # this is just to check what happened in the previous line -- there are 2 folders only
-Require("data.table (&gt;=1.12.8)")</code></pre>
+Require("data.table (&gt;=1.12.8)")</a></code></pre>
 <p>Or we can use a hybrid of our main, “personal” library and a project specific one for “extra” packages:</p>
-<pre><code>setLibPaths("Project_A_Packages", standAlone = FALSE)
+<pre><code><a href="reference/setLibPaths.html">setLibPaths("Project_A_Packages", standAlone = FALSE)
 .libPaths() # we have added a library to original ones on this system
-Require("data.table (&gt;=1.12.8)")</code></pre>
+Require("data.table (&gt;=1.12.8)")</a></code></pre>
 </div>
 <div id="installing-old-package-versions" class="section level3">
 <h3 class="hasAnchor">
 <a href="#installing-old-package-versions" class="anchor"></a>Installing old package versions</h3>
 <p>In the same way as above, we can specify maximum or exact package versions. <code>Require</code> will retrieve these on CRAN archives.</p>
-<pre><code><a href="reference/Require.html">Require("data.table (&lt;=1.11.0)")</a></code></pre>
+<pre><code><a href="reference/Require-package.html">Require("data.table (&lt;=1.11.0)")</a></code></pre>
 </div>
 <div id="managing-a-project" class="section level3">
 <h3 class="hasAnchor">
 <a href="#managing-a-project" class="anchor"></a>Managing a project</h3>
 <p>Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.</p>
-<pre><code>library(Require)
-setLibPaths("ProjectA", standAlone = TRUE)
+<pre><code><a href="https://Require.predictiveecology.org">library(Require)
+setup("ProjectA", standAlone = TRUE)
 Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
-          "PredictiveEcology/SpaDES@development", "raster (&gt;=3.1.5)"))</code></pre>
+          "PredictiveEcology/SpaDES@development", "raster (&gt;=3.1.5)"))</a></code></pre>
 </div>
 <div id="taking-a-snapshot" class="section level3">
 <h3 class="hasAnchor">
@@ -142,12 +151,12 @@ Require(c("data.table (==1.12.8)", "dplyr", "reproducible",
 <p>When a system is set up with the correct packages and versions, we can take a snapshot and give that file to another person or machine:</p>
 <pre><code><a href="reference/pkgSnapshot.html">pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project specific ones</a></code></pre>
 <p>Move to a new machine, say</p>
-<pre><code><a href="reference/Require.html">Require::Require(packageVersionFile = "mySnapshot.txt")</a></code></pre>
+<pre><code><a href="reference/Require-package.html">Require::Require(packageVersionFile = "mySnapshot.txt")</a></code></pre>
 </div>
 <div id="using-local-package-cache" class="section level3">
 <h3 class="hasAnchor">
 <a href="#using-local-package-cache" class="anchor"></a>Using local package cache</h3>
-<p>When installing on many machines on a network, having a local cache can speed up installations. Setting <code><a href="https://rdrr.io/r/base/options.html">options("Require.RPackageCache" = someSharedDirectory)</a></code> will turn on local cache. By default, binaries will be saved on Windows. Also by default, binaries will be <em>built</em> on the fly on *nix systems and this binary will be cached for even faster installs later (turned off with <code><a href="https://rdrr.io/r/base/options.html">options("Require.RPackageCache" = someSharedDirectory)</a></code>)</p>
+<p>When installing on many machines on a network, having a local cache can speed up installations. Setting <code><a href="https://rdrr.io/r/base/options.html">options("Require.RPackageCache" = someSharedDirectory)</a></code> will turn on local cache. By default, binaries will be saved on Windows. Also by default, binaries will be <em>built</em> on the fly on *nix systems and this binary will be cached for even faster installs later (turned off with <code><a href="https://rdrr.io/r/base/options.html">options("Require.RPackageCache" = NULL)</a></code>)</p>
 </div>
 </div>
 </div>
@@ -167,27 +176,28 @@ Require(c("data.table (==1.12.8)", "dplyr", "reproducible",
 <a href="#current-release" class="anchor"></a>Current release</h3>
 <p><a href="https://github.com/PredictiveEcology/Require/actions"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=master" alt="R build status"></a> <a href="https://codecov.io/gh/PredictiveEcology/Require"><img src="https://codecov.io/gh/PredictiveEcology/Require/branch/master/graph/badge.svg" alt="codecov"></a></p>
 <p><strong>Install from CRAN:</strong></p>
-<div class="sourceCode" id="cb10"><pre class="r"><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span>(<span class="st">"Require"</span>)</pre></div>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html">install.packages</a></span><span class="op">(</span><span class="st">"Require"</span><span class="op">)</span></code></pre></div>
 <p><strong>Install from GitHub:</strong></p>
-<pre><code>#install.packages("devtools")
+<pre><code><a href="https://devtools.r-lib.org/">#install.packages("devtools")
 library("devtools")
-install_github("PredictiveEcology/Require", dependencies = TRUE) </code></pre>
+install_github("PredictiveEcology/Require", dependencies = TRUE) </a></code></pre>
 </div>
 <div id="development-version" class="section level3">
 <h3 class="hasAnchor">
 <a href="#development-version" class="anchor"></a>Development version</h3>
 <p><a href="https://github.com/PredictiveEcology/Require/actions"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development" alt="R build status"></a> <a href="https://codecov.io/gh/PredictiveEcology/Require"><img src="https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg" alt="codecov"></a></p>
 <p><strong>Install from GitHub:</strong></p>
-<pre><code>#install.packages("devtools")
+<pre><code><a href="https://devtools.r-lib.org/">#install.packages("devtools")
 library("devtools")
-install_github("PredictiveEcology/Require", ref = "development", dependencies = TRUE) </code></pre>
+install_github("PredictiveEcology/Require", ref = "development", dependencies = TRUE) </a></code></pre>
 </div>
 </div>
 </div>
 <div id="conclusion" class="section level1">
 <h1 class="hasAnchor">
 <a href="#conclusion" class="anchor"></a>Conclusion</h1>
-<p><code>Require</code> package offers a simple, lightweight, package focused around a single function. The package has very few dependencies and so can be used to install packages without interfering with itself.</p>
+<p><code>Require</code> package offers a simple, lightweight, package focused around a single function that is resilient to being called multiple times (unlike <code>install.packages</code>). The package has two dependencies (<code>data.table</code> and <code>remotes</code>) and so can be used to install packages without interfering with itself.</p>
 <div id="contributions" class="section level2">
 <h2 class="hasAnchor">
 <a href="#contributions" class="anchor"></a>Contributions</h2>
@@ -235,6 +245,7 @@ install_github("PredictiveEcology/Require", ref = "development", dependencies = 
 <li><a href="https://cran.r-project.org/package=Require"><img src="https://www.r-pkg.org/badges/version/Require" alt="CRAN_Status_Badge"></a></li>
 <li><a href="https://cran.r-project.org/package=Require"><img src="https://cranlogs.r-pkg.org/badges/grand-total/Require" alt="CRAN Downloads"></a></li>
 <li><a href="https://github.com/PredictiveEcology/Require/actions"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg" alt="R build status"></a></li>
+<li><a href="https://gitter.im/PredictiveEcology/Require?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge&amp;utm_content=badge"><img src="https://badges.gitter.im/PredictiveEcology/Require.svg" alt="Join the chat at https://gitter.im/PredictiveEcology/Require"></a></li>
 </ul>
 </div>
 </div>
@@ -246,7 +257,7 @@ install_github("PredictiveEcology/Require", ref = "development", dependencies = 
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

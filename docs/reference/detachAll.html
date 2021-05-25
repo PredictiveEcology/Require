@@ -12,8 +12,8 @@
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
 
@@ -42,7 +42,7 @@
 <meta property="og:title" content="Detach and unload all packages — detachAll" />
 <meta property="og:description" content="This uses pkgDepTopoSort internally so that the package
 dependency tree is determined, and then packages are unloaded
-in the reverse order. Some packages don't unload successfully for 
+in the reverse order. Some packages don't unload successfully for
 a variety of reasons. Several known packages that have this problem
 are identified internally and *not* unloaded. Currently, these are
 glue, rlang, ps, ellipsis, and, processx." />
@@ -59,16 +59,6 @@ glue, rlang, ps, ellipsis, and, processx." />
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
 
-
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-58633549-5"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-58633549-5');
-</script>
 
 
   </head>
@@ -87,7 +77,7 @@ glue, rlang, ps, ellipsis, and, processx." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
       </span>
     </div>
 
@@ -95,7 +85,7 @@ glue, rlang, ps, ellipsis, and, processx." />
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -109,7 +99,7 @@ glue, rlang, ps, ellipsis, and, processx." />
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/PredictiveEcology/Require/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -134,13 +124,13 @@ glue, rlang, ps, ellipsis, and, processx." />
     <div class="ref-description">
     <p>This uses <code>pkgDepTopoSort</code> internally so that the package
 dependency tree is determined, and then packages are unloaded
-in the reverse order. Some packages don't unload successfully for 
+in the reverse order. Some packages don't unload successfully for
 a variety of reasons. Several known packages that have this problem
 are identified internally and *not* unloaded. Currently, these are
 <code>glue</code>, <code>rlang</code>, <code>ps</code>, <code>ellipsis</code>, and, <code>processx</code>.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>detachAll</span>(<span class='no'>pkgs</span>, <span class='kw'>dontTry</span> <span class='kw'>=</span> <span class='kw'>NULL</span>, <span class='kw'>doSort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)</pre>
+    <pre class="usage"><span class='fu'>detachAll</span><span class='op'>(</span><span class='va'>pkgs</span>, dontTry <span class='op'>=</span> <span class='cn'>NULL</span>, doSort <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -157,17 +147,17 @@ by a user if they find a package fails in attempts to unload it, e.g., "ps"</p><
     </tr>
     <tr>
       <th>doSort</th>
-      <td><p>If <code>TRUE</code> (the default), then the <code>pkgs</code> will be 
-topologically sorted. If <code>FALSE</code>, then it won't. Useful if the 
+      <td><p>If <code>TRUE</code> (the default), then the <code>pkgs</code> will be
+topologically sorted. If <code>FALSE</code>, then it won't. Useful if the
 <code>pkgs</code> are already sorted.</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>A numeric named vector, with names of the packages that were attempted. 
-<code>2</code> means the package was successfully unloaded, <code>1</code> it was 
-tried, but failed, <code>3</code> it was in the search path and was detached 
+    <p>A numeric named vector, with names of the packages that were attempted.
+<code>2</code> means the package was successfully unloaded, <code>1</code> it was
+tried, but failed, <code>3</code> it was in the search path and was detached
 and unloaded.</p>
 
   </div>
@@ -185,7 +175,7 @@ and unloaded.</p>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Use message to print a clean square data structure — messageDF • Require</title>
+<title>modifyList for multiple lists — modifyList2 • Require</title>
 
 
 <!-- jquery -->
@@ -39,9 +39,12 @@
 
 
 
-<meta property="og:title" content="Use message to print a clean square data structure — messageDF" />
-<meta property="og:description" content="Sends to message, but in a structured way so that a data.frame-like can
-be cleanly sent to messaging." />
+<meta property="og:title" content="modifyList for multiple lists — modifyList2" />
+<meta property="og:description" content="This calls modifyList iteratively using 
+Reduce, so it can handle &amp;gt;2 lists.
+The subsequent list elements that share a name will override 
+previous list elements with that same name.
+It also will handle the case where any list is a NULL" />
 
 
 
@@ -112,32 +115,60 @@ be cleanly sent to messaging." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Use message to print a clean square data structure</h1>
+    <h1><code>modifyList</code> for multiple lists</h1>
     <small class="dont-index">Source: <a href='https://github.com/PredictiveEcology/Require/blob/master/R/helpers.R'><code>R/helpers.R</code></a></small>
-    <div class="hidden name"><code>messageDF.Rd</code></div>
+    <div class="hidden name"><code>modifyList2.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Sends to <code>message</code>, but in a structured way so that a data.frame-like can
-be cleanly sent to messaging.</p>
+    <p>This calls <code><a href='https://rdrr.io/r/utils/modifyList.html'>modifyList</a></code> iteratively using 
+<code><a href='https://rdrr.io/r/base/funprog.html'>Reduce</a></code>, so it can handle &gt;2 lists.
+The subsequent list elements that share a name will override 
+previous list elements with that same name.
+It also will handle the case where any list is a <code>NULL</code></p>
     </div>
 
-    <pre class="usage"><span class='fu'>messageDF</span><span class='op'>(</span><span class='va'>df</span>, <span class='va'>round</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>modifyList2</span><span class='op'>(</span><span class='va'>...</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>df</th>
-      <td><p>A data.frame, data.table, matrix</p></td>
-    </tr>
-    <tr>
-      <th>round</th>
-      <td><p>An optional numeric to pass to <code>round</code></p></td>
+      <th>...</th>
+      <td><p>One or more named lists.</p></td>
     </tr>
     </table>
 
+    <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
+    <p>Simply a convenience around 
+<code><a href='https://rdrr.io/r/base/funprog.html'>Reduce(modifyList, list(...))</a></code>, with some checks.</p>
+
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='fu'>modifyList2</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>1</span><span class='op'>)</span>, <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>2</span>, b <span class='op'>=</span> <span class='fl'>2</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; $a
+#&gt; [1] 2
+#&gt; 
+#&gt; $b
+#&gt; [1] 2
+#&gt; </div><div class='input'><span class='fu'>modifyList2</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>1</span><span class='op'>)</span>, <span class='cn'>NULL</span>, <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>2</span>, b <span class='op'>=</span> <span class='fl'>2</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; $a
+#&gt; [1] 2
+#&gt; 
+#&gt; $b
+#&gt; [1] 2
+#&gt; </div><div class='input'><span class='fu'>modifyList2</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>1</span><span class='op'>)</span>, <span class='cn'>NULL</span>, <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>2</span>, b <span class='op'>=</span> <span class='fl'>2</span><span class='op'>)</span>, <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span>a <span class='op'>=</span> <span class='fl'>3</span>, c <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/list.html'>list</a></span><span class='op'>(</span><span class='fl'>1</span><span class='op'>:</span><span class='fl'>10</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; $a
+#&gt; [1] 3
+#&gt; 
+#&gt; $b
+#&gt; [1] 2
+#&gt; 
+#&gt; $c
+#&gt; $c[[1]]
+#&gt;  [1]  1  2  3  4  5  6  7  8  9 10
+#&gt; 
+#&gt; </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

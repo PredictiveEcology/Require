@@ -6,14 +6,14 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Internals used by <code>Require</code> — getPkgVersions • Require</title>
+<title>Internals used by Require — getPkgVersions • Require</title>
 
 
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
 
@@ -39,7 +39,7 @@
 
 
 
-<meta property="og:title" content="Internals used by <code>Require</code> — getPkgVersions" />
+<meta property="og:title" content="Internals used by Require — getPkgVersions" />
 <meta property="og:description" content="While these are not intended to be called manually by users, they may be
 of some use for advanced users." />
 
@@ -55,16 +55,6 @@ of some use for advanced users." />
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
 
-
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-58633549-5"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-58633549-5');
-</script>
 
 
   </head>
@@ -83,7 +73,7 @@ of some use for advanced users." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
       </span>
     </div>
 
@@ -91,7 +81,7 @@ of some use for advanced users." />
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -105,7 +95,7 @@ of some use for advanced users." />
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/PredictiveEcology/Require/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -132,24 +122,24 @@ of some use for advanced users." />
 of some use for advanced users.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>getPkgVersions</span>(<span class='no'>pkgDT</span>, <span class='kw'>install</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)
+    <pre class="usage"><span class='fu'>getPkgVersions</span><span class='op'>(</span><span class='va'>pkgDT</span>, install <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span>
 
-<span class='fu'>getAvailable</span>(<span class='no'>pkgDT</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>))
+<span class='fu'>getAvailable</span><span class='op'>(</span><span class='va'>pkgDT</span>, purge <span class='op'>=</span> <span class='cn'>FALSE</span>, repos <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"repos"</span><span class='op'>)</span><span class='op'>)</span>
 
-<span class='fu'>installFrom</span>(<span class='no'>pkgDT</span>, <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>, <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>))
+<span class='fu'>installFrom</span><span class='op'>(</span><span class='va'>pkgDT</span>, purge <span class='op'>=</span> <span class='cn'>FALSE</span>, repos <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"repos"</span><span class='op'>)</span><span class='op'>)</span>
 
-<span class='fu'>doInstalls</span>(
-  <span class='no'>pkgDT</span>,
-  <span class='no'>install_githubArgs</span>,
-  <span class='no'>install.packagesArgs</span>,
-  <span class='kw'>install</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
-  <span class='no'>...</span>
-)
+<span class='fu'>doInstalls</span><span class='op'>(</span>
+  <span class='va'>pkgDT</span>,
+  <span class='va'>install_githubArgs</span>,
+  <span class='va'>install.packagesArgs</span>,
+  install <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  repos <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"repos"</span><span class='op'>)</span>,
+  <span class='va'>...</span>
+<span class='op'>)</span>
 
-<span class='fu'>doLoading</span>(<span class='no'>pkgDT</span>, <span class='kw'>require</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>, <span class='no'>...</span>)
+<span class='fu'>doLoading</span><span class='op'>(</span><span class='va'>pkgDT</span>, require <span class='op'>=</span> <span class='cn'>TRUE</span>, <span class='va'>...</span><span class='op'>)</span>
 
-<span class='fu'>archiveVersionsAvailable</span>(<span class='no'>package</span>, <span class='no'>repos</span>)</pre>
+<span class='fu'>archiveVersionsAvailable</span><span class='op'>(</span><span class='va'>package</span>, <span class='va'>repos</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -243,7 +233,7 @@ It has been borrowed from a sub-set of the code in a non-exported function:
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

@@ -12,8 +12,8 @@
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
 
@@ -41,7 +41,7 @@
 
 <meta property="og:title" content="Determine package dependencies — pkgDep" />
 <meta property="og:description" content="This will first look in local filesystem (in .libPaths()) and will use
-a local package to find its dependencies. If the package doesn't exist locally, 
+a local package to find its dependencies. If the package does not exist locally, 
 including whether it is the correct version, then it will look in (currently) 
 CRAN and its archives (if the current CRAN version is not
 the desired version to check). It will also look on GitHub if the 
@@ -83,16 +83,6 @@ correct. This function may eventually replace pkgDep." />
 <![endif]-->
 
 
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-58633549-5"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-58633549-5');
-</script>
-
 
   </head>
 
@@ -110,7 +100,7 @@ correct. This function may eventually replace pkgDep." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
       </span>
     </div>
 
@@ -118,7 +108,7 @@ correct. This function may eventually replace pkgDep." />
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -132,7 +122,7 @@ correct. This function may eventually replace pkgDep." />
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/PredictiveEcology/Require/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -156,7 +146,7 @@ correct. This function may eventually replace pkgDep." />
 
     <div class="ref-description">
     <p>This will first look in local filesystem (in <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code>) and will use
-a local package to find its dependencies. If the package doesn't exist locally, 
+a local package to find its dependencies. If the package does not exist locally, 
 including whether it is the correct version, then it will look in (currently) 
 <code>CRAN</code> and its archives (if the current <code>CRAN</code> version is not
 the desired version to check). It will also look on <code>GitHub</code> if the 
@@ -186,63 +176,63 @@ local, installed, and incorrect package dependencies. <code>pkgDepAlt</code> get
 correct. This function may eventually replace <code>pkgDep</code>.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>pkgDep</span>(
-  <span class='no'>packages</span>,
-  <span class='kw'>libPath</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>(),
-  <span class='kw'>which</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span>),
-  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='no'>depends</span>,
-  <span class='no'>imports</span>,
-  <span class='no'>suggests</span>,
-  <span class='no'>linkingTo</span>,
-  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
-  <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>includeBase</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>sort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
-)
+    <pre class="usage"><span class='fu'>pkgDep</span><span class='op'>(</span>
+  <span class='va'>packages</span>,
+  libPath <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span><span class='op'>(</span><span class='op'>)</span>,
+  which <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span><span class='op'>)</span>,
+  recursive <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  <span class='va'>depends</span>,
+  <span class='va'>imports</span>,
+  <span class='va'>suggests</span>,
+  <span class='va'>linkingTo</span>,
+  repos <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"repos"</span><span class='op'>)</span>,
+  keepVersionNumber <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  includeBase <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  sort <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  purge <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"Require.purge"</span>, <span class='cn'>FALSE</span><span class='op'>)</span>
+<span class='op'>)</span>
 
-<span class='fu'>pkgDep2</span>(
-  <span class='no'>packages</span>,
-  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>which</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span>),
-  <span class='no'>depends</span>,
-  <span class='no'>imports</span>,
-  <span class='no'>suggests</span>,
-  <span class='no'>linkingTo</span>,
-  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
-  <span class='kw'>sorted</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
-)
+<span class='fu'>pkgDep2</span><span class='op'>(</span>
+  <span class='va'>packages</span>,
+  recursive <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  which <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span><span class='op'>)</span>,
+  <span class='va'>depends</span>,
+  <span class='va'>imports</span>,
+  <span class='va'>suggests</span>,
+  <span class='va'>linkingTo</span>,
+  repos <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"repos"</span><span class='op'>)</span>,
+  sorted <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  purge <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"Require.purge"</span>, <span class='cn'>FALSE</span><span class='op'>)</span>
+<span class='op'>)</span>
 
-<span class='fu'>pkgDepTopoSort</span>(
-  <span class='no'>pkgs</span>,
-  <span class='no'>deps</span>,
-  <span class='kw'>reverse</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>topoSort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>useAllInSearch</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>returnFull</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
-)
+<span class='fu'>pkgDepTopoSort</span><span class='op'>(</span>
+  <span class='va'>pkgs</span>,
+  <span class='va'>deps</span>,
+  reverse <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  topoSort <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  useAllInSearch <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  returnFull <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  recursive <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  purge <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"Require.purge"</span>, <span class='cn'>FALSE</span><span class='op'>)</span>
+<span class='op'>)</span>
 
-<span class='fu'>pkgDepAlt</span>(
-  <span class='no'>packages</span>,
-  <span class='kw'>libPath</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>(),
-  <span class='kw'>which</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span>, <span class='st'>"Remotes"</span>),
-  <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='no'>depends</span>,
-  <span class='no'>imports</span>,
-  <span class='no'>suggests</span>,
-  <span class='no'>linkingTo</span>,
-  <span class='no'>enhances</span>,
-  <span class='no'>remotes</span>,
-  <span class='kw'>repos</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"repos"</span>),
-  <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>includeBase</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>,
-  <span class='kw'>sort</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>,
-  <span class='kw'>purge</span> <span class='kw'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span>(<span class='st'>"Require.purge"</span>, <span class='fl'>FALSE</span>)
-)</pre>
+<span class='fu'>pkgDepAlt</span><span class='op'>(</span>
+  <span class='va'>packages</span>,
+  libPath <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span><span class='op'>(</span><span class='op'>)</span>,
+  which <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Depends"</span>, <span class='st'>"Imports"</span>, <span class='st'>"LinkingTo"</span>, <span class='st'>"Remotes"</span><span class='op'>)</span>,
+  recursive <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  <span class='va'>depends</span>,
+  <span class='va'>imports</span>,
+  <span class='va'>suggests</span>,
+  <span class='va'>linkingTo</span>,
+  <span class='va'>enhances</span>,
+  <span class='va'>remotes</span>,
+  repos <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"repos"</span><span class='op'>)</span>,
+  keepVersionNumber <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  includeBase <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  sort <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  purge <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"Require.purge"</span>, <span class='cn'>FALSE</span><span class='op'>)</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -393,22 +383,23 @@ circumstances:</p><ol>
 
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-  <span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>)
-  <span class='fu'>pkgDep</span>(<span class='st'>"Require"</span>, <span class='kw'>keepVersionNumber</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>) <span class='co'># just names</span>
-  <span class='fu'>pkgDep</span>(<span class='st'>"PredictiveEcology/reproducible"</span>) <span class='co'># GitHub</span>
-  <span class='fu'>pkgDep</span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='kw'>recursive</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>) <span class='co'># GitHub</span>
-  <span class='fu'>pkgDep</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span>)) <span class='co'># GitHub package and local packages</span>
-  <span class='fu'>pkgDep</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span>, <span class='st'>"plyr"</span>)) <span class='co'># GitHub, local, and CRAN packages</span>
-}
-<span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-  <span class='fu'>pkgDep2</span>(<span class='st'>"Require"</span>)
+    <pre class="examples"><div class='input'><span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='fu'>pkgDep</span><span class='op'>(</span><span class='st'>"Require"</span><span class='op'>)</span>
+  <span class='fu'>pkgDep</span><span class='op'>(</span><span class='st'>"Require"</span>, keepVersionNumber <span class='op'>=</span> <span class='cn'>FALSE</span><span class='op'>)</span> <span class='co'># just names</span>
+  <span class='fu'>pkgDep</span><span class='op'>(</span><span class='st'>"PredictiveEcology/reproducible"</span><span class='op'>)</span> <span class='co'># GitHub</span>
+  <span class='fu'>pkgDep</span><span class='op'>(</span><span class='st'>"PredictiveEcology/reproducible"</span>, recursive <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span> <span class='co'># GitHub</span>
+  <span class='fu'>pkgDep</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span><span class='op'>)</span><span class='op'>)</span> <span class='co'># GitHub package and local packages</span>
+  <span class='fu'>pkgDep</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"PredictiveEcology/reproducible"</span>, <span class='st'>"Require"</span>, <span class='st'>"plyr"</span><span class='op'>)</span><span class='op'>)</span> <span class='co'># GitHub, local, and CRAN packages</span>
+<span class='op'>}</span>
+<span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='fu'>pkgDep2</span><span class='op'>(</span><span class='st'>"Require"</span><span class='op'>)</span>
   <span class='co'># much bigger one</span>
-  <span class='fu'>pkgDep2</span>(<span class='st'>"reproducible"</span>)
-}
-<span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-<span class='fu'>pkgDepTopoSort</span>(<span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span>(<span class='st'>"Require"</span>, <span class='st'>"data.table"</span>), <span class='kw'>reverse</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)
-}</div></pre>
+  <span class='fu'>pkgDep2</span><span class='op'>(</span><span class='st'>"reproducible"</span><span class='op'>)</span>
+<span class='op'>}</span>
+<span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='fu'>pkgDepTopoSort</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"Require"</span>, <span class='st'>"data.table"</span><span class='op'>)</span>, reverse <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span>
+<span class='op'>}</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -424,7 +415,7 @@ circumstances:</p><ol>
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>

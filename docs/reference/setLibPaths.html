@@ -6,14 +6,14 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Set <code>.libPaths</code> — setLibPaths • Require</title>
+<title>Set .libPaths — setLibPaths • Require</title>
 
 
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/flatly/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
 
@@ -39,10 +39,15 @@
 
 
 
-<meta property="og:title" content="Set <code>.libPaths</code> — setLibPaths" />
+<meta property="og:title" content="Set .libPaths — setLibPaths" />
 <meta property="og:description" content="This will set the .libPaths() by either adding a new path to
 it if standAlone = FALSE, or will concatenate
-c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE." />
+c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE.
+Currently, the default is to make this new .libPaths() &quot;sticky&quot;, meaning it becomes
+associated with the current directory even through a restart of R.
+It does this by adding and/updating the .Rprofile file in the current directory.
+If this current directory is a project, then the project will have the new .libPaths()
+associated with it, even through an R restart." />
 
 
 
@@ -56,16 +61,6 @@ c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE." />
 <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
 <![endif]-->
 
-
-<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-58633549-5"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-58633549-5');
-</script>
 
 
   </head>
@@ -84,7 +79,7 @@ c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.8</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
       </span>
     </div>
 
@@ -92,7 +87,7 @@ c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE." />
       <ul class="nav navbar-nav">
         <li>
   <a href="../index.html">
-    <span class="fas fa fas fa-home fa-lg"></span>
+    <span class="fas fa-home fa-lg"></span>
      
   </a>
 </li>
@@ -106,7 +101,7 @@ c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE." />
       <ul class="nav navbar-nav navbar-right">
         <li>
   <a href="https://github.com/PredictiveEcology/Require/">
-    <span class="fab fa fab fa-github fa-lg"></span>
+    <span class="fab fa-github fa-lg"></span>
      
   </a>
 </li>
@@ -131,10 +126,20 @@ c(libPath, tail(.libPaths(), 1)) if standAlone = TRUE." />
     <div class="ref-description">
     <p>This will set the <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code> by either adding a new path to
 it if <code>standAlone = FALSE</code>, or will concatenate
-<code><a href='https://rdrr.io/r/base/c.html'>c(libPath, tail(.libPaths(), 1))</a></code> if <code>standAlone = TRUE</code>.</p>
+<code><a href='https://rdrr.io/r/base/c.html'>c(libPath, tail(.libPaths(), 1))</a></code> if <code>standAlone = TRUE</code>.
+Currently, the default is to make this new <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code> "sticky", meaning it becomes
+associated with the current directory even through a restart of R.
+It does this by adding and/updating the <code class="file">.Rprofile</code> file in the current directory.
+If this current directory is a project, then the project will have the new <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code>
+associated with it, even through an R restart.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>setLibPaths</span>(<span class='no'>libPaths</span>, <span class='kw'>standAlone</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)</pre>
+    <pre class="usage"><span class='fu'>setLibPaths</span><span class='op'>(</span>
+  <span class='va'>libPaths</span>,
+  standAlone <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  updateRprofile <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/options.html'>getOption</a></span><span class='op'>(</span><span class='st'>"Require.updateRprofile"</span>, <span class='cn'>FALSE</span><span class='op'>)</span>,
+  exact <span class='op'>=</span> <span class='cn'>FALSE</span>
+<span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -155,6 +160,24 @@ components of <code>.libPath()</code></p></td>
 installs if the user has a substantial number of the packages already in
 their personal library. Default <code>FALSE</code> to minimize package installing.</p></td>
     </tr>
+    <tr>
+      <th>updateRprofile</th>
+      <td><p>Logical or Character string. If <code>TRUE</code>, then
+this function will put several lines of code in the current directory's <code>.Rprofile</code>
+file setting up the package libraries for this and future sessions. If
+a character string, then this should be the path to an <code>.Rprofile</code> file.
+To reset back to normal, run <code>setLibPaths()</code> without a <code>libPath</code>. Default:
+<code><a href='https://rdrr.io/r/base/options.html'>getOption("Require.updateRprofile", FALSE)</a></code>, meaning <code>FALSE</code>, but it
+can be set with an option or within a single call.</p></td>
+    </tr>
+    <tr>
+      <th>exact</th>
+      <td><p>Logical. This function will automatically append the R version number to the
+<code>libPaths</code> to maintain separate R package libraries for each R version
+on the system. There are some cases where this behaviour is not desirable.
+Set <code>exact</code> to <code>TRUE</code> to override this automatic appending and use
+the exact, unaltered <code>libPaths</code>. Default is <code>FALSE</code></p></td>
+    </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
@@ -165,22 +188,27 @@ As when setting <code>options</code>, this will return the previous state of
 <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code> allowing the user to reset easily.</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
-    <p>This code was modified from <a href='https://github.com/milesmcbain'>https://github.com/milesmcbain</a>.
+    <p>This details of this code were modified from <a href='https://github.com/milesmcbain'>https://github.com/milesmcbain</a>.
 A different, likely non-approved by CRAN approach that also works is here:
 <a href='https://stackoverflow.com/a/36873741/3890027'>https://stackoverflow.com/a/36873741/3890027</a>.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='kw'>if</span> (<span class='fl'>FALSE</span>) {
-<span class='no'>orig</span> <span class='kw'>&lt;-</span> <span class='fu'>setLibPaths</span>(<span class='st'>"~/newProjectLib"</span>) <span class='co'># will only have 2 paths,</span>
-                                       <span class='co'># this and the last one in .libPaths()</span>
-<span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>() <span class='co'># see the 2 paths</span>
-<span class='fu'>setLibPaths</span>(<span class='no'>orig</span>) <span class='co'># reset</span>
-<span class='fu'><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths</a></span>() <span class='co'># see the 2 original paths back</span>
+    <pre class="examples"><div class='input'><span class='va'>origDir</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/getwd.html'>setwd</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempdir</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span>
+<span class='fu'>setLibPaths</span><span class='op'>(</span><span class='st'>"newProjectLib"</span><span class='op'>)</span> <span class='co'># set a new R package library locally</span>
+</div><div class='output co'>#&gt; <span class='message'>.libPaths() is now: /tmp/RtmpPDViuC/newProjectLib/4.1, /usr/lib/R/library</span></div><div class='input'><span class='fu'>setLibPaths</span><span class='op'>(</span><span class='op'>)</span> <span class='co'># reset it to original</span>
+</div><div class='output co'>#&gt; <span class='message'>There was no custom libPaths setting in .Rprofile; nothing changed</span></div><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/getwd.html'>setwd</a></span><span class='op'>(</span><span class='va'>origDir</span><span class='op'>)</span>
+<span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
+<span class='co'># Using standAlone = FALSE means that newly installed packages will be installed</span>
+<span class='co'>#   in the new package library, but loading packages can come from any of the ones</span>
+<span class='co'>#   listed in .libPaths()</span>
+<span class='fu'>setLibPaths</span><span class='op'>(</span><span class='st'>"~/newProjectLib"</span>, standAlone <span class='op'>=</span> <span class='cn'>FALSE</span><span class='op'>)</span> <span class='co'># will have 2 or more paths</span>
+<span class='co'># Can restart R, and changes will stay</span>
 
-<span class='co'># will have 2 or more paths</span>
-<span class='fu'>setLibPaths</span>(<span class='st'>"~/newProjectLib"</span>, <span class='kw'>standAlone</span> <span class='kw'>=</span> <span class='fl'>FALSE</span>) <span class='co'># will have 2 or more paths</span>
+<span class='co'># remove the custom .libPaths()</span>
+<span class='fu'>Require</span><span class='fu'>::</span><span class='fu'>setLibPaths</span><span class='op'>(</span><span class='op'>)</span> <span class='co'># reset to previous; remove from .Rprofile because libPath arg is empty</span>
 
-}</div></pre>
+<span class='op'>}</span>
+</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
@@ -196,7 +224,7 @@ A different, likely non-approved by CRAN approach that also works is here:
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
