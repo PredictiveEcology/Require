@@ -1,9 +1,8 @@
 utils::globalVariables(c(
-  "localFileName", "neededFiles", "i.neededFiles", "installFromFac",
-  ".N", ".I", "Archs", "type", "localType", "N", "installOrder",
-  "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile",
-  "Names", "packageFullName", "Version", "hasVersionSpec", "correctVersion", "repoLocation",
-  "inequality", " AvailableVersion", "Package", "mtime", "newMtime"
+  "Archs", "AvailableVersion", "correctVersion", "destFile", "dup", "filepath",  "github", "hasVersionSpec",
+  ".I", "i.neededFiles", "inequality", "installFromFac", "installOrder", "installResult", "isGitPkg",
+  "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "newMtime",
+  "Package", "packageFullName", "repoLocation", "type", "version"
 ))
 
   #' @details
@@ -57,7 +56,7 @@ parseGitHub <- function(pkgDT) {
 #' of some use for advanced users.
 #'
 #' @return
-#' In general, these functions return a data.table with various package
+#' In general, these functions return a `data.table` with various package
 #' information, installation status, version, available version etc.
 #'
 #' @importFrom data.table setorderv
@@ -306,7 +305,6 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           nf <- neededVersions$Package[wh]
           neededVersions[installFrom == "CRAN", neededFiles := nf]
         }
-
       }
       if (any(neededVersions$installFrom == "GitHub")) {
         neededVersions[installFrom == "GitHub", neededFiles := paste0(Package, "_", Branch)]
@@ -430,7 +428,9 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       } else {
         lines <- f
       }
-      suppressWarnings(vers_line <- lines[grep("^Version: *", lines)]) # nolint
+      suppressWarnings({
+        vers_line <- lines[grep("^Version: *", lines)]
+      })
       out <- gsub("Version: ", "", vers_line)
       if (length(out) == 0) out <- NA
       if (length(f) == 1)
@@ -442,9 +442,9 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
 }
 
 #' @rdname DESCRIPTION-helpers
-#' @param file A file path to a DESCRIPTION file
-#' @param other Any other keyword in a DESCRIPTION file that precedes a ":". The rest of the line will be
-#'   retrieved.
+#' @param file A file path to a `DESCRIPTION` file
+#' @param other Any other keyword in a `DESCRIPTION` file that precedes a ":".
+#'   The rest of the line will be retrieved.
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   # origLocal <- Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
   # on.exit({
@@ -456,7 +456,9 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
     } else {
       lines <- f
     }
-    suppressWarnings(vers_line <- lines[grep(paste0("^",other,": *"), lines)]) # nolint
+    suppressWarnings({
+      vers_line <- lines[grep(paste0("^",other,": *"), lines)]
+    })
     out <- gsub(paste0(other, ": "), "", vers_line)
     if (length(out) == 0) out <- NA
     out
@@ -482,7 +484,6 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 getGitHubDESCRIPTION <- function(pkg, purge = getOption("Require.purge", FALSE)) {
   getGitHubFile(pkg, "DESCRIPTION", purge = purge)
 }
-
 
 getGitHubNamespace <- function(pkg, purge = getOption("Require.purge", FALSE)) {
   getGitHubFile(pkg, "NAMESPACE", purge = purge)
@@ -517,8 +518,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
             if (any(hasSubFolder)) {
               Branch <- paste0(Branch, "/", GitSubFolder)
             }
-            file.path("https://raw.githubusercontent.com", Account,
-                      Repo, Branch, filename, fsep = "/")
+            file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
           },
           by = "Package"]
 
@@ -543,8 +543,6 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
   }
   ret
 }
-
-
 
 updateInstalled <- function(pkgDT, installPkgNames, warn) {
   if (NROW(installPkgNames)) {
@@ -981,7 +979,7 @@ currentCRANPkgDates <- function(pkgs) {
   }
   if (is.null(names(pkgs))) names(pkgs) <- pkgs
 
-  aa <- substring(currentCranDates, nchar("      <a href=\"")+1, 200)
+  aa <- substring(currentCranDates, nchar("      <a href=\"") + 1, 200)
   bb <- unlist(lapply(paste0(pkgs, "_"), function(p) which(startsWith(aa, p))))
   currentCranDates2 <- aa[bb]
   dd <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", currentCranDates2)
@@ -1232,15 +1230,16 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       warn <- list()
       p <- file.path(cranArchivePath, p)
       ipa <- modifyList2(install.packagesArgs, dots, list(repos = NULL))
-      warn <- tryCatch(
+      warn <- tryCatch({
         out <- do.call(install.packages,
                        # using ap meant that it was messing up the src vs bin paths
-                       append(list(unname(p)), ipa)),
-        # ret <- do.call(remotes::install_version, append(list(package = unname(p), version = v, ...), install_githubArgs)),
+                       append(list(unname(p)), ipa))
+        },
         error = function(x) {
           x$message
         },
-        warning = function(condition) condition)
+        warning = function(condition) condition
+      )
       warn
     })
     out <- unlist(out)
@@ -1261,8 +1260,8 @@ installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_
   updateInstalled(pkgDT, gitPkgNames$Package, out5)
 }
 
-installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs, install_githubArgs,
-                       repos = getOption("repos")) {
+installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs,
+                       install_githubArgs, repos = getOption("repos")) {
   currentTime <- Sys.time()
   dft <- difftime(currentTime, startTime, units = "secs")
   timeLeft <- dft/toInstall$installOrder * (numPackages - toInstall$installOrder + 1)
@@ -1308,7 +1307,6 @@ copyTarball <- function(pkg, builtBinary) {
       unlink(newFiles)
     }
   }
-
 }
 
 installRequire <- function(requireHome = getOption("Require.Home")) {
@@ -1505,17 +1503,16 @@ warningCantInstall <- function(pkgs) {
 
 }
 
-rpackageFolder <- function(path = getOption("Require.RPackageCache"), exact = FALSE)  {
+rpackageFolder <- function(path = getOption("Require.RPackageCache", RequirePkgCacheDir()), exact = FALSE)  {
   if (!is.null(path)) {
     if (isTRUE(exact))
       return(path)
     path <- path[1]
-    rversion <- paste0(R.version$major, ".", strsplit(R.version$minor, split = "\\.")[[1]][1])
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (!endsWith(path, rversion))
-        file.path(path, rversion)
+      if (!endsWith(path, rversion()))
+        file.path(path, rversion())
       else
         path
     }

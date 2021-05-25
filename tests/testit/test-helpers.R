@@ -1,7 +1,7 @@
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+Sys.setenv("CRANCACHE_DISABLE" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",

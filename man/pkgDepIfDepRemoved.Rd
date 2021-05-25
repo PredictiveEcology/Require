@@ -13,7 +13,7 @@ pkgDepIfDepRemoved(pkg = character(), depsRemoved = character())
 from the \code{pkg} immediate dependencies}
 }
 \value{
-A character vector of the packages that would removed from recursive dependencies 
+A character vector of the packages that would removed from recursive dependencies
 of \code{pkg}
 if \code{depsRemoved} were removed from first level dependencies
 }

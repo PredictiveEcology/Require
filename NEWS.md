@@ -4,9 +4,9 @@ version 0.0.12
 ==============
 
 ## New features
-* `setup`: new function for creating a new project. See `readme.md`
-* `setLibPath` and package caching (via `options("RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.
-* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to .libPaths() to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
+* `setup`: new function for creating a new project. See `README.md`
+* `setLibPath` and package caching (via `options("Require.RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.
+* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to `.libPaths()` to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
 
 ## Bug fixes
 * several edge cases with complex loading of many packages
@@ -14,6 +14,7 @@ version 0.0.12
 * small minor bugfixes
 * In cases where a DESCRIPTION file had both a package with a minimum version (e.g., in Imports) and a REMOTES: for that package (without a minimum version, but with a branch, say), `Require` would use the REMOTES: entry. But since that means there is no minimum package version, and `Require` does not automatically install a package that is not violating a minimum version number, it would not install anything. Now, it harmonizes the 2 entries for a given package, and uses both the minimum version number and the git branch as the potential source to find that version number.
 * allow either `master` or `main` branches to be installed from GitHub, without needing to specify (#26)
+* fix use of options in `setup()`
 
 version 0.0.10
 ==============
