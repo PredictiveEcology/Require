@@ -1,24 +1,29 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
-version 0.0.11
+version 0.0.12
 ==============
+
+## Dependency changes
+* with the release of R 4.1, we dropped support for R 3.5. R 3.6 (`oldrel`) and newer are supported.
 
 ## New features
 * `setup`: new function for creating a new project. See `readme.md`
 * `setLibPath` and package caching (via `options("RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.
-* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to .libPaths() to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
+* `setLibPaths` gains a new argument, `updateRprofile`, which allows a user's changes to `.libPaths()` to persist through an R restart. Set to `getOption("Require.updateRprofile", FALSE)`, at start
 
 ## Bug fixes
 * several edge cases with complex loading of many packages
-
+* was incorrectly (not) loading base packages, e.g., `parallel`
+* small minor bugfixes
+* In cases where a DESCRIPTION file had both a package with a minimum version (e.g., in Imports) and a REMOTES: for that package (without a minimum version, but with a branch, say), `Require` would use the REMOTES: entry. But since that means there is no minimum package version, and `Require` does not automatically install a package that is not violating a minimum version number, it would not install anything. Now, it harmonizes the 2 entries for a given package, and uses both the minimum version number and the git branch as the potential source to find that version number.
+* allow either `master` or `main` branches to be installed from GitHub, without needing to specify (#26)
 
 version 0.0.10
 ==============
 
 ## Bug fixes
 * CRAN error on one flavour of Linux
-* erroneous checkPath error creating `Specified path xxxx doesn't exist` even though it does.
-
+* erroneous `checkPath` error creating `Specified path xxxx doesn't exist` even though it does.
 
 version 0.0.9
 ==============
@@ -29,13 +34,12 @@ version 0.0.9
 * `detachAll` now unloads reverse depends of the depends, if they are loaded
 
 ## Bug fixes
-* deals with more cases of installing arbitrary packages from a packageVersion.txt file
-* Does not mistakenly create a new, empty directory of packages to accommodate 2 LibPaths from packageVersion.txt file, *if the second (or more) LibPath* is full of base packages.
+* deals with more cases of installing arbitrary packages from a `packageVersion.txt` file
+* Does not mistakenly create a new, empty directory of packages to accommodate 2 `LibPaths` from `packageVersion.txt` file, *if the second (or more) `LibPath`* is full of base packages.
 * Handles better false positives (packages did not install properly when they did) and some false negatives (no error collected at end when there was an error in installing)
 * better suggestion of what to do in some edge cases of failed package installs
 * captures and deals with a bug in `install.packages` (`argument "av2" is missing, with no default`) on R-devel for Windows (on Sept 09, 2020). May be transient.
 * Was, by default, installing from `source` on Windows. Fixed.
-
 
 
 version 0.0.8
