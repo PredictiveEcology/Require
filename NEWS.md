@@ -3,6 +3,9 @@ Known issues: https://github.com/PredictiveEcology/Require/issues
 version 0.0.12
 ==============
 
+## Dependency changes
+* with the release of R 4.1, we dropped support for R 3.5. R 3.6 (`oldrel`) and newer are supported.
+
 ## New features
 * `setup`: new function for creating a new project. See `readme.md`
 * `setLibPath` and package caching (via `options("RPackageCache")`) now automatically create and use a subfolder of user-provided path with the R major & minor version number (as with normal R behaviour) to allow multiple R versions to coexist on the same machine.

@@ -14,8 +14,7 @@ See `NEWS.md` for complete list of changes.
 - os: ubuntu-20.04,   r: 'release'
 - os: ubuntu-20.04,   r: 'oldrel'
 - os: ubuntu-20.04,   r: '3.6'
-- os: ubuntu-20.04,   r: '3.5'
-          
+
 ### Winbuilder
 * Windows                 (win-builder), R 4.0.5
 * Windows                 (win-builder), R 4.1.0
