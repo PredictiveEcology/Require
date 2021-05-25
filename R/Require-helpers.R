@@ -1511,8 +1511,8 @@ rpackageFolder <- function(path = getOption("Require.RPackageCache", RequirePkgC
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (!endsWith(path, rversion))
-        file.path(path, rversion)
+      if (!endsWith(path, rversion()))
+        file.path(path, rversion())
       else
         path
     }
