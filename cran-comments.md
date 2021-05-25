@@ -8,16 +8,18 @@ See `NEWS.md` for complete list of changes.
 ### GitHub Actions
 - os: macOS-latest,   r: 'release'
 - os: windows-latest, r: 'release'
+- os: windows-latest, r: '4.0'
 - os: windows-latest, r: '3.6'
-- os: ubuntu-18.04,   r: 'devel', 
-- os: ubuntu-18.04,   r: 'release'
-- os: ubuntu-18.04,   r: 'oldrel'
-- os: ubuntu-18.04,   r: '3.5'
+- os: ubuntu-20.04,   r: 'devel', 
+- os: ubuntu-20.04,   r: 'release'
+- os: ubuntu-20.04,   r: 'oldrel'
+- os: ubuntu-20.04,   r: '3.6'
+- os: ubuntu-20.04,   r: '3.5'
           
 ### Winbuilder
-* Windows                 (win-builder), R 3.6.3
-* Windows                 (win-builder), R 4.0.2
-* Windows                 (win-builder), R 4.1.0 (2020-11-30)
+* Windows                 (win-builder), R 4.0.5
+* Windows                 (win-builder), R 4.1.0
+* Windows                 (win-builder), R-devel
 
 ## R CMD check results
 
