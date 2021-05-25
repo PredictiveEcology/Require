@@ -43,7 +43,7 @@ parseGitHub <- function(pkgDT) {
       pkgDT[hasSubFold, RepoWBranch := gsub(paste0("/",GitSubFolder), "", RepoWBranch), by = subFoldIndices]
     }
     pkgDT[isGitHub, Repo := gsub("^(.*)@(.*)$", "\\1", RepoWBranch)]
-    pkgDT[isGitHub, Branch := "master"]
+    pkgDT[isGitHub, Branch := "HEAD"]
     pkgDT[isGitHub & grepl("@", RepoWBranch), Branch := gsub("^.*@(.*)$", "\\1", RepoWBranch)]
     set(pkgDT, NULL, c("RepoWBranch", "fullGit"), NULL)
   }
@@ -613,9 +613,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         }
       }
       startTime <- Sys.time()
-      out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots, numPackages = NROW(toInstall),
-                startTime = startTime,
-                install.packagesArgs = install.packagesArgs, install_githubArgs = install_githubArgs, repos = repos)
+      out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots,
+                numPackages = NROW(toInstall), startTime = startTime,
+                install.packagesArgs = install.packagesArgs,
+                install_githubArgs = install_githubArgs, repos = repos)
     }
     failedToInstall <- pkgDT$installFrom == "Fail"
     if (NROW(pkgDT[failedToInstall]) ) {
@@ -677,7 +678,8 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
             warningCantInstall(pkgs)
           }
           error3 <- grepl("is being loaded, but", outMess)
-          packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"), "\\1", outMess[error3])
+          packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"),
+                               "\\1", outMess[error3])
           if (any(error3)) {
             pkgs <- paste(packageNames, collapse = "', '")
             if (length(setdiff(pkgs, pkgsWarned)) > 0)
@@ -717,8 +719,10 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
           outMessToRm <- c(outMessToRm, max(outMessToRm) + 1) # There is non ASCII character in the message that can't be explicitly used
           outMess <- outMess[-outMessToRm]
         } else {
-          warning(firstPartMess, ". The newer version fails the version number test. Please either change the version number requested, ",
-                  "or prevent the newer version from loading by changing the .libPaths() prior to any packages being loaded")
+          warning(firstPartMess, ". The newer version fails the version number test.",
+                  " Please either change the version number requested,",
+                  " or prevent the newer version from loading by changing the .libPaths() prior",
+                  " to any packages being loaded.")
         }
       }
       if (length(outMess) > 0)
@@ -1263,11 +1267,11 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   timeLeft <- dft/toInstall$installOrder * (numPackages - toInstall$installOrder + 1)
 
   lotsOfTimeLeft <- dft > 10
-  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 0) else "..."
+  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
-  message(" -- Installing ", pkgToReport, " -- (", toInstall$installOrder, " of ", numPackages,
-          ". Estimated time left: ", timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
+  message(" -- Installing ", pkgToReport, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ",
+          timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
 
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
@@ -1494,8 +1498,9 @@ isWindows <- function() {
 warningCantInstall <- function(pkgs) {
   warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
           "-----\n",
-          "install.packages(c('", paste(pkgs, collapse = ", "),"'), lib = '", .libPaths()[1],"')",
-      "\n-----\n...before any other packages get loaded")
+          "install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '",.libPaths()[1],"')",
+          "\n-----\n...before any other packages get loaded")
+
 }
 
 rpackageFolder <- function(path = getOption("Require.RPackageCache", RequirePkgCacheDir()), exact = FALSE)  {
@@ -1506,8 +1511,8 @@ rpackageFolder <- function(path = getOption("Require.RPackageCache", RequirePkgC
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (!endsWith(path, rversion()))
-        file.path(path, rversion())
+      if (!endsWith(path, rversion))
+        file.path(path, rversion)
       else
         path
     }
