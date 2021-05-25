@@ -1268,7 +1268,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   timeLeft <- dft/toInstall$installOrder * (numPackages - toInstall$installOrder + 1)
 
   lotsOfTimeLeft <- dft > 10
-  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 0) else "..."
+  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
   message(" -- Installing ", pkgToReport, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ",
