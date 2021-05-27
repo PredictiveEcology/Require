@@ -6,7 +6,7 @@ outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir") {
+if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
@@ -38,7 +38,7 @@ d <- pkgDep(pkg2) # GitHub package and local packages
 testit::assert({length(d) == 2})
 testit::assert({isTRUE(all.equal(a$Require, d$Require))})
 
-dAlt <- pkgDepAlt(pkg2, recursive = TRUE) 
+dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
 testit::assert({length(setdiff(extractPkgName(d[[1]]), extractPkgName(dAlt[[1]]))) == 0})
 testit::assert({length(setdiff(extractPkgName(d[[2]]), extractPkgName(dAlt[[2]]))) == 0})
 testit::assert({length(d) == length(dAlt)})
@@ -50,7 +50,7 @@ testit::assert({length(e) == 3})
 testit::assert({isTRUE(all.equal(e[[pkg]], d[[pkg]]))})
 testit::assert({isTRUE(all.equal(d$Require, e$Require))})
 
-eAlt <- pkgDepAlt(pkg3, recursive = TRUE) 
+eAlt <- pkgDepAlt(pkg3, recursive = TRUE)
 testit::assert({length(setdiff(extractPkgName(e[[1]]), extractPkgName(eAlt[[1]]))) == 0})
 testit::assert({length(setdiff(extractPkgName(e[[2]]), extractPkgName(eAlt[[2]]))) == 0})
 testit::assert({length(setdiff(extractPkgName(e[[3]]), extractPkgName(eAlt[[3]]))) == 0})
@@ -94,4 +94,5 @@ testit::assert({identical(sort(c("data.table (>= 1.10.4)", "remotes")), sort(d[[
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 options(outOpts)
+unlink("~/._R")
 options(outOpts2)

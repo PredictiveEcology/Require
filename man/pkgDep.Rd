@@ -141,15 +141,15 @@ the top of the list.}
 R packages in \code{search()} will be appended to \code{pkgs}
 to allow those to also be identified}
 
-\item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}. 
-If \code{TRUE}, then then all installed packages will be searched. 
-If \code{FALSE}, the default, only packages that are currently in 
+\item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}.
+If \code{TRUE}, then then all installed packages will be searched.
+If \code{FALSE}, the default, only packages that are currently in
 the \code{search()} path and passed in \code{pkgs} will be included
 in the possible reverse dependencies.}
 
 \item{enhances}{Logical. Include packages listed in "Enhances". Default \code{FALSE}.}
 
-\item{remotes}{Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages. 
+\item{remotes}{Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages.
 Default \code{TRUE}.}
 }
 \value{
@@ -158,12 +158,12 @@ are either full reverse depends.
 }
 \description{
 This will first look in local filesystem (in \code{.libPaths()}) and will use
-a local package to find its dependencies. If the package does not exist locally, 
-including whether it is the correct version, then it will look in (currently) 
+a local package to find its dependencies. If the package does not exist locally,
+including whether it is the correct version, then it will look in (currently)
 \code{CRAN} and its archives (if the current \code{CRAN} version is not
-the desired version to check). It will also look on \code{GitHub} if the 
+the desired version to check). It will also look on \code{GitHub} if the
 package description is of the form of a GitHub package with format
-\code{account/repo@branch} or \code{account/repo@commit}. For this, 
+\code{account/repo@branch} or \code{account/repo@commit}. For this,
 it will attempt to get package dependencies from
 the GitHub \file{DESCRIPTION} file.
 This is intended to replace \code{tools::package_dependencies} or

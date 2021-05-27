@@ -5,7 +5,7 @@ outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir") {
+if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
@@ -18,10 +18,10 @@ testit::assert({is(out, "simpleWarning")})
 
 # for coverages that were missing
 pkgDTEmpty <- Require:::toPkgDT(character())
-out <- Require:::installedVers(pkgDTEmpty) # 
+out <- Require:::installedVers(pkgDTEmpty) #
 
 # test warn missing
-out <- Require:::updateInstalled(pkgDTEmpty, installPkgNames = "package") 
+out <- Require:::updateInstalled(pkgDTEmpty, installPkgNames = "package")
 
 pkgDep("data.table", purge = FALSE)
 pkgDep("data.table", purge = TRUE)
@@ -31,14 +31,15 @@ pkgDep2("Require")
 pkgDepTopoSort(c("data.table", "remotes"), useAllInSearch = TRUE)
 pkgDepTopoSort(c("data.table", "remotes"), useAllInSearch = TRUE, deps = "Require")
 pkgDepTopoSort(c("Require", "data.table", "remotes"))
-pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE, 
+pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE,
                deps = "Require", returnFull = FALSE, reverse = TRUE)
 
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
-options("Require.RPackageCache" = "~/._RPackageCache/",
-        "Require.unloadNamespaces" = FALSE)
+if (Sys.info()["user"] == "emcintir2")
+  options("Require.RPackageCache" = "~/._RPackageCache/",
+          "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir())))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
                          libPaths = tempdir2(basename(tempdir()))))
