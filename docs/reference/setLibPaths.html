@@ -79,7 +79,7 @@ associated with it, even through an R restart." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.14</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.13</span>
       </span>
     </div>
 
@@ -195,7 +195,7 @@ A different, likely non-approved by CRAN approach that also works is here:
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <pre class="examples"><div class='input'><span class='va'>origDir</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/base/getwd.html'>setwd</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/tempfile.html'>tempdir</a></span><span class='op'>(</span><span class='op'>)</span><span class='op'>)</span>
 <span class='fu'>setLibPaths</span><span class='op'>(</span><span class='st'>"newProjectLib"</span><span class='op'>)</span> <span class='co'># set a new R package library locally</span>
-</div><div class='output co'>#&gt; <span class='message'>.libPaths() is now: C:/Users/emcintir/AppData/Local/Temp/RtmpovTtxN/newProjectLib/4.0, C:/Program Files/R/R-4.0.4/library</span></div><div class='input'><span class='fu'>setLibPaths</span><span class='op'>(</span><span class='op'>)</span> <span class='co'># reset it to original</span>
+</div><div class='output co'>#&gt; <span class='message'>.libPaths() is now: /private/var/folders/l2/hy6b0sl977bcd8695nt6j7s80000gn/T/RtmpMLoyJ2/newProjectLib/4.1, /Library/Frameworks/R.framework/Versions/4.1/Resources/library</span></div><div class='input'><span class='fu'>setLibPaths</span><span class='op'>(</span><span class='op'>)</span> <span class='co'># reset it to original</span>
 </div><div class='output co'>#&gt; <span class='message'>There was no custom libPaths setting in .Rprofile; nothing changed</span></div><div class='input'><span class='fu'><a href='https://rdrr.io/r/base/getwd.html'>setwd</a></span><span class='op'>(</span><span class='va'>origDir</span><span class='op'>)</span>
 <span class='kw'>if</span> <span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='op'>{</span>
 <span class='co'># Using standAlone = FALSE means that newly installed packages will be installed</span>
