@@ -41,12 +41,12 @@
 
 <meta property="og:title" content="Determine package dependencies — pkgDep" />
 <meta property="og:description" content="This will first look in local filesystem (in .libPaths()) and will use
-a local package to find its dependencies. If the package does not exist locally, 
-including whether it is the correct version, then it will look in (currently) 
+a local package to find its dependencies. If the package does not exist locally,
+including whether it is the correct version, then it will look in (currently)
 CRAN and its archives (if the current CRAN version is not
-the desired version to check). It will also look on GitHub if the 
+the desired version to check). It will also look on GitHub if the
 package description is of the form of a GitHub package with format
-account/repo@branch or account/repo@commit. For this, 
+account/repo@branch or account/repo@commit. For this,
 it will attempt to get package dependencies from
 the GitHub DESCRIPTION file.
 This is intended to replace tools::package_dependencies or
@@ -100,7 +100,7 @@ correct. This function may eventually replace pkgDep." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.12</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.14</span>
       </span>
     </div>
 
@@ -146,12 +146,12 @@ correct. This function may eventually replace pkgDep." />
 
     <div class="ref-description">
     <p>This will first look in local filesystem (in <code><a href='https://rdrr.io/r/base/libPaths.html'>.libPaths()</a></code>) and will use
-a local package to find its dependencies. If the package does not exist locally, 
-including whether it is the correct version, then it will look in (currently) 
+a local package to find its dependencies. If the package does not exist locally,
+including whether it is the correct version, then it will look in (currently)
 <code>CRAN</code> and its archives (if the current <code>CRAN</code> version is not
-the desired version to check). It will also look on <code>GitHub</code> if the 
+the desired version to check). It will also look on <code>GitHub</code> if the
 package description is of the form of a GitHub package with format
-<code>account/repo@branch</code> or <code>account/repo@commit</code>. For this, 
+<code>account/repo@branch</code> or <code>account/repo@commit</code>. For this,
 it will attempt to get package dependencies from
 the GitHub <code class="file">DESCRIPTION</code> file.
 This is intended to replace <code><a href='https://rdrr.io/r/tools/package_dependencies.html'>tools::package_dependencies</a></code> or
@@ -351,9 +351,9 @@ to allow those to also be identified</p></td>
     </tr>
     <tr>
       <th>returnFull</th>
-      <td><p>Logical. Primarily useful when <code>reverse = TRUE</code>. 
-If <code>TRUE</code>, then then all installed packages will be searched. 
-If <code>FALSE</code>, the default, only packages that are currently in 
+      <td><p>Logical. Primarily useful when <code>reverse = TRUE</code>.
+If <code>TRUE</code>, then then all installed packages will be searched.
+If <code>FALSE</code>, the default, only packages that are currently in
 the <code><a href='https://rdrr.io/r/base/search.html'>search()</a></code> path and passed in <code>pkgs</code> will be included
 in the possible reverse dependencies.</p></td>
     </tr>
@@ -363,7 +363,7 @@ in the possible reverse dependencies.</p></td>
     </tr>
     <tr>
       <th>remotes</th>
-      <td><p>Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages. 
+      <td><p>Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages.
 Default <code>TRUE</code>.</p></td>
     </tr>
     </table>

@@ -15,7 +15,6 @@ This is a minor update to deal with CRAN policy violation (directory left over a
 - os: ubuntu-20.04,   r: '3.6'
 
 ### Winbuilder
-* Windows                 (win-builder), R 4.0.5
 * Windows                 (win-builder), R 4.1.0
 * Windows                 (win-builder), R-devel
 
@@ -28,3 +27,4 @@ There was one NOTE through about the Maintainer. The correct maintainer is <elio
 ## Downstream dependencies
 
 We have tested this version of the package with several downstream dependencies. There are no downstream problems.
+# 
