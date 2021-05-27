@@ -6,7 +6,7 @@ outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir") {
+if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
@@ -101,7 +101,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                             packageVersion("TimeWarp", lib.loc = dir6))})
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
-  
+
   setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
