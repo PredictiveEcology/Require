@@ -2,7 +2,7 @@ Known issues: https://github.com/PredictiveEcology/Require/issues
 
 version 0.0.13
 ==============
-* CRAN policy violation -- dealt with extraneous folder created during testing
+* fix CRAN policy violation -- dealt with extraneous folder created during testing
 
 version 0.0.12
 ==============
