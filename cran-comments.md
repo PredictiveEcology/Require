@@ -1,7 +1,6 @@
 ## Updated release
 
-This is a feature update with several minor bugfixes.
-See `NEWS.md` for complete list of changes.
+This is a minor update to deal with CRAN policy violation (directory left over after testing).
 
 ## Test environments
 
