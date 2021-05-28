@@ -1,6 +1,6 @@
 ## Updated release
 
-This is a minor update to deal with CRAN policy violation (directory left over after testing).
+This is an update to deal with CRAN policy violation (directory left over after testing).
 
 ## Test environments
 
@@ -17,7 +17,7 @@ This is a minor update to deal with CRAN policy violation (directory left over a
 ### Winbuilder
 * Windows                 (win-builder), R 4.0.5
 * Windows                 (win-builder), R 4.1.0
-* Windows                 (win-builder), R-devel
+* Windows                 (win-builder), R-devel (2021-05-25 r80389)
 
 ## R CMD check results
 
