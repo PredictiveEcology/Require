@@ -23,8 +23,9 @@ This is an update to deal with CRAN policy violation (directory left over after 
 
 There were no ERRORs nor WARNINGs.
 
-There was one NOTE through about the Maintainer. The correct maintainer is <eliot.mcintire@canada.ca>, as indicated.
-
 ## Downstream dependencies
 
-We have tested this version of the package with several downstream dependencies. There are minor updates related to function documentation updates. These will be pushed to dependencies after CRAN acceptance.
+We checked all reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
+
+ * We saw 0 new problems
+ * We failed to check 0 packages
