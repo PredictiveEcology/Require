@@ -1,5 +1,10 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
+version 0.0.14
+==============
+## bugfixes
+* bugfix where a package being installed from GitHub directly had a `Remotes` field for a package that was in `Suggests` (in its DESCRIPTION file). It would install this `Remotes` package even though it was only in `Suggests`
+
 version 0.0.13
 ==============
 * fix CRAN policy violation -- dealt with extraneous folder created during testing
