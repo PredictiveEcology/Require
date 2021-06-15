@@ -247,10 +247,17 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
     if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {
-        which <- c(which, "Remotes")
 
         pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
         needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
+        neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
+        neededRemotesName <- extractPkgName(neededRemotes)
+        neededName <- extractPkgName(needed)
+        needSomeRemotes <- neededName %in% neededRemotesName
+        if (any(needSomeRemotes)) {
+          needed <- c(needed[!needSomeRemotes], neededRemotes[neededRemotesName %in% neededName])
+        }
+
         #if (FALSE) {
         # Check NAMESPACE too -- because imperfect DESCRIPTION files
         rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE)
