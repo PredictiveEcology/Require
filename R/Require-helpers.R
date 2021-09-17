@@ -744,7 +744,6 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
               " possibly because they were unknown; trying again")
       # These should only be loaded if they are in the original pkgDT,
       #   which in all cases should be "none of the toInstall should be loaded"
-      browser()
       out2 <- Require(unique(toInstall), require = FALSE, ...)
       out2 <- unlist(out2)
       names(out2) <- unique(toInstall)
@@ -1101,6 +1100,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   pkgDT
 }
 
+#' @importFrom stats setNames
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                         repos = getOption("repos")) {
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package

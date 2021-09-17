@@ -247,7 +247,8 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
-  allrepos <- unique(c(repos, getOption("repos")))
+  allrepos <- c(repos, getOption("repos"))
+  allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
   opts <- options(repos = allrepos)
   on.exit({
     options(opts)}
