@@ -646,8 +646,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 #' @importFrom utils capture.output
 #' @rdname Require-internals
 doLoading <- function(pkgDT, require = TRUE, ...) {
-  packages <- pkgDT[loadOrder > 0]$Package
-  packageOrder <- pkgDT[loadOrder > 0]$loadOrder
+  pkgDTForLoad <- pkgDT[loadOrder > 0]
+  packages <- pkgDTForLoad$Package
+  packageOrder <- pkgDTForLoad$loadOrder
   if (isTRUE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
@@ -731,16 +732,31 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
         message(paste0(outMess, collapse = "\n"))
       return(list(out = out, toInstall = toInstall))
     })
-    requireOut
+    # requireOut
     out <- unlist(lapply(requireOut, function(x) x$out))
     toInstall <- unlist(lapply(requireOut, function(x) x$toInstall))
 
     if (length(toInstall)) {
-      out2 <- Require(unique(toInstall), ...)
+      message("Installed package(s) didn't have all dependencies installed,",
+              " possibly because they were unknown; trying again")
+      # These should only be loaded if they are in the original pkgDT,
+      #   which in all cases should be "none of the toInstall should be loaded"
+      browser()
+      out2 <- Require(unique(toInstall), require = FALSE, ...)
       out2 <- unlist(out2)
       names(out2) <- unique(toInstall)
+      if (any(!out)) {
 
-      out <- c(out, out2)
+        pkgToTryAgain <- pkgDTForLoad[Package %in% names(out)]
+        if (NROW(pkgToTryAgain)) {
+          retryOut <- doLoading(pkgToTryAgain)
+          if (isTRUE(any(retryOut$loaded))) {
+            out[match(retryOut[loaded == TRUE]$Package, names(out))] <- TRUE
+          }
+        }
+      }
+
+      # out <- c(out, out2) # The second group should only be installed, not loaded
     }
 
     pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & loadOrder > 0)]
@@ -1106,7 +1122,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       dots$type <- toInstall$type
   }
 
-  ipa <- modifyList2(install.packagesArgs, dots, list(repos = repos))
+  ipa <- modifyList2(install.packagesArgs, dots)
 
   # manually override "type = 'both'" because it gets it wrong some of the time
   ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
@@ -1138,6 +1154,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   installPackagesQuoted <- quote(do.call(install.packages,
                 # using ap meant that it was messing up the src vs bin paths
                 append(list(installPkgNames), ipa)))
+
   warn <- tryCatch({
     out <- eval(installPackagesQuoted)
   }, warning = function(condition) {

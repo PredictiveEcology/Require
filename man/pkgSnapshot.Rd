@@ -32,18 +32,18 @@ Defaults to the \code{.libPaths()[1]}.}
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{purge}{Logical. Should all caches be purged Default is 
-\code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout 
-the \code{Require} package. These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged. The cached values are renewed 
-when found to be too old, with the age limit. 
-This maximum age can be set in seconds with the environment variable 
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
-defaults to 3600  (one hour -- see
-\code{\link[utils]{available.packages}}).
+\item{purge}{Logical. Should all caches be purged Default is
+  \code{getOption("Require.purge", FALSE)}.
+  There is a lot of internal caching of results throughout
+  the \code{Require} package. These help with speed and reduce calls to internet sources.
+  However, sometimes these caches must be purged. The cached values are renewed
+  when found to be too old, with the age limit.
+  This maximum age can be set in seconds with the environment variable
+  \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
+  defaults to 3600  (one hour -- see
+  \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}}
+  Internally, there are calls to \code{available.packages}}
 
 \item{exact}{Logical. If \code{TRUE}, the default, then for GitHub packages, it
 will install the exact SHA, rather than the head of the account/repo@branch. For

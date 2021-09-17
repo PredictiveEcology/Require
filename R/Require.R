@@ -247,8 +247,14 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
+  allrepos <- unique(c(repos, getOption("repos")))
+  opts <- options(repos = allrepos)
+  on.exit({
+    options(opts)}
+    , add = TRUE)
+
   origDTThreads <- data.table::setDTthreads(1)
-  on.exit(data.table::setDTthreads(origDTThreads))
+  on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
 
   purge <- dealWithCache(purge)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
@@ -408,7 +414,7 @@ Require <- function(packages, packageVersionFile,
 
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs,
-                            install = install, repos = repos, ...)
+                            install = install, ...)
       }
       if ("detached" %in% colnames(pkgDT)) {
         unloaded <- pkgDT[!is.na(detached)]
