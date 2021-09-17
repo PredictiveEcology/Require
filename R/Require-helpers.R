@@ -601,11 +601,14 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       names(Package) <- Package
       namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
       if (any(namespacesLoaded) && getOption("Require.unloadNamespaces", TRUE)) {
-        si <- sessionInfo()
+        si <- try(sessionInfo(), silent = TRUE)
+        stopErrMess <- "The attempt to unload loaded packages failed. Please restart R and run again"
+        if (is(si, "try-error")) stop(stopErrMess)
         allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
         topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded)))
+
         if (is(topoSortedAllLoaded, "try-error"))
-          stop("The attempt to unload loaded packages failed. Please restart R and run again")
+          stop(stopErrMess)
         topoSortedAllLoaded <- setdiff(topoSortedAllLoaded, c("Require", "testit", "remotes", "data.table", "glue", "rlang"))
         detached <- detachAll(topoSortedAllLoaded, doSort = FALSE)
         # detached1 <- unloadNamespaces(topoSortedAllLoaded)
