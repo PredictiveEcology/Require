@@ -247,8 +247,15 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
+  allrepos <- c(repos, getOption("repos"))
+  allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
+  opts <- options(repos = allrepos)
+  on.exit({
+    options(opts)}
+    , add = TRUE)
+
   origDTThreads <- data.table::setDTthreads(1)
-  on.exit(data.table::setDTthreads(origDTThreads))
+  on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
 
   purge <- dealWithCache(purge)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA

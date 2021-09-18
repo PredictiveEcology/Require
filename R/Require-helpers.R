@@ -601,11 +601,14 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       names(Package) <- Package
       namespacesLoaded <- unlist(lapply(Package, isNamespaceLoaded))
       if (any(namespacesLoaded) && getOption("Require.unloadNamespaces", TRUE)) {
-        si <- sessionInfo()
+        si <- try(sessionInfo(), silent = TRUE)
+        stopErrMess <- "The attempt to unload loaded packages failed. Please restart R and run again"
+        if (is(si, "try-error")) stop(stopErrMess)
         allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
         topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded)))
+
         if (is(topoSortedAllLoaded, "try-error"))
-          stop("The attempt to unload loaded packages failed. Please restart R and run again")
+          stop(stopErrMess)
         topoSortedAllLoaded <- setdiff(topoSortedAllLoaded, c("Require", "testit", "remotes", "data.table", "glue", "rlang"))
         detached <- detachAll(topoSortedAllLoaded, doSort = FALSE)
         # detached1 <- unloadNamespaces(topoSortedAllLoaded)
@@ -646,8 +649,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 #' @importFrom utils capture.output
 #' @rdname Require-internals
 doLoading <- function(pkgDT, require = TRUE, ...) {
-  packages <- pkgDT[loadOrder > 0]$Package
-  packageOrder <- pkgDT[loadOrder > 0]$loadOrder
+  pkgDTForLoad <- pkgDT[loadOrder > 0]
+  packages <- pkgDTForLoad$Package
+  packageOrder <- pkgDTForLoad$loadOrder
   if (isTRUE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
@@ -731,16 +735,30 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
         message(paste0(outMess, collapse = "\n"))
       return(list(out = out, toInstall = toInstall))
     })
-    requireOut
+    # requireOut
     out <- unlist(lapply(requireOut, function(x) x$out))
     toInstall <- unlist(lapply(requireOut, function(x) x$toInstall))
 
     if (length(toInstall)) {
-      out2 <- Require(unique(toInstall), ...)
+      message("Installed package(s) didn't have all dependencies installed,",
+              " possibly because they were unknown; trying again")
+      # These should only be loaded if they are in the original pkgDT,
+      #   which in all cases should be "none of the toInstall should be loaded"
+      out2 <- Require(unique(toInstall), require = FALSE, ...)
       out2 <- unlist(out2)
       names(out2) <- unique(toInstall)
+      if (any(!out)) {
 
-      out <- c(out, out2)
+        pkgToTryAgain <- pkgDTForLoad[Package %in% names(out)]
+        if (NROW(pkgToTryAgain)) {
+          retryOut <- doLoading(pkgToTryAgain)
+          if (isTRUE(any(retryOut$loaded))) {
+            out[match(retryOut[loaded == TRUE]$Package, names(out))] <- TRUE
+          }
+        }
+      }
+
+      # out <- c(out, out2) # The second group should only be installed, not loaded
     }
 
     pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & loadOrder > 0)]
@@ -1082,6 +1100,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   pkgDT
 }
 
+#' @importFrom stats setNames
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                         repos = getOption("repos")) {
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
@@ -1124,17 +1143,40 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     }
   }
 
+  tryInstallAgainWithoutAPCache <- function() {
+    nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
+    prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
+    val <- 0
+    val <- setNames(list(val), nm = nameOfEnvVari)
+    do.call(Sys.setenv, val)
+    prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
+    on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
+    # unlink(av3CacheFile)
+    out <- eval(installPackagesQuoted)
+  }
+  installPackagesQuoted <- quote(do.call(install.packages,
+                # using ap meant that it was messing up the src vs bin paths
+                append(list(installPkgNames), ipa)))
+
   warn <- tryCatch({
-    out <- do.call(install.packages,
-                   # using ap meant that it was messing up the src vs bin paths
-                   append(list(installPkgNames), ipa))
-  }, warning = function(condition) condition,
-  error = function(e) {
-    if (grepl('argument \\"av2\\" is missing', e))
+    out <- eval(installPackagesQuoted)
+  }, warning = function(condition) {
+    if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
+      outFromWarn <- tryInstallAgainWithoutAPCache()
+    } else {
+      outFromWarn <- condition
+    }
+    outFromWarn
+  }, error = function(e) {
+    av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
+    if (grepl('argument \\"av2\\" is missing', e)) {
       tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ",R.version.string,")")),
                warning = function(w) w)
-    else
+    } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
+      tryInstallAgainWithoutAPCache()
+    } else {
       stop(e)
+    }
   })
 
   if (any(grepl("--build", c(dots, install.packagesArgs))))
