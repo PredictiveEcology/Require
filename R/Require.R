@@ -486,7 +486,7 @@ Require <- function(packages, packageVersionFile,
         if (!all(nas)) {
           allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
           if (length(allCorrect)) {
-            allInstalled <- pkgDT[!nas][allCorrect]
+            allInstalled <- pkgDT[!nas][!allCorrect]
             if (NROW(allInstalled) == 0)
               message("All packages appear to have installed correctly")
           }
