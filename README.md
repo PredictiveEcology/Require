@@ -151,7 +151,7 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 ### Current release
 
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=master)](https://github.com/PredictiveEcology/Require/actions)
-[![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/master/graph/badge.svg)](https://codecov.io/gh/PredictiveEcology/Require)
+[![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/master/graph/badge.svg)](https://app.codecov.io/gh/PredictiveEcology/Require)
 
 **Install from CRAN:**
 
@@ -170,7 +170,7 @@ install_github("PredictiveEcology/Require", dependencies = TRUE)
 ### Development version
 
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development)](https://github.com/PredictiveEcology/Require/actions)
-[![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg)](https://codecov.io/gh/PredictiveEcology/Require)
+[![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg)](https://app.codecov.io/gh/PredictiveEcology/Require)
 
 **Install from GitHub:**
 
