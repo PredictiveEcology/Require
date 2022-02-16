@@ -6,6 +6,7 @@ version 0.0.14
 * bugfix where a package being installed from GitHub directly had a `Remotes` field for a package that was in `Suggests` (in its DESCRIPTION file). It would install this `Remotes` package even though it was only in `Suggests`
 * bugfix when user supplies a non-CRAN `repos` argument to `Require`. It was not correctly using. Thanks to @CeresBarros for identifying issue #30
 * bugfix "All packages appear to have installed correctly" was misreporting under some cases.
+* `repos` argument not correctly passed into `doInstalls` from `Require`. This meant that installs would not respect a user supplied repos, but would use the `options("repos")` instead.
 
 version 0.0.13
 ==============

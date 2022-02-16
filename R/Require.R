@@ -415,7 +415,7 @@ Require <- function(packages, packageVersionFile,
 
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs,
-                            install = install, ...)
+                            install = install, repos = repos, ...)
       }
       if ("detached" %in% colnames(pkgDT)) {
         unloaded <- pkgDT[!is.na(detached)]
