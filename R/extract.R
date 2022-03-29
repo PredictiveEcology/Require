@@ -22,7 +22,7 @@ extractPkgName <- function(pkgs) {
   gitPkgs <- extractPkgGitHub(pkgNames)
   whGitPkgs <- is.na(gitPkgs)
 
-  if (any(whGitPkgs)) {
+  if (any(!whGitPkgs)) {
     pkgNames[!whGitPkgs] <- gitPkgs[!whGitPkgs]
   }
 
