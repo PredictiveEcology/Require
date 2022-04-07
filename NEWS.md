@@ -3,6 +3,7 @@ Known issues: https://github.com/PredictiveEcology/Require/issues
 version 0.0.14
 ==============
 ## bugfixes
+* `Require` would silently fail to install a GitHub package if there was a warning during the installation. These warnings are now correctly captured, without stopping the installation.
 * bugfix where a package being installed from GitHub directly had a `Remotes` field for a package that was in `Suggests` (in its DESCRIPTION file). It would install this `Remotes` package even though it was only in `Suggests`
 * bugfix when user supplies a non-CRAN `repos` argument to `Require`. It was not correctly using. Thanks to @CeresBarros for identifying issue #30
 * bugfix "All packages appear to have installed correctly" was misreporting under some cases.

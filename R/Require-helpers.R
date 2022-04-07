@@ -528,7 +528,6 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
     # if (colnames(pkgDT))
     pkgDT[repoLocation == "GitHub",
           filepath := {
-            # destFile <- file.path(tempdir(), paste0(Package, "_", Version, "_", filename))
             if (!all(file.exists(destFile)))
               download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE)
             destFile
@@ -858,9 +857,17 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     }))]
     ipa <- modifyList2(install_githubArgs, dots)
     outRes <- lapply(gitPkgDeps2, function(p) {
-      out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-               warning = function(w) w,
-               error = function(e) e)
+      withCallingHandlers(
+        out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+                        error=function(e) {
+                          e
+        }), warning=function(w) {
+          w
+          invokeRestart("muffleWarning")
+        }, message = function(m) {
+          m
+          invokeRestart("muffleMessage")
+        })
       if (identical(out, extractPkgName(p)))
         out <- NULL
       out
@@ -870,17 +877,8 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
 
     warn <- outRes
     if (is(warn[[1]], "simpleWarning") || is(warn[[1]], "install_error")) {
-      warning(warn)
+      ignore <- lapply(warn, function(w) warning(w$message))
     }
-    # if (any(attempts >= maxAttempts)) {
-    #   failedAttempts <- attempts[attempts >= maxAttempts]
-    #   outRes[attempts >= maxAttempts] <- "Failed"
-    #   if (any(identical("message", names(warn[[1]]) ))) {
-    #     if (is.character(warn[[1]]$message)) {
-    #       outRes[attempts >= maxAttempts] <- warn[[1]]$message
-    #     }
-    #   }
-    # }
     isTryError <- unlist(lapply(outRes, is, "try-error"))
     whichDone <- !names(gitPkgs) %in% names(outRes)[!isTryError]
     gitPkgs1 <- gitPkgs[whichDone]
@@ -1384,7 +1382,6 @@ installRequire <- function(requireHome = getOption("Require.Home")) {
     if (isFALSE(done)) {
       system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
-      # system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
   } else {
     stop("Require will need to be installed manually in", .libPaths()[1])
@@ -1398,10 +1395,6 @@ toPkgDT <- function(pkgDT, deepCopy = FALSE) {
       data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
     else
       toDT(Package = extractPkgName(pkgDT), packageFullName = pkgDT)
-    # pkgDT2 <- setDT(list(Package = extractPkgName(pkgDT)))
-    # set(pkgDT2, NULL, "packageFullName", pkgDT)
-    # pkgDT <- pkgDT2
-    # pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
   }
 
   pkgDT
@@ -1437,7 +1430,6 @@ rmDuplicatePkgs <- function(pkgDT) {
     pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
     if (!all(pkgDT$keep)) {
       summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
-      # summaryOfDups[is.na(keep), keep := FALSE]
       setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
       messageDF(summaryOfDups)
     }
