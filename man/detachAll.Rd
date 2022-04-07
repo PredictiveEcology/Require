@@ -13,20 +13,20 @@ unless \code{doSort} is \code{FALSE}.}
 \item{dontTry}{A character vector of packages to not try. This can be used
 by a user if they find a package fails in attempts to unload it, e.g., "ps"}
 
-\item{doSort}{If \code{TRUE} (the default), then the \code{pkgs} will be 
-topologically sorted. If \code{FALSE}, then it won't. Useful if the 
+\item{doSort}{If \code{TRUE} (the default), then the \code{pkgs} will be
+topologically sorted. If \code{FALSE}, then it won't. Useful if the
 \code{pkgs} are already sorted.}
 }
 \value{
-A numeric named vector, with names of the packages that were attempted. 
-\code{2} means the package was successfully unloaded, \code{1} it was 
-tried, but failed, \code{3} it was in the search path and was detached 
+A numeric named vector, with names of the packages that were attempted.
+\code{2} means the package was successfully unloaded, \code{1} it was
+tried, but failed, \code{3} it was in the search path and was detached
 and unloaded.
 }
 \description{
 This uses \code{pkgDepTopoSort} internally so that the package
 dependency tree is determined, and then packages are unloaded
-in the reverse order. Some packages don't unload successfully for 
+in the reverse order. Some packages don't unload successfully for
 a variety of reasons. Several known packages that have this problem
 are identified internally and *not* unloaded. Currently, these are
 \code{glue}, \code{rlang}, \code{ps}, \code{ellipsis}, and, \code{processx}.

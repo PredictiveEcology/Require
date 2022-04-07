@@ -247,8 +247,15 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
+  allrepos <- c(repos, getOption("repos"))
+  allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
+  opts <- options(repos = allrepos)
+  on.exit({
+    options(opts)}
+    , add = TRUE)
+
   origDTThreads <- data.table::setDTthreads(1)
-  on.exit(data.table::setDTthreads(origDTThreads))
+  on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
 
   purge <- dealWithCache(purge)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
@@ -408,7 +415,7 @@ Require <- function(packages, packageVersionFile,
 
         pkgDT <- doInstalls(pkgDT, install_githubArgs = install_githubArgs,
                             install.packagesArgs = install.packagesArgs,
-                            install = install, ...)
+                            install = install, repos = repos, ...)
       }
       if ("detached" %in% colnames(pkgDT)) {
         unloaded <- pkgDT[!is.na(detached)]
@@ -479,7 +486,7 @@ Require <- function(packages, packageVersionFile,
         if (!all(nas)) {
           allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
           if (length(allCorrect)) {
-            allInstalled <- pkgDT[!nas][allCorrect]
+            allInstalled <- pkgDT[!nas][!allCorrect]
             if (NROW(allInstalled) == 0)
               message("All packages appear to have installed correctly")
           }
