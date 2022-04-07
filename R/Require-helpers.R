@@ -3,7 +3,7 @@ utils::globalVariables(c(
   ".N", ".I", "Archs", "type", "localType", "N", "installOrder",
   "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile",
   "Names", "packageFullName", "Version", "hasVersionSpec", "correctVersion", "repoLocation",
-  "inequality", " AvailableVersion", "Package", "mtime", "newMtime"
+  "inequality", " AvailableVersion", "Package", "mtime", "newMtime", "tmpOrder"
 ))
 
   #' @details

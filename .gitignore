@@ -53,3 +53,5 @@ tests/testit/tmp.txt
 
 tmp*
 .Rprofile
+
+.secrets/
