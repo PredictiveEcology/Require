@@ -109,7 +109,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
             pkgsNew[[i]] <- needed
             while (length(unlist(pkgsNew[[i]])) > 0) {
               i <- i + 1
-              pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i - 1]]), function(needed) {
+              pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
+              names(pkgsToLookup) <- pkgsToLookup
+              pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
                                           purge = purge, repos = repos)))
               })
