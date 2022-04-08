@@ -3,7 +3,7 @@ utils::globalVariables(c(
   ".N", ".I", "Archs", "type", "localType", "N", "installOrder",
   "installResult", "isGitPkg", "keep", "keep2", "github", "dup", "filepath", "destFile",
   "Names", "packageFullName", "Version", "hasVersionSpec", "correctVersion", "repoLocation",
-  "inequality", " AvailableVersion", "Package", "mtime", "newMtime"
+  "inequality", " AvailableVersion", "Package", "mtime", "newMtime", "tmpOrder"
 ))
 
   #' @details
@@ -576,6 +576,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
+    pkgDT[, tmpOrder := seq_len(NROW(pkgDT))]
 
     toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & !(installFrom %in% c("Fail", "Duplicate"))]
     hasRequireDeps <- pkgDT[(installed == FALSE  | !correctVersion) & Package == "Require"]
@@ -621,6 +622,11 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
+      pkgDT <- rbindlist(list(pkgDT[!toInstall, on = "packageFullName"],
+                              rbindlist(out, fill = TRUE)),
+                         fill = TRUE)
+      setorderv(pkgDT, "tmpOrder")
+      set(pkgDT, NULL, "tmpOrder", NULL)
     }
     failedToInstall <- pkgDT$installFrom == "Fail"
     if (NROW(pkgDT[failedToInstall]) ) {
@@ -851,47 +857,38 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
-  while (length(gitPkgs)) {
+  if (length(gitPkgs)) {
     gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
     ipa <- modifyList2(install_githubArgs, dots)
-    outRes <- lapply(gitPkgDeps2, function(p) {
-      withCallingHandlers(
-        out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-                        error=function(e) {
-                          e
-        }), warning=function(w) {
-          w
-          invokeRestart("muffleWarning")
-        }, message = function(m) {
-          m
-          invokeRestart("muffleMessage")
-        })
+    for (p in gitPkgDeps2) {
+      out <- withCallingHandlers(
+        tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+                 error=function(e) {
+                   e
+                 }), warning=function(w) {
+                   w
+                   invokeRestart("muffleWarning")
+                 }, message = function(m) {
+                   m
+                   invokeRestart("muffleMessage")
+                 })
       if (identical(out, extractPkgName(p)))
         out <- NULL
-      out
-    })
-    attempts[names(outRes)] <- attempts[names(outRes)] + 1
-    maxAttempts <- 0
+      warn <- out
+      if (is(warn, "simpleWarning") || is(warn, "install_error")) {
+        warning(warn)
+        gitPkgNames[packageFullName == p,
+                    installResult := warn$message]
+      }
+      gitPkgNames <- updateInstalled(gitPkgNames, extractPkgName(p), warn)
+      gitPkgNames
+    }
 
-    warn <- outRes
-    if (is(warn[[1]], "simpleWarning") || is(warn[[1]], "install_error")) {
-      ignore <- lapply(warn, function(w) warning(w$message))
-    }
-    isTryError <- unlist(lapply(outRes, is, "try-error"))
-    whichDone <- !names(gitPkgs) %in% names(outRes)[!isTryError]
-    gitPkgs1 <- gitPkgs[whichDone]
-    outRes <- outRes[whichDone]
-    if (identical(gitPkgs1, gitPkgs)) {
-      # failedAttempts <- names(gitPkgs)
-      gitPkgs <- character()
-    }
-    gitPkgs <- gitPkgs1
-    outRes <- unlist(outRes)
 
   }
-  outRes
+  gitPkgNames
 }
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
@@ -1071,7 +1068,8 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     warn <- warn[grep("message", names(warn))]
     pkgDT[Package == toInstall$Package, installResult := unlist(lapply(warn, function(x) x))]
   }
-  pkgDT <- updateInstalled(pkgDT, toInstall$Package, warn)
+  pkgDT <- updateInstalled(pkgDT[Package == toInstall$Package],
+                           toInstall$Package, warn)
   permDen <- grepl("Permission denied", names(warn))
   packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
   if (any(permDen)) {
@@ -1141,6 +1139,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     }
   }
 
+
   tryInstallAgainWithoutAPCache <- function() {
     nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
     prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
@@ -1184,7 +1183,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     warning(warn)
     pkgDT[Package == installPkgNames, installResult := warn$message]
   }
-  pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
+  pkgDT <- updateInstalled(pkgDT[Package == installPkgNames], installPkgNames, warn)
   permDen <- grepl("Permission denied", names(warn))
   packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
   if (any(permDen)) {
@@ -1292,13 +1291,13 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   if (any(grepl("--build", c(dots, install.packagesArgs))))
     copyTarball(installPkgNames, TRUE)
 
-  updateInstalled(pkgDT, installPkgNames, warnings())
+  updateInstalled(pkgDT[Package == installPkgNames], installPkgNames, warnings())
 }
 
 installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
   gitPkgNames <- toInstall[installFrom == "GitHub"]
   out5 <- install_githubV(gitPkgNames, install_githubArgs = install_githubArgs, dots = dots)
-  updateInstalled(pkgDT, gitPkgNames$Package, out5)
+  out5
 }
 
 installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs, install_githubArgs,
