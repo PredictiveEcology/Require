@@ -863,9 +863,17 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     }))]
     ipa <- modifyList2(install_githubArgs, dots)
     for (p in gitPkgDeps2) {
-      out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-               warning = function(w) w,
-               error = function(e) e)
+      out <- withCallingHandlers(
+        tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+                 error=function(e) {
+                   e
+                 }), warning=function(w) {
+                   w
+                   invokeRestart("muffleWarning")
+                 }, message = function(m) {
+                   m
+                   invokeRestart("muffleMessage")
+                 })
       if (identical(out, extractPkgName(p)))
         out <- NULL
       warn <- out
@@ -1088,6 +1096,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   pkgDT
 }
 
+#' @importFrom stats setNames
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                         repos = getOption("repos")) {
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
