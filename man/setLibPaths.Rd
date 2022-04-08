@@ -27,7 +27,7 @@ Default \code{FALSE} to minimize package installing.}
 this function will put several lines of code in the current directory's \code{.Rprofile}
 file setting up the package libraries for this and future sessions. If
 a character string, then this should be the path to an \code{.Rprofile} file.
-To reset back to normal, run \code{setLibPaths()} without a libPath. Default:
+To reset back to normal, run \code{setLibPaths()} without a \code{libPath}. Default:
 \code{getOption("Require.updateRprofile", FALSE)}, meaning \code{FALSE}, but it
 can be set with an option or within a single call.}
 
@@ -71,7 +71,7 @@ setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
 # Can restart R, and changes will stay
 
 # remove the custom .libPaths()
-Require::setLibPaths() # reset to previous; remove from Rprofile because libPath arg is empty
+Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
 
 }
 }

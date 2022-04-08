@@ -250,6 +250,14 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
 
         pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
         needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
+        neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
+        neededRemotesName <- extractPkgName(neededRemotes)
+        neededName <- extractPkgName(needed)
+        needSomeRemotes <- neededName %in% neededRemotesName
+        if (any(needSomeRemotes)) {
+          needed <- c(needed[!needSomeRemotes], neededRemotes[neededRemotesName %in% neededName])
+        }
+
         #if (FALSE) {
         # Check NAMESPACE too -- because imperfect DESCRIPTION files
         rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE)
@@ -304,9 +312,12 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         #}
         #needed <- pkgDT2[!duplicated(extractPkgName(pkgDT2$Package))]$Package
       } else {
-        needed <- unique(unname(unlist(pkgDepCRAN(pkg, pkgsNoVersion = pkgNoVersion, which = which,
-                                                  keepVersionNumber = keepVersionNumber,
-                                                  purge = purge, repos = repos))))
+        needed <- unique(unname(unlist(pkgDepCRAN(pkg,
+                                                  pkgsNoVersion = pkgNoVersion,
+                                           which = which,
+                                           keepVersionNumber = keepVersionNumber,
+                                           purge = purge,
+                                           repos = repos))))
 
         if (is.null(needed)) { # essesntially, failed
           pkgName <- extractPkgName(pkg)
@@ -788,6 +799,7 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' if \code{depsRemoved} were removed from first level dependencies
 #' @examples
 #' pkgDepIfDepRemoved("Require", "remotes")
+#' }
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
   if (length(pkg)) {
     p2 <- pkgDep2(pkg, recursive = TRUE)

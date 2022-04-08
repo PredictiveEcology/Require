@@ -66,17 +66,18 @@ after they are installed.}
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
-\item{purge}{Logical. Should all caches be purged?
-Default is \code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout the \code{Require} package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
-The cached values are renewed when found to be too old, with the age limit.
-This maximum age can be set in seconds with the environment variable
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
+\item{purge}{Logical. Should all caches be purged Default is
+  \code{getOption("Require.purge", FALSE)}.
+  There is a lot of internal caching of results throughout
+  the \code{Require} package. These help with speed and reduce calls to internet sources.
+  However, sometimes these caches must be purged. The cached values are renewed
+  when found to be too old, with the age limit.
+  This maximum age can be set in seconds with the environment variable
+  \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
+  defaults to 3600  (one hour -- see
+  \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}.}
+  Internally, there are calls to \code{available.packages}}
 
 \item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
 a \code{data.table} with many details attached to the output.}
@@ -95,12 +96,13 @@ A single key function, 'Require' that wraps 'install.packages',
     reproducible workflow, this package emphasizes functions that return the 
     same result whether it is the first or subsequent times running the function.
 
-This is an "all in one" function that will run \code{install.packages} for CRAN packages,
-\code{remotes::install_github} for \url{https://github.com/} packages and will install
-specific versions of each package if versions are specified either via an (in)equality
-(e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for an exact version) or with a
-\code{packageVersionFile}.
-If \code{require = TRUE}, the default, the function will then run \code{require} on all
+This is an "all in one" function that will run \code{install.packages} for
+CRAN packages, \code{remotes::install_github} for \url{https://github.com/} packages and
+will install specific versions of each package if versions are specified either
+via an (in)equality (e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for
+an exact version) or with a
+\code{packageVersionFile}. If \code{require = TRUE}, the default,
+the function will then run \code{require} on all
 named packages that satisfy their version requirements. If packages are already installed
 (\code{packages} supplied), and their optional version numbers are satisfied,
 then the "install" component will be skipped.
@@ -150,9 +152,9 @@ the current collection of packages and versions.
 
 \section{Local Cache of Packages}{
 
-When installing new packages, \code{Require} will put all source and binary files
+When installing new packages, `Require` will put all source and binary files
 in an R-version specific subfolder of
-\code{getOption("Require.RPackageCache")} whose default is \code{NULL}, meaning
+\code{getOption("Require.RPackageCache")} whose default is `NULL`, meaning
 \emph{do not cache packages locally},
 and will reuse them if needed. To turn
 on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
@@ -230,7 +232,7 @@ ProjectPackageFolder <- file.path("~", "ProjectA")
 setLibPaths(ProjectPackageFolder)
 Require("PredictiveEcology/SpaDES@development") # the latest version on GitHub
 Require("PredictiveEcology/SpaDES@23002b2a92a92df4ccba7f51cdd82798800b2fa7")
-# a specific commit (by using the SHA)
+                              # a specific commit (by using the SHA)
 
 
 ############################################################################
@@ -261,7 +263,7 @@ Require::Require("SpaDES") # not necessary to specify standAlone here because .l
 # Installing on many machines that are connected by a shared drive
 ############################################################################
 options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly.
-# Put thes in a shared location.
+                                                       # Put thes in a shared location.
 # May need to install Require in main user library before setting library paths for project
 if (!require("Require")) install.packages("Require")
 setLibPaths("./packages") # not shared location for library path; no longer using main user lib

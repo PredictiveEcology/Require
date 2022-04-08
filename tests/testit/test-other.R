@@ -5,7 +5,7 @@ outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir") {
+if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
@@ -37,8 +37,9 @@ pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE,
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
-options("Require.RPackageCache" = "~/._RPackageCache/",
-        "Require.unloadNamespaces" = FALSE)
+if (Sys.info()["user"] == "emcintir2")
+  options("Require.RPackageCache" = "~/._RPackageCache/",
+          "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir())))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
                          libPaths = tempdir2(basename(tempdir()))))
