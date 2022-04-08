@@ -567,7 +567,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' @importFrom utils sessionInfo
 #' @export
 #' @details
-#' \code{doInstall} is a wrapper around \code{utils::install.packages}, 
+#' \code{doInstall} is a wrapper around \code{utils::install.packages},
 #' \code{installGithub}, and \code{installCRAN}, and \code{installArchive}
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
@@ -1499,7 +1499,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
             "These will not be unloaded: ", paste(dontTryExtra, collapse = ", "))
     dontTry <- c(dontTry, dontTryExtra)
   }
-  
+
   dontTry <- unique(c(c("Require", "data.table"), dontTry))
   didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
@@ -1631,10 +1631,22 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     if (is.na(packageTarName)) { # linux didn't have that character
       packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
     }
-    opts2 <- append(list(...), 
-                    list(packageTarName, 
-                         repos = NULL, 
+    opts2 <- append(list(...),
+                    list(packageTarName,
+                         repos = NULL,
                          lib = normalizePath(libPath, winslash = "/")))
+    if (FALSE) {
+      opts2 <- append(list(...),
+                      list(packageTarName,
+                           repos = NULL,
+                           lib = normalizePath(libPath, winslash = "/")))
+      theCharacters <- unlist(lapply(opts2, is.character))
+      opts2[theCharacters] <- paste0("'", opts2[theCharacters], "'")
+      hasName <- names(opts2) != ""
+      out2 <- system(paste("Rscript -e \"do.call(install.packages, list(",
+                   paste(opts2[!hasName], ", ",
+                         paste(names(opts2)[hasName], sep = " = ", opts2[hasName], collapse = ", "),"))\"")))
+    }
     do.call(install.packages, opts2)
     # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
     # system(cmd, wait = TRUE)
