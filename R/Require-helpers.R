@@ -524,12 +524,12 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
 
     checkPath(dirname(tempfile()), create = TRUE)
     set(pkgDT, NULL, "destFile",
-        file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Version, "_", pkgDT$filename)))
+        file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Version, "_", filename)))
     # if (colnames(pkgDT))
     pkgDT[repoLocation == "GitHub",
           filepath := {
-            if (!all(file.exists(destFile)))
-              download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE)
+            #        if (!all(file.exists(destFile)))
+            download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE)
             destFile
           }, by = c("Package", "Branch")]
     if (identical("DESCRIPTION", filename))
