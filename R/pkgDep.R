@@ -250,7 +250,27 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         neededName <- extractPkgName(needed)
         needSomeRemotes <- neededName %in% neededRemotesName
         if (any(needSomeRemotes)) {
-          needed <- c(needed[!needSomeRemotes], neededRemotes[neededRemotesName %in% neededName])
+          hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
+          if (length(hasVersionNum)) {
+            neededInRemotesWVersion <- needed[needSomeRemotes][hasVersionNum]
+            vn <- extractVersionNumber(neededInRemotesWVersion)
+            ineq <- extractInequality(neededInRemotesWVersion)
+            neededPkgsInRemotes <- extractPkgName(neededInRemotesWVersion)
+            inequWVN <- paste0(" (", ineq, " ", vn, ")")
+            remotes <- neededRemotes[neededRemotesName %in% neededName]
+            whNeedVN <- match(neededPkgsInRemotes, extractPkgName(remotes))
+            remotesWVN <- remotes[whNeedVN]
+            remotesWVN <- paste0(remotesWVN, inequWVN)
+            remotesWoVN <- if (length(neededRemotes) != length(whNeedVN)) {
+              remotes[-whNeedVN]
+            } else {
+              NULL
+            }
+            remotesAll <- c(remotesWVN, remotesWoVN)
+          } else {
+            remotesAll <- neededRemotes[neededRemotesName %in% neededName]
+          }
+          needed <- c(needed[!needSomeRemotes], remotesAll)
         }
 
         #if (FALSE) {
