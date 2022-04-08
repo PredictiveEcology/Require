@@ -1,12 +1,12 @@
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+Sys.setenv("CRANCACHE_DISABLE" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir") {
+if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
@@ -38,7 +38,7 @@ d <- pkgDep(pkg2) # GitHub package and local packages
 testit::assert({length(d) == 2})
 testit::assert({isTRUE(all.equal(a$Require, d$Require))})
 
-dAlt <- pkgDepAlt(pkg2, recursive = TRUE) 
+dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
 testit::assert({length(setdiff(extractPkgName(d[[1]]), extractPkgName(dAlt[[1]]))) == 0})
 testit::assert({length(setdiff(extractPkgName(d[[2]]), extractPkgName(dAlt[[2]]))) == 0})
 testit::assert({length(d) == length(dAlt)})
@@ -50,7 +50,7 @@ testit::assert({length(e) == 3})
 testit::assert({isTRUE(all.equal(e[[pkg]], d[[pkg]]))})
 testit::assert({isTRUE(all.equal(d$Require, e$Require))})
 
-eAlt <- pkgDepAlt(pkg3, recursive = TRUE) 
+eAlt <- pkgDepAlt(pkg3, recursive = TRUE)
 testit::assert({length(setdiff(extractPkgName(e[[1]]), extractPkgName(eAlt[[1]]))) == 0})
 testit::assert({length(setdiff(extractPkgName(e[[2]]), extractPkgName(eAlt[[2]]))) == 0})
 testit::assert({length(setdiff(extractPkgName(e[[3]]), extractPkgName(eAlt[[3]]))) == 0})
@@ -75,11 +75,12 @@ testit::assert({isTRUE(all.equal(e, eAlt))})
 
 ### pkgDepTopoSort
 out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
-knownRevDeps <- list(Require = c("reproducible", "SpaDES", "SpaDES.addins", "SpaDES.core",
-                                 "SpaDES.experiment", "SpaDES.tools"),
-                     data.table = c("quickPlot",
-                                    "reproducible", "Require", "SpaDES", "SpaDES.addins", "SpaDES.core",
-                                    "SpaDES.experiment", "SpaDES.tools"))
+knownRevDeps <- list(
+  Require = c("reproducible", "SpaDES", "SpaDES.addins", "SpaDES.core",
+              "SpaDES.experiment", "SpaDES.tools"),
+  data.table = c("quickPlot", "reproducible", "Require", "SpaDES", "SpaDES.addins", "SpaDES.core",
+                 "SpaDES.experiment", "SpaDES.tools")
+)
 test <- unlist(lapply(names(out), function(p) {
   setdiff(knownRevDeps[[p]], out[[p]])
 }))
@@ -94,4 +95,5 @@ testit::assert({identical(sort(c("data.table (>= 1.10.4)")), sort(d[[1]]))})
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 options(outOpts)
+unlink("~/._R")
 options(outOpts2)

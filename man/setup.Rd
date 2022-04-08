@@ -6,17 +6,17 @@
 \title{Setup a project library, cache, options}
 \usage{
 setup(
-  RPackageFolders = getOption("RPackageFolders", "R"),
-  RPackageCache = getOption("RPackageCache", "~/.cache/R/RequirePkgCache"),
-  buildBinaries = getOption("buildBinaries", TRUE),
-  standAlone = getOption("standAlone", TRUE)
+  RPackageFolders = getOption("Require.RPackageFolders", "R"),
+  RPackageCache = getOption("Require.RPackageCache", RequirePkgCacheDir()),
+  buildBinaries = getOption("Require.buildBinaries", TRUE),
+  standAlone = getOption("Require.standAlone", TRUE)
 )
 
 setupOff(removePackages = FALSE)
 }
 \arguments{
-\item{RPackageFolders}{One or more folders where R packages are 
-installed to and loaded from. In the case of more than one 
+\item{RPackageFolders}{One or more folders where R packages are
+installed to and loaded from. In the case of more than one
 folder provided, installation will only happen in the first one.}
 
 \item{RPackageCache}{See \code{?RequireOptions}.}
@@ -24,13 +24,12 @@ folder provided, installation will only happen in the first one.}
 \item{buildBinaries}{See \code{?RequireOptions}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-                  the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-                  be prepended to \code{.libPaths()} during the \code{Require} call,
-                  resulting in shared packages, i.e.,
-                  it will include the user's default package folder(s).
-                  This can be create dramatically faster
-installs if the user has a substantial number of the packages already in
-their personal library. Default \code{FALSE} to minimize package installing.}
+the \code{libPaths} only.
+If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
+resulting in shared packages, i.e., it will include the user's default package folder(s).
+This can be create dramatically faster installs if the user has a substantial number of
+the packages already in their personal library.
+Default \code{FALSE} to minimize package installing.}
 
 \item{removePackages}{Logical. If \code{TRUE}, then all packages that
 were installed in the custom library will be deleted when \code{setupOff}
@@ -40,17 +39,17 @@ deletions.}
 }
 \description{
 This can be placed as the first line of any/all scripts and it will
-be create a reproducible, self-contained project with R packages. 
+be create a reproducible, self-contained project with R packages.
 Some of these have direct relationships with \code{RequireOptions}
 and arguments in \code{setLibPaths} and \code{Require}.
 }
 \examples{
-# Place this as the first line of a project
 \dontrun{
+# Place this as the first line of a project
 Require::setup()
 
 # To turn it off and return to normal
 Require::setupOff()
 }
-  
+
 }

@@ -32,24 +32,24 @@ archiveVersionsAvailable(package, repos)
 \item{pkgDT}{A character string with full package names or a data.table
 with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 
-\item{install}{Logical or "force". If \code{FALSE}, this will not try to
-install anything. If \code{"force"}, then it will force installation of
-requested packages, mimicking a call to e.g., \code{install.packages}. If
-\code{TRUE}, the default, then this function will try to install any
-missing packages or dependencies.}
+\item{install}{Logical or "force". If \code{FALSE}, this will not try to install anything.
+If \code{"force"}, then it will force installation of requested packages,
+mimicking a call to e.g., \code{install.packages}.
+If \code{TRUE}, the default, then this function will try to install any missing
+packages or dependencies.}
 
-\item{purge}{Logical. Should all caches be purged Default is 
-\code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout 
-the \code{Require} package. These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged. The cached values are renewed 
-when found to be too old, with the age limit. 
-This maximum age can be set in seconds with the environment variable 
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
-defaults to 3600  (one hour -- see
-\code{\link[utils]{available.packages}}).
+\item{purge}{Logical. Should all caches be purged Default is
+  \code{getOption("Require.purge", FALSE)}.
+  There is a lot of internal caching of results throughout
+  the \code{Require} package. These help with speed and reduce calls to internet sources.
+  However, sometimes these caches must be purged. The cached values are renewed
+  when found to be too old, with the age limit.
+  This maximum age can be set in seconds with the environment variable
+  \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
+  defaults to 3600  (one hour -- see
+  \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}}
+  Internally, there are calls to \code{available.packages}}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
@@ -75,7 +75,7 @@ after they are installed.}
 \item{package}{A single package name (without version or github specifications)}
 }
 \value{
-In general, these functions return a data.table with various package
+In general, these functions return a \code{data.table} with various package
 information, installation status, version, available version etc.
 }
 \description{

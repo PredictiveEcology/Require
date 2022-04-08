@@ -23,9 +23,9 @@ with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 \code{parseGitHub} returns a data.table with added columns.
 
 \code{install_githubV} returns a named character vector indicating packages
-  successfully installed, unless the word "Failed" is returned, indicating
-  installation failure. The names will be the full GitHub package name,
-  as provided to \code{gitPkgNames} in the function call.
+successfully installed, unless the word "Failed" is returned, indicating
+installation failure. The names will be the full GitHub package name,
+as provided to \code{gitPkgNames} in the function call.
 }
 \description{
 \code{install_githubV} is a vectorized \code{installGithubPackages}.

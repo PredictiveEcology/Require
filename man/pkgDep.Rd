@@ -105,18 +105,18 @@ will include version number. Default is \code{FALSE}}
 If \code{FALSE}, the packages will not have a discernible order as they will be a
 concatenation of the possibly recursive package dependencies.}
 
-\item{purge}{Logical. Should all caches be purged Default is 
-\code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout 
-the \code{Require} package. These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged. The cached values are renewed 
-when found to be too old, with the age limit. 
-This maximum age can be set in seconds with the environment variable 
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
-defaults to 3600  (one hour -- see
-\code{\link[utils]{available.packages}}).
+\item{purge}{Logical. Should all caches be purged Default is
+  \code{getOption("Require.purge", FALSE)}.
+  There is a lot of internal caching of results throughout
+  the \code{Require} package. These help with speed and reduce calls to internet sources.
+  However, sometimes these caches must be purged. The cached values are renewed
+  when found to be too old, with the age limit.
+  This maximum age can be set in seconds with the environment variable
+  \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
+  defaults to 3600  (one hour -- see
+  \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}}
+  Internally, there are calls to \code{available.packages}}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
@@ -141,15 +141,15 @@ the top of the list.}
 R packages in \code{search()} will be appended to \code{pkgs}
 to allow those to also be identified}
 
-\item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}. 
-If \code{TRUE}, then then all installed packages will be searched. 
-If \code{FALSE}, the default, only packages that are currently in 
+\item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}.
+If \code{TRUE}, then then all installed packages will be searched.
+If \code{FALSE}, the default, only packages that are currently in
 the \code{search()} path and passed in \code{pkgs} will be included
 in the possible reverse dependencies.}
 
 \item{enhances}{Logical. Include packages listed in "Enhances". Default \code{FALSE}.}
 
-\item{remotes}{Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages. 
+\item{remotes}{Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages.
 Default \code{TRUE}.}
 }
 \value{
@@ -158,12 +158,12 @@ are either full reverse depends.
 }
 \description{
 This will first look in local filesystem (in \code{.libPaths()}) and will use
-a local package to find its dependencies. If the package does not exist locally, 
-including whether it is the correct version, then it will look in (currently) 
+a local package to find its dependencies. If the package does not exist locally,
+including whether it is the correct version, then it will look in (currently)
 \code{CRAN} and its archives (if the current \code{CRAN} version is not
-the desired version to check). It will also look on \code{GitHub} if the 
+the desired version to check). It will also look on \code{GitHub} if the
 package description is of the form of a GitHub package with format
-\code{account/repo@branch} or \code{account/repo@commit}. For this, 
+\code{account/repo@branch} or \code{account/repo@commit}. For this,
 it will attempt to get package dependencies from
 the GitHub \file{DESCRIPTION} file.
 This is intended to replace \code{tools::package_dependencies} or
@@ -185,18 +185,18 @@ of their dependencies are detached or unloaded first.
 \code{pkgDepAlt} is a newer, still experimental approach to \code{pkgDep}, which has different
 internal algorithms. With current testing, it appears to be slightly more accurate for
 (some unknown, as of yet) edge cases. One known case is when the a \code{package} is
-installed locally package, but is 
+installed locally package, but is
 not the version that is requested with \code{pkgDep}, the function will default to the
-local, installed, and incorrect package dependencies. \code{pkgDepAlt} gets this case 
+local, installed, and incorrect package dependencies. \code{pkgDepAlt} gets this case
 correct. This function may eventually replace \code{pkgDep}.
 }
 \note{
 \code{tools::package_dependencies} and \code{pkgDep} will differ under the following
 circumstances:
 \enumerate{
-  \item GitHub packages are not detected using \code{tools::package_dependencies};
-  \item \code{tools::package_dependencies} does not detect the dependencies of base packages
-    among themselves, \emph{e.g.}, \code{methods} depends on \code{stats} and \code{graphics}.
+\item GitHub packages are not detected using \code{tools::package_dependencies};
+\item \code{tools::package_dependencies} does not detect the dependencies of base packages
+among themselves, \emph{e.g.}, \code{methods} depends on \code{stats} and \code{graphics}.
 }
 }
 \examples{

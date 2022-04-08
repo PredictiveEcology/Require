@@ -1,12 +1,12 @@
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+Sys.setenv("CRANCACHE_DISABLE" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir") {
+if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else {
@@ -63,7 +63,7 @@ testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
   out <- find.package("TimeWarp", lib.loc = dir1)
   if (length(out)) TRUE else FALSE
-  }, error = function(x) FALSE)
+}, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
 out <- detachAll(c("Require", "TimeWarp", "sdfd"))
 out <- out[names(out) != "testit"]
@@ -101,7 +101,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                             packageVersion("TimeWarp", lib.loc = dir6))})
   remove.packages("TimeWarp", lib = dir2)
   remove.packages("TimeWarp", lib = dir6)
-  
+
   setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
@@ -128,7 +128,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert({isTRUE(isInstalled)})
 
   # Try github with version
-  dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
+  dir4 <- Require:::rpackageFolder(tempdir2("test4"))
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                              require = FALSE, standAlone = FALSE, libPaths = dir4)

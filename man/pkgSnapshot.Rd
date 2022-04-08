@@ -24,33 +24,32 @@ a script.}
 Defaults to the \code{.libPaths()[1]}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-                  the \code{libPaths} only. If \code{FALSE}, then \code{libPath} will
-                  be prepended to \code{.libPaths()} during the \code{Require} call,
-                  resulting in shared packages, i.e.,
-                  it will include the user's default package folder(s).
-                  This can be create dramatically faster
-installs if the user has a substantial number of the packages already in
-their personal library. Default \code{FALSE} to minimize package installing.}
+the \code{libPaths} only.
+If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
+resulting in shared packages, i.e., it will include the user's default package folder(s).
+This can be create dramatically faster installs if the user has a substantial number of
+the packages already in their personal library.
+Default \code{FALSE} to minimize package installing.}
 
-\item{purge}{Logical. Should all caches be purged Default is 
-\code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout 
-the \code{Require} package. These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged. The cached values are renewed 
-when found to be too old, with the age limit. 
-This maximum age can be set in seconds with the environment variable 
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, 
-defaults to 3600  (one hour -- see
-\code{\link[utils]{available.packages}}).
+\item{purge}{Logical. Should all caches be purged Default is
+  \code{getOption("Require.purge", FALSE)}.
+  There is a lot of internal caching of results throughout
+  the \code{Require} package. These help with speed and reduce calls to internet sources.
+  However, sometimes these caches must be purged. The cached values are renewed
+  when found to be too old, with the age limit.
+  This maximum age can be set in seconds with the environment variable
+  \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
+  defaults to 3600  (one hour -- see
+  \code{\link[utils]{available.packages}}).
 
-Internally, there are calls to \code{available.packages}}
+  Internally, there are calls to \code{available.packages}}
 
 \item{exact}{Logical. If \code{TRUE}, the default, then for GitHub packages, it
 will install the exact SHA, rather than the head of the account/repo@branch. For
 CRAN packages, it will install the exact version. If \code{FALSE}, then GitHub
-packages will identify their branch if that had been specified upon installation, 
+packages will identify their branch if that had been specified upon installation,
 not a SHA. If the package had been installed with reference to a SHA, then it
-will return the SHA as it does not know what branch it came from. 
+will return the SHA as it does not know what branch it came from.
 Similarly, CRAN packages will
 report their version and specify with a \code{>=}, allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
