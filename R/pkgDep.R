@@ -182,11 +182,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
               curTrue <- dt3$Current == TRUE
               dt4 <- if (any(curTrue)) if (all(curTrue)) dt3 else dt3[curTrue] else dt3[0]
-              # if (!(identical(dt4[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)],
-              #                 dt4Stable[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)])))
-              #   browser()
-              #dt4 <- rdt4
-              #}
               pkgsNew <- list()
               pkgsNew[[i - 1]] <- dt3[dt3$Current == FALSE]$Package
               pkgsNew[[i]] <- dt4$Package
@@ -568,8 +563,12 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
   }))
   aaa <- split(aa, firsts)
   aa <- aaa$later
+
+  aa <- checkCircular(aa)
+
+
   if (length(aa) > 1) {
-    lengths <- unlist(lapply(aa, length))
+    lengths <- lengths(aa)
     aa <- aa[order(lengths)]
     if (isTRUE(topoSort)) {
       notInOrder <- TRUE
@@ -814,4 +813,22 @@ pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
     pkg <- paste(paste(setdiff(p1, p2Clean), collapse = ", "))
   }
   return(pkg)
+}
+
+checkCircular <- function(aa) {
+  circular <- lapply(names(aa), function(outer)  {
+    circularWh <- extractPkgName(aa[[outer]]) %in% extractPkgName(outer)
+    circ <- if (any(circularWh)) {
+      aa[[outer]][circularWh]
+    } else {
+      NULL
+    }
+  })
+
+  if (length(unlist(circular))) {
+    for (i in which(!unlist(lapply(circular, is.null)))) {
+      aa[[i]] <- setdiff(aa[[i]], circular[[i]])
+    }
+  }
+  aa
 }
