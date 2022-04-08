@@ -872,12 +872,11 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
                    m
                    invokeRestart("muffleMessage")
                  })
-      if (is(out, "simpleWarning") || identical(out, 1L)) {
+      if (is(out, "simpleWarning") || identical(out, 1L) || is(out, "simpleError")) {
         if (requireNamespace("remotes")) {
           message("Require::installGithubPackage is still experimental and it failed; ",
                   "Trying remotes::install_github instead")
           out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-                          warning = function(w) w,
                           error = function(e) e)
         } else {
           warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
@@ -1623,9 +1622,12 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     setwd(orig)
   })
   if (nchar(Sys.which("R")) > 0) {
-    out1 <- system(paste("R CMD build ", gr$repo), intern = TRUE)
-    buildingLine <- grep("building", out1, value = TRUE)
-    packageTarName <- strsplit(buildingLine, "'")[[1]][2]
+    message("building package (R CMD build)")
+    versionOfPkg <- DESCRIPTIONFileVersionV(dir(out, pattern = "DESCRIPTION", full.names = TRUE))
+    out1 <- system(paste("R CMD build ", gr$repo), intern = FALSE)
+    packageTarName <- paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
+    #buildingLine <- grep("building", out1, value = TRUE)
+    #packageTarName <- strsplit(buildingLine, "'")[[1]][2]
     if (is.na(packageTarName)) { # linux didn't have that character
       packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
     }
