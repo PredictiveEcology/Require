@@ -262,7 +262,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
         depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
         depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
         depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
-        pkgDT2 <- data.table(packageFullName = setdiff(union(depsFromNamespace, needed), .basePkgs))
+        pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), .basePkgs))
         # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
         if (NROW(pkgDT2)) {
           pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
