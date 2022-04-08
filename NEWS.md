@@ -9,6 +9,7 @@ version 0.0.14
 * bugfix "All packages appear to have installed correctly" was misreporting under some cases.
 * `repos` argument not correctly passed into `doInstalls` from `Require`. This meant that installs would not respect a user supplied repos, but would use the `options("repos")` instead.
 * `extractPkgNames` now allows GitHub packages that have the repository omitted, i.e., they only have `@`. This is useful if there is a default expectation for a github repository
+* better handling of GitHub package install issues
 
 version 0.0.13
 ==============
