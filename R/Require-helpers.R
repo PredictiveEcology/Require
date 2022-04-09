@@ -1657,7 +1657,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
     # system(cmd, wait = TRUE)
   } else {
-    error("Can't install packages this way because R is not on the search path")
+    stop("Can't install packages this way because R is not on the search path")
   }
 }
 
@@ -1665,6 +1665,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
 #' @export
 installGitHubPackage <- installGithubPackage
 
+#' @importFrom utils unzip
 downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
   if (!dir.exists(modulePath)) dir.create(modulePath, recursive = TRUE)
   gr <- splitGitRepo(gitRepo)
