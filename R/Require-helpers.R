@@ -1655,8 +1655,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
                          paste(names(opts2)[hasName], sep = " = ", opts2[hasName], collapse = ", "),"))\"")))
     }
     do.call(install.packages, opts2)
-    # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
-    # system(cmd, wait = TRUE)
   } else {
     stop("Can't install packages this way because R is not on the search path")
   }
@@ -1692,8 +1690,5 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
   file.rename(badDirname, gsub(basename(badDirname), gr$repo, badDirname)) # it was downloaded with a branch suffix
   unlink(zipFileName)
   message(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"))
-  # possRmd <- normalizePath(winslash = "/", file.path(repoFull, paste0(gr$repo, ".Rmd")), mustWork = FALSE)
-  # if (file.exists(possRmd))
-  #   message("To run it, try: \nfile.edit('", possRmd,"')")
   return(normalizePath(repoFull))
 }
