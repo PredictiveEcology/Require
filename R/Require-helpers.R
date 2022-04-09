@@ -862,7 +862,8 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     ipa <- modifyList2(install_githubArgs, dots)
     for (p in gitPkgDeps2) {
       out <- withCallingHandlers(
-        tryCatch(do.call(installGithubPackage, append(list(p), ipa)),
+        # tryCatch(do.call(installGithubPackage, append(list(p), ipa)),
+        tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
                  error=function(e) {
                    e
                  }), warning=function(w) {
@@ -872,17 +873,17 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
                    m
                    invokeRestart("muffleMessage")
                  })
-      if (is(out, "simpleWarning") || identical(out, 1L) || is(out, "simpleError")) {
-        if (requireNamespace("remotes")) {
-          message("Require::installGithubPackage is still experimental and it failed; ",
-                  "Trying remotes::install_github instead")
-          out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-                          error = function(e) e)
-        } else {
-          warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
-                  "install.packages('remotes')")
-        }
-      }
+      # if (is(out, "simpleWarning") || identical(out, 1L) || is(out, "simpleError")) {
+      #   if (requireNamespace("remotes")) {
+      #     message("Require::installGithubPackage is still experimental and it failed; ",
+      #             "Trying remotes::install_github instead")
+      #     # out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+      #     #                 error = function(e) e)
+      #   } else {
+      #     warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
+      #             "install.packages('remotes')")
+      #   }
+      # }
       if (identical(out, extractPkgName(p)))
         out <- NULL
       warn <- out

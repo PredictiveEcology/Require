@@ -22,9 +22,9 @@ Depends:
 Imports:
     data.table (>= 1.10.4),
     methods,
+    remotes,
     utils
 Suggests:
-    remotes,
     covr,
     testit
 Encoding: UTF-8
