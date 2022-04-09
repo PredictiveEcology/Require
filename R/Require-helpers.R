@@ -1614,8 +1614,9 @@ splitGitRepo <- function(gitRepo) {
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
   gr <- splitGitRepo(gitRepo)
-  modulePath <- file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = ""))
-  dir.create(modulePath, recursive = TRUE)
+  modulePath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
+                              winslash = "\\")
+  checkPath(modulePath, create = TRUE)
   out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = modulePath)
   orig <- setwd(modulePath)
   on.exit({
@@ -1623,13 +1624,18 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
   })
   if (nchar(Sys.which("R")) > 0) {
     message("building package (R CMD build)")
-    versionOfPkg <- DESCRIPTIONFileVersionV(dir(out, pattern = "DESCRIPTION", full.names = TRUE))
-    out1 <- system(paste("R CMD build ", gr$repo), intern = FALSE)
-    packageTarName <- paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
-    #buildingLine <- grep("building", out1, value = TRUE)
-    #packageTarName <- strsplit(buildingLine, "'")[[1]][2]
-    if (is.na(packageTarName)) { # linux didn't have that character
-      packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
+    internal <- !interactive()
+    out1 <- system(paste("R CMD build ", gr$repo), intern = internal)
+    packageTarName <- if (interactive()) {
+      versionOfPkg <- DESCRIPTIONFileVersionV(dir(out, pattern = "DESCRIPTION", full.names = TRUE))
+      paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
+    } else {
+      buildingLine <- grep("building", out1, value = TRUE)
+      packageTarName <- strsplit(buildingLine, "'")[[1]][2]
+      if (is.na(packageTarName)) { # linux didn't have that character
+        packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
+      }
+      packageTarName
     }
     opts2 <- append(list(...),
                     list(packageTarName,
@@ -1651,7 +1657,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
     # system(cmd, wait = TRUE)
   } else {
-    message("Can't install packages this way because R is not on the search path")
+    error("Can't install packages this way because R is not on the search path")
   }
 }
 
