@@ -819,6 +819,7 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' of \code{pkg}
 #' if \code{depsRemoved} were removed from first level dependencies
 #' @examples
+#' \dontrun{
 #' pkgDepIfDepRemoved("Require", "remotes")
 #' }
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
