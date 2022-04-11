@@ -935,17 +935,17 @@ installedVers <- function(pkgDT) {
     pkgs <- unique(pkgDT$Package)
     names(pkgs) <- pkgs
     installedPkgsCurrent <- lapply(pkgs, function(p) {
-      pkgPath <- file.path(.libPaths(), p)
-      out <- pkgPath[file.exists(pkgPath)][1]
-      # out <- tryCatch(find.package(p, lib.loc = .libPaths()), error = function(x) NA)
+      DESCRIPTIONfilePath <- file.path(.libPaths(), p, "DESCRIPTION")
+      out <- DESCRIPTIONfilePath[file.exists(DESCRIPTIONfilePath)][1]
       descV <- if (!is.na(out)) {
-        descV <- DESCRIPTIONFileVersionV(file.path(out, "DESCRIPTION"))
-        cbind("Package" = p, LibPath = dirname(out), "Version" = descV)
+        descV <- DESCRIPTIONFileVersionV(out)
+        cbind("Package" = p, LibPath = dirname(dirname(out)), "Version" = descV)
       } else {
         cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
       }
       descV
     })
+
     installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
     installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
     pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
