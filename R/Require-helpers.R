@@ -1653,6 +1653,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
                    paste(opts2[!hasName], ", ",
                          paste(names(opts2)[hasName], sep = " = ", opts2[hasName], collapse = ", "),"))\"")))
     }
+    opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
     # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
     # system(cmd, wait = TRUE)
