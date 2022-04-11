@@ -78,7 +78,7 @@ if (interactive()) {
   #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
   #localBinsFull <- c(dts, rems)
   localBinsFull <- dts
-  
+
   if (length(localBinsFull) == 2) {
     if (Require:::isWindows())
       system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
@@ -89,7 +89,7 @@ if (interactive()) {
   }
 
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
-    Require:::installRequire(getOption("Require.Home"))
+  Require:::installRequire(getOption("Require.Home"))
 
   # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
   setwd(origDir)
@@ -101,7 +101,7 @@ if (interactive()) {
 
   testit::assert({length(pkgDepTest1) == 1})
   testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)")})
-  
+
   testit::assert({length(pkgDepTest2) == 1})
   testit::assert({sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)})
 
