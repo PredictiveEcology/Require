@@ -616,7 +616,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         }
       }
       startTime <- Sys.time()
-      out <- by(toInstall, toInstall$installOrder, installAny, pkgDT = pkgDT, dots = dots,
+
+      toInstall[, groupCRANtogether := cumsum(installFrom != "CRAN")] # group CRAN together for speed
+      out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT, dots = dots,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
@@ -1135,7 +1137,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   # manually override "type = 'both'" because it gets it wrong some of the time
   ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
   if (NROW(ap) > 1 && isWindows()) {
-    ap <- ap[Package == installPkgNames]
+    ap <- ap[Package %in% installPkgNames]
     if (NROW(ap)) {
       onVec <- c("Package")
       if (!is.null(toInstall$versionSpec))
@@ -1190,9 +1192,9 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
   if (!is.null(warn)) {
     warning(warn)
-    pkgDT[Package == installPkgNames, installResult := warn$message]
+    pkgDT[Package %in% installPkgNames, installResult := warn$message]
   }
-  pkgDT <- updateInstalled(pkgDT[Package == installPkgNames], installPkgNames, warn)
+  pkgDT <- updateInstalled(pkgDT[Package %in% installPkgNames], installPkgNames, warn)
   permDen <- grepl("Permission denied", names(warn))
   packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
   if (any(permDen)) {
@@ -1295,7 +1297,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     out <- unlist(out)
     if (length(out)) {
       warning(out[[1]])
-      pkgDT[Package == toInstall$Package, installResult := unlist(out)[[1]]]
+      pkgDT[Package %in% toInstall$Package, installResult := unlist(out)[[1]]]
     }
   }
   if (any(grepl("--build", c(dots, install.packagesArgs))))
@@ -1314,13 +1316,15 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
                        install_githubArgs, repos = getOption("repos")) {
   currentTime <- Sys.time()
   dft <- difftime(currentTime, startTime, units = "secs")
-  timeLeft <- dft/toInstall$installOrder * (numPackages - toInstall$installOrder + 1)
+  installRange <- unique(c(toInstall$installOrder[1], tail(toInstall$installOrder, 1) ))
+  timeLeft <- dft/installRange[1] * (numPackages - installRange[1] + 1)
 
   lotsOfTimeLeft <- dft > 10
   timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
-  pkgToReport <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
-  message(" -- Installing ", pkgToReport, " -- (", toInstall$installOrder, " of ", numPackages, ". Estimated time left: ",
+  pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
+  installRangeCh <- paste(installRange, collapse = ":")
+  message(" -- Installing ", pkgToReport, " -- (", installRangeCh, " of ", numPackages, ". Estimated time left: ",
           timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
 
   if (any("Local" %in% toInstall$installFrom)) {
