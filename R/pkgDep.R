@@ -691,7 +691,7 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
       try(readLines(desc_path))
     else
       lines <- desc_path
-    if (is(lines, "try-error")) browser()
+    if (is(lines, "try-error")) stop("Cannot read the file: ", desc_path)
     Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
     on.exit(Sys.setlocale(locale = ""))
     sl <- list()
