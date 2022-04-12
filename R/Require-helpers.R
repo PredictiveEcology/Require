@@ -1000,8 +1000,17 @@ currentCRANPkgDates <- function(pkgs) {
   if (!exists("currentCranDates", envir = .pkgEnv[["pkgDep"]])) {
     message("Getting dates of current CRAN packages")
     tf <- tempfile();
-    out <- try(download.file(file.path(getOption("repos")["CRAN"], "src/contrib/"), tf, quiet = TRUE))
-    if (is(out, "try-error")) stop(out, "Download from CRAN failed momentarily. Please try again shortly")
+    cranRepoHttp <- getOption("repos")["CRAN"]
+    for (i in 1:2) {
+      out <- try(download.file(file.path(cranRepoHttp, "src/contrib/"), tf, quiet = TRUE), silent = TRUE)
+      if (is(out, "try-error"))
+        if (i == 1) {
+          cranRepoHttp <- paste0("https", "://", paste(c("cloud", "r-project", "org"), collapse = "."), "/")
+        } else {
+          stop(out, "Download from CRAN failed momentarily. Please try again shortly")
+        }
+    }
+
     currentCranDates <- readLines(tf)
     assign("currentCranDates", currentCranDates, envir = .pkgEnv[["pkgDep"]])
   } else {
