@@ -1,6 +1,6 @@
 ## Updated release
 
-This is an update to deal with CRAN policy violation (directory left over after testing).
+This update deals with several bugfixes, a removed package dependency (remotes), and changes to tests.
 
 ## Test environments
 
@@ -8,16 +8,14 @@ This is an update to deal with CRAN policy violation (directory left over after 
 - os: macOS-latest,   r: 'release'
 - os: windows-latest, r: 'release'
 - os: windows-latest, r: '4.0'
-- os: windows-latest, r: '3.6'
 - os: ubuntu-20.04,   r: 'devel', 
 - os: ubuntu-20.04,   r: 'release'
 - os: ubuntu-20.04,   r: 'oldrel'
-- os: ubuntu-20.04,   r: '3.6'
 
 ### Winbuilder
-* Windows                 (win-builder), R 4.0.5
-* Windows                 (win-builder), R 4.1.0
-* Windows                 (win-builder), R-devel (2021-05-25 r80389)
+* Windows                 (win-builder), 4.0.5 (2021-03-31)
+* Windows                 (win-builder), R 4.1.3 (2022-03-10)
+* Windows                 (win-builder), 4.2.0 beta (2022-04-11 r82149 ucrt)
 
 ## R CMD check results
 
@@ -27,5 +25,7 @@ There were no ERRORs nor WARNINGs.
 
 We checked all reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
 
- * We saw 0 new problems
+ * We saw 1 new problem in a SpaDES.core example
  * We failed to check 0 packages
+ 
+We will submit a new SpaDES.core when this package is accepted on CRAN.
