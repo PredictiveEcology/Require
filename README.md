@@ -188,7 +188,7 @@ install_github("PredictiveEcology/Require", ref = "development", dependencies = 
 # Conclusion
 
 `Require` package offers a simple, lightweight, package focused around a single function that is resilient to being called multiple times (unlike `install.packages`).
-The package has two dependencies (`data.table` and `remotes`) and so can be used to install packages without interfering with itself.
+The package has one dependencies (`data.table`) and so can be used to install packages without interfering with itself.
 
 ## Contributions
 

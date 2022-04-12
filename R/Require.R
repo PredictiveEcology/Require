@@ -12,8 +12,8 @@ utils::globalVariables(c(
 
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
-#' This is an "all in one" function that will run `install.packages` for CRAN packages,
-#' `remotes::install_github` for \url{https://github.com/} packages and will install
+#' This is an "all in one" function that will run `install.packages` for CRAN and
+#' GitHub \url{https://github.com/} packages and will install
 #' specific versions of each package if versions are specified either via an (in)equality
 #' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
 #' `packageVersionFile`.
@@ -30,14 +30,14 @@ utils::globalVariables(c(
 #' be installed in `libPaths`.
 #'
 #' @section GitHub Package:
-#' Follows `remotes::install_github` standard as this is what is used internally.
+#' Follows `remotes::install_github` standard.
 #' As with `remotes::install_github`, it is not possible to specify a past
-#' version of a GitHub package, without supplying a SHA that had that package
-#' version. Similarly, if a developer does a local install e.g., via
-#' `devtools::install`, of an active project, this package will not be able
-#' know of the GitHub state, and thus `pkgSnapshot` will not be able to
+#' version of a GitHub package unless that version is a tag or the user passes
+#' the SHA that had that package version. Similarly, if a developer does a
+#' local install e.g., via `pkgload::install`, of an active project, this package
+#' will not be able know of the GitHub state, and thus `pkgSnapshot` will not be able to
 #' recover this state as there is no SHA associated with a local
-#' installation. Use `Require` or `install_github` to create
+#' installation. Use `Require` (or `remotes::install_github`) to create
 #' a record of the GitHub state.
 #'
 #' @section Package Snapshots:
@@ -92,7 +92,8 @@ utils::globalVariables(c(
 #'        `.libPaths()` to `c(libPaths, tail(libPaths(), 1)` to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              `install.packages`, `install_github` or `installVersions`.
-#' @param install_githubArgs List of optional named arguments, passed to `install_github`.
+#' @param install_githubArgs List of optional named arguments, passed to `install.packages`
+#'   inside `installGitHubPackage`.
 #' @param install.packagesArgs List of optional named arguments, passed to `install.packages`.
 #' @param standAlone Logical. If `TRUE`, all packages will be installed to and loaded from
 #'   the `libPaths` only.
@@ -114,9 +115,7 @@ utils::globalVariables(c(
 #'   Internally, there are calls to `available.packages`.
 #' @param verbose Numeric. If `1` (less) or `2` (more), there will be
 #'   a `data.table` with many details attached to the output.
-#' @param ... Passed to \emph{all} of `install_github`,
-#'   `install.packages`, and `remotes::install_version`, i.e., the
-#'   function will error if all of these functions can not use the ... argument.
+#' @param ... Passed to `install.packages`.
 #'   Good candidates are e.g., `type` or `dependencies`. This can be
 #'   used with `install_githubArgs` or `install.packageArgs` which
 #'   give individual options for those 2 internal function calls.
@@ -438,7 +437,6 @@ Require <- function(packages, packageVersionFile,
               checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
               install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
               if (getOption("Require.buildBinaries", TRUE)) {
-                # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
                 install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
               }
 
