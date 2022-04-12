@@ -111,7 +111,8 @@ if (interactive()) {
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
                    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
                    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr", "Require")
-  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)), RequireDeps)
+  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)),
+                      RequireDeps)
   out <- unlink(pkgsToRm, recursive = TRUE)
 
   runTests <- function(have, pkgs) {

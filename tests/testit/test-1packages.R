@@ -57,36 +57,35 @@ library(testit)
 
 dir1 <- Require:::rpackageFolder(tempdir2("test1"))
 options("Require.verbose" = TRUE)
-out <- Require::Require("digest (<= 0.6.29)", standAlone = TRUE, libPaths = dir1)
+out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
-  out <- find.package("digest", lib.loc = dir1)
+  out <- find.package("fpCompare", lib.loc = dir1)
   if (length(out)) TRUE else FALSE
 }, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
-out <- detachAll(c("Require", "digest", "sdfd"))
+out <- detachAll(c("Require", "fpCompare", "sdfd"))
 out <- out[names(out) != "testit"]
-expectedPkgs <- c(sdfd = 3, digest = 2, Require = 1, data.table = 1)
+expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
 keep <- intersect(names(expectedPkgs), names(out))
 out <- out[keep]
 testit::assert({identical(sort(out), sort(expectedPkgs))})
-testit::assert({names(out)[out == 2] == "digest"})
+testit::assert({names(out)[out == 2] == "fpCompare"})
 
-# detach("package:digest", unload = TRUE)
-remove.packages("digest", lib = dir1)
+# detach("package:fpCompare", unload = TRUE)
+remove.packages("fpCompare", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(tempdir2("test2"))
-  pvWant <- "0.6.28"
-  inst <- Require::Require(paste0("digest (<=", pvWant, ")"), standAlone = TRUE,
-                           libPaths = dir2, dependencies = FALSE)
-  pv <- packageVersion("digest", lib.loc = dir2)
+  pvWant <- "0.2.2"
+  inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"), standAlone = TRUE,
+                           libPaths = dir2, dependencies = FALSE, require = FALSE)
+  pv <- packageVersion("fpCompare", lib.loc = dir2)
   testit::assert({pv == pvWant})
-  detach("package:digest", unload = TRUE)
 
   # Test snapshot file
   orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
@@ -97,10 +96,10 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   dir6 <- Require:::rpackageFolder(tempdir2("test6"))
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
-  testit::assert({identical(packageVersion("digest", lib.loc = dir2),
-                            packageVersion("digest", lib.loc = dir6))})
-  remove.packages("digest", lib = dir2)
-  remove.packages("digest", lib = dir6)
+  testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
+                            packageVersion("fpCompare", lib.loc = dir6))})
+  remove.packages("fpCompare", lib = dir2)
+  remove.packages("fpCompare", lib = dir6)
 
   setLibPaths(orig, updateRprofile = FALSE)
 
