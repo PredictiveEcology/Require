@@ -1,3 +1,4 @@
+message("--------------------------------- Starting test-packagesLong.R")
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
