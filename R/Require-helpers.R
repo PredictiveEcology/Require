@@ -1662,8 +1662,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     out1 <- system(paste(Rpath, "CMD build ", gr$repo, paste(extras, collapse = " ")), intern = internal)
     # cat(out1, file = "/home/emcintir/tmp.R")
     if (identical(1L, out1)) stop("")
+    theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
     packageTarName <- if (interactive()) {
-      versionOfPkg <- DESCRIPTIONFileVersionV(dir(out, pattern = "DESCRIPTION", full.names = TRUE))
+      versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
       paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
     } else {
       buildingLine <- grep("building", out1, value = TRUE)
@@ -1691,11 +1692,37 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     }
     opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
-    # cmd <- paste0("R CMD INSTALL ",opts, " ",packageTarName)
-    # system(cmd, wait = TRUE)
+    packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
+    postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
+                               acct = gr$acct, br = gr$br,
+                               lib = normalizePath(libPath, winslash = "/"))
   } else {
     stop("Can't install packages this way because R is not on the search path")
   }
+}
+
+postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
+  file <- system.file(package = "peutils", "DESCRIPTION", lib.loc = lib)
+  txt <- readLines(file)
+  beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
+  insertHere <- min(beforeTheseLines)
+  sha <- getSHAfromGitHub(acct, repo, br)
+  newTxt <-
+    paste("RemoteType: github
+    RemoteHost: api.github.com
+    RemoteRepo: ",pkg,"
+    RemoteUsername: ",acct,"
+    RemoteRef: ",br,"
+    RemoteSha: ",sha,"
+    GithubRepo: ",pkg,"
+    GithubUsername: ",acct,"
+    GithubRef: ",br,"
+    GithubSHA1: ",sha,"")
+  newTxt <- strsplit(newTxt, split = "\n")[[1]]
+  newTxt <- gsub("^ +", "", newTxt)
+  txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
+  cat(txtOut, file = file, sep = "\n")
+  return(invisible())
 }
 
 #' @rdname installGithubPackage
@@ -1732,4 +1759,18 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
   # if (file.exists(possRmd))
   #   message("To run it, try: \nfile.edit('", possRmd,"')")
   return(normalizePath(repoFull))
+}
+
+getSHAfromGitHub <- function(acct, repo, br) {
+  shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
+  urlConn <- url(shaPath)
+  on.exit(close(urlConn))
+  sha <- readLines(urlConn)
+  sha <- strsplit(sha, "},")[[1]]
+  sha <- grep(paste0("\\b", br, "\\b"), sha, value = TRUE)
+  sha <- strsplit(sha, ":")[[1]]
+  shaLine <- grep("sha", sha) + 1
+  shaLine <- strsplit(sha[shaLine], ",")[[1]][1]
+  sha <- gsub("[[:punct:]]+(.+)[[:punct:]]", "\\1", shaLine)
+
 }

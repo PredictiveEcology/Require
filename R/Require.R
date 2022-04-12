@@ -12,8 +12,8 @@ utils::globalVariables(c(
 
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
-#' This is an "all in one" function that will run `install.packages` for CRAN packages,
-#' `remotes::install_github` for \url{https://github.com/} packages and will install
+#' This is an "all in one" function that will run `install.packages` for CRAN and
+#' GitHub \url{https://github.com/} packages and will install
 #' specific versions of each package if versions are specified either via an (in)equality
 #' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
 #' `packageVersionFile`.
@@ -30,14 +30,14 @@ utils::globalVariables(c(
 #' be installed in `libPaths`.
 #'
 #' @section GitHub Package:
-#' Follows `remotes::install_github` standard as this is what is used internally.
+#' Follows `remotes::install_github` standard.
 #' As with `remotes::install_github`, it is not possible to specify a past
-#' version of a GitHub package, without supplying a SHA that had that package
-#' version. Similarly, if a developer does a local install e.g., via
-#' `devtools::install`, of an active project, this package will not be able
-#' know of the GitHub state, and thus `pkgSnapshot` will not be able to
+#' version of a GitHub package unless that version is a tag or the user passes
+#' the SHA that had that package version. Similarly, if a developer does a
+#' local install e.g., via `pkgload::install`, of an active project, this package
+#' will not be able know of the GitHub state, and thus `pkgSnapshot` will not be able to
 #' recover this state as there is no SHA associated with a local
-#' installation. Use `Require` or `install_github` to create
+#' installation. Use `Require` (or `remotes::install_github`) to create
 #' a record of the GitHub state.
 #'
 #' @section Package Snapshots:
