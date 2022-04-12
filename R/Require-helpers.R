@@ -206,7 +206,11 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
             oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
             oldAvailableVersions[, repoLocation := archiveSource]
-            setorderv(oldAvailableVersions, "OlderVersionsAvailableCh", order = -1L)
+            # Order based on package_version object, not character string
+            packVersOrd <- order(package_version(oldAvailableVersions$OlderVersionsAvailable),
+                                 decreasing = TRUE)
+            oldAvailableVersions <- oldAvailableVersions[packVersOrd, ]
+            # setorderv(oldAvailableVersions, "OlderVersionsAvailable", order = -1L)
           }
 
           oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
