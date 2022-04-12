@@ -1658,7 +1658,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     extras <- c("--no-resave-data", "--no-manual",
       "--no-build-vignettes")
     Rpath1 <- Sys.getenv("R_HOME")
-    browser()
     Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
     out1 <- system(paste(Rpath, "CMD build ", gr$repo, paste(extras, collapse = " ")), intern = internal)
     cat(out1, file = "/home/emcintir/tmp.R")
