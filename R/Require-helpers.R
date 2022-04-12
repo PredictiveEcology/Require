@@ -1765,12 +1765,13 @@ getSHAfromGitHub <- function(acct, repo, br) {
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
-  sha <- readLines(urlConn)
+  sha <- suppressWarnings(readLines(urlConn))
   sha <- strsplit(sha, "},")[[1]]
   sha <- grep(paste0("\\b", br, "\\b"), sha, value = TRUE)
   sha <- strsplit(sha, ":")[[1]]
   shaLine <- grep("sha", sha) + 1
   shaLine <- strsplit(sha[shaLine], ",")[[1]][1]
   sha <- gsub("[[:punct:]]+(.+)[[:punct:]]", "\\1", shaLine)
+  sha
 
 }
