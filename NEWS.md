@@ -1,9 +1,12 @@
 Known issues: https://github.com/PredictiveEcology/Require/issues
 
-version 0.0.14
+version 0.1.0
 ==============
 ## enhancements
 * install CRAN packages using vectorized `install.packages` --> much faster
+* now uses internal `installGithubPackage` instead of `remotes::install_github`
+* this previous means that all installations use `install.packages` directly
+* remove dependency on `remotes`
 
 ## bugfixes
 * `Require` would silently fail to install a GitHub package if there was a warning during the installation. These warnings are now correctly captured, without stopping the installation.
