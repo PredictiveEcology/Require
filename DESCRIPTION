@@ -10,8 +10,8 @@ Description: A single key function, 'Require' that wraps 'install.packages',
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2021-05-26
-Version: 0.0.13
+Date: 2022-04-12
+Version: 0.0.14
 Authors@R: c(
     person("Eliot J B", "McIntire", email = "eliot.mcintire@canada.ca",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6914-8316")),
@@ -23,9 +23,9 @@ Depends:
 Imports:
     data.table (>= 1.10.4),
     methods,
-    remotes,
     utils
 Suggests:
+    remotes,
     covr,
     testit
 Encoding: UTF-8
@@ -33,4 +33,5 @@ Language: en-CA
 License: GPL-3
 BugReports: https://github.com/PredictiveEcology/Require/issues
 ByteCompile: yes
-RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2

@@ -28,6 +28,6 @@ This uses \code{pkgDepTopoSort} internally so that the package
 dependency tree is determined, and then packages are unloaded
 in the reverse order. Some packages don't unload successfully for
 a variety of reasons. Several known packages that have this problem
-are identified internally and *not* unloaded. Currently, these are
+are identified internally and \emph{not} unloaded. Currently, these are
 \code{glue}, \code{rlang}, \code{ps}, \code{ellipsis}, and, \code{processx}.
 }

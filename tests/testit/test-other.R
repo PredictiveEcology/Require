@@ -28,10 +28,10 @@ pkgDep("data.table", purge = TRUE)
 pkgDep2("Require")
 
 
-pkgDepTopoSort(c("data.table", "remotes"), useAllInSearch = TRUE)
-pkgDepTopoSort(c("data.table", "remotes"), useAllInSearch = TRUE, deps = "Require")
-pkgDepTopoSort(c("Require", "data.table", "remotes"))
-pkgDepTopoSort(c("Require", "data.table", "remotes"), useAllInSearch = TRUE,
+pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)
+pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE, deps = "Require")
+pkgDepTopoSort(c("Require", "data.table"))
+pkgDepTopoSort(c("Require", "data.table"), useAllInSearch = TRUE, 
                deps = "Require", returnFull = FALSE, reverse = TRUE)
 
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
@@ -95,4 +95,3 @@ testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
 testit::assert(identical(getOption("Require.RPackageCache"), secondTry))
 options(opt22)
-

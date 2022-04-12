@@ -1,3 +1,5 @@
+message("--------------------------------- Starting test-0pkgSnapshot.R")
+
 if (interactive()) {
   library(Require)
   srch <- search()
@@ -45,34 +47,43 @@ if (interactive()) {
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
 
     theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
-    localBins <- dir(theDir, pattern = "data.table|remotes")
-    localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
-    vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
-    vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
-    vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
+    if (!is.null(theDir)) {
+      localBins <- dir(theDir, pattern = "data.table|remotes")
+      localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
+      vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
+      vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
+      vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
 
-    # vers <- gsub("^.+\\_(.+)\\.[[:alnum:]]+", "\\1", basename(localBins))
+      # vers <- gsub("^.+\\_(.+)\\.[[:alnum:]]+", "\\1", basename(localBins))
 
-    localBinsOrd <- order(package_version(vers), decreasing = TRUE)
-    localBins <- localBins[localBinsOrd]
-    localBinsFull <- localBinsFull[localBinsOrd]
-    dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
-    localBins <- localBins[!dups]
-    localBinsFull <- localBinsFull[!dups]
-    if (any(grepl("tar.gz", localBinsFull))) {
-      localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
+      localBinsOrd <- order(package_version(vers), decreasing = TRUE)
+      localBins <- localBins[localBinsOrd]
+      localBinsFull <- localBinsFull[localBinsOrd]
+      dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
+      localBins <- localBins[!dups]
+      localBinsFull <- localBinsFull[!dups]
+      if (any(grepl("tar.gz", localBinsFull))) {
+        localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
+      }
+      # THere might be more than one version
+      dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+      rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+      localBinsFull <- na.omit(c(dts, rems))
+    } else {
+      localBinsFull <- NULL
     }
     # THere might be more than one version
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-    localBinsFull <- c(dts, rems)
+    #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+    localBinsFull <- dts
+    #localBinsFull <- c(dts, rems)
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
       else
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
-      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",
+      system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
                     .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
 
@@ -83,7 +94,7 @@ if (interactive()) {
     # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
     #setwd(oldDir)
 
-    try(st <- system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
+    st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
     print(st)
 
     # Test

@@ -1,7 +1,8 @@
+message("--------------------------------- Starting test-1packages.R")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+Sys.setenv("CRANCACHE_DISABLE" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
@@ -56,37 +57,38 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 library(testit)
 
 dir1 <- Require:::rpackageFolder(tempdir2("test1"))
+checkPath(dir1, create = TRUE)
 options("Require.verbose" = TRUE)
-out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
+out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
-  out <- find.package("TimeWarp", lib.loc = dir1)
+  out <- find.package("fpCompare", lib.loc = dir1)
   if (length(out)) TRUE else FALSE
-  }, error = function(x) FALSE)
+}, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
-out <- detachAll(c("Require", "TimeWarp", "sdfd"))
+out <- detachAll(c("Require", "fpCompare", "sdfd"))
 out <- out[names(out) != "testit"]
-expectedPkgs <- c(sdfd = 3, TimeWarp = 2, Require = 1, remotes = 1, data.table = 1)
+expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
 keep <- intersect(names(expectedPkgs), names(out))
 out <- out[keep]
 testit::assert({identical(sort(out), sort(expectedPkgs))})
-testit::assert({names(out)[out == 2] == "TimeWarp"})
+testit::assert({names(out)[out == 2] == "fpCompare"})
 
-# detach("package:TimeWarp", unload = TRUE)
-remove.packages("TimeWarp", lib = dir1)
+# detach("package:fpCompare", unload = TRUE)
+remove.packages("fpCompare", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(tempdir2("test2"))
-  pvWant <- "1.0-7"
-  inst <- Require::Require(paste0("TimeWarp (<=", pvWant, ")"), standAlone = TRUE,
-                           libPaths = dir2, dependencies = FALSE)
-  pv <- packageVersion("TimeWarp", lib.loc = dir2)
+  checkPath(dir2, create = TRUE)
+  pvWant <- "0.2.2"
+  inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"), standAlone = TRUE,
+                           libPaths = dir2, dependencies = FALSE, require = FALSE)
+  pv <- packageVersion("fpCompare", lib.loc = dir2)
   testit::assert({pv == pvWant})
-  detach("package:TimeWarp", unload = TRUE)
 
   # Test snapshot file
   orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
@@ -95,12 +97,13 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
   dir6 <- Require:::rpackageFolder(tempdir2("test6"))
+  checkPath(dir6, create = TRUE)
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
-  testit::assert({identical(packageVersion("TimeWarp", lib.loc = dir2),
-                            packageVersion("TimeWarp", lib.loc = dir6))})
-  remove.packages("TimeWarp", lib = dir2)
-  remove.packages("TimeWarp", lib = dir6)
+  testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
+                            packageVersion("fpCompare", lib.loc = dir6))})
+  remove.packages("fpCompare", lib = dir2)
+  remove.packages("fpCompare", lib = dir6)
 
   setLibPaths(orig, updateRprofile = FALSE)
 
@@ -114,6 +117,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(tempdir2("test3"))
+  checkPath(dir3, create = TRUE)
   # Try github
   try({
     inst <- Require::Require("achubaty/fpCompare", install = "force",
@@ -128,7 +132,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert({isTRUE(isInstalled)})
 
   # Try github with version
-  dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
+  dir4 <- Require:::rpackageFolder(tempdir2("test4"))
+  checkPath(dir4, create = TRUE)
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
