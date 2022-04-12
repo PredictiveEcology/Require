@@ -1660,7 +1660,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     Rpath1 <- Sys.getenv("R_HOME")
     Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
     out1 <- system(paste(Rpath, "CMD build ", gr$repo, paste(extras, collapse = " ")), intern = internal)
-    cat(out1, file = "/home/emcintir/tmp.R")
+    # cat(out1, file = "/home/emcintir/tmp.R")
     if (identical(1L, out1)) stop("")
     packageTarName <- if (interactive()) {
       versionOfPkg <- DESCRIPTIONFileVersionV(dir(out, pattern = "DESCRIPTION", full.names = TRUE))
