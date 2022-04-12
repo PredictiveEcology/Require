@@ -2,7 +2,8 @@ utils::globalVariables(c(
   "Archs", "AvailableVersion", "correctVersion", "destFile", "dup", "filepath",  "github", "hasVersionSpec",
   ".I", "i.neededFiles", "inequality", "installFromFac", "installOrder", "installResult", "isGitPkg",
   "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "newMtime",
-  "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version"
+  "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
+  "groupCRANtogetherDif", "groupCRANtogether"
 ))
 
   #' @details
@@ -557,7 +558,8 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- names(warn)
     }
     warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
-    if (isTRUE(any(!warnOut) || length(warnOut) == 0 || is.na(warnOut)) && is.null(warn) ) {
+    if (isTRUE(any(!warnOut) || length(warnOut) == 0 || all(is.na(warnOut))) &&
+        all(is.null(warn) )) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
     } else if (!is.null(warn)) {
