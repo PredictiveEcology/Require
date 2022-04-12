@@ -57,36 +57,36 @@ library(testit)
 
 dir1 <- Require:::rpackageFolder(tempdir2("test1"))
 options("Require.verbose" = TRUE)
-out <- Require::Require("TimeWarp (<= 2.3.1)", standAlone = TRUE, libPaths = dir1)
+out <- Require::Require("digest (<= 0.6.29)", standAlone = TRUE, libPaths = dir1)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
-  out <- find.package("TimeWarp", lib.loc = dir1)
+  out <- find.package("digest", lib.loc = dir1)
   if (length(out)) TRUE else FALSE
 }, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
-out <- detachAll(c("Require", "TimeWarp", "sdfd"))
+out <- detachAll(c("Require", "digest", "sdfd"))
 out <- out[names(out) != "testit"]
-expectedPkgs <- c(sdfd = 3, TimeWarp = 2, Require = 1, data.table = 1)
+expectedPkgs <- c(sdfd = 3, digest = 2, Require = 1, data.table = 1)
 keep <- intersect(names(expectedPkgs), names(out))
 out <- out[keep]
 testit::assert({identical(sort(out), sort(expectedPkgs))})
-testit::assert({names(out)[out == 2] == "TimeWarp"})
+testit::assert({names(out)[out == 2] == "digest"})
 
-# detach("package:TimeWarp", unload = TRUE)
-remove.packages("TimeWarp", lib = dir1)
+# detach("package:digest", unload = TRUE)
+remove.packages("digest", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(tempdir2("test2"))
-  pvWant <- "1.0-7"
-  inst <- Require::Require(paste0("TimeWarp (<=", pvWant, ")"), standAlone = TRUE,
+  pvWant <- "0.6.28"
+  inst <- Require::Require(paste0("digest (<=", pvWant, ")"), standAlone = TRUE,
                            libPaths = dir2, dependencies = FALSE)
-  pv <- packageVersion("TimeWarp", lib.loc = dir2)
+  pv <- packageVersion("digest", lib.loc = dir2)
   testit::assert({pv == pvWant})
-  detach("package:TimeWarp", unload = TRUE)
+  detach("package:digest", unload = TRUE)
 
   # Test snapshot file
   orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
@@ -97,10 +97,10 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   dir6 <- Require:::rpackageFolder(tempdir2("test6"))
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
-  testit::assert({identical(packageVersion("TimeWarp", lib.loc = dir2),
-                            packageVersion("TimeWarp", lib.loc = dir6))})
-  remove.packages("TimeWarp", lib = dir2)
-  remove.packages("TimeWarp", lib = dir6)
+  testit::assert({identical(packageVersion("digest", lib.loc = dir2),
+                            packageVersion("digest", lib.loc = dir6))})
+  remove.packages("digest", lib = dir2)
+  remove.packages("digest", lib = dir6)
 
   setLibPaths(orig, updateRprofile = FALSE)
 

@@ -15,7 +15,7 @@ utils::globalVariables(c(
 #' This is an "all in one" function that will run `install.packages` for CRAN packages,
 #' `remotes::install_github` for \url{https://github.com/} packages and will install
 #' specific versions of each package if versions are specified either via an (in)equality
-#' (e.g., `"Holidays (>=1.0.0)"` or `"Holidays (==1.0.0)"` for an exact version) or with a
+#' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
 #' `packageVersionFile`.
 #' If `require = TRUE`, the default, the function will then run `require` on all
 #' named packages that satisfy their version requirements. If packages are already installed
@@ -208,7 +208,7 @@ utils::globalVariables(c(
 #' ############################################################################
 #' # Restart R -- when installing/loading packages, start fresh
 #' pkgs <- c(
-#'   "Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
+#'   "glue (<=1.0.4)", "digest (<= 0.6.28)", "glmm (<=1.3.0)",
 #'   "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
 #'   "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
 #' )

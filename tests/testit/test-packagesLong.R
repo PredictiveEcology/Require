@@ -215,7 +215,7 @@ if (interactive()) {
     return(out2)
   }
 
-  pkgs <- list(c("Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
+  pkgs <- list(c("glue (<=2.0.4)", "digest (<= 1.0.3)", "glmm (<=1.3.0)",
                  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
                  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
@@ -258,9 +258,9 @@ if (interactive()) {
                  "data.table (>=0.0.0.9)",
                  paste0("digest (>=0.6.25)"),
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
-               "Holidays (>=1000.3.1)",
-               c("Holidays (>=1.0.1)", "fpCompare"),
-               "Holidays (>=1.3.1)",
+               "glue (>=1000.3.1)",
+               c("glue (>=1.0.1)", "fpCompare"),
+               "glue (>=1.3.1)",
                c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
@@ -305,10 +305,10 @@ if (interactive()) {
       # TODO: what goes here?
     }
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
-    if (any("TimeWarp" %in% Require::extractPkgName(pkg))) {
-      try(unloadNamespace("Holidays"))
-      try(unloadNamespace("TimeWarp"))
-      try(remove.packages(c("Holidays", "TimeWarp")))
+    if (any("digest" %in% Require::extractPkgName(pkg))) {
+      try(unloadNamespace("glue"))
+      try(unloadNamespace("digest"))
+      try(remove.packages(c("digest", "glue")))
     }
   }
   unlink(tmpdir, recursive = TRUE)

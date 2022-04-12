@@ -94,7 +94,7 @@ A single key function, 'Require' that wraps 'install.packages', 'remotes::instal
 This is an "all in one" function that will run \code{install.packages} for CRAN packages,
 \code{remotes::install_github} for \url{https://github.com/} packages and will install
 specific versions of each package if versions are specified either via an (in)equality
-(e.g., \code{"Holidays (>=1.0.0)"} or \code{"Holidays (==1.0.0)"} for an exact version) or with a
+(e.g., \code{"glue (>=1.6.2)"} or \code{"glue (==1.6.2)"} for an exact version) or with a
 \code{packageVersionFile}.
 If \code{require = TRUE}, the default, the function will then run \code{require} on all
 named packages that satisfy their version requirements. If packages are already installed
@@ -234,7 +234,7 @@ Require("PredictiveEcology/SpaDES@23002b2a92a92df4ccba7f51cdd82798800b2fa7")
 ############################################################################
 # Restart R -- when installing/loading packages, start fresh
 pkgs <- c(
-  "Holidays (<=1.0.4)", "TimeWarp (<= 1.0.3)", "glmm (<=1.3.0)",
+  "glue (<=1.0.4)", "digest (<= 0.6.28)", "glmm (<=1.3.0)",
   "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
   "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
 )
