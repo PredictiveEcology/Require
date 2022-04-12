@@ -128,7 +128,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version", "Archs")]
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
-        notCorrectVersions[repoLocation != "GitHub" & is.na(AvailableVersion), AvailableVersion := "10000000"]
+        # notCorrectVersions[repoLocation != "GitHub" & is.na(AvailableVersion),
+        #                    AvailableVersion := "10000000"]
         notCorrectVersions[repoLocation != "GitHub",
                            compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
         notCorrectVersions[repoLocation != "GitHub",
