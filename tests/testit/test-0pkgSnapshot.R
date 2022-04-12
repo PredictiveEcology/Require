@@ -1,3 +1,5 @@
+message("--------------------------------- Starting test-0pkgSnapshot.R")
+
 if (interactive()) {
   library(Require)
   srch <- search()

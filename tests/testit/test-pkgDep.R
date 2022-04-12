@@ -1,3 +1,4 @@
+message("--------------------------------- Starting test-pkgDep.R")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -77,12 +78,15 @@ testit::assert({!isTRUE(all.equal(a, e))})
 out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
 knownRevDeps <- list(
   Require = c("reproducible", "SpaDES", "SpaDES.addins", "SpaDES.core",
-              "SpaDES.experiment", "SpaDES.tools"),
-  data.table = c("quickPlot", "reproducible", "Require", "SpaDES", "SpaDES.addins", "SpaDES.core",
-                 "SpaDES.experiment", "SpaDES.tools")
+              "SpaDES.experiment", "SpaDES.tools", "SpaDES.install", "SpaDES.project")
 )
+knownRevDeps <- append(knownRevDeps,
+                       list(data.table = c(knownRevDeps$Require, "Require")))
+installedPkgs <- dir(.libPaths()[1])
+knownRevDeps <- lapply(knownRevDeps, function(krd) intersect(krd, installedPkgs))
+
 test <- unlist(lapply(names(out), function(p) {
-  setdiff(knownRevDeps[[p]], out[[p]])
+  knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
 }))
 if (interactive()) {
   testit::assert({length(test) == 0})
