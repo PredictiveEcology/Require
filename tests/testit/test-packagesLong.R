@@ -105,7 +105,8 @@ if (interactive()) {
   testit::assert({length(pkgDepTest2) == 1})
   testit::assert({sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)})
 
-  pkgsInstalled <- dir(tmpdir, full.names = TRUE)
+  tmpdirForPkgs <- gsub(".+ ([[:digit:]]\\.[[:digit:]])\\.[[:digit:]].+", "\\1", R.version.string)
+  pkgsInstalled <- dir(tmpdirForPkgs, full.names = TRUE)
   RequireDeps <- c("data.table", "utils", "callr", "cli", "covr",
                    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
                    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
@@ -216,7 +217,7 @@ if (interactive()) {
     return(out2)
   }
 
-  pkgs <- list(c("glue (<=2.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
+  pkgs <- list(c("LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
                  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
                  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
@@ -259,9 +260,9 @@ if (interactive()) {
                  "data.table (>=0.0.0.9)",
                  paste0("tinytest (>=1.3.1)"),
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
-               "glue (>=1000.3.1)",
-               c("glue (>=1.0.1)", "fpCompare"),
-               "glue (>=1.3.1)",
+               "LearnBayes (>=1000.3.1)",
+               c("LearnBayes (>=1.0.1)", "fpCompare"),
+               "LearnBayes (>=2.15.1)",
                c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
@@ -307,9 +308,9 @@ if (interactive()) {
     }
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
     if (any("tinytest" %in% Require::extractPkgName(pkg))) {
-      try(unloadNamespace("glue"))
+      try(unloadNamespace("LearnBayes"))
       try(unloadNamespace("tinytest"))
-      try(remove.packages(c("tinytest", "glue")))
+      try(remove.packages(c("tinytest", "LearnBayes")))
     }
   }
   unlink(tmpdir, recursive = TRUE)
