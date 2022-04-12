@@ -1002,7 +1002,7 @@ currentCRANPkgDates <- function(pkgs) {
     tf <- tempfile();
     cranRepoHttp <- getOption("repos")["CRAN"]
     for (i in 1:2) {
-      out <- try(download.file(file.path(cranRepoHttp, "src/contrib/"), tf, quiet = TRUE), silent = TRUE)
+      out <- suppressWarnings(try(download.file(file.path(cranRepoHttp, "src/contrib/"), tf, quiet = TRUE), silent = TRUE))
       if (is(out, "try-error"))
         if (i == 1) {
           cranRepoHttp <- paste0("https", "://", paste(c("cloud", "r-project", "org"), collapse = "."), "/")
