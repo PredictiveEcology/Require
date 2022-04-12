@@ -41,7 +41,8 @@ prepended to \code{.libPaths()} (temporarily during this call) to
 \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
 \code{.libPaths()} to \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
-\item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
+\item{install_githubArgs}{List of optional named arguments, passed to \code{install.packages}
+inside \code{installGitHubPackage}.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
@@ -81,9 +82,7 @@ Internally, there are calls to \code{available.packages}.}
 \item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
 a \code{data.table} with many details attached to the output.}
 
-\item{...}{Passed to \emph{all} of \code{install_github},
-\code{install.packages}, and \code{remotes::install_version}, i.e., the
-function will error if all of these functions can not use the ... argument.
+\item{...}{Passed to \code{install.packages}.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
@@ -91,8 +90,8 @@ give individual options for those 2 internal function calls.}
 \description{
 A single key function, 'Require' that wraps 'install.packages', 'remotes::install_github', 'versions::install.versions', and 'base::require' that allows for reproducible workflows. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function.
 
-This is an "all in one" function that will run \code{install.packages} for CRAN packages,
-\code{remotes::install_github} for \url{https://github.com/} packages and will install
+This is an "all in one" function that will run \code{install.packages} for CRAN and
+GitHub \url{https://github.com/} packages and will install
 specific versions of each package if versions are specified either via an (in)equality
 (e.g., \code{"glue (>=1.6.2)"} or \code{"glue (==1.6.2)"} for an exact version) or with a
 \code{packageVersionFile}.
@@ -117,14 +116,14 @@ function.
 }
 \section{GitHub Package}{
 
-Follows \code{remotes::install_github} standard as this is what is used internally.
+Follows \code{remotes::install_github} standard.
 As with \code{remotes::install_github}, it is not possible to specify a past
-version of a GitHub package, without supplying a SHA that had that package
-version. Similarly, if a developer does a local install e.g., via
-\code{devtools::install}, of an active project, this package will not be able
-know of the GitHub state, and thus \code{pkgSnapshot} will not be able to
+version of a GitHub package unless that version is a tag or the user passes
+the SHA that had that package version. Similarly, if a developer does a
+local install e.g., via \code{pkgload::install}, of an active project, this package
+will not be able know of the GitHub state, and thus \code{pkgSnapshot} will not be able to
 recover this state as there is no SHA associated with a local
-installation. Use \code{Require} or \code{install_github} to create
+installation. Use \code{Require} (or \code{remotes::install_github}) to create
 a record of the GitHub state.
 }
 

@@ -53,13 +53,12 @@ Internally, there are calls to \code{available.packages}.}
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
-\item{install_githubArgs}{List of optional named arguments, passed to \code{install_github}.}
+\item{install_githubArgs}{List of optional named arguments, passed to \code{install.packages}
+inside \code{installGitHubPackage}.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
-\item{...}{Passed to \emph{all} of \code{install_github},
-\code{install.packages}, and \code{remotes::install_version}, i.e., the
-function will error if all of these functions can not use the ... argument.
+\item{...}{Passed to \code{install.packages}.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
