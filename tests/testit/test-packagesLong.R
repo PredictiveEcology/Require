@@ -216,14 +216,14 @@ if (interactive()) {
     return(out2)
   }
 
-  pkgs <- list(c("glue (<=2.0.4)", "digest (<= 1.0.3)", "glmm (<=1.3.0)",
+  pkgs <- list(c("glue (<=2.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
                  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
                  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
                c("SpaDES.core (>=0.9)",
                  "PredictiveEcology/map@development (>= 4.0.9)",
 
                  "achubaty/amc@development (>=0.1.5)", "data.table (>=100.0)",
-                 "digest (>=0.6.23)", "PredictiveEcology/LandR@development (>= 1.0.2)",
+                 "tinytest (>=1.3.1)", "PredictiveEcology/LandR@development (>= 1.0.2)",
                  "versions (>=0.3)",
                  "fastdigest (>=0.0.0.9)", "PredictiveEcology/map@development (>= 0.1.0.9)",
                  "achubaty/amc@development (>=0.0.0.9)", "data.table (>=0.0.0.9)",
@@ -239,13 +239,13 @@ if (interactive()) {
                  "PredictiveEcology/map@development (>= 5.0.0.9)",
                  "achubaty/amc@development (>=0.1.5)",
                  "data.table (>=100.0)",
-                 paste0("digest (>=0.6.25)"),
+                 paste0("tinytest (>=1.3.1)"),
                  "PredictiveEcology/LandR@development (>= 1.0.2)"),
                c("fastdigest (>=0.0.0.9)",
                  "PredictiveEcology/map@development (>= 0.0.0.9)",
                  "achubaty/amc@development (>=0.0.0.9)",
                  "data.table (>=0.0.0.9)",
-                 paste0("digest (>=0.6.25)"),
+                 paste0("tinytest (>=1.3.1)"),
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
                # Multiple conflicting version numbers, and with NO version number
                c("fastdigest (>=0.0.0.8)", "fastdigest (>=0.0.0.9)", "fastdigest"), #"quickPlot", "testthat"),
@@ -257,7 +257,7 @@ if (interactive()) {
                  "PredictiveEcology/map@development (>= 110.0.9)",
                  "achubaty/amc@development (>=0.0.0.9)",
                  "data.table (>=0.0.0.9)",
-                 paste0("digest (>=0.6.25)"),
+                 paste0("tinytest (>=1.3.1)"),
                  "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
                "glue (>=1000.3.1)",
                c("glue (>=1.0.1)", "fpCompare"),
@@ -306,10 +306,10 @@ if (interactive()) {
       # TODO: what goes here?
     }
     suppressWarnings(rm(outFromRequire, out, have, normalRequire))
-    if (any("digest" %in% Require::extractPkgName(pkg))) {
+    if (any("tinytest" %in% Require::extractPkgName(pkg))) {
       try(unloadNamespace("glue"))
-      try(unloadNamespace("digest"))
-      try(remove.packages(c("digest", "glue")))
+      try(unloadNamespace("tinytest"))
+      try(remove.packages(c("tinytest", "glue")))
     }
   }
   unlink(tmpdir, recursive = TRUE)
