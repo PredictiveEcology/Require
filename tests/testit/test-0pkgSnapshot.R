@@ -1,3 +1,5 @@
+message("--------------------------------- Starting test-0pkgSnapshot.R")
+
 if (interactive()) {
   library(Require)
   srch <- search()
@@ -70,13 +72,18 @@ if (interactive()) {
     } else {
       localBinsFull <- NULL
     }
+    # THere might be more than one version
+    dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+    #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+    localBinsFull <- dts
+    #localBinsFull <- c(dts, rems)
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
       else
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
-      system(paste0("Rscript -e \"install.packages(c('data.table', 'remotes'), lib ='",
+      system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
                     .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
 

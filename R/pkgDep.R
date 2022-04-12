@@ -1,7 +1,6 @@
 utils::globalVariables(c(
-  "PackageTrimmed", "hasVers", "atLeastOneWithVersionSpec", "maxVersionSpec", "Current",
-  "GithubRepo", "GithubSHA1", "GithubUsername", "mtime", "newMtime", "newPackageFullName"
-  #, "..keepCols3"
+  "atLeastOneWithVersionSpec", "Current", "GithubRepo", "GithubSHA1", "GithubUsername",
+  "hasVers", "maxVersionSpec", "mtime", "newMtime", "newPackageFullName", "PackageTrimmed"
 ))
 
 #' Determine package dependencies
@@ -110,7 +109,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
             pkgsNew[[i]] <- needed
             while (length(unlist(pkgsNew[[i]])) > 0) {
               i <- i + 1
-              pkgsNew[[i]] <- lapply(trimVersionNumber(pkgsNew[[i - 1]]), function(needed) {
+              pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
+              names(pkgsToLookup) <- pkgsToLookup
+              pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
                                           purge = purge, repos = repos)))
               })
@@ -183,11 +184,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
               curTrue <- dt3$Current == TRUE
               dt4 <- if (any(curTrue)) if (all(curTrue)) dt3 else dt3[curTrue] else dt3[0]
-              # if (!(identical(dt4[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)],
-              #                 dt4Stable[, list(PackageTrimmed, Current, Package, hasVers, atLeastOneWithVersionSpec, versionSpec)])))
-              #   browser()
-              #dt4 <- rdt4
-              #}
               pkgsNew <- list()
               pkgsNew[[i - 1]] <- dt3[dt3$Current == FALSE]$Package
               pkgsNew[[i]] <- dt4$Package
@@ -247,65 +243,86 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
     if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {
+        # which <- c(which, "Remotes")
+        needed <- getGitHubDeps(pkgDT, which, purge)
 
-        pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
-        needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
-        neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
-        neededRemotesName <- extractPkgName(neededRemotes)
-        neededName <- extractPkgName(needed)
-        needSomeRemotes <- neededName %in% neededRemotesName
-        if (any(needSomeRemotes)) {
-          needed <- c(needed[!needSomeRemotes], neededRemotes[neededRemotesName %in% neededName])
-        }
-
-        #if (FALSE) {
-        # Check NAMESPACE too -- because imperfect DESCRIPTION files
-        rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE)
-        depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
-        depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1",
-                                         grep("^import", depsFromNamespace, value = TRUE)))
-        depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
-        depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
-        depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
-        pkgDT2 <- data.table(packageFullName = setdiff(union(depsFromNamespace, needed), .basePkgs))
-        # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
-        if (NROW(pkgDT2)) {
-          pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
-          setorderv(pkgDT2, "isGitPkg", order = -1)
-          pkgDT2[, Package := extractPkgName(packageFullName)]
-
-          # Here, GitHub package specification in a DESCRIPTION file Remotes section
-          #   won't have version numbering --> Need to merge the two fields
-          pkgDT2[, Version := extractVersionNumber(packageFullName)]
-          if (any(!is.na(pkgDT2$Version))) {
-            pkgDT2[!is.na(Version), inequality := extractInequality(packageFullName)]
-            pkgDT2[, Version := {
-              if (all(is.na(Version))) NA_character_ else as.character(max(as.package_version(Version[!is.na(Version)])))
-            }, by = "Package"]
-            pkgDT2[, inequality := {
-              if (all(is.na(inequality))) NA_character_ else inequality[!is.na(inequality)][[1]]
-            }, by = "Package"]
-            pkgDT2[, github := extractPkgGitHub(packageFullName)]
-            if (any(pkgDT2$isGitPkg == TRUE & !is.na(pkgDT2$Version))) {
-              pkgDT2[isGitPkg == TRUE & !is.na(Version), newPackageFullName:=
-                       ifelse (is.na(extractVersionNumber(packageFullName)),
-                         paste0(packageFullName, " (", inequality, Version, ")"), NA) ]
-              whGitNeedVersion <- !is.na(pkgDT2$newPackageFullName)
-              if (any(whGitNeedVersion)) {
-                pkgDT2[whGitNeedVersion == TRUE, packageFullName := newPackageFullName]
-              }
-            }
-          }
-          dup <- duplicated(pkgDT2, by = c("Package", "Version"))
-          pkgDT2 <- pkgDT2[dup == FALSE]
-          differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
-          if (length(differences)) {
-            message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
-                    paste(differences, collapse = ", "), " --) ")
-          }
-
-        }
-        needed <- pkgDT2$packageFullName
+        # pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
+        # needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
+        # neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
+        # neededRemotesName <- extractPkgName(neededRemotes)
+        # neededName <- extractPkgName(needed)
+        # needSomeRemotes <- neededName %in% neededRemotesName
+        # if (any(needSomeRemotes)) {
+        #   hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
+        #   if (length(hasVersionNum)) {
+        #     neededInRemotesWVersion <- needed[needSomeRemotes][hasVersionNum]
+        #     vn <- extractVersionNumber(neededInRemotesWVersion)
+        #     ineq <- extractInequality(neededInRemotesWVersion)
+        #     neededPkgsInRemotes <- extractPkgName(neededInRemotesWVersion)
+        #     inequWVN <- paste0(" (", ineq, " ", vn, ")")
+        #     remotes <- neededRemotes[neededRemotesName %in% neededName]
+        #     whNeedVN <- match(neededPkgsInRemotes, extractPkgName(remotes))
+        #     remotesWVN <- remotes[whNeedVN]
+        #     remotesWVN <- paste0(remotesWVN, inequWVN)
+        #     remotesWoVN <- if (length(neededRemotes) != length(whNeedVN)) {
+        #       remotes[-whNeedVN]
+        #     } else {
+        #       NULL
+        #     }
+        #     remotesAll <- c(remotesWVN, remotesWoVN)
+        #   } else {
+        #     remotesAll <- neededRemotes[neededRemotesName %in% neededName]
+        #   }
+        #   needed <- c(needed[!needSomeRemotes], remotesAll)
+        # }
+        #
+        # #if (FALSE) {
+        # # Check NAMESPACE too -- because imperfect DESCRIPTION files
+        # rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE)
+        # depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
+        # depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1",
+        #                                  grep("^import", depsFromNamespace, value = TRUE)))
+        # depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
+        # depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
+        # depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
+        # pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), .basePkgs))
+        # # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
+        # if (NROW(pkgDT2)) {
+        #   pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
+        #   setorderv(pkgDT2, "isGitPkg", order = -1)
+        #   pkgDT2[, Package := extractPkgName(packageFullName)]
+        #
+        #   # Here, GitHub package specification in a DESCRIPTION file Remotes section
+        #   #   won't have version numbering --> Need to merge the two fields
+        #   pkgDT2[, Version := extractVersionNumber(packageFullName)]
+        #   if (any(!is.na(pkgDT2$Version))) {
+        #     pkgDT2[!is.na(Version), inequality := extractInequality(packageFullName)]
+        #     pkgDT2[, Version := {
+        #       if (all(is.na(Version))) NA_character_ else as.character(max(as.package_version(Version[!is.na(Version)])))
+        #     }, by = "Package"]
+        #     pkgDT2[, inequality := {
+        #       if (all(is.na(inequality))) NA_character_ else inequality[!is.na(inequality)][[1]]
+        #     }, by = "Package"]
+        #     pkgDT2[, github := extractPkgGitHub(packageFullName)]
+        #     if (any(pkgDT2$isGitPkg == TRUE & !is.na(pkgDT2$Version))) {
+        #       pkgDT2[isGitPkg == TRUE & !is.na(Version), newPackageFullName :=
+        #                ifelse(is.na(extractVersionNumber(packageFullName)),
+        #                  paste0(packageFullName, " (", inequality, Version, ")"), NA) ]
+        #       whGitNeedVersion <- !is.na(pkgDT2$newPackageFullName)
+        #       if (any(whGitNeedVersion)) {
+        #         pkgDT2[whGitNeedVersion == TRUE, packageFullName := newPackageFullName]
+        #       }
+        #     }
+        #   }
+        #   dup <- duplicated(pkgDT2, by = c("Package", "Version"))
+        #   pkgDT2 <- pkgDT2[dup == FALSE]
+        #   differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
+        #   if (length(differences)) {
+        #     message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
+        #             paste(differences, collapse = ", "), " --) ")
+        #   }
+        # }
+        # needed <- pkgDT2$packageFullName
         #}
         #pkgDT2 <- data.table(Package = needed, github = extractPkgGitHub(needed))
         #if ("github" %in% colnames(pkgDT2)) {
@@ -335,7 +352,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
               else
                 as.data.table(ava, keep.rownames = "packageURL")
               packageURL <- if (NROW(dt)) tail(dt$packageURL, 1) else character()
-
             } else {
               pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
               packageURL <- file.path(pkgName, pkgFilename)
@@ -570,8 +586,12 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
   }))
   aaa <- split(aa, firsts)
   aa <- aaa$later
+
+  aa <- checkCircular(aa)
+
+
   if (length(aa) > 1) {
-    lengths <- unlist(lapply(aa, length))
+    lengths <- lengths(aa)
     aa <- aa[order(lengths)]
     if (isTRUE(topoSort)) {
       notInOrder <- TRUE
@@ -651,6 +671,10 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
                                 keepVersionNumber = TRUE,
                                 purge = getOption("Require.purge", FALSE),
                                 keepSeparate = FALSE) {
+  if (!exists("pkgDep", envir = .pkgEnv))
+    .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
+  if (!exists("DESCRIPTIONFile", envir = .pkgEnv[["pkgDep"]]))
+    .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- newPkgDepEnv()
   objName <- if (length(desc_path) == 1)
     paste0(desc_path, paste0(collapse = "_", which, "_", keepVersionNumber))
   else {
@@ -667,7 +691,7 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
       try(readLines(desc_path))
     else
       lines <- desc_path
-    if (is(lines, "try-error")) browser()
+    if (is(lines, "try-error")) stop("Cannot read the file: ", desc_path)
     Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
     on.exit(Sys.setlocale(locale = ""))
     sl <- list()
@@ -788,8 +812,8 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 
 #' Package dependencies when one or more packages removed
 #'
-#' This is primarily for package developers.
-#' It allows the testing of what the recursive dependencies would be if a package was removed
+#' This is primarily for package developers. It allows the testing
+#' of what the recursive dependencies would be if a package was removed
 #' from the immediate dependencies.
 #' @param pkg A package name to be testing the dependencies
 #' @param depsRemoved A vector of package names who are to be "removed"
@@ -799,7 +823,8 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' A character vector of the packages that would removed from recursive dependencies
 #' of \code{pkg}
 #' if \code{depsRemoved} were removed from first level dependencies
-#' @examples \dontrun{
+#' @examples
+#' \dontrun{
 #' pkgDepIfDepRemoved("Require", "remotes")
 #' }
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
@@ -816,4 +841,103 @@ pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
     pkg <- paste(paste(setdiff(p1, p2Clean), collapse = ", "))
   }
   return(pkg)
+}
+
+checkCircular <- function(aa) {
+  circular <- lapply(names(aa), function(outer)  {
+    circularWh <- extractPkgName(aa[[outer]]) %in% extractPkgName(outer)
+    circ <- if (any(circularWh)) {
+      aa[[outer]][circularWh]
+    } else {
+      NULL
+    }
+  })
+
+  if (length(unlist(circular))) {
+    for (i in which(!unlist(lapply(circular, is.null)))) {
+      aa[[i]] <- setdiff(aa[[i]], circular[[i]])
+    }
+  }
+  aa
+}
+
+getGitHubDeps <- function(pkgDT, which, purge) {
+  pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
+  needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
+  neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
+  neededRemotesName <- extractPkgName(neededRemotes)
+  neededName <- extractPkgName(needed)
+  needSomeRemotes <- neededName %in% neededRemotesName
+  if (any(needSomeRemotes)) {
+    hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
+    if (length(hasVersionNum)) {
+      neededInRemotesWVersion <- needed[needSomeRemotes][hasVersionNum]
+      vn <- extractVersionNumber(neededInRemotesWVersion)
+      ineq <- extractInequality(neededInRemotesWVersion)
+      neededPkgsInRemotes <- extractPkgName(neededInRemotesWVersion)
+      inequWVN <- paste0(" (", ineq, " ", vn, ")")
+      remotes <- neededRemotes[neededRemotesName %in% neededName]
+      whNeedVN <- match(neededPkgsInRemotes, extractPkgName(remotes))
+      remotesWVN <- remotes[whNeedVN]
+      remotesWVN <- paste0(remotesWVN, inequWVN)
+      remotesWoVN <- if (length(neededRemotes) != length(whNeedVN)) {
+        remotes[-whNeedVN]
+      } else {
+        NULL
+      }
+      remotesAll <- c(remotesWVN, remotesWoVN)
+    } else {
+      remotesAll <- neededRemotes[neededRemotesName %in% neededName]
+    }
+    needed <- c(needed[!needSomeRemotes], remotesAll)
+  }
+
+  #if (FALSE) {
+  # Check NAMESPACE too -- because imperfect DESCRIPTION files
+  rr <- readLines(getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE)
+  depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
+  depsFromNamespace <- unique(gsub("^import.*\\((.+)\\,.*$", "\\1",
+                                   grep("^import", depsFromNamespace, value = TRUE)))
+  depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
+  depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
+  depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
+  pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), .basePkgs))
+  # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
+  if (NROW(pkgDT2)) {
+    pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
+    setorderv(pkgDT2, "isGitPkg", order = -1)
+    pkgDT2[, Package := extractPkgName(packageFullName)]
+
+    # Here, GitHub package specification in a DESCRIPTION file Remotes section
+    #   won't have version numbering --> Need to merge the two fields
+    pkgDT2[, Version := extractVersionNumber(packageFullName)]
+    if (any(!is.na(pkgDT2$Version))) {
+      pkgDT2[!is.na(Version), inequality := extractInequality(packageFullName)]
+      pkgDT2[, Version := {
+        if (all(is.na(Version))) NA_character_ else as.character(max(as.package_version(Version[!is.na(Version)])))
+      }, by = "Package"]
+      pkgDT2[, inequality := {
+        if (all(is.na(inequality))) NA_character_ else inequality[!is.na(inequality)][[1]]
+      }, by = "Package"]
+      pkgDT2[, github := extractPkgGitHub(packageFullName)]
+      if (any(pkgDT2$isGitPkg == TRUE & !is.na(pkgDT2$Version))) {
+        pkgDT2[isGitPkg == TRUE & !is.na(Version), newPackageFullName :=
+                 ifelse(is.na(extractVersionNumber(packageFullName)),
+                        paste0(packageFullName, " (", inequality, Version, ")"), NA) ]
+        whGitNeedVersion <- !is.na(pkgDT2$newPackageFullName)
+        if (any(whGitNeedVersion)) {
+          pkgDT2[whGitNeedVersion == TRUE, packageFullName := newPackageFullName]
+        }
+      }
+    }
+    dup <- duplicated(pkgDT2, by = c("Package", "Version"))
+    pkgDT2 <- pkgDT2[dup == FALSE]
+    differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
+    if (length(differences)) {
+      message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
+              paste(differences, collapse = ", "), " --) ")
+    }
+  }
+  needed <- pkgDT2$packageFullName
+
 }

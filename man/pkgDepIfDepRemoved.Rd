@@ -18,8 +18,8 @@ of \code{pkg}
 if \code{depsRemoved} were removed from first level dependencies
 }
 \description{
-This is primarily for package developers.
-It allows the testing of what the recursive dependencies would be if a package was removed
+This is primarily for package developers. It allows the testing
+of what the recursive dependencies would be if a package was removed
 from the immediate dependencies.
 }
 \examples{
