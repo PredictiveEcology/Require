@@ -617,7 +617,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       }
       startTime <- Sys.time()
 
-      toInstall[, groupCRANtogether := cumsum(installFrom != "CRAN")] # group CRAN together for speed
+      toInstall[, groupCRANtogether := cumsum(c(0, abs(diff(as.integer(factor(installFrom))))))] # group CRAN together for speed
       out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT, dots = dots,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
@@ -1166,11 +1166,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                 # using ap meant that it was messing up the src vs bin paths
                 append(list(installPkgNames), ipa)))
 
-  warn <- tryCatch({
+  warn <- withCallingHandlers({
     out <- eval(installPackagesQuoted)
   }, warning = function(condition) {
     if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
       outFromWarn <- tryInstallAgainWithoutAPCache()
+      withRestarts("muffleWarning")
     } else {
       outFromWarn <- condition
     }
@@ -1281,16 +1282,20 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
       warn <- list()
       p <- file.path(cranArchivePath, p)
+      dots$type <- "source" # must be a source
       ipa <- modifyList2(install.packagesArgs, dots, list(repos = NULL))
-      warn <- tryCatch({
+      warn <- withCallingHandlers({
         out <- do.call(install.packages,
                        # using ap meant that it was messing up the src vs bin paths
                        append(list(unname(p)), ipa))
         },
-        error = function(x) {
-          x$message
+        error = function(e) {
+          e$message
         },
-        warning = function(condition) condition
+        warning = function(w) {
+          w
+          withRestarts("muffleWarnings")
+        }
       )
       warn
     })
@@ -1324,8 +1329,8 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
   installRangeCh <- paste(installRange, collapse = ":")
-  message(" -- Installing ", pkgToReport, " -- (", installRangeCh, " of ", numPackages, ". Estimated time left: ",
-          timeLeftAlt, "; est. finish: ", estTimeFinish, ")")
+  message(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages, ". Estimated time left: ",
+          timeLeftAlt, "; est. finish: ", estTimeFinish, "\033[39m")
 
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
