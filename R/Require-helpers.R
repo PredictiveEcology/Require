@@ -1159,7 +1159,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (NROW(ap)) {
       onVec <- c("Package")
       if (!is.null(toInstall$versionSpec))
-        if (!is.na(toInstall$versionSpec) && !isTRUE(toInstall$correctVersionAvail))
+        if (all(!is.na(toInstall$versionSpec)) &&
+            !isTRUE(all(toInstall$correctVersionAvail)))
           onVec <- c("Package", "Version" = "versionSpec")
 
       type <- c("source", "binary")[any(grepl("bin", ap[toInstall, on = onVec]$Repository)) + 1]
