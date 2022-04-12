@@ -617,8 +617,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       }
       startTime <- Sys.time()
 
-      toInstall[, groupCRANtogether := cumsum(c(0, abs(diff(as.integer(factor(installFrom))))))] # group CRAN together for speed
-      out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT, dots = dots,
+      toInstall[, groupCRANtogetherChange := cumsum(installFrom  != "CRAN")]
+      toInstall[, groupCRANtogetherDif := c(0, diff(installFrom  == "CRAN"))]
+      toInstall[groupCRANtogetherDif < 1, groupCRANtogetherDif := 0]
+      toInstall[, groupCRANtogether := cumsum(groupCRANtogetherDif) + groupCRANtogetherChange]
+      out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT,
+                dots = dots,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
