@@ -92,7 +92,8 @@ utils::globalVariables(c(
 #'        `.libPaths()` to `c(libPaths, tail(libPaths(), 1)` to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              `install.packages`, `install_github` or `installVersions`.
-#' @param install_githubArgs List of optional named arguments, passed to `install_github`.
+#' @param install_githubArgs List of optional named arguments, passed to `install.packages`
+#'   inside `installGitHubPackage`.
 #' @param install.packagesArgs List of optional named arguments, passed to `install.packages`.
 #' @param standAlone Logical. If `TRUE`, all packages will be installed to and loaded from
 #'   the `libPaths` only.
@@ -114,9 +115,7 @@ utils::globalVariables(c(
 #'   Internally, there are calls to `available.packages`.
 #' @param verbose Numeric. If `1` (less) or `2` (more), there will be
 #'   a `data.table` with many details attached to the output.
-#' @param ... Passed to \emph{all} of `install_github`,
-#'   `install.packages`, and `remotes::install_version`, i.e., the
-#'   function will error if all of these functions can not use the ... argument.
+#' @param ... Passed to `install.packages`.
 #'   Good candidates are e.g., `type` or `dependencies`. This can be
 #'   used with `install_githubArgs` or `install.packageArgs` which
 #'   give individual options for those 2 internal function calls.
@@ -438,7 +437,6 @@ Require <- function(packages, packageVersionFile,
               checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
               install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
               if (getOption("Require.buildBinaries", TRUE)) {
-                # if (isWindows() && getOption("Require.buildBinaries", TRUE)) {
                 install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
               }
 

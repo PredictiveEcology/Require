@@ -812,11 +812,8 @@ archiveVersionsAvailable <- function(package, repos) {
         x$repo <- repo
         x
         })
-      # if (length(package) == 1)
-      # return(info)
     }
   }
-  # warning(sprintf("couldn't find package '%s'", package))
   return(info)
 }
 
