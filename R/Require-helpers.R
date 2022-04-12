@@ -1647,7 +1647,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
   if (nchar(Sys.which("R")) > 0) {
     message("building package (R CMD build)")
     internal <- !interactive()
-    out1 <- system(paste("R CMD build ", gr$repo), intern = internal)
+    extras <- c("--no-resave-data", "--no-manual",
+      "--no-build-vignettes")
+    out1 <- system(paste("R CMD build ", gr$repo, paste(extras, collapse = " ")), intern = internal)
+    if (identical(1L, out1)) stop("")
     packageTarName <- if (interactive()) {
       versionOfPkg <- DESCRIPTIONFileVersionV(dir(out, pattern = "DESCRIPTION", full.names = TRUE))
       paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
