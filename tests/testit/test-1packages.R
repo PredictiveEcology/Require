@@ -1,4 +1,4 @@
-message("--------------------------------- Starting test-1packages.R")
+message("\033[34m --------------------------------- Starting test-1packages.R \033[39m")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
