@@ -61,6 +61,7 @@ A file is written with the package names and versions of all packages within \co
 This can later be passed to \code{Require}.
 }
 \examples{
+checkPath(tempdir(), create = TRUE) # need to make sure the temp folder is there
 pkgSnapFile <- tempfile()
 pkgSnapshot(pkgSnapFile, .libPaths()[1])
 data.table::fread(pkgSnapFile)
