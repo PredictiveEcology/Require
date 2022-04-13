@@ -76,17 +76,17 @@ pkgSnapshot(fileName)
 # library(googledrive)
 # (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
 
-# On new machine 
+# On new machine
 fileName <- "packageSnapshot.txt"
 library(Require)
 # get the file from email, slack, cloud etc.
 # library(googledrive)
 # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
-setLibPaths("~/RPackages") # start with an empty folder for new 
+setLibPaths("~/RPackages") # start with an empty folder for new
                            # library to minimize package version conflicts
 Require(packageVersionFile = fileName)
 
-# Passing NULL --> results in output to console with exact Require call to 
+# Passing NULL --> results in output to console with exact Require call to
 #   achieve the packages installations
 pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 
@@ -98,5 +98,6 @@ sink()
 # Will show "minimum package version"
 pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 }
+unlink(tempdir(), recursive = TRUE) # clean up
 
 }

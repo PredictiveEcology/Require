@@ -54,5 +54,6 @@ tryCatch(checkPath(tmpdir, create = FALSE), error = function(e) FALSE) ## FALSE
 checkPath(tmpdir, create = TRUE)
 dir.exists(tmpdir) ## TRUE
 
-unlink(tmpdir, recursive = TRUE)
+unlink(tempdir(), recursive = TRUE) # clean up
+
 }
