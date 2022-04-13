@@ -61,11 +61,11 @@ A file is written with the package names and versions of all packages within \co
 This can later be passed to \code{Require}.
 }
 \examples{
+\dontrun{
 pkgSnapFile <- tempfile()
+cat(paste("pkgSnapFile is: ", pkgSnapFile), file = "c:/Eliot/tmp/tmp.txt", append = TRUE)
 pkgSnapshot(pkgSnapFile, .libPaths()[1])
 data.table::fread(pkgSnapFile)
-
-\dontrun{
 
 # An example to move this file to a new computer
 library(Require)
@@ -76,17 +76,17 @@ pkgSnapshot(fileName)
 # library(googledrive)
 # (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
 
-# On new machine 
+# On new machine
 fileName <- "packageSnapshot.txt"
 library(Require)
 # get the file from email, slack, cloud etc.
 # library(googledrive)
 # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
-setLibPaths("~/RPackages") # start with an empty folder for new 
+setLibPaths("~/RPackages") # start with an empty folder for new
                            # library to minimize package version conflicts
 Require(packageVersionFile = fileName)
 
-# Passing NULL --> results in output to console with exact Require call to 
+# Passing NULL --> results in output to console with exact Require call to
 #   achieve the packages installations
 pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 

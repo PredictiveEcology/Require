@@ -4,7 +4,7 @@ if (interactive()) {
   library(Require)
   srch <- search()
   anyNamespaces <- srch[!gsub("package:", "", srch) %in%
-                          c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads")]
+                          c("Require", "data.table", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads")]
   if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
   library(testit)
   origLibPathsAllTests <- .libPaths()

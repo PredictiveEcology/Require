@@ -88,7 +88,7 @@ used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 }
 \description{
-A single key function, 'Require' that wraps 'install.packages', 'remotes::install_github', 'versions::install.versions', and 'base::require' that allows for reproducible workflows. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function.
+A single key function, 'Require' that wraps 'install.packages', 'remotes::install_github', 'versions::install.versions', and 'base::require' that allows for reproducible workflows. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function. Maturing.
 
 This is an "all in one" function that will run \code{install.packages} for CRAN and
 GitHub \url{https://github.com/} packages and will install

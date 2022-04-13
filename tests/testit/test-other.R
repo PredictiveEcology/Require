@@ -44,7 +44,7 @@ if (Sys.info()["user"] == "emcintir2")
           "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
-                         libPaths = tempdir2(tempdir2("other"))))
+                         libPaths = tempdir2("other/test2")))
 
 pkg <- c("data.table", "data.table")
 pkgDT <- Require:::toPkgDT(pkg)

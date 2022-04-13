@@ -507,7 +507,7 @@ Require <- function(packages, packageVersionFile,
     }
     notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
     if (sum(notCorrectly)) {
-      message("The following packages did not get installed correctly. Try to rerun Require call again without any changes...")
+      message("The following packages did not get installed correctly. Perhaps restart R and try again...")
       colsToKeep2 <- c(
         "packageFullName", "Package", "LibPath", "Version",
         "repoLocation", "installFrom", "installResult"
