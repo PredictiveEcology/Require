@@ -28,6 +28,7 @@
 #' @importFrom utils write.table
 #' @importFrom data.table fwrite
 #' @examples
+#' checkPath(tempdir(), create = TRUE) # need to make sure the temp folder is there
 #' pkgSnapFile <- tempfile()
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
 #' data.table::fread(pkgSnapFile)
