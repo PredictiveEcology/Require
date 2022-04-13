@@ -37,11 +37,12 @@
 #'
 #' @export
 #' @examples
+#' \dontrun{
 #' origDir <- setwd(tempdir())
-#' setLibPaths("newProjectLib") # set a new R package library locally
+#' td <- tempdir()
+#' setLibPaths(td) # set a new R package library locally
 #' setLibPaths() # reset it to original
 #' setwd(origDir)
-#' \dontrun{
 #' # Using standAlone = FALSE means that newly installed packages will be installed
 #' #   in the new package library, but loading packages can come from any of the ones
 #' #   listed in .libPaths()
