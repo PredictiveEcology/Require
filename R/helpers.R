@@ -32,7 +32,7 @@ setMethod("normPath",
               if (any(nas)) {
                 path[nas] <- NA_character_
               }
-              
+
               # path <- lapply(path, function(x) {
               #   if (is.na(x)) {
               #     NA_character_
@@ -261,23 +261,23 @@ invertList <- function(l) {
 }
 
 #' \code{modifyList} for multiple lists
-#' 
-#' @description 
-#' This calls \code{\link[utils]{modifyList}} iteratively using 
+#'
+#' @description
+#' This calls \code{\link[utils]{modifyList}} iteratively using
 #' \code{\link[base]{Reduce}}, so it can handle >2 lists.
-#' The subsequent list elements that share a name will override 
+#' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
 #' It also will handle the case where any list is a \code{NULL}
-#' 
-#' @details 
-#' Simply a convenience around 
+#'
+#' @details
+#' Simply a convenience around
 #' \code{Reduce(modifyList, list(...))}, with some checks.
-#' 
-#' 
+#'
+#'
 #' @export
 #' @param ... One or more named lists.
 #' @importFrom utils modifyList
-#' @examples 
+#' @examples
 #' modifyList2(list(a = 1), list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
