@@ -1,4 +1,4 @@
-message("--------------------------------- Starting test-0pkgSnapshot.R")
+message("\033[34m --------------------------------- Starting test-0pkgSnapshot.R \033[39m")
 
 if (interactive()) {
   library(Require)

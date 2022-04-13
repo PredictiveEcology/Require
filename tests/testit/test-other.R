@@ -1,3 +1,5 @@
+message("\033[34m --------------------------------- Starting test-other.R \033[39m")
+
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
@@ -31,7 +33,7 @@ pkgDep2("Require")
 pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)
 pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE, deps = "Require")
 pkgDepTopoSort(c("Require", "data.table"))
-pkgDepTopoSort(c("Require", "data.table"), useAllInSearch = TRUE, 
+pkgDepTopoSort(c("Require", "data.table"), useAllInSearch = TRUE,
                deps = "Require", returnFull = FALSE, reverse = TRUE)
 
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
@@ -40,9 +42,9 @@ Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 if (Sys.info()["user"] == "emcintir2")
   options("Require.RPackageCache" = "~/._RPackageCache/",
           "Require.unloadNamespaces" = FALSE)
-Require("data.table", install = "force", require = FALSE, libPaths = tempdir2(basename(tempdir())))
+Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
-                         libPaths = tempdir2(basename(tempdir()))))
+                         libPaths = tempdir2(tempdir2("other"))))
 
 pkg <- c("data.table", "data.table")
 pkgDT <- Require:::toPkgDT(pkg)
@@ -60,12 +62,12 @@ testit::assert({isTRUE(out['data.table'] == 1)})
 warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w) w$message)
 testit::assert({grepl("you will likely", warn)})
 
-origLP <- setLibPaths(tempdir2(basename(tempdir())), updateRprofile = FALSE)
+origLP <- setLibPaths(tempdir2("other"), updateRprofile = FALSE)
 warn <- tryCatch(Require("data.table"), warning = function(w) w$message)
 setLibPaths(origLP, updateRprofile = FALSE)
 
 # Test the setLibPaths with changed .Rprofile
-origDir <- setwd(tempdir())
+origDir <- setwd(tempdir2("other"))
 setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package library locally
 setLibPaths() # reset it to original
 setwd(origDir)

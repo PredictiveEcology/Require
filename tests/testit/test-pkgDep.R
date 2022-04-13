@@ -1,4 +1,5 @@
-message("--------------------------------- Starting test-pkgDep.R")
+message("\033[34m --------------------------------- Starting test-pkgDep.R \033[39m")
+
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -100,4 +101,5 @@ if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 options(outOpts)
 unlink("~/._R")
+unlink(tempdir2())
 options(outOpts2)

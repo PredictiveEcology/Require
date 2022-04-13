@@ -1,4 +1,4 @@
-message("--------------------------------- Starting test-packagesLong.R")
+message("\033[34m --------------------------------- Starting test-packagesLong.R \033[39m")
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
@@ -16,28 +16,10 @@ if (interactive()) {
   } else {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
   }
-  tmpdir <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
+  tmpdir <- file.path(tempdir2("other"), paste0("RequireTmp", sample(1e5, 1)))
 
   suppressWarnings(dir.create(tmpdir))
   # repo <- chooseCRANmirror(ind = 1)
-  # if (FALSE) {
-  ## Make a clean copy of my main R library
-  # message("###########################################################################")
-  # message("Big Package Snapshot")
-  # message("###########################################################################")
-  # tf <- tempfile2("RequireTmp")
-  # snap <- pkgSnapshot(tf)
-  # tmpdirA <- file.path(tempdir(), paste0("RequireTmp", sample(1e5, 1)))
-  # orig <- Require::setLibPaths(tmpdirA, standAlone = TRUE)
-  # outOpts1 <- options("install.packages.compile.from.source" = "yes")
-  # Require::Require(packageVersionFile = tf)
-  # options(outOpts1)
-  # options(orig)
-  # unlink(tmpdirA)
-  # message("###########################################################################")
-  # message("End Big Package Snapshot")
-  # message("###########################################################################")
-
 
 
   pkgDepTest1 <- Require::pkgDep("Require")
@@ -182,7 +164,7 @@ if (interactive()) {
           origDir <- Require::normPath(file.path(.libPaths()[1]))
           origDirWithPkg <- file.path(origDir, sam)
           files <- grep(Require::normPath(origDirWithPkg), files, value = TRUE)
-          td <- Require::normPath(file.path(tempdir(), .rndstr(1, 6)))
+          td <- Require::normPath(file.path(tempdir2("other"), .rndstr(1, 6)))
           newFiles <- gsub(origDir, td, files)
           dirs <- unique(dirname(files))
           newDirs <- gsub(origDir, td, dirs)
