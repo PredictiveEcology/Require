@@ -64,6 +64,7 @@
 #' # Will show "minimum package version"
 #' pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 #' }
+#' unlink(tempdir(), recursive = TRUE) # clean up
 #'
 pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
                         purge = getOption("Require.purge", FALSE), exact = TRUE) {

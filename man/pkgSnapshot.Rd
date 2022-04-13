@@ -98,5 +98,6 @@ sink()
 # Will show "minimum package version"
 pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
 }
+unlink(tempdir(), recursive = TRUE) # clean up
 
 }
