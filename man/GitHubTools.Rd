@@ -2,12 +2,12 @@
 % Please edit documentation in R/Require-helpers.R
 \name{parseGitHub}
 \alias{parseGitHub}
-\alias{install_githubV}
+\alias{continueWithWarning}
 \title{GitHub specific helpers}
 \usage{
 parseGitHub(pkgDT)
 
-install_githubV(gitPkgNames, install_githubArgs = list(), dots = dots)
+continueWithWarning(w)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a data.table

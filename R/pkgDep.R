@@ -862,7 +862,10 @@ checkCircular <- function(aa) {
 }
 
 getGitHubDeps <- function(pkgDT, which, purge) {
-  pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
+  pkgDT <- tryCatch(getGitHubDESCRIPTION(pkgDT, purge = purge), error = function(e) {
+    e
+    stop("It seems like the github repository or branch (", pkgDT$packageFullName,
+         ") does not exist, please check spelling")})
   needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
   neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
   neededRemotesName <- extractPkgName(neededRemotes)

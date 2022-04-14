@@ -63,7 +63,6 @@ This can later be passed to \code{Require}.
 \examples{
 \dontrun{
 pkgSnapFile <- tempfile()
-cat(paste("pkgSnapFile is: ", pkgSnapFile), file = "c:/Eliot/tmp/tmp.txt", append = TRUE)
 pkgSnapshot(pkgSnapFile, .libPaths()[1])
 data.table::fread(pkgSnapFile)
 

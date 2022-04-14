@@ -266,10 +266,9 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
-  libPaths <- checkLibPaths(libPaths = libPaths)
-  # if (missing(libPaths))
-  #   libPaths <- .libPaths()
-  suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
+  origLibPaths <- checkLibPaths(libPaths = libPaths)
+  libPaths <- if (missing(libPaths)) .libPaths() else .libPaths(libPaths)
+  # suppressMessages(origLibPaths <- setLibPaths(libPaths, standAlone))
 
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
@@ -460,6 +459,7 @@ Require <- function(packages, packageVersionFile,
           message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
         }
       }
+      browser()
       if (isTRUE(require)) {
         pkgDT <- doLoading(pkgDT, ...)
       }
