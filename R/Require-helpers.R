@@ -1208,16 +1208,15 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                 # using ap meant that it was messing up the src vs bin paths
                 append(list(installPkgNames), ipa)))
 
-  browser()
-
   outputsFromInstalls <- lapply(installPkgNames, function(l) list())
   ipa <- append(list(installPkgNames), ipa)
   out <- withCallingHandlers(
     tryCatch(do.call(install.packages, ipa), error = function(e) e),
     error=function(cond) {
-      outputsFromInstalls[[p]][["errors"]] <<- append(outputsFromInstalls[[p]][["errors"]], list(cond))
+      outputsFromInstalls[["errors"]] <<- append(outputsFromInstalls[["errors"]], list(cond))
     }, warning=function(cond) {
-      outputsFromInstalls[[p]][["warnings"]] <<- append(outputsFromInstalls[[p]][["warnings"]], list(cond))
+      warning(cond)
+      outputsFromInstalls[["warnings"]] <<- append(outputsFromInstalls[["warnings"]], list(cond))
       invokeRestart("muffleWarning")
     })
 
@@ -1485,7 +1484,6 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   if (any("GitHub" %in% toInstall$installFrom)) {
     installOut <- installGitHub(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
   }
-  browser()
   updateInstalled(installOut$pkgDT,
                   installPkgNames = extractPkgName(names(installOut$outputsFromInstalls)),
                   outputsList = installOut$outputsFromInstalls)
@@ -1896,21 +1894,38 @@ needDifferentAction <- function(cond, concernTxt) {
 }
 
 install.packagesWithOutput <- function(opts2) {
+  if (is.null(opts2$repos))
+    opts2$repos <- getOption("repos")
   theCharacters <- unlist(lapply(opts2, is.character))
+  whNotNamed <- which(names(opts2) == "")
+  opts2[[whNotNamed]] <- unname(opts2[[whNotNamed]])
+  opts2[[whNotNamed]] <- paste0(opts2[[whNotNamed]], collapse = "', '")
   opts2[theCharacters] <- paste0("'", opts2[theCharacters], "'")
-  hasName <- names(opts2) != ""
   RscriptPath <- file.path(Sys.getenv("R_HOME"), "bin", "Rscript")
   fileout <- tempfile(fileext = ".out")
   fileerr <- tempfile(fileext = ".err")
   on.exit({unlink(fileout); unlink(fileerr)})
-  out2 <- system2(RscriptPath, paste("-e \"do.call(install.packages, list(",
-                                     paste(opts2[!hasName], ", ",
-                                           paste(names(opts2)[hasName], sep = " = ", opts2[hasName], collapse = ", "),"))\"")),
-                  stdout = fileout, stderr = fileerr, wait = FALSE)
+  browser()
+  out2 <- system2(RscriptPath, paste("-e \"do.call(install.packages, list(c(",
+                                     paste(opts2[whNotNamed], "), ",
+                                           paste(names(opts2)[-whNotNamed], sep = " = ", opts2[-whNotNamed], collapse = ", "),"))\"")),
+                  stdout = fileout, stderr = fileerr,
+                  wait = FALSE
+                  )
+                  #wait = TRUE)
+  #out2 <- system(paste(RscriptPath, " -e \"do.call(install.packages, list(c(",
+  #                                   paste(opts2[whNotNamed], "), ",
+  #                                         paste(names(opts2)[-whNotNamed], sep = " = ",
+  #                                               opts2[-whNotNamed], collapse = ", "),"))\"")))
+  #wait = TRUE)
   b <- a <- character()
+  fileerr2 <- tempfile(fileext = ".err")
+  file.link(fileerr, fileerr2)
   for (i in 1:5000) {
     aNew <- suppressWarnings(try(silent = TRUE, scan(file = fileout, quiet = TRUE, what = "character", sep = "\n", skip = length(a))))
-    bNew <- suppressWarnings(try(silent = TRUE, scan(file = fileerr, quiet = TRUE, what = "character", sep = "\n", skip = length(b))))
+    bNew <-
+      suppressWarnings(try(silent = TRUE,
+                           scan(file = fileerr2, quiet = TRUE, what = "character", sep = "\n", skip = length(b))))
     Sys.sleep(0.005)
     if (!is(bNew, "try-error") && !identical(b, bNew)) {
       b <- setdiff(bNew, b)
@@ -1922,8 +1937,11 @@ install.packagesWithOutput <- function(opts2) {
       if (length(a))
         message(paste(a, collapse = "\n"))
     }
-    if (any(grepl("successfully", aNew)) || any(grepl("Execution halted", aNew)))
+    abNew <- c(aNew, bNew)
+    if (any(grepl("successfully", abNew)) || any(grepl("Execution halted", abNew)) ||
+        any(grepl("DONE", abNew)))
       break
   }
-  c(aNew, bNew)
+  return(abNew)
+
 }

@@ -459,7 +459,6 @@ Require <- function(packages, packageVersionFile,
           message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
         }
       }
-      browser()
       if (isTRUE(require)) {
         pkgDT <- doLoading(pkgDT, ...)
       }
