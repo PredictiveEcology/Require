@@ -215,7 +215,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
           data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
           bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
 
-          browser()
           aa <- oldAvailableVersions[
             ,{
               list(nextRow = min(na.rm = TRUE,
