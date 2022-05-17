@@ -3,7 +3,7 @@ utils::globalVariables(c(
   ".I", "i.neededFiles", "inequality", "installFromFac", "installOrder", "installResult", "isGitPkg",
   "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "newMtime",
   "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
-  "groupCRANtogetherDif", "groupCRANtogether"
+  "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow"
 ))
 
   #' @details
@@ -1445,6 +1445,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   # Check ones that failed
   #if (any(grepl("not available for this version", warnings1)))
   #  toInstall[, installFrom := "Archive"]
+
   if (any("Archive" %in% toInstall$installFrom))
     withCallingHandlers(pkgDT <- installArchive(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                             repos = repos),
@@ -1454,14 +1455,15 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
                         warning = function(warn) {
                           warnings1 <<- c(warnings1, warn$message)
                         })
+
   if (any("GitHub" %in% toInstall$installFrom)) {
     withCallingHandlers(pkgDT <- installGitHub(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs),
-    message = function(mess) {
-      messages <<- c(messages, mess$message)
-    },
-    warning = function(warn) {
-      warnings1 <<- c(warnings1, warn$message)
-    })
+                        message = function(mess) {
+                          messages <<- c(messages, mess$message)
+                        },
+                        warning = function(warn) {
+                          warnings1 <<- c(warnings1, warn$message)
+                        })
   }
   pkgDT
 }
