@@ -144,6 +144,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                            v[v1] <- .evalV(.parseV(text = paste(compareVersionAvail[v1], inequality[v1], "0")))
                            v
                          }]
+      notCorrectVersions[Package %in% .basePkgs, correctVersionAvail := TRUE]
 
       takenOffCran <- is.na(notCorrectVersions$inequality) & !notCorrectVersions$correctVersionAvail &
         !notCorrectVersions$Package %in% .basePkgs
