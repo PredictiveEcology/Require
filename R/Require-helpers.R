@@ -122,7 +122,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     #if (NROW(whNotCorrect)) {
     notCorrectVersions <- pkgDT#[whNotCorrect]
-
+    takenOffCran <- FALSE # This is an object that will be modified only if in the CRAN section
     # do CRAN first
     if (any(notCorrectVersions$repoLocation == "CRAN")) {
       cachedAvailablePackages <- available.packagesCached(repos = repos, purge = purge)
@@ -145,7 +145,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                            v
                          }]
 
-      takenOffCran <- is.na(notCorrectVersions$inequality) & !notCorrectVersions$correctVersionAvail
+      takenOffCran <- is.na(notCorrectVersions$inequality) & !notCorrectVersions$correctVersionAvail &
+        !notCorrectVersions$Package %in% .basePkgs
       takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
 
       # If package has both a binary and source available on CRAN, there will be 2 entries
@@ -278,12 +279,13 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
     }
     # do GitHub second
-    if (any(notCorrectVersions$repoLocation == "GitHub")) {
+    if (any(notCorrectVersions$repoLocation[whNotCorrect] == "GitHub")) {
       notCorrectVersions <- getGitHubDESCRIPTION(notCorrectVersions, purge = purge)
       notCorrectVersions[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
-      notCorrectVersions[repoLocation == "GitHub", compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
-      notCorrectVersions[repoLocation == "GitHub", correctVersionAvail :=
-                           .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+      notCorrectVersions[repoLocation == "GitHub",
+                         compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
+      notCorrectVersions[repoLocation == "GitHub",
+                         correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
       set(notCorrectVersions, NULL, c("url", "DESCFile"), NULL)
 
     }
@@ -1308,7 +1310,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
   # warns <- list()
   dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
-  onMRAN <- dateFromMRAN > .earliestMRANDate && isWindows()
+  onMRAN <- isTRUE(dateFromMRAN > .earliestMRANDate) && isWindows()
   if (any(onMRAN)) {
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
     install.packagesArgs["ignore_repo_cache"] <- TRUE
