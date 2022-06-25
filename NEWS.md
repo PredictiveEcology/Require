@@ -1,4 +1,12 @@
-Known issues: https://github.com/PredictiveEcology/Require/issues
+Known issues: <https://github.com/PredictiveEcology/Require/issues>
+
+version 0.1.0.9000
+==============
+## enhancements
+* none
+
+## bugfixes
+* fixed an error installing certain GitHub packages
 
 version 0.1.0
 ==============

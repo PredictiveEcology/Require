@@ -244,7 +244,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       pkgDT <- parseGitHub(pkg)
       if ("GitHub" %in% pkgDT$repoLocation) {
         # which <- c(which, "Remotes")
-        needed <- getGitHubDeps(pkgDT, which, purge)
+        needed <- getGitHubDeps(pkg, pkgDT, which, purge)
 
         # pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
         # needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
@@ -861,7 +861,7 @@ checkCircular <- function(aa) {
   aa
 }
 
-getGitHubDeps <- function(pkgDT, which, purge) {
+getGitHubDeps <- function(pkg, pkgDT, which, purge) {
   pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
   needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
   neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
