@@ -705,13 +705,19 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       setorderv(pkgDT, "tmpOrder")
       set(pkgDT, NULL, "tmpOrder", NULL)
     }
-    failedToInstall <- pkgDT$installFrom == "Fail"
-    if (NROW(pkgDT[failedToInstall]) ) {
-      keepCols <- c("packageFullName", "installed", "correctVersion", "AvailableVersion")
-      message("The following packages could not be installed because could not find a correct version")
-      messageDF(pkgDT[failedToInstall, ..keepCols])
-      pkgDTFail <- pkgDT[failedToInstall]
-    }
+    # failedToInstall <- pkgDT$installFrom == "Fail"
+    # if (sum(failedToInstall, na.rm = TRUE) ) {
+    #   keepCols <- c("packageFullName", "installed", "correctVersion", "AvailableVersion")
+    #   keepCols <- intersect(colnames(pkgDT), keepCols)
+    #   if ("AvailableVersion" %in% keepCols) {
+    #     message("The following packages could not be installed because could not find a correct version")
+    #   } else {
+    #     keepCols <- setdiff(keepCols, "correctVersion")
+    #     message("The following packages could not be installed; check messaging")
+    #   }
+    #   pkgDTFail <- pkgDT[failedToInstall == TRUE]
+    #   messageDF(pkgDTFail[, ..keepCols])
+    # }
   }
 
   # Now that it is installed, add installed version to Version column
