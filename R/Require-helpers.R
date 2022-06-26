@@ -1235,62 +1235,89 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     # unlink(av3CacheFile)
     out <- eval(installPackagesQuoted)
   }
-  installPackagesQuoted <- quote(do.call(install.packages,
-                # using ap meant that it was messing up the src vs bin paths
-                append(list(installPkgNames), ipa)))
 
-  warn <- withCallingHandlers({
-    out <- eval(installPackagesQuoted)
-  }, warning = function(condition) {
-    if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
-      outFromWarn <- tryInstallAgainWithoutAPCache()
-      withRestarts("muffleWarning")
-    } else {
-      outFromWarn <- condition
-    }
-    outFromWarn
-  }, error = function(e) {
-    av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
-    if (grepl('argument \\"av2\\" is missing', e)) {
-      tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ",R.version.string,")")),
-               warning = function(w) w)
-    } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
-      tryInstallAgainWithoutAPCache()
-    } else {
-      stop(e)
-    }
-  })
-
-  if (any(grepl("--build", c(dots, install.packagesArgs))))
-    copyTarball(installPkgNames, TRUE)
-
-  if (!is.null(warn)) {
-    warning(warn)
-    pkgDT[Package %in% installPkgNames, installResult := warn$message]
+  needSomeSrc <- if (isWindows()) {
+    rep(FALSE, NROW(pkgDT))
+  } else {
+    installPkgNames %in% sourcePkgs()
   }
-  pkgDT <- updateInstalled(pkgDT[Package %in% installPkgNames], installPkgNames, warn)
-  permDen <- grepl("Permission denied", names(warn))
-  packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
-  if (any(permDen)) {
-    stopMess <- character()
-    if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
-      stopMess <- c(
-        stopMess,
-        paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-               "------\n",
-               #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '", libPaths[1],"')",
-               "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",
-               libPaths[1],"')")
-      )
-    if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
-      stopMess <- c(
-        stopMess,
-        paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-               "------\n", "remotes::install_github(c('",
-               paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
-                      collapse = "', '"), "'), lib = '",libPaths[1],"')")
-      )
-    stop(stopMess)
+  installPkgNamesList <- list()
+  reposList <- list()
+  if (any(needSomeSrc)) {
+    installPkgNamesList$Src <- installPkgNames[needSomeSrc]
+    installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
+    message("The following package(s) need to be (and will be) installed from source: ",
+            paste(installPkgNamesList$Src, collapse = ", "))
+    reposList$Src <- c(CRAN = "https://cloud.r-project.org/")
+    reposList$Reg <- repos
+  } else {
+    installPkgNamesList$Reg <- installPkgNames
+    reposList$Reg <- repos
+  }
+
+  if (internetExists("cannot install packages from CRAN")) {
+    Map(installPkgNames = installPkgNamesList, repos = reposList,
+        function(installPkgNamesList, repos) {
+
+          installPackagesQuoted <-
+            quote(do.call(install.packages,
+                          # using ap meant that it was messing up the src vs bin paths
+                          append(list(installPkgNames, repos = repos), ipa)))
+
+          warn <- withCallingHandlers({
+            out <- eval(installPackagesQuoted)
+          }, warning = function(condition) {
+            if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
+              outFromWarn <- tryInstallAgainWithoutAPCache()
+              withRestarts("muffleWarning")
+            } else {
+              outFromWarn <- condition
+            }
+            outFromWarn
+          }, error = function(e) {
+            av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
+            if (grepl('argument \\"av2\\" is missing', e)) {
+              tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ",R.version.string,")")),
+                       warning = function(w) w)
+            } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
+              tryInstallAgainWithoutAPCache()
+            } else {
+              stop(e)
+            }
+          })
+        })
+
+    if (any(grepl("--build", c(dots, install.packagesArgs))))
+      copyTarball(installPkgNames, TRUE)
+
+    if (!is.null(warn)) {
+      warning(warn)
+      pkgDT[Package %in% installPkgNames, installResult := warn$message]
+    }
+    pkgDT <- updateInstalled(pkgDT[Package %in% installPkgNames], installPkgNames, warn)
+    permDen <- grepl("Permission denied", names(warn))
+    packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
+    if (any(permDen)) {
+      stopMess <- character()
+      if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
+        stopMess <- c(
+          stopMess,
+          paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                 "------\n",
+                 #"install.packages(c('",paste(pkgs, collapse = ", "),"'), lib = '", libPaths[1],"')",
+                 "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",
+                 libPaths[1],"')")
+        )
+      if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
+        stopMess <- c(
+          stopMess,
+          paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+                 "------\n", "remotes::install_github(c('",
+                 paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
+                        collapse = "', '"), "'), lib = '",libPaths[1],"')")
+        )
+      stop(stopMess)
+    }
   }
   pkgDT
 }
