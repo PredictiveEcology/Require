@@ -698,9 +698,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
-      pkgDT <- rbindlist(list(pkgDT[!toInstall, on = "packageFullName"],
-                              rbindlist(out, fill = TRUE)),
-                         fill = TRUE)
+      pkgDT <- rbindlist(out, fill = TRUE)
+      # pkgDT <- rbindlist(list(pkgDT[!toInstall, on = "packageFullName"],
+      #                         rbindlist(out, fill = TRUE)),
+      #                    fill = TRUE)
       setorderv(pkgDT, "tmpOrder")
       set(pkgDT, NULL, "tmpOrder", NULL)
     }
