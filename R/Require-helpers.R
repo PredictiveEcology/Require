@@ -628,7 +628,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
       warn <- names(warn)
     }
     warnOut <- unlist(lapply(installPkgNames, function(ip) any(grepl(ip, warn)) || grepl(ip, warn[[1]])))
-    if (isTRUE(any(!warnOut) || length(warnOut) == 0 || all(is.na(warnOut))) &&
+    if (isTRUE(any(!warnOut) || length(warnOut) == 0 || all(is.na(warnOut))) ||
         all(is.null(warn) )) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
       # pkgDT[pkgDT$Package %in% installPkgNames, `:=`(installed = TRUE)]
@@ -1267,12 +1267,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   }
   installPkgNamesList <- list()
   reposList <- list()
-  if (any(needSomeSrc)) {
+  if (any(needSomeSrc) && !identical(stripHTTPAddress(repos), stripHTTPAddress(srcPackageURLOnCRAN))) {
     installPkgNamesList$Src <- installPkgNames[needSomeSrc]
     installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
     message("The following package(s) need to be (and will be) installed from source: ",
             paste(installPkgNamesList$Src, collapse = ", "))
-    reposList$Src <- c(CRAN = "https://cloud.r-project.org/")
+    reposList$Src <- c(CRAN = srcPackageURLOnCRAN)
     reposList$Reg <- repos
   } else {
     installPkgNamesList$Reg <- installPkgNames
@@ -1282,7 +1282,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (internetExists("cannot install packages from CRAN")) {
     warn <- NULL
     Map(installPkgNames = installPkgNamesList, repos = reposList,
-        function(installPkgNamesList, repos) {
+        function(installPkgNames, repos) {
 
           installPackagesQuoted <-
             quote(do.call(install.packages,
@@ -1457,7 +1457,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   if (any(grepl("--build", c(dots, install.packagesArgs))))
     copyTarball(installPkgNames, TRUE)
 
-  updateInstalled(pkgDT[Package == installPkgNames], installPkgNames, warnings())
+  pkgDT <- updateInstalled(pkgDT[Package == installPkgNames], installPkgNames, warnings())
 }
 
 installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
@@ -1589,8 +1589,9 @@ installRequire <- function(requireHome = getOption("Require.Home")) {
 
 toPkgDT <- function(pkgDT, deepCopy = FALSE) {
   if (!is.data.table(pkgDT)) {
+    pkgDT <- rmExtraSpaces(pkgDT)
     pkgDT <- if (deepCopy)
-      data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
+      data.table(Package = extractPkgName(pkgDT), packageFullName = pkgDT)
     else
       toDT(Package = extractPkgName(pkgDT), packageFullName = pkgDT)
   }
@@ -1985,3 +1986,12 @@ internetExists <- function(mess = "") {
 sourcePkgs <- function (additional = NULL)
   c("igraph", "rgeos", "rgdal", "terra", "sf", "units", "stringfish",
     "qs", "sp", "Rcpp", "RcppParallel", "cpp11", "lwgeom", additional)
+
+srcPackageURLOnCRAN <- "https://cloud.r-project.org/"
+
+stripHTTPAddress <- function(addr) {
+  addr <- gsub("https://(.+)", "\\1", unname(addr))
+  addr <- gsub("/$", "", unname(addr))
+
+  addr
+}

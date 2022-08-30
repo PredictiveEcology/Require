@@ -98,6 +98,9 @@ trimVersionNumber <- function(pkgs) {
   }
 }
 
+rmExtraSpaces <- function(string) {
+  gsub(" {2, }", " ", string)
+}
 .grepVersionNumber <- " *\\(.*"
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
