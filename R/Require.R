@@ -255,6 +255,9 @@ Require <- function(packages, packageVersionFile,
   allrepos <- c(repos, getOption("repos"))
   allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
   opts <- options(repos = allrepos)
+
+  Ncpus <- getOption("Ncpus")
+  if (is.null(Ncpus)) opts <- append(opts, options(Ncpus = 16))
   on.exit({
     options(opts)}
     , add = TRUE)
