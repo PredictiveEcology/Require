@@ -132,6 +132,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
         # notCorrectVersions[repoLocation != "GitHub" & is.na(AvailableVersion),
         #                    AvailableVersion := "10000000"]
+        if (is.null(notCorrectVersions$versionSpec)) {
+          notCorrectVersions[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
+                                    inequality = NA)]
+        } 
         notCorrectVersions[repoLocation != "GitHub",
                            compareVersionAvail := {
                              v <- !is.na(AvailableVersion)
@@ -145,10 +149,12 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                              v[v1] <- .evalV(.parseV(text = paste(compareVersionAvail[v1], inequality[v1], "0")))
                              v
                            }]
+        
         notCorrectVersions[Package %in% .basePkgs, correctVersionAvail := TRUE]
-
+        
         takenOffCran <- is.na(notCorrectVersions$inequality) &
-          !(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) &
+          (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
+              is.na(notCorrectVersions$AvailableVersion)) &
           !notCorrectVersions$Package %in% .basePkgs
         takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
 
@@ -165,7 +171,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
 
       # do Older Versions
-      needOlder <- notCorrectVersions$correctVersionAvail == FALSE # & grepl("==|<=|<", notCorrectVersions$inequality)
+      needOlder <- notCorrectVersions$correctVersionAvail == FALSE 
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
       if (any(needOlderNotGH)) {
 
@@ -236,7 +242,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
             if (any(aa$needLaterDate)) {
               names(pkg) <- pkg
-              browser()
               areTheyArchived <- lapply(pkg, function(pk) {
                 uu <- url(paste0("https://cran.r-project.org/package=", pk))
                 on.exit(try(close(uu), silent = TRUE))
