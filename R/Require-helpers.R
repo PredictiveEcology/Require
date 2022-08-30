@@ -627,7 +627,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
     if (is(warn, "warnings")) {
       warn <- names(warn)
     }
-    warnOut <- unlist(lapply(installPkgNames, function(ip) grepl(ip, warn) || grepl(ip, warn[[1]])))
+    warnOut <- unlist(lapply(installPkgNames, function(ip) any(grepl(ip, warn)) || grepl(ip, warn[[1]])))
     if (isTRUE(any(!warnOut) || length(warnOut) == 0 || all(is.na(warnOut))) &&
         all(is.null(warn) )) {
       set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
@@ -1386,27 +1386,32 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                    else
                      break
                  }
+                 if (!is(a, "try-error")) {
 
                  ipa <- modifyList2(install.packagesArgs, dots,
                                     list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
-                 messages <- c()
-                 warnings1 <- c()
-                 withCallingHandlers(
-                   do.call(install.packages, append(list(p), ipa)),
-                   message = function(mess) {
-                     messages <<- c(messages, mess)
-                   },
-                   warning = function(w) {
-                     warnings1 <<- c(warnings1, w)
-                   })
-                 installedVers <- try(DESCRIPTIONFileVersionV(
-                   file.path(.libPaths()[1], p, "DESCRIPTION"), purge = TRUE))
-                 if (!identical(installedVers, installVersions[onMRAN])) {
-                   message("-- incorrect version installed from MRAN; trying CRAN Archive")
-                   onMRAN <- FALSE
+                   messages <- c()
+                   warnings1 <- c()
+                   withCallingHandlers(
+                     do.call(install.packages, append(list(p), ipa)),
+                     message = function(mess) {
+                       messages <<- c(messages, mess)
+                     },
+                     warning = function(w) {
+                       warnings1 <<- c(warnings1, w)
+                     })
+                   installedVers <- try(DESCRIPTIONFileVersionV(
+                     file.path(.libPaths()[1], p, "DESCRIPTION"), purge = TRUE))
+                   if (!identical(installedVers, installVersions[onMRAN])) {
+                     message("-- incorrect version installed from MRAN; trying CRAN Archive")
+                     onMRAN <- FALSE
+                   } else {
+                     if (any(grepl("cannot open URL.*bin.*Not Found", unlist(warnings1))))
+                       message("MRAN had the necessary version, but not the binary for this R version")
+                   }
                  } else {
-                   if (any(grepl("cannot open URL.*bin.*Not Found", unlist(warnings1))))
-                     message("MRAN had the necessary version, but not the binary for this R version")
+                   onMRAN <- FALSE
+                   return(onMRAN)
                  }
                })
 
