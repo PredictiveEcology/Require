@@ -135,7 +135,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         if (is.null(notCorrectVersions$versionSpec)) {
           notCorrectVersions[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
                                     inequality = NA)]
-        } 
+        }
         notCorrectVersions[repoLocation != "GitHub",
                            compareVersionAvail := {
                              v <- !is.na(AvailableVersion)
@@ -149,9 +149,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                              v[v1] <- .evalV(.parseV(text = paste(compareVersionAvail[v1], inequality[v1], "0")))
                              v
                            }]
-        
+
         notCorrectVersions[Package %in% .basePkgs, correctVersionAvail := TRUE]
-        
+
         takenOffCran <- is.na(notCorrectVersions$inequality) &
           (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
               is.na(notCorrectVersions$AvailableVersion)) &
@@ -171,7 +171,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
       }
 
       # do Older Versions
-      needOlder <- notCorrectVersions$correctVersionAvail == FALSE 
+      needOlder <- notCorrectVersions$correctVersionAvail == FALSE
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
       if (any(needOlderNotGH)) {
 
@@ -1280,6 +1280,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   }
 
   if (internetExists("cannot install packages from CRAN")) {
+    warn <- NULL
     Map(installPkgNames = installPkgNamesList, repos = reposList,
         function(installPkgNamesList, repos) {
 
@@ -1288,7 +1289,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                           # using ap meant that it was messing up the src vs bin paths
                           append(list(installPkgNames, repos = repos), ipa)))
 
-          warn <- withCallingHandlers({
+          warn <<- withCallingHandlers({
             out <- eval(installPackagesQuoted)
           }, warning = function(condition) {
             if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
