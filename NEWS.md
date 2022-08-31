@@ -1,9 +1,9 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
-version 0.1.0.9000
+version 0.1.1
 ==============
 ## enhancements
-* none
+* can now use `pak` if `options("Require.usepak" = TRUE)` and there are no version specifications (i.e., if a user specifies e.g., `Require("reproducible (<= 1.2.9))`, then the non-`pak` approach will be used)
 
 ## bugfixes
 * fixed an error installing certain GitHub packages

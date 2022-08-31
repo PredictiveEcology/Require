@@ -474,23 +474,30 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
   else
     aa <- deps
   bb <- list()
-  cc <- lapply(pkgs, function(x) character())
 
-  firsts <- unlist(lapply(aa, function(ps) {
-    if (length(ps) == 0 || all(ps %in% .basePkgs))
-      "first"
-    else
-      "later"
-  }))
-  aaa <- split(aa, firsts)
-  aa <- aaa$later
+  # firsts <- unlist(lapply(aa, function(ps) {
+  #   if (length(ps) == 0 || all(ps %in% .basePkgs))
+  #     "first"
+  #   else
+  #     "later"
+  # }))
+  # aaa <- split(aa, firsts)
+  # aa <- aaa$later
 
   aa <- checkCircular(aa)
+  cc <- lapply(aa, function(x) character())
+  dd <- lapply(cc, function(x) 0)
 
 
   if (length(aa) > 1) {
     lengths <- lengths(aa)
     aa <- aa[order(lengths)]
+    cc <- cc[order(lengths)]
+    dd <- lapply(cc, function(x) 0)
+
+    ddIndex <- 0
+    priorsBeingInstalled <- priorsAlreadyInstalled <- character()
+
     if (isTRUE(topoSort)) {
       notInOrder <- TRUE
       isCorrectOrder <- logical(length(aa))
@@ -508,14 +515,28 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
           if (isCorrectOrder) {
             # bb[names(aa)[j]] <- list(overlapPkgs)
             cc[j] <- list(overlapPkgs)
+            priorsBeingInstalled <- vapply(dd, function(x) if (is.numeric(x)) x == ddIndex else FALSE, logical(1))
+            priorsBeingInstalled <- extractPkgName(names(priorsBeingInstalled)[priorsBeingInstalled])
+            overlapPkgsAdditional <- intersect(overlapPkgs, priorsBeingInstalled)
+            if (length(overlapPkgsAdditional)) {
+              ddIndex <- ddIndex + 1
+              priorsAlreadyInstalled <- vapply(dd, function(x) if (is.numeric(x)) x < ddIndex else FALSE, logical(1))
+              priorsAlreadyInstalled <- extractPkgName(names(priorsAlreadyInstalled)[priorsAlreadyInstalled])
+              # priorDeps <- union(priorDeps, overlapPkgs)
+            } #else {
+              #priorsBeingInstalled <- c(priorsBeingInstalled, pkgNameNames[j])
+            #}
+            dd[j] <- list(ddIndex)
+
             newOrd <- c(newOrd, j)
-            i <- i + 1
+            # i <- i + 1
             break
           }
         }
       }
       aa <- aa[newOrd]
       cc <- cc[newOrd]
+      dd <- dd[newOrd]
     }
   }
 
@@ -524,7 +545,8 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
   } else {
     cc
   }
-  out <- append(aaa$first, out)
+  # out <- append(aaa$first, out)
+  attr(out, "installSafeGroups") <- dd
 
   return(out)
 }

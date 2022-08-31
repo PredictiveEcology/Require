@@ -252,298 +252,331 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
-  allrepos <- c(repos, getOption("repos"))
-  allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
-  opts <- options(repos = allrepos)
-
-  Ncpus <- getOption("Ncpus")
-  if (is.null(Ncpus)) opts <- append(opts, options(Ncpus = 16))
-  on.exit({
-    options(opts)}
-    , add = TRUE)
-
-  origDTThreads <- data.table::setDTthreads(1)
-  on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
-
-  purge <- dealWithCache(purge)
-  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
-  which <- whichToDILES(doDeps)
-
+  hasVersionNumberSpec <- !identical(trimVersionNumber(packages), packages)
+  wantpak <- requireNamespace("pak") && isTRUE(getOption("Require.usepak", TRUE))
   libPaths <- checkLibPaths(libPaths = libPaths)
-  # if (missing(libPaths))
-  #   libPaths <- .libPaths()
-  suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone)})
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
 
-  if (!missing(packageVersionFile)) {
-    packages <- data.table::fread(packageVersionFile)
-    # if  (!any(packages$Package == "Require")) {
-    #   # Doesn't list Require
-    #   packages <- rbindlist(list(packages,
-    #                              data.table(Package = "Require", LibPath = .libPaths()[1],
-    #                                         Version = as.character(packageVersion("Require")))),
-    #                         fill = TRUE, use.names = TRUE)
-    # }
-    packages <- packages[!packages$Package %in% .basePkgs]
-    uniqueLibPaths <- unique(packages$LibPath)
-    if (length(uniqueLibPaths) > 1) {
-      dt <- data.table(
-        libPathInSnapshot = uniqueLibPaths,
-        newLibPaths = normPath(c(
-          libPaths[1],
-          file.path(
-            libPaths[1],
-            gsub(":", "", uniqueLibPaths[-1])
-          )
-        ))
-      )
-      message(
-        "packageVersionFile is covering more than one library; installing packages in reverse order; ",
-        "also -- .libPaths() will be altered to be\n"
-      )
-      messageDF(dt)
-      callArgs <- as.list(match.call())[-1]
-      out <- Map(
-        lib = rev(dt$libPathInSnapshot),
-        newLib = rev(dt$newLibPaths), function(lib, newLib) {
-          tf <- tempfile2("RequireSnapshot")
-          packages <- packages[packages$LibPath == lib]
-          data.table::fwrite(packages, file = tf)
-          callArgs[["packageVersionFile"]] <- tf
-          callArgs[["libPaths"]] <- newLib
-          callArgs[["standAlone"]] <- TRUE
-          out <- do.call(Require, args = callArgs)
+  if (wantpak && hasVersionNumberSpec)
+    message("Cannot use pak because version numbers are specified")
+  if (wantpak && !hasVersionNumberSpec) {
+    out <- try(pak::pkg_install(packages, lib = libPaths[1], dependencies = doDeps, ...))
+    if (is(out, "try-error")) {
+      if (grepl("Can't find package", out)) {
+        missingPkg <- gsub(".*package called (.+)\\..+", "\\1", out)
+        if (length(missingPkg)) {
+          message("pak failed, possibly due to archived package on CRAN; trying non-pak... ")
+          opts <- options("Require.usepak" = FALSE)
+          out33 <- Require(missingPkg, require = FALSE, ...)
+          if (isTRUE(out33)) {
+            options(opts)
+            packagesInner <- setdiff(packages, missingPkg)
+            out44 <- Require(packagesInner, require = FALSE, ...)
+          }
         }
-      )
-      out <- unlist(out)
-      setLibPaths(dt$newLibPaths, standAlone = TRUE)
-      message(" to echo the multiple paths in ", packageVersionFile)
+      }
+    }
+    packages <- setNames(packages, packages)
+    out <- if (isTRUE(require))
+      vapply(packages, require, character.only = TRUE, FUN.VALUE = logical(1))
+    else
+      logical()
 
-      if (isTRUE(require)) {
-        return(out)
+  } else {
+
+
+    allrepos <- c(repos, getOption("repos"))
+    allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
+    opts <- options(repos = allrepos)
+
+    Ncpus <- getOption("Ncpus")
+    if (is.null(Ncpus)) opts <- append(opts, options(Ncpus = 16))
+    on.exit({
+      options(opts)}
+      , add = TRUE)
+
+    origDTThreads <- data.table::setDTthreads(1)
+    on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
+
+    purge <- dealWithCache(purge)
+    which <- whichToDILES(doDeps)
+
+    # if (missing(libPaths))
+    #   libPaths <- .libPaths()
+    suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone)})
+
+    if (!missing(packageVersionFile)) {
+      packages <- data.table::fread(packageVersionFile)
+      # if  (!any(packages$Package == "Require")) {
+      #   # Doesn't list Require
+      #   packages <- rbindlist(list(packages,
+      #                              data.table(Package = "Require", LibPath = .libPaths()[1],
+      #                                         Version = as.character(packageVersion("Require")))),
+      #                         fill = TRUE, use.names = TRUE)
+      # }
+      packages <- packages[!packages$Package %in% .basePkgs]
+      uniqueLibPaths <- unique(packages$LibPath)
+      if (length(uniqueLibPaths) > 1) {
+        dt <- data.table(
+          libPathInSnapshot = uniqueLibPaths,
+          newLibPaths = normPath(c(
+            libPaths[1],
+            file.path(
+              libPaths[1],
+              gsub(":", "", uniqueLibPaths[-1])
+            )
+          ))
+        )
+        message(
+          "packageVersionFile is covering more than one library; installing packages in reverse order; ",
+          "also -- .libPaths() will be altered to be\n"
+        )
+        messageDF(dt)
+        callArgs <- as.list(match.call())[-1]
+        out <- Map(
+          lib = rev(dt$libPathInSnapshot),
+          newLib = rev(dt$newLibPaths), function(lib, newLib) {
+            tf <- tempfile2("RequireSnapshot")
+            packages <- packages[packages$LibPath == lib]
+            data.table::fwrite(packages, file = tf)
+            callArgs[["packageVersionFile"]] <- tf
+            callArgs[["libPaths"]] <- newLib
+            callArgs[["standAlone"]] <- TRUE
+            out <- do.call(Require, args = callArgs)
+          }
+        )
+        out <- unlist(out)
+        setLibPaths(dt$newLibPaths, standAlone = TRUE)
+        message(" to echo the multiple paths in ", packageVersionFile)
+
+        if (isTRUE(require)) {
+          return(out)
+        } else {
+          return(invisible(out))
+        }
+        packages[, LibPath := .libPaths()[1]]
+      }
+      if (NROW(packages)) {
+        set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
       } else {
-        return(invisible(out))
+        character()
       }
-      packages[, LibPath := .libPaths()[1]]
-    }
-    if (NROW(packages)) {
-      set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
-    } else {
-      character()
-    }
-    if (any(grep("github", tolower(colnames(packages))))) {
-      haveGit <- nchar(packages[["GithubSHA1"]]) > 0
-      if (sum(haveGit, na.rm = TRUE)) {
-        packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1))]
+      if (any(grep("github", tolower(colnames(packages))))) {
+        haveGit <- nchar(packages[["GithubSHA1"]]) > 0
+        if (sum(haveGit, na.rm = TRUE)) {
+          packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1))]
+        }
       }
+      packages <- packages$Package
+      which <- NULL
+      install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
+      install.packagesArgs["dependencies"] <- FALSE
+      require <- FALSE
+      oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
+      Sys.setenv(R_REMOTES_UPGRADE = "never")
+      on.exit(
+        {
+          Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)
+        },
+        add = TRUE
+      )
+      message("Using ", packageVersionFile, "; setting `require = FALSE`")
     }
-    packages <- packages$Package
-    which <- NULL
-    install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
-    install.packagesArgs["dependencies"] <- FALSE
-    require <- FALSE
-    oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
-    Sys.setenv(R_REMOTES_UPGRADE = "never")
     on.exit(
       {
-        Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)
+        suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))
       },
       add = TRUE
     )
-    message("Using ", packageVersionFile, "; setting `require = FALSE`")
-  }
-  on.exit(
-    {
-      suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))
-    },
-    add = TRUE
-  )
 
-  # Rm base packages -- this will happen in getPkgDeps if that is run
-  if (NROW(packages)) {
+    # Rm base packages -- this will happen in getPkgDeps if that is run
+    if (NROW(packages)) {
 
-    # Some package names are not derived from their GitHub repo names -- user can supply named packages
-    origPackagesHaveNames <- nchar(names(packages)) > 0
-    if (any(origPackagesHaveNames)) {
-      packages <- packages[order(names(packages), decreasing = TRUE)]
-    }
-    dups <- duplicated(packages)
-    packages <- packages[!dups] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
-    origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
-    packagesOrig <- packages
-    packageNamesOrig <- packages
+      # Some package names are not derived from their GitHub repo names -- user can supply named packages
+      origPackagesHaveNames <- nchar(names(packages)) > 0
+      if (any(origPackagesHaveNames)) {
+        packages <- packages[order(names(packages), decreasing = TRUE)]
+      }
+      dups <- duplicated(packages)
+      packages <- packages[!dups] # (unique removes names) sometimes people pass identical packages -- only <10s microseconds
+      origPackagesHaveNames <- nchar(names(packages)) > 0 # redo -- changed order
+      packagesOrig <- packages
+      packageNamesOrig <- packages
 
-    if (any(origPackagesHaveNames)) {
-      packageNamesOrig[origPackagesHaveNames] <- packagesOrig[origPackagesHaveNames]
-    }
-    packagesOrder <- seq(packagesOrig)
-    names(packagesOrder) <- extractPkgName(packageNamesOrig)
+      if (any(origPackagesHaveNames)) {
+        packageNamesOrig[origPackagesHaveNames] <- packagesOrig[origPackagesHaveNames]
+      }
+      packagesOrder <- seq(packagesOrig)
+      names(packagesOrder) <- extractPkgName(packageNamesOrig)
 
-    if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-      packages <- getPkgDeps(packages, which = which, purge = purge)
-    }
+      if (length(which) && (isTRUE(install) || identical(install, "force"))) {
+        packages <- getPkgDeps(packages, which = which, purge = purge)
+      }
 
 
-    # Create data.table of Require workflow
-    if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
+      # Create data.table of Require workflow
+      if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
 
-    pkgDT <- toPkgDT(packages, deepCopy = TRUE)
-    # identify the packages that were asked by user to load -- later dependencies will be in table too
-    # some cases, original was without version, but due to a dependency that does have a version,
-    # it is no longer the same as orig package name
-    pkgDT[
-      packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig),
-      packagesRequired := packagesOrder[match(Package, names(packagesOrder))]
-    ]
-    pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
-
-    if (any(origPackagesHaveNames)) {
+      pkgDT <- toPkgDT(packages, deepCopy = TRUE)
+      # identify the packages that were asked by user to load -- later dependencies will be in table too
+      # some cases, original was without version, but due to a dependency that does have a version,
+      # it is no longer the same as orig package name
       pkgDT[
-        packageFullName %in% packagesOrig[origPackagesHaveNames],
-        Package := names(packagesOrig[origPackagesHaveNames])
+        packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig),
+        packagesRequired := packagesOrder[match(Package, names(packagesOrder))]
       ]
-    }
+      pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
 
-    # Join installed with requested
-    pkgDT <- installedVers(pkgDT)
-    pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
-    pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
+      if (any(origPackagesHaveNames)) {
+        pkgDT[
+          packageFullName %in% packagesOrig[origPackagesHaveNames],
+          Package := names(packagesOrig[origPackagesHaveNames])
+        ]
+      }
 
-    if (length(packages)) {
-      if (isTRUE(install) || identical(install, "force")) {
-        pkgDT <- parseGitHub(pkgDT)
-        pkgDT <- getPkgVersions(pkgDT, install = install)
-        pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
-        pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
-        pkgDT <- rmDuplicatePkgs(pkgDT)
+      # Join installed with requested
+      pkgDT <- installedVers(pkgDT)
+      pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
+      pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
 
-        # Remove base packages from the installation step
-        pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
+      if (length(packages)) {
+        if (isTRUE(install) || identical(install, "force")) {
+          pkgDT <- parseGitHub(pkgDT)
+          pkgDT <- getPkgVersions(pkgDT, install = install)
+          pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
+          pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
+          pkgDT <- rmDuplicatePkgs(pkgDT)
 
-        if (any(!is.na(pkgDT$needInstall))) {
-          install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
-          install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
-          if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-            if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
-              ip <- .installed.pkgs()
-              isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
-              if (isTRUE(isCranCacheInstalled)) {
-                message(
-                  "Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
-                  "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
-                  "To use only crancache's caching mechanism, set both:",
-                  "\noptions('Require.RPackageCache' = NULL)\n",
-                  "Sys.setenv('CRANCACHE_DISABLE' = '')"
-                )
-                Sys.setenv("CRANCACHE_DISABLE" = TRUE)
+          # Remove base packages from the installation step
+          pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
+
+          if (any(!is.na(pkgDT$needInstall))) {
+            install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
+            install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
+            if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
+              if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
+                ip <- .installed.pkgs()
+                isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
+                if (isTRUE(isCranCacheInstalled)) {
+                  message(
+                    "Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
+                    "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
+                    "To use only crancache's caching mechanism, set both:",
+                    "\noptions('Require.RPackageCache' = NULL)\n",
+                    "Sys.setenv('CRANCACHE_DISABLE' = '')"
+                  )
+                  Sys.setenv("CRANCACHE_DISABLE" = TRUE)
+                }
+
+                checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
+                install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
+                if (getOption("Require.buildBinaries", TRUE)) {
+                  install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
+                }
+
+                install_githubArgs["destdir"] <- install.packagesArgs["destdir"]
               }
-
-              checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
-              install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
-              if (getOption("Require.buildBinaries", TRUE)) {
-                install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
-              }
-
-              install_githubArgs["destdir"] <- install.packagesArgs["destdir"]
             }
           }
+
+          pkgDT <- doInstalls(pkgDT,
+            install_githubArgs = install_githubArgs,
+            install.packagesArgs = install.packagesArgs,
+            install = install, ...
+          )
+        }
+        if ("detached" %in% colnames(pkgDT)) {
+          unloaded <- pkgDT[!is.na(detached)]
+          if (NROW(unloaded)) {
+            reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
+            relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
+            message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+            message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+          }
+        }
+        if (isTRUE(require)) {
+          pkgDT <- doLoading(pkgDT, ...)
+        }
+      }
+      out <- pkgDT[packagesRequired > 0]$loaded
+      # outOrder <- pkgDT[packagesRequired > 0]$packagesRequired
+      names(out) <- pkgDT[packagesRequired > 0]$packageFullName
+
+      # put back in original order
+      outOrder <- match(pkgDT[packagesRequired > 0]$packageFullName, packagesOrig)
+      orderNAs <- is.na(outOrder)
+      if (any(orderNAs)) {
+        outOrder[orderNAs] <- match(pkgDT[packagesRequired > 0][orderNAs]$Package, packagesOrig)
+      }
+      out <- out[order(outOrder)]
+
+      if (verbose > 0) {
+        if (verbose < 2) {
+          colsToKeep <- c(
+            "packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom",
+            "Version", "repoLocation", "correctVersion", "hasVersionSpec",
+            "correctVersionAvail"
+          )
+          colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
+          pkgDT <- pkgDT[, ..colsToKeep]
         }
 
-        pkgDT <- doInstalls(pkgDT,
-          install_githubArgs = install_githubArgs,
-          install.packagesArgs = install.packagesArgs,
-          install = install, ...
-        )
+        attr(out, "Require") <- pkgDT[]
       }
-      if ("detached" %in% colnames(pkgDT)) {
-        unloaded <- pkgDT[!is.na(detached)]
-        if (NROW(unloaded)) {
-          reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
-          relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
-          message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
-          message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+      stillNeeded <- if (!is.null(pkgDT$installResult)) {
+        if (any(grep("No available", pkgDT$installResult))) {
+          pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]
+        } else {
+          pkgDT[0]
         }
       }
-      if (isTRUE(require)) {
-        pkgDT <- doLoading(pkgDT, ...)
-      }
-    }
-    out <- pkgDT[packagesRequired > 0]$loaded
-    # outOrder <- pkgDT[packagesRequired > 0]$packagesRequired
-    names(out) <- pkgDT[packagesRequired > 0]$packageFullName
-
-    # put back in original order
-    outOrder <- match(pkgDT[packagesRequired > 0]$packageFullName, packagesOrig)
-    orderNAs <- is.na(outOrder)
-    if (any(orderNAs)) {
-      outOrder[orderNAs] <- match(pkgDT[packagesRequired > 0][orderNAs]$Package, packagesOrig)
-    }
-    out <- out[order(outOrder)]
-
-    if (verbose > 0) {
-      if (verbose < 2) {
-        colsToKeep <- c(
-          "packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom",
-          "Version", "repoLocation", "correctVersion", "hasVersionSpec",
-          "correctVersionAvail"
-        )
-        colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
-        pkgDT <- pkgDT[, ..colsToKeep]
-      }
-
-      attr(out, "Require") <- pkgDT[]
-    }
-    stillNeeded <- if (!is.null(pkgDT$installResult)) {
-      if (any(grep("No available", pkgDT$installResult))) {
-        pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]
-      } else {
-        pkgDT[0]
-      }
-    }
-    if (NROW(stillNeeded)) {
-      message(
-        "Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking ",
-        "information and thus will not be installed. ",
-        "These may have been installed locally from source, or are on another ",
-        "repository system, such as BioConductor:"
-      )
-      messageDF(stillNeeded[, list(Package, packageFullName, installResult)])
-    }
-    notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
-    if (sum(notCorrectly)) {
-      message("The following packages did not get installed correctly.")
-      colsToKeep2 <- c(
-        "packageFullName", "Package", "LibPath", "Version",
-        "repoLocation", "installFrom", "installResult"
-      )
-      messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
-      nonZeroExit <- grepl("had non-zero", pkgDT[notCorrectly == TRUE, ..colsToKeep2]$installResult)
-      if (any(nonZeroExit)) {
-        nonZ <- pkgDT[notCorrectly == TRUE, ..colsToKeep2]
+      if (NROW(stillNeeded)) {
         message(
-          "It may be necessary to simply run:\ninstall.packages(c('", paste(nonZ$Package, collapse = "', '"), "'))",
-          "\nbut this will cause a different version to be installed."
+          "Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking ",
+          "information and thus will not be installed. ",
+          "These may have been installed locally from source, or are on another ",
+          "repository system, such as BioConductor:"
         )
-        if (!missing(packageVersionFile)) {
-          message("If packages are installed as per above, you may wish to rerun pkgSnapshot('", packageVersionFile, "') to update with the new version")
+        messageDF(stillNeeded[, list(Package, packageFullName, installResult)])
+      }
+      notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
+      if (sum(notCorrectly)) {
+        message("The following packages did not get installed correctly.")
+        colsToKeep2 <- c(
+          "packageFullName", "Package", "LibPath", "Version",
+          "repoLocation", "installFrom", "installResult"
+        )
+        messageDF(pkgDT[notCorrectly == TRUE, ..colsToKeep2])
+        nonZeroExit <- grepl("had non-zero", pkgDT[notCorrectly == TRUE, ..colsToKeep2]$installResult)
+        if (any(nonZeroExit)) {
+          nonZ <- pkgDT[notCorrectly == TRUE, ..colsToKeep2]
+          message(
+            "It may be necessary to simply run:\ninstall.packages(c('", paste(nonZ$Package, collapse = "', '"), "'))",
+            "\nbut this will cause a different version to be installed."
+          )
+          if (!missing(packageVersionFile)) {
+            message("If packages are installed as per above, you may wish to rerun pkgSnapshot('", packageVersionFile, "') to update with the new version")
+          }
+        }
+      } else {
+        if (!is.null(pkgDT$needInstall)) {
+          nas <- is.na(pkgDT$needInstall)
+          if (!all(nas)) {
+            allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
+            if (length(allCorrect)) {
+              allInstalled <- pkgDT[!nas][allCorrect]
+              if (NROW(allInstalled) == 0) {
+                message("All packages appear to have installed correctly")
+              }
+            }
+          }
         }
       }
     } else {
-      if (!is.null(pkgDT$needInstall)) {
-        nas <- is.na(pkgDT$needInstall)
-        if (!all(nas)) {
-          allCorrect <- pkgDT$needInstall[!nas] == TRUE & pkgDT$installed[!nas] == FALSE
-          if (length(allCorrect)) {
-            allInstalled <- pkgDT[!nas][allCorrect]
-            if (NROW(allInstalled) == 0) {
-              message("All packages appear to have installed correctly")
-            }
-          }
-        }
-      }
+      out <- logical()
     }
-  } else {
-    out <- logical()
   }
+
 
   if (isTRUE(require)) {
     return(out)
