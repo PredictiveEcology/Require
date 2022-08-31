@@ -698,6 +698,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       toInstall[, groupCRANtogetherDif := c(0, diff(installFrom  == "CRAN"))]
       toInstall[groupCRANtogetherDif < 1, groupCRANtogetherDif := 0]
       toInstall[, groupCRANtogether := cumsum(groupCRANtogetherDif) + groupCRANtogetherChange]
+      browser()
       out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT,
                 dots = dots,
                 numPackages = NROW(toInstall), startTime = startTime,
@@ -1371,6 +1372,9 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     if (dir.exists(installedPkgs)) {
       try(unlink(installedPkgs, recursive = TRUE))
     }
+    messages <- c()
+    warnings1 <- c()
+
     out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN],
                v = installVersions[onMRAN], function(p, date, v, ...) {
                  for (attempt in 1:5) { # Try 13 days from known date of the package being available on CRAN
@@ -1388,10 +1392,8 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                  }
                  if (!is(a, "try-error")) {
 
-                 ipa <- modifyList2(install.packagesArgs, dots,
-                                    list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
-                   messages <- c()
-                   warnings1 <- c()
+                   ipa <- modifyList2(install.packagesArgs, dots,
+                                      list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
                    withCallingHandlers(
                      do.call(install.packages, append(list(p), ipa)),
                      message = function(mess) {
@@ -1402,17 +1404,18 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                      })
                    installedVers <- try(DESCRIPTIONFileVersionV(
                      file.path(.libPaths()[1], p, "DESCRIPTION"), purge = TRUE))
+                   outInner <- NULL
                    if (!identical(installedVers, installVersions[onMRAN])) {
                      message("-- incorrect version installed from MRAN; trying CRAN Archive")
-                     onMRAN <- FALSE
+                     outInner <- FALSE
                    } else {
                      if (any(grepl("cannot open URL.*bin.*Not Found", unlist(warnings1))))
                        message("MRAN had the necessary version, but not the binary for this R version")
                    }
                  } else {
-                   onMRAN <- FALSE
-                   return(onMRAN)
+                   outInner <- FALSE
                  }
+                 return(outInner)
                })
 
 
@@ -1420,38 +1423,42 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
     out <- unlist(out)
     if (length(out)) {
-      lapply(out, warning)
-      pkgDT[Package == toInstall$Package, installResult := unlist(out)[[1]]]
+      if (length(warnings1)) {
+        pkgDT[Package == toInstall$Package, installResult := unlist(warnings1)[[1]]]
+      } else {
+        pkgDT[Package == toInstall$Package, installResult := unlist(out)[[1]]]
+      }
       onMRAN <- FALSE
     }
                }
   if (any(!onMRAN)) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
     cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
+    errorMess <- list()
+    warn <- list()
     out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
-      warn <- list()
       p <- file.path(cranArchivePath, p)
       dots$type <- "source" # must be a source
       ipa <- modifyList2(install.packagesArgs, dots, list(repos = NULL))
-      warn <- withCallingHandlers({
-        out <- do.call(install.packages,
+      withCallingHandlers({
+        do.call(install.packages,
                        # using ap meant that it was messing up the src vs bin paths
                        append(list(unname(p)), ipa))
         },
         error = function(e) {
-          e$message
+          errorMess <<- append(errorMess, list(e$message))
         },
         warning = function(w) {
-          w
-          withRestarts("muffleWarnings")
+          warn <<- append(warn, list(w$message))
+          invokeRestart("muffleWarning")
         }
+
       )
-      warn
     })
-    out <- unlist(out)
-    if (length(out)) {
-      warning(out[[1]])
-      pkgDT[Package %in% toInstall$Package, installResult := unlist(out)[[1]]]
+    warn <- unlist(warn)
+    if (length(warn)) {
+      warning(warn)
+      pkgDT[Package %in% toInstall$Package, installResult := unlist(warn)]
     }
   }
   if (any(grepl("--build", c(dots, install.packagesArgs))))
