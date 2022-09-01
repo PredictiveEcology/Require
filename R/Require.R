@@ -526,7 +526,7 @@ Require <- function(packages, packageVersionFile,
           colsToKeep <- c(
             "packageFullName", "Package", "installed", "loadOrder", "loaded", "installFrom",
             "Version", "repoLocation", "correctVersion", "hasVersionSpec",
-            "correctVersionAvail"
+            "correctVersionAvail", "installResult"
           )
           colsToKeep <- intersect(colsToKeep, colnames(pkgDT))
           pkgDT <- pkgDT[, ..colsToKeep]
