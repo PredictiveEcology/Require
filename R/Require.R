@@ -256,10 +256,15 @@ Require <- function(packages, packageVersionFile,
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   if (!missing(packages)) { # would occur when using packageVersionFile
     hasVersionNumberSpec <- !identical(trimVersionNumber(packages), packages)
-    wantpak <- requireNamespace("pak") && isTRUE(getOption("Require.usepak", TRUE))
+    wantpak <- isTRUE(getOption("Require.usepak", FALSE))
   } else {
     wantpak <- FALSE
     hasVersionNumberSpec <- FALSE
+  }
+  if (isTRUE(wantpak)) {
+    if (!requireNamespace("pak"))
+      wantpak <- FALSE
+
   }
 
   if (wantpak && hasVersionNumberSpec)
