@@ -1942,8 +1942,33 @@ rversions <- structure(list(version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
                                                                                1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141
                                          ), class = c("POSIXct", "POSIXt"), tzone = "UTC")), class = "data.frame", row.names = 108:127)
 
-rCurrentVersion <- function()
-  paste0(R.version$major, ".", gsub("\\..*", "", R.version$minor))
+#' Get or compare current R version to a known version
+#'
+#' Compares R version to a known version
+#' @param testVers A character string using format "== 4.1"
+#'   or ">= 4.1"
+#' @return
+#' If no `testVers` is supplied, then it will just return the current R version.
+#' If `testVers` is supplied, then it will return a `TRUE` or `FALSE`.
+#'
+#' @example
+#' rCurrentVersion(">= 4.1")
+rCurrentVersion <- function(testVers) {
+  curVer <- paste0(R.version$major, ".",
+                   gsub("\\..*", "", R.version$minor))
+  if (!missing(testVers)) {
+    curVerNum <- as.character(numeric_version(curVer))
+    testVers <- gsub("\\(|\\)", "", testVers) # remove parentheses, if any
+    testVers <- paste0("(", testVers, ")")    # put them back
+    testVersNum <- as.character(numeric_version(extractVersionNumber(testVers)))
+    inequ <- extractInequality(testVers)
+    comp <- compareVersion(curVerNum, testVersNum)
+    out <- eval(parse(text = paste(comp, inequ, "0")))
+  } else {
+    out <- curVer
+  }
+  out
+}
 
 urlExists <- function(url) {
   con <- url(url)
