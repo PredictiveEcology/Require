@@ -887,7 +887,7 @@ archiveVersionsAvailable <- function(package, repos) {
 
 #' GitHub specific helpers
 #'
-#' \code{install_githubV} is a vectorized \code{installGithubPackages}.
+#' \code{installGitHub} is a vectorized \code{installGithubPackages}.
 #' This will attempt to identify all dependencies of all supplied packages first,
 #' then load the packages in the correct order so that each of their dependencies
 #' are met before each is installed.
@@ -897,7 +897,7 @@ archiveVersionsAvailable <- function(package, repos) {
 #' @param dots A list of ..., e.g., list(...). Only for internal use.
 #'
 #' @return
-#' \code{install_githubV} returns a named character vector indicating packages
+#' \code{installGitHub} returns a named character vector indicating packages
 #'   successfully installed, unless the word "Failed" is returned, indicating
 #'   installation failure. The names will be the full GitHub package name,
 #'   as provided to \code{gitPkgNames} in the function call.
@@ -905,31 +905,33 @@ archiveVersionsAvailable <- function(package, repos) {
 #' @rdname GitHubTools
 #' @examples
 #' \dontrun{
-#'   install_githubV(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
+#'   installGitHub(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
 #' }
 #'
-install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dots) {
-  gitPkgNames <- toPkgDT(gitPkgNames)
-  # if (!is.data.table(gitPkgNames)) {
-  #   gitPkgNames <- data.table(Package = extractPkgName(gitPkgNames), packageFullName = c(gitPkgNames))
+installGitHub <- function(pkgDT, install_githubArgs = list(), dots = dots) {
+
+  pkgDT <- toPkgDT(pkgDT)
+  toInstall <- pkgDT[installFrom == "GitHub"]
+  # if (!is.data.table(pkgDT)) {
+  #   pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
   # }
   if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
     dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
   #  but there are weird cases where the internals of Require don't get correct
   #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
   #  which has R.oo
-  #sortedTopologically <- pkgDepTopoSort(gitPkgNames$packageFullName)
+  #sortedTopologically <- pkgDepTopoSort(pkgDT$packageFullName)
   #installPkgNames <- names(sortedTopologically)
-  installPkgNames <- gitPkgNames$packageFullName
+  installPkgNames <- toInstall$packageFullName
 
-  names(installPkgNames) <- gitPkgNames$Package
+  names(installPkgNames) <- toInstall$Package
 
-  ord <- match(extractPkgName(installPkgNames), gitPkgNames$Package)
-  gitPkgNames <- gitPkgNames[ord]
+  ord <- match(extractPkgName(installPkgNames), toInstall$Package)
+  toInstall <- toInstall[ord]
   installPkgNames <- installPkgNames[ord]
 
-  gitPkgs <- trimVersionNumber(gitPkgNames$packageFullName)
-  names(gitPkgs) <- gitPkgNames$Package
+  gitPkgs <- trimVersionNumber(toInstall$packageFullName)
+  names(gitPkgs) <- toInstall$Package
   isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
@@ -940,20 +942,22 @@ install_githubV <- function(gitPkgNames, install_githubArgs = list(), dots = dot
     ipa <- modifyList2(install_githubArgs, dots)
     for (p in gitPkgDeps2) {
       warns <- messes <- errors <- list()
-      withCallingHandlers(
-        tryCatch(do.call(installGithubPackage, append(list(p), ipa)),
-                 error=function(e) {
-                   errors <<- append(errors, list(e))
-                 }), warning=function(w) {
-                   browser()
-                   warns <<- append(warns, list(w))
-                   invokeRestart("muffleWarning")
-                 }, message = function(m) {
-                   messes <<- append(messes, list(m))
-                   invokeRestart("muffleMessage")
-                 })
+      out1 <- withCallingHandlers(
+        do.call(installGithubPackage, append(list(p), ipa)),
+        # error=function(e) {
+        #   errors <<- append(errors, list(e))
+        # },
+        warning=function(w) {
+          warns <<- append(warns, list(w))
+          invokeRestart("muffleWarning")
+          # }, message = function(m) {
+          #   messes <<- append(messes, list(m))
+          #   invokeRestart("muffleMessage")
+        })
+
       if (length(warns)) {
-      # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
+        # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
+        browser()
         if (requireNamespace("remotes")) {
           message("Require::installGithubPackage is still experimental and it failed; ",
                   "Trying remotes::install_github instead")
@@ -1448,11 +1452,11 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
 }
 
-installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
-  gitPkgNames <- toInstall[installFrom == "GitHub"]
-  out5 <- install_githubV(gitPkgNames, install_githubArgs = install_githubArgs, dots = dots)
-  out5
-}
+# installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
+#   # gitPkgNames <- toInstall[installFrom == "GitHub"]
+#   out5 <- installGitHub(gitPkgNames, install_githubArgs = install_githubArgs, dots = dots)
+#   out5
+# }
 
 installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs,
                        install_githubArgs, repos = getOption("repos")) {
