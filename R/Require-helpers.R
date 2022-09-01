@@ -123,6 +123,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
     #if (NROW(whNotCorrect)) {
     notCorrectVersions <- pkgDT#[whNotCorrect]
     takenOffCran <- FALSE # This is an object that will be modified only if in the CRAN section
+    if (is.null(notCorrectVersions$versionSpec)) {
+      notCorrectVersions[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
+                                inequality = NA)]
+    }
     if (internetExists(paste0("cannot check for available packages"))) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
@@ -132,10 +136,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
         # notCorrectVersions[repoLocation != "GitHub" & is.na(AvailableVersion),
         #                    AvailableVersion := "10000000"]
-        if (is.null(notCorrectVersions$versionSpec)) {
-          notCorrectVersions[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
-                                    inequality = NA)]
-        }
         notCorrectVersions[repoLocation != "GitHub",
                            compareVersionAvail := {
                              v <- !is.na(AvailableVersion)
