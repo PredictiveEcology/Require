@@ -1950,25 +1950,24 @@ urlExists <- function(url) {
 }
 
 internetExists <- function(mess = "") {
-  internetMightExit <- TRUE
-  if (!is.null(.pkgEnv$internetExists)) {
-    if ((Sys.time() - getOption('Require.internetExistsTimeout', 10)) < .pkgEnv$internetExists) {
-      message("Internet does not appear to exist; ", mess)
-      internetMightExit <- FALSE
+  internetMightExist <- TRUE
+  if (!is.null(.pkgEnv$internetExistsTime)) {
+    if ((Sys.time() - getOption('Require.internetExistsTimeout', 30)) < .pkgEnv$internetExistsTime) {
+        internetMightExist <- FALSE
     }
   }
-  if (internetMightExit) {
+  if (internetMightExist) {
     opts2 <- options(timeout = 2)
     on.exit(options(opts2))
-    ue <- urlExists("https://www.google.com")
+    ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
     if (isFALSE(ue)) {
-      internetMightExit <- FALSE
+      internetMightExist <- FALSE
       message("Internet does not appear to exist; ", mess, "; not re-checking internet for getOption('Require.internetExistsTimeout')",
               " which is currently ", getOption('Require.internetExistsTimeout', 10), " seconds")
-      .pkgEnv$internetExists <- Sys.time()
     }
+    .pkgEnv$internetExistsTime <- Sys.time()
   }
-  internetMightExit
+  .pkgEnv$internetExists
 }
 
 
