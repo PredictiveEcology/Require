@@ -278,7 +278,8 @@ Require <- function(packages, packageVersionFile,
     }
     packages <- setNames(packages, packages)
     out <- if (isTRUE(require))
-      vapply(packages, require, character.only = TRUE, FUN.VALUE = logical(1))
+      vapply(extractPkgName(packages), require, character.only = TRUE,
+             FUN.VALUE = logical(1))
     else
       logical()
 

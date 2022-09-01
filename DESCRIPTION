@@ -25,8 +25,8 @@ Imports:
     utils
 Suggests:
     covr,
-    pak,
     remotes,
+    pak,
     testit
 Encoding: UTF-8
 Language: en-CA
