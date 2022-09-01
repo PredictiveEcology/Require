@@ -252,10 +252,15 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
-  hasVersionNumberSpec <- !identical(trimVersionNumber(packages), packages)
-  wantpak <- requireNamespace("pak") && isTRUE(getOption("Require.usepak", TRUE))
   libPaths <- checkLibPaths(libPaths = libPaths)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  if (!missing(packages)) { # would occur when using packageVersionFile
+    hasVersionNumberSpec <- !identical(trimVersionNumber(packages), packages)
+    wantpak <- requireNamespace("pak") && isTRUE(getOption("Require.usepak", TRUE))
+  } else {
+    wantpak <- FALSE
+    hasVersionNumberSpec <- FALSE
+  }
 
   if (wantpak && hasVersionNumberSpec)
     message("Cannot use pak because version numbers are specified")

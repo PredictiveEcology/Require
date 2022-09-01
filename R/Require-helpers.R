@@ -1239,18 +1239,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     }
   }
 
-  tryInstallAgainWithoutAPCache <- function() {
-    nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
-    prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
-    val <- 0
-    val <- setNames(list(val), nm = nameOfEnvVari)
-    do.call(Sys.setenv, val)
-    prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
-    on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
-    # unlink(av3CacheFile)
-    out <- eval(installPackagesQuoted)
-  }
-
   needSomeSrc <- if (isWindows()) {
     rep(FALSE, NROW(pkgDT))
   } else {
@@ -1284,7 +1272,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
             out <- eval(installPackagesQuoted)
           }, warning = function(condition) {
             if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
-              outFromWarn <- tryInstallAgainWithoutAPCache()
+              outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
               withRestarts("muffleWarning")
             } else {
               outFromWarn <- condition
@@ -1296,7 +1284,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
               tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ",R.version.string,")")),
                        warning = function(w) w)
             } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
-              tryInstallAgainWithoutAPCache()
+              tryInstallAgainWithoutAPCache(installPackagesQuoted)
             } else {
               stop(e)
             }
@@ -1991,4 +1979,16 @@ stripHTTPAddress <- function(addr) {
   addr <- gsub("/$", "", unname(addr))
 
   addr
+}
+
+tryInstallAgainWithoutAPCache <- function(installPackagesQuoted) {
+  nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
+  prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
+  val <- 0
+  val <- setNames(list(val), nm = nameOfEnvVari)
+  do.call(Sys.setenv, val)
+  prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
+  on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
+  # unlink(av3CacheFile)
+  out <- eval(installPackagesQuoted)
 }
