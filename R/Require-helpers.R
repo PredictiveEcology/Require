@@ -1850,14 +1850,14 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
                                acct = gr$acct, br = gr$br,
-                               lib = normalizePath(libPath, winslash = "/"))
+                               lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
   } else {
     stop("Can't install packages this way because R is not on the search path")
   }
 }
 
 postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
-  file <- system.file(package = pkg, "DESCRIPTION", lib.loc = lib)
+  file <- file.path(lib, pkg, "DESCRIPTION")
   txt <- readLines(file)
   beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
   insertHere <- min(beforeTheseLines)
