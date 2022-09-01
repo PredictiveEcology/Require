@@ -1380,9 +1380,9 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                                       list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
                    withCallingHandlers(
                      do.call(install.packages, append(list(p), ipa)),
-                     message = function(mess) {
-                       messages <<- c(messages, mess)
-                     },
+                     # message = function(mess) {
+                     #   messages <<- c(messages, mess)
+                     # },
                      warning = function(w) {
                        warnings1 <<- c(warnings1, w)
                      })
@@ -1432,9 +1432,9 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
               # using ap meant that it was messing up the src vs bin paths
               append(list(unname(p)), ipa))
     },
-    error = function(e) {
-      errorMess <<- append(errorMess, list(e$message))
-    },
+    # error = function(e) {
+    #   errorMess <<- append(errorMess, list(e$message))
+    # },
     warning = function(w) {
       warn <<- append(warn, list(w$message))
       invokeRestart("muffleWarning")
@@ -1488,33 +1488,36 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   messages <- c()
   if (internetExists("cannot install packages")) {
     if (any("CRAN" %in% toInstall$installFrom))
-      withCallingHandlers(pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
-                                               repos = repos),
-                          message = function(mess) {
-                            messages <<- c(messages, mess$message)
-                          },
-                          warning = function(warn) {
-                            warnings1 <<- c(warnings1, warn$message)
-                          })
+      #withCallingHandlers(
+        pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
+                                               repos = repos)#,
+                          # message = function(mess) {
+                          #   messages <<- c(messages, mess$message)
+                          # },
+                          # warning = function(warn) {
+                          #   warnings1 <<- c(warnings1, warn$message)
+                          # })
 
     if (any("Archive" %in% toInstall$installFrom))
-      withCallingHandlers(pkgDT <- installArchive(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
-                                                  repos = repos),
-                          message = function(mess) {
-                            messages <<- c(messages, mess$message)
-                          },
-                          warning = function(warn) {
-                            warnings1 <<- c(warnings1, warn$message)
-                          })
+      #withCallingHandlers(
+        pkgDT <- installArchive(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
+                                                  repos = repos)#,
+                          # message = function(mess) {
+                          #   messages <<- c(messages, mess$message)
+                          # },
+                          # warning = function(warn) {
+                          #   warnings1 <<- c(warnings1, warn$message)
+                          # })
 
     if (any("GitHub" %in% toInstall$installFrom)) {
-      withCallingHandlers(pkgDT <- installGitHub(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs),
-                          message = function(mess) {
-                            messages <<- c(messages, mess$message)
-                          },
-                          warning = function(warn) {
-                            warnings1 <<- c(warnings1, warn$message)
-                          })
+      #withCallingHandlers(
+        pkgDT <- installGitHub(pkgDT, install_githubArgs, dots)#,
+                          # message = function(mess) {
+                          #   messages <<- c(messages, mess$message)
+                          # },
+                          # warning = function(warn) {
+                          #   warnings1 <<- c(warnings1, warn$message)
+                          # })
     }
   } else {
     pkgDT[pkgDT$packageFullName%in% toInstall$packageFullName, installFrom := "Fail"]
