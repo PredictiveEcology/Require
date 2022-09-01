@@ -2,33 +2,33 @@
 % Please edit documentation in R/Require-helpers.R
 \name{parseGitHub}
 \alias{parseGitHub}
-\alias{install_githubV}
+\alias{installGitHub}
 \title{GitHub specific helpers}
 \usage{
 parseGitHub(pkgDT)
 
-install_githubV(gitPkgNames, install_githubArgs = list(), dots = dots)
+installGitHub(pkgDT, install_githubArgs = list(), dots = dots)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a data.table
 with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 
-\item{gitPkgNames}{Character vector of package to install from GitHub}
-
 \item{install_githubArgs}{Any arguments passed to \code{install_github}}
 
 \item{dots}{A list of ..., e.g., list(...). Only for internal use.}
+
+\item{gitPkgNames}{Character vector of package to install from GitHub}
 }
 \value{
 \code{parseGitHub} returns a data.table with added columns.
 
-\code{install_githubV} returns a named character vector indicating packages
+\code{installGitHub} returns a named character vector indicating packages
 successfully installed, unless the word "Failed" is returned, indicating
 installation failure. The names will be the full GitHub package name,
 as provided to \code{gitPkgNames} in the function call.
 }
 \description{
-\code{install_githubV} is a vectorized \code{installGithubPackages}.
+\code{installGitHub} is a vectorized \code{installGithubPackages}.
 This will attempt to identify all dependencies of all supplied packages first,
 then load the packages in the correct order so that each of their dependencies
 are met before each is installed.
@@ -39,7 +39,7 @@ are met before each is installed.
 }
 \examples{
 \dontrun{
-  install_githubV(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
+  installGitHub(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
 }
 
 }
