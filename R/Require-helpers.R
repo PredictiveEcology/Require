@@ -337,9 +337,11 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
     pkgDT[needInstall == TRUE & # installed == FALSE &
             (correctVersionAvail == TRUE | is.na(correctVersionAvail)) & repoLocation == "GitHub",
           installFrom := repoLocation]
-    pkgDT[needInstall == TRUE & # installed == FALSE &
-            correctVersionAvail == FALSE,
-          `:=`(installFrom = "Fail", installResult = "No available version")]
+    whFails <- ifelse(is.na(pkgDT$correctVersionAvail), FALSE,
+                      ifelse(pkgDT$needInstall == TRUE & pkgDT$correctVersionAvail == FALSE, TRUE, FALSE))
+    pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
+    if (any(whFails)) message("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall], sep = ", "),
+                              " could not be installed because no available version\033[39m")
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
       pkgDT[needInstall == TRUE & # installed == FALSE &
               (correctVersionAvail == TRUE) &
