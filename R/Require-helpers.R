@@ -972,16 +972,16 @@ installGitHub <- function(pkgDT, install_githubArgs = list(), dots = dots) {
       #   out <- NULL
       # warn <- out
       if (length(warns)) {
-      # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
+        # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
         warning(warns)
-        gitPkgNames[packageFullName == p,
-                    installResult := warns[[1]]]
+        toInstall[packageFullName == p,
+                  installResult := warns[[1]]]
       }
-      gitPkgNames <- updateInstalled(gitPkgNames, extractPkgName(p), warns)
-      gitPkgNames
+      pkgDT <- updateInstalled(pkgDT, extractPkgName(p), warns)
+      pkgDT
     }
   }
-  gitPkgNames
+  pkgDT
 }
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
