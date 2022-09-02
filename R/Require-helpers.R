@@ -1,7 +1,7 @@
 utils::globalVariables(c(
   "Archs", "AvailableVersion", "correctVersion", "destFile", "dup", "filepath",  "github", "hasVersionSpec",
   ".I", "i.neededFiles", "inequality", "installFromFac", "installOrder", "installResult", "isGitPkg",
-  "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "newMtime",
+  "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "dayAfterPutOnCRAN",
   "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
   "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow"
 ))
@@ -155,7 +155,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         takenOffCran <- is.na(notCorrectVersions$inequality) &
           (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
               is.na(notCorrectVersions$AvailableVersion)) &
-          !notCorrectVersions$Package %in% .basePkgs
+          !notCorrectVersions$Package %in% .basePkgs & notCorrectVersions$repoLocation == "CRAN"
         takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
@@ -198,7 +198,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package",
                                           fill = TRUE, use.names = TRUE)
         # delete unwanted columns
-        set(oldAvailableVersions, NULL, c("size", "isdir", "mode", #"mtime",
+        set(oldAvailableVersions, NULL, c("size", "isdir", "mode",
                                           "ctime", "atime", "uid", "gid", "uname", "grname"),
             NULL)
         setDT(oldAvailableVersions)
@@ -223,26 +223,48 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
             currDates <- currentCRANPkgDates(unique(oldAvailableVersions$Package))
             oldAvailableVersions <- rbindlist(list(oldAvailableVersions, currDates), use.names = TRUE, fill = TRUE)
             data.table::setkeyv(oldAvailableVersions, c("Package", "mtime", "CRANVersion"))
+            colsToNAfill <- setdiff(colnames(oldAvailableVersions),
+                                    c("compareVersionAvail", "correctVersionAvail",
+                                      "archiveSource", "PackageUrl", "OlderVersionsAvailable" ,
+                                      "OlderVersionsAvailableCh", "mtime", "CRANVersion"))
+            wh <- which(is.na(oldAvailableVersions$packageFullName))
+            set(oldAvailableVersions, wh, colsToNAfill, oldAvailableVersions[wh - 1, ..colsToNAfill])
+
             bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
 
             aa <- oldAvailableVersions[
               ,{
-                list(nextRow = min(na.rm = TRUE,
+                list(nextRow = as.integer(min(na.rm = TRUE,
                                    max(.I, na.rm = TRUE),
-                                   max(.I[correctVersionAvail == TRUE & archiveSource == "Archive" &
-                                            mtime > .earliestMRANDate] + 1)),
+                                   max(.I[correctVersionAvail == TRUE & archiveSource == "Archive"# &
+                                       ]
+                                       , na.rm = TRUE))),
+                     nextVersionRow = as.integer(max(.I[correctVersionAvail == TRUE & archiveSource == "Archive"# &
+                     ], na.rm = TRUE) + 1),
                      lastRow = max(.I, na.rm = TRUE)
                 )
               }, by = Package]
 
             aa[nextRow == lastRow, needLaterDate := TRUE]
-            desiredDates <- oldAvailableVersions[aa$nextRow, list(Package, newMtime = mtime + 60*60*24)]
+            desiredDates <- oldAvailableVersions[aa$nextRow,
+                                                 list(Package,
+                                                      dayAfterPutOnCRAN = mtime + 60*60*24)]
+            desiredDateEnd <- oldAvailableVersions[aa$nextVersionRow]$mtime - 60*60*24
+            desiredDates <- data.table(desiredDates, desiredDateEnd)
             set(aa, NULL, "lastRow", NULL)
 
-
-            if (any(aa$needLaterDate)) {
-              names(pkg) <- pkg
-              areTheyArchived <- lapply(pkg, function(pk) {
+            # offCRAN <- oldAvailableVersions[, list(offCRAN = !any(!is.na(CRANVersion))), by = "Package"]
+            if (length(takenOffCranPkg)) {
+              pkgNeeded <- na.omit(aa$Package[aa$needLaterDate])
+              names(pkgNeeded) <- pkgNeeded
+              i <- 0
+              if (length(pkgNeeded) > 10)
+                message("The package versions requested do not appear on the CRAN repo supplied. ",
+                        "Checking the dates of the individual package Archives on the canonical CRAN mirror;",
+                        " This will take some time")
+              areTheyArchived <- lapply(pkgNeeded, function(pk) {
+                i <<- i + 1
+                message(i, " of ", length(pkgNeeded), ": ", pk)
                 uu <- url(paste0("https://cran.r-project.org/package=", pk))
                 on.exit(try(close(uu), silent = TRUE))
                 rl <- readLines(uu)
@@ -251,17 +273,18 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                 gsub("Archived on (.{10,10}).*", "\\1", archivedOn)
               })
               areTheyArchived <- areTheyArchived[vapply(areTheyArchived, function(x) length(x) > 0, logical(1))]
+              browser()
               latestDates <- data.table(Package = names(areTheyArchived),
                                         mtime = as.POSIXct(unlist(areTheyArchived)) - 60*24*24)
               aa <- aa[latestDates, on = "Package"]
               desiredDates <- desiredDates[aa, on = "Package"]
-              desiredDates[needLaterDate == TRUE, newMtime := mtime]
+              desiredDates[needLaterDate == TRUE, dayAfterPutOnCRAN := mtime]
               set(desiredDates, NULL, c("nextRow", "needLaterDate", "mtime"), NULL)
             }
 
 
             oldAvailableVersions <- desiredDates[bb, on = "Package"]
-            oldAvailableVersions[, mtime := newMtime]
+            oldAvailableVersions[, mtime := dayAfterPutOnCRAN]
 
             oldAvailableVersions <- oldAvailableVersions[!is.na(archiveSource)]
             oldAvailableVersions[, repoLocation := archiveSource]
@@ -1103,23 +1126,23 @@ currentCRANPkgDates <- function(pkgs) {
   }
   if (is.null(names(pkgs))) names(pkgs) <- pkgs
 
-  aa <- substring(currentCranDates, nchar("      <a href=\"") + 1, 200)
+  aa <- gsub(" *<a href=\"", "", currentCranDates)
+  # aa <- substring(currentCranDates, nchar("      <a href=\"") + 1, 200)
   bb <- unlist(lapply(paste0(pkgs, "_"), function(p) which(startsWith(aa, p))))
   currentCranDates2 <- aa[bb]
-  dd <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", currentCranDates2)
+
+  # There are at least 2 formats that come from CRAN; this covers 2 of them
+  dd2 <- gsub(paste0(".+([0-3][0-9]-[[:alpha:]]{3,3}-20[0-2][0-9]).+"), "\\1", currentCranDates2)
+  dd <- as.POSIXct(dd2, format = "%d-%b-%y")
+  if (any(is.na(dd))) {
+    dd2 <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", currentCranDates2)
+    dd <- as.POSIXct(dd2)
+  }
   ee <- gsub(paste0("^.+>[[:alnum:]\\.]+\\_(.*)\\.tar\\.gz<.*"), "\\1", currentCranDates2)
   ff <- gsub(paste0("^.+>([[:alnum:]\\.]+)\\_.*\\.tar\\.gz<.*"), "\\1", currentCranDates2)
   pkgsDateAvail <- data.table(Package = ff, date = dd, CRANVersion = ee)
 
-  # currentCranDates1 <- sapply(pkgs, function(pkg)
-  #   grep(paste0("\"", pkg, "\\_.*\\.tar\\.gz"), currentCranDates, value = TRUE))
-  #
-  #
-  # pkgsDateAvail <- lapply(currentCranDates1, function(ava)
-  #   data.table(date = unique(gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", ava)),
-  #              CRANVersion = unique(gsub(paste0("^.+>[[:alnum:]\\.]+\\_(.*)\\.tar\\.gz<.*"), "\\1", ava))))
-  # pkgsDateAvail <- rbindlist(pkgsDateAvail[sapply(pkgsDateAvail, function(x) length(x) > 0)], idcol = "Package")
-  currentCranDates <- pkgsDateAvail[, mtime := as.POSIXct(date)]
+  currentCranDates <- pkgsDateAvail[, mtime := date]
   set(currentCranDates, NULL, "date", NULL)
 
   currentCranDates
@@ -1336,8 +1359,6 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   Archive <- "Archive"
   message("installing older versions is still experimental and may cause package version conflicts")
   installPkgNames <- toInstall[installFrom == Archive]$Package
-  # sortedTopologically <- pkgDepTopoSort(installPkgNames)
-  # installPkgNames <- names(sortedTopologically)
 
   names(installPkgNames) <- installPkgNames
 
@@ -1347,80 +1368,109 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   installVersions <- toIn$OlderVersionsAvailable
 
   # warns <- list()
-  dateFromMRAN <- as.Date(gsub(" .*", "", toIn$mtime))
-  onMRAN <- isTRUE(dateFromMRAN > .earliestMRANDate) && isWindows()
+  earliestDateOnMRAN <- as.Date(gsub(" .*", "", toIn$dayAfterPutOnCRAN))
+  latestDateOnMRAN <- pmin(.latestMRANDate, as.Date(gsub(" .*", "", toIn$desiredDateEnd)))
+  onMRANvec <- earliestDateOnMRAN > .earliestMRANDate
+  earliestDateOnMRAN[!onMRANvec] <- as.Date(.earliestMRANDate) + 10
+  onMRAN <- earliestDateOnMRAN > .earliestMRANDate & ( isWindows() | isMacOSX() )
   if (any(onMRAN)) {
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
     install.packagesArgs["ignore_repo_cache"] <- TRUE
     installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onMRAN])
-    if (dir.exists(installedPkgs)) {
-      try(unlink(installedPkgs, recursive = TRUE))
+    dirsAlreadyExist <- dir.exists(installedPkgs)
+    if (any(dirsAlreadyExist)) {
+      try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
     }
-    messages <- c()
-    warnings1 <- c()
+    warnings1 <- list()
 
-    out <- Map(p = unname(installPkgNames)[onMRAN], date = dateFromMRAN[onMRAN],
-               v = installVersions[onMRAN], function(p, date, v, ...) {
-                 for (attempt in 1:5) { # Try 13 days from known date of the package being available on CRAN
+    urlsOuter <- c()
+    extension <- if (isWindows()) ".zip" else ".tgz"
+    osNameOnMRAN <- if (isWindows()) "windows" else "macosx"
+    out <- Map(p = unname(installPkgNames)[onMRAN], earliestDateMRAN = earliestDateOnMRAN[onMRAN],
+               lastestDateMRAN = latestDateOnMRAN[onMRAN],
+               v = installVersions[onMRAN], function(p, earliestDateMRAN, lastestDateMRAN, v, ...) {
+                 for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
                    rver <- rCurrentVersion()
-                   urls <- file.path("https://MRAN.revolutionanalytics.com/snapshot", date, "bin/windows/contrib", rver,
-                                     paste0(p, "_", v, ".zip"))
+                   evenOrOdd <- attempt %% 2 == 0
+                   date <- if (evenOrOdd) earliestDateMRAN else lastestDateMRAN
+                   dif <- floor(attempt/2)
+                   date <- if (evenOrOdd) date + dif else date - dif
+
+                   urls <- file.path("https://MRAN.revolutionanalytics.com/snapshot", date, "bin", osNameOnMRAN,
+                                     "contrib", rver,
+                                     paste0(p, "_", v, extension))
                    con <- url(urls)
                    on.exit(try(close(con), silent = TRUE), add = TRUE)
                    a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
                    close(con)
-                   if (is(a, "try-error"))
-                     date <- date + 1
-                   else
+                   if (is(a, "try-error")) {
+                     earliestDateOnMRAN <- earliestDateOnMRAN + 1
+                     urls <- "Fail"
+                   } else
                      break
-                 }
-                 if (!is(a, "try-error")) {
 
-                   ipa <- modifyList2(install.packagesArgs, dots,
-                                      list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
-                   withCallingHandlers(
-                     do.call(install.packages, append(list(p), ipa)),
-                     # message = function(mess) {
-                     #   messages <<- c(messages, mess)
-                     # },
-                     warning = function(w) {
-                       warnings1 <<- c(warnings1, w)
-                     })
-                   installedVers <- try(DESCRIPTIONFileVersionV(
-                     file.path(.libPaths()[1], p, "DESCRIPTION"), purge = TRUE))
-                   outInner <- NULL
-                   if (!identical(installedVers, installVersions[onMRAN])) {
-                     message("-- incorrect version installed from MRAN; trying CRAN Archive")
-                     outInner <- FALSE
-                   } else {
-                     if (any(grepl("cannot open URL.*bin.*Not Found", unlist(warnings1))))
-                       message("MRAN had the necessary version, but not the binary for this R version")
-                   }
-                 } else {
-                   outInner <- FALSE
                  }
-                 return(outInner)
+                 names(urls) <- p
+                 urlsOuter <<- c(urlsOuter, urls)
                })
+    #if (!is(a, "try-error")) {
 
+    ipa <- modifyList2(install.packagesArgs, dots)
+    #list(repos = file.path("https://MRAN.revolutionanalytics.com/snapshot", date)))
+    ipa <- append(ipa, list(repos = NULL, type = "bin"))
+
+    urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
+    urlsFail <- urlsOuter[urlsOuter == "Fail"]
+    withCallingHandlers(
+      do.call(install.packages, append(list(unname(urlsSuccess)), ipa)),
+      error = function(err) {
+        warning(err)
+      },
+      # message = function(mess) {
+      #   messages <<- c(messages, mess)
+      # },
+      warning = function(w) {
+        ww <- list(w)
+        warnings1 <<- append(warnings1, ww)
+      })
+    installedVers <- try(DESCRIPTIONFileVersionV(
+      file.path(.libPaths()[1], names(urlsSuccess), "DESCRIPTION"), purge = TRUE))
+
+    onMRANAfter <- urlsOuter != "Fail"
+    out <- installedVers == installVersions[onMRANAfter]
+    if (!all(onMRANAfter)) {
+      message("-- incorrect version installed from MRAN for ",
+              paste(names(urlsFail), collapse = ", "),"; trying CRAN Archive (as source). ",
+              "Alternatively, try to manually increment the required version number to next version?")
+    } else {
+      if (any(grepl("cannot open URL.*bin.*Not Found", unlist(warnings1))))
+        message("MRAN had the necessary version, but not the binary for this R version")
+    }
 
     install.packagesArgs["ignore_repo_cache"] <- origIgnoreRepoCache
 
     out <- unlist(out)
-    if (length(out)) {
+    if (sum(!out)) {
+      wh <- match(names(out), pkgDT$Package)
       if (length(warnings1)) {
-        pkgDT[Package == toInstall$Package, installResult := unlist(warnings1)[[1]]]
-      } else {
-        pkgDT[Package == toInstall$Package, installResult := unlist(out)[[1]]]
+        whWarnings <- match(names(warnings1), pkgDT$Package)
+        pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x[[1]]))]
       }
+      pkgDT[wh, installResult := c("not installed", "installed")[unlist(out) + 1]]
       onMRAN <- FALSE
     }
-               }
+    pkgDT <- updateInstalled(pkgDT, names(urlsSuccess), out)
+    onMRAN <- onMRANAfter
+
+  }
+
   if (any(!onMRAN)) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
     cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
     errorMess <- list()
     warn <- list()
     p <- toIn$PackageUrl[!onMRAN]
+    installPkgNamesArchiveOnly <- toIn$Package[!onMRAN]
     # out <- Map(p = toIn$PackageUrl[!onMRAN], v = installVersions[!onMRAN], function(p, v, ...) {
     p <- file.path(cranArchivePath, p)
     dots$type <- "source" # must be a source
@@ -1447,11 +1497,12 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       warning(warn)
       pkgDT[Package %in% toInstall$Package, installResult := unlist(warn)]
     }
+    pkgDT <- updateInstalled(pkgDT, installPkgNamesArchiveOnly, warn)
   }
   if (any(grepl("--build", c(dots, install.packagesArgs))))
     copyTarball(installPkgNames, TRUE)
 
-  pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
+  pkgDT
 }
 
 # installGitHub <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
@@ -1724,6 +1775,9 @@ isWindows <- function() {
   tolower(Sys.info()["sysname"]) == "windows"
 }
 
+isMacOSX <- function()
+  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+
 warningCantInstall <- function(pkgs) {
   warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
           "-----\n",
@@ -1861,7 +1915,11 @@ postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
   txt <- readLines(file)
   beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
   insertHere <- min(beforeTheseLines)
-  sha <- getSHAfromGitHub(acct, repo, br)
+  sha <- if (grepl("[[:alnum:]]{40,40}", br)) { # it is already a sha -- no need to find from head
+    br
+  } else {
+    getSHAfromGitHub(acct, repo, br)
+  }
   newTxt <-
     paste("RemoteType: github
     RemoteHost: api.github.com
@@ -1918,6 +1976,7 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
 
 getSHAfromGitHub <- function(acct, repo, br) {
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
+  # shaPathWithCommit <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
   sha <- suppressWarnings(readLines(urlConn))
@@ -1932,6 +1991,7 @@ getSHAfromGitHub <- function(acct, repo, br) {
 }
 
 .earliestMRANDate <- "2015-06-06"
+.latestMRANDate <- Sys.Date() - 45
 
 rversions <- structure(list(version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
                                          "3.5.3", "3.6.0", "3.6.1", "3.6.2", "3.6.3", "4.0.0", "4.0.1",
@@ -2025,3 +2085,4 @@ tryInstallAgainWithoutAPCache <- function(installPackagesQuoted) {
   # unlink(av3CacheFile)
   out <- eval(installPackagesQuoted)
 }
+
