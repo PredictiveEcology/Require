@@ -979,8 +979,10 @@ installGitHub <- function(pkgDT, install_githubArgs = list(), dots = dots) {
           #   messes <<- append(messes, list(m))
           #   invokeRestart("muffleMessage")
         })
+      warns <- lapply(warns, function(w) grep("in use and will not be", w$message,
+                                              invert = TRUE, value = TRUE))
 
-      if (length(warns)) {
+      if (length(unlist(warns))) {
         # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
         browser()
         if (requireNamespace("remotes")) {
