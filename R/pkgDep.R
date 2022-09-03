@@ -1,6 +1,6 @@
 utils::globalVariables(c(
   "atLeastOneWithVersionSpec", "Current", "GithubRepo", "GithubSHA1", "GithubUsername",
-  "hasVers", "maxVersionSpec", "mtime", "newMtime", "newPackageFullName", "PackageTrimmed"
+  "hasVers", "maxVersionSpec", "mtime", "newPackageFullName", "PackageTrimmed"
 ))
 
 #' Determine package dependencies
