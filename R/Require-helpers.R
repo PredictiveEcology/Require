@@ -933,10 +933,10 @@ archiveVersionsAvailable <- function(package, repos) {
 #'   installGitHub(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
 #' }
 #'
-installGitHub <- function(pkgDT, install_githubArgs = list(), dots = dots) {
+installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = dots) {
 
   pkgDT <- toPkgDT(pkgDT)
-  toInstall <- pkgDT[installFrom == "GitHub"]
+  toInstall <- toInstall[installFrom == "GitHub"]
   # if (!is.data.table(pkgDT)) {
   #   pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
   # }
@@ -1001,7 +1001,7 @@ installGitHub <- function(pkgDT, install_githubArgs = list(), dots = dots) {
       if (length(warns)) {
         # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
         warning(warns)
-        toInstall[packageFullName == p,
+        pkgDT[packageFullName == p,
                   installResult := warns[[1]]]
       }
       pkgDT <- updateInstalled(pkgDT, extractPkgName(p), warns)
@@ -1564,7 +1564,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
 
     if (any("GitHub" %in% toInstall$installFrom)) {
       #withCallingHandlers(
-        pkgDT <- installGitHub(pkgDT, install_githubArgs, dots)#,
+        pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots)#,
                           # message = function(mess) {
                           #   messages <<- c(messages, mess$message)
                           # },
