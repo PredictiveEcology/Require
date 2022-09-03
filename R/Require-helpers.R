@@ -2090,7 +2090,8 @@ tryInstallAgainWithoutAPCache <- function(installPackagesQuoted) {
 
 dealWithViolations <- function(pkgSnapshotObj) {
   dd <- pkgSnapshotObj
-  ff <- ifelse(!is.na(dd$GithubRepo), paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
+  ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
+               paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
   gg <- pkgDep(ff, recursive = TRUE)
   hh <- sort(unique(gsub(" ", "", gsub("\n", "", unname(unlist(gg))))))
   ii <- data.table::data.table(packageNameFull = hh,
