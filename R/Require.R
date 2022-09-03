@@ -318,13 +318,8 @@ Require <- function(packages, packageVersionFile,
 
     if (!missing(packageVersionFile)) {
       packages <- data.table::fread(packageVersionFile)
-      # if  (!any(packages$Package == "Require")) {
-      #   # Doesn't list Require
-      #   packages <- rbindlist(list(packages,
-      #                              data.table(Package = "Require", LibPath = .libPaths()[1],
-      #                                         Version = as.character(packageVersion("Require")))),
-      #                         fill = TRUE, use.names = TRUE)
-      # }
+
+      packages <- dealWithViolations(packages)
       packages <- packages[!packages$Package %in% .basePkgs]
       uniqueLibPaths <- unique(packages$LibPath)
       if (length(uniqueLibPaths) > 1) {
