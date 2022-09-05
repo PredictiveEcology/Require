@@ -1984,6 +1984,7 @@ getSHAfromGitHub <- function(acct, repo, br) {
   sha <- suppressWarnings(readLines(urlConn))
   sha <- strsplit(sha, "},")[[1]]
   sha <- grep(paste0("\\b", br, "\\b"), sha, value = TRUE)
+  if (exists("aaaa")) browser()
   sha <- strsplit(sha, ":")[[1]]
   shaLine <- grep("sha", sha) + 1
   shaLine <- strsplit(sha[shaLine], ",")[[1]][1]
