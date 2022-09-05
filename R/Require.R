@@ -267,10 +267,17 @@ Require <- function(packages, packageVersionFile,
 
   }
 
-  if (wantpak && hasVersionNumberSpec)
-    message("Cannot use pak because version numbers are specified")
-  if (wantpak && !hasVersionNumberSpec) {
-    out <- try(pak::pkg_install(packages, lib = libPaths[1], dependencies = doDeps, ...))
+  #if (wantpak && hasVersionNumberSpec)
+  #  message("Cannot use pak because version numbers are specified")
+  if (wantpak){#} && !hasVersionNumberSpec) {
+    if (hasVersionNumberSpec)
+      warnings("pak was requested, but version number requirements are part of the ",
+               "packages or dependencies to install; pak does not deal with version ",
+               "numbers. Removing all version number requirements and simply installing ",
+               "latest versions of everything...")
+    out <- try(pak::pkg_install(trimVersionNumber(packages),
+                                lib = libPaths[1],
+                                dependencies = doDeps, ...))
     if (is(out, "try-error")) {
       if (grepl("Can't find package", out)) {
         missingPkg <- gsub(".*package called (.+)\\..+", "\\1", out)
