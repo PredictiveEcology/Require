@@ -1289,7 +1289,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     reposList$Reg <- repos
   }
 
-  if (internetExists("cannot install packages from CRAN")) {
+  if (internetExists("cannot install packages from CRAN because internet appears unavailable")) {
     warn <- NULL
     Map(installPkgNames = installPkgNamesList, repos = reposList,
         function(installPkgNames, repos) {
