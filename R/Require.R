@@ -491,11 +491,10 @@ Require <- function(packages, packageVersionFile,
               }
             }
           }
-
           pkgDT <- doInstalls(pkgDT,
-            install_githubArgs = install_githubArgs,
-            install.packagesArgs = install.packagesArgs,
-            install = install, ...
+                              install_githubArgs = install_githubArgs,
+                              install.packagesArgs = install.packagesArgs,
+                              install = install, ...
           )
         }
         if ("detached" %in% colnames(pkgDT)) {

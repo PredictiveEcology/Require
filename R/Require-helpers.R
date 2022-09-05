@@ -232,7 +232,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
 
             bb <- oldAvailableVersions[correctVersionAvail == TRUE & archiveSource == "Archive"]
 
-            aa <- oldAvailableVersions[
+            suppressWarnings(aa <- oldAvailableVersions[
               ,{
                 list(nextRow = as.integer(min(na.rm = TRUE,
                                    max(.I, na.rm = TRUE),
@@ -243,7 +243,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                      ], na.rm = TRUE) + 1),
                      lastRow = max(.I, na.rm = TRUE)
                 )
-              }, by = Package]
+              }, by = Package])
 
             aa[nextRow == lastRow, needLaterDate := TRUE]
             desiredDates <- oldAvailableVersions[aa$nextRow,
@@ -2103,7 +2103,7 @@ dealWithViolations <- function(pkgSnapshotObj) {
   ii <- data.table::data.table(packageNameFull = hh,
                                Package = extractPkgName(hh),
                                DepVersion = extractVersionNumber(hh))
-  ii[, maxVers := max(DepVersion, na.rm = TRUE), by = "Package"]
+  suppressWarnings(ii[, maxVers := max(DepVersion, na.rm = TRUE), by = "Package"])
   ii[, keep := DepVersion == maxVers, by = "Package"]
   data.table::setorderv(ii, c("Package", "keep"), na.last = TRUE, order = -1L)
   ii <- ii[, .SD[1], by = "Package"]
