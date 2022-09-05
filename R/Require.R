@@ -314,7 +314,7 @@ Require <- function(packages, packageVersionFile,
 
     # if (missing(libPaths))
     #   libPaths <- .libPaths()
-    suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone)})
+    suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
 
     if (!missing(packageVersionFile)) {
       packages <- data.table::fread(packageVersionFile)

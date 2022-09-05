@@ -57,11 +57,16 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
                         updateRprofile = getOption("Require.updateRprofile", FALSE),
                         exact = FALSE) {
   oldLibPaths <- .libPaths()
-
   if (missing(libPaths)) {
     return(checkMissingLibPaths(libPaths, updateRprofile))
   } ## End missing
   libPaths <- checkLibPaths(libPaths, exact = exact)
+
+  if (rCurrentVersion(">= 4.2")) { # now correct behaviour; remaining parts unnecessary
+    .libPaths(libPaths, include.site = !standAlone)
+    return(oldLibPaths)
+  }
+
   #libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
   if (!is.null(updateRprofile)) {
     setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
