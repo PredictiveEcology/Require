@@ -1905,7 +1905,7 @@ postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
     getSHAfromGitHub(acct, repo, br)
   }
   newTxt <-
-    paste("RemoteType: github
+    paste0("RemoteType: github
     RemoteHost: api.github.com
     RemoteRepo: ",pkg,"
     RemoteUsername: ",acct,"
