@@ -2041,9 +2041,13 @@ rCurrentVersion <- function(testVers) {
 urlExists <- function(url) {
   con <- url(url)
   on.exit(try(close(con), silent = TRUE), add = TRUE)
-  a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
-  close(con)
-  ret <- if (is(a, "try-error")) FALSE else TRUE
+  for (i in 1:5) {
+    a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
+    close(con)
+    ret <- if (is(a, "try-error")) FALSE else TRUE
+    if (isTRUE(ret))
+      break
+  }
   ret
 }
 
