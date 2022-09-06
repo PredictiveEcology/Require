@@ -7,7 +7,7 @@
 \usage{
 parseGitHub(pkgDT)
 
-installGitHub(pkgDT, install_githubArgs = list(), dots = dots)
+installGitHub(pkgDT, toInstall, install_githubArgs = list(), dots = dots)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a data.table

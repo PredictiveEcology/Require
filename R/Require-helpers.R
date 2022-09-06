@@ -2051,8 +2051,8 @@ internetExists <- function(mess = "") {
     ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
     if (isFALSE(ue)) {
       internetMightExist <- FALSE
-      message("Internet does not appear to exist; ", mess, "; not re-checking internet for getOption('Require.internetExistsTimeout')",
-              " which is currently ", getOption('Require.internetExistsTimeout', 10), " seconds")
+      message("\033[32mInternet does not appear to exist; ", mess, "; \nnot re-checking internet for getOption('Require.internetExistsTimeout')",
+              " which is currently ", getOption('Require.internetExistsTimeout', 10), " seconds\033[39m")
     }
     .pkgEnv$internetExistsTime <- Sys.time()
   }
