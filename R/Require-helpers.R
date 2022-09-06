@@ -515,7 +515,7 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
     }
     #if (is.null(out)) {
       if (length(f) == 1) {
-        lines <- try(readLines(f))
+        lines <- try(readLines(f), silent = TRUE)
         if (is(lines, "try-error")) {
           warning(lines)
           lines <- character()
@@ -1541,36 +1541,15 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   messages <- c()
   if (internetExists("cannot install packages")) {
     if (any("CRAN" %in% toInstall$installFrom))
-      #withCallingHandlers(
         pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                                                repos = repos)#,
-                          # message = function(mess) {
-                          #   messages <<- c(messages, mess$message)
-                          # },
-                          # warning = function(warn) {
-                          #   warnings1 <<- c(warnings1, warn$message)
-                          # })
 
     if (any("Archive" %in% toInstall$installFrom))
-      #withCallingHandlers(
         pkgDT <- installArchive(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                                                   repos = repos)#,
-                          # message = function(mess) {
-                          #   messages <<- c(messages, mess$message)
-                          # },
-                          # warning = function(warn) {
-                          #   warnings1 <<- c(warnings1, warn$message)
-                          # })
 
     if (any("GitHub" %in% toInstall$installFrom)) {
-      #withCallingHandlers(
         pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots)#,
-                          # message = function(mess) {
-                          #   messages <<- c(messages, mess$message)
-                          # },
-                          # warning = function(warn) {
-                          #   warnings1 <<- c(warnings1, warn$message)
-                          # })
     }
   } else {
     pkgDT[pkgDT$packageFullName%in% toInstall$packageFullName, installFrom := "Fail"]
@@ -2010,6 +1989,10 @@ rversions <- structure(list(version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
                                                                                1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141
                                          ), class = c("POSIXct", "POSIXt"), tzone = "UTC")), class = "data.frame", row.names = 108:127)
 
+rversion <- function() {
+  paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
+}
+
 #' Get or compare current R version to a known version
 #'
 #' Compares R version to a known version
@@ -2019,11 +2002,12 @@ rversions <- structure(list(version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
 #' If no `testVers` is supplied, then it will just return the current R version.
 #' If `testVers` is supplied, then it will return a `TRUE` or `FALSE`.
 #'
+#' @export
 #' @example
 #' rCurrentVersion(">= 4.1")
 rCurrentVersion <- function(testVers) {
-  curVer <- paste0(R.version$major, ".",
-                   gsub("\\..*", "", R.version$minor))
+  curVer <- rversion() #paste0(R.version$major, ".",
+                   # gsub("\\..*", "", R.version$minor))
   if (!missing(testVers)) {
     curVerNum <- as.character(numeric_version(curVer))
     testVers <- gsub("\\(|\\)", "", testVers) # remove parentheses, if any

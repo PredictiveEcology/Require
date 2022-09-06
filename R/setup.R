@@ -1,6 +1,3 @@
-rversion <- function() {
-  paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
-}
 
 #' Path to (package) cache directory
 #'
