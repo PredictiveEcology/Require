@@ -2110,3 +2110,19 @@ dealWithViolations <- function(pkgSnapshotObj) {
   set(dd, NULL, c("DepVersion"), NULL)
   dd[]
 }
+
+installPackagesSystem <- function(pkg, args, libPath) {
+  opts2 <- append(args,
+                  list(pkg,
+                       #repos = NULL,
+                       lib = normalizePath(libPath, winslash = "/")))
+  theCharacters <- unlist(lapply(opts2, is.character))
+  opts2[theCharacters] <- paste0("'", opts2[theCharacters], "'")
+  hasName <- names(opts2) != ""
+  out2 <- paste("Rscript -e \"do.call(install.packages, list(",
+                paste(opts2[!hasName], ", ",
+                      paste(names(opts2)[hasName], sep = " = ", opts2[hasName], collapse = ", "),"))\""))
+  out <- system(out2, intern = TRUE)
+  return(out)
+
+}
