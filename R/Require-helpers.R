@@ -1423,23 +1423,22 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
     urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
     urlsFail <- urlsOuter[urlsOuter == "Fail"]
+
     withCallingHandlers(
-      do.call(install.packages, append(list(unname(urlsSuccess)), ipa)),
-      error = function(err) {
-        warning(err)
-      },
-      # message = function(mess) {
-      #   messages <<- c(messages, mess)
-      # },
+        do.call(install.packages, append(list(unname(urlsSuccess)), ipa)),
       warning = function(w) {
         ww <- list(w)
+        pack <- names(urlsSuccess)[unlist(lapply(names(urlsSuccess), function(pak) grepl(pak, w$message)))]
+        names(ww) <- pack
         warnings1 <<- append(warnings1, ww)
       })
-    installedVers <- try(DESCRIPTIONFileVersionV(
-      file.path(.libPaths()[1], names(urlsSuccess), "DESCRIPTION"), purge = TRUE))
+    installedVers <- suppressWarnings(try(DESCRIPTIONFileVersionV(
+      file.path(.libPaths()[1], names(urlsSuccess), "DESCRIPTION"), purge = TRUE),
+      silent = TRUE))
 
     onMRANAfter <- urlsOuter != "Fail"
     out <- installedVers == installVersions[onMRANAfter]
+    names(out) <- names(urlsSuccess)
     if (!all(onMRANAfter)) {
       message("-- incorrect version installed from MRAN for ",
               paste(names(urlsFail), collapse = ", "),"; trying CRAN Archive (as source). ",
@@ -1452,17 +1451,21 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     install.packagesArgs["ignore_repo_cache"] <- origIgnoreRepoCache
 
     out <- unlist(out)
-    if (sum(!out)) {
+    thoseThatSucceeded <- out %in% TRUE # there are NAs if not installed; FALSE if version doesn't match
+    names(thoseThatSucceeded) <- names(out)
+    if (sum(!thoseThatSucceeded, na.rm = TRUE)) {
       wh <- match(names(out), pkgDT$Package)
       if (length(warnings1)) {
         whWarnings <- match(names(warnings1), pkgDT$Package)
-        pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x[[1]]))]
+        pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x$message))]
       }
       pkgDT[wh, installResult := c("not installed", "installed")[unlist(out) + 1]]
-      onMRAN <- FALSE
+      message("Failed to install binaries of ",
+              paste(names(thoseThatSucceeded)[!thoseThatSucceeded], collapse = ", "),
+              "; trying src versions")
     }
-    pkgDT <- updateInstalled(pkgDT, names(urlsSuccess), out)
-    onMRAN <- onMRANAfter
+    pkgDT <- updateInstalled(pkgDT, names(thoseThatSucceeded)[!thoseThatSucceeded], out)
+    onMRAN <- thoseThatSucceeded
 
   }
 
