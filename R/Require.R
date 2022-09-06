@@ -451,6 +451,13 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- installedVers(pkgDT)
       pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
       pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
+      if (isTRUE(standAlone)) {
+        # Remove any packages that are not in .libPaths()[1], i.e., the main R library
+        notInLibPaths1 <- (!pkgDT$Package %in% .basePkgs) &
+          (!normPath(pkgDT$LibPath) %in% normPath(.libPaths()[1]))
+        if (any(notInLibPaths1))
+          pkgDT[notInLibPaths1, installed := FALSE]
+      }
 
       if (length(packages)) {
         if (isTRUE(install) || identical(install, "force")) {
