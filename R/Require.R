@@ -96,7 +96,8 @@ utils::globalVariables(c(
 #'   inside `installGitHubPackage`.
 #' @param install.packagesArgs List of optional named arguments, passed to `install.packages`.
 #' @param standAlone Logical. If `TRUE`, all packages will be installed to and loaded from
-#'   the `libPaths` only.
+#'   the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE USER'S `.libPaths()`, similar
+#'   to e.g., the `checkpoint` package.
 #'   If `FALSE`, then `libPath` will be prepended to `.libPaths()` during the `Require` call,
 #'   resulting in shared packages, i.e., it will include the user's default package folder(s).
 #'   This can be create dramatically faster installs if the user has a substantial number of
@@ -395,12 +396,13 @@ Require <- function(packages, packageVersionFile,
       )
       message("Using ", packageVersionFile, "; setting `require = FALSE`")
     }
-    on.exit(
-      {
-        suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))
-      },
-      add = TRUE
-    )
+    # on.exit(
+    #   {
+    #     browser()
+    #     # suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))
+    #   },
+    #   add = TRUE
+    # )
 
     # Rm base packages -- this will happen in getPkgDeps if that is run
     if (NROW(packages)) {

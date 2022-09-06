@@ -63,7 +63,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   libPaths <- checkLibPaths(libPaths, exact = exact)
 
   if (rCurrentVersion(">= 4.2")) { # now correct behaviour; remaining parts unnecessary
-    .libPaths(libPaths, include.site = !standAlone)
+    .libPaths(libPaths[1], include.site = !standAlone)
     return(oldLibPaths)
   }
 
