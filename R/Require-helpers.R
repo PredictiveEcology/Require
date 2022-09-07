@@ -1657,7 +1657,9 @@ rmDuplicatePkgs <- function(pkgDT) {
     set(pkgDT, NULL, "duplicate", FALSE)
     pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
     if (!all(pkgDT$keep)) {
-      summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
+      colsKeep <- intersect(c("Package", "packageFullName", "keep", "installResult"),
+                colnames(pkgDT))
+      summaryOfDups <- pkgDT[dup == TRUE, ..colsKeep]
       setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
       messageDF(summaryOfDups)
     }
