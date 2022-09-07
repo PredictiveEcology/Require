@@ -1149,7 +1149,9 @@ currentCRANPkgDates <- function(pkgs) {
 
 installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
   installFromCur <- "Local"
-  installPkgNames <- toInstall[installFrom == installFromCur]$Package
+  installPackage <- toInstall[installFrom == installFromCur]$Package
+  names(installPackage) <- installPackage
+  installPkgNames <- installPackage
 
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
   # installPkgNames <- names(sortedTopologically)
@@ -1168,10 +1170,11 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
 
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
 
+  warnings1 <- list()
   warn <- lapply(installPkgNamesBoth, function(installPkgNames) {
     # Deal with "binary" mumbo jumbo
-    type <- c("source", "binary")[endsWith(installPkgNames, "zip") + 1]
-    isBin <- isBinary(installPkgNames)
+    isBin <- all(isBinary(installPkgNames))
+    type <- c("source", "binary")[isBin + 1]
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
@@ -1186,19 +1189,29 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
         do.call(install.packages,
                 # using ap meant that it was messing up the src vs bin paths
                 append(list(installPkgName), ipa))
-      }, warning = function(condition) condition)
+      }, warning = function(w) {
+        ww <- list(w)
+        pack <- names(installPackage)[unlist(lapply(names(installPackage),
+                                                    function(pak) grepl(pak, w$message)))]
+        names(ww) <- pack
+        warnings1 <<- append(warnings1, ww)
+        w
+        })
       )
-      if (!isBin && buildBin) copyTarball(basename(installPkgName), TRUE)
+      if (!all(isBin) && buildBin) copyTarball(basename(installPkgName), TRUE)
       warn
     })
   })
 
-  warn <- unlist(warn)
-  if (!is.null(warn)) {
-    warning(warn)
-    warn <- warn[grep("message", names(warn))]
-    pkgDT[Package == toInstall$Package, installResult := unlist(lapply(warn, function(x) x))]
+  pkgDT[, installResult := "installed"]
+  if (length(warnings1)) {
+    # wh <- match(names(warnings1), pkgDT$Package)
+    whWarnings <- match(names(warnings1), pkgDT$Package)
+    pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x$message))]
+    # pkgDT[wh, installResult := "not installed"]
   }
+
+
   pkgDT <- updateInstalled(pkgDT, toInstall$Package, warn)
   permDen <- grepl("Permission denied", names(warn))
   packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
