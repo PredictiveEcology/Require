@@ -561,7 +561,7 @@ Require <- function(packages, packageVersionFile,
         messageDF(stillNeeded[, list(Package, packageFullName, installResult)])
       }
       notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
-      if (sum(notCorrectly)) {
+      if (isTRUE(any(notCorrectly))) {
         message("The following packages did not get installed correctly.")
         colsToKeep2 <- c(
           "packageFullName", "Package", "LibPath", "Version",

@@ -1211,10 +1211,9 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     # pkgDT[wh, installResult := "not installed"]
   }
 
-
-  pkgDT <- updateInstalled(pkgDT, toInstall$Package, warn)
-  permDen <- grepl("Permission denied", names(warn))
-  packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
+  pkgDT <- updateInstalled(pkgDT, toInstall$Package, warnings1)
+  permDen <- grepl("Permission denied", sapply(warnings1, function(w) w$message))
+  packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warnings1))
   if (any(permDen)) {
     stopMess <- character()
     if (any(pkgDT[Package %in% packagesDen]$installFrom == installFromCur))
