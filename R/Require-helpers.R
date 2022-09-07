@@ -2027,7 +2027,7 @@ urlExists <- function(url) {
   on.exit(try(close(con), silent = TRUE), add = TRUE)
   for (i in 1:5) {
     a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
-    close(con)
+    try(close(con), silent = TRUE)
     ret <- if (is(a, "try-error")) FALSE else TRUE
     if (isTRUE(ret))
       break
