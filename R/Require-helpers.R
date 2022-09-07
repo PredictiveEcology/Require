@@ -724,18 +724,16 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       }
       startTime <- Sys.time()
 
-      # toInstall[, groupCRANtogetherChange := cumsum(installFrom  != "CRAN")]
-      # toInstall[, groupCRANtogetherDif := c(0, diff(installFrom  == "CRAN"))]
-      # toInstall[groupCRANtogetherDif < 1, groupCRANtogetherDif := 0]
-      # toInstall[, groupCRANtogether := cumsum(groupCRANtogetherDif) + groupCRANtogetherChange]
-      # toInstall[, groupCRANtogether := 1] # Eliot testing override -- maybe this will just work
+      if (isWindows()) { # binaries on CRAN
+        toInstall[installFrom == "CRAN", installSafeGroups := -1]
+        data.table::setorderv(toInstall, c("installSafeGroups"))
+        toInstall[, installOrder := seq(.N)]
+      }
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
-                # out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT,
                 dots = dots,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
-      # pkgDT <- rbindlist(out, fill = TRUE)
       setorderv(pkgDT, "tmpOrder")
       set(pkgDT, NULL, "tmpOrder", NULL)
     }
@@ -984,7 +982,6 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
 
       if (length(unlist(warns))) {
         # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
-        browser()
         if (requireNamespace("remotes")) {
           message("Require::installGithubPackage is still experimental and it failed; ",
                   "Trying remotes::install_github instead")
@@ -1152,7 +1149,9 @@ currentCRANPkgDates <- function(pkgs) {
 
 installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs) {
   installFromCur <- "Local"
-  installPkgNames <- toInstall[installFrom == installFromCur]$Package
+  installPackage <- toInstall[installFrom == installFromCur]$Package
+  names(installPackage) <- installPackage
+  installPkgNames <- installPackage
 
   # sortedTopologically <- pkgDepTopoSort(installPkgNames)
   # installPkgNames <- names(sortedTopologically)
@@ -1171,10 +1170,11 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
 
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
 
+  warnings1 <- list()
   warn <- lapply(installPkgNamesBoth, function(installPkgNames) {
     # Deal with "binary" mumbo jumbo
-    type <- c("source", "binary")[endsWith(installPkgNames, "zip") + 1]
-    isBin <- isBinary(installPkgNames)
+    isBin <- all(isBinary(installPkgNames))
+    type <- c("source", "binary")[isBin + 1]
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
@@ -1189,19 +1189,29 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
         do.call(install.packages,
                 # using ap meant that it was messing up the src vs bin paths
                 append(list(installPkgName), ipa))
-      }, warning = function(condition) condition)
+      }, warning = function(w) {
+        ww <- list(w)
+        pack <- names(installPackage)[unlist(lapply(names(installPackage),
+                                                    function(pak) grepl(pak, w$message)))]
+        names(ww) <- pack
+        warnings1 <<- append(warnings1, ww)
+        w
+        })
       )
-      if (!isBin && buildBin) copyTarball(basename(installPkgName), TRUE)
+      if (!all(isBin) && buildBin) copyTarball(basename(installPkgName), TRUE)
       warn
     })
   })
 
-  warn <- unlist(warn)
-  if (!is.null(warn)) {
-    warning(warn)
-    warn <- warn[grep("message", names(warn))]
-    pkgDT[Package == toInstall$Package, installResult := unlist(lapply(warn, function(x) x))]
+  pkgDT[, installResult := "installed"]
+  if (length(warnings1)) {
+    # wh <- match(names(warnings1), pkgDT$Package)
+    whWarnings <- match(names(warnings1), pkgDT$Package)
+    pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x$message))]
+    # pkgDT[wh, installResult := "not installed"]
   }
+
+
   pkgDT <- updateInstalled(pkgDT, toInstall$Package, warn)
   permDen <- grepl("Permission denied", names(warn))
   packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
@@ -1842,6 +1852,18 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
   tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
                               mustWork = FALSE, winslash = "\\")
   checkPath(tmpPath, create = TRUE)
+  # Check if it needs new install
+  alreadyExistingDESCRIPTIONFile <- file.path(libPath, gr$repo, "DESCRIPTION")
+  if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+    packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
+    shaOnGitHub <- getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br)
+    shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+    if (identical(shaLocal, shaOnGitHub)) {
+      message("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install")
+      return(invisible())
+    }
+  }
+
   out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath)
   orig <- setwd(tmpPath)
   on.exit({
@@ -1858,6 +1880,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     # cat(out1, file = "/home/emcintir/tmp.R")
     if (identical(1L, out1)) stop("")
     theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
+    packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     packageTarName <- if (interactive()) {
       versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
       paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
@@ -1887,7 +1910,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     }
     opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
-    packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
+    # packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
                                acct = gr$acct, br = gr$br,
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
@@ -1907,7 +1930,7 @@ postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
     getSHAfromGitHub(acct, repo, br)
   }
   newTxt <-
-    paste("RemoteType: github
+    paste0("RemoteType: github
     RemoteHost: api.github.com
     RemoteRepo: ",pkg,"
     RemoteUsername: ",acct,"
@@ -2032,7 +2055,7 @@ urlExists <- function(url) {
   on.exit(try(close(con), silent = TRUE), add = TRUE)
   for (i in 1:5) {
     a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
-    close(con)
+    try(close(con), silent = TRUE)
     ret <- if (is(a, "try-error")) FALSE else TRUE
     if (isTRUE(ret))
       break
