@@ -1837,6 +1837,18 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
   tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
                               mustWork = FALSE, winslash = "\\")
   checkPath(tmpPath, create = TRUE)
+  # Check if it needs new install
+  alreadyExistingDESCRIPTIONFile <- file.path(libPath, gr$repo, "DESCRIPTION")
+  if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+    packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
+    shaOnGitHub <- getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br)
+    shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+    if (identical(shaLocal, shaOnGitHub)) {
+      message("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install")
+      return(invisible())
+    }
+  }
+
   out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath)
   orig <- setwd(tmpPath)
   on.exit({
@@ -1853,6 +1865,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     # cat(out1, file = "/home/emcintir/tmp.R")
     if (identical(1L, out1)) stop("")
     theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
+    packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     packageTarName <- if (interactive()) {
       versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
       paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
@@ -1882,7 +1895,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     }
     opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
-    packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
+    # packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
                                acct = gr$acct, br = gr$br,
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
