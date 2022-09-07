@@ -1173,7 +1173,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   warnings1 <- list()
   warn <- lapply(installPkgNamesBoth, function(installPkgNames) {
     # Deal with "binary" mumbo jumbo
-    isBin <- all(isBinary(installPkgNames))
+    isBin <- all(isBinary(installPkgNames)) && (isWindows() || isMacOSX())
     type <- c("source", "binary")[isBin + 1]
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
