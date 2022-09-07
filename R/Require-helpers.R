@@ -724,18 +724,16 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       }
       startTime <- Sys.time()
 
-      # toInstall[, groupCRANtogetherChange := cumsum(installFrom  != "CRAN")]
-      # toInstall[, groupCRANtogetherDif := c(0, diff(installFrom  == "CRAN"))]
-      # toInstall[groupCRANtogetherDif < 1, groupCRANtogetherDif := 0]
-      # toInstall[, groupCRANtogether := cumsum(groupCRANtogetherDif) + groupCRANtogetherChange]
-      # toInstall[, groupCRANtogether := 1] # Eliot testing override -- maybe this will just work
+      if (isWindows()) { # binaries on CRAN
+        toInstall[installFrom == "CRAN", installSafeGroups := -1]
+        data.table::setorderv(toInstall, c("installSafeGroups"))
+        toInstall[, installOrder := seq(.N)]
+      }
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
-                # out <- by(toInstall, toInstall$groupCRANtogether, installAny, pkgDT = pkgDT,
                 dots = dots,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
-      # pkgDT <- rbindlist(out, fill = TRUE)
       setorderv(pkgDT, "tmpOrder")
       set(pkgDT, NULL, "tmpOrder", NULL)
     }
@@ -984,7 +982,6 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
 
       if (length(unlist(warns))) {
         # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
-        browser()
         if (requireNamespace("remotes")) {
           message("Require::installGithubPackage is still experimental and it failed; ",
                   "Trying remotes::install_github instead")
