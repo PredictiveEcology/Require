@@ -728,8 +728,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         data.table::setorderv(toInstall, c("installSafeGroups"))
         toInstall[, installOrder := seq(.N)]
       }
+      set(toInstall, NULL, "installSafeGroups", toInstall$installSafeGroups - min(toInstall$installSafeGroups) + 1)
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
-                dots = dots,
+                dots = dots, numGroups = max(toInstall$installSafeGroups),
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
@@ -1528,7 +1529,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 #   out5
 # }
 
-installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs,
+installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime, install.packagesArgs,
                        install_githubArgs, repos = getOption("repos")) {
   currentTime <- Sys.time()
   dft <- difftime(currentTime, startTime, units = "secs")
@@ -1540,7 +1541,10 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
   installRangeCh <- paste(installRange, collapse = ":")
-  message(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages, ". Estimated time left: ",
+  message(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages,
+          if (numGroups > 1)
+            paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,") ") else "",
+          ". Estimated time left: ",
           timeLeftAlt, "; est. finish: ", estTimeFinish, "\033[39m")
 
   if (any("Local" %in% toInstall$installFrom)) {
