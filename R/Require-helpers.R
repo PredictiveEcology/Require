@@ -266,7 +266,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                         " This will take some time")
               areTheyArchived <- lapply(pkgNeeded, function(pk) {
                 i <<- i + 1
-                message(i, " of ", length(pkgNeeded), ": ", pk)
+                # message(i, " of ", length(pkgNeeded), ": ", pk)
                 uu <- url(paste0("https://cran.r-project.org/package=", pk))
                 on.exit(try(close(uu), silent = TRUE))
                 rl <- readLines(uu)
@@ -275,7 +275,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                 gsub("Archived on (.{10,10}).*", "\\1", archivedOn)
               })
               areTheyArchived <- areTheyArchived[vapply(areTheyArchived, function(x) length(x) > 0, logical(1))]
-              browser()
               latestDates <- data.table(Package = names(areTheyArchived),
                                         mtime = as.POSIXct(unlist(areTheyArchived)) - 60*24*24)
               aa <- aa[latestDates, on = "Package"]
@@ -702,7 +701,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       toInstall <- unique(toInstall, by = c("Package"))
       pkgsCleaned <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
 
-      message("Installing: ", paste(pkgsCleaned, collapse = ", "))
+      message("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "))
       toInstall[, installOrder := seq(NROW(toInstall))]
       Package <- toInstall$Package
       names(Package) <- Package
