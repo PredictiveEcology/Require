@@ -67,7 +67,7 @@ isInstalled <- tryCatch({
   if (length(out)) TRUE else FALSE
 }, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
-out <- detachAll(c("Require", "fpCompare", "sdfd"))
+out <- detachAll(c("Require", "fpCompare", "sdfd"), dontTry = "testit")
 out <- out[names(out) != "testit"]
 expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
 keep <- intersect(names(expectedPkgs), names(out))
