@@ -1476,11 +1476,11 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
               "; trying src versions")
     }
     pkgDT <- updateInstalled(pkgDT, names(thoseThatSucceeded)[thoseThatSucceeded], out)
-    onMRAN <- thoseThatSucceeded
+    onMRAN <- urlsOuter != "Fail" # thoseThatSucceeded
 
   }
 
-  if (any(!onMRAN)) {
+  if (any(!onMRAN) ) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
     cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
     errorMess <- list()
