@@ -1205,7 +1205,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     })
   })
 
-  pkgDT[, installResult := "installed"]
+  pkgDT[Package %in% toInstall$Package, installResult := NA]
   if (length(warnings1)) {
     # wh <- match(names(warnings1), pkgDT$Package)
     whWarnings <- match(names(warnings1), pkgDT$Package)
