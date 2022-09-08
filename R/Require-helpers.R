@@ -3,7 +3,8 @@ utils::globalVariables(c(
   ".I", "i.neededFiles", "inequality", "installFromFac", "installOrder", "installResult", "isGitPkg",
   "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "dayAfterPutOnCRAN",
   "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
-  "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow"
+  "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow", "..colsToNAfill",
+  "DepVersion", "maxVers", "violations"
 ))
 
   #' @details
@@ -115,6 +116,7 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
 #'
 #' @export
 #' @importFrom utils compareVersion download.file tail
+#' @importFrom stats na.omit
 #' @importFrom data.table setkeyv
 #' @rdname Require-internals
 getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
@@ -2028,7 +2030,7 @@ rversion <- function() {
 #' If `testVers` is supplied, then it will return a `TRUE` or `FALSE`.
 #'
 #' @export
-#' @example
+#' @examples
 #' rCurrentVersion(">= 4.1")
 rCurrentVersion <- function(testVers) {
   curVer <- rversion() #paste0(R.version$major, ".",

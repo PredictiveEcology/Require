@@ -697,6 +697,7 @@ whichToDILES <- function(which) {
     files <- file.path(dirs, "DESCRIPTION")
     filesExist <- file.exists(files)
     files <- files[filesExist]
+    names(files) <- basename(dirs[filesExist])
     desc_lines <- lapply(files, function(file) DESCRIPTIONFile(file))
     versions <- DESCRIPTIONFileVersionV(desc_lines, purge = FALSE)
     deps <- if (length(which)) lapply(desc_lines, function(lines)
