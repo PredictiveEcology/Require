@@ -17,3 +17,6 @@ If \code{testVers} is supplied, then it will return a \code{TRUE} or \code{FALSE
 \description{
 Compares R version to a known version
 }
+\examples{
+rCurrentVersion(">= 4.1")
+}

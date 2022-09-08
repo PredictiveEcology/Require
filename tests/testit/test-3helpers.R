@@ -1,3 +1,4 @@
+message("\033[34m --------------------------------- Starting test-3helpers.R \033[39m")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
