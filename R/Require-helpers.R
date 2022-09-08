@@ -2060,6 +2060,8 @@ urlExists <- function(url) {
     ret <- if (is(a, "try-error")) FALSE else TRUE
     if (isTRUE(ret))
       break
+    else
+      Sys.sleep(0.1)
   }
   ret
 }
@@ -2077,12 +2079,11 @@ internetExists <- function(mess = "") {
     ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
     if (isFALSE(ue)) {
       internetMightExist <- FALSE
-      message("\033[32mInternet does not appear to exist; ", mess, "; \nnot re-checking internet for getOption('Require.internetExistsTimeout')",
-              " which is currently ", getOption('Require.internetExistsTimeout', 10), " seconds\033[39m")
+      message("\033[32mInternet does not appear to exist; proceeding anyway\033[39m")
     }
     .pkgEnv$internetExistsTime <- Sys.time()
   }
-  .pkgEnv$internetExists
+  TRUE # .pkgEnv$internetExists
 }
 
 
