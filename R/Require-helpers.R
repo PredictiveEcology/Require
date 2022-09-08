@@ -1475,7 +1475,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
               paste(names(thoseThatSucceeded)[!thoseThatSucceeded], collapse = ", "),
               "; trying src versions")
     }
-    pkgDT <- updateInstalled(pkgDT, names(thoseThatSucceeded)[!thoseThatSucceeded], out)
+    pkgDT <- updateInstalled(pkgDT, names(thoseThatSucceeded)[thoseThatSucceeded], out)
     onMRAN <- thoseThatSucceeded
 
   }
