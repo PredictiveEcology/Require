@@ -1713,6 +1713,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   names(others) <- others
   depsToUnload <- c(others, depsToUnload)
   depsToUnload <- depsToUnload[!duplicated(depsToUnload)]
+  depsToUnload <- setdiff(depsToUnload, dontTry)
 
   if (length(depsToUnload) > 0) {
     out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
