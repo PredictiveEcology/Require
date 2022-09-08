@@ -1,4 +1,4 @@
-message("\033[34m --------------------------------- Starting test-pkgDep.R \033[39m")
+message("\033[34m --------------------------------- Starting test-6pkgDep.R \033[39m")
 
 origLibPathsAllTests <- .libPaths()
 
