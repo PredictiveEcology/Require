@@ -1,4 +1,4 @@
-message("\033[34m --------------------------------- Starting test-packagesLong.R \033[39m")
+message("\033[34m --------------------------------- Starting test-5packagesLong.R \033[39m")
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
