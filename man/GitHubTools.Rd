@@ -10,14 +10,14 @@ parseGitHub(pkgDT)
 installGitHub(pkgDT, toInstall, install_githubArgs = list(), dots = dots)
 }
 \arguments{
-\item{pkgDT}{A character string with full package names or a data.table
+\item{pkgDT}{A character string with full package names or a \code{data.table}
 with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
+
+\item{toInstall}{DESCRIPTION NEEDED}
 
 \item{install_githubArgs}{Any arguments passed to \code{install_github}}
 
 \item{dots}{A list of ..., e.g., list(...). Only for internal use.}
-
-\item{gitPkgNames}{Character vector of package to install from GitHub}
 }
 \value{
 \code{parseGitHub} returns a data.table with added columns.

@@ -7,17 +7,15 @@ utils::globalVariables(c(
   "DepVersion", "maxVers", "violations"
 ))
 
-  #' @details
+#' @details
 #' \code{parseGitHub} turns the single character string representation into 3 or 4:
 #' \code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
 #'
 #' @return
 #' \code{parseGitHub} returns a data.table with added columns.
 #'
-#' @param pkgDT A character string with full package names or a data.table
-#'   with at least 2 columns \code{"Package"} and \code{"packageFullName"}.
-#' @rdname GitHubTools
 #' @export
+#' @rdname GitHubTools
 parseGitHub <- function(pkgDT) {
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
@@ -916,7 +914,9 @@ archiveVersionsAvailable <- function(package, repos) {
 #' then load the packages in the correct order so that each of their dependencies
 #' are met before each is installed.
 #'
-#' @param gitPkgNames Character vector of package to install from GitHub
+#' @param pkgDT A character string with full package names or a \code{data.table}
+#'   with at least 2 columns \code{"Package"} and \code{"packageFullName"}.
+#' @param toInstall DESCRIPTION NEEDED
 #' @param install_githubArgs Any arguments passed to \code{install_github}
 #' @param dots A list of ..., e.g., list(...). Only for internal use.
 #'
@@ -925,8 +925,10 @@ archiveVersionsAvailable <- function(package, repos) {
 #'   successfully installed, unless the word "Failed" is returned, indicating
 #'   installation failure. The names will be the full GitHub package name,
 #'   as provided to \code{gitPkgNames} in the function call.
+#'
 #' @export
 #' @rdname GitHubTools
+#'
 #' @examples
 #' \dontrun{
 #'   installGitHub(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
