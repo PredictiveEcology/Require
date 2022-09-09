@@ -1,5 +1,17 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.1.1.9000
+==============
+## dependencies
+* drop support for R 3.6 (R >= 4.0 are supported)
+* add `backports` dependency for R 4.0 support
+
+## enhancements
+* none
+
+## bugfixes
+* multiple fixes for certain edge cases
+
 version 0.1.1
 ==============
 ## enhancements
