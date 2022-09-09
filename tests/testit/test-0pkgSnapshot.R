@@ -75,9 +75,7 @@ if (interactive()) {
     }
     # THere might be more than one version
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
     localBinsFull <- dts
-    #localBinsFull <- c(dts, rems)
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
         system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
@@ -88,17 +86,14 @@ if (interactive()) {
                     .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
 
-    # oldDir <- getwd()
     if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
     Require:::installRequire(getOption("Require.Home"))
-    # on.exit(setwd(oldDir))
-    # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
-    #setwd(oldDir)
 
     st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
     print(st)
 
     # Test
+    browser()
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")
     here <- pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths())

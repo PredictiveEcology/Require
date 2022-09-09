@@ -253,57 +253,11 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
+  if (verbose == 0 || verbose %in% FALSE) {
+    install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = TRUE))
+  }
   libPaths <- checkLibPaths(libPaths = libPaths)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
-  if (!missing(packages)) { # would occur when using packageVersionFile
-    hasVersionNumberSpec <- !identical(trimVersionNumber(packages), packages)
-    wantpak <- isTRUE(getOption("Require.usepak", FALSE))
-  } else {
-    wantpak <- FALSE
-    hasVersionNumberSpec <- FALSE
-  }
-  if (isTRUE(wantpak)) {
-    if (!requireNamespace("pak"))
-      wantpak <- FALSE
-
-  }
-
-  #if (wantpak && hasVersionNumberSpec)
-  #  message("Cannot use pak because version numbers are specified")
-  if (wantpak){#} && !hasVersionNumberSpec) {
-    if (hasVersionNumberSpec)
-      warnings("pak was requested, but version number requirements are part of the ",
-               "packages or dependencies to install; pak does not deal with version ",
-               "numbers. Removing all version number requirements and simply installing ",
-               "latest versions of everything...")
-    out <- try(pak::pkg_install(trimVersionNumber(packages),
-                                lib = libPaths[1],
-                                dependencies = doDeps, ...))
-    if (is(out, "try-error")) {
-      if (grepl("Can't find package", out)) {
-        missingPkg <- gsub(".*package called (.+)\\..+", "\\1", out)
-        if (length(missingPkg)) {
-          message("pak failed, possibly due to archived package on CRAN; trying non-pak... ")
-          opts <- options("Require.usepak" = FALSE)
-          out33 <- Require(missingPkg, require = FALSE, ...)
-          if (isTRUE(out33)) {
-            options(opts)
-            packagesInner <- setdiff(packages, missingPkg)
-            out44 <- Require(packagesInner, require = FALSE, ...)
-          }
-        }
-      }
-    }
-    packages <- setNames(packages, packages)
-    out <- if (isTRUE(require))
-      vapply(extractPkgName(packages), require, character.only = TRUE,
-             FUN.VALUE = logical(1))
-    else
-      logical()
-
-  } else {
-
-
     allrepos <- c(repos, getOption("repos"))
     allrepos <- allrepos[!(duplicated(names(allrepos)) & duplicated(allrepos))]
     opts <- options(repos = allrepos)
@@ -396,15 +350,7 @@ Require <- function(packages, packageVersionFile,
       )
       message("Using ", packageVersionFile, "; setting `require = FALSE`")
     }
-    # on.exit(
-    #   {
-    #     browser()
-    #     # suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE, exact = TRUE))
-    #   },
-    #   add = TRUE
-    # )
 
-    # Rm base packages -- this will happen in getPkgDeps if that is run
     if (NROW(packages)) {
 
       # Some package names are not derived from their GitHub repo names -- user can supply named packages
@@ -468,51 +414,71 @@ Require <- function(packages, packageVersionFile,
           pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
           pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
           pkgDT <- rmDuplicatePkgs(pkgDT)
-
-          # Remove base packages from the installation step
           pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
+          # pkgsForInstall <- pkgDT[pkgDT$needInstall %in% TRUE ]
+          # if (all(pkgsForInstall$installFrom %in% c("GitHub", "CRAN"))) { # can't do Archive, MRAN
+          canusepak <- usepak(packageFullName = pkgDT$packageFullName,
+                              needInstall = pkgDT$needInstall,
+                              installFrom = pkgDT$installFrom, toplevel = TRUE)
+          if (canusepak) {
+            fas <- formals(pak::pkg_install)
+            pakFormalsPassedHere <- names(list(...)) %in% names(fas)
+            if (any(pakFormalsPassedHere)) {
+              fas <- modifyList2(fas, list(...)[pakFormalsPassedHere])
+            }
+            pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
+            out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),
+                                    lib = libPaths[1],
+                                    dependencies = doDeps,
+                                    ask = eval(fas[["ask"]]),
+                                    upgrade = fas[["upgrade"]])
+            pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
+          } else {
 
-          if (any(!is.na(pkgDT$needInstall))) {
-            install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
-            install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
-            if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-              if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
-                ip <- .installed.pkgs()
-                isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
-                if (isTRUE(isCranCacheInstalled)) {
-                  message(
-                    "Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
-                    "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
-                    "To use only crancache's caching mechanism, set both:",
-                    "\noptions('Require.RPackageCache' = NULL)\n",
-                    "Sys.setenv('CRANCACHE_DISABLE' = '')"
-                  )
-                  Sys.setenv("CRANCACHE_DISABLE" = TRUE)
+            # Remove base packages from the installation step
+
+            if (any(!is.na(pkgDT$needInstall))) {
+              install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
+              install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
+              if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
+                if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
+                  ip <- .installed.pkgs()
+                  isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
+                  if (isTRUE(isCranCacheInstalled)) {
+                    message(
+                      "Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
+                      "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
+                      "To use only crancache's caching mechanism, set both:",
+                      "\noptions('Require.RPackageCache' = NULL)\n",
+                      "Sys.setenv('CRANCACHE_DISABLE' = '')"
+                    )
+                    Sys.setenv("CRANCACHE_DISABLE" = TRUE)
+                  }
+
+                  checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
+                  install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
+                  if (getOption("Require.buildBinaries", TRUE)) {
+                    install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
+                  }
+
+                  install_githubArgs["destdir"] <- install.packagesArgs["destdir"]
                 }
-
-                checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
-                install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
-                if (getOption("Require.buildBinaries", TRUE)) {
-                  install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
-                }
-
-                install_githubArgs["destdir"] <- install.packagesArgs["destdir"]
               }
             }
+            pkgDT <- doInstalls(pkgDT,
+                                install_githubArgs = install_githubArgs,
+                                install.packagesArgs = install.packagesArgs,
+                                install = install, ...
+            )
           }
-          pkgDT <- doInstalls(pkgDT,
-                              install_githubArgs = install_githubArgs,
-                              install.packagesArgs = install.packagesArgs,
-                              install = install, ...
-          )
-        }
-        if ("detached" %in% colnames(pkgDT)) {
-          unloaded <- pkgDT[!is.na(detached)]
-          if (NROW(unloaded)) {
-            reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
-            relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
-            message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
-            message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+          if ("detached" %in% colnames(pkgDT)) {
+            unloaded <- pkgDT[!is.na(detached)]
+            if (NROW(unloaded)) {
+              reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
+              relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
+              message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+              message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+            }
           }
         }
         if (isTRUE(require)) {
@@ -596,7 +562,7 @@ Require <- function(packages, packageVersionFile,
     } else {
       out <- logical()
     }
-  }
+  #}
 
 
   if (isTRUE(require)) {
@@ -604,4 +570,34 @@ Require <- function(packages, packageVersionFile,
   } else {
     return(invisible(out))
   }
+}
+
+usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = FALSE) {
+
+  wantpak <- isTRUE(getOption("Require.usepak", FALSE))
+  if (!is.null(installFrom) && wantpak) {
+    wantpak <- all(installFrom[needInstall %in% TRUE] %in% c("GitHub", "CRAN"))
+    return(wantpak)
+  }
+
+  if (!missing(packageFullName)) { # would occur when using packageVersionFile
+    hasVersionNumberSpec <- !identical(trimVersionNumber(packageFullName), packageFullName)
+    wantpak <- isTRUE(getOption("Require.usepak", FALSE))
+  } else {
+    wantpak <- FALSE
+    hasVersionNumberSpec <- FALSE
+  }
+  if (isTRUE(wantpak)) {
+    if (!requireNamespace("pak"))
+      wantpak <- FALSE
+  }
+
+  if (wantpak && hasVersionNumberSpec) {
+    wantpak <- FALSE
+    if (isTRUE(toplevel))
+      message("Using hybrid install via both *pak::pkg_install* and *Require* because version numbers are specified")
+  }
+
+
+  wantpak
 }
