@@ -38,8 +38,8 @@ testit::assert({length(b[[1]]) > length(a1[[1]])})
 pkg2 <- c(pkg, "Require")
 d <- pkgDep(pkg2) # GitHub package and local packages
 testit::assert({length(d) == 2})
-# Dependencies changed... remotes removed
-testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), d$Require))})
+# Dependencies changed... remotes removed; backports added
+testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), setdiff(d$Require, "backports")))})
 
 # dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
 # testit::assert({length(setdiff(extractPkgName(d[[1]]), extractPkgName(dAlt[[1]]))) == 0})
