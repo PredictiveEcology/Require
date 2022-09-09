@@ -74,6 +74,5 @@ setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
 
 # remove the custom .libPaths()
 Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
-
 }
 }
