@@ -8,7 +8,8 @@ if (interactive()) {
   if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
   library(testit)
   origLibPathsAllTests <- .libPaths()
-  pkgVF <- file.path(tempdir2("testingA", "packageVersions.txt"))
+  tmpdir <- checkPath(tempdir2("testingA"), create = TRUE)
+  pkgVF <- file.path(tmpdir, "packageVersions.txt")
   aa <- pkgSnapshot(packageVersionFile = pkgVF)
   bb <- list()
   for (lp in unique(aa$LibPath)) {
@@ -25,7 +26,7 @@ if (interactive()) {
   data.table::fwrite(x = bb, file = pkgVF)
 
 
-  if (file.exists("packageVersions.txt")) {
+  if (file.exists(pkgVF)) {
     fileNames <- list()
     baseFN <- "packageVersions"
     tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
