@@ -113,9 +113,9 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
       bodyFn <- gsub("shim_fun", ".shim_fun", bodyFn)
       bodyFn <- gsub("oldLibPaths", ".oldLibPaths", bodyFn)
       lineWMissing <- which(grepl("missing.libPaths", bodyFn))
-      bodyFn <- bodyFn[-(lineWMissing:(lineWMissing+2))]
+      bodyFn <- bodyFn[-(lineWMissing:(lineWMissing + 2))]
       lineWRprofileToUpdate <- which(grepl("is\\.null\\(updateRprofile\\)", bodyFn))
-      bodyFn <- bodyFn[-(lineWRprofileToUpdate:(lineWRprofileToUpdate+2))]
+      bodyFn <- bodyFn[-(lineWRprofileToUpdate:(lineWRprofileToUpdate + 2))]
       bodyFn <- gsub("\\<standAlone\\>", "._standAlone", bodyFn)
       bodyFn <- gsub("\\.libPaths", "origDotlibPaths", bodyFn)
       bodyFn <- gsub("\\<libPaths\\>", "._libPaths", bodyFn)
@@ -134,7 +134,6 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
       cat(bodyFn, file = ".Rprofile", append = TRUE, sep = "\n")
     }
   }
-
 }
 
 checkMissingLibPaths <- function(libPaths, updateRprofile = NULL) {
@@ -190,7 +189,6 @@ checkTRUERprofile <- function(updateRprofile) {
   if (isTRUE(updateRprofile)) updateRprofile <- ".Rprofile"
   updateRprofile
 }
-
 
 prevLibPathsText <- "Previous .libPaths: "
 commentCharsForSetLibPaths <- "#### setLibPaths "
