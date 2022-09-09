@@ -699,7 +699,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       toInstall <- unique(toInstall, by = c("Package"))
       pkgsCleaned <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
 
-      message("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "))
       toInstall[, installOrder := seq(NROW(toInstall))]
       Package <- toInstall$Package
       names(Package) <- Package
@@ -728,9 +727,13 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         data.table::setorderv(toInstall, c("installSafeGroups"))
         toInstall[, installOrder := seq(.N)]
       }
-      set(toInstall, NULL, "installSafeGroups", toInstall$installSafeGroups - min(toInstall$installSafeGroups) + 1)
+      set(toInstall, NULL, "installSafeGroups", as.integer(factor(toInstall$installSafeGroups)))
+      maxGroup <- max(toInstall$installSafeGroups)
+      if (maxGroup > 1)
+        message("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "))
+
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
-                dots = dots, numGroups = max(toInstall$installSafeGroups),
+                dots = dots, numGroups = maxGroup,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
@@ -1917,7 +1920,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     }
     opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
-    # packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
                                acct = gr$acct, br = gr$br,
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
