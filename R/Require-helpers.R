@@ -4,7 +4,7 @@ utils::globalVariables(c(
   "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "dayAfterPutOnCRAN",
   "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
   "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow", "..colsToNAfill",
-  "DepVersion", "maxVers", "violations"
+  "DepVersion", "maxVers", "violations", "..colsKeep"
 ))
 
 #' @details
@@ -264,7 +264,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                         " This will take some time")
               areTheyArchived <- lapply(pkgNeeded, function(pk) {
                 i <<- i + 1
-                message(i, " of ", length(pkgNeeded), ": ", pk)
+                # message(i, " of ", length(pkgNeeded), ": ", pk)
                 uu <- url(paste0("https://cran.r-project.org/package=", pk))
                 on.exit(try(close(uu), silent = TRUE))
                 rl <- readLines(uu)
@@ -273,7 +273,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
                 gsub("Archived on (.{10,10}).*", "\\1", archivedOn)
               })
               areTheyArchived <- areTheyArchived[vapply(areTheyArchived, function(x) length(x) > 0, logical(1))]
-              browser()
               latestDates <- data.table(Package = names(areTheyArchived),
                                         mtime = as.POSIXct(unlist(areTheyArchived)) - 60*24*24)
               aa <- aa[latestDates, on = "Package"]
@@ -700,7 +699,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       toInstall <- unique(toInstall, by = c("Package"))
       pkgsCleaned <- preparePkgNameToReport(toInstall$Package, toInstall$packageFullName)
 
-      message("Installing: ", paste(pkgsCleaned, collapse = ", "))
       toInstall[, installOrder := seq(NROW(toInstall))]
       Package <- toInstall$Package
       names(Package) <- Package
@@ -729,8 +727,13 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         data.table::setorderv(toInstall, c("installSafeGroups"))
         toInstall[, installOrder := seq(.N)]
       }
+      set(toInstall, NULL, "installSafeGroups", as.integer(factor(toInstall$installSafeGroups)))
+      maxGroup <- max(toInstall$installSafeGroups)
+      if (maxGroup > 1)
+        message("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "))
+
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
-                dots = dots,
+                dots = dots, numGroups = maxGroup,
                 numPackages = NROW(toInstall), startTime = startTime,
                 install.packagesArgs = install.packagesArgs,
                 install_githubArgs = install_githubArgs, repos = repos)
@@ -1478,11 +1481,11 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
               "; trying src versions")
     }
     pkgDT <- updateInstalled(pkgDT, names(thoseThatSucceeded)[thoseThatSucceeded], out)
-    onMRAN <- thoseThatSucceeded
+    onMRAN <- urlsOuter != "Fail" # thoseThatSucceeded
 
   }
 
-  if (any(!onMRAN)) {
+  if (any(!onMRAN) ) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
     cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
     errorMess <- list()
@@ -1529,7 +1532,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 #   out5
 # }
 
-installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.packagesArgs,
+installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime, install.packagesArgs,
                        install_githubArgs, repos = getOption("repos")) {
   currentTime <- Sys.time()
   dft <- difftime(currentTime, startTime, units = "secs")
@@ -1541,7 +1544,10 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, startTime, install.p
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
   installRangeCh <- paste(installRange, collapse = ":")
-  message(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages, ". Estimated time left: ",
+  message(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages,
+          if (numGroups > 1)
+            paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,") ") else "",
+          ". Estimated time left: ",
           timeLeftAlt, "; est. finish: ", estTimeFinish, "\033[39m")
 
   if (any("Local" %in% toInstall$installFrom)) {
@@ -1670,7 +1676,9 @@ rmDuplicatePkgs <- function(pkgDT) {
     set(pkgDT, NULL, "duplicate", FALSE)
     pkgDT[is.na(keep), `:=`(keep = FALSE, installFrom = "Duplicate", duplicate = TRUE)] # Was "Fail" ...
     if (!all(pkgDT$keep)) {
-      summaryOfDups <- pkgDT[dup == TRUE, list(Package, packageFullName, keep, installResult)]
+      colsKeep <- intersect(c("Package", "packageFullName", "keep", "installResult"),
+                colnames(pkgDT))
+      summaryOfDups <- pkgDT[dup == TRUE, ..colsKeep]
       setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
       messageDF(summaryOfDups)
     }
@@ -1715,6 +1723,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
   names(others) <- others
   depsToUnload <- c(others, depsToUnload)
   depsToUnload <- depsToUnload[!duplicated(depsToUnload)]
+  depsToUnload <- setdiff(depsToUnload, dontTry)
 
   if (length(depsToUnload) > 0) {
     out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
@@ -1911,7 +1920,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
     }
     opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
-    # packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
                                acct = gr$acct, br = gr$br,
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
@@ -2060,6 +2068,8 @@ urlExists <- function(url) {
     ret <- if (is(a, "try-error")) FALSE else TRUE
     if (isTRUE(ret))
       break
+    else
+      Sys.sleep(0.1)
   }
   ret
 }
@@ -2077,12 +2087,11 @@ internetExists <- function(mess = "") {
     ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
     if (isFALSE(ue)) {
       internetMightExist <- FALSE
-      message("\033[32mInternet does not appear to exist; ", mess, "; \nnot re-checking internet for getOption('Require.internetExistsTimeout')",
-              " which is currently ", getOption('Require.internetExistsTimeout', 10), " seconds\033[39m")
+      message("\033[32mInternet does not appear to exist; proceeding anyway\033[39m")
     }
     .pkgEnv$internetExistsTime <- Sys.time()
   }
-  .pkgEnv$internetExists
+  TRUE # .pkgEnv$internetExists
 }
 
 

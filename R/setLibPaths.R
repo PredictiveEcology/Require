@@ -61,16 +61,16 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   } ## End missing
   libPaths <- checkLibPaths(libPaths, exact = exact)
 
+  if (!is.null(updateRprofile)) {
+    setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
+  }
+
   if (rCurrentVersion(">= 4.2")) { # now correct behaviour; remaining parts unnecessary
     .libPaths(libPaths[1], include.site = !standAlone)
     return(oldLibPaths)
   }
 
   #libPaths <- checkPath(normPath(libPaths), create = TRUE)#, mustWork = TRUE)
-  if (!is.null(updateRprofile)) {
-    setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
-  }
-
   shim_fun <- .libPaths
   shim_env <- new.env(parent = environment(shim_fun))
   if (isTRUE(standAlone)) {

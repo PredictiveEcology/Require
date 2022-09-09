@@ -1,3 +1,4 @@
+message("\033[34m --------------------------------- Starting test-2extract.R \033[39m")
 origLibPathsAllTests <- .libPaths()
 
 library(Require)

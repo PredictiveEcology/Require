@@ -1,4 +1,4 @@
-message("\033[34m --------------------------------- Starting test-other.R \033[39m")
+message("\033[34m --------------------------------- Starting test-4other.R \033[39m")
 
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -44,7 +44,7 @@ if (Sys.info()["user"] == "emcintir2")
           "Require.unloadNamespaces" = FALSE)
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
-                         libPaths = tempdir2(tempdir2("other"))))
+                         libPaths = tempdir2("other")))
 
 pkg <- c("data.table", "data.table")
 pkgDT <- Require:::toPkgDT(pkg)
@@ -56,7 +56,7 @@ Require:::rmDuplicatePkgs(pkgDT)
 data.table::set(pkgDT, NULL, "versionSpec", NA)
 Require:::rmDuplicatePkgs(pkgDT)
 
-out <- detachAll("data.table")
+out <- detachAll("data.table", dontTry = "testit")
 testit::assert({isTRUE(out['data.table'] == 1)})
 
 warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w) w$message)
