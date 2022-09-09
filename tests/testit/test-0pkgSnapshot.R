@@ -8,7 +8,7 @@ if (interactive()) {
   if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
   library(testit)
   origLibPathsAllTests <- .libPaths()
-  pkgVF <- "packageVersions.txt"
+  pkgVF <- file.path(tempdir2("testingA", "packageVersions.txt"))
   aa <- pkgSnapshot(packageVersionFile = pkgVF)
   bb <- list()
   for (lp in unique(aa$LibPath)) {
@@ -100,7 +100,7 @@ if (interactive()) {
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")
-    here <- pkgSnapshot("packageVersionsEliot.txt", libPaths = .libPaths())
+    here <- pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths())
     anyMissing <- there[!here, on = c("Package", "Version")]
     anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
     anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
