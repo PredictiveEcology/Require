@@ -1,10 +1,13 @@
 utils::globalVariables(c(
-  "Archs", "AvailableVersion", "correctVersion", "destFile", "dup", "filepath",  "github", "hasVersionSpec",
-  ".I", "i.neededFiles", "inequality", "installFromFac", "installOrder", "installResult", "isGitPkg",
-  "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "dayAfterPutOnCRAN",
-  "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
-  "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow", "..colsToNAfill",
-  "DepVersion", "maxVers", "violations", "..colsKeep"
+  c("..colsKeep", "..colsToNAfill", ".I", ".N", "Archs", "AvailableVersion",
+    "correctVersion", "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup",
+    "filepath", "github", "groupCRANtogether", "groupCRANtogetherChange",
+    "groupCRANtogetherDif", "hasVersionSpec", "i.neededFiles", "inequality",
+    "installFromFac", "installOrder", "installResult", "isGitPkg",
+    "keep", "keep2", "lastRow", "localFileName", "localType", "maxVers",
+    "mtime", "N", "Names", "neededFiles", "needLaterDate", "nextRow",
+    "Package", "packageFullName", "repoLocation", "tmpOrder", "type",
+    "version", "violations")
 ))
 
 #' @details
