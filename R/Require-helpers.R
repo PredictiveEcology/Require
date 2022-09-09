@@ -4,7 +4,7 @@ utils::globalVariables(c(
   "keep", "keep2", "localType", "localFileName", "mtime", ".N", "N", "Names", "neededFiles", "dayAfterPutOnCRAN",
   "Package", "packageFullName", "repoLocation", "tmpOrder", "type", "version", "groupCRANtogetherChange",
   "groupCRANtogetherDif", "groupCRANtogether", "lastRow", "needLaterDate", "nextRow", "..colsToNAfill",
-  "DepVersion", "maxVers", "violations"
+  "DepVersion", "maxVers", "violations", "..colsKeep"
 ))
 
 #' @details
