@@ -181,10 +181,12 @@ testit::assert({length(out) == 0})
 #                                 install = "force"),
 #                  error = function(x) x)
 if (interactive()) {
-  warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
-                   warning = function(x) x)
-  warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
-                   warning = function(x) x)
+  warn <- tryCatch({
+    out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
+  }, warning = function(x) x)
+  warn <- tryCatch({
+    out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
+  }, warning = function(x) x)
 }
 
 options(opt)
