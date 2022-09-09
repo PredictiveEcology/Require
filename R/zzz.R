@@ -5,8 +5,6 @@ utils::globalVariables(c(
 .pkgEnv <- new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
-  backports::import("base", c(".libPaths"))
-
   opts <- options()
   opts.Require <- RequireOptions()
   toset <- !(names(opts.Require) %in% names(opts))
