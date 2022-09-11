@@ -17,7 +17,7 @@ if (interactive()) {
     if (!all(pack %in% Require:::.basePkgs)) {
       deps <- pkgDep(pack, recursive = TRUE)
       haveNoDeps <- unlist(lapply(deps, length)) == 2
-      sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 10))
+      sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 3))
       pkgs <- c(names(deps[haveNoDeps][sam]), Require::extractPkgName(unname(unlist(deps[haveNoDeps][sam]))))
       bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
     }
