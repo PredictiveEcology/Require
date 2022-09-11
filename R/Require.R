@@ -421,18 +421,7 @@ Require <- function(packages, packageVersionFile,
                               needInstall = pkgDT$needInstall,
                               installFrom = pkgDT$installFrom, toplevel = TRUE)
           if (canusepak) {
-            fas <- formals(pak::pkg_install)
-            pakFormalsPassedHere <- names(list(...)) %in% names(fas)
-            if (any(pakFormalsPassedHere)) {
-              fas <- modifyList2(fas, list(...)[pakFormalsPassedHere])
-            }
-            pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
-            out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),
-                                    lib = libPaths[1],
-                                    dependencies = doDeps,
-                                    ask = eval(fas[["ask"]]),
-                                    upgrade = fas[["upgrade"]])
-            pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
+            pkgDT <- installByPak(pkgDT, libPaths, doDeps, ...)
           } else {
             # if (any(!is.na(pkgDT$needInstall))) {
             #   install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))

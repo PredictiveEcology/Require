@@ -2234,3 +2234,19 @@ installPackagesSystem <- function(pkg, args, libPath) {
   return(out)
 
 }
+
+
+installByPak <- function(pkgDT, libPaths, doDeps, ...) {
+  fas <- formals(pak::pkg_install)
+  pakFormalsPassedHere <- names(list(...)) %in% names(fas)
+  if (any(pakFormalsPassedHere)) {
+    fas <- modifyList2(fas, list(...)[pakFormalsPassedHere])
+  }
+  pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
+  out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),
+                          lib = libPaths[1],
+                          dependencies = doDeps,
+                          ask = eval(fas[["ask"]]),
+                          upgrade = fas[["upgrade"]])
+  pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
+}
