@@ -413,10 +413,8 @@ Require <- function(packages, packageVersionFile,
           pkgDT <- getPkgVersions(pkgDT, install = install)
           pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
           pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
-          pkgDT <- rmDuplicatePkgs(pkgDT)
+          pkgDT <- rmDuplicatePkgs(pkgDT, verbose = verbose)
           pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
-          # pkgsForInstall <- pkgDT[pkgDT$needInstall %in% TRUE ]
-          # if (all(pkgsForInstall$installFrom %in% c("GitHub", "CRAN"))) { # can't do Archive, MRAN
           canusepak <- usepak(packageFullName = pkgDT$packageFullName,
                               needInstall = pkgDT$needInstall,
                               installFrom = pkgDT$installFrom, toplevel = TRUE)

@@ -1716,10 +1716,11 @@ toDT <- function(...) {
   setDT(list(...))
 }
 
-rmDuplicatePkgs <- function(pkgDT) {
+rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
   dups <- pkgDT[installed == FALSE, .N, by = "Package"][N > 1]
   if (NROW(dups)) {
-    message("Duplicate packages are Required; discarding older, unavailable, and identifying version violations")
+    if (verbose >= 1)
+      message("Some packages are needed; multiple minimum version requirements; using most stringent")
     pkgDT <- pkgDT[dups, dup := TRUE, on = "Package"]
     pkgDT <- pkgDT[is.na(dup) | (dup == TRUE & installFrom != "Fail"), keep := TRUE]
 
@@ -1746,7 +1747,7 @@ rmDuplicatePkgs <- function(pkgDT) {
                 colnames(pkgDT))
       summaryOfDups <- pkgDT[dup == TRUE, ..colsKeep]
       setorderv(summaryOfDups, c("Package", "keep"), order = c(1,-1))
-      messageDF(summaryOfDups)
+      if (verbose >= 1) messageDF(summaryOfDups)
     }
     pkgDT[, `:=`(keep2 = NULL, keep = NULL, dup = NULL)]
   }
