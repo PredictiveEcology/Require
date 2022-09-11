@@ -684,6 +684,36 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
 #' \code{installGithub}, and \code{installCRAN}, and \code{installArchive}
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
+
+  if (any(!is.na(pkgDT$needInstall))) {
+    install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
+    install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
+    if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
+      if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
+        ip <- .installed.pkgs()
+        isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
+        if (isTRUE(isCranCacheInstalled)) {
+          message(
+            "Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
+            "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
+            "To use only crancache's caching mechanism, set both:",
+            "\noptions('Require.RPackageCache' = NULL)\n",
+            "Sys.setenv('CRANCACHE_DISABLE' = '')"
+          )
+          Sys.setenv("CRANCACHE_DISABLE" = TRUE)
+        }
+
+        checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
+        install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
+        if (getOption("Require.buildBinaries", TRUE)) {
+          install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
+        }
+
+        install_githubArgs["destdir"] <- install.packagesArgs["destdir"]
+      }
+    }
+  }
+
   if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
       (isTRUE(install) || install == "force")) {
     dots <- list(...)
