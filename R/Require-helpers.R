@@ -1380,11 +1380,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (!is.null(warn) && !canusepak) {
       warning(warn)
       pkgDT[Package %in% installPkgNames, installResult := warn$message]
-      pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
     }
-    if (canusepak) {
-      pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
-    }
+    pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
     permDen <- grepl("Permission denied", names(warn))
     packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
     if (any(permDen)) {
