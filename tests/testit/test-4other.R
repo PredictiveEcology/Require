@@ -85,7 +85,6 @@ setup(setupTestDir, RPackageCache = ccc)
 testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
 message("This is getOption('Require.RPackageCache')", getOption("Require.RPackageCache"))
-message("This is NULL")
 testit::assert(identical(getOption("Require.RPackageCache"), NULL))
 
 # reset options after setupOff()

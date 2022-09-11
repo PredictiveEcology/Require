@@ -647,7 +647,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
   ret
 }
 
-updateInstalled <- function(pkgDT, installPkgNames, warn) {
+updateInstalled <- function(pkgDT, installPkgNames, warn = NULL) {
   if (is(warn, "pkg_install_result")) {
     pkgs <- extractPkgName(warn$ref[warn$type %in% c("standard", "github")])
     pkgDT[match(installPkgNames, Package),
@@ -655,7 +655,7 @@ updateInstalled <- function(pkgDT, installPkgNames, warn) {
                installed = warn[match(installPkgNames, pkgs), "status"] == "OK")]
   } else {
     if (NROW(installPkgNames)) {
-      if (missing(warn)) warn <- warnings()
+      if (is.null(warn)) warn <- warnings()
       if (is(warn, "simpleWarning"))
         warn <- warn$message
       if (is(warn, "warnings")) {
