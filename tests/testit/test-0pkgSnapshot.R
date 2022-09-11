@@ -31,7 +31,8 @@ if (interactive()) {
     baseFN <- "packageVersions"
     tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
-    fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
+    fileNames[["fn0"]][["txt"]] <- file.path(tmpdir, paste0(baseFN, ".txt"))
+
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
     Sys.setenv("R_REMOTES_UPGRADE" = "never")
     Sys.setenv('CRANCACHE_DISABLE' = TRUE)
@@ -93,7 +94,6 @@ if (interactive()) {
     print(st)
 
     # Test
-    browser()
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")
     here <- pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths())
