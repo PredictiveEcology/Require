@@ -34,9 +34,6 @@ utils::globalVariables(c(
 #' @param depends Logical. Include packages listed in "Depends". Default \code{TRUE}.
 #' @param imports Logical. Include packages listed in "Imports". Default \code{TRUE}.
 #' @param suggests Logical. Include packages listed in "Suggests". Default \code{FALSE}.
-#' @param enhances Logical. Include packages listed in "Enhances". Default \code{FALSE}.
-#' @param remotes Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages.
-#'   Default \code{TRUE}.
 #' @param linkingTo Logical. Include packages listed in "LinkingTo". Default \code{TRUE}.
 #' @param recursive Logical. Should dependencies of dependencies be searched, recursively.
 #'                  NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.

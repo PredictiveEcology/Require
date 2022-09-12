@@ -126,11 +126,6 @@ If \code{TRUE}, then then all installed packages will be searched.
 If \code{FALSE}, the default, only packages that are currently in
 the \code{search()} path and passed in \code{pkgs} will be included
 in the possible reverse dependencies.}
-
-\item{enhances}{Logical. Include packages listed in "Enhances". Default \code{FALSE}.}
-
-\item{remotes}{Logical. Include packages listed in "Remotes". This is only relevant for GitHub packages.
-Default \code{TRUE}.}
 }
 \value{
 A possibly ordered, named (with packages as names) list where list elements
