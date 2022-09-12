@@ -1809,7 +1809,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
     dontTry <- c(dontTry, dontTryExtra)
   }
 
-  dontTry <- unique(c(c("Require", "data.table"), dontTry))
+  dontTry <- unique(c(c("Require", "data.table", "covr"), dontTry))
   didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
   dontNeedToUnload <- logical()
@@ -2055,15 +2055,11 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
   file.rename(badDirname, gsub(basename(badDirname), gr$repo, badDirname)) # it was downloaded with a branch suffix
   unlink(zipFileName)
   message(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"))
-  # possRmd <- normalizePath(winslash = "/", file.path(repoFull, paste0(gr$repo, ".Rmd")), mustWork = FALSE)
-  # if (file.exists(possRmd))
-  #   message("To run it, try: \nfile.edit('", possRmd,"')")
   return(normalizePath(repoFull))
 }
 
 getSHAfromGitHub <- function(acct, repo, br) {
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
-  # shaPathWithCommit <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
   sha <- suppressWarnings(readLines(urlConn))
