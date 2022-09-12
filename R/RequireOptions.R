@@ -31,14 +31,14 @@
 #'   \item{\code{persistentPkgEnv}}{
 #'     Default: \code{FALSE}. (ADVANCED USE) \code{Require} stashes a lot of information in a
 #'     hidden environment, located at \code{Require:::.pkgEnv}. This gets reset at each
-#'     restart of R and each reload of Require. To make the stashes more persistent, 
-#'     set this option to \code{TRUE}. A file will be placed at 
+#'     restart of R and each reload of Require. To make the stashes more persistent,
+#'     set this option to \code{TRUE}. A file will be placed at
 #'     \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
 #'   }
 #'   \item{\code{purge}}{
 #'     Default: \code{FALSE}. If set to (almost) all internal caches used by \code{Require}
-#'     will be deleted and rebuilt. This should not generally be necessary as it will 
-#'     automatically be deleted after (by default) 1 hour (set via 
+#'     will be deleted and rebuilt. This should not generally be necessary as it will
+#'     automatically be deleted after (by default) 1 hour (set via
 #'     \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
 #'   }
 #'   \item{\code{setupVerbose}}{
@@ -52,25 +52,25 @@
 #'     packages that conflict with the requested package installing via \code{Require}.
 #'     This can be complicated, resulting in broken states that can only be recovered
 #'     by restarting R. Default is to attempt to do this. \code{FALSE} will not attempt
-#'     to do this. User must deal with inability to install packages due to package already 
+#'     to do this. User must deal with inability to install packages due to package already
 #'     being loaded.
 #'   }
 #'   \item{\code{verbose}}{
-#'     Default: \code{0}. During a \code{Require}, there is a lot of information collected 
+#'     Default: \code{0}. During a \code{Require}, there is a lot of information collected
 #'     and used. With \code{verbose} set to \code{1} or \code{2}, more of this information
 #'     will be reported as an attribute attached to the return object of \code{Require}.
 #'     This may help diagnosing problems.
 #'   }
-#'   
+#'
 #' }
 #'
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL, #"~/._RPackageCache", # nolint
-       Require.RPackageCache = NULL, #"~/._RPackageCache", # nolint
+       Require.RPackageCache = RequireCacheDir(), #"~/._RPackageCache", # nolint
        Require.setupVerbose = TRUE,
-       Require.standAlone = TRUE, 
+       Require.standAlone = TRUE,
        Require.unloadNamespaces = TRUE,
        Require.updateRprofile = FALSE,
        # Require.useCranCache = NULL,
@@ -79,6 +79,6 @@ RequireOptions <- function() {
 }
 
 #   \item{\code{useCranCache}}{
-#     Default: \code{NULL}. Experimental. If \code{TRUE}, a user can try 
+#     Default: \code{NULL}. Experimental. If \code{TRUE}, a user can try
 #     to use the same cache folder as the crancache package (for binaries only). .
 #   }
