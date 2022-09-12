@@ -872,3 +872,33 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge) {
   }
   needed
 }
+
+
+dealWithCache <- function(purge, checkAge = TRUE) {
+  if (!isTRUE(purge) && isTRUE(checkAge)) {
+    purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
+    if (is.null(.pkgEnv[["startTime"]])) {
+      purge = TRUE
+    } else {
+      purgeDiff <- if (identical(purgeDiff, "")  || is.na(purgeDiff)) 3600 else purgeDiff
+      autoPurge <- purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
+      purge <- purge || autoPurge
+    }
+  }
+
+  if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
+    .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
+    .pkgEnv[["startTime"]] <- Sys.time()
+  }
+
+  if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
+  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge)
+    .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
+
+  purge
+}
+
+.grepTooManySpaces <- " {2,}"
+.grepTabCR <- "\n|\t"
+
+newPkgDepEnv <- function() new.env(parent = emptyenv())
