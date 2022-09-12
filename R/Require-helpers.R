@@ -2060,21 +2060,42 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".") {
 
 getSHAfromGitHub <- function(acct, repo, br) {
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
+  if (missing(br))
+    br <- "main"
+  masterMain <- c("main", "master")
+  if (br %in% masterMain) {
+    # possibly change order -- i.e., put user choice first
+    br <- masterMain[rev(masterMain %in% br + 1)]
+  }
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
   sha <- suppressWarnings(readLines(urlConn))
-  sha <- strsplit(sha, "},")[[1]]
-  # shaTry <- grep(paste0("\\b", br, "\\b"), sha, value = TRUE)
-  # masterMain <- c("master", "main")
-  # if (length(shaTry) == 0) {
-  #   if (isTRUE(br %in% masterMain))
-  #     shaTry <- grep(paste0("\\b", setdiff(masterMain, br), "\\b"), sha, value = TRUE)
-  # }
+  if (length(sha) > 0) {
+    # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
+    #   Was easier to collapse the individual lines, then re-split
+    sha <- paste(sha, collapse = "")
+  }
+  sha1 <- strsplit(sha, "},")[[1]] # this splits onto separate lines
 
-  sha <- strsplit(sha, ":")[[1]]
-  shaLine <- grep("sha", sha) + 1
-  shaLine <- strsplit(sha[shaLine], ",")[[1]][1]
-  sha <- gsub("[[:punct:]]+(.+)[[:punct:]]", "\\1", shaLine)
+  sha2 <- strsplit(sha1, ":")
+
+  for (branch in br) { # will be length 1 in most cases except master/main
+    whHasBr <- which(vapply(sha2, function(xx)
+      any(grepl(paste0(".+refs/.+[[:punct:]]", branch, "[[:punct:]]"), xx)), FUN.VALUE = logical(1)))
+    if (length(whHasBr) > 0) {
+      break
+    }
+  }
+
+  shas <- c("br", "acct", "repo", "shaPath", "sha", "sha1", "sha2", "shaLine", "whHasBr")
+  env <- environment();
+  shas <- shas[vapply(shas, exists, inherits = FALSE, env = env, FUN.VALUE = logical(1))]
+  shasAll <- mget(shas, inherits = FALSE)
+  saveRDS(shasAll, file = "c:/Eliot/GitHub/Require/outShaAll.rds")
+  sha3 <- sha2[[whHasBr]]
+  shaLine <- grep("sha", sha3) + 1
+  shaLine <- strsplit(sha3[shaLine], ",")[[1]][1]
+  sha <- gsub(" *[[:punct:]]+(.+)[[:punct:]] *", "\\1", shaLine)
   sha
 
 }
