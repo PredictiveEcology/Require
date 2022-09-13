@@ -2260,6 +2260,9 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
   if (any(pakFormalsPassedHere)) {
     fas <- modifyList2(fas, list(...)[pakFormalsPassedHere])
   }
+  if (!"ask" %in% pakFormalsPassedHere) {
+    fas[["ask"]] <- FALSE
+  }
   pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
   out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),
                           lib = libPaths[1],
