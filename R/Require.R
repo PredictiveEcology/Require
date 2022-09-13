@@ -424,8 +424,11 @@ Require <- function(packages, packageVersionFile,
                               needInstall = pkgDT$needInstall,
                               installFrom = pkgDT$repoLocation, toplevel = TRUE)
           if (canusepak) {
-            pkgDT <- installByPak(pkgDT, libPaths, doDeps, ...)
-          } else {
+            pakOut <- try(installByPak(pkgDT, libPaths, doDeps, ...))
+            if (is(pakOut, "try-error"))
+              canusepak <- FALSE
+          }
+          if (!canusepak) {
             pkgDT <- doInstalls(pkgDT,
                                 install_githubArgs = install_githubArgs,
                                 install.packagesArgs = install.packagesArgs,
