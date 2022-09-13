@@ -370,6 +370,8 @@ Require <- function(packages, packageVersionFile,
       packagesOrder <- seq(packagesOrig)
       names(packagesOrder) <- extractPkgName(packageNamesOrig)
 
+      packagesFullNameOrder <- packagesOrder
+      names(packagesFullNameOrder) <- packageNamesOrig
       if (length(which) && (isTRUE(install) || identical(install, "force"))) {
         packages <- getPkgDeps(packages, which = which, purge = purge)
       }
@@ -384,9 +386,11 @@ Require <- function(packages, packageVersionFile,
       # it is no longer the same as orig package name
       pkgDT[
         packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig),
-        packagesRequired := packagesOrder[match(Package, names(packagesOrder))]
+        `:=`(
+          packagesRequired = packagesOrder[match(Package, names(packagesOrder))],
+          userRequestedOrder = packagesFullNameOrder[match(packageFullName, names(packagesFullNameOrder))])
       ]
-      pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
+      pkgDT[, loadOrder := userRequestedOrder] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
 
       if (any(origPackagesHaveNames)) {
         pkgDT[
@@ -395,6 +399,7 @@ Require <- function(packages, packageVersionFile,
         ]
       }
 
+      data.table::setorderv(pkgDT, c("userRequestedOrder"), na.last = TRUE)
       # Join installed with requested
       pkgDT <- installedVers(pkgDT)
       pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
