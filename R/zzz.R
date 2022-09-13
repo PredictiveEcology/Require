@@ -10,7 +10,7 @@ utils::globalVariables(c(
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
 
-  if (!is.null(getOption("Require.RPackageCache"))) {
+  if (isTRUE(getOption("Require.RPackageCache"))) {
     RequirePkgCacheDir()
   }
 

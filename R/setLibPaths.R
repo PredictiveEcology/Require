@@ -65,7 +65,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
     setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
   }
 
-  if (rCurrentVersion(">= 4.1")) { # now correct behaviour; remaining parts unnecessary
+  if (Require::rCurrentVersion(">= 4.1")) { # now correct behaviour; remaining parts unnecessary
     #.libPaths(libPaths[1], include.site = !standAlone)
     do.call(.libPaths, list(new = libPaths[1], include.site = !standAlone)) ## to avoid triggering warning on R < 4.1
     return(oldLibPaths)
