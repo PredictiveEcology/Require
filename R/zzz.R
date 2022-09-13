@@ -10,10 +10,6 @@ utils::globalVariables(c(
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
 
-  if (isTRUE(getOption("Require.RPackageCache"))) {
-    RequirePkgCacheDir()
-  }
-
   if (getOption("Require.persistentPkgEnv")) {
     if (file.exists(.thePersistentFile())) {
       pkgEnvLast <- readRDS(.thePersistentFile())
