@@ -2255,6 +2255,7 @@ installPackagesSystem <- function(pkg, args, libPath) {
 
 
 installByPak <- function(pkgDT, libPaths, doDeps, ...) {
+  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
   fas <- formals(pak::pkg_install)
   pakFormalsPassedHere <- names(list(...)) %in% names(fas)
   if (any(pakFormalsPassedHere)) {
@@ -2266,7 +2267,7 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
   pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
   out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),
                           lib = libPaths[1],
-                          dependencies = doDeps,
+                          dependencies = FALSE,
                           ask = eval(fas[["ask"]]),
                           upgrade = fas[["upgrade"]])
   pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
