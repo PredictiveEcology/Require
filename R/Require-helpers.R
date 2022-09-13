@@ -164,8 +164,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
         # If package has both a binary and source available on CRAN, there will be 2 entries
         notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
         setorderv(notCorrectVersions, "correctVersionAvail", order = -1) # put TRUE first
-        notCorrectVersions <- notCorrectVersions[, .SD[1], by = "packageFullName"] # Take first of multiples
-        notCorrectVersions[, N := .N, by = "packageFullName"]
+        notCorrectVersions <- notCorrectVersions[, .SD[1], by = "Package"] # Take first of multiples
+        notCorrectVersions[, N := .N, by = "Package"]
         if (any(notCorrectVersions[correctVersionAvail == TRUE]$N > 1)) {
           notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
           notCorrectVersions[N > 1, type := ifelse(is.na(Archs), "source", "binary")]
@@ -2259,6 +2259,9 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
   pakFormalsPassedHere <- names(list(...)) %in% names(fas)
   if (any(pakFormalsPassedHere)) {
     fas <- modifyList2(fas, list(...)[pakFormalsPassedHere])
+  }
+  if (!"ask" %in% pakFormalsPassedHere) {
+    fas[["ask"]] <- FALSE
   }
   pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
   out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),

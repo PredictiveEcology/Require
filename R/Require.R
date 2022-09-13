@@ -417,7 +417,7 @@ Require <- function(packages, packageVersionFile,
           pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
           canusepak <- usepak(packageFullName = pkgDT$packageFullName,
                               needInstall = pkgDT$needInstall,
-                              installFrom = pkgDT$installFrom, toplevel = TRUE)
+                              installFrom = pkgDT$repoLocation, toplevel = TRUE)
           if (canusepak) {
             pkgDT <- installByPak(pkgDT, libPaths, doDeps, ...)
           } else {
