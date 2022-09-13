@@ -55,10 +55,10 @@ utils::globalVariables(c(
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
 #' in an R-version specific subfolder of
-#' `getOption("Require.RPackageCache")` whose default is `NULL`, meaning
-#' \emph{do not cache packages locally},
+#' `getOption("Require.RPackageCache")` whose default is `RPackageCache()`, meaning
+#' \emph{cache packages locally in a project-independent location},
 #' and will reuse them if needed. To turn
-#' on this feature, set `options("Require.RPackageCache" = "someExistingFolder")`.
+#' off this feature, set `options("Require.RPackageCache" = FALSE)`.
 #'
 #' @note
 #' For advanced use and diagnosis, the user can set `verbose = TRUE` or
@@ -230,7 +230,7 @@ utils::globalVariables(c(
 #' ############################################################################
 #' # Installing on many machines that are connected by a shared drive
 #' ############################################################################
-#' options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly.
+#' options("Require.RPackageCache" = TRUE) # will binaries on the fly.
 #' # Put thes in a shared location.
 #' # May need to install Require in main user library before setting library paths for project
 #' if (!require("Require")) install.packages("Require")
@@ -421,34 +421,6 @@ Require <- function(packages, packageVersionFile,
           if (canusepak) {
             pkgDT <- installByPak(pkgDT, libPaths, doDeps, ...)
           } else {
-            # if (any(!is.na(pkgDT$needInstall))) {
-            #   install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
-            #   install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
-            #   if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-            #     if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
-            #       ip <- .installed.pkgs()
-            #       isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
-            #       if (isTRUE(isCranCacheInstalled)) {
-            #         message(
-            #           "Package crancache is installed and option('Require.RPackageCache') is set; it is unlikely that both are needed. ",
-            #           "turning off crancache with Sys.setenv('CRANCACHE_DISABLE' = TRUE). ",
-            #           "To use only crancache's caching mechanism, set both:",
-            #           "\noptions('Require.RPackageCache' = NULL)\n",
-            #           "Sys.setenv('CRANCACHE_DISABLE' = '')"
-            #         )
-            #         Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-            #       }
-            #
-            #       checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
-            #       install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
-            #       if (getOption("Require.buildBinaries", TRUE)) {
-            #         install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
-            #       }
-            #
-            #       install_githubArgs["destdir"] <- install.packagesArgs["destdir"]
-            #     }
-            #   }
-            # }
             pkgDT <- doInstalls(pkgDT,
                                 install_githubArgs = install_githubArgs,
                                 install.packagesArgs = install.packagesArgs,

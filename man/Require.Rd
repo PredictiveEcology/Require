@@ -148,10 +148,10 @@ the current collection of packages and versions.
 
 When installing new packages, \code{Require} will put all source and binary files
 in an R-version specific subfolder of
-\code{getOption("Require.RPackageCache")} whose default is \code{NULL}, meaning
-\emph{do not cache packages locally},
+\code{getOption("Require.RPackageCache")} whose default is \code{RPackageCache()}, meaning
+\emph{cache packages locally in a project-independent location},
 and will reuse them if needed. To turn
-on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
+off this feature, set \code{options("Require.RPackageCache" = FALSE)}.
 }
 
 \examples{
@@ -256,7 +256,7 @@ Require::Require("SpaDES") # not necessary to specify standAlone here because .l
 ############################################################################
 # Installing on many machines that are connected by a shared drive
 ############################################################################
-options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly.
+options("Require.RPackageCache" = TRUE) # will binaries on the fly.
 # Put thes in a shared location.
 # May need to install Require in main user library before setting library paths for project
 if (!require("Require")) install.packages("Require")
