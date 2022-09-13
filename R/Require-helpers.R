@@ -2087,11 +2087,11 @@ getSHAfromGitHub <- function(acct, repo, br) {
     }
   }
 
-  shas <- c("br", "acct", "repo", "shaPath", "sha", "sha1", "sha2", "shaLine", "whHasBr")
-  env <- environment();
-  shas <- shas[vapply(shas, exists, inherits = FALSE, env = env, FUN.VALUE = logical(1))]
-  shasAll <- mget(shas, inherits = FALSE)
-  saveRDS(shasAll, file = "c:/Eliot/GitHub/Require/outShaAll.rds")
+  #shas <- c("br", "acct", "repo", "shaPath", "sha", "sha1", "sha2", "shaLine", "whHasBr")
+  #env <- environment();
+  #shas <- shas[vapply(shas, exists, inherits = FALSE, env = env, FUN.VALUE = logical(1))]
+  #shasAll <- mget(shas, inherits = FALSE)
+  #saveRDS(shasAll, file = "c:/Eliot/GitHub/Require/outShaAll.rds")
   sha3 <- sha2[[whHasBr]]
   shaLine <- grep("sha", sha3) + 1
   shaLine <- strsplit(sha3[shaLine], ",")[[1]][1]
