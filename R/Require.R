@@ -372,7 +372,10 @@ Require <- function(packages, packageVersionFile,
 
       packagesFullNameOrder <- packagesOrder
       names(packagesFullNameOrder) <- packageNamesOrig
+
+
       if (length(which) && (isTRUE(install) || identical(install, "force"))) {
+        message("Identifying package dependencies...")
         packages <- getPkgDeps(packages, which = which, purge = purge)
       }
 
