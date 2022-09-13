@@ -85,7 +85,7 @@ setup(setupTestDir, RPackageCache = ccc)
 testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
 message("This is getOption('Require.RPackageCache')", getOption("Require.RPackageCache"))
-testit::assert(identical(getOption("Require.RPackageCache"), NULL))
+testit::assert(identical(normPath(getOption("Require.RPackageCache")), normPath(Require::RequireCacheDir())))
 
 # reset options after setupOff()
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
