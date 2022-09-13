@@ -377,8 +377,8 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
   }
 
   # Check for local copy of src or binary first
-  if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
-    localFiles <- dir(rpackageFolder(getOption("Require.RPackageCache")), full.names = TRUE)
+  if (!is.null(rpackageFolder(getOptionRPackageCache()))) {
+    localFiles <- dir(rpackageFolder(getOptionRPackageCache()), full.names = TRUE)
     # sanity check -- there are bad files, quite often
     fileSizeEq0 <- file.size(localFiles) == 0
     if (any(fileSizeEq0)) {
@@ -479,7 +479,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
             else
               "Y"
             if (identical("y", tolower(out))) {
-              unlink(file.path(rpackageFolder(getOption("Require.RPackageCache")),
+              unlink(file.path(rpackageFolder(getOptionRPackageCache()),
                                neededVersions[srcFromCRAN]$localFileName))
             }
           }
@@ -689,7 +689,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
     install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
     if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
-      if (!is.null(rpackageFolder(getOption("Require.RPackageCache")))) {
+      if (!is.null(rpackageFolder(getOptionRPackageCache()))) {
         ip <- .installed.pkgs()
         isCranCacheInstalled <- any(grepl("crancache", ip[, "Package"])) && identical(Sys.getenv("CRANCACHE_DISABLE"), "")
         if (isTRUE(isCranCacheInstalled)) {
@@ -703,8 +703,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
           Sys.setenv("CRANCACHE_DISABLE" = TRUE)
         }
 
-        checkPath(rpackageFolder(getOption("Require.RPackageCache")), create = TRUE)
-        install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOption("Require.RPackageCache"))), "/")
+        checkPath(rpackageFolder(getOptionRPackageCache()), create = TRUE)
+        install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOptionRPackageCache())), "/")
         if (getOption("Require.buildBinaries", TRUE)) {
           install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
         }
@@ -1230,7 +1230,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     dots$dependencies <- NA # This was NA; which means let install.packages do it. But, failed in some cases:
 
   message("Using local cache of ", paste(toIn$localFileName, collapse = ", "))
-  installPkgNames <- normPath(file.path(rpackageFolder(getOption("Require.RPackageCache")), toIn$localFileName))
+  installPkgNames <- normPath(file.path(rpackageFolder(getOptionRPackageCache()), toIn$localFileName))
   names(installPkgNames) <- installPkgNames
 
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
@@ -1621,7 +1621,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
     anyFaultyBinaries <- grepl("error 1 in extracting from zip file", pkgDT$installResult)
     if (isTRUE(anyFaultyBinaries)) {
       message("Local cache of ", paste(pkgDT[anyFaultyBinaries]$localFileName, collapse = ", "), " faulty; deleting")
-      unlink(file.path(rpackageFolder(getOption("Require.RPackageCache")), pkgDT[anyFaultyBinaries]$localFileName))
+      unlink(file.path(rpackageFolder(getOptionRPackageCache()), pkgDT[anyFaultyBinaries]$localFileName))
     }
   }
 
@@ -1654,7 +1654,7 @@ copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
     newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
     if (length(newFiles)) {
-      newNames <- file.path(rpackageFolder(getOption("Require.RPackageCache")), unique(basename(newFiles)))
+      newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
       if (all(!file.exists(newNames)))
         try(file.link(newFiles, newNames))
       unlink(newFiles)
@@ -1859,7 +1859,7 @@ warningCantInstall <- function(pkgs) {
 
 }
 
-rpackageFolder <- function(path = getOption("Require.RPackageCache", RequirePkgCacheDir()), exact = FALSE)  {
+rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE)  {
   if (!is.null(path)) {
     if (isTRUE(exact))
       return(path)
@@ -2267,4 +2267,22 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
                           ask = eval(fas[["ask"]]),
                           upgrade = fas[["upgrade"]])
   pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
+}
+
+getOptionRPackageCache <- function() {
+  fromEnvVars <- Sys.getenv("Require.RPackageCache")
+  if (nchar(fromEnvVars) == 0) {
+    fromEnvVars <- NULL
+    curVal <- getOption("Require.RPackageCache")
+  } else {
+    curVal <- fromEnvVars
+    if (identical("TRUE", curVal)) curVal <- TRUE
+    if (identical("FALSE", curVal)) curVal <- FALSE
+  }
+
+  if (isTRUE(curVal)) {
+    curVal <- RequirePkgCacheDir()
+    options("Require.RPackageCache" = curVal)
+  }
+  curVal
 }

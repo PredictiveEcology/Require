@@ -15,14 +15,22 @@
 #' The following options are likely of interest to most users:
 #' \describe{
 #'   \item{\code{RPackageCache}}{
-#'     Default: \code{NULL}. If a folder is provided, then binary and source packages will
-#'       be cached here. Subsequent downloads of same package will use local copy. Default
+#'     Default: \code{getOptionRPackageCache()}, which must be either a path or a logical.
+#'     This can be set using an environment
+#'     variable e.g. `Sys.setenv(Require.RPackageCache = "somePath")`, or
+#'     `Sys.setenv(Require.RPackageCache = "TRUE")`; if that is not
+#'     set, then an either a path or logical option `(options("Require.RPackageCache" = "somePath"))`
+#'     or `(options("Require.RPackageCache" = TRUE))`. If `TRUE`, the default
+#'     folder location `RequirePkgCacheDir()` will be used. If this is `TRUE` or a path is provided,
+#'       then binary and source packages will be cached here. Subsequent downloads
+#'       of same package will use local copy. Default
 #'       is to have packages not be cached locally so each install of the same version will
 #'       be from the original source, e.g., CRAN, GitHub.
 #'   }
 #'   \item{\code{buildBinaries}}{
 #'     Default: \code{TRUE}. Only relevant on *nix systems and if
-#'     \code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE}, then
+#'     \code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE} or a
+#'        valid path, then
 #'        \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the
 #'        package binary will be built and then saved in the
 #'        \code{getOption("Require.RPackageCache")}. This means that subsequent installs
@@ -68,7 +76,7 @@ RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL, #"~/._RPackageCache", # nolint
-       Require.RPackageCache = RequireCacheDir(), #"~/._RPackageCache", # nolint
+       Require.RPackageCache = getOptionRPackageCache(), #"~/._RPackageCache", # nolint
        Require.setupVerbose = TRUE,
        Require.standAlone = TRUE,
        Require.unloadNamespaces = TRUE,
