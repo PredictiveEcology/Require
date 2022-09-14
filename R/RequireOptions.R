@@ -19,13 +19,14 @@
 #'     This can be set using an environment
 #'     variable e.g. `Sys.setenv(Require.RPackageCache = "somePath")`, or
 #'     `Sys.setenv(Require.RPackageCache = "TRUE")`; if that is not
-#'     set, then an either a path or logical option `(options("Require.RPackageCache" = "somePath"))`
-#'     or `(options("Require.RPackageCache" = TRUE))`. If `TRUE`, the default
-#'     folder location `RequirePkgCacheDir()` will be used. If this is `TRUE` or a path is provided,
-#'       then binary and source packages will be cached here. Subsequent downloads
-#'       of same package will use local copy. Default
-#'       is to have packages not be cached locally so each install of the same version will
-#'       be from the original source, e.g., CRAN, GitHub.
+#'     set, then an either a path or logical option (`options(Require.RPackageCache = "somePath")`
+#'     or `options(Require.RPackageCache = TRUE)`). If `TRUE`, the default
+#'     folder location `RequirePkgCacheDir()` will be used.
+#'     If this is `TRUE` or a path is provided,
+#'     then binary and source packages will be cached here. Subsequent downloads
+#'     of same package will use local copy.
+#'     Default is to have packages not be cached locally so each install of the same version will
+#'     be from the original source, e.g., CRAN, GitHub.
 #'   }
 #'   \item{`buildBinaries`}{
 #'     Default: `TRUE`. Only relevant on *nix systems and if
@@ -75,8 +76,8 @@
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
-       Require.RPackageFolders = NULL, #"~/._RPackageCache", # nolint
-       Require.RPackageCache = getOptionRPackageCache(), #"~/._RPackageCache", # nolint
+       Require.RPackageFolders = NULL,
+       Require.RPackageCache = getOptionRPackageCache(), # RequirePkgCacheDir()
        Require.setupVerbose = TRUE,
        Require.standAlone = TRUE,
        Require.unloadNamespaces = TRUE,

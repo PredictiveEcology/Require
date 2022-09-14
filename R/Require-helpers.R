@@ -1640,7 +1640,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
         pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots)#,
     }
   } else {
-    pkgDT[pkgDT$packageFullName%in% toInstall$packageFullName, installFrom := "Fail"]
+    pkgDT[pkgDT$packageFullName %in% toInstall$packageFullName, installFrom := "Fail"]
   }
 
   pkgDT
@@ -1901,7 +1901,6 @@ preparePkgNameToReport <- function(Package, packageFullName) {
   Package
 }
 
-
 splitGitRepo <- function(gitRepo) {
   grSplit <- strsplit(gitRepo, "/|@")[[1]]
   acct <- grSplit[[1]]
@@ -1925,7 +1924,6 @@ splitGitRepo <- function(gitRepo) {
 #' @param ... Passed to R CMD INSTALL
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
-
   gr <- splitGitRepo(gitRepo)
   tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
                            mustWork = FALSE, winslash = "\\")
@@ -2097,7 +2095,6 @@ getSHAfromGitHub <- function(acct, repo, br) {
   shaLine <- strsplit(sha3[shaLine], ",")[[1]][1]
   sha <- gsub(" *[[:punct:]]+(.+)[[:punct:]] *", "\\1", shaLine)
   sha
-
 }
 
 .earliestMRANDate <- "2015-06-06"
@@ -2250,12 +2247,10 @@ installPackagesSystem <- function(pkg, args, libPath) {
                             collapse = ", "),"))\""))
   out <- system(out2, intern = TRUE)
   return(out)
-
 }
 
-
 installByPak <- function(pkgDT, libPaths, doDeps, ...) {
-  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
+  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak") ## TODO: is this allowed by CRAN??
   fas <- formals(pak::pkg_install)
   pakFormalsPassedHere <- names(list(...)) %in% names(fas)
   if (any(pakFormalsPassedHere)) {

@@ -24,12 +24,13 @@ Default: \code{getOptionRPackageCache()}, which must be either a path or a logic
 This can be set using an environment
 variable e.g. \code{Sys.setenv(Require.RPackageCache = "somePath")}, or
 \code{Sys.setenv(Require.RPackageCache = "TRUE")}; if that is not
-set, then an either a path or logical option \code{(options("Require.RPackageCache" = "somePath"))}
-or \code{(options("Require.RPackageCache" = TRUE))}. If \code{TRUE}, the default
-folder location \code{RequirePkgCacheDir()} will be used. If this is \code{TRUE} or a path is provided,
+set, then an either a path or logical option (\code{options(Require.RPackageCache = "somePath")}
+or \code{options(Require.RPackageCache = TRUE)}). If \code{TRUE}, the default
+folder location \code{RequirePkgCacheDir()} will be used.
+If this is \code{TRUE} or a path is provided,
 then binary and source packages will be cached here. Subsequent downloads
-of same package will use local copy. Default
-is to have packages not be cached locally so each install of the same version will
+of same package will use local copy.
+Default is to have packages not be cached locally so each install of the same version will
 be from the original source, e.g., CRAN, GitHub.
 }
 \item{\code{buildBinaries}}{

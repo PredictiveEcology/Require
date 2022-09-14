@@ -31,12 +31,17 @@ RequirePkgCacheDir <- function() {
 #' be create a reproducible, self-contained project with R packages.
 #' Some of these have direct relationships with `RequireOptions`
 #' and arguments in `setLibPaths` and `Require`.
+#'
 #' @param RPackageFolders One or more folders where R packages are
 #'   installed to and loaded from. In the case of more than one
 #'   folder provided, installation will only happen in the first one.
+#'
 #' @param RPackageCache See `?RequireOptions`.
+#'
 #' @param buildBinaries See `?RequireOptions`.
+#'
 #' @inheritParams setLibPaths
+#'
 #' @export
 #' @rdname setup
 #'
