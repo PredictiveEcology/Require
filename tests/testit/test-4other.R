@@ -1,12 +1,14 @@
-message("\033[34m --------------------------------- Starting test-4other.R \033[39m")
+message("\033[32m --------------------------------- Starting test-4other.R \033[39m")
 
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
+options("Require.RPackageCache" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE)
+                   "Require.unloadNamespaces" = TRUE
+                   )
 if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
@@ -44,7 +46,7 @@ Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
 if (Sys.info()["user"] == "emcintir2") {
-  options("Require.RPackageCache" = "~/._RPackageCache/",
+  options("Require.RPackageCache" = TRUE,
           "Require.unloadNamespaces" = FALSE)
 }
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
@@ -84,21 +86,22 @@ options(outOpts)
 options(outOpts2)
 
 ## setup
+# assign("aaaa", 1, envir = .GlobalEnv)
 options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 setup(setupTestDir, RPackageCache = ccc) ## TODO: Error in file.link(fromFiles, toFiles) : no files to link from
 testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
-message("This is getOption('Require.RPackageCache')", getOption("Require.RPackageCache"))
-testit::assert(identical(normPath(getOption("Require.RPackageCache")), normPath(Require::RequireCacheDir())))
+message("This is getOption('Require.RPackageCache')", Require:::getOptionRPackageCache())
+testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
 
 # reset options after setupOff()
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
 opt22 <- options("Require.RPackageCache" = secondTry)
 ccc <- checkPath(secondTry, create = TRUE)
 setup(setupTestDir, RPackageCache = ccc)
-testit::assert(identical(getOption("Require.RPackageCache"), ccc))
+testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
-testit::assert(identical(getOption("Require.RPackageCache"), secondTry))
+testit::assert(identical(Require:::getOptionRPackageCache(), secondTry))
 options(opt22)

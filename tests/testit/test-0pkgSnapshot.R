@@ -1,4 +1,4 @@
-message("\033[34m --------------------------------- Starting test-0pkgSnapshot.R \033[39m")
+message("\033[32m --------------------------------- Starting test-0pkgSnapshot.R \033[39m")
 
 if (interactive()) {
   library(Require)
@@ -39,13 +39,13 @@ if (interactive()) {
     outOpts <- options("Require.persistentPkgEnv" = TRUE,
                        "install.packages.check.source" = "never",
                        "install.packages.compile.from.source" = "never",
-                       "Require.unloadNamespaces" = TRUE)
+                       "Require.unloadNamespaces" = TRUE,
+                       "Require.RPackageCache" = TRUE)
     if (Sys.info()["user"] == "emcintir2") {
       outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                          "Require.RPackageCache" = "~/._RPackageCache/")
+                          )
     } else if (Sys.info()["user"] == "achubaty") {
-      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                          "Require.RPackageCache" = RequirePkgCacheDir())
+      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
     } else {
       outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
         "Require.RPackageCache" = RequirePkgCacheDir())

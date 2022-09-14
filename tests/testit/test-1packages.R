@@ -1,4 +1,4 @@
-message("\033[34m --------------------------------- Starting test-1packages.R \033[39m")
+message("\033[32m --------------------------------- Starting test-1packages.R \033[39m")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -6,16 +6,16 @@ Sys.setenv("CRANCACHE_DISABLE" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE)
+                   "Require.unloadNamespaces" = TRUE,
+                   "Require.RPackageCache" = TRUE)
 if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 } else if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
+                      )
 } else {
   outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-    "Require.RPackageCache" = RequirePkgCacheDir())
+    "Require.RPackageCache" = TRUE)
 }
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
