@@ -2039,7 +2039,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                          repos = NULL,
                          lib = normalizePath(libPath, winslash = "/")))
     if (verbose >= 1) # covers TRUE also
-      message("* building ‘",packageTarName,"’ ... Built!")
+      message("* building ",packageTarName," ... Built!")
     if (FALSE) {
       opts2 <- append(list(...),
                       list(packageTarName,
