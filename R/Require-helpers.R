@@ -2100,14 +2100,29 @@ getSHAfromGitHub <- function(acct, repo, br) {
 .earliestMRANDate <- "2015-06-06"
 .latestMRANDate <- Sys.Date() - 45
 
-rversions <- structure(list(version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
-                                         "3.5.3", "3.6.0", "3.6.1", "3.6.2", "3.6.3", "4.0.0", "4.0.1",
-                                         "4.0.2", "4.0.3", "4.0.4", "4.0.5", "4.1.0", "4.1.1", "4.1.2",
-                                         "4.1.3", "4.2.0"), date = structure(c(1521101067, 1524467078,
-                                                                               1530515071, 1545293080, 1552291489, 1556262303, 1562310303, 1576137903,
-                                                                               1582963516, 1587711934, 1591427116, 1592809519, 1602313524, 1613376313,
-                                                                               1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141
-                                         ), class = c("POSIXct", "POSIXt"), tzone = "UTC")), class = "data.frame", row.names = 108:127)
+#' R versions
+#'
+#' Reference table of R versions and their release dates (2018 and later).
+#'
+#' Update this as needed using `rversions::r_versions()`:
+#'
+#' \verb{
+#' # install.packages("rversions")
+#' v = rversions::r_versions()
+#' keep = which(as.Date(v$date, format = "%Y-%m-%d") >= as.Date("2018-01-01", format = "%Y-%m-%d"))
+#' dput(v[keep, c("version", "date")])
+#' }
+rversions <- structure(list(
+  version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
+              "3.5.3", "3.6.0", "3.6.1", "3.6.2", "3.6.3", "4.0.0", "4.0.1",
+              "4.0.2", "4.0.3", "4.0.4", "4.0.5", "4.1.0", "4.1.1", "4.1.2",
+              "4.1.3", "4.2.0", "4.2.1"),
+  date = structure(c(1521101067, 1524467078,
+                     1530515071, 1545293080, 1552291489, 1556262303, 1562310303, 1576137903,
+                     1582963516, 1587711934, 1591427116, 1592809519, 1602313524, 1613376313,
+                     1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141,
+                     1655967933), class = c("POSIXct", "POSIXt"), tzone = "UTC")),
+  row.names = 108:128, class = "data.frame")
 
 rversion <- function() {
   paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
