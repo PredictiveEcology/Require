@@ -117,6 +117,11 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+
+  pkgGrep <- paste0(unlist(lapply(strsplit(names(out), " "), `[`, 1)), ".*[.]tar[.]gz", collapse = "|")
+  pkgs2rm <- dir(path = getOption("Require.Home"), pattern = pkgGrep, full.names = TRUE)
+  unlink(pkgs2rm)
+
   options(outOpts)
   if (exists("outOpts2")) options(outOpts2)
 #}
