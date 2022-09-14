@@ -1656,7 +1656,7 @@ copyTarball <- function(pkg, builtBinary) {
     if (length(newFiles)) {
       newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
       if (all(!file.exists(newNames)))
-        try(file.link(newFiles, newNames))
+        try(linkOrCopy(newFiles, newNames))
       unlink(newFiles)
     }
   }

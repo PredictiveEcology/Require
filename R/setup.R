@@ -167,7 +167,7 @@ copyRequireAndDeps <- function(RPackageFolders) {
             message("Updating version of ", pkg, " in ", RPackageFolders)
           unlink(toFiles)
         }
-        file.link(fromFiles, toFiles)
+        linkOrCopy(fromFiles, toFiles)
         break
       }
     }

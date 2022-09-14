@@ -76,7 +76,7 @@ setLibPaths() # reset it to original
 setwd(origDir)
 
 if (!identical(origLibPathsAllTests, .libPaths())) {
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE) ## TODO: >50 warnings re: invalid cross-device link btw /home and /tmp
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 options(outOpts)
 options(outOpts2)
@@ -86,8 +86,8 @@ options(outOpts2)
 options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-setup(setupTestDir, RPackageCache = ccc) ## TODO: Error in file.link(fromFiles, toFiles) : no files to link from
-testit::assert(identical(getOption("Require.RPackageCache"), ccc))
+setup(setupTestDir, RPackageCache = ccc)
+testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 setupOff()
 message("This is getOption('Require.RPackageCache')", Require:::getOptionRPackageCache())
 testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
@@ -96,7 +96,7 @@ testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
 opt22 <- options("Require.RPackageCache" = secondTry)
 ccc <- checkPath(secondTry, create = TRUE)
-setup(setupTestDir, RPackageCache = ccc)
+setup(setupTestDir, RPackageCache = ccc) ## TODO: warnings in file() cannot open DESCRIPTION files
 testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
 testit::assert(identical(Require:::getOptionRPackageCache(), secondTry))
