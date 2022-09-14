@@ -1,8 +1,14 @@
 #' `Require` options
 #'
 #' These provide top-level, powerful settings for a comprehensive
-#' reproducible workflow. To see defaults, run `RequireOptions()`.
+#' reproducible workflow.
 #' See Details below.
+#'
+#' \describe{
+#'   \item{`RequireOptions()`}{prints the default values of package options set at startup,
+#'   which may have been changed (e.g., by the user) during the current session.}
+#'   \item{`getRequireOptions()`}{prints the current values of package options.}
+#' }
 #'
 #' @export
 #' @details
@@ -73,11 +79,12 @@
 #'
 #' }
 #'
+#' @rdname RequireOptions
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL,
-       Require.RPackageCache = getOptionRPackageCache(), # RequirePkgCacheDir()
+       Require.RPackageCache = getOptionRPackageCache(),
        Require.setupVerbose = TRUE,
        Require.standAlone = TRUE,
        Require.unloadNamespaces = FALSE,
@@ -86,6 +93,18 @@ RequireOptions <- function() {
        Require.verbose = 0
   )
 }
+
+#' @export
+#' @rdname RequireOptions
+getRequireOptions <- function() {
+  opts <- names(RequireOptions())
+  vals <- lapply(opts, getOption)
+  names(vals) <- opts
+
+  return(invisible(vals))
+}
+
+# old code ------------------------------------------------------------------------------------
 
 #   \item{\code{useCranCache}}{
 #     Default: \code{NULL}. Experimental. If \code{TRUE}, a user can try

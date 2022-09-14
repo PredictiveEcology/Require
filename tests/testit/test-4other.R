@@ -5,22 +5,15 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-options("Require.RPackageCache" = TRUE)
-outOpts <- options("Require.verbose" = FALSE,
-                   "Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE
-                   )
+                   "Require.RPackageCache" = TRUE,
+                   "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 } else if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
-} else {
-  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
 # Test misspelled
@@ -83,18 +76,18 @@ setLibPaths() # reset it to original
 setwd(origDir)
 
 if (!identical(origLibPathsAllTests, .libPaths())) {
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE) ## TODO: >50 warnings re: invalid cross-device link btw /home and /tmp
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 options(outOpts)
-options(outOpts2)
+if (exists("outOpts2")) options(outOpts2)
 
 ## setup
 # assign("aaaa", 1, envir = .GlobalEnv)
 options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-setup(setupTestDir, RPackageCache = ccc) ## TODO: Error in file.link(fromFiles, toFiles) : no files to link from
-testit::assert(identical(getOption("Require.RPackageCache"), ccc))
+setup(setupTestDir, RPackageCache = ccc)
+testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 setupOff()
 message("This is getOption('Require.RPackageCache')", Require:::getOptionRPackageCache())
 testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
@@ -103,7 +96,7 @@ testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
 opt22 <- options("Require.RPackageCache" = secondTry)
 ccc <- checkPath(secondTry, create = TRUE)
-setup(setupTestDir, RPackageCache = ccc)
+setup(setupTestDir, RPackageCache = ccc) ## TODO: warnings in file() cannot open DESCRIPTION files
 testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
 testit::assert(identical(Require:::getOptionRPackageCache(), secondTry))

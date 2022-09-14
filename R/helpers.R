@@ -286,3 +286,27 @@ modifyList2 <- function(...) {
   dots <- dots[!unlist(lapply(dots, is.null))]
   do.call(Reduce, alist(modifyList, dots))
 }
+
+#' Create link to file, falling back to making a copy if linking fails.
+#'
+#' First try to create a hardlink to the file.
+#' If that fails, try a symbolic link (symlink) before falling back to copying the file.
+#' "File" here can mean a file or a directory.
+#'
+#' @param from,to character vectors, containing file names or paths.
+#'
+linkOrCopy <- function(to, from) {
+  res <- suppressWarnings(file.link(from, to)) ## try hardlink
+  if (isFALSE(res)) {
+    res <- suppressWarnings(file.symlink(from, to)) ## try symbolic link
+    if (isFALSE(res)) {
+      res <- suppressWarnings(file.copy(from, to, recursive = TRUE)) ## finally, copy the file
+    }
+  }
+
+  return(invisible(res))
+}
+
+timestamp <- function() {
+  format(Sys.time(), "%Y%m%d%H%M%S")
+}

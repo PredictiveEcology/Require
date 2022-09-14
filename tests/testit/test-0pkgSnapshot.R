@@ -2,7 +2,6 @@ thisFilename <- "test-0pkgSnapshot.R"
 startTimeAll <- startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
-
 #if (interactive()) {
   library(Require)
   srch <- search()
@@ -115,7 +114,7 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   options(outOpts)
-  options(outOpts2)
+  if (exists("outOpts2")) options(outOpts2)
 #}
 
   endTime <- Sys.time()

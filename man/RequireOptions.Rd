@@ -2,16 +2,25 @@
 % Please edit documentation in R/RequireOptions.R
 \name{RequireOptions}
 \alias{RequireOptions}
+\alias{getRequireOptions}
 \title{\code{Require} options}
 \usage{
 RequireOptions()
+
+getRequireOptions()
 }
 \description{
 These provide top-level, powerful settings for a comprehensive
-reproducible workflow. To see defaults, run \code{RequireOptions()}.
+reproducible workflow.
 See Details below.
 }
 \details{
+\describe{
+\item{\code{RequireOptions()}}{prints the default values of package options set at startup,
+which may have been changed (e.g., by the user) during the current session.}
+\item{\code{getRequireOptions()}}{prints the current values of package options.}
+}
+
 Below are options that can be set with \code{options("Require.xxx" = newValue)},
 where \code{xxx} is one of the values below, and \code{newValue} is a new value to
 give the option. Sometimes these options can be placed in the user's \code{.Rprofile}

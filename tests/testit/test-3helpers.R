@@ -11,14 +11,9 @@ outOpts <- options("Require.verbose" = FALSE,
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 } else if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
-} else {
-  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-    "Require.RPackageCache" = RequirePkgCacheDir())
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))
@@ -119,6 +114,6 @@ testit::assert({identical(modifyList(modifyList(f1, f2), f3), d)})
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 options(outOpts)
-options(outOpts2)
+if (exists("outOpts2")) options(outOpts2)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

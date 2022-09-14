@@ -1706,7 +1706,7 @@ copyTarball <- function(pkg, builtBinary) {
     if (length(newFiles)) {
       newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
       if (all(!file.exists(newNames)))
-        try(file.link(newFiles, newNames))
+        try(linkOrCopy(newFiles, newNames))
       unlink(newFiles)
     }
   }
@@ -2370,7 +2370,6 @@ getOptionRPackageCache <- function() {
     if (identical("TRUE", curVal)) curVal <- TRUE
     if (identical("FALSE", curVal)) curVal <- FALSE
   }
-
 
   if (isTRUE(curVal)) {
     curVal <- RequirePkgCacheDir()

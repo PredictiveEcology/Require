@@ -14,11 +14,7 @@ outOpts <- options("Require.verbose" = TRUE,
 if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 } else if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      )
-} else {
-  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-    "Require.RPackageCache" = TRUE)
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
@@ -197,7 +193,7 @@ if (interactive()) {
 
 options(opt)
 options(outOpts)
-options(outOpts2)
+if (exists("outOpts2")) options(outOpts2)
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 endTime <- Sys.time()

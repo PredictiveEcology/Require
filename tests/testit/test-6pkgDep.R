@@ -10,16 +10,12 @@ outOpts <- options("Require.verbose" = FALSE,
                    "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
+                   "Require.RPackageCache" = TRUE,
                    "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 } else if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
-} else {
-  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-    "Require.RPackageCache" = RequirePkgCacheDir())
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
 #library(Require)
@@ -110,7 +106,7 @@ if (!identical(origLibPathsAllTests, .libPaths()))
 options(outOpts)
 unlink("~/._R", recursive = TRUE)
 unlink(tempdir2(), recursive = TRUE)
-options(outOpts2)
+if (exists("outOpts2")) options(outOpts2)
 endTime <- Sys.time()
 tdOuter <- tempdir2("tests")
 startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")) # doesn't seem to keep globals from other scripts; recreate here
