@@ -1,4 +1,7 @@
-message("\033[32m --------------------------------- Starting test-0pkgSnapshot.R \033[39m")
+thisFilename <- "test-5packagesLong.R"
+startTimeAll <- startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+
 
 if (interactive()) {
   library(Require)
