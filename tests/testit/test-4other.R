@@ -3,20 +3,16 @@ message("\033[32m --------------------------------- Starting test-4other.R \033[
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-options("Require.RPackageCache" = TRUE)
 outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE
-                   )
+                   "Require.RPackageCache" = TRUE,
+                   "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
 } else if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
-} else {
-  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = RequirePkgCacheDir())
 }
 

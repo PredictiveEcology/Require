@@ -13,9 +13,6 @@ if (Sys.info()["user"] == "emcintir2") {
 } else if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
                       "Require.RPackageCache" = RequirePkgCacheDir())
-} else {
-  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-    "Require.RPackageCache" = RequirePkgCacheDir())
 }
 
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))

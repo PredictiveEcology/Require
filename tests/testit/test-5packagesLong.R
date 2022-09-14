@@ -9,6 +9,7 @@ if (interactive()) {
   outOpts <- options("Require.persistentPkgEnv" = TRUE,
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
+                     "Require.RPackageCache" = TRUE,
                      "Require.unloadNamespaces" = FALSE)
   if (Sys.info()["user"] == "emcintir2") {
     outOpts2 <- options("Require.Home" = "~/GitHub/Require",
@@ -16,9 +17,6 @@ if (interactive()) {
   } else if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
                         "Require.RPackageCache" = RequirePkgCacheDir())
-  } else {
-    outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-      "Require.RPackageCache" = RequirePkgCacheDir())
   }
   tmpdir <- file.path(tempdir2("other"), paste0("RequireTmp", sample(1e5, 1)))
 
