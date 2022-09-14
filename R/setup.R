@@ -77,6 +77,7 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
   names(roNames) <- roNames
   nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
   if (any(nonStandardOpt)) {
+    setLibPathsUpdateRprofile(.libPaths()[1])
     rp <- readLines(".Rprofile")
     lineWithPrevious <- grepl("### Previous", rp)
     if (any(lineWithPrevious)) {
