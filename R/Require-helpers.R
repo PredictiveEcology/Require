@@ -365,7 +365,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos")) {
     whFails <- ifelse(is.na(pkgDT$correctVersionAvail), FALSE,
                       ifelse(pkgDT$needInstall == TRUE & pkgDT$correctVersionAvail == FALSE, TRUE, FALSE))
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
-    if (any(whFails)) message("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall], sep = ", "),
+    if (any(whFails)) message("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall %in% TRUE], collapse = ", "),
                               " could not be installed because no available version\033[39m")
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
       pkgDT[needInstall == TRUE & # installed == FALSE &
@@ -986,18 +986,18 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
 
   # Require doesn't actually install a previous version of a Git package at this point,
   #    it just takes the HEAD, so canusepak can evaluate just the toInstall$Package
-  canusepak <- usepak(toInstall$Package)# (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
-  if (isTRUE(canusepak)) {
-    doDeps <- if (!is.null(dots$dependencies)) dots$dependencies else NA
-    doDeps <- if (is.null(install_githubArgs$dependencies)) doDeps else install_githubArgs$dependencies
-
-    ipaForPak <- list(pkg = trimVersionNumber(toInstall$packageFullName),
-                      upgrade = FALSE,
-                      ask = FALSE,
-                      dependencies = doDeps)
-    out <- do.call(pak::pkg_install, ipaForPak)
-    pkgDT <- updateInstalled(pkgDT, installPkgNames = toInstall$Package, out)
-  } else {
+  # canusepak <- usepak(toInstall$Package)# (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
+  # if (isTRUE(canusepak)) {
+  #   doDeps <- if (!is.null(dots$dependencies)) dots$dependencies else NA
+  #   doDeps <- if (is.null(install_githubArgs$dependencies)) doDeps else install_githubArgs$dependencies
+  #
+  #   ipaForPak <- list(pkg = trimVersionNumber(toInstall$packageFullName),
+  #                     upgrade = FALSE,
+  #                     ask = FALSE,
+  #                     dependencies = doDeps)
+  #   out <- do.call(pak::pkg_install, ipaForPak)
+  #   pkgDT <- updateInstalled(pkgDT, installPkgNames = toInstall$Package, out)
+  # } else {
 
     # if (!is.data.table(pkgDT)) {
     #   pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
@@ -1069,7 +1069,7 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
         pkgDT
       }
     }
-  }
+  # }
   pkgDT
 }
 
@@ -1306,7 +1306,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
 #' @importFrom stats setNames
 installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                         repos = getOption("repos")) {
-  canusepak <- usepak(toInstall$Package) # (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
+  # canusepak <- usepak(toInstall$Package) # (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
 
   names(installPkgNames) <- installPkgNames
@@ -1371,15 +1371,15 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
           ipaFull <- append(list(installPkgNames, repos = repos), ipa)
           installPackagesQuoted <-
-            if (canusepak) {
-              ipaForPak <- list(pkg = installPkgNames,
-                                upgrade = FALSE,
-                                ask = FALSE,
-                                dependencies = ipaFull$dependencies)
-              quote(do.call(pak::pkg_install, ipaForPak))
-            } else {
+            # if (canusepak) {
+            #   ipaForPak <- list(pkg = installPkgNames,
+            #                     upgrade = FALSE,
+            #                     ask = FALSE,
+            #                     dependencies = ipaFull$dependencies)
+            #   quote(do.call(pak::pkg_install, ipaForPak))
+            # } else {
               quote(do.call(install.packages, ipaFull))
-            }
+            #}
 
           warn <<- withCallingHandlers({
             out <- eval(installPackagesQuoted)
@@ -1407,7 +1407,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (any(grepl("--build", c(dots, install.packagesArgs))))
       copyTarball(installPkgNames, TRUE)
 
-    if (!is.null(warn) && !canusepak) {
+    if (!is.null(warn)) {# && !canusepak) {
       warning(warn)
       pkgDT[Package %in% installPkgNames, installResult := warn$message]
     }

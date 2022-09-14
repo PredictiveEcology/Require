@@ -80,7 +80,7 @@ RequireOptions <- function() {
        Require.RPackageCache = getOptionRPackageCache(), # RequirePkgCacheDir()
        Require.setupVerbose = TRUE,
        Require.standAlone = TRUE,
-       Require.unloadNamespaces = TRUE,
+       Require.unloadNamespaces = FALSE,
        Require.updateRprofile = FALSE,
        # Require.useCranCache = NULL,
        Require.verbose = 0

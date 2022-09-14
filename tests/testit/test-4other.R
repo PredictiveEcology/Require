@@ -90,8 +90,8 @@ ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 setup(setupTestDir, RPackageCache = ccc) ## TODO: Error in file.link(fromFiles, toFiles) : no files to link from
 testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
-message("This is getOption('Require.RPackageCache'): ", getOption("Require.RPackageCache"))
-testit::assert(identical(getOption("Require.RPackageCache"), NULL))
+message("This is getOption('Require.RPackageCache') :", getOption("Require.RPackageCache"))
+testit::assert(identical(normPath(getOption("Require.RPackageCache")), normPath(Require::RequireCacheDir())))
 
 # reset options after setupOff()
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
