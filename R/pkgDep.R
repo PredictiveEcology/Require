@@ -45,6 +45,7 @@ utils::globalVariables(c(
 #'        concatenation of the possibly recursive package dependencies.
 #' @param includeBase Logical. Should R base packages be included, specifically, those in
 #'   `tail(.libPath(), 1)`
+#' @inheritParams Require
 #'
 #' @export
 #' @rdname pkgDep
@@ -63,7 +64,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    depends, imports, suggests, linkingTo,
                    repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
-                   sort = TRUE, purge = getOption("Require.purge", FALSE)) {
+                   sort = TRUE, purge = getOption("Require.purge", FALSE),
+                   verbose = getOption("Require.verbose")) {
 
   purge <- dealWithCache(purge)
 
@@ -92,7 +94,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
 
     if (any(needGet)) {
       neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
-                                purge = purge, repos = repos)
+                                purge = purge, repos = repos, verbose = verbose)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
@@ -110,7 +112,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
               names(pkgsToLookup) <- pkgsToLookup
               pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
-                                          purge = purge, repos = repos)))
+                                          purge = purge, repos = repos, verbose = verbose)))
               })
               prevIndices <- 1:(i - 1)
               curPkgs <- unlist(pkgsNew[[i]])
@@ -217,9 +219,10 @@ pkgDep <- function(packages, libPath = .libPaths(),
 }
 
 #' @importFrom utils untar
+#' @inheritParams Require
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
-                        repos = repos, includeBase = FALSE) {
+                        repos = repos, includeBase = FALSE, verbose = getOption("Require.verbose")) {
   names(packages) <- packages
   pkgsNoVersion <- extractPkgName(packages)
   if (!isTRUE(includeBase)) {
@@ -238,26 +241,29 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                 pkgNoVersion = pkgsNoVersionToCheck,
                 function(desc_path, pkg, pkgNoVersion) {
     if (!file.exists(desc_path)) {
-      pkgDT <- parseGitHub(pkg)
+      pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
         needed <- getGitHubDeps(pkg, pkgDT, which, purge)
 
       } else {
-        if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"))) {
+        if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"),
+                           verbose = verbose)) {
           needed <- unique(unname(unlist(pkgDepCRAN(pkg,
                                                     pkgsNoVersion = pkgNoVersion,
                                                     which = which,
                                                     keepVersionNumber = keepVersionNumber,
                                                     purge = purge,
-                                                    repos = repos))))
+                                                    repos = repos,
+                                                    verbose = verbose))))
 
           if (is.null(needed)) { # essesntially, failed
             pkgName <- extractPkgName(pkg)
             td <- tempdir2(pkgName)
             packageTD <- file.path(td, pkgName)
             if (!dir.exists(packageTD)) {
-              message("available.packages() does not have correct information on package dependencies for ", pkgName,
-                      "; downloading tar.gz")
+              if (verbose %in% 1) # covers TRUE also
+                message("available.packages() does not have correct information on package dependencies for ", pkgName,
+                        "; downloading tar.gz")
               verNum <- extractVersionNumber(pkg)
               if (is.na(verNum)) {
                 ava <- archiveVersionsAvailable(pkgName, repos = repos)
@@ -294,7 +300,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                   purge = purge)
             else {
               character()
-              message(pkg, " dependencies not found on CRAN; perhaps incomplete description? On GitHub?")
+              if (verbose %in% 1) # covers TRUE also
+                message(pkg, " dependencies not found on CRAN; perhaps incomplete description? On GitHub?")
             }
           }
           purge <<- FALSE
@@ -359,14 +366,16 @@ pkgDep2 <- function(packages, recursive = TRUE,
 }
 
 #' @importFrom utils compareVersion
+#' @inheritParams Require
 pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
                        #recursive = FALSE,
                        pkgsNoVersion,
                        keepVersionNumber = TRUE, repos = getOption("repos"),
-                       purge = getOption("Require.purge", FALSE)) {
-  capFull <- available.packagesCached(repos = repos, purge = purge)
+                       purge = getOption("Require.purge", FALSE),
+                       verbose = getOption("Require.verbose")) {
+  capFull <- available.packagesCached(repos = repos, purge = purge, verbose = verbose)
   deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, pkgsNoVersion = pkgsNoVersion,
-                          keepVersionNumber = keepVersionNumber)
+                          keepVersionNumber = keepVersionNumber, verbose = verbose)
   deps
 }
 
@@ -402,6 +411,7 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #'   the `search()` path and passed in `pkgs` will be included
 #'   in the possible reverse dependencies.
 #'
+#' @inheritParams Require
 #' @export
 #' @rdname pkgDep
 #' @return
@@ -415,7 +425,8 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            useAllInSearch = FALSE,
                            returnFull = TRUE, recursive = TRUE,
-                           purge = getOption("Require.purge", FALSE)) {
+                           purge = getOption("Require.purge", FALSE),
+                           verbose = getOption("Require.verbose")) {
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
@@ -424,7 +435,8 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
       a <- gsub("package:", "", a)
       pkgs <- unique(c(pkgs, a))
     } else {
-      message("deps is provided; useAllInSearch will be set to FALSE")
+      if (verbose %in% 1) # covers TRUE also
+        message("deps is provided; useAllInSearch will be set to FALSE")
     }
   }
 
@@ -553,8 +565,9 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                       "Autoloads", "package:base", "devtools_shims")
 
 
+#' @inheritParams Require
 pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
-                            keepSeparate = FALSE) {
+                            keepSeparate = FALSE, verbose = getOption("Require.verbose")) {
   # MUCH faster to use base "ap$Package %in% pkgs" than data.table internal "Package %in% pkgs"
   if (missing(pkgsNoVersion))
     pkgsNoVersion <- trimVersionNumber(pkgs)
@@ -784,7 +797,8 @@ checkCircular <- function(aa) {
   aa
 }
 
-getGitHubDeps <- function(pkg, pkgDT, which, purge) {
+#' @inheritParams Require
+getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require.verbose")) {
   pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
   needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
   neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
@@ -861,8 +875,9 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge) {
       pkgDT2 <- pkgDT2[dup == FALSE]
       differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
       if (length(differences)) {
-        message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
-                paste(differences, collapse = ", "), " --) ")
+        if (verbose %in% 1) # covers TRUE also
+          message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
+                  paste(differences, collapse = ", "), " --) ")
       }
     }
     needed <- pkgDT2$packageFullName

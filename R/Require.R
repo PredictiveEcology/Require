@@ -255,6 +255,7 @@ Require <- function(packages, packageVersionFile,
 
   if (verbose == 0 || verbose %in% FALSE) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = TRUE))
+    install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet = TRUE))
   }
   libPaths <- checkLibPaths(libPaths = libPaths)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
@@ -417,9 +418,9 @@ Require <- function(packages, packageVersionFile,
 
       if (length(packages)) {
         if (isTRUE(install) || identical(install, "force")) {
-          pkgDT <- parseGitHub(pkgDT)
+          pkgDT <- parseGitHub(pkgDT, verbose = verbose)
           pkgDT <- getPkgVersions(pkgDT, install = install)
-          pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos)
+          pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos, verbose = verbose)
           pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
           pkgDT <- rmDuplicatePkgs(pkgDT, verbose = verbose)
           pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
@@ -435,7 +436,8 @@ Require <- function(packages, packageVersionFile,
             pkgDT <- doInstalls(pkgDT,
                                 install_githubArgs = install_githubArgs,
                                 install.packagesArgs = install.packagesArgs,
-                                install = install, repos = repos, ...
+                                install = install, repos = repos, verbose = verbose,
+                                ...
             )
           }
           if ("detached" %in% colnames(pkgDT)) {

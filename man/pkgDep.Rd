@@ -19,7 +19,8 @@ pkgDep(
   keepVersionNumber = TRUE,
   includeBase = FALSE,
   sort = TRUE,
-  purge = getOption("Require.purge", FALSE)
+  purge = getOption("Require.purge", FALSE),
+  verbose = getOption("Require.verbose")
 )
 
 pkgDep2(
@@ -43,7 +44,8 @@ pkgDepTopoSort(
   useAllInSearch = FALSE,
   returnFull = TRUE,
   recursive = TRUE,
-  purge = getOption("Require.purge", FALSE)
+  purge = getOption("Require.purge", FALSE),
+  verbose = getOption("Require.verbose")
 )
 }
 \arguments{
@@ -97,6 +99,9 @@ This maximum age can be set in seconds with the environment variable
 defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages()}}).
 
 Internally, there are calls to \code{available.packages}.}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}

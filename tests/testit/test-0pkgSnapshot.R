@@ -39,7 +39,8 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
     Sys.setenv("R_REMOTES_UPGRADE" = "never")
     Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-    outOpts <- options("Require.persistentPkgEnv" = TRUE,
+    outOpts <- options("Require.verbose" = FALSE,
+                       "Require.persistentPkgEnv" = TRUE,
                        "install.packages.check.source" = "never",
                        "install.packages.compile.from.source" = "never",
                        "Require.unloadNamespaces" = TRUE,

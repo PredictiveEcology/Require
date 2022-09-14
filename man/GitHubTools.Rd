@@ -5,13 +5,22 @@
 \alias{installGitHub}
 \title{GitHub specific helpers}
 \usage{
-parseGitHub(pkgDT)
+parseGitHub(pkgDT, verbose = getOption("Require.verbose"))
 
-installGitHub(pkgDT, toInstall, install_githubArgs = list(), dots = dots)
+installGitHub(
+  pkgDT,
+  toInstall,
+  install_githubArgs = list(),
+  dots = dots,
+  verbose = getOption("Require.verbose")
+)
 }
 \arguments{
 \item{pkgDT}{A character string with full package names or a \code{data.table}
 with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 
 \item{toInstall}{DESCRIPTION NEEDED}
 

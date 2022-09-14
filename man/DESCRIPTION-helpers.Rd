@@ -10,7 +10,11 @@ DESCRIPTIONFileVersionV(file, purge = getOption("Require.purge", FALSE))
 
 DESCRIPTIONFileOtherV(file, other = "RemoteSha")
 
-getGitHubDESCRIPTION(pkg, purge = getOption("Require.purge", FALSE))
+getGitHubDESCRIPTION(
+  pkg,
+  purge = getOption("Require.purge", FALSE),
+  verbose = getOption("Require.verbose")
+)
 }
 \arguments{
 \item{file}{A file path to a \code{DESCRIPTION} file}
@@ -31,6 +35,9 @@ Internally, there are calls to \code{available.packages}.}
 The rest of the line will be retrieved.}
 
 \item{pkg}{A character string with a GitHub package specification (c.f. remotes)}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 }
 \description{
 A series of helpers to access and deal with GitHub packages

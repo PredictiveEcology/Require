@@ -11,9 +11,19 @@
 \usage{
 getPkgVersions(pkgDT, install = TRUE)
 
-getAvailable(pkgDT, purge = FALSE, repos = getOption("repos"))
+getAvailable(
+  pkgDT,
+  purge = FALSE,
+  repos = getOption("repos"),
+  verbose = getOption("Require.verbose")
+)
 
-installFrom(pkgDT, purge = FALSE, repos = getOption("repos"))
+installFrom(
+  pkgDT,
+  purge = FALSE,
+  repos = getOption("repos"),
+  verbose = getOption("Require.verbose")
+)
 
 doInstalls(
   pkgDT,
@@ -21,10 +31,11 @@ doInstalls(
   install.packagesArgs,
   install = TRUE,
   repos = getOption("repos"),
+  verbose = getOption("Require.verbose"),
   ...
 )
 
-doLoading(pkgDT, require = TRUE, ...)
+doLoading(pkgDT, require = TRUE, verbose = getOption("Require.verbose"), ...)
 
 archiveVersionsAvailable(package, repos)
 }
@@ -52,6 +63,9 @@ Internally, there are calls to \code{available.packages}.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install.packages}
 inside \code{installGitHubPackage}.}

@@ -112,5 +112,7 @@ unlink("~/._R", recursive = TRUE)
 unlink(tempdir2(), recursive = TRUE)
 options(outOpts2)
 endTime <- Sys.time()
+tdOuter <- tempdir2("tests")
+startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")) # doesn't seem to keep globals from other scripts; recreate here
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
 try(message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m"), silent = TRUE)
