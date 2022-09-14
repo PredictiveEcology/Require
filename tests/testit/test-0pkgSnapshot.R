@@ -113,5 +113,5 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   options(outOpts)
-  options(outOpts2)
+  if (exists("outOpts2")) options(outOpts2)
 #}
