@@ -532,7 +532,7 @@ Require <- function(packages, packageVersionFile,
           if (length(allCorrect)) {
             allInstalled <- pkgDT[!nas][allCorrect]
             if (NROW(allInstalled) == 0) {
-              if (verbose >= 1)
+              if (verbose >= 0)
                 message("All packages appear to have installed correctly")
             }
           }
@@ -552,7 +552,8 @@ Require <- function(packages, packageVersionFile,
   }
 }
 
-usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = FALSE) {
+usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = FALSE,
+                   verbose = getOption("Require.verbose")) {
 
   wantpak <- isTRUE(getOption("Require.usepak", FALSE))
   if (!is.null(installFrom) && wantpak) {
@@ -574,8 +575,11 @@ usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = 
 
   if (wantpak && hasVersionNumberSpec) {
     wantpak <- FALSE
-    if (isTRUE(toplevel))
-      message("Using hybrid install via both *pak::pkg_install* and *Require* because version numbers are specified")
+    if (isTRUE(toplevel)) {
+      if (verbose >= 1)
+        message("Using hybrid install via both *pak::pkg_install* and *Require* because version numbers are specified")
+    }
+
   }
 
 

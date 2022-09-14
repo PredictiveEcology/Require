@@ -4,7 +4,7 @@
 \alias{linkOrCopy}
 \title{Create link to file, falling back to making a copy if linking fails.}
 \usage{
-linkOrCopy(to, from)
+linkOrCopy(from, to)
 }
 \arguments{
 \item{from, to}{character vectors, containing file names or paths.}
