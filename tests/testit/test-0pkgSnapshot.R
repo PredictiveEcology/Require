@@ -27,6 +27,17 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   bb <- data.table::rbindlist(bb)
   data.table::fwrite(x = bb, file = pkgVF)
 
+  outOpts <- options("Require.verbose" = FALSE,
+                     "Require.persistentPkgEnv" = TRUE,
+                     "install.packages.check.source" = "never",
+                     "install.packages.compile.from.source" = "never",
+                     "Require.unloadNamespaces" = TRUE,
+                     "Require.RPackageCache" = TRUE)
+  if (Sys.info()["user"] == "achubaty") {
+    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  } else {
+    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+  }
 
   if (file.exists(pkgVF)) {
     fileNames <- list()
@@ -38,17 +49,7 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
     Sys.setenv("R_REMOTES_UPGRADE" = "never")
     Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-    outOpts <- options("Require.verbose" = FALSE,
-                       "Require.persistentPkgEnv" = TRUE,
-                       "install.packages.check.source" = "never",
-                       "install.packages.compile.from.source" = "never",
-                       "Require.unloadNamespaces" = TRUE,
-                       "Require.RPackageCache" = TRUE)
-    if (Sys.info()["user"] == "achubaty") {
-      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-    } else {
-      outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-    }
+
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
 
     theDir <- Require:::rpackageFolder(getOptionRPackageCache())
