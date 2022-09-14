@@ -11,10 +11,10 @@ outOpts <- options("Require.verbose" = TRUE,
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE,
                    "Require.RPackageCache" = TRUE)
-if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-} else if (Sys.info()["user"] == "achubaty") {
+if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
