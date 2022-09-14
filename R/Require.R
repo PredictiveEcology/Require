@@ -13,7 +13,7 @@ utils::globalVariables(c(
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
 #' This is an "all in one" function that will run `install.packages` for CRAN and
-#' GitHub \url{https://github.com/} packages and will install
+#' GitHub <https://github.com/> packages and will install
 #' specific versions of each package if versions are specified either via an (in)equality
 #' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
 #' `packageVersionFile`.
@@ -23,7 +23,7 @@ utils::globalVariables(c(
 #' then the "install" component will be skipped.
 #'
 #' `standAlone` will either put the `Require`d packages and their
-#' dependencies \emph{all} within the `libPaths` (if `TRUE`) or if
+#' dependencies *all* within the `libPaths` (if `TRUE`) or if
 #' `FALSE` will only install packages and their dependencies that are
 #' otherwise not installed in `.libPaths()[1]`, i.e., the current active
 #' R package directory. Any packages or dependencies that are not yet installed will
@@ -49,14 +49,14 @@ utils::globalVariables(c(
 #' This function works best if all required packages are called within one
 #' `Require` call, as all dependencies can be identified together, and all
 #' package versions will be addressed (if there are no conflicts),
-#' allowing a call to \code{\link{pkgSnapshot}} to take a snapshot or "record" of
+#' allowing a call to [pkgSnapshot()] to take a snapshot or "record" of
 #' the current collection of packages and versions.
 #'
 #' @section Local Cache of Packages:
 #' When installing new packages, `Require` will put all source and binary files
 #' in an R-version specific subfolder of
 #' `getOption("Require.RPackageCache")` whose default is `RPackageCache()`, meaning
-#' \emph{cache packages locally in a project-independent location},
+#' *cache packages locally in a project-independent location*,
 #' and will reuse them if needed. To turn
 #' off this feature, set `options("Require.RPackageCache" = FALSE)`.
 #'
@@ -111,7 +111,7 @@ utils::globalVariables(c(
 #'   The cached values are renewed when found to be too old, with the age limit.
 #'   This maximum age can be set in seconds with the environment variable
 #'   `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE`, or if unset,
-#'   defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
+#'   defaults to 3600  (one hour -- see [utils::available.packages()]).
 #'
 #'   Internally, there are calls to `available.packages`.
 #' @param verbose Numeric. If `1` (less) or `2` (more), there will be
@@ -370,7 +370,12 @@ Require <- function(packages, packageVersionFile,
       packagesOrder <- seq(packagesOrig)
       names(packagesOrder) <- extractPkgName(packageNamesOrig)
 
+      packagesFullNameOrder <- packagesOrder
+      names(packagesFullNameOrder) <- packageNamesOrig
+
+
       if (length(which) && (isTRUE(install) || identical(install, "force"))) {
+        message("Identifying package dependencies...")
         packages <- getPkgDeps(packages, which = which, purge = purge)
       }
 
@@ -384,9 +389,11 @@ Require <- function(packages, packageVersionFile,
       # it is no longer the same as orig package name
       pkgDT[
         packageFullName %in% unique(packageNamesOrig) | Package %in% unique(packageNamesOrig),
-        packagesRequired := packagesOrder[match(Package, names(packagesOrder))]
+        `:=`(
+          packagesRequired = packagesOrder[match(Package, names(packagesOrder))],
+          userRequestedOrder = packagesFullNameOrder[match(packageFullName, names(packagesFullNameOrder))])
       ]
-      pkgDT[, loadOrder := packagesRequired] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
+      pkgDT[, loadOrder := userRequestedOrder] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
 
       if (any(origPackagesHaveNames)) {
         pkgDT[
@@ -395,6 +402,7 @@ Require <- function(packages, packageVersionFile,
         ]
       }
 
+      data.table::setorderv(pkgDT, c("userRequestedOrder"), na.last = TRUE)
       # Join installed with requested
       pkgDT <- installedVers(pkgDT)
       pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
@@ -419,8 +427,11 @@ Require <- function(packages, packageVersionFile,
                               needInstall = pkgDT$needInstall,
                               installFrom = pkgDT$repoLocation, toplevel = TRUE)
           if (canusepak) {
-            pkgDT <- installByPak(pkgDT, libPaths, doDeps, ...)
-          } else {
+            pakOut <- try(installByPak(pkgDT, libPaths, doDeps, ...))
+            if (is(pakOut, "try-error"))
+              canusepak <- FALSE
+          }
+          if (!canusepak) {
             pkgDT <- doInstalls(pkgDT,
                                 install_githubArgs = install_githubArgs,
                                 install.packagesArgs = install.packagesArgs,

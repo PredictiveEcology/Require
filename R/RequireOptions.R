@@ -1,72 +1,73 @@
-#' \code{Require} options
+#' `Require` options
 #'
 #' These provide top-level, powerful settings for a comprehensive
-#' reproducible workflow. To see defaults, run \code{RequireOptions()}.
+#' reproducible workflow. To see defaults, run `RequireOptions()`.
 #' See Details below.
 #'
 #' @export
 #' @details
 #'
-#' Below are options that can be set with \code{options("Require.xxx" = newValue)},
-#' where \code{xxx} is one of the values below, and \code{newValue} is a new value to
-#' give the option. Sometimes these options can be placed in the user's \code{.Rprofile}
+#' Below are options that can be set with `options("Require.xxx" = newValue)`,
+#' where `xxx` is one of the values below, and `newValue` is a new value to
+#' give the option. Sometimes these options can be placed in the user's `.Rprofile`
 #' file so they persist between sessions.
 #'
 #' The following options are likely of interest to most users:
 #' \describe{
-#'   \item{\code{RPackageCache}}{
-#'     Default: \code{getOptionRPackageCache()}, which must be either a path or a logical.
+#'   \item{`RPackageCache`}{
+#'     Default: `getOptionRPackageCache()`, which must be either a path or a logical.
 #'     This can be set using an environment
 #'     variable e.g. `Sys.setenv(Require.RPackageCache = "somePath")`, or
 #'     `Sys.setenv(Require.RPackageCache = "TRUE")`; if that is not
-#'     set, then an either a path or logical option `(options("Require.RPackageCache" = "somePath"))`
-#'     or `(options("Require.RPackageCache" = TRUE))`. If `TRUE`, the default
-#'     folder location `RequirePkgCacheDir()` will be used. If this is `TRUE` or a path is provided,
-#'       then binary and source packages will be cached here. Subsequent downloads
-#'       of same package will use local copy. Default
-#'       is to have packages not be cached locally so each install of the same version will
-#'       be from the original source, e.g., CRAN, GitHub.
+#'     set, then an either a path or logical option (`options(Require.RPackageCache = "somePath")`
+#'     or `options(Require.RPackageCache = TRUE)`). If `TRUE`, the default
+#'     folder location `RequirePkgCacheDir()` will be used.
+#'     If this is `TRUE` or a path is provided,
+#'     then binary and source packages will be cached here. Subsequent downloads
+#'     of same package will use local copy.
+#'     Default is to have packages not be cached locally so each install of the same version will
+#'     be from the original source, e.g., CRAN, GitHub.
 #'   }
-#'   \item{\code{buildBinaries}}{
-#'     Default: \code{TRUE}. Only relevant on *nix systems and if
-#'     \code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE} or a
+#'   \item{`buildBinaries`}{
+#'     Default: `TRUE`. Only relevant on *nix systems and if
+#'     `getOption("Require.RPackageCache")` is set to a  path. If `TRUE` or a
 #'        valid path, then
-#'        \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the
+#'        `Require` will pass `INSTALL_OPTS = "--build"`, meaning the
 #'        package binary will be built and then saved in the
-#'        \code{getOption("Require.RPackageCache")}. This means that subsequent installs
+#'        `getOption("Require.RPackageCache")`. This means that subsequent installs
 #'        of this package on this or identical system will be faster.
 #'   }
-#'   \item{\code{persistentPkgEnv}}{
-#'     Default: \code{FALSE}. (ADVANCED USE) \code{Require} stashes a lot of information in a
-#'     hidden environment, located at \code{Require:::.pkgEnv}. This gets reset at each
+#'   \item{`persistentPkgEnv`}{
+#'     Default: `FALSE`. (ADVANCED USE) `Require` stashes a lot of information in a
+#'     hidden environment, located at `Require:::.pkgEnv`. This gets reset at each
 #'     restart of R and each reload of Require. To make the stashes more persistent,
-#'     set this option to \code{TRUE}. A file will be placed at
-#'     \code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
+#'     set this option to `TRUE`. A file will be placed at
+#'     `file.path("~", "._Require_pkgEnv.rdata")`, which will be restored at package load
 #'   }
-#'   \item{\code{purge}}{
-#'     Default: \code{FALSE}. If set to (almost) all internal caches used by \code{Require}
+#'   \item{`purge`}{
+#'     Default: `FALSE`. If set to (almost) all internal caches used by `Require`
 #'     will be deleted and rebuilt. This should not generally be necessary as it will
 #'     automatically be deleted after (by default) 1 hour (set via
-#'     \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds)
+#'     `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in seconds)
 #'   }
-#'   \item{\code{setupVerbose}}{
-#'     Default: \code{TRUE}. Logical. Once \code{setup} is called, there are several important
-#'     changes that are made to the user's experience. For beginners with \code{Require},
+#'   \item{`setupVerbose`}{
+#'     Default: `TRUE`. Logical. Once `setup` is called, there are several important
+#'     changes that are made to the user's experience. For beginners with `Require`,
 #'     the messages that are written are important to see. However, these can be turned off
-#'     setting this to \code{FALSE}
+#'     setting this to `FALSE`
 #'   }
-#'   \item{\code{unloadNamespaces}}{
-#'     Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload
-#'     packages that conflict with the requested package installing via \code{Require}.
+#'   \item{`unloadNamespaces`}{
+#'     Default: `TRUE`. (ADVANCED USE) `Require` will attempt to detach and unload
+#'     packages that conflict with the requested package installing via `Require`.
 #'     This can be complicated, resulting in broken states that can only be recovered
-#'     by restarting R. Default is to attempt to do this. \code{FALSE} will not attempt
+#'     by restarting R. Default is to attempt to do this. `FALSE` will not attempt
 #'     to do this. User must deal with inability to install packages due to package already
 #'     being loaded.
 #'   }
-#'   \item{\code{verbose}}{
-#'     Default: \code{0}. During a \code{Require}, there is a lot of information collected
-#'     and used. With \code{verbose} set to \code{1} or \code{2}, more of this information
-#'     will be reported as an attribute attached to the return object of \code{Require}.
+#'   \item{`verbose`}{
+#'     Default: `0`. During a `Require`, there is a lot of information collected
+#'     and used. With `verbose` set to `1` or `2`, more of this information
+#'     will be reported as an attribute attached to the return object of `Require`.
 #'     This may help diagnosing problems.
 #'   }
 #'
@@ -75,8 +76,8 @@
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
-       Require.RPackageFolders = NULL, #"~/._RPackageCache", # nolint
-       Require.RPackageCache = getOptionRPackageCache(), #"~/._RPackageCache", # nolint
+       Require.RPackageFolders = NULL,
+       Require.RPackageCache = getOptionRPackageCache(), # RequirePkgCacheDir()
        Require.setupVerbose = TRUE,
        Require.standAlone = TRUE,
        Require.unloadNamespaces = FALSE,

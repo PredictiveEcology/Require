@@ -29,14 +29,19 @@ RequirePkgCacheDir <- function() {
 #'
 #' This can be placed as the first line of any/all scripts and it will
 #' be create a reproducible, self-contained project with R packages.
-#' Some of these have direct relationships with \code{RequireOptions}
-#' and arguments in \code{setLibPaths} and \code{Require}.
+#' Some of these have direct relationships with `RequireOptions`
+#' and arguments in `setLibPaths` and `Require`.
+#'
 #' @param RPackageFolders One or more folders where R packages are
 #'   installed to and loaded from. In the case of more than one
 #'   folder provided, installation will only happen in the first one.
-#' @param RPackageCache See \code{?RequireOptions}.
-#' @param buildBinaries See \code{?RequireOptions}.
+#'
+#' @param RPackageCache See `?RequireOptions`.
+#'
+#' @param buildBinaries See `?RequireOptions`.
+#'
 #' @inheritParams setLibPaths
+#'
 #' @export
 #' @rdname setup
 #'
@@ -93,9 +98,9 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
 
 #' @rdname setup
 #' @export
-#' @param removePackages Logical. If \code{TRUE}, then all packages that
-#'   were installed in the custom library will be deleted when \code{setupOff}
-#'   is run. The default is \code{FALSE}, and when \code{TRUE} is selected,
+#' @param removePackages Logical. If `TRUE`, then all packages that
+#'   were installed in the custom library will be deleted when `setupOff`
+#'   is run. The default is `FALSE`, and when `TRUE` is selected,
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
 setupOff <- function(removePackages = FALSE) {
