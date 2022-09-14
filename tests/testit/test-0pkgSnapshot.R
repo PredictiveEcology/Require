@@ -73,7 +73,7 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
       if (any(grepl("tar.gz", localBinsFull))) {
         localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
       }
-      # THere might be more than one version
+      # There might be more than one version
       dts <- grep("data.table", localBinsFull, value = TRUE)[1]
       rems <- grep("remotes", localBinsFull, value = TRUE)[1]
       localBinsFull <- na.omit(c(dts, rems))
@@ -85,9 +85,11 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
     localBinsFull <- dts
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
-        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"') ,quiet = TRUE, type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+        system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2] ,
+                      "'), quiet = TRUE, type = 'binary', lib = '", .libPaths()[1],"', repos = NULL)\""), wait = TRUE)
       else
-        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), quiet = TRUE, lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+        system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+                      "'), quiet = TRUE, lib = '", .libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
       system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
                     .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
