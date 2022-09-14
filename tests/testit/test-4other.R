@@ -90,7 +90,7 @@ ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 setup(setupTestDir, RPackageCache = ccc)
 testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 setupOff()
-message("This is getOption('Require.RPackageCache')", Require:::getOptionRPackageCache())
+message("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache())
 testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
 
 # reset options after setupOff()

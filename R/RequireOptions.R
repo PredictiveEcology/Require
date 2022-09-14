@@ -70,6 +70,9 @@
 #'     to do this. User must deal with inability to install packages due to package already
 #'     being loaded.
 #'   }
+#'   \item{`usePak`}{
+#'     Default: `FALSE`. Should `pak` be used to resolve package dependencies and installation.
+#'   }
 #'   \item{`verbose`}{
 #'     Default: `0`. During a `Require`, there is a lot of information collected
 #'     and used. With `verbose` set to `1` or `2`, more of this information
@@ -89,6 +92,7 @@ RequireOptions <- function() {
        Require.unloadNamespaces = FALSE,
        Require.updateRprofile = FALSE,
        # Require.useCranCache = NULL,
+       Require.usePak = FALSE,
        Require.verbose = 0
   )
 }
@@ -100,7 +104,7 @@ getRequireOptions <- function() {
   vals <- lapply(opts, getOption)
   names(vals) <- opts
 
-  return(invisible(vals))
+  return(vals)
 }
 
 # old code ------------------------------------------------------------------------------------

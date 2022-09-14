@@ -388,7 +388,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
   if (!is.null(rpackageFolder(getOptionRPackageCache()))) {
     localFiles <- dir(rpackageFolder(getOptionRPackageCache()), full.names = TRUE)
     # sanity check -- there are bad files, quite often
-    fileSizeEq0 <- file.size(localFiles) == 0
+    fileSizeEq0 <- is.na(file.size(localFiles)) | file.size(localFiles) == 0
     if (any(fileSizeEq0)) {
       unlink(localFiles[fileSizeEq0])
       localFiles <- localFiles[!fileSizeEq0]
@@ -1731,13 +1731,11 @@ installRequire <- function(requireHome = getOption("Require.Home"),
             on.exit(setwd(origDir), add = TRUE)
             if (verbose >= 1) # covers TRUE also
               message("Installing Require ver: ", pkgVersionAtRequireHome," from source at ", requireHome)
-            out <- system(paste0("R CMD INSTALL --no-multiarch --library=",
-                                 .libPaths()[1], " Require"),
+            out <- system(paste0("R CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
                           wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE)
           }
         }
         done <- TRUE
-
       } else {
         if (!is.null(requireHome))
           if (verbose >= 1) # covers TRUE also
@@ -1746,12 +1744,14 @@ installRequire <- function(requireHome = getOption("Require.Home"),
     }
 
     if (isFALSE(done)) {
-      system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', quiet = TRUE, repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+      system(paste0("Rscript -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
+                    "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
     }
   } else {
     stop("Require will need to be installed manually in", .libPaths()[1])
-    system(paste0("Rscript -e \"install.packages(c('Require'), lib ='",.libPaths()[1],"', quiet = TRUE, repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+    system(paste0("Rscript -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
+                  "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   }
 }
 
