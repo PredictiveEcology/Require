@@ -41,18 +41,14 @@ if (interactive()) {
                        "install.packages.compile.from.source" = "never",
                        "Require.unloadNamespaces" = TRUE,
                        "Require.RPackageCache" = TRUE)
-    if (Sys.info()["user"] == "emcintir2") {
-      outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                          )
-    } else if (Sys.info()["user"] == "achubaty") {
+    if (Sys.info()["user"] == "achubaty") {
       outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
     } else {
-      outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
-        "Require.RPackageCache" = RequirePkgCacheDir())
+      outOpts2 <- options("Require.Home" = "~/GitHub/Require")
     }
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
 
-    theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
+    theDir <- Require:::rpackageFolder(getOptionRPackageCache())
     if (!is.null(theDir)) {
       localBins <- dir(theDir, pattern = "data.table|remotes")
       localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
