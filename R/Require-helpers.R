@@ -2177,10 +2177,10 @@ internetExists <- function(mess = "") {
   TRUE # .pkgEnv$internetExists
 }
 
-
-sourcePkgs <- function (additional = NULL)
-  c("igraph", "rgeos", "rgdal", "terra", "sf", "units", "stringfish",
-    "qs", "sp", "Rcpp", "RcppParallel", "cpp11", "lwgeom", additional)
+sourcePkgs <- function(additional = NULL) {
+  c("cpp11", "igraph", "lwgeom", "qs", "raster", "Rcpp", "RcppParallel",
+    "rgdal", "rgeos", "sf", "sp", "stringfish", "terra", "units", additional)
+}
 
 srcPackageURLOnCRAN <- "https://cloud.r-project.org/"
 
