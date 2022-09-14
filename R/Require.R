@@ -475,8 +475,9 @@ Require <- function(packages, packageVersionFile,
           pkgDT <- pkgDT[, ..colsToKeep]
         }
 
-        attr(out, "Require") <- pkgDT[]
       }
+      attr(out, "Require") <- pkgDT[]
+
       stillNeeded <- if (!is.null(pkgDT$installResult)) {
         if (any(grep("No available", pkgDT$installResult))) {
           pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]

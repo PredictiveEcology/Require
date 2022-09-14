@@ -1,9 +1,12 @@
-message("\033[32m --------------------------------- Starting test-1packages.R \033[39m")
+thisFilename <- "test-1packages.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = TRUE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE,
@@ -58,7 +61,6 @@ library(testit)
 
 dir1 <- Require:::rpackageFolder(tempdir2("test1"))
 checkPath(dir1, create = TRUE)
-options("Require.verbose" = TRUE)
 out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
@@ -194,3 +196,5 @@ options(outOpts)
 options(outOpts2)
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

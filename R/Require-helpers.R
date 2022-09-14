@@ -2291,7 +2291,7 @@ getOptionRPackageCache <- function() {
   fromEnvVars <- Sys.getenv("Require.RPackageCache")
   if (nchar(fromEnvVars) == 0) {
     fromEnvVars <- NULL
-    curVal <- getOption("Require.RPackageCache")
+    curVal <- getOption("Require.RPackageCache", TRUE)
   } else {
     curVal <- fromEnvVars
     if (identical("TRUE", curVal)) curVal <- TRUE

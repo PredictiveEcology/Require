@@ -37,7 +37,7 @@ RequirePkgCacheDir <- function() {
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
 
-  return(invisible(pkgCacheDir))
+  return(pkgCacheDir)
 }
 
 #' Setup a project library, cache, options

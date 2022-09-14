@@ -1,4 +1,6 @@
-message("\033[32m --------------------------------- Starting test-4other.R \033[39m")
+thisFilename <- "test-4other.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -9,11 +11,9 @@ outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "Require.RPackageCache" = TRUE,
                    "Require.unloadNamespaces" = TRUE)
 if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 } else if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                      "Require.RPackageCache" = RequirePkgCacheDir())
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
 # Test misspelled
@@ -101,3 +101,5 @@ testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
 testit::assert(identical(Require:::getOptionRPackageCache(), secondTry))
 options(opt22)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

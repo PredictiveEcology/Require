@@ -1,4 +1,6 @@
-message("\033[32m --------------------------------- Starting test-5packagesLong.R \033[39m")
+thisFilename <- "test-5packagesLong.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
@@ -6,17 +8,16 @@ if (interactive()) {
   library(Require)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+  outOpts <- options("Require.verbose" = FALSE,
+                     "Require.persistentPkgEnv" = TRUE,
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
-                     "Require.RPackageCache" = TRUE,
-                     "Require.unloadNamespaces" = FALSE)
-  if (Sys.info()["user"] == "emcintir2") {
-    outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                        "Require.RPackageCache" = "~/._RPackageCache/")
-  } else if (Sys.info()["user"] == "achubaty") {
-    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
-                        "Require.RPackageCache" = RequirePkgCacheDir())
+                     "Require.unloadNamespaces" = FALSE,
+                     "Require.RPackageCache" = TRUE)
+  if (Sys.info()["user"] == "achubaty") {
+    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  } else {
+    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
   }
   tmpdir <- file.path(tempdir2("other"), paste0("RequireTmp", sample(1e5, 1)))
 
@@ -29,7 +30,7 @@ if (interactive()) {
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
   origDir <- setwd("~/GitHub/");
 
-  theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
+  theDir <- Require:::rpackageFolder(getOptionRPackageCache())
   if (!is.null(theDir)) {
     localBins <- dir(theDir, pattern = "data.table|remotes")
     localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
@@ -307,3 +308,5 @@ if (interactive()) {
 }
 
 # unlink(tmpdir, recursive = TRUE)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
