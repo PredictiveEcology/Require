@@ -9,10 +9,11 @@ setup(
   RPackageFolders = getOption("Require.RPackageFolders", "R"),
   RPackageCache = getOptionRPackageCache(),
   buildBinaries = getOption("Require.buildBinaries", TRUE),
-  standAlone = getOption("Require.standAlone", TRUE)
+  standAlone = getOption("Require.standAlone", TRUE),
+  verbose = getOption("Require.verbose")
 )
 
-setupOff(removePackages = FALSE)
+setupOff(removePackages = FALSE, verbose = getOption("Require.verbose"))
 }
 \arguments{
 \item{RPackageFolders}{One or more folders where R packages are
@@ -31,6 +32,9 @@ resulting in shared packages, i.e., it will include the user's default package f
 This can be create dramatically faster installs if the user has a substantial number of
 the packages already in their personal library.
 Default \code{FALSE} to minimize package installing.}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 
 \item{removePackages}{Logical. If \code{TRUE}, then all packages that
 were installed in the custom library will be deleted when \code{setupOff}

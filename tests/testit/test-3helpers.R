@@ -10,10 +10,10 @@ outOpts <- options("Require.verbose" = FALSE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-} else if (Sys.info()["user"] == "achubaty") {
+if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))

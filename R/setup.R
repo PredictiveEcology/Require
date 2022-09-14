@@ -56,6 +56,7 @@ RequirePkgCacheDir <- function() {
 #' @param buildBinaries See `?RequireOptions`.
 #'
 #' @inheritParams setLibPaths
+#' @inheritParams Require
 #'
 #' @export
 #' @rdname setup
@@ -72,10 +73,11 @@ RequirePkgCacheDir <- function() {
 setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
                   buildBinaries = getOption("Require.buildBinaries", TRUE),
-                  standAlone = getOption("Require.standAlone", TRUE)) {
+                  standAlone = getOption("Require.standAlone", TRUE),
+                  verbose = getOption("Require.verbose")) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
   RPackageCache <- checkPath(RPackageCache, create = TRUE)
-  copyRequireAndDeps(RPackageFolders)
+  copyRequireAndDeps(RPackageFolders, verbose = verbose)
 
   newOpts <- list("Require.RPackageCache" = RPackageCache,
                   "Require.buildBinaries" = buildBinaries)#,
@@ -85,7 +87,7 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                        setLibPaths(RPackageFolders, standAlone = standAlone,
                                    updateRprofile = TRUE))
   if (!any(grepl(alreadyInRprofileMessage, co)))
-    if (getOption("Require.setupVerbose", TRUE))
+    if (verbose >= 1)
       silence <- lapply(co, message)
   ro <- RequireOptions()
   roNames <- names(newOpts)
@@ -113,13 +115,14 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
 }
 
 #' @rdname setup
+#' @inheritParams Require
 #' @export
 #' @param removePackages Logical. If `TRUE`, then all packages that
 #'   were installed in the custom library will be deleted when `setupOff`
 #'   is run. The default is `FALSE`, and when `TRUE` is selected,
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
-setupOff <- function(removePackages = FALSE) {
+setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   lps <- .libPaths()
   if (file.exists(".Rprofile")) {
     rp <- readLines(".Rprofile")
@@ -137,7 +140,7 @@ setupOff <- function(removePackages = FALSE) {
     }
     setLibPaths()
     if (isTRUE(removePackages)) {
-      if (interactive() && getOption("Require.setupVerbose", TRUE) ) {
+      if (interactive() && (verbose >= 0)) {
         message("You have requested to remove all packages in ", lps[1])
         out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
         if (identical(tolower(out), "n"))
@@ -151,7 +154,7 @@ setupOff <- function(removePackages = FALSE) {
   }
 }
 
-copyRequireAndDeps <- function(RPackageFolders) {
+copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.verbose")) {
   lps <- .libPaths()
   names(lps) <- lps
   pkgs <- c("Require", "data.table")
@@ -164,7 +167,7 @@ copyRequireAndDeps <- function(RPackageFolders) {
       if (isTRUE(pkgInstalledAlready)) {
         fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
         if (!newPathExists) {
-          if (getOption("Require.setupVerbose", TRUE))
+          if (verbose >= 1)
             message("Placing copy of ", pkg, " in ", RPackageFolders)
           dirs <- unique(dirname(fromFiles))
           dirs <- gsub(thePath, theNewPath, dirs)
@@ -178,7 +181,7 @@ copyRequireAndDeps <- function(RPackageFolders) {
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          if (getOption("Require.setupVerbose", TRUE))
+          if (verbose >= 1)
             message("Updating version of ", pkg, " in ", RPackageFolders)
           unlink(toFiles)
         }

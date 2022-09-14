@@ -12,10 +12,10 @@ outOpts <- options("Require.verbose" = FALSE,
                    "install.packages.compile.from.source" = "never",
                    "Require.RPackageCache" = TRUE,
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-} else if (Sys.info()["user"] == "achubaty") {
+if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 
 #library(Require)
@@ -98,8 +98,6 @@ if (interactive()) {
 }
 
 pkg <- c("Require (==0.0.6)")
-# d <- pkgDepAlt(pkg) # GitHub package and local packages
-# testit::assert({identical(sort(c("data.table (>= 1.10.4)")), sort(d[[1]]))})
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
@@ -109,6 +107,6 @@ unlink(tempdir2(), recursive = TRUE)
 if (exists("outOpts2")) options(outOpts2)
 endTime <- Sys.time()
 tdOuter <- tempdir2("tests")
-startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")) # doesn't seem to keep globals from other scripts; recreate here
+try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE) # doesn't seem to keep globals from other scripts; recreate here
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
 try(message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m"), silent = TRUE)

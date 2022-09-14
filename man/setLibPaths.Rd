@@ -8,7 +8,8 @@ setLibPaths(
   libPaths,
   standAlone = TRUE,
   updateRprofile = getOption("Require.updateRprofile", FALSE),
-  exact = FALSE
+  exact = FALSE,
+  verbose = getOption("Require.verbose")
 )
 }
 \arguments{
@@ -37,6 +38,9 @@ can be set with an option or within a single call.}
 on the system. There are some cases where this behaviour is not desirable.
 Set \code{exact} to \code{TRUE} to override this automatic appending and use
 the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which

@@ -1656,7 +1656,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   installRangeCh <- paste(installRange, collapse = ":")
 
 
-  if (verbose %in% 1) # covers TRUE also
+  if (verbose >= 0) # i.e., has to be explicitly -1 not just FALSE
     message(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages,
             if (numGroups > 1)
               paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,") ")

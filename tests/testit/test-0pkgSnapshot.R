@@ -1,5 +1,7 @@
 thisFilename <- "test-0pkgSnapshot.R"
 startTimeAll <- startTime <- Sys.time()
+tdOuter <- tempdir2("tests")
+try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
 #if (interactive()) {
