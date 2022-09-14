@@ -307,7 +307,6 @@ if (interactive()) {
   if (exists("outOpts2")) options(outOpts2)
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-
 }
 
 # unlink(tmpdir, recursive = TRUE)
