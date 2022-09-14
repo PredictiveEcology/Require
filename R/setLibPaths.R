@@ -36,6 +36,7 @@
 #' `.libPaths()` allowing the user to reset easily.
 #'
 #' @export
+#' @importFrom utils compareVersion
 #' @inheritParams Require
 #' @examples
 #' \dontrun{
@@ -65,12 +66,10 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   if (!is.null(updateRprofile)) {
     setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
   }
-
-  gte41 <- isTRUE(rversion() >= "4.1")
-  if (gte41) { # now correct behaviour; remaining parts unnecessary
-    #.libPaths(libPaths[1], include.site = !standAlone)
+  gte4.1 <- compareVersion(paste0(R.version$major, ".", gsub("\\..*", "", R.version$minor)), "4.1")
+  if (gte4.1 >= 0) { # now correct behaviour; remaining parts unnecessary
     do.call(.libPaths, list(new = libPaths[1],
-                            if (gte41) include.site = !standAlone)) ## to avoid triggering warning on R < 4.1
+                 if (gte41) include.site = !standAlone)) ## to avoid triggering warning on R < 4.1
     return(oldLibPaths)
   }
 
