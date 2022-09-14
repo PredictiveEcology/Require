@@ -95,7 +95,6 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
     Require:::installRequire(getOption("Require.Home"))
 
     st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
-    print(st)
 
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])

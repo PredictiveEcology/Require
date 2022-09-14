@@ -296,11 +296,13 @@ Require <- function(packages, packageVersionFile,
             )
           ))
         )
-        message(
-          "packageVersionFile is covering more than one library; installing packages in reverse order; ",
-          "also -- .libPaths() will be altered to be\n"
-        )
-        messageDF(dt)
+        if (verbose >= 1) {
+          message(
+            "packageVersionFile is covering more than one library; installing packages in reverse order; ",
+            "also -- .libPaths() will be altered to be\n"
+          )
+          messageDF(dt)
+        }
         callArgs <- as.list(match.call())[-1]
         out <- Map(
           lib = rev(dt$libPathInSnapshot),
@@ -349,7 +351,8 @@ Require <- function(packages, packageVersionFile,
         },
         add = TRUE
       )
-      message("Using ", packageVersionFile, "; setting `require = FALSE`")
+      if (verbose >= 1)
+        message("Using ", packageVersionFile, "; setting `require = FALSE`")
     }
 
     if (NROW(packages)) {
@@ -376,7 +379,8 @@ Require <- function(packages, packageVersionFile,
 
 
       if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-        message("Identifying package dependencies...")
+        if (verbose >= 1)
+          message("Identifying package dependencies...")
         packages <- getPkgDeps(packages, which = which, purge = purge)
       }
 
@@ -445,8 +449,10 @@ Require <- function(packages, packageVersionFile,
             if (NROW(unloaded)) {
               reloaded <- lapply(unloaded[detached == 2]$Package, loadNamespace)
               relibraried <- lapply(unloaded[detached == 3]$Package, require, character.only = TRUE)
-              message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
-              message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+              if (verbose >= 1) {
+                message("Attempting to reload namespaces that were detached: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+                message("Attempting to reattach to the search path: ", paste(unloaded[detached == 2]$Package, collapse = ", "))
+              }
             }
           }
         }
@@ -488,13 +494,15 @@ Require <- function(packages, packageVersionFile,
         }
       }
       if (NROW(stillNeeded)) {
-        message(
-          "Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking ",
-          "information and thus will not be installed. ",
-          "These may have been installed locally from source, or are on another ",
-          "repository system, such as BioConductor:"
-        )
-        messageDF(stillNeeded[, list(Package, packageFullName, installResult)])
+        if (verbose >= 1) {
+          message(
+            "Several packages are not on CRAN, its archives (for this OS), or don't have GitHub tracking ",
+            "information and thus will not be installed. ",
+            "These may have been installed locally from source, or are on another ",
+            "repository system, such as BioConductor:"
+          )
+          messageDF(stillNeeded[, list(Package, packageFullName, installResult)])
+        }
       }
       notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
       if (isTRUE(any(notCorrectly))) {
@@ -523,7 +531,8 @@ Require <- function(packages, packageVersionFile,
             if (length(allCorrect)) {
               allInstalled <- pkgDT[!nas][allCorrect]
               if (NROW(allInstalled) == 0) {
-                message("All packages appear to have installed correctly")
+                if (verbose >= 1)
+                  message("All packages appear to have installed correctly")
               }
             }
           }

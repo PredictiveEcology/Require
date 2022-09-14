@@ -9,7 +9,8 @@ pkgSnapshot(
   libPaths,
   standAlone = FALSE,
   purge = getOption("Require.purge", FALSE),
-  exact = TRUE
+  exact = TRUE,
+  verbose = getOption("Require.verbose")
 )
 }
 \arguments{
@@ -53,6 +54,9 @@ will return the SHA as it does not know what branch it came from.
 Similarly, CRAN packages will
 report their version and specify with a \code{>=}, allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
+
+\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
+a \code{data.table} with many details attached to the output.}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.

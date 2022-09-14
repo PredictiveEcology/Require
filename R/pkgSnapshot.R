@@ -69,7 +69,8 @@
 #' unlink(tempdir(), recursive = TRUE) # clean up
 #'
 pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
-                        purge = getOption("Require.purge", FALSE), exact = TRUE) {
+                        purge = getOption("Require.purge", FALSE), exact = TRUE,
+                        verbose = getOption("Require.verbose")) {
   if (missing(libPaths))
     libPaths <- .libPaths()
   origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
@@ -100,7 +101,8 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
     # source("packages.R")
   } else {
     fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
-    message("package version file saved in ",packageVersionFile)
+    if (verbose >= 1)
+      message("package version file saved in ",packageVersionFile)
   }
 
   return(invisible(ip))
