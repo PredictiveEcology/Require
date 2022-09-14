@@ -7,7 +7,7 @@ utils::globalVariables(c(
   "LibPath", "libPaths", "loaded", "loadOrder", "needInstall",
   "OlderVersionsAvailable", "OlderVersionsAvailableCh",
   "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
-  "Repo", "repoLocation", "RepoWBranch",  "Version", "versionSpec"
+  "Repo", "repoLocation", "RepoWBranch", "userRequestedOrder", "Version", "versionSpec"
 ))
 
 #' Repeatability-safe install and load packages, optionally with specific versions
@@ -475,8 +475,9 @@ Require <- function(packages, packageVersionFile,
           pkgDT <- pkgDT[, ..colsToKeep]
         }
 
-        attr(out, "Require") <- pkgDT[]
       }
+      attr(out, "Require") <- pkgDT[]
+
       stillNeeded <- if (!is.null(pkgDT$installResult)) {
         if (any(grep("No available", pkgDT$installResult))) {
           pkgDT[installed == FALSE, list(Package, packageFullName, installResult)]
