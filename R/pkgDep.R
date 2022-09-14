@@ -5,46 +5,46 @@ utils::globalVariables(c(
 
 #' Determine package dependencies
 #'
-#' This will first look in local filesystem (in \code{.libPaths()}) and will use
+#' This will first look in local filesystem (in `.libPaths()`) and will use
 #' a local package to find its dependencies. If the package does not exist locally,
 #' including whether it is the correct version, then it will look in (currently)
-#' \code{CRAN} and its archives (if the current \code{CRAN} version is not
-#' the desired version to check). It will also look on \code{GitHub} if the
+#' `CRAN` and its archives (if the current `CRAN` version is not
+#' the desired version to check). It will also look on `GitHub` if the
 #' package description is of the form of a GitHub package with format
-#' \code{account/repo@branch} or \code{account/repo@commit}. For this,
+#' `account/repo@branch` or `account/repo@commit`. For this,
 #' it will attempt to get package dependencies from
 #' the GitHub \file{DESCRIPTION} file.
-#' This is intended to replace \code{tools::package_dependencies} or
-#' \code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
+#' This is intended to replace `tools::package_dependencies` or
+#' `pkgDep` in the \pkg{miniCRAN} package, but with modifications to allow
 #' multiple sources to be searched in the same function call.
 #'
-#' @note \code{tools::package_dependencies} and \code{pkgDep} will differ under the following
+#' @note `tools::package_dependencies` and `pkgDep` will differ under the following
 #' circumstances:
 #' \enumerate{
-#'   \item GitHub packages are not detected using \code{tools::package_dependencies};
-#'   \item \code{tools::package_dependencies} does not detect the dependencies of base packages
-#'     among themselves, \emph{e.g.}, \code{methods} depends on \code{stats} and \code{graphics}.
+#'   \item GitHub packages are not detected using `tools::package_dependencies`;
+#'   \item `tools::package_dependencies` does not detect the dependencies of base packages
+#'     among themselves, *e.g.*, `methods` depends on `stats` and `graphics`.
 #' }
 #'
 #' @inheritParams Require
 #' @param which a character vector listing the types of dependencies, a subset of
-#'   \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
-#'   Character string \code{"all"} is shorthand for that vector,
-#'   character string \code{"most"} for the same vector without \code{"Enhances"}.
-#' @param depends Logical. Include packages listed in "Depends". Default \code{TRUE}.
-#' @param imports Logical. Include packages listed in "Imports". Default \code{TRUE}.
-#' @param suggests Logical. Include packages listed in "Suggests". Default \code{FALSE}.
-#' @param linkingTo Logical. Include packages listed in "LinkingTo". Default \code{TRUE}.
+#'   `c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")`.
+#'   Character string `"all"` is shorthand for that vector,
+#'   character string `"most"` for the same vector without `"Enhances"`.
+#' @param depends Logical. Include packages listed in "Depends". Default `TRUE`.
+#' @param imports Logical. Include packages listed in "Imports". Default `TRUE`.
+#' @param suggests Logical. Include packages listed in "Suggests". Default `FALSE`.
+#' @param linkingTo Logical. Include packages listed in "LinkingTo". Default `TRUE`.
 #' @param recursive Logical. Should dependencies of dependencies be searched, recursively.
-#'                  NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.
-#' @param keepVersionNumber Logical. If \code{TRUE}, then the package dependencies returned
-#'   will include version number. Default is \code{FALSE}
-#' @param libPath A path to search for installed packages. Defaults to \code{.libPaths()}
-#' @param sort Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
-#'        If \code{FALSE}, the packages will not have a discernible order as they will be a
+#'                  NOTE: Dependencies of suggests will not be recursive. Default `TRUE`.
+#' @param keepVersionNumber Logical. If `TRUE`, then the package dependencies returned
+#'   will include version number. Default is `FALSE`
+#' @param libPath A path to search for installed packages. Defaults to `.libPaths()`
+#' @param sort Logical. If `TRUE`, the default, then the packages will be sorted alphabetically.
+#'        If `FALSE`, the packages will not have a discernible order as they will be a
 #'        concatenation of the possibly recursive package dependencies.
 #' @param includeBase Logical. Should R base packages be included, specifically, those in
-#'   \code{tail(.libPath(), 1)}
+#'   `tail(.libPath(), 1)`
 #'
 #' @export
 #' @rdname pkgDep
@@ -326,11 +326,11 @@ getDescPath <- function(packages, libPath) {
 }
 
 #' @description
-#' \code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
-#' i.e., the first order dependencies, and runs the \code{pkgDep} on those.
+#' `pkgDep2` is a convenience wrapper of `pkgDep` that "goes one level in",
+#' i.e., the first order dependencies, and runs the `pkgDep` on those.
 #' @rdname pkgDep
 #' @export
-#' @param sorted Logical. If \code{TRUE}, the default, the packages will be sorted in
+#' @param sorted Logical. If `TRUE`, the default, the packages will be sorted in
 #'   the returned list from most number of dependencies to least.
 #' @examples
 #' \dontrun{
@@ -373,33 +373,33 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 
 #' Reverse package depends
 #'
-#' This is a wrapper around \code{tools::dependsOnPkgs},
-#' but with the added option of \code{sorted}, which
+#' This is a wrapper around `tools::dependsOnPkgs`,
+#' but with the added option of `sorted`, which
 #' will sort them such that the packages at the top will have
-#' the least number of dependencies that are in \code{pkgs}.
+#' the least number of dependencies that are in `pkgs`.
 #' This is essentially a topological sort, but it is done
-#' heuristically. This can be used to e.g., \code{detach} or
-#' \code{unloadNamespace} packages in order so that they each
+#' heuristically. This can be used to e.g., `detach` or
+#' `unloadNamespace` packages in order so that they each
 #' of their dependencies are detached or unloaded first.
 #' @param pkgs A vector of package names to evaluate their
-#'   reverse depends (i.e., the packages that \emph{use} each
+#'   reverse depends (i.e., the packages that *use* each
 #'   of these packages)
 #' @param deps An optional named list of (reverse) dependencies.
-#'   If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)}
+#'   If not supplied, then `tools::dependsOnPkgs(..., recursive = TRUE)`
 #'   will be used
-#' @param topoSort Logical. If \code{TRUE}, the default, then
+#' @param topoSort Logical. If `TRUE`, the default, then
 #'   the returned list of packages will be in order with the
-#'   least number of dependencies listed in \code{pkgs} at
+#'   least number of dependencies listed in `pkgs` at
 #'   the top of the list.
-#' @param reverse Logical. If \code{TRUE}, then this will use \code{tools::pkgDependsOn}
-#'   to determine which packages depend on the \code{pkgs}
-#' @param useAllInSearch Logical. If \code{TRUE}, then all non-core
-#' R packages in \code{search()} will be appended to \code{pkgs}
+#' @param reverse Logical. If `TRUE`, then this will use `tools::pkgDependsOn`
+#'   to determine which packages depend on the `pkgs`
+#' @param useAllInSearch Logical. If `TRUE`, then all non-core
+#' R packages in `search()` will be appended to `pkgs`
 #' to allow those to also be identified
-#' @param returnFull Logical. Primarily useful when \code{reverse = TRUE}.
-#'   If \code{TRUE}, then then all installed packages will be searched.
-#'   If \code{FALSE}, the default, only packages that are currently in
-#'   the \code{search()} path and passed in \code{pkgs} will be included
+#' @param returnFull Logical. Primarily useful when `reverse = TRUE`.
+#'   If `TRUE`, then then all installed packages will be searched.
+#'   If `FALSE`, the default, only packages that are currently in
+#'   the `search()` path and passed in `pkgs` will be included
 #'   in the possible reverse dependencies.
 #'
 #' @export
@@ -740,12 +740,12 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' from the immediate dependencies.
 #' @param pkg A package name to be testing the dependencies
 #' @param depsRemoved A vector of package names who are to be "removed"
-#'   from the \code{pkg} immediate dependencies
+#'   from the `pkg` immediate dependencies
 #' @export
 #' @return
 #' A character vector of the packages that would removed from recursive dependencies
-#' of \code{pkg}
-#' if \code{depsRemoved} were removed from first level dependencies
+#' of `pkg`
+#' if `depsRemoved` were removed from first level dependencies
 #' @examples
 #' \dontrun{
 #' pkgDepIfDepRemoved("Require", "remotes")

@@ -31,5 +31,5 @@ extractInequality("Require (<=0.0.1)")
 extractPkgGitHub("PredictiveEcology/Require")
 }
 \seealso{
-\code{\link{trimVersionNumber}}
+\code{\link[=trimVersionNumber]{trimVersionNumber()}}
 }

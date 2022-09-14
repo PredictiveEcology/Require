@@ -11,11 +11,11 @@ utils::globalVariables(c(
 ))
 
 #' @details
-#' \code{parseGitHub} turns the single character string representation into 3 or 4:
-#' \code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
+#' `parseGitHub` turns the single character string representation into 3 or 4:
+#' `Account`, `Repo`, `Branch`, `SubFolder`.
 #'
 #' @return
-#' \code{parseGitHub} returns a data.table with added columns.
+#' `parseGitHub` returns a data.table with added columns.
 #'
 #' @export
 #' @rdname GitHubTools
@@ -53,7 +53,7 @@ parseGitHub <- function(pkgDT) {
   pkgDT[]
 }
 
-#' Internals used by \code{Require}
+#' Internals used by `Require`
 #'
 #' While these are not intended to be called manually by users, they may be
 #' of some use for advanced users.
@@ -573,7 +573,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' A series of helpers to access and deal with GitHub packages
 #'
 #' @details
-#' \code{getGitHubDESCRIPTION} retrieves the DESCRIPTION file from GitHub.com
+#' `getGitHubDESCRIPTION` retrieves the DESCRIPTION file from GitHub.com
 #'
 #' @rdname DESCRIPTION-helpers
 #' @export
@@ -680,8 +680,8 @@ updateInstalled <- function(pkgDT, installPkgNames, warn = NULL) {
 #' @importFrom utils sessionInfo
 #' @export
 #' @details
-#' \code{doInstall} is a wrapper around \code{utils::install.packages},
-#' \code{installGithub}, and \code{installCRAN}, and \code{installArchive}
+#' `doInstall` is a wrapper around `utils::install.packages`,
+#' `installGithub`, and `installCRAN`, and `installArchive`
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
 
@@ -794,7 +794,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 }
 
 #' @details
-#' \code{doLoading} is a wrapper around \code{require}.
+#' `doLoading` is a wrapper around `require`.
 #'
 #' @export
 #' @importFrom utils capture.output
@@ -921,9 +921,9 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
 #' @export
 #' @param package A single package name (without version or github specifications)
 #' @details
-#' \code{archiveVersionsAvailable} searches CRAN Archives for available versions.
+#' `archiveVersionsAvailable` searches CRAN Archives for available versions.
 #' It has been borrowed from a sub-set of the code in a non-exported function:
-#' \code{remotes:::download_version_url}
+#' `remotes:::download_version_url`
 archiveVersionsAvailable <- function(package, repos) {
   info <- NULL
   for (repo in repos) {
@@ -954,22 +954,22 @@ archiveVersionsAvailable <- function(package, repos) {
 
 #' GitHub specific helpers
 #'
-#' \code{installGitHub} is a vectorized \code{installGithubPackages}.
+#' `installGitHub` is a vectorized `installGithubPackages`.
 #' This will attempt to identify all dependencies of all supplied packages first,
 #' then load the packages in the correct order so that each of their dependencies
 #' are met before each is installed.
 #'
-#' @param pkgDT A character string with full package names or a \code{data.table}
-#'   with at least 2 columns \code{"Package"} and \code{"packageFullName"}.
+#' @param pkgDT A character string with full package names or a `data.table`
+#'   with at least 2 columns `"Package"` and `"packageFullName"`.
 #' @param toInstall DESCRIPTION NEEDED
-#' @param install_githubArgs Any arguments passed to \code{install_github}
+#' @param install_githubArgs Any arguments passed to `install_github`
 #' @param dots A list of ..., e.g., list(...). Only for internal use.
 #'
 #' @return
-#' \code{installGitHub} returns a named character vector indicating packages
+#' `installGitHub` returns a named character vector indicating packages
 #'   successfully installed, unless the word "Failed" is returned, indicating
 #'   installation failure. The names will be the full GitHub package name,
-#'   as provided to \code{gitPkgNames} in the function call.
+#'   as provided to `gitPkgNames` in the function call.
 #'
 #' @export
 #' @rdname GitHubTools
@@ -1756,26 +1756,26 @@ rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
 
 #' Detach and unload all packages
 #'
-#' This uses \code{pkgDepTopoSort} internally so that the package
+#' This uses `pkgDepTopoSort` internally so that the package
 #' dependency tree is determined, and then packages are unloaded
 #' in the reverse order. Some packages don't unload successfully for
 #' a variety of reasons. Several known packages that have this problem
 #' are identified internally and *not* unloaded. Currently, these are
-#' \code{glue}, \code{rlang}, \code{ps}, \code{ellipsis}, and, \code{processx}.
+#' `glue`, `rlang`, `ps`, `ellipsis`, and, `processx`.
 #'
 #' @return
 #' A numeric named vector, with names of the packages that were attempted.
-#' \code{2} means the package was successfully unloaded, \code{1} it was
-#' tried, but failed, \code{3} it was in the search path and was detached
+#' `2` means the package was successfully unloaded, `1` it was
+#' tried, but failed, `3` it was in the search path and was detached
 #' and unloaded.
 #' @export
 #' @param pkgs A character vector of packages to detach. Will be topologically sorted
-#'   unless \code{doSort} is \code{FALSE}.
+#'   unless `doSort` is `FALSE`.
 #' @param dontTry A character vector of packages to not try. This can be used
 #'   by a user if they find a package fails in attempts to unload it, e.g., "ps"
-#' @param doSort If \code{TRUE} (the default), then the \code{pkgs} will be
-#'   topologically sorted. If \code{FALSE}, then it won't. Useful if the
-#'   \code{pkgs} are already sorted.
+#' @param doSort If `TRUE` (the default), then the `pkgs` will be
+#'   topologically sorted. If `FALSE`, then it won't. Useful if the
+#'   `pkgs` are already sorted.
 #'
 #'
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
@@ -1916,12 +1916,12 @@ splitGitRepo <- function(gitRepo) {
 
 #' Install R Package from GitHub source code
 #'
-#' A lightweight alternative to \code{devtools::install_github}. All dependencies
+#' A lightweight alternative to `devtools::install_github`. All dependencies
 #' must have been installed already for this to work.
 #'
 #' @param gitRepo A repository in the form: Account/Repository@Branch or Account/Repository@SHA
 #' @param libPath The folder where you would like the package installed. Defaults
-#'   to \code{.libPaths()[1]}
+#'   to `.libPaths()[1]`
 #' @param ... Passed to R CMD INSTALL
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {

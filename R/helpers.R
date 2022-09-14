@@ -86,17 +86,17 @@ setMethod("normPath",
 #' such as trailing slashes, etc.
 #'
 #' @note This will not work for paths to files.
-#' To check for existence of files, use \code{\link{file.exists}}.
-#' To normalize a path to a file, use \code{\link{normPath}} or \code{\link{normalizePath}}.
+#' To check for existence of files, use [file.exists()].
+#' To normalize a path to a file, use [normPath()] or [normalizePath()].
 #'
 #' @param path A character string corresponding to a directory path.
 #'
 #' @param create A logical indicating whether the path should
-#' be created if it does not exist. Default is \code{FALSE}.
+#' be created if it does not exist. Default is `FALSE`.
 #'
 #' @return Character string denoting the cleaned up filepath.
 #'
-#' @seealso \code{\link{file.exists}}, \code{\link{dir.create}}.
+#' @seealso [file.exists()], [dir.create()].
 #'
 #' @export
 #' @rdname checkPath
@@ -177,11 +177,11 @@ setMethod("checkPath",
 
 #' Use message to print a clean square data structure
 #'
-#' Sends to \code{message}, but in a structured way so that a data.frame-like can
+#' Sends to `message`, but in a structured way so that a data.frame-like can
 #' be cleanly sent to messaging.
 #'
 #' @param df A data.frame, data.table, matrix
-#' @param round An optional numeric to pass to \code{round}
+#' @param round An optional numeric to pass to `round`
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
 messageDF <- function(df, round) {#}, colour = NULL) {
@@ -208,15 +208,15 @@ messageDF <- function(df, round) {#}, colour = NULL) {
 
 #' Make a temporary (sub-)directory
 #'
-#' Create a temporary subdirectory in \code{.RequireTempPath()}, or a
+#' Create a temporary subdirectory in `.RequireTempPath()`, or a
 #' temporary file in that temporary subdirectory.
 #'
 #' @param sub Character string, length 1. Can be a result of
-#'   \code{file.path("smth", "smth2")} for nested temporary sub
+#'   `file.path("smth", "smth2")` for nested temporary sub
 #'   directories.
 #' @param tempdir Optional character string where the temporary dir should be placed.
-#'   Defaults to \code{.RequireTempPath()}
-#' @seealso \code{\link{tempfile2}}
+#'   Defaults to `.RequireTempPath()`
+#' @seealso [tempfile2()]
 #' @export
 tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath())) {
   checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
@@ -224,11 +224,11 @@ tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireT
 
 #' Make a temporary subfile in a temporary (sub-)directory
 #'
-#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
+#' @param ... passed to `tempfile`, e.g., `fileext`
 #'
-#' @seealso \code{\link{tempdir2}}
+#' @seealso [tempdir2()]
 #' @inheritParams tempdir2
-#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
+#' @param ... passed to `tempfile`, e.g., `fileext`
 #' @export
 tempfile2 <- function(sub = "",
                       tempdir = getOption("Require.tempPath", .RequireTempPath()),
@@ -240,11 +240,11 @@ tempfile2 <- function(sub = "",
 
 #' Invert a 2-level list
 #'
-#' This is a simple version of \code{purrr::transpose}, only for lists with 2 levels.
+#' This is a simple version of `purrr::transpose`, only for lists with 2 levels.
 #'
-#' @param l A list with 2 levels. If some levels are absent, they will be \code{NULL}
+#' @param l A list with 2 levels. If some levels are absent, they will be `NULL`
 #'
-#' @return A list with 2 levels deep, inverted from \code{l}
+#' @return A list with 2 levels deep, inverted from `l`
 #'
 #' @export
 #' @examples
@@ -260,18 +260,18 @@ invertList <- function(l) {
   })
 }
 
-#' \code{modifyList} for multiple lists
+#' `modifyList` for multiple lists
 #'
 #' @description
-#' This calls \code{\link[utils]{modifyList}} iteratively using
-#' \code{\link[base]{Reduce}}, so it can handle >2 lists.
+#' This calls [utils::modifyList()] iteratively using
+#' [base::Reduce()], so it can handle >2 lists.
 #' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
-#' It also will handle the case where any list is a \code{NULL}
+#' It also will handle the case where any list is a `NULL`
 #'
 #' @details
 #' Simply a convenience around
-#' \code{Reduce(modifyList, list(...))}, with some checks.
+#' `Reduce(modifyList, list(...))`, with some checks.
 #'
 #'
 #' @export

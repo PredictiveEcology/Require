@@ -16,5 +16,5 @@ The resulting string(s) will have only name (including github.com repository if 
 trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 }
 \seealso{
-\code{\link{extractPkgName}}
+\code{\link[=extractPkgName]{extractPkgName()}}
 }

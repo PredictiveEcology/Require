@@ -76,7 +76,7 @@ However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
+defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages()}}).
 
 Internally, there are calls to \code{available.packages}.}
 
@@ -140,7 +140,7 @@ If a \code{libPaths} is used, it must be used in both functions.
 This function works best if all required packages are called within one
 \code{Require} call, as all dependencies can be identified together, and all
 package versions will be addressed (if there are no conflicts),
-allowing a call to \code{\link{pkgSnapshot}} to take a snapshot or "record" of
+allowing a call to \code{\link[=pkgSnapshot]{pkgSnapshot()}} to take a snapshot or "record" of
 the current collection of packages and versions.
 }
 
