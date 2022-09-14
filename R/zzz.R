@@ -16,13 +16,18 @@ utils::globalVariables(c(
       list2env(pkgEnvLast, .pkgEnv)
     }
   }
+
   invisible()
 }
 
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
-    mess <- c("Require version: ", as.character(utils::packageVersion("Require")), ". ")
-    mess <- c(mess, "See ?RequireOptions for additional settings.")
+    mess <- c(
+      "Require version: ", as.character(utils::packageVersion("Require")), ".\n",
+      "  Using cache directory: ", RequireCacheDir(), ".\n",
+      "  See ?RequireOptions for additional settings."
+    )
+
     packageStartupMessage(mess)
   }
 }

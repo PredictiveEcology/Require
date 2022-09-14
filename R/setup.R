@@ -4,8 +4,11 @@
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function() {
-  ## cache dirs based on rappdirs::user_cache_dir()
   appName <- "R-Require"
+
+  ## use cache dir following OS conventions used by rappdirs package:
+  ## rappdirs::user_cache_dir(appName)
+
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
@@ -16,13 +19,25 @@ RequireCacheDir <- function() {
       Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
     )
   }
-  checkPath(cacheDir, create = TRUE)
+  cacheDir <- checkPath(cacheDir, create = TRUE)
+
+  readme <- file.path(cacheDir, "README")
+  if (!file.exists(readme)) {
+    file.copy(system.file("cache-README", package = "Require"), readme)
+  }
+
+  return(cacheDir)
 }
 
 #' @export
 #' @rdname RequireCacheDir
 RequirePkgCacheDir <- function() {
-  checkPath(file.path(RequireCacheDir(), "packages", rversion()), create = TRUE)
+  pkgCacheDir <- checkPath(file.path(RequireCacheDir(), "packages", rversion()), create = TRUE)
+
+  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
+  ##       - remind them how to change this, and make sure it's documented!
+
+  return(invisible(pkgCacheDir))
 }
 
 #' Setup a project library, cache, options
