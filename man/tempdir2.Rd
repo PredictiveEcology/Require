@@ -19,5 +19,5 @@ Create a temporary subdirectory in \code{.RequireTempPath()}, or a
 temporary file in that temporary subdirectory.
 }
 \seealso{
-\code{\link{tempfile2}}
+\code{\link[=tempfile2]{tempfile2()}}
 }

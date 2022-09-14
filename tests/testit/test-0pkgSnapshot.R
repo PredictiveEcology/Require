@@ -43,8 +43,12 @@ if (interactive()) {
     if (Sys.info()["user"] == "emcintir2") {
       outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                           "Require.RPackageCache" = "~/._RPackageCache/")
+    } else if (Sys.info()["user"] == "achubaty") {
+      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
+                          "Require.RPackageCache" = RequirePkgCacheDir())
     } else {
-      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+      outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
+        "Require.RPackageCache" = RequirePkgCacheDir())
     }
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
 

@@ -11,11 +11,11 @@ utils::globalVariables(c(
 ))
 
 #' @details
-#' \code{parseGitHub} turns the single character string representation into 3 or 4:
-#' \code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
+#' `parseGitHub` turns the single character string representation into 3 or 4:
+#' `Account`, `Repo`, `Branch`, `SubFolder`.
 #'
 #' @return
-#' \code{parseGitHub} returns a data.table with added columns.
+#' `parseGitHub` returns a data.table with added columns.
 #'
 #' @export
 #' @rdname GitHubTools
@@ -53,7 +53,7 @@ parseGitHub <- function(pkgDT) {
   pkgDT[]
 }
 
-#' Internals used by \code{Require}
+#' Internals used by `Require`
 #'
 #' While these are not intended to be called manually by users, they may be
 #' of some use for advanced users.
@@ -573,7 +573,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' A series of helpers to access and deal with GitHub packages
 #'
 #' @details
-#' \code{getGitHubDESCRIPTION} retrieves the DESCRIPTION file from GitHub.com
+#' `getGitHubDESCRIPTION` retrieves the DESCRIPTION file from GitHub.com
 #'
 #' @rdname DESCRIPTION-helpers
 #' @export
@@ -680,8 +680,8 @@ updateInstalled <- function(pkgDT, installPkgNames, warn = NULL) {
 #' @importFrom utils sessionInfo
 #' @export
 #' @details
-#' \code{doInstall} is a wrapper around \code{utils::install.packages},
-#' \code{installGithub}, and \code{installCRAN}, and \code{installArchive}
+#' `doInstall` is a wrapper around `utils::install.packages`,
+#' `installGithub`, and `installCRAN`, and `installArchive`
 doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        install = TRUE, repos = getOption("repos"), ...) {
 
@@ -794,7 +794,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 }
 
 #' @details
-#' \code{doLoading} is a wrapper around \code{require}.
+#' `doLoading` is a wrapper around `require`.
 #'
 #' @export
 #' @importFrom utils capture.output
@@ -921,9 +921,9 @@ doLoading <- function(pkgDT, require = TRUE, ...) {
 #' @export
 #' @param package A single package name (without version or github specifications)
 #' @details
-#' \code{archiveVersionsAvailable} searches CRAN Archives for available versions.
+#' `archiveVersionsAvailable` searches CRAN Archives for available versions.
 #' It has been borrowed from a sub-set of the code in a non-exported function:
-#' \code{remotes:::download_version_url}
+#' `remotes:::download_version_url`
 archiveVersionsAvailable <- function(package, repos) {
   info <- NULL
   for (repo in repos) {
@@ -954,22 +954,22 @@ archiveVersionsAvailable <- function(package, repos) {
 
 #' GitHub specific helpers
 #'
-#' \code{installGitHub} is a vectorized \code{installGithubPackages}.
+#' `installGitHub` is a vectorized `installGithubPackages`.
 #' This will attempt to identify all dependencies of all supplied packages first,
 #' then load the packages in the correct order so that each of their dependencies
 #' are met before each is installed.
 #'
-#' @param pkgDT A character string with full package names or a \code{data.table}
-#'   with at least 2 columns \code{"Package"} and \code{"packageFullName"}.
+#' @param pkgDT A character string with full package names or a `data.table`
+#'   with at least 2 columns `"Package"` and `"packageFullName"`.
 #' @param toInstall DESCRIPTION NEEDED
-#' @param install_githubArgs Any arguments passed to \code{install_github}
+#' @param install_githubArgs Any arguments passed to `install_github`
 #' @param dots A list of ..., e.g., list(...). Only for internal use.
 #'
 #' @return
-#' \code{installGitHub} returns a named character vector indicating packages
+#' `installGitHub` returns a named character vector indicating packages
 #'   successfully installed, unless the word "Failed" is returned, indicating
 #'   installation failure. The names will be the full GitHub package name,
-#'   as provided to \code{gitPkgNames} in the function call.
+#'   as provided to `gitPkgNames` in the function call.
 #'
 #' @export
 #' @rdname GitHubTools
@@ -1640,7 +1640,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
         pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots)#,
     }
   } else {
-    pkgDT[pkgDT$packageFullName%in% toInstall$packageFullName, installFrom := "Fail"]
+    pkgDT[pkgDT$packageFullName %in% toInstall$packageFullName, installFrom := "Fail"]
   }
 
   pkgDT
@@ -1756,26 +1756,26 @@ rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
 
 #' Detach and unload all packages
 #'
-#' This uses \code{pkgDepTopoSort} internally so that the package
+#' This uses `pkgDepTopoSort` internally so that the package
 #' dependency tree is determined, and then packages are unloaded
 #' in the reverse order. Some packages don't unload successfully for
 #' a variety of reasons. Several known packages that have this problem
 #' are identified internally and *not* unloaded. Currently, these are
-#' \code{glue}, \code{rlang}, \code{ps}, \code{ellipsis}, and, \code{processx}.
+#' `glue`, `rlang`, `ps`, `ellipsis`, and, `processx`.
 #'
 #' @return
 #' A numeric named vector, with names of the packages that were attempted.
-#' \code{2} means the package was successfully unloaded, \code{1} it was
-#' tried, but failed, \code{3} it was in the search path and was detached
+#' `2` means the package was successfully unloaded, `1` it was
+#' tried, but failed, `3` it was in the search path and was detached
 #' and unloaded.
 #' @export
 #' @param pkgs A character vector of packages to detach. Will be topologically sorted
-#'   unless \code{doSort} is \code{FALSE}.
+#'   unless `doSort` is `FALSE`.
 #' @param dontTry A character vector of packages to not try. This can be used
 #'   by a user if they find a package fails in attempts to unload it, e.g., "ps"
-#' @param doSort If \code{TRUE} (the default), then the \code{pkgs} will be
-#'   topologically sorted. If \code{FALSE}, then it won't. Useful if the
-#'   \code{pkgs} are already sorted.
+#' @param doSort If `TRUE` (the default), then the `pkgs` will be
+#'   topologically sorted. If `FALSE`, then it won't. Useful if the
+#'   `pkgs` are already sorted.
 #'
 #'
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE) {
@@ -1901,7 +1901,6 @@ preparePkgNameToReport <- function(Package, packageFullName) {
   Package
 }
 
-
 splitGitRepo <- function(gitRepo) {
   grSplit <- strsplit(gitRepo, "/|@")[[1]]
   acct <- grSplit[[1]]
@@ -1916,16 +1915,15 @@ splitGitRepo <- function(gitRepo) {
 
 #' Install R Package from GitHub source code
 #'
-#' A lightweight alternative to \code{devtools::install_github}. All dependencies
+#' A lightweight alternative to `devtools::install_github`. All dependencies
 #' must have been installed already for this to work.
 #'
 #' @param gitRepo A repository in the form: Account/Repository@Branch or Account/Repository@SHA
 #' @param libPath The folder where you would like the package installed. Defaults
-#'   to \code{.libPaths()[1]}
+#'   to `.libPaths()[1]`
 #' @param ... Passed to R CMD INSTALL
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], ...) {
-
   gr <- splitGitRepo(gitRepo)
   tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
                            mustWork = FALSE, winslash = "\\")
@@ -2097,20 +2095,34 @@ getSHAfromGitHub <- function(acct, repo, br) {
   shaLine <- strsplit(sha3[shaLine], ",")[[1]][1]
   sha <- gsub(" *[[:punct:]]+(.+)[[:punct:]] *", "\\1", shaLine)
   sha
-
 }
 
 .earliestMRANDate <- "2015-06-06"
 .latestMRANDate <- Sys.Date() - 45
 
-rversions <- structure(list(version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
-                                         "3.5.3", "3.6.0", "3.6.1", "3.6.2", "3.6.3", "4.0.0", "4.0.1",
-                                         "4.0.2", "4.0.3", "4.0.4", "4.0.5", "4.1.0", "4.1.1", "4.1.2",
-                                         "4.1.3", "4.2.0"), date = structure(c(1521101067, 1524467078,
-                                                                               1530515071, 1545293080, 1552291489, 1556262303, 1562310303, 1576137903,
-                                                                               1582963516, 1587711934, 1591427116, 1592809519, 1602313524, 1613376313,
-                                                                               1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141
-                                         ), class = c("POSIXct", "POSIXt"), tzone = "UTC")), class = "data.frame", row.names = 108:127)
+#' R versions
+#'
+#' Reference table of R versions and their release dates (2018 and later).
+#'
+#' Update this as needed using `rversions::r_versions()`:
+#'
+#' \verb{
+#' # install.packages("rversions")
+#' v = rversions::r_versions()
+#' keep = which(as.Date(v$date, format = "%Y-%m-%d") >= as.Date("2018-01-01", format = "%Y-%m-%d"))
+#' dput(v[keep, c("version", "date")])
+#' }
+rversions <- structure(list(
+  version = c("3.4.4", "3.5.0", "3.5.1", "3.5.2",
+              "3.5.3", "3.6.0", "3.6.1", "3.6.2", "3.6.3", "4.0.0", "4.0.1",
+              "4.0.2", "4.0.3", "4.0.4", "4.0.5", "4.1.0", "4.1.1", "4.1.2",
+              "4.1.3", "4.2.0", "4.2.1"),
+  date = structure(c(1521101067, 1524467078,
+                     1530515071, 1545293080, 1552291489, 1556262303, 1562310303, 1576137903,
+                     1582963516, 1587711934, 1591427116, 1592809519, 1602313524, 1613376313,
+                     1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141,
+                     1655967933), class = c("POSIXct", "POSIXt"), tzone = "UTC")),
+  row.names = 108:128, class = "data.frame")
 
 rversion <- function() {
   paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
@@ -2180,10 +2192,10 @@ internetExists <- function(mess = "") {
   TRUE # .pkgEnv$internetExists
 }
 
-
-sourcePkgs <- function (additional = NULL)
-  c("igraph", "rgeos", "rgdal", "terra", "sf", "units", "stringfish",
-    "qs", "sp", "Rcpp", "RcppParallel", "cpp11", "lwgeom", additional)
+sourcePkgs <- function(additional = NULL) {
+  c("cpp11", "igraph", "lwgeom", "qs", "raster", "Rcpp", "RcppParallel",
+    "rgdal", "rgeos", "sf", "sp", "stringfish", "terra", "units", additional)
+}
 
 srcPackageURLOnCRAN <- "https://cloud.r-project.org/"
 
@@ -2250,12 +2262,10 @@ installPackagesSystem <- function(pkg, args, libPath) {
                             collapse = ", "),"))\""))
   out <- system(out2, intern = TRUE)
   return(out)
-
 }
 
-
 installByPak <- function(pkgDT, libPaths, doDeps, ...) {
-  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
+  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak") ## TODO: is this allowed by CRAN??
   fas <- formals(pak::pkg_install)
   pakFormalsPassedHere <- names(list(...)) %in% names(fas)
   if (any(pakFormalsPassedHere)) {

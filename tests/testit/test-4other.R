@@ -10,8 +10,12 @@ outOpts <- options("Require.persistentPkgEnv" = TRUE,
 if (Sys.info()["user"] == "emcintir2") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require",
                       "Require.RPackageCache" = "~/._RPackageCache/")
+} else if (Sys.info()["user"] == "achubaty") {
+  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require",
+                      "Require.RPackageCache" = RequirePkgCacheDir())
 } else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  outOpts2 <- options(#"Require.Home" = "~/GitHub/Require",
+                      "Require.RPackageCache" = RequirePkgCacheDir())
 }
 
 # Test misspelled
@@ -39,9 +43,10 @@ pkgDepTopoSort(c("Require", "data.table"), useAllInSearch = TRUE,
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
-if (Sys.info()["user"] == "emcintir2")
+if (Sys.info()["user"] == "emcintir2") {
   options("Require.RPackageCache" = "~/._RPackageCache/",
           "Require.unloadNamespaces" = FALSE)
+}
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
                          libPaths = tempdir2("other")))
@@ -72,8 +77,9 @@ setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package librar
 setLibPaths() # reset it to original
 setwd(origDir)
 
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+if (!identical(origLibPathsAllTests, .libPaths())) {
+  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE) ## TODO: >50 warnings re: invalid cross-device link btw /home and /tmp
+}
 options(outOpts)
 options(outOpts2)
 
@@ -81,7 +87,7 @@ options(outOpts2)
 options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-setup(setupTestDir, RPackageCache = ccc)
+setup(setupTestDir, RPackageCache = ccc) ## TODO: Error in file.link(fromFiles, toFiles) : no files to link from
 testit::assert(identical(getOption("Require.RPackageCache"), ccc))
 setupOff()
 message("This is getOption('Require.RPackageCache')", getOption("Require.RPackageCache"))
