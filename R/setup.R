@@ -209,3 +209,53 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
+#' Use cache for R package compilation
+#'
+#' Simple [`ccache`](https://ccache.dev/) configuration for compiling R packages on Linux,
+#' based on <http://dirk.eddelbuettel.com/blog/2017/11/27/#011_faster_package_installation_one>.
+#'
+#' @note This is typically run once per user, per machine to configure the cache.
+#'
+#' @param overwrite Logical. Should the existing configuration be overwritten?
+#'                  For safety, a backup copy of the old configuration is created.
+#'
+#' @return Invoked for the side effect of copying files needed to configure `ccache` for R packages.
+#'
+#' @author Dirk Eddelbuettel and Alex Chubaty
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#'  useLinuxSourceCache()
+#' }
+useLinuxSourceCache <- function(overwrite = FALSE) {
+  if (identical(Sys.info()[["sysname"]], "Linux")) {
+    hasccache <- nzchar(Sys.which("ccache"))
+    if (isTRUE(hasccache)) {
+      confFile <- file.path("~", ".ccache", "ccache.conf")
+      putFile(system.file("dotccache/ccache.conf", package = "Require"), confFile, overwrite)
+
+      makevarsFile <- file.path("~", ".R", "Makevars")
+      putFile(system.file("dotR/Makevars", package = "Require"), makevarsFile, overwrite)
+    } else {
+      warning("'ccache' not found. Is it installed? Try e.g., 'sudo apt install ccache'.")
+    }
+  } else {
+    message("Setting up ccache for R package compilation is currently only supported on Linux.")
+  }
+
+  invisible()
+}
+
+putFile <- function(from, to, overwrite) {
+  if (file.exists(to)) {
+    if (isTRUE(overwrite)) {
+      res0 <- file.copy(to, paste0(to, ".bak.", timestamp()))
+      res1 <- file.copy(from, to)
+    } else {
+      message("file ", to, " exists but overwrite not TRUE. Not overwriting.")
+    }
+  } else {
+    res1 <- file.copy(from, to)
+  }
+}

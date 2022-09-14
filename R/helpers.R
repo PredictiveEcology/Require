@@ -293,7 +293,7 @@ modifyList2 <- function(...) {
 #' If that fails, try a symbolic link (symlink) before falling back to copying the file.
 #' "File" here can mean a file or a directory.
 #'
-#' @inheritParams base::file.link
+#' @param from,to character vectors, containing file names or paths.
 #'
 linkOrCopy <- function(to, from) {
   res <- suppressWarnings(file.link(from, to)) ## try hardlink
@@ -305,4 +305,8 @@ linkOrCopy <- function(to, from) {
   }
 
   return(invisible(res))
+}
+
+timestamp <- function() {
+  format(Sys.time(), "%Y%m%d%H%M%S")
 }

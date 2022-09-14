@@ -7,9 +7,7 @@
 linkOrCopy(to, from)
 }
 \arguments{
-\item{from, to}{character vectors, containing file names or paths.
-    For \code{file.copy} and \code{file.symlink}
-#ifdef windows not active    \code{to} can alternatively be the path to a single existing directory.}
+\item{from, to}{character vectors, containing file names or paths.}
 }
 \description{
 First try to create a hardlink to the file.
