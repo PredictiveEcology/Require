@@ -3,7 +3,7 @@ startTimeAll <- startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
 
-if (interactive()) {
+#if (interactive()) {
   library(Require)
   srch <- search()
   anyNamespaces <- srch[!gsub("package:", "", srch) %in%
@@ -82,12 +82,12 @@ if (interactive()) {
     localBinsFull <- dts
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
-        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"') ,quiet = TRUE, type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
       else
-        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), quiet = TRUE, lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
     } else {
       system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
-                    .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+                    .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
     }
 
     if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
@@ -115,4 +115,4 @@ if (interactive()) {
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
   options(outOpts)
   options(outOpts2)
-}
+#}
