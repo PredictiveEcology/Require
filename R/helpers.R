@@ -295,7 +295,7 @@ modifyList2 <- function(...) {
 #'
 #' @param from,to character vectors, containing file names or paths.
 #'
-linkOrCopy <- function(to, from) {
+linkOrCopy <- function(from, to) {
   res <- suppressWarnings(file.link(from, to)) ## try hardlink
   if (isFALSE(res)) {
     res <- suppressWarnings(file.symlink(from, to)) ## try symbolic link
