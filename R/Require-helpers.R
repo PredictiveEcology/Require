@@ -1922,6 +1922,10 @@ rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE)  {
   if (!is.null(path)) {
     if (isTRUE(exact))
       return(path)
+    if (isFALSE(path)) {
+      return(NULL)
+    }
+
     path <- path[1]
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
