@@ -428,7 +428,7 @@ Require <- function(packages, packageVersionFile,
         pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos, verbose = verbose)
         pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
         pkgDT <- rmDuplicatePkgs(pkgDT, verbose = verbose)
-        pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
+        pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA] ## TODO: if number of GitHub pkgs > N; prompt sure to ensure GITHUB_PAT setup
         canusepak <- usepak(packageFullName = pkgDT$packageFullName,
                             needInstall = pkgDT$needInstall,
                             installFrom = pkgDT$repoLocation, toplevel = TRUE)
