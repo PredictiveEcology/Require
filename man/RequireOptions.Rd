@@ -78,6 +78,9 @@ by restarting R. Default is to attempt to do this. \code{FALSE} will not attempt
 to do this. User must deal with inability to install packages due to package already
 being loaded.
 }
+\item{\code{usePak}}{
+Default: \code{FALSE}. Should \code{pak} be used to resolve package dependencies and installation.
+}
 \item{\code{verbose}}{
 Default: \code{0}. During a \code{Require}, there is a lot of information collected
 and used. With \code{verbose} set to \code{1} or \code{2}, more of this information
