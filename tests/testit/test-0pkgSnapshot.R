@@ -1,4 +1,4 @@
-thisFilename <- "test-5packagesLong.R"
+thisFilename <- "test-0pkgSnapshot.R"
 startTimeAll <- startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
@@ -117,3 +117,6 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   options(outOpts)
   options(outOpts2)
 #}
+
+  endTime <- Sys.time()
+  message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
