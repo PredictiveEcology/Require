@@ -7,7 +7,7 @@ utils::globalVariables(c(
   "LibPath", "libPaths", "loaded", "loadOrder", "needInstall",
   "OlderVersionsAvailable", "OlderVersionsAvailableCh",
   "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
-  "Repo", "repoLocation", "RepoWBranch",  "Version", "versionSpec"
+  "Repo", "repoLocation", "RepoWBranch", "userRequestedOrder", "Version", "versionSpec"
 ))
 
 #' Repeatability-safe install and load packages, optionally with specific versions

@@ -2284,7 +2284,7 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
 }
 
 #' Get the option for Require.RPackageCache
-#' 
+#'
 #' Takes the EnvVar first, then option as path, then option as logical; if logical then use RequirePkgCacheDir()
 #' @export
 getOptionRPackageCache <- function() {
