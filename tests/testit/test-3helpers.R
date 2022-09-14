@@ -1,9 +1,12 @@
-message("\033[32m --------------------------------- Starting test-3helpers.R \033[39m")
+thisFilename <- "test-3helpers.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = FALSE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
@@ -117,3 +120,5 @@ if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 options(outOpts)
 options(outOpts2)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

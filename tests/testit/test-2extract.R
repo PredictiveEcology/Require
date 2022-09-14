@@ -1,4 +1,6 @@
-message("\033[32m --------------------------------- Starting test-2extract.R \033[39m")
+thisFilename <- "test-2extract.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 origLibPathsAllTests <- .libPaths()
 
 library(Require)
@@ -41,3 +43,5 @@ testit::assert({all(c("versionSpec", "hasVersionSpec") %in% colnames(out))})
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

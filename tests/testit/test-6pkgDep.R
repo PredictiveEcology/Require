@@ -1,10 +1,13 @@
-message("\033[34m --------------------------------- Starting test-6pkgDep.R \033[39m")
+thisFilename <- "test-6pkgDep.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = FALSE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
@@ -108,3 +111,6 @@ options(outOpts)
 unlink("~/._R", recursive = TRUE)
 unlink(tempdir2(), recursive = TRUE)
 options(outOpts2)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m")

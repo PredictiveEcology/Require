@@ -1,10 +1,13 @@
-message("\033[32m --------------------------------- Starting test-4other.R \033[39m")
+thisFilename <- "test-4other.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
 options("Require.RPackageCache" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = FALSE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE
@@ -105,3 +108,5 @@ testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
 testit::assert(identical(Require:::getOptionRPackageCache(), secondTry))
 options(opt22)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
