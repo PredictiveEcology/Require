@@ -146,11 +146,16 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   unlink(dirname(dir3), recursive = TRUE)
 }
 
+
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
 names(pkg) <- c("MuMIn", "")
 out <- Require(pkg, install = FALSE, require = FALSE)
 testit::assert({isFALSE(all(out))})
+
+# Try a package taken off CRAN
+out <- Require("gdalUtils")
+testit::assert(isTRUE(out)) # it got installed, even though off CRAN
 
 out <- getPkgVersions("Require")
 testit::assert({is.data.table(out)})
