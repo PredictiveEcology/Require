@@ -263,8 +263,8 @@ invertList <- function(l) {
 #' `modifyList` for multiple lists
 #'
 #' @description
-#' This calls [utils::modifyList()] iteratively using
-#' [base::Reduce()], so it can handle >2 lists.
+#' This calls [utils::modifyList] iteratively using
+#' [base::Reduce], so it can handle >2 lists.
 #' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
 #' It also will handle the case where any list is a `NULL`
