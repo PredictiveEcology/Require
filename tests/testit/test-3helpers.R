@@ -38,7 +38,7 @@ paths <- list("./aaa/zzz",
               file.path(tmpdir, "aaa", "zzz"))
 
 checked <- Require::normPath(paths)
-testit::assert({isTRUE(all.equal(length(unique(checked)), 1))})
+testit::assert({isTRUE(all.equal(length(unique(checked)), 1))}) ## TODO: fails on non-windows
 
 # extra checks for missing/NA/NULL
 testit::assert({isTRUE(all.equal(Require::normPath(), character()))})
@@ -64,7 +64,7 @@ paths <- list("./aaa/zzz",
               file.path(tmpdir, "aaa", "zzz"))
 
 checked <- lapply(paths, checkPath, create = FALSE)
-testit::assert({isTRUE(all.equal(length(unique(checked)), 1))})
+testit::assert({isTRUE(all.equal(length(unique(checked)), 1))}) ## TODO: fails on non-windows
 unlink(tmpdir, recursive = TRUE)
 
 # extra checks for missing/NA/NULL

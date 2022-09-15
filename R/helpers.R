@@ -46,7 +46,7 @@ setMethod("normPath",
               if (!is.null(path)) {
                 hasDotStart <- startsWith(path, "./")
                 if (isTRUE(any(hasDotStart)))
-                  path[hasDotStart] <- gsub("^[.]/", paste0(getwd()), path[hasDotStart])
+                  path[hasDotStart] <- gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
                 path <- gsub("\\\\", "//", path)
                 path <- gsub("//", "/", path)
                 path <- gsub("/$", "", path) # nolint
@@ -182,10 +182,11 @@ setMethod("checkPath",
 #'
 #' @param df A data.frame, data.table, matrix
 #' @param round An optional numeric to pass to `round`
-#' @importFrom data.table is.data.table as.data.table
 #' @inheritParams Require
-#' @rdname messageVerbose
+#'
+#' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
+#' @rdname messageVerbose
 messageDF <- function(df, round, verbose = getOption("Require.verbose"),
                       verboseLevel = 1) {#}, colour = NULL) {
   if (is.matrix(df))

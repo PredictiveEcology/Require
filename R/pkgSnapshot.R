@@ -83,8 +83,9 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
     # aa <- pkgDep("SpaDES", recursive = T)
     tmpPkgSnapshotFile <- ".tmppackageVersions.txt"
     on.exit({try(unlink(tmpPkgSnapshotFile), silent = TRUE)}, add = TRUE)
-    co <- suppressMessages(pkgSnapshot(tmpPkgSnapshotFile, libPaths = libPaths, standAlone = standAlone,
-                purge = purge))
+    co <- suppressMessages({
+      pkgSnapshot(tmpPkgSnapshotFile, libPaths = libPaths, standAlone = standAlone, purge = purge)
+    })
     cc <- data.table::fread(tmpPkgSnapshotFile)
     # cc <- bb[bb$Package %in% extractPkgName(aa$SpaDES) & bb$LibPath == bb$LibPath[1],]
     if (isTRUE(exact)) {
@@ -109,4 +110,3 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
 
   return(invisible(ip))
 }
-

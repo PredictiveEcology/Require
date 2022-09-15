@@ -723,7 +723,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         }
 
         checkPath(rpackageFolder(getOptionRPackageCache()), create = TRUE)
-        install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOptionRPackageCache())), "/")
+        install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOptionRPackageCache())), "/") ## TODO: why need trailing slash here?
         if (getOption("Require.buildBinaries", TRUE)) {
           install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
         }
@@ -1432,7 +1432,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
           }, error = function(e) {
             av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
             if (grepl('argument \\"av2\\" is missing', e)) {
-              tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ",R.version.string,")")),
+              tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ", R.version.string,")")),
                        warning = function(w) w)
             } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
               tryInstallAgainWithoutAPCache(installPackagesQuoted)
@@ -1478,8 +1478,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 }
 
 #' @inheritParams Require
-installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs, repos = getOption("repos"),
-                           verbose = getOption("Require.verbose")) {
+installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
+                           repos = getOption("repos"), verbose = getOption("Require.verbose")) {
   Archive <- "Archive"
   messageVerbose("installing older versions is still experimental and may cause package version conflicts",
                  verbose = verbose, verboseLevel = 1)
@@ -1515,7 +1515,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                lastestDateMRAN = latestDateOnMRAN[onMRAN],
                v = installVersions[onMRAN], function(p, earliestDateMRAN, lastestDateMRAN, v, ...) {
                  for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
-                   rver <- rCurrentVersion()
+                   rver <- rversion()
                    evenOrOdd <- attempt %% 2 == 0
                    date <- if (evenOrOdd) earliestDateMRAN else lastestDateMRAN
                    dif <- floor(attempt/2)
@@ -1681,7 +1681,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   if (internetExists("cannot install packages", verbose = verbose)) {
     if (any("CRAN" %in% toInstall$installFrom))
         pkgDT <- installCRAN(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
-                                               repos = repos, verbose = verbose)#,
+                             repos = repos, verbose = verbose)#,
 
     if (any("Archive" %in% toInstall$installFrom))
         pkgDT <- installArchive(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
@@ -1932,10 +1932,13 @@ rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE)  {
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (!endsWith(path, rversion()))
-        file.path(path, rversion())
-      else
+      if (interactive() && !endsWith(path, rversion())) {
+        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
+        ## need to know if it's a user, who *should* keep R-version-specific dirs
+        file.path(path, rversion()) ## 4.99
+      } else {
         path
+      }
     }
   } else {
     NULL
@@ -2219,8 +2222,7 @@ rversion <- function() {
 #' @examples
 #' rCurrentVersion(">= 4.1")
 rCurrentVersion <- function(testVers) {
-  curVer <- rversion() #paste0(R.version$major, ".",
-                   # gsub("\\..*", "", R.version$minor))
+  curVer <- rversion()
   if (!missing(testVers)) {
     curVerNum <- as.character(numeric_version(curVer))
     testVers <- gsub("\\(|\\)", "", testVers) # remove parentheses, if any
