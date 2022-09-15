@@ -1933,10 +1933,13 @@ rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE)  {
     if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (!endsWith(path, rversion()))
-        file.path(path, rversion())
-      else
+      if (interactive() && !endsWith(path, rversion())) {
+        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
+        ## need to know if it's a user, who *should* keep R-version-specific dirs
+        file.path(path, rversion()) ## 4.99
+      } else {
         path
+      }
     }
   } else {
     NULL
