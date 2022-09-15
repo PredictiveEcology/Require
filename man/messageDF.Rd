@@ -4,12 +4,16 @@
 \alias{messageDF}
 \title{Use message to print a clean square data structure}
 \usage{
-messageDF(df, round)
+messageDF(df, round, verbose = getOption("Require.verbose"), verboseLevel = 1)
 }
 \arguments{
 \item{df}{A data.frame, data.table, matrix}
 
 \item{round}{An optional numeric to pass to \code{round}}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 }
 \description{
 Sends to \code{message}, but in a structured way so that a data.frame-like can

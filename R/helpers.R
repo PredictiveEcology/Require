@@ -183,8 +183,10 @@ setMethod("checkPath",
 #' @param df A data.frame, data.table, matrix
 #' @param round An optional numeric to pass to `round`
 #' @importFrom data.table is.data.table as.data.table
+#' @inheritParams Require
 #' @importFrom utils capture.output
-messageDF <- function(df, round) {#}, colour = NULL) {
+messageDF <- function(df, round, verbose = getOption("Require.verbose"),
+                      verboseLevel = 1) {#}, colour = NULL) {
   if (is.matrix(df))
     df <- as.data.frame(df)
   if (!is.data.table(df)) {
@@ -198,11 +200,7 @@ messageDF <- function(df, round) {#}, colour = NULL) {
     }
   }
   out <- lapply(capture.output(df), function(x) {
-    #if (!is.null(colour)) {
-    #  message(getFromNamespace(colour, ns = "crayon")(x))
-    #} else {
-      message(x)
-    #}
+      messageVerbose(x, verbose = verbose, verboseLevel = verboseLevel)
   })
 }
 
@@ -309,4 +307,10 @@ linkOrCopy <- function(from, to) {
 
 timestamp <- function() {
   format(Sys.time(), "%Y%m%d%H%M%S")
+}
+
+messageVerbose <- function(..., verbose = getOption("Require.verbose"),
+                           verboseLevel = 1) {
+  if (verbose >= verboseLevel)
+    message(...)
 }

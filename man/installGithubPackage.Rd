@@ -25,8 +25,9 @@ installGitHubPackage(
 \item{libPath}{The folder where you would like the package installed. Defaults
 to \code{.libPaths()[1]}}
 
-\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a \code{data.table} with many details attached to the output.}
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{...}{Passed to R CMD INSTALL}
 }
