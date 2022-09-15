@@ -176,8 +176,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbo
       }
 
       # do Older Versions
-      needOlder <- notCorrectVersions$correctVersionAvail == FALSE &
-        notCorrectVersions$hasVersionSpec %in% TRUE
+
+      needOlder <- notCorrectVersions$correctVersionAvail == FALSE # &
+      # notCorrectVersions$hasVersionSpec %in% TRUE
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
       if (any(needOlderNotGH)) {
 
