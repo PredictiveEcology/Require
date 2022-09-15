@@ -271,6 +271,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                   rbindlist(lapply(ava, as.data.table, keep.rownames = "packageURL"))
                 else
                   as.data.table(ava, keep.rownames = "packageURL")
+                data.table::setorderv(dt, "mtime") # order it so last one is the most recent one
                 packageURL <- if (NROW(dt)) tail(dt$packageURL, 1) else character()
               } else {
                 pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
