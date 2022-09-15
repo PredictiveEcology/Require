@@ -189,6 +189,7 @@ setMethod("checkPath",
 #'
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
+#' @rdname messageVerbose
 messageDF <- function(df, round, verbose = getOption("Require.verbose"),
                       verboseLevel = 1) {#}, colour = NULL) {
   if (is.matrix(df))
@@ -313,6 +314,17 @@ timestamp <- function() {
   format(Sys.time(), "%Y%m%d%H%M%S")
 }
 
+
+#' Similar to base::message, but with an verbosity threshold
+#'
+#' This will only show a message if the value of `verbose` is greater than
+#' the `verboseLevel`.
+#'
+#' @rdname messageVerbose
+#' @inheritParams base::message
+#' @inheritParams Require
+#' @param verboseLevel A numeric indicating what verbose threshold (level) above which
+#'   this message will show.
 messageVerbose <- function(..., verbose = getOption("Require.verbose"),
                            verboseLevel = 1) {
   if (verbose >= verboseLevel)
