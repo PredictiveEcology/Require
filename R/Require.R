@@ -111,7 +111,7 @@ utils::globalVariables(c(
 #'   The cached values are renewed when found to be too old, with the age limit.
 #'   This maximum age can be set in seconds with the environment variable
 #'   `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE`, or if unset,
-#'   defaults to 3600  (one hour -- see [utils::available.packages]).
+#'   defaults to 3600  (one hour -- see [`utils::available.packages`]).
 #'
 #'   Internally, there are calls to `available.packages`.
 #' @param verbose Numeric. If `1` (less) or `2` (more), there will be

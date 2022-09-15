@@ -53,7 +53,7 @@ setMethod("normPath",
               }
             }
             return(path)
-          })
+})
 
 #' @export
 #' @rdname normPath
@@ -61,7 +61,7 @@ setMethod("normPath",
           signature(path = "list"),
           definition = function(path) {
             return(normPath(unlist(path)))
-          })
+})
 
 #' @export
 #' @rdname normPath
@@ -69,7 +69,7 @@ setMethod("normPath",
           signature(path = "NULL"),
           definition = function(path) {
             return(character(0))
-          })
+})
 
 #' @export
 #' @rdname normPath
@@ -77,7 +77,7 @@ setMethod("normPath",
           signature(path = "missing"),
           definition = function() {
             return(character(0))
-          })
+})
 
 ################################################################################
 #' Check directory path
@@ -142,7 +142,7 @@ setMethod(
       return(path)
     }
     #}
-  })
+})
 
 #' @export
 #' @rdname checkPath
@@ -263,8 +263,8 @@ invertList <- function(l) {
 #' `modifyList` for multiple lists
 #'
 #' @description
-#' This calls [utils::modifyList] iteratively using
-#' [base::Reduce], so it can handle >2 lists.
+#' This calls [`utils::modifyList`] iteratively using
+#' [`base::Reduce`], so it can handle >2 lists.
 #' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
 #' It also will handle the case where any list is a `NULL`
