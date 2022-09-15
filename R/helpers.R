@@ -79,6 +79,14 @@ setMethod("normPath",
             return(character(0))
 })
 
+#' @export
+#' @rdname normPath
+setMethod("normPath",
+          signature(path = "logical"),
+          definition = function(path) {
+            return(NA)
+          })
+
 ################################################################################
 #' Check directory path
 #'

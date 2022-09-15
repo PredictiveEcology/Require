@@ -6,6 +6,7 @@
 \alias{normPath,list-method}
 \alias{normPath,NULL-method}
 \alias{normPath,missing-method}
+\alias{normPath,logical-method}
 \title{Normalize filepath}
 \usage{
 normPath(path)
@@ -17,6 +18,8 @@ normPath(path)
 \S4method{normPath}{`NULL`}(path)
 
 \S4method{normPath}{missing}()
+
+\S4method{normPath}{logical}(path)
 }
 \arguments{
 \item{path}{A character vector of filepaths.}
