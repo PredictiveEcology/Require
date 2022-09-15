@@ -66,8 +66,8 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   if (!is.null(updateRprofile)) {
     setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
   }
-  gte4.1 <- compareVersion(paste0(R.version$major, ".", gsub("\\..*", "", R.version$minor)), "4.1")
-  if (gte4.1 >= 0) { # now correct behaviour; remaining parts unnecessary
+  gte4.1 <- isTRUE(getRversion() >= "4.1")
+  if (gte4.1) { # now correct behaviour; remaining parts unnecessary
     do.call(.libPaths, list(new = libPaths[1],
                  if (gte4.1) include.site = !standAlone)) ## to avoid triggering warning on R < 4.1
     return(oldLibPaths)
