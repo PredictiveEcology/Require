@@ -84,7 +84,7 @@ setMethod("normPath",
 setMethod("normPath",
           signature(path = "logical"),
           definition = function(path) {
-            return(NA)
+            return(NA_character_)
           })
 
 ################################################################################
