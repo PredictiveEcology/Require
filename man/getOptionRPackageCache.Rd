@@ -2,10 +2,13 @@
 % Please edit documentation in R/Require-helpers.R
 \name{getOptionRPackageCache}
 \alias{getOptionRPackageCache}
-\title{Get the option for Require.RPackageCache}
+\title{Get the option for \code{Require.RPackageCache}}
 \usage{
 getOptionRPackageCache()
 }
 \description{
-Takes the EnvVar first, then option as path, then option as logical; if logical then use RequirePkgCacheDir()
+First checks if an environment variable \code{Require.RPackageCache} is set and defines a path.
+If not set, checks whether the option is set as a path.
+If not, then checks whether the option is set as a logical value.
+If logical, then use \code{RequirePkgCacheDir()}.
 }

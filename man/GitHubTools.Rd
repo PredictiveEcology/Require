@@ -29,7 +29,7 @@ a \code{data.table} with many details attached to the output.}
 \item{dots}{A list of ..., e.g., list(...). Only for internal use.}
 }
 \value{
-\code{parseGitHub} returns a data.table with added columns.
+\code{parseGitHub} returns a \code{data.table} with added columns.
 
 \code{installGitHub} returns a named character vector indicating packages
 successfully installed, unless the word "Failed" is returned, indicating

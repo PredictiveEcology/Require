@@ -15,7 +15,7 @@ utils::globalVariables(c(
 #' `Account`, `Repo`, `Branch`, `SubFolder`.
 #'
 #' @return
-#' `parseGitHub` returns a data.table with added columns.
+#' `parseGitHub` returns a `data.table` with added columns.
 #'
 #' @export
 #' @rdname GitHubTools
@@ -1920,8 +1920,9 @@ warningCantInstall <- function(pkgs) {
 
 rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE)  {
   if (!is.null(path)) {
-    if (isTRUE(exact))
+    if (isTRUE(exact)) {
       return(path)
+    }
     if (isFALSE(path)) {
       return(NULL)
     }
@@ -2360,9 +2361,13 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
   pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
 }
 
-#' Get the option for Require.RPackageCache
+#' Get the option for `Require.RPackageCache`
 #'
-#' Takes the EnvVar first, then option as path, then option as logical; if logical then use RequirePkgCacheDir()
+#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
+#' If not set, checks whether the option is set as a path.
+#' If not, then checks whether the option is set as a logical value.
+#' If logical, then use `RequirePkgCacheDir()`.
+#'
 #' @export
 getOptionRPackageCache <- function() {
   fromEnvVars <- Sys.getenv("Require.RPackageCache")
