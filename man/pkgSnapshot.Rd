@@ -55,8 +55,9 @@ Similarly, CRAN packages will
 report their version and specify with a \code{>=}, allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
 
-\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a \code{data.table} with many details attached to the output.}
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.

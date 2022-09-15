@@ -87,8 +87,7 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                        setLibPaths(RPackageFolders, standAlone = standAlone,
                                    updateRprofile = TRUE))
   if (!any(grepl(alreadyInRprofileMessage, co)))
-    if (verbose >= 1)
-      silence <- lapply(co, message)
+    silence <- lapply(co, messageVerbose, verbose = verbose, verboseLevel = 1)
   ro <- RequireOptions()
   roNames <- names(newOpts)
   names(roNames) <- roNames
@@ -140,8 +139,9 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
     }
     setLibPaths()
     if (isTRUE(removePackages)) {
-      if (interactive() && (verbose >= 0)) {
-        message("You have requested to remove all packages in ", lps[1])
+      if (interactive() && (verbose >= 1)) { # don't even ask if verbose is low
+        messageVerbose("You have requested to remove all packages in ", lps[1],
+                       verbose = verbose, verboseLevel = 1)
         out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
         if (identical(tolower(out), "n"))
           removePackages <- FALSE
@@ -167,8 +167,8 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
       if (isTRUE(pkgInstalledAlready)) {
         fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
         if (!newPathExists) {
-          if (verbose >= 1)
-            message("Placing copy of ", pkg, " in ", RPackageFolders)
+          message("Placing copy of ", pkg, " in ", RPackageFolders,
+                  verbose = verbose, verboseLevel = 1)
           dirs <- unique(dirname(fromFiles))
           dirs <- gsub(thePath, theNewPath, dirs)
           lapply(dirs, checkPath, create = TRUE)
@@ -181,8 +181,8 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          if (verbose >= 1)
-            message("Updating version of ", pkg, " in ", RPackageFolders)
+          message("Updating version of ", pkg, " in ", RPackageFolders,
+                  verbose = verbose, verboseLevel = 1)
           unlink(toFiles)
         }
         linkOrCopy(fromFiles, toFiles)

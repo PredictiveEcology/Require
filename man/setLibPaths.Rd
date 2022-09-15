@@ -39,8 +39,9 @@ on the system. There are some cases where this behaviour is not desirable.
 Set \code{exact} to \code{TRUE} to override this automatic appending and use
 the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 
-\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a \code{data.table} with many details attached to the output.}
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which

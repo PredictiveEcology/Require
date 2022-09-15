@@ -22,8 +22,9 @@ by a user if they find a package fails in attempts to unload it, e.g., "ps"}
 topologically sorted. If \code{FALSE}, then it won't. Useful if the
 \code{pkgs} are already sorted.}
 
-\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a \code{data.table} with many details attached to the output.}
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 }
 \value{
 A numeric named vector, with names of the packages that were attempted.

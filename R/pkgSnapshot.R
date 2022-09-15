@@ -103,8 +103,8 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
     # source("packages.R")
   } else {
     fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
-    if (verbose >= 1)
-      message("package version file saved in ", packageVersionFile)
+    messageVerbose("package version file saved in ", packageVersionFile,
+                   verbose = verbose, verboseLevel = 1)
   }
 
   return(invisible(ip))

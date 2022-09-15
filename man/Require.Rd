@@ -80,8 +80,9 @@ defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::
 
 Internally, there are calls to \code{available.packages}.}
 
-\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a \code{data.table} with many details attached to the output.}
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{...}{Passed to \code{install.packages}.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be

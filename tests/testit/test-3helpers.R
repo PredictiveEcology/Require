@@ -16,7 +16,8 @@ if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 
-out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2))
+out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2,
+                                                                   verboseLevel = 1))
 testit::assert({is.character(out)})
 testit::assert({is.numeric(as.numeric(gsub(".*: ", "", out)[2]))})
 

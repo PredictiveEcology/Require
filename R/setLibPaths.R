@@ -85,8 +85,8 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
 
   environment(shim_fun) <- shim_env
   shim_fun(unique(libPaths))
-  if (verbose >= 1)
-    message(".libPaths() is now: ", paste(.libPaths(), collapse = ", "))
+  message(".libPaths() is now: ", paste(.libPaths(), collapse = ", "),
+          verbose = verbose, verboseLevel = 1)
   return(invisible(oldLibPaths))
 }
 
@@ -104,8 +104,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
       }
     }
     if (any(grepl(setLibPathsStartText, readLines(".Rprofile")))) {
-      if (verbose >= 1)
-        message(alreadyInRprofileMessage)
+      message(alreadyInRprofileMessage, verbose = verbose, verboseLevel = 1)
     } else {
       bodyFn <- format(body(Require::setLibPaths))
       lineWCheckPath <- grepl("checkPath.normPath|checkLibPaths", bodyFn)
@@ -134,8 +133,9 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
                   if (verbose >= 1)
                     resetRprofileMessage(updateRprofile),
                   paste0(commentCharsForSetLibPaths, "end ####"))
-      if (verbose >= 1)
-        message("Updating ", updateRprofile, "; this will set new libPaths for R packages even after restarting R")
+      messageVerbose("Updating ", updateRprofile,
+                     "; this will set new libPaths for R packages even after restarting R",
+                     verbose = verbose, verboseLevel = 1)
       cat(bodyFn, file = ".Rprofile", append = TRUE, sep = "\n")
     }
   }
@@ -152,8 +152,8 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
         ll <- readLines(updateRprofile)
         bounds <- which(grepl("#### setLibPaths", ll))
         if (length(bounds)) {
-          if (verbose >= 1)
-            message("removing custom libPaths in .Rprofile")
+          messageVerbose("removing custom libPaths in .Rprofile",
+                         verbose = verbose, verboseLevel = 1)
           if (identical("", ll[bounds[1] - 1])) {
             bounds[1] <- bounds[1] - 1
           }
@@ -176,8 +176,8 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
         noChange <- TRUE
       }
       if (isTRUE(noChange))
-        if (verbose >= 1)
-          message("There was no custom libPaths setting in .Rprofile; nothing changed")
+        messageVerbose("There was no custom libPaths setting in .Rprofile; nothing changed",
+                       verbose = verbose, verboseLevel = 0)
 
       return(invisible())
     }
