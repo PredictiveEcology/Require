@@ -33,7 +33,6 @@ paths <- list("./aaa/zzz",
               ".//aaa//zzz/",
               ".\\aaa\\zzz",
               ".\\aaa\\zzz\\",
-              ".aaa//zzz/",
               paste0(tmpdir, "/aaa/zzz"), # nolint
               paste0(tmpdir, "/aaa/zzz/"), # nolint
               file.path(tmpdir, "aaa", "zzz"))
@@ -60,7 +59,6 @@ paths <- list("./aaa/zzz",
               ".//aaa//zzz/",
               ".\\aaa\\zzz",
               ".\\aaa\\zzz\\",
-              ".aaa//zzz/",
               paste0(tmpdir, "/aaa/zzz"), # nolint
               paste0(tmpdir, "/aaa/zzz/"), # nolint
               file.path(tmpdir, "aaa", "zzz"))

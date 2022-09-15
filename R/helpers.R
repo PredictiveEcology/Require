@@ -46,7 +46,7 @@ setMethod("normPath",
               if (!is.null(path)) {
                 hasDotStart <- startsWith(path, "./")
                 if (isTRUE(any(hasDotStart)))
-                  path[hasDotStart] <- gsub("^[.]/", paste0(getwd()), path[hasDotStart])
+                  path[hasDotStart] <- gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
                 path <- gsub("\\\\", "//", path)
                 path <- gsub("//", "/", path)
                 path <- gsub("/$", "", path) # nolint
