@@ -154,7 +154,7 @@ out <- Require(pkg, install = FALSE, require = FALSE)
 testit::assert({isFALSE(all(out))})
 
 # Try a package taken off CRAN
-out <- Require("gdalUtils")
+out <- Require("ffbase")
 testit::assert(isTRUE(out)) # it got installed, even though off CRAN
 
 out <- getPkgVersions("Require")
