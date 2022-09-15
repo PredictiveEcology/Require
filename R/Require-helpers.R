@@ -2075,14 +2075,14 @@ postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
   newTxt <-
     paste0("RemoteType: github
     RemoteHost: api.github.com
-    RemoteRepo: ",pkg,"
-    RemoteUsername: ",acct,"
-    RemoteRef: ",br,"
-    RemoteSha: ",sha,"
-    GithubRepo: ",pkg,"
-    GithubUsername: ",acct,"
-    GithubRef: ",br,"
-    GithubSHA1: ",sha,"")
+    RemoteRepo: ", pkg, "
+    RemoteUsername: ", acct,"
+    RemoteRef: ", br, "
+    RemoteSha: ", sha, "
+    GithubRepo: ", pkg, "
+    GithubUsername: ", acct, "
+    GithubRef: ", br, "
+    GithubSHA1: ", sha, "")
   newTxt <- strsplit(newTxt, split = "\n")[[1]]
   newTxt <- gsub("^ +", "", newTxt)
   txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
@@ -2104,7 +2104,7 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
   repoFull <- file.path(modulePath, gr$repo)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   for (i in 1:2) {
-    url <- paste0("http://github.com/",ar,"/archive/",gr$br,".zip")
+    url <- paste0("http://github.com/", ar, "/archive/", gr$br, ".zip")
     out <- try(download.file(url, destfile = zipFileName, quiet = TRUE), silent = TRUE)
     if (is(out, "try-error") && identical(gr$br, "master"))
       gr$br <- "main"

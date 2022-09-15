@@ -83,19 +83,19 @@ message("\033[32m --------------------------------- Starting ", thisFilename, " 
     } else {
       localBinsFull <- NULL
     }
-    # THere might be more than one version
+    ## There might be more than one version
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     localBinsFull <- dts
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
         system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2] ,
-                      "'), quiet = TRUE, type = 'binary', lib = '", .libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+                      "'), quiet = TRUE, type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
       else
         system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
                       "'), quiet = TRUE, lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
     } else {
       system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
-                    .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+                    .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
     }
 
     if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
