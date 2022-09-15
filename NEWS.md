@@ -9,7 +9,8 @@ version 0.1.1.9000
 * several improvements in package dependency resolution and installation.
 
 ## bugfixes
-* multiple fixes for certain edge cases
+* fix issue with 'dot directories' in `normPath()`.
+* multiple fixes for certain edge cases.
 
 version 0.1.1
 ==============
