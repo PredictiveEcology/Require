@@ -1244,7 +1244,6 @@ currentCRANPkgDates <- function(pkgs, verbose = getOption("Require.verbose")) {
 #' @inheritParams Require
 installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
                          verbose = getOption("Require.verbose")) {
-  browser()
   installFromCur <- "Local"
   installPackage <- toInstall[installFrom == installFromCur]$Package
   names(installPackage) <- installPackage
@@ -1345,7 +1344,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   # canusepak <- usepak(toInstall$Package) # (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
   installPkgNames <- toInstall[installFrom == "CRAN"]$Package
 
-  browser()
   names(installPkgNames) <- installPkgNames
 
   toIn <- toInstall[installFrom == "CRAN"]
