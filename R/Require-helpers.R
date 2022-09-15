@@ -1951,8 +1951,9 @@ checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
   } else {
     pathsToCheck <- libPaths
   }
-  unlist(lapply(pathsToCheck, function(lp)
-    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)))
+  unlist(lapply(pathsToCheck, function(lp) {
+    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)
+  }))
 }
 
 preparePkgNameToReport <- function(Package, packageFullName) {

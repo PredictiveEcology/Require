@@ -71,8 +71,9 @@
 pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
                         purge = getOption("Require.purge", FALSE), exact = TRUE,
                         verbose = getOption("Require.verbose")) {
-  if (missing(libPaths))
+  if (missing(libPaths)) {
     libPaths <- .libPaths()
+  }
   origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
   on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
@@ -95,14 +96,15 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
       dd <- paste0(ifelse(!is.na(cc$GithubRepo), paste0(cc$GithubUsername, "/", cc$GithubRepo, "@", ref),
                           paste0(cc$Package, " (>=", cc$Version, ")")))
     }
-    ee <- paste0("Require(c('", paste(dd, collapse = "',\n'"), "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
+    ee <- paste0("Require(c('", paste(dd, collapse = "',\n'"),
+                 "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
     cat(ee)
     # cat(ee, file = "packages.R")
     # source("packages.R")
   } else {
     fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
     if (verbose >= 1)
-      message("package version file saved in ",packageVersionFile)
+      message("package version file saved in ", packageVersionFile)
   }
 
   return(invisible(ip))
