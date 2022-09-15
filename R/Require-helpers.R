@@ -262,32 +262,32 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbo
             set(aa, NULL, "lastRow", NULL)
 
             # offCRAN <- oldAvailableVersions[, list(offCRAN = !any(!is.na(CRANVersion))), by = "Package"]
-            if (length(takenOffCranPkg)) {
-              pkgNeeded <- na.omit(aa$Package[aa$needLaterDate])
-              names(pkgNeeded) <- pkgNeeded
-              i <- 0
-              if (length(pkgNeeded) > 10)
-                  messageVerbose("The package versions requested do not appear on the CRAN repo supplied. ",
-                          "Checking the dates of the individual package Archives on the canonical CRAN mirror;",
-                          " This will take some time", verbose = verbose, verboseLevel = 2)
-              areTheyArchived <- lapply(pkgNeeded, function(pk) {
-                i <<- i + 1
-                # message(i, " of ", length(pkgNeeded), ": ", pk)
-                uu <- url(paste0("https://cran.r-project.org/package=", pk))
-                on.exit(try(close(uu), silent = TRUE))
-                rl <- readLines(uu)
-                close(uu)
-                archivedOn <- grep("Archived on", rl, value = TRUE)
-                gsub("Archived on (.{10,10}).*", "\\1", archivedOn)
-              })
-              areTheyArchived <- areTheyArchived[vapply(areTheyArchived, function(x) length(x) > 0, logical(1))]
-              latestDates <- data.table(Package = names(areTheyArchived),
-                                        mtime = as.POSIXct(unlist(areTheyArchived)) - 60*24*24)
-              aa <- aa[latestDates, on = "Package"]
-              desiredDates <- desiredDates[aa, on = "Package"]
-              desiredDates[needLaterDate == TRUE, dayAfterPutOnCRAN := mtime]
-              set(desiredDates, NULL, c("nextRow", "needLaterDate", "mtime"), NULL)
-            }
+            # if (length(takenOffCranPkg)) {
+            #   pkgNeeded <- na.omit(aa$Package[aa$needLaterDate])
+            #   names(pkgNeeded) <- pkgNeeded
+            #   i <- 0
+            #   if (length(pkgNeeded) > 10)
+            #       messageVerbose("The package versions requested do not appear on the CRAN repo supplied. ",
+            #               "Checking the dates of the individual package Archives on the canonical CRAN mirror;",
+            #               " This will take some time", verbose = verbose, verboseLevel = 2)
+            #   areTheyArchived <- lapply(pkgNeeded, function(pk) {
+            #     i <<- i + 1
+            #     # message(i, " of ", length(pkgNeeded), ": ", pk)
+            #     uu <- url(paste0("https://cran.r-project.org/package=", pk))
+            #     on.exit(try(close(uu), silent = TRUE))
+            #     rl <- readLines(uu)
+            #     close(uu)
+            #     archivedOn <- grep("Archived on", rl, value = TRUE)
+            #     gsub("Archived on (.{10,10}).*", "\\1", archivedOn)
+            #   })
+            #   areTheyArchived <- areTheyArchived[vapply(areTheyArchived, function(x) length(x) > 0, logical(1))]
+            #   latestDates <- data.table(Package = names(areTheyArchived),
+            #                             mtime = as.POSIXct(unlist(areTheyArchived)) - 60*24*24)
+            #   aa <- aa[latestDates, on = "Package"]
+            #   desiredDates <- desiredDates[aa, on = "Package"]
+            #   desiredDates[needLaterDate == TRUE, dayAfterPutOnCRAN := mtime]
+            #   set(desiredDates, NULL, c("nextRow", "needLaterDate", "mtime"), NULL)
+            # }
 
 
             oldAvailableVersions <- desiredDates[bb, on = "Package"]
