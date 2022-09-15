@@ -2,9 +2,12 @@
 % Please edit documentation in R/helpers.R
 \name{messageDF}
 \alias{messageDF}
+\alias{messageVerbose}
 \title{Use message to print a clean square data structure}
 \usage{
 messageDF(df, round, verbose = getOption("Require.verbose"), verboseLevel = 1)
+
+messageVerbose(..., verbose = getOption("Require.verbose"), verboseLevel = 1)
 }
 \arguments{
 \item{df}{A data.frame, data.table, matrix}
@@ -14,8 +17,19 @@ messageDF(df, round, verbose = getOption("Require.verbose"), verboseLevel = 1)
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
 If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
+
+\item{verboseLevel}{A numeric indicating what verbose threshold (level) above which
+this message will show.}
+
+\item{...}{Passed to \code{install.packages}.
+Good candidates are e.g., \code{type} or \code{dependencies}. This can be
+used with \code{install_githubArgs} or \code{install.packageArgs} which
+give individual options for those 2 internal function calls.}
 }
 \description{
 Sends to \code{message}, but in a structured way so that a data.frame-like can
 be cleanly sent to messaging.
+
+This will only show a message if the value of \code{verbose} is greater than
+the \code{verboseLevel}.
 }
