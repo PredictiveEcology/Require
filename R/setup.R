@@ -127,6 +127,7 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
     rp <- readLines(".Rprofile")
     lineWithPrevious <- grepl("### Previous option", rp)
     options(RequireOptions())
+    options(getOptionRPackageCache()) # This one may have a Sys.getenv that is different
     if (any(lineWithPrevious)) {
       lineWithPrevious <- which(lineWithPrevious)
       silence <- lapply(lineWithPrevious, function(lwp) {
