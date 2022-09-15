@@ -2376,7 +2376,7 @@ getOptionRPackageCache <- function() {
   }
 
   if (isTRUE(curVal)) {
-    curVal <- RequirePkgCacheDir()
+    curVal <- RequireOptions()$Require.RPackageCache
     options("Require.RPackageCache" = curVal)
   }
   if (isFALSE(curVal)) {
