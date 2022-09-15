@@ -1747,7 +1747,7 @@ installRequire <- function(requireHome = getOption("Require.Home"),
     }
 
     if (isFALSE(done)) {
-      Rpath <- file.path(Sys.getenv("R_HOME"), "bin/Rscript")
+      Rpath <- Sys.which("Rscript")
       system(paste0(Rpath, " -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
                     "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
@@ -2328,7 +2328,7 @@ installPackagesSystem <- function(pkg, args, libPath) {
   opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
   opts2[theCharacters][theCharactersAsVector] <- aa
   hasName <- names(opts2) != ""
-  Rpath <- file.path(Sys.getenv("R_HOME"), "bin/Rscript")
+  Rpath <- Sys.which("Rscript")
   out2 <- paste(Rpath, "-e \"do.call(install.packages, list(",
                 paste(opts2[!hasName], ", ",
                       paste(names(opts2)[hasName], sep = " = ", opts2[hasName],
