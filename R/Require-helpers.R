@@ -1659,7 +1659,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
 
   messageVerbose(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages,
                  if (numGroups > 1)
-                   paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,") ")
+                   paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
                  else  "",
                  ". Estimated time left: ",
                  timeLeftAlt, "; est. finish: ", estTimeFinish, "\033[39m",
