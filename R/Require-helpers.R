@@ -204,9 +204,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbo
         oldAvailableVersions <- rbindlist(oldAvailableVersions, idcol = "Package",
                                           fill = TRUE, use.names = TRUE)
         # delete unwanted columns
-        set(oldAvailableVersions, NULL, c("size", "isdir", "mode",
-                                          "ctime", "atime", "uid", "gid", "uname", "grname"),
-            NULL)
+        colsToDelete <- c("size", "isdir", "mode",
+                          "ctime", "atime", "uid", "gid", "uname", "grname")
+        colsToDelete <- intersect(colnames(oldAvailableVersions), colsToDelete)
+        set(oldAvailableVersions, NULL, colsToDelete, NULL)
         setDT(oldAvailableVersions)
         if (NROW(oldAvailableVersions) && "PackageUrl" %in% colnames(oldAvailableVersions)) {
           oldAvailableVersions[, OlderVersionsAvailable := gsub(".*_(.*)\\.tar\\.gz", "\\1", PackageUrl)]
