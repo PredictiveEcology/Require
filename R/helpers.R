@@ -85,7 +85,7 @@ setMethod("normPath",
           signature(path = "logical"),
           definition = function(path) {
             return(NA_character_)
-          })
+})
 
 ################################################################################
 #' Check directory path
