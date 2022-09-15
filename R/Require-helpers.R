@@ -1747,14 +1747,13 @@ installRequire <- function(requireHome = getOption("Require.Home"),
     }
 
     if (isFALSE(done)) {
-      system(paste0("Rscript -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
+      Rpath <- Sys.which("Rscript")
+      system(paste0(Rpath, " -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
                     "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
       done <- TRUE
     }
   } else {
     stop("Require will need to be installed manually in", .libPaths()[1])
-    system(paste0("Rscript -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
-                  "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
   }
 }
 
@@ -2052,18 +2051,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                          lib = normalizePath(libPath, winslash = "/")))
     messageVerbose("* building ",packageTarName," ... Built!",
                    verbose = verbose, verboseLevel = 1)
-    if (FALSE) {
-      opts2 <- append(list(...),
-                      list(packageTarName,
-                           repos = NULL,
-                           lib = normalizePath(libPath, winslash = "/")))
-      theCharacters <- unlist(lapply(opts2, is.character))
-      opts2[theCharacters] <- paste0("'", opts2[theCharacters], "'")
-      hasName <- names(opts2) != ""
-      out2 <- system(paste("Rscript -e \"do.call(install.packages, list(",
-                           paste(opts2[!hasName], ", ",
-                                 paste(names(opts2)[hasName], sep = " = ", opts2[hasName], collapse = ", "), "))\"")))
-    }
     opts2$type <- NULL # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
     postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
@@ -2341,7 +2328,8 @@ installPackagesSystem <- function(pkg, args, libPath) {
   opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
   opts2[theCharacters][theCharactersAsVector] <- aa
   hasName <- names(opts2) != ""
-  out2 <- paste("Rscript -e \"do.call(install.packages, list(",
+  Rpath <- Sys.which("Rscript")
+  out2 <- paste(Rpath, "-e \"do.call(install.packages, list(",
                 paste(opts2[!hasName], ", ",
                       paste(names(opts2)[hasName], sep = " = ", opts2[hasName],
                             collapse = ", "),"))\""))
