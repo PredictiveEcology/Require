@@ -92,7 +92,7 @@ message("\033[32m --------------------------------- Starting ", thisFilename, " 
                       "'), quiet = TRUE, type = 'binary', lib = '", .libPaths()[1],"', repos = NULL)\""), wait = TRUE)
       else
         system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
-                      "'), quiet = TRUE, lib = '", .libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+                      "'), quiet = TRUE, lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
     } else {
       system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
                     .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
