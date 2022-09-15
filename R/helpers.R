@@ -182,8 +182,12 @@ setMethod("checkPath",
 #'
 #' @param df A data.frame, data.table, matrix
 #' @param round An optional numeric to pass to `round`
-#' @importFrom data.table is.data.table as.data.table
 #' @inheritParams Require
+#' @param verboseLevel Numeric or logical indicating how verbose should the function be.
+#'   If -1 or less, then as little verbosity as possible.
+#'   If 0 or FALSE, then minimal outputs; if `1` or TRUE, more outputs; `2` even more.
+#'
+#' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
 messageDF <- function(df, round, verbose = getOption("Require.verbose"),
                       verboseLevel = 1) {#}, colour = NULL) {
