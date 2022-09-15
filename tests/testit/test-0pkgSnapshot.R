@@ -2,7 +2,8 @@ thisFilename <- "test-0pkgSnapshot.R"
 startTimeAll <- startTime <- Sys.time()
 tdOuter <- tempdir2("tests")
 try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+message("\033[32m --------------------------------- Starting ", thisFilename, "  at: ",
+        format(startTime),"---------------------------\033[39m")
 
 #if (interactive()) {
   library(Require)
@@ -29,12 +30,14 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   bb <- data.table::rbindlist(bb)
   data.table::fwrite(x = bb, file = pkgVF)
 
-  outOpts <- options("Require.verbose" = FALSE,
-                     "Require.persistentPkgEnv" = TRUE,
-                     "install.packages.check.source" = "never",
-                     "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = TRUE,
-                     "Require.RPackageCache" = TRUE)
+  outOpts <- options(
+    install.packages.check.source = "never",
+    install.packages.compile.from.source = "never",
+    Require.persistentPkgEnv = TRUE,
+    Require.RPackageCache = TRUE,
+    Require.unloadNamespaces = TRUE,
+    Require.verbose = FALSE
+  )
   if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
   } else {
@@ -126,5 +129,5 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
   if (exists("outOpts2")) options(outOpts2)
 #}
 
-  endTime <- Sys.time()
-  message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTime <- Sys.time()
+message("\033[32m ----------------------------------", thisFilename, ": ", format(endTime - startTime), " \033[39m")
