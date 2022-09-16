@@ -265,7 +265,7 @@ Require <- function(packages, packageVersionFile,
   opts <- options(repos = allrepos)
 
   Ncpus <- getOption("Ncpus")
-  if (is.null(Ncpus)) opts <- append(opts, options(Ncpus = 16))
+  if (is.null(Ncpus)) opts <- append(opts, options(Ncpus = 4))
   on.exit({
     options(opts)}
     , add = TRUE)
