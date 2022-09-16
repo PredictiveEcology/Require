@@ -345,7 +345,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbo
     } else {
       pkgDT[, correctVersionAvail := NA]
     }
-
   }
 
   pkgDT
