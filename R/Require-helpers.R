@@ -1263,7 +1263,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     dots$dependencies <- NA # This was NA; which means let install.packages do it. But, failed in some cases:
 
   messageVerbose("Using local cache of ", paste(toIn$localFileName, collapse = ", "),
-                 verbose = verbose, verboseLevel = 1)
+                 verbose = verbose, verboseLevel = 0)
   installPkgNames <- normPath(file.path(rpackageFolder(getOptionRPackageCache()), toIn$localFileName))
   names(installPkgNames) <- installPkgNames
 

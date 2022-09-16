@@ -553,7 +553,6 @@ Require <- function(packages, packageVersionFile,
   } else {
     out <- logical()
   }
-  #}
 
 
   if (isTRUE(require)) {
