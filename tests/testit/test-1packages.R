@@ -61,7 +61,7 @@ library(testit)
 
 dir1 <- Require:::rpackageFolder(tempdir2("test1"))
 checkPath(dir1, create = TRUE)
-out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1)
+out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1, verbose = 2)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
