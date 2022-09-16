@@ -1155,9 +1155,9 @@ installedVers <- function(pkgDT) {
         installedPkgsCurrent <- ip[, c("Package", "LibPath", "Version")]
         pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
       }
-    } else {
-      pkgDT <- ip[pkgDT, on = "Package"]
     }
+    pkgDT <- ip[pkgDT, on = "Package"]
+
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
   }
