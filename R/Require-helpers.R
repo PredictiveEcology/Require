@@ -1152,10 +1152,9 @@ installedVers <- function(pkgDT) {
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error")) browser()
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
-        installedPkgsCurrent <- ip[, c("Package", "LibPath", "Version")]
-        pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
       }
     }
+    ip <- ip[, c("Package", "LibPath", "Version")]
     pkgDT <- ip[pkgDT, on = "Package"]
 
   } else {
