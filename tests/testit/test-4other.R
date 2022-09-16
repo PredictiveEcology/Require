@@ -1,7 +1,7 @@
 thisFilename <- "test-4other.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-
+library(Require)
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
@@ -79,9 +79,9 @@ setwd(origDir)
 if (!identical(origLibPathsAllTests, .libPaths())) {
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
+
 options(outOpts)
 if (exists("outOpts2")) options(outOpts2)
-
 ## setup
 # assign("aaaa", 1, envir = .GlobalEnv)
 options(RequireOptions())
@@ -91,7 +91,12 @@ setup(setupTestDir, RPackageCache = ccc)
 testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 setupOff()
 message("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache())
-testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
+if (identical(RPackageCacheSysEnv, "FALSE")) {
+  testit::assert(identical(NULL, getOptionRPackageCache()))
+} else {
+  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+}
 
 # reset options after setupOff()
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
@@ -100,7 +105,25 @@ ccc <- checkPath(secondTry, create = TRUE)
 setup(setupTestDir, RPackageCache = ccc) ## TODO: warnings in file() cannot open DESCRIPTION files
 testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
-testit::assert(identical(Require:::getOptionRPackageCache(), secondTry))
+testit::assert(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
+
+ooo <- options(Require.RPackageCache = TRUE)
+testit::assert(identical(getOptionRPackageCache(), RequirePkgCacheDir()))
+ooo <- options(Require.RPackageCache = FALSE)
+testit::assert(identical(getOptionRPackageCache(), NULL))
+ooo <- options(Require.RPackageCache = tempdir())
+testit::assert(identical(getOptionRPackageCache(), tempdir()))
+ooo <- options(Require.RPackageCache = "default")
+RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
+if (identical(RPackageCacheSysEnv, "FALSE")) {
+  testit::assert(identical(NULL, getOptionRPackageCache()))
+} else {
+  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+}
+ooo <- options(Require.RPackageCache = NULL)
+testit::assert(identical(getOptionRPackageCache(), NULL))
+
+
 options(opt22)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

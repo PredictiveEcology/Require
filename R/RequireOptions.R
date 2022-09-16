@@ -87,7 +87,7 @@ RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL,
-       Require.RPackageCache = RequirePkgCacheDir(),
+       Require.RPackageCache = "default", # RequirePkgCacheDir(),
        Require.standAlone = TRUE,
        Require.unloadNamespaces = FALSE,
        Require.updateRprofile = FALSE,

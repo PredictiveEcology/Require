@@ -2365,23 +2365,36 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
 #'
 #' @export
 getOptionRPackageCache <- function() {
-  fromEnvVars <- Sys.getenv("Require.RPackageCache")
-  if (nchar(fromEnvVars) == 0) {
-    fromEnvVars <- NULL
-    curVal <- getOption("Require.RPackageCache")
-  } else {
-    curVal <- fromEnvVars
-    if (identical("TRUE", curVal)) curVal <- TRUE
-    if (identical("FALSE", curVal)) curVal <- FALSE
-  }
-
-  if (isTRUE(curVal)) {
-    curVal <- RequireOptions()$Require.RPackageCache
-    options("Require.RPackageCache" = curVal)
-  }
-  if (isFALSE(curVal)) {
-    curVal <- NULL
-    options("Require.RPackageCache" = curVal)
+  curVal <- getOption("Require.RPackageCache")
+  try <- 1
+  while (try < 3) {
+    if (isTRUE(curVal)) {
+      curVal <- RequirePkgCacheDir()
+      break
+    } else if (isFALSE(curVal)) {
+      curVal <- NULL
+      break
+    } else {
+      if (identical("default", curVal)) {
+        fromEnvVars <- Sys.getenv("Require.RPackageCache")
+        if (nchar(fromEnvVars) == 0  ) {
+          curVal <- RequirePkgCacheDir()
+          break
+        } else {
+          try <- try + 1
+          curVal <- fromEnvVars
+          if (identical("TRUE", curVal)) {
+            curVal <- TRUE
+          } else if (identical("FALSE", curVal)) {
+            curVal <- FALSE
+          } else {
+            break
+          }
+        }
+      } else {
+        break
+      }
+    }
   }
   curVal
 }

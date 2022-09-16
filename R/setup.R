@@ -88,10 +88,12 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                                    updateRprofile = TRUE))
   if (!any(grepl(alreadyInRprofileMessage, co)))
     silence <- lapply(co, messageVerbose, verbose = verbose, verboseLevel = 1)
+
   ro <- RequireOptions()
   roNames <- names(newOpts)
   names(roNames) <- roNames
   nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
+  nonStandardOpt[] <- TRUE # OVERRIDE -- MAKE THEM ALL EXPLICIT IN .Rprofile
   if (any(nonStandardOpt)) {
     setLibPathsUpdateRprofile(.libPaths()[1])
     rp <- readLines(".Rprofile")
@@ -122,12 +124,14 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
+
   lps <- .libPaths()
   if (file.exists(".Rprofile")) {
     rp <- readLines(".Rprofile")
     lineWithPrevious <- grepl("### Previous option", rp)
-    options(RequireOptions())
-    options(getOptionRPackageCache()) # This one may have a Sys.getenv that is different
+
+    #options(RequireOptions())
+    #options(getOptionRPackageCache()) # This one may have a Sys.getenv that is different
     if (any(lineWithPrevious)) {
       lineWithPrevious <- which(lineWithPrevious)
       silence <- lapply(lineWithPrevious, function(lwp) {
