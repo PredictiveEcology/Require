@@ -419,7 +419,10 @@ Require <- function(packages, packageVersionFile,
       notInLibPaths1 <- (!pkgDT$Package %in% .basePkgs) &
         (!normPath(pkgDT$LibPath) %in% normPath(.libPaths()[1]))
       if (any(notInLibPaths1))
-        pkgDT[notInLibPaths1, installed := FALSE]
+        pkgDT[notInLibPaths1, `:=`(
+          installed = FALSE,
+          LibPath = NA_character_,
+          Version = NA_character_)]
     }
 
     if (length(packages)) {
