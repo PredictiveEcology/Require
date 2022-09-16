@@ -489,7 +489,8 @@ Require <- function(packages, packageVersionFile,
       }
 
     }
-    attr(out, "Require") <- pkgDT[]
+    if (verbose >= 2)
+      attr(out, "Require") <- pkgDT[]
 
     stillNeeded <- if (!is.null(pkgDT$installResult)) {
       if (any(grep("No available", pkgDT$installResult))) {
