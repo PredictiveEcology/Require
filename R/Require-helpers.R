@@ -505,7 +505,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     }
   }
 
-  pkgDT
+  invisible(pkgDT)
 }
 
 #' @rdname DESCRIPTION-helpers
