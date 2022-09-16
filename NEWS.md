@@ -1,6 +1,6 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
-version 0.1.1.9000
+version 0.1.2
 ==============
 ## dependencies
 * drop support for R 3.6 (R >= 4.0 are supported)

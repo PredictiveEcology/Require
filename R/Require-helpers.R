@@ -1130,30 +1130,47 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   ret
 }
 
+#' @importFrom utils packageVersion installed.packages
 installedVers <- function(pkgDT) {
   pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {
-    pkgs <- unique(pkgDT$Package)
-    names(pkgs) <- pkgs
-    installedPkgsCurrent <- lapply(pkgs, function(p) {
-      DESCRIPTIONfilePath <- file.path(.libPaths(), p, "DESCRIPTION")
-      out <- DESCRIPTIONfilePath[file.exists(DESCRIPTIONfilePath)][1]
-      descV <- if (!is.na(out)) {
-        descV <- DESCRIPTIONFileVersionV(out)
-        cbind("Package" = p, LibPath = dirname(dirname(out)), "Version" = descV)
-      } else {
-        cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
-      }
-      descV
-    })
+    pkgs <- pkgDT$Package
+    names(pkgs) <- pkgDT$packageFullName
+    ln <- loadedNamespaces()
+    ln <- ln[!ln %in% .basePkgs]
+    pkgs <- pkgs[pkgs %in% ln]
 
-    installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
-    installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
-    pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
-  } else {
-    pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
-  }
-  pkgDT[]
+    installedPkgsCurrent <- lapply(pkgs, function(x) data.table(VersionFromPV = as.character(numeric_version(packageVersion(x)))))
+    installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
+    set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
+    ip <- as.data.table(installed.packages())[]
+    ip <- ip[, c("Package", "LibPath", "Version")]
+    ip <- installedPkgsCurrent[ip, on = "Package"]
+    ip[!is.na(VersionFromPV), Version := VersionFromPV]
+    ip <- ip[Package %in% pkgDT$Package]
+    installedPkgsCurrent <- ip[, c("Package", "LibPath", "Version")]
+
+    #   pkgs <- unique(pkgDT$Package)
+    #   names(pkgs) <- pkgs
+  #   installedPkgsCurrent <- lapply(pkgs, function(p) {
+  #     DESCRIPTIONfilePath <- file.path(.libPaths(), p, "DESCRIPTION")
+  #     out <- DESCRIPTIONfilePath[file.exists(DESCRIPTIONfilePath)][1]
+  #     descV <- if (!is.na(out)) {
+  #       descV <- DESCRIPTIONFileVersionV(out)
+  #       cbind("Package" = p, LibPath = dirname(dirname(out)), "Version" = descV)
+  #     } else {
+  #       cbind("Package" = p, LibPath = NA_character_, "Version" = NA_character_)
+  #     }
+  #     descV
+  #   })
+  #
+  #   installedPkgsCurrent <- do.call(rbind, installedPkgsCurrent)
+  #   installedPkgsCurrent <- as.data.table(installedPkgsCurrent)
+  pkgDT <- installedPkgsCurrent[pkgDT, on = "Package"]
+} else {
+  pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
+}
+pkgDT[]
 }
 
 #' @importFrom utils available.packages
