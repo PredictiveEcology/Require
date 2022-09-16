@@ -1148,7 +1148,6 @@ installedVers <- function(pkgDT) {
 
       installedPkgsCurrent <- lapply(pkgs, function(x) data.table(VersionFromPV = as.character(numeric_version(packageVersion(x)))))
       installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
-      browser()
       set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
       ip <- installedPkgsCurrent[ip, on = "Package"]
       ip[!is.na(VersionFromPV), Version := VersionFromPV]
