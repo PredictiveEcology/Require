@@ -12,8 +12,7 @@ if (interactive()) {
                      "Require.persistentPkgEnv" = TRUE,
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = FALSE,
-                     "Require.RPackageCache" = TRUE)
+                     "Require.unloadNamespaces" = FALSE)
   if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
   } else {

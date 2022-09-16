@@ -34,7 +34,6 @@ message("\033[32m --------------------------------- Starting ", thisFilename, " 
     install.packages.check.source = "never",
     install.packages.compile.from.source = "never",
     Require.persistentPkgEnv = TRUE,
-    Require.RPackageCache = TRUE,
     Require.unloadNamespaces = TRUE,
     Require.verbose = FALSE
   )
