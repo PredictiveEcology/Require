@@ -345,7 +345,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbo
     } else {
       pkgDT[, correctVersionAvail := NA]
     }
-
   }
 
   pkgDT
@@ -505,7 +504,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     }
   }
 
-  invisible(pkgDT)
+  pkgDT
 }
 
 #' @rdname DESCRIPTION-helpers
