@@ -1155,6 +1155,7 @@ installedVers <- function(pkgDT) {
       }
     }
     ip <- ip[, c("Package", "LibPath", "Version")]
+    ip <- unique(ip, on = c("Package", "LibPath"))
     pkgDT <- ip[pkgDT, on = "Package"]
 
   } else {
