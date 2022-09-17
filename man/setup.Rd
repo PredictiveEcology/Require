@@ -7,12 +7,13 @@
 \usage{
 setup(
   RPackageFolders = getOption("Require.RPackageFolders", "R"),
-  RPackageCache = getOption("Require.RPackageCache", RequirePkgCacheDir()),
+  RPackageCache = getOptionRPackageCache(),
   buildBinaries = getOption("Require.buildBinaries", TRUE),
-  standAlone = getOption("Require.standAlone", TRUE)
+  standAlone = getOption("Require.standAlone", TRUE),
+  verbose = getOption("Require.verbose")
 )
 
-setupOff(removePackages = FALSE)
+setupOff(removePackages = FALSE, verbose = getOption("Require.verbose"))
 }
 \arguments{
 \item{RPackageFolders}{One or more folders where R packages are
@@ -24,12 +25,17 @@ folder provided, installation will only happen in the first one.}
 \item{buildBinaries}{See \code{?RequireOptions}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only.
+the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
+to e.g., the \code{checkpoint} package.
 If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
 resulting in shared packages, i.e., it will include the user's default package folder(s).
 This can be create dramatically faster installs if the user has a substantial number of
 the packages already in their personal library.
 Default \code{FALSE} to minimize package installing.}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{removePackages}{Logical. If \code{TRUE}, then all packages that
 were installed in the custom library will be deleted when \code{setupOff}

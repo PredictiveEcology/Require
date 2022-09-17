@@ -1,2 +1,5 @@
 library(testit)
+# optsCRAN <- options(repos = c(CRAN = "https://muug.ca/mirror/cran"))
+optsCRAN <- options(repos = c(CRAN = "https://cloud.r-project.org"))
 test_pkg("Require")
+options(optsCRAN)

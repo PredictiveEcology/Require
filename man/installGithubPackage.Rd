@@ -5,15 +5,29 @@
 \alias{installGitHubPackage}
 \title{Install R Package from GitHub source code}
 \usage{
-installGithubPackage(gitRepo, libPath = .libPaths()[1], ...)
+installGithubPackage(
+  gitRepo,
+  libPath = .libPaths()[1],
+  verbose = getOption("Require.verbose"),
+  ...
+)
 
-installGitHubPackage(gitRepo, libPath = .libPaths()[1], ...)
+installGitHubPackage(
+  gitRepo,
+  libPath = .libPaths()[1],
+  verbose = getOption("Require.verbose"),
+  ...
+)
 }
 \arguments{
 \item{gitRepo}{A repository in the form: Account/Repository@Branch or Account/Repository@SHA}
 
 \item{libPath}{The folder where you would like the package installed. Defaults
 to \code{.libPaths()[1]}}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{...}{Passed to R CMD INSTALL}
 }

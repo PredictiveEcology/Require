@@ -1,17 +1,19 @@
-message("\033[34m --------------------------------- Starting test-other.R \033[39m")
-
+thisFilename <- "test-4other.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+library(Require)
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = FALSE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
-} else {
+if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 
 # Test misspelled
@@ -39,12 +41,13 @@ pkgDepTopoSort(c("Require", "data.table"), useAllInSearch = TRUE,
 Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
 
 
-if (Sys.info()["user"] == "emcintir2")
-  options("Require.RPackageCache" = "~/._RPackageCache/",
+if (Sys.info()["user"] == "emcintir2") {
+  options("Require.RPackageCache" = TRUE,
           "Require.unloadNamespaces" = FALSE)
+}
 Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
-                         libPaths = tempdir2(tempdir2("other"))))
+                         libPaths = tempdir2("other")))
 
 pkg <- c("data.table", "data.table")
 pkgDT <- Require:::toPkgDT(pkg)
@@ -56,7 +59,7 @@ Require:::rmDuplicatePkgs(pkgDT)
 data.table::set(pkgDT, NULL, "versionSpec", NA)
 Require:::rmDuplicatePkgs(pkgDT)
 
-out <- detachAll("data.table")
+out <- detachAll("data.table", dontTry = "testit")
 testit::assert({isTRUE(out['data.table'] == 1)})
 
 warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w) w$message)
@@ -72,28 +75,54 @@ setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package librar
 setLibPaths() # reset it to original
 setwd(origDir)
 
-if (!identical(origLibPathsAllTests, .libPaths()))
+if (!identical(origLibPathsAllTests, .libPaths())) {
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-options(outOpts)
-options(outOpts2)
+}
 
+options(outOpts)
+if (exists("outOpts2")) options(outOpts2)
 ## setup
+# assign("aaaa", 1, envir = .GlobalEnv)
 options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 setup(setupTestDir, RPackageCache = ccc)
-testit::assert(identical(getOption("Require.RPackageCache"), ccc))
+testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 setupOff()
-message("This is getOption('Require.RPackageCache')", getOption("Require.RPackageCache"))
-message("This is NULL")
-testit::assert(identical(getOption("Require.RPackageCache"), NULL))
+message("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache())
+RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
+if (identical(RPackageCacheSysEnv, "FALSE")) {
+  testit::assert(identical(NULL, getOptionRPackageCache()))
+} else {
+  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+}
 
 # reset options after setupOff()
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
 opt22 <- options("Require.RPackageCache" = secondTry)
 ccc <- checkPath(secondTry, create = TRUE)
-setup(setupTestDir, RPackageCache = ccc)
-testit::assert(identical(getOption("Require.RPackageCache"), ccc))
+setup(setupTestDir, RPackageCache = ccc) ## TODO: warnings in file() cannot open DESCRIPTION files
+testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 setupOff()
-testit::assert(identical(getOption("Require.RPackageCache"), secondTry))
+testit::assert(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
+
+ooo <- options(Require.RPackageCache = TRUE)
+testit::assert(identical(getOptionRPackageCache(), RequirePkgCacheDir()))
+ooo <- options(Require.RPackageCache = FALSE)
+testit::assert(identical(getOptionRPackageCache(), NULL))
+ooo <- options(Require.RPackageCache = tempdir())
+testit::assert(identical(getOptionRPackageCache(), tempdir()))
+ooo <- options(Require.RPackageCache = "default")
+RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
+if (identical(RPackageCacheSysEnv, "FALSE")) {
+  testit::assert(identical(NULL, getOptionRPackageCache()))
+} else {
+  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+}
+ooo <- options(Require.RPackageCache = NULL)
+testit::assert(identical(getOptionRPackageCache(), NULL))
+
+
 options(opt22)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

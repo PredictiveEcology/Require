@@ -44,16 +44,16 @@ setMethod("normPath",
               # in non-interactive testing
               path <- unlist(path)
               if (!is.null(path)) {
-                hasDotStart <- startsWith(path, ".")
-                if (isTRUE(any(hasDotStart)))
-                  path[hasDotStart] <- gsub("^[.]", paste0(getwd()), path[hasDotStart])
                 path <- gsub("\\\\", "//", path)
                 path <- gsub("//", "/", path)
+                hasDotStart <- startsWith(path, "./")
+                if (isTRUE(any(hasDotStart)))
+                  path[hasDotStart] <- gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
                 path <- gsub("/$", "", path) # nolint
               }
             }
             return(path)
-          })
+})
 
 #' @export
 #' @rdname normPath
@@ -61,7 +61,7 @@ setMethod("normPath",
           signature(path = "list"),
           definition = function(path) {
             return(normPath(unlist(path)))
-          })
+})
 
 #' @export
 #' @rdname normPath
@@ -69,7 +69,7 @@ setMethod("normPath",
           signature(path = "NULL"),
           definition = function(path) {
             return(character(0))
-          })
+})
 
 #' @export
 #' @rdname normPath
@@ -77,7 +77,15 @@ setMethod("normPath",
           signature(path = "missing"),
           definition = function() {
             return(character(0))
-          })
+})
+
+#' @export
+#' @rdname normPath
+setMethod("normPath",
+          signature(path = "logical"),
+          definition = function(path) {
+            return(NA_character_)
+})
 
 ################################################################################
 #' Check directory path
@@ -86,17 +94,17 @@ setMethod("normPath",
 #' such as trailing slashes, etc.
 #'
 #' @note This will not work for paths to files.
-#' To check for existence of files, use \code{\link{file.exists}}.
-#' To normalize a path to a file, use \code{\link{normPath}} or \code{\link{normalizePath}}.
+#' To check for existence of files, use [file.exists()].
+#' To normalize a path to a file, use [normPath()] or [normalizePath()].
 #'
 #' @param path A character string corresponding to a directory path.
 #'
 #' @param create A logical indicating whether the path should
-#' be created if it does not exist. Default is \code{FALSE}.
+#' be created if it does not exist. Default is `FALSE`.
 #'
 #' @return Character string denoting the cleaned up filepath.
 #'
-#' @seealso \code{\link{file.exists}}, \code{\link{dir.create}}.
+#' @seealso [file.exists()], [dir.create()].
 #'
 #' @export
 #' @rdname checkPath
@@ -142,7 +150,7 @@ setMethod(
       return(path)
     }
     #}
-  })
+})
 
 #' @export
 #' @rdname checkPath
@@ -177,14 +185,18 @@ setMethod("checkPath",
 
 #' Use message to print a clean square data structure
 #'
-#' Sends to \code{message}, but in a structured way so that a data.frame-like can
+#' Sends to `message`, but in a structured way so that a data.frame-like can
 #' be cleanly sent to messaging.
 #'
 #' @param df A data.frame, data.table, matrix
-#' @param round An optional numeric to pass to \code{round}
+#' @param round An optional numeric to pass to `round`
+#' @inheritParams Require
+#'
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
-messageDF <- function(df, round) {#}, colour = NULL) {
+#' @rdname messageVerbose
+messageDF <- function(df, round, verbose = getOption("Require.verbose"),
+                      verboseLevel = 1) {#}, colour = NULL) {
   if (is.matrix(df))
     df <- as.data.frame(df)
   if (!is.data.table(df)) {
@@ -198,25 +210,21 @@ messageDF <- function(df, round) {#}, colour = NULL) {
     }
   }
   out <- lapply(capture.output(df), function(x) {
-    #if (!is.null(colour)) {
-    #  message(getFromNamespace(colour, ns = "crayon")(x))
-    #} else {
-      message(x)
-    #}
+      messageVerbose(x, verbose = verbose, verboseLevel = verboseLevel)
   })
 }
 
 #' Make a temporary (sub-)directory
 #'
-#' Create a temporary subdirectory in \code{.RequireTempPath()}, or a
+#' Create a temporary subdirectory in `.RequireTempPath()`, or a
 #' temporary file in that temporary subdirectory.
 #'
 #' @param sub Character string, length 1. Can be a result of
-#'   \code{file.path("smth", "smth2")} for nested temporary sub
+#'   `file.path("smth", "smth2")` for nested temporary sub
 #'   directories.
 #' @param tempdir Optional character string where the temporary dir should be placed.
-#'   Defaults to \code{.RequireTempPath()}
-#' @seealso \code{\link{tempfile2}}
+#'   Defaults to `.RequireTempPath()`
+#' @seealso [tempfile2()]
 #' @export
 tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath())) {
   checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
@@ -224,11 +232,11 @@ tempdir2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireT
 
 #' Make a temporary subfile in a temporary (sub-)directory
 #'
-#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
+#' @param ... passed to `tempfile`, e.g., `fileext`
 #'
-#' @seealso \code{\link{tempdir2}}
+#' @seealso [tempdir2()]
 #' @inheritParams tempdir2
-#' @param ... passed to \code{tempfile}, e.g., \code{fileext}
+#' @param ... passed to `tempfile`, e.g., `fileext`
 #' @export
 tempfile2 <- function(sub = "",
                       tempdir = getOption("Require.tempPath", .RequireTempPath()),
@@ -240,11 +248,11 @@ tempfile2 <- function(sub = "",
 
 #' Invert a 2-level list
 #'
-#' This is a simple version of \code{purrr::transpose}, only for lists with 2 levels.
+#' This is a simple version of `purrr::transpose`, only for lists with 2 levels.
 #'
-#' @param l A list with 2 levels. If some levels are absent, they will be \code{NULL}
+#' @param l A list with 2 levels. If some levels are absent, they will be `NULL`
 #'
-#' @return A list with 2 levels deep, inverted from \code{l}
+#' @return A list with 2 levels deep, inverted from `l`
 #'
 #' @export
 #' @examples
@@ -260,18 +268,18 @@ invertList <- function(l) {
   })
 }
 
-#' \code{modifyList} for multiple lists
+#' `modifyList` for multiple lists
 #'
 #' @description
-#' This calls \code{\link[utils]{modifyList}} iteratively using
-#' \code{\link[base]{Reduce}}, so it can handle >2 lists.
+#' This calls [`utils::modifyList`] iteratively using
+#' [`base::Reduce`], so it can handle >2 lists.
 #' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
-#' It also will handle the case where any list is a \code{NULL}
+#' It also will handle the case where any list is a `NULL`
 #'
 #' @details
 #' Simply a convenience around
-#' \code{Reduce(modifyList, list(...))}, with some checks.
+#' `Reduce(modifyList, list(...))`, with some checks.
 #'
 #'
 #' @export
@@ -285,4 +293,45 @@ modifyList2 <- function(...) {
   dots <- list(...)
   dots <- dots[!unlist(lapply(dots, is.null))]
   do.call(Reduce, alist(modifyList, dots))
+}
+
+#' Create link to file, falling back to making a copy if linking fails.
+#'
+#' First try to create a hardlink to the file.
+#' If that fails, try a symbolic link (symlink) before falling back to copying the file.
+#' "File" here can mean a file or a directory.
+#'
+#' @param from,to character vectors, containing file names or paths.
+#'
+linkOrCopy <- function(from, to) {
+  res <- suppressWarnings(file.link(from, to)) ## try hardlink
+  if (isFALSE(res)) {
+    res <- suppressWarnings(file.symlink(from, to)) ## try symbolic link
+    if (isFALSE(res)) {
+      res <- suppressWarnings(file.copy(from, to, recursive = TRUE)) ## finally, copy the file
+    }
+  }
+
+  return(invisible(res))
+}
+
+timestamp <- function() {
+  format(Sys.time(), "%Y%m%d%H%M%S")
+}
+
+
+#' Similar to base::message, but with an verbosity threshold
+#'
+#' This will only show a message if the value of `verbose` is greater than
+#' the `verboseLevel`.
+#'
+#' @rdname messageVerbose
+#' @inheritParams base::message
+#' @inheritParams Require
+#' @param verboseLevel A numeric indicating what verbose threshold (level) above which
+#'   this message will show.
+messageVerbose <- function(..., verbose = getOption("Require.verbose"),
+                           verboseLevel = 1) {
+  if (verbose >= verboseLevel)
+    message(...)
 }

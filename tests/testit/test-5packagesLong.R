@@ -1,4 +1,6 @@
-message("\033[34m --------------------------------- Starting test-packagesLong.R \033[39m")
+thisFilename <- "test-5packagesLong.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
@@ -6,15 +8,15 @@ if (interactive()) {
   library(Require)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
+  outOpts <- options("Require.verbose" = FALSE,
+                     "Require.persistentPkgEnv" = TRUE,
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = TRUE)
-  if (Sys.info()["user"] == "emcintir2") {
-    outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                        "Require.RPackageCache" = "~/._RPackageCache/")
-  } else {
+                     "Require.unloadNamespaces" = FALSE)
+  if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  } else {
+    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
   }
   tmpdir <- file.path(tempdir2("other"), paste0("RequireTmp", sample(1e5, 1)))
 
@@ -27,7 +29,7 @@ if (interactive()) {
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
   origDir <- setwd("~/GitHub/");
 
-  theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
+  theDir <- Require:::rpackageFolder(getOptionRPackageCache())
   if (!is.null(theDir)) {
     localBins <- dir(theDir, pattern = "data.table|remotes")
     localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
@@ -64,11 +66,14 @@ if (interactive()) {
 
   if (length(localBinsFull) == 2) {
     if (Require:::isWindows())
-      system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+      system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+                    "'), quiet = TRUE, type = 'binary', lib ='", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
     else
-      system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+      system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+                    "'), quiet = TRUE, lib ='", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
   } else {
-    system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",.libPaths()[1],"', repos = '",getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+    system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='", .libPaths()[1],
+                  "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
   }
 
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
@@ -249,7 +254,7 @@ if (interactive()) {
                c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
-  options("Require.verbose" = TRUE)
+  options("Require.verbose" = FALSE)
 
   i <- 0
   pkg <- pkgs[[i + 1]] # redundant, but kept for interactive use
@@ -265,43 +270,44 @@ if (interactive()) {
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
-    suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
-                                   function(p) tryCatch(require(p, character.only = TRUE),
-                                                        error = function(x) FALSE))))
-    out2 <- out
-    out2 <- out2[names(out2) %in% names(normalRequire)]
-    whMatch <- match(names(normalRequire), names(out2))
-    whMatch <- whMatch[!is.na(whMatch)]
-    out2 <- out2[whMatch]
-    have2 <- have[loadOrder > 0]
-    normalRequire2 <- if (NROW(have2))
-      normalRequire[have2$Package]
-    else
-      normalRequire
+    # suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
+    #                                function(p) tryCatch(require(p, character.only = TRUE),
+    #                                                     error = function(x) FALSE))))
+    # out2 <- out
+    # out2 <- out2[names(out2) %in% names(normalRequire)]
+    # whMatch <- match(names(normalRequire), names(out2))
+    # whMatch <- whMatch[!is.na(whMatch)]
+    # out2 <- out2[whMatch]
+    # have2 <- have[loadOrder > 0]
+    # normalRequire2 <- if (NROW(have2))
+    #   normalRequire[have2$Package]
+    # else
+    #   normalRequire
 
     # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
-    if (length(out2)) {
-      out2 <- out2[out2]
-      normalRequire2 <- normalRequire2[!is.na(normalRequire2)][normalRequire2]
-      browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
-      testit::assert({all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))])})
-      runTests(have, pkg)
-    } else {
-      # TODO: what goes here?
-    }
-    suppressWarnings(rm(outFromRequire, out, have, normalRequire))
-    if (any("tinytest" %in% Require::extractPkgName(pkg))) {
-      try(unloadNamespace("LearnBayes"))
-      try(unloadNamespace("tinytest"))
-      try(remove.packages(c("tinytest", "LearnBayes")))
-    }
+    # if (length(out2)) {
+    #   out2 <- out2[out2]
+    #   normalRequire2 <- normalRequire2[!is.na(normalRequire2)][normalRequire2]
+    #   browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
+    #   testit::assert({all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))])})
+    #   runTests(have, pkg)
+    # } else {
+    #   # TODO: what goes here?
+    # }
+    # suppressWarnings(rm(outFromRequire, out, have, normalRequire))
+    # if (any("tinytest" %in% Require::extractPkgName(pkg))) {
+    #   try(unloadNamespace("LearnBayes"))
+    #   try(unloadNamespace("tinytest"))
+    #   try(remove.packages(c("tinytest", "LearnBayes")))
+    # }
   }
   unlink(tmpdir, recursive = TRUE)
   options(outOpts)
-  options(outOpts2)
+  if (exists("outOpts2")) options(outOpts2)
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-
 }
 
 # unlink(tmpdir, recursive = TRUE)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

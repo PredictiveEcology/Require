@@ -11,9 +11,19 @@
 \usage{
 getPkgVersions(pkgDT, install = TRUE)
 
-getAvailable(pkgDT, purge = FALSE, repos = getOption("repos"))
+getAvailable(
+  pkgDT,
+  purge = FALSE,
+  repos = getOption("repos"),
+  verbose = getOption("Require.verbose")
+)
 
-installFrom(pkgDT, purge = FALSE, repos = getOption("repos"))
+installFrom(
+  pkgDT,
+  purge = FALSE,
+  repos = getOption("repos"),
+  verbose = getOption("Require.verbose")
+)
 
 doInstalls(
   pkgDT,
@@ -21,15 +31,16 @@ doInstalls(
   install.packagesArgs,
   install = TRUE,
   repos = getOption("repos"),
+  verbose = getOption("Require.verbose"),
   ...
 )
 
-doLoading(pkgDT, require = TRUE, ...)
+doLoading(pkgDT, require = TRUE, verbose = getOption("Require.verbose"), ...)
 
 archiveVersionsAvailable(package, repos)
 }
 \arguments{
-\item{pkgDT}{A character string with full package names or a data.table
+\item{pkgDT}{A character string with full package names or a \code{data.table}
 with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
 
 \item{install}{Logical or "force". If \code{FALSE}, this will not try to install anything.
@@ -46,12 +57,16 @@ However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
+defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install.packages}
 inside \code{installGitHubPackage}.}

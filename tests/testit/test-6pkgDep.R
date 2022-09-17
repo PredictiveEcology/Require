@@ -1,18 +1,20 @@
-message("\033[34m --------------------------------- Starting test-pkgDep.R \033[39m")
+thisFilename <- "test-6pkgDep.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = FALSE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
-} else {
+if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 
 #library(Require)
@@ -38,7 +40,8 @@ testit::assert({length(b[[1]]) > length(a1[[1]])})
 pkg2 <- c(pkg, "Require")
 d <- pkgDep(pkg2) # GitHub package and local packages
 testit::assert({length(d) == 2})
-testit::assert({isTRUE(all.equal(a$Require, d$Require))})
+# Dependencies changed... remotes removed
+testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), d$Require))})
 
 # dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
 # testit::assert({length(setdiff(extractPkgName(d[[1]]), extractPkgName(dAlt[[1]]))) == 0})
@@ -94,12 +97,15 @@ if (interactive()) {
 }
 
 pkg <- c("Require (==0.0.6)")
-# d <- pkgDepAlt(pkg) # GitHub package and local packages
-# testit::assert({identical(sort(c("data.table (>= 1.10.4)")), sort(d[[1]]))})
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 options(outOpts)
-unlink("~/._R")
-unlink(tempdir2())
-options(outOpts2)
+unlink("~/._R", recursive = TRUE)
+tdOuter <- tempdir2("tests")
+try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE) # doesn't seem to keep globals from other scripts; recreate here
+unlink(tempdir2(), recursive = TRUE)
+if (exists("outOpts2")) options(outOpts2)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+try(message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m"), silent = TRUE)
