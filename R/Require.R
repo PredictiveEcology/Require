@@ -413,7 +413,8 @@ Require <- function(packages, packageVersionFile,
     # Join installed with requested
     pkgDT <- installedVers(pkgDT)
     pkgDT <- pkgDT[, .SD[1], by = "packageFullName"] # remove duplicates
-    pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)]
+    tmp <- try(pkgDT[, `:=`(installed = !is.na(Version), loaded = FALSE)])
+    if (is(tmp, "try-error")) stop("Error number 345; please contact developer")
     if (isTRUE(standAlone)) {
       # Remove any packages that are not in .libPaths()[1], i.e., the main R library
       notInLibPaths1 <- (!pkgDT$Package %in% .basePkgs) &
