@@ -6,7 +6,22 @@ version 0.1.2
 * drop support for R 3.6 (R >= 4.0 are supported)
 
 ## enhancements
-* several improvements in package dependency resolution and installation.
+* much quieter messaging by default (can increase with verbose = 1)
+
+* much faster installations:
+
+  * When source packages, they are grouped and installed together using the internal parallelism of install.packages (setting Ncpus option to 4)
+  * when binary, passes vectors to install.packages so much faster.
+  * all packages are installed in install-safe groups for speed
+
+* can use pak package under the hood when options("Require.usepak" = TRUE), though there are still many cases that pak cannot deal with. Users should try and determine if this option delivers as expected. pak installs tend to be slightly faster if they work correctly.
+* binary package caching is turned in by default in a user-specific standard directory, making repeat installations (on same system, or shared drive systems) much faster.
+* MRAN installs for Windows are now much more robust under many conditions.
+* archived packages (ie no longer on CRAN) will now be found and installed (latest available version)
+* more robust dependency identification even for archived or older packages or package versions (including their dependencies)
+* MRAN binaries will be used in MacOSX.
+* improved installation of older packages (e.g. when dependencies are removed from CRAN, or source versions can't be easily compiled)
+* several other minor improvements in package dependency resolution and installation.
 
 ## bugfixes
 * fix issue with 'dot directories' in `normPath()`.
