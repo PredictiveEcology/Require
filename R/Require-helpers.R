@@ -1419,15 +1419,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
           ipaFull <- append(list(installPkgNames, repos = repos), ipa)
           installPackagesQuoted <-
-            # if (canusepak) {
-            #   ipaForPak <- list(pkg = installPkgNames,
-            #                     upgrade = FALSE,
-            #                     ask = FALSE,
-            #                     dependencies = ipaFull$dependencies)
-            #   quote(do.call(pak::pkg_install, ipaForPak))
-            # } else {
               quote(do.call(install.packages, ipaFull))
-            #}
 
           warn <<- withCallingHandlers({
             out <- eval(installPackagesQuoted)
