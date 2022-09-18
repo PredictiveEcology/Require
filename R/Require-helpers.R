@@ -1150,13 +1150,14 @@ installedVers <- function(pkgDT) {
         installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
         set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
-        if (is(ip, "try-error")) browser()
+        if (is(ip, "try-error")) stop("Error number 234; please contact developers")
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
       }
     }
     ip <- ip[, c("Package", "LibPath", "Version")]
     ip <- unique(ip, on = c("Package", "LibPath"))
-    pkgDT <- ip[pkgDT, on = "Package"]
+    pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
+    if (is(pkgDT, "try-error")) stop("Error number 123; please contact developers")
 
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
@@ -2023,6 +2024,16 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
 
   out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+  if (is(out, "try-error")) {
+    # This is likely due to a wrong path for the git repo, or more likely an error b/c no GITHUB_PAT
+    if (!requireNamespace("remotes")) stop("The GitHub repository could not be contacted; ",
+                                           "this may be because of a missing GITHUB_PAT; ",
+                                           "please `install.packages('remotes')`")
+    out <- remotes::install_github(gitRepo, dependencies = NA)
+    if (identical(out, extractPkgName(gitRepo)))
+      return(invisible())
+
+  }
   orig <- setwd(tmpPath)
   on.exit({
     setwd(orig)
@@ -2118,6 +2129,10 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
     else
       break
   }
+  if (is(out, "try-error")){
+    return(out)
+  }
+
   out <- unzip(zipFileName, exdir = modulePath) # unzip it
   if (dir.exists(repoFull))
     if (isTRUE(overwrite)) {
