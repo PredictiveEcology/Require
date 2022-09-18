@@ -2111,7 +2111,7 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
   repoFull <- file.path(modulePath, gr$repo)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   for (i in 1:2) {
-    url <- paste0("http://github.com/", ar, "/archive/", gr$br, ".zip")
+    url <- paste0("https://github.com/", ar, "/archive/", gr$br, ".zip")
     out <- try(download.file(url, destfile = zipFileName, quiet = TRUE), silent = TRUE)
     if (is(out, "try-error") && identical(gr$br, "master"))
       gr$br <- "main"
