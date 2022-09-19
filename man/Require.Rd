@@ -61,9 +61,11 @@ mimicking a call to e.g., \code{install.packages}.
 If \code{TRUE}, the default, then this function will try to install any missing
 packages or dependencies.}
 
-\item{require}{Logical. If \code{TRUE}, the default, then the function will
+\item{require}{Logical or character string. If \code{TRUE}, the default, then the function will
 attempt to call \code{require} on all requested \code{packages}, possibly
-after they are installed.}
+after they are installed. If a character string, then it will only call \code{require}
+on those specific packages (i.e., it will install the ones listed in \code{packages}, but
+load the packages listed in \code{require})}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}

@@ -826,7 +826,7 @@ doLoading <- function(pkgDT, require = TRUE, verbose = getOption("Require.verbos
   pkgDTForLoad <- pkgDT[loadOrder > 0]
   packages <- pkgDTForLoad$Package
   packageOrder <- pkgDTForLoad$loadOrder
-  if (isTRUE(require)) {
+  if (NROW(pkgDTForLoad)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
     packages <- packages[order(packageOrder)]

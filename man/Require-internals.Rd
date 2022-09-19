@@ -78,9 +78,11 @@ Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 
-\item{require}{Logical. If \code{TRUE}, the default, then the function will
+\item{require}{Logical or character string. If \code{TRUE}, the default, then the function will
 attempt to call \code{require} on all requested \code{packages}, possibly
-after they are installed.}
+after they are installed. If a character string, then it will only call \code{require}
+on those specific packages (i.e., it will install the ones listed in \code{packages}, but
+load the packages listed in \code{require})}
 
 \item{package}{A single package name (without version or github specifications)}
 }
