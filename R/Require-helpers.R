@@ -1414,6 +1414,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                      verbose = verbose)) {
     td <- tempdir2(paste(collapse = "", sample(LETTERS, 8)))
     warn <- NULL
+    tmpPath <- tempdir2(.rndstr())
+    orig <- setwd(tmpPath)
+    on.exit({
+      unlink(tmpPath, recursive = TRUE)
+      setwd(orig)
+    })
     Map(installPkgNames = installPkgNamesList, repos = reposList,
         function(installPkgNames, repos) {
 
