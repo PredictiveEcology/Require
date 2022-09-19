@@ -209,7 +209,7 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   if (Sys.info()["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       options(
-        repos = c(
+        repos = c(CRAN =
           paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest")
         )
       )
