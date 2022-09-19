@@ -8,7 +8,7 @@
 <!-- badges: end -->
 
 A simple package for reproducible package management in R.
-This is different than other approaches to package management such as `packrat`, `checkpoint`, and `renv`, by including all-in-one management for packages in R focused around a single function, `Require`.
+This is different than other approaches to package management such as `pak`, `packrat`, `checkpoint`, and `renv`, by including all-in-one management for packages in R focused around a single function, `Require`. We outline differences with these packages below.
 
 # Objectives
 
@@ -18,9 +18,18 @@ Mixing many package dependencies that are constantly evolving creates challenges
 For example, what is the best way to move analyses from one machine to another, or set up a series of High Performance Compute nodes? 
 How should we use functions like `install.packages` in a reproducible workflow that are clearly intended to be used once or very few times?
 How do we deal with many packages on GitHub that have many common dependencies?
+How do we deal with packages that have dependencies that are no longer on CRAN ("they have been archived")?
+How do we replicate an analysis 6 months from now when some packages have changed, and their dependencies have changed?
 Finally, how do we do all this for many concurrent projects without installing hundreds of packages in a new directory for every project?
 
+
 The `Require` package attempts to address these issues and others. 
+
+# Differences with:
+
+## `pak`
+
+`pak` focuses on fast 
 It is different than `packrat` in that it is much simpler and is closer to base R package management.
 `Require` _can_ use hierarchical library paths, as in base R, with many paths in the `.libPaths()`, or can set a single library path to be `standAlone`.
 This allows "system" packages to be used as well as "project-specific" packages to be used together, as in base R.
