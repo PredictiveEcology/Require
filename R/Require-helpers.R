@@ -2004,27 +2004,36 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
   alreadyExistingDESCRIPTIONFile <- file.path(libPath, gr$repo, "DESCRIPTION")
+  useRemotes <- FALSE
   if (file.exists(alreadyExistingDESCRIPTIONFile)) {
     packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
-    shaOnGitHub <- getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br)
-    shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-    if (identical(shaLocal, shaOnGitHub)) {
-      messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
-                     verbose = verbose, verboseLevel = 1)
-      return(invisible())
+    shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+    if (is(shaOnGitHub, "try-error")) {
+      useRemotes <- TRUE
+    } else {
+      shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+      if (identical(shaLocal, shaOnGitHub)) {
+        messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
+                       verbose = verbose, verboseLevel = 1)
+        return(invisible())
+      }
     }
   }
 
-  out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
-  if (is(out, "try-error")) {
+  if (!useRemotes) {
+    out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+    if (is(out, "try-error")) {
+      useRemotes <- TRUE
+    }
+  }
     # This is likely due to a wrong path for the git repo, or more likely an error b/c no GITHUB_PAT
+  if (useRemotes) {
     if (!requireNamespace("remotes")) stop("The GitHub repository could not be contacted; ",
                                            "this may be because of a missing GITHUB_PAT; ",
                                            "please `install.packages('remotes')`")
     out <- remotes::install_github(gitRepo, dependencies = NA)
     if (identical(out, extractPkgName(gitRepo)))
       return(invisible())
-
   }
   orig <- setwd(tmpPath)
   on.exit({
