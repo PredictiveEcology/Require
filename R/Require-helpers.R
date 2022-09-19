@@ -1281,8 +1281,9 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   warnings1 <- list()
   warn <- lapply(installPkgNamesBoth, function(installPkgNames) {
     # Deal with "binary" mumbo jumbo
-    isBin <- all(isBinary(installPkgNames)) && (isWindows() || isMacOSX())
-    type <- c("source", "binary")[isBin + 1]
+    isBin <- isBinary(installPkgNames)
+    isBinNotLinux <- all(isBin ) && (isWindows() || isMacOSX())
+    type <- c("source", "binary")[isBinNotLinux + 1]
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
@@ -1711,11 +1712,15 @@ isBinary <- function(fn) {
 
 copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
-    newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
-    if (length(newFiles)) {
+    theDir <- dir(full.names = TRUE)
+    newFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
+    # newFiles <- dir(pattern = gsub("\\_.*", "", paste(collapse = "|", pkg)), full.names = TRUE)
+    if (length(unlist(newFiles))) {
+      newFiles <- unlist(newFiles)
       newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
-      if (all(!file.exists(newNames)))
-        try(linkOrCopy(newFiles, newNames))
+      filesAlreadyExist <- file.exists(newNames)
+      if (any(!filesAlreadyExist))
+        try(linkOrCopy(newFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
       unlink(newFiles)
     }
   }
