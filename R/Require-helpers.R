@@ -2152,7 +2152,7 @@ getSHAfromGitHub <- function(acct, repo, br) {
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
   sha <- suppressWarnings(readLines(urlConn))
-  if (length(sha) > 0) {
+  if (length(sha) > 1) {
     # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
     #   Was easier to collapse the individual lines, then re-split
     sha <- paste(sha, collapse = "")
@@ -2163,7 +2163,8 @@ getSHAfromGitHub <- function(acct, repo, br) {
 
   for (branch in br) { # will be length 1 in most cases except master/main
     whHasBr <- which(vapply(sha2, function(xx)
-      any(grepl(paste0(".+refs/.+[[:punct:]]", branch, "[[:punct:]]"), xx)), FUN.VALUE = logical(1)))
+      any(grepl(paste0(".+refs/.+/+", branch, "\""), xx)), FUN.VALUE = logical(1)))
+      #any(grepl(paste0(".+refs/.+[[:punct:]]", branch, "[[:punct:]]"), xx)), FUN.VALUE = logical(1)))
     if (length(whHasBr) > 0) {
       break
     }
