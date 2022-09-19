@@ -7,6 +7,7 @@ version 0.1.2
 
 ## enhancements
 * much quieter messaging by default (can increase with verbose = 1)
+* `require` argument in `Require` can now be a character vector indicating which packages should be attached, not just installed. Note: by default, all packages that are passed to `packages` are attached if `require = TRUE`
 
 * much faster installations:
 
