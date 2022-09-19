@@ -71,9 +71,11 @@ utils::globalVariables(c(
 #'   mimicking a call to e.g., `install.packages`.
 #'   If `TRUE`, the default, then this function will try to install any missing
 #'   packages or dependencies.
-#' @param require Logical. If `TRUE`, the default, then the function will
+#' @param require Logical or character string. If `TRUE`, the default, then the function will
 #'   attempt to call `require` on all requested `packages`, possibly
-#'   after they are installed.
+#'   after they are installed. If a character string, then it will only call `require`
+#'   on those specific packages (i.e., it will install the ones listed in `packages`, but
+#'   load the packages listed in `require`)
 #' @param packages Character vector of packages to install via
 #'   `install.packages`, then load (i.e., with `library`). If it is
 #'   one package, it can be unquoted (as in `require`). In the case of a
@@ -400,6 +402,14 @@ Require <- function(packages, packageVersionFile,
         packagesRequired = packagesOrder[match(Package, names(packagesOrder))],
         userRequestedOrder = packagesFullNameOrder[match(packageFullName, names(packagesFullNameOrder))])
     ]
+    pkgDT[!is.na(packagesRequired),
+          userRequestedOrder := as.integer(min(userRequestedOrder, na.rm = TRUE)), by = "Package"]
+    # convert require as a character string to the specific packages to load
+    if (is.character(require)) {
+      whLoad <- pkgDT$Package %in% require
+      pkgDT[whLoad, userRequestedOrder := as.integer(factor(userRequestedOrder))]
+      pkgDT[!whLoad, userRequestedOrder := NA]
+    }
     pkgDT[, loadOrder := userRequestedOrder] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
 
     if (any(origPackagesHaveNames)) {
@@ -465,9 +475,7 @@ Require <- function(packages, packageVersionFile,
           }
         }
       }
-      if (isTRUE(require)) {
-        pkgDT <- doLoading(pkgDT, ...)
-      }
+      pkgDT <- doLoading(pkgDT, require = require, ...)
     }
     out <- pkgDT[packagesRequired > 0]$loaded
     # outOrder <- pkgDT[packagesRequired > 0]$packagesRequired

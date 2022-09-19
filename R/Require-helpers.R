@@ -826,7 +826,7 @@ doLoading <- function(pkgDT, require = TRUE, verbose = getOption("Require.verbos
   pkgDTForLoad <- pkgDT[loadOrder > 0]
   packages <- pkgDTForLoad$Package
   packageOrder <- pkgDTForLoad$loadOrder
-  if (isTRUE(require)) {
+  if (NROW(pkgDTForLoad) && !isFALSE(require)) {
     # packages <- extractPkgName(pkgDT$Package)
     names(packages) <- packages
     packages <- packages[order(packageOrder)]
@@ -1117,9 +1117,9 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 
   if ("github" %in% colnames(dt))
     setorderv(dt, na.last = TRUE, "github") # keep github packages up at top -- they take precedence
-  haveVersion <- dt[Package != packageFullName] # have no version number or are github
-  haveNoVersion <- dt[Package == packageFullName] # have no version number or are github
-  dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package][!duplicated(Package)]))
+  # haveVersion <- dt[Package != packageFullName] # have no version number or are github
+  # haveNoVersion <- dt[Package == packageFullName] # have no version number or are github
+  # dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package]))#[!duplicated(Package)]))
   setorderv(dt, "origOrder")
   ret <- dt$packageFullName
   if (!is.null(names(packages))) {
@@ -1281,8 +1281,9 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   warnings1 <- list()
   warn <- lapply(installPkgNamesBoth, function(installPkgNames) {
     # Deal with "binary" mumbo jumbo
-    isBin <- all(isBinary(installPkgNames)) && (isWindows() || isMacOSX())
-    type <- c("source", "binary")[isBin + 1]
+    isBin <- isBinary(installPkgNames)
+    isBinNotLinux <- all(isBin ) && (isWindows() || isMacOSX())
+    type <- c("source", "binary")[isBinNotLinux + 1]
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
@@ -1414,6 +1415,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                      verbose = verbose)) {
     td <- tempdir2(paste(collapse = "", sample(LETTERS, 8)))
     warn <- NULL
+    tmpPath <- tempdir2(.rndstr())
+    orig <- setwd(tmpPath)
+    on.exit({
+      unlink(tmpPath, recursive = TRUE)
+      setwd(orig)
+    })
     Map(installPkgNames = installPkgNamesList, repos = reposList,
         function(installPkgNames, repos) {
 
@@ -1705,11 +1712,15 @@ isBinary <- function(fn) {
 
 copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
-    newFiles <- dir(pattern = gsub("\\_.*", "", pkg), full.names = TRUE)
-    if (length(newFiles)) {
+    theDir <- dir(full.names = TRUE)
+    newFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
+    # newFiles <- dir(pattern = gsub("\\_.*", "", paste(collapse = "|", pkg)), full.names = TRUE)
+    if (length(unlist(newFiles))) {
+      newFiles <- unlist(newFiles)
       newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
-      if (all(!file.exists(newNames)))
-        try(linkOrCopy(newFiles, newNames))
+      filesAlreadyExist <- file.exists(newNames)
+      if (any(!filesAlreadyExist))
+        try(linkOrCopy(newFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
       unlink(newFiles)
     }
   }
@@ -1971,17 +1982,40 @@ preparePkgNameToReport <- function(Package, packageFullName) {
   Package
 }
 
-splitGitRepo <- function(gitRepo) {
+
+
+splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
   grSplit <- strsplit(gitRepo, "/|@")[[1]]
-  acct <- grSplit[[1]]
+  grAcct <- strsplit(gitRepo, "/")[[1]] # only account and repo
+  if (length(grAcct) == 1) {
+    acct <- default
+    grSplit <- append(list(acct), grSplit)
+  } else {
+    acct <- grSplit[[1]]
+  }
   repo <- grSplit[[2]]
   if (length(grSplit) > 2) {
     br <- grSplit[[3]]
   } else {
-    br <- "master"
+    br <- "main"
   }
+  if (!is.null(masterOrMain))
+    br <- masterOrMain
+
   list(acct = acct, repo = repo, br = br)
 }
+
+# splitGitRepo <- function(gitRepo) {
+#   grSplit <- strsplit(gitRepo, "/|@")[[1]]
+#   acct <- grSplit[[1]]
+#   repo <- grSplit[[2]]
+#   if (length(grSplit) > 2) {
+#     br <- grSplit[[3]]
+#   } else {
+#     br <- "master"
+#   }
+#   list(acct = acct, repo = repo, br = br)
+# }
 
 #' Install R Package from GitHub source code
 #'
@@ -1996,6 +2030,7 @@ splitGitRepo <- function(gitRepo) {
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = getOption("Require.verbose"),
                                  ...) {
+  masterMain <- c("main", "master")
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
   quiet <- isTRUE(dots$quiet)
@@ -2004,27 +2039,65 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
   alreadyExistingDESCRIPTIONFile <- file.path(libPath, gr$repo, "DESCRIPTION")
+  useRemotes <- FALSE
   if (file.exists(alreadyExistingDESCRIPTIONFile)) {
     packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
-    shaOnGitHub <- getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br)
-    shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-    if (identical(shaLocal, shaOnGitHub)) {
-      messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
-                     verbose = verbose, verboseLevel = 1)
-      return(invisible())
+
+    for (i in 1:2) {
+      shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+      if (is(shaOnGitHub, "try-error")) {
+        if (gr$br %in% masterMain) {
+          # possibly change order -- i.e., put user choice first
+          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
+          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
+          gr <- splitGitRepo(gitRepo, masterOrMain = br)
+          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
+        }
+      } else {
+        break
+      }
+    }
+    if (is(shaOnGitHub, "try-error")) {
+      useRemotes <- TRUE
+    } else {
+      shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+      if (identical(shaLocal, shaOnGitHub)) {
+        messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
+                       verbose = verbose, verboseLevel = 1)
+        return(invisible())
+      }
     }
   }
 
-  out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
-  if (is(out, "try-error")) {
+  if (!useRemotes) {
+    for (i in 1:2) {
+      out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+      if (is(out, "try-error")) {
+        if (gr$br %in% masterMain) {
+          # possibly change order -- i.e., put user choice first
+          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
+          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
+          gr <- splitGitRepo(gitRepo, masterOrMain = br)
+          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
+        }
+      } else {
+        break
+      }
+    }
+    if (is(out, "try-error"))
+      useRemotes <- TRUE
+  }
     # This is likely due to a wrong path for the git repo, or more likely an error b/c no GITHUB_PAT
-    if (!requireNamespace("remotes")) stop("The GitHub repository could not be contacted; ",
-                                           "this may be because of a missing GITHUB_PAT; ",
-                                           "please `install.packages('remotes')`")
+  if (useRemotes) {
+    if (!requireNamespace("remotes")) {
+      install.packages("remotes")
+      #stop("The GitHub repository could not be contacted; ",
+      #                                     "this may be because of a missing GITHUB_PAT; ",
+      #                                     "please `install.packages('remotes')`")
+    }
     out <- remotes::install_github(gitRepo, dependencies = NA)
     if (identical(out, extractPkgName(gitRepo)))
       return(invisible())
-
   }
   orig <- setwd(tmpPath)
   on.exit({

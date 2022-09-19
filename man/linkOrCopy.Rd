@@ -4,10 +4,13 @@
 \alias{linkOrCopy}
 \title{Create link to file, falling back to making a copy if linking fails.}
 \usage{
-linkOrCopy(from, to)
+linkOrCopy(from, to, allowSymlink = FALSE)
 }
 \arguments{
 \item{from, to}{character vectors, containing file names or paths.}
+
+\item{allowSymlink}{Logical. If \code{FALSE}, the default, then it will try \code{file.link} first, then
+\code{file.copy}, omitting the \code{file.symlink} step}
 }
 \description{
 First try to create a hardlink to the file.

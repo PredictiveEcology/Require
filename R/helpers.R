@@ -302,16 +302,20 @@ modifyList2 <- function(...) {
 #' "File" here can mean a file or a directory.
 #'
 #' @param from,to character vectors, containing file names or paths.
+#' @param allowSymlink Logical. If `FALSE`, the default, then it will try `file.link` first, then
+#'   `file.copy`, omitting the `file.symlink` step
 #'
-linkOrCopy <- function(from, to) {
+linkOrCopy <- function(from, to, allowSymlink = FALSE) {
   res <- suppressWarnings(file.link(from, to)) ## try hardlink
-  if (isFALSE(res)) {
-    res <- suppressWarnings(file.symlink(from, to)) ## try symbolic link
-    if (isFALSE(res)) {
-      res <- suppressWarnings(file.copy(from, to, recursive = TRUE)) ## finally, copy the file
+  if (any(!res)) {
+    if (allowSymlink) {
+      res[!res] <- suppressWarnings(file.symlink(from[!res], to[!res]))
+    }
+    if (any(!res)) {
+      res[!res] <- suppressWarnings(
+        file.copy(from[!res], to[!res], recursive = TRUE)) ## finally, copy the file
     }
   }
-
   return(invisible(res))
 }
 
