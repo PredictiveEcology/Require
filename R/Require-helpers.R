@@ -1971,17 +1971,38 @@ preparePkgNameToReport <- function(Package, packageFullName) {
   Package
 }
 
-splitGitRepo <- function(gitRepo) {
+
+
+splitGitRepo <- function(gitRepo, default = "PredictiveEcology") {
   grSplit <- strsplit(gitRepo, "/|@")[[1]]
-  acct <- grSplit[[1]]
+  grAcct <- strsplit(gitRepo, "/")[[1]] # only account and repo
+  if (length(grAcct) == 1) {
+    acct <- default
+    grSplit <- append(list(acct), grSplit)
+  } else {
+    acct <- grSplit[[1]]
+  }
   repo <- grSplit[[2]]
   if (length(grSplit) > 2) {
     br <- grSplit[[3]]
   } else {
-    br <- "master"
+    br <- "main"
   }
+
   list(acct = acct, repo = repo, br = br)
 }
+
+# splitGitRepo <- function(gitRepo) {
+#   grSplit <- strsplit(gitRepo, "/|@")[[1]]
+#   acct <- grSplit[[1]]
+#   repo <- grSplit[[2]]
+#   if (length(grSplit) > 2) {
+#     br <- grSplit[[3]]
+#   } else {
+#     br <- "master"
+#   }
+#   list(acct = acct, repo = repo, br = br)
+# }
 
 #' Install R Package from GitHub source code
 #'
