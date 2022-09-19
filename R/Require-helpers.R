@@ -1984,7 +1984,7 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 
 
 
-splitGitRepo <- function(gitRepo, default = "PredictiveEcology") {
+splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
   grSplit <- strsplit(gitRepo, "/|@")[[1]]
   grAcct <- strsplit(gitRepo, "/")[[1]] # only account and repo
   if (length(grAcct) == 1) {
@@ -1999,6 +1999,8 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology") {
   } else {
     br <- "main"
   }
+  if (!is.null(masterOrMain))
+    br <- masterOrMain
 
   list(acct = acct, repo = repo, br = br)
 }
@@ -2028,6 +2030,7 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology") {
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = getOption("Require.verbose"),
                                  ...) {
+  masterMain <- c("main", "master")
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
   quiet <- isTRUE(dots$quiet)
@@ -2039,7 +2042,21 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   useRemotes <- FALSE
   if (file.exists(alreadyExistingDESCRIPTIONFile)) {
     packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
-    shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+
+    for (i in 1:2) {
+      shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+      if (is(shaOnGitHub, "try-error")) {
+        if (gr$br %in% masterMain) {
+          # possibly change order -- i.e., put user choice first
+          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
+          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
+          gr <- splitGitRepo(gitRepo, masterOrMain = br)
+          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
+        }
+      } else {
+        break
+      }
+    }
     if (is(shaOnGitHub, "try-error")) {
       useRemotes <- TRUE
     } else {
@@ -2053,16 +2070,31 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
 
   if (!useRemotes) {
-    out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
-    if (is(out, "try-error")) {
-      useRemotes <- TRUE
+    for (i in 1:2) {
+      out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+      if (is(out, "try-error")) {
+        if (gr$br %in% masterMain) {
+          # possibly change order -- i.e., put user choice first
+          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
+          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
+          gr <- splitGitRepo(gitRepo, masterOrMain = br)
+          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
+        }
+      } else {
+        break
+      }
     }
+    if (is(out, "try-error"))
+      useRemotes <- TRUE
   }
     # This is likely due to a wrong path for the git repo, or more likely an error b/c no GITHUB_PAT
   if (useRemotes) {
-    if (!requireNamespace("remotes")) stop("The GitHub repository could not be contacted; ",
-                                           "this may be because of a missing GITHUB_PAT; ",
-                                           "please `install.packages('remotes')`")
+    if (!requireNamespace("remotes")) {
+      install.packages("remotes")
+      #stop("The GitHub repository could not be contacted; ",
+      #                                     "this may be because of a missing GITHUB_PAT; ",
+      #                                     "please `install.packages('remotes')`")
+    }
     out <- remotes::install_github(gitRepo, dependencies = NA)
     if (identical(out, extractPkgName(gitRepo)))
       return(invisible())
