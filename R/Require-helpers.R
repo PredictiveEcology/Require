@@ -1117,9 +1117,9 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
 
   if ("github" %in% colnames(dt))
     setorderv(dt, na.last = TRUE, "github") # keep github packages up at top -- they take precedence
-  haveVersion <- dt[Package != packageFullName] # have no version number or are github
-  haveNoVersion <- dt[Package == packageFullName] # have no version number or are github
-  dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package][!duplicated(Package)]))
+  # haveVersion <- dt[Package != packageFullName] # have no version number or are github
+  # haveNoVersion <- dt[Package == packageFullName] # have no version number or are github
+  # dt <- rbindlist(list(haveVersion, haveNoVersion[!Package %in% haveVersion$Package]))#[!duplicated(Package)]))
   setorderv(dt, "origOrder")
   ret <- dt$packageFullName
   if (!is.null(names(packages))) {

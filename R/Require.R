@@ -402,10 +402,13 @@ Require <- function(packages, packageVersionFile,
         packagesRequired = packagesOrder[match(Package, names(packagesOrder))],
         userRequestedOrder = packagesFullNameOrder[match(packageFullName, names(packagesFullNameOrder))])
     ]
+    pkgDT[!is.na(packagesRequired),
+          userRequestedOrder := as.integer(min(userRequestedOrder, na.rm = TRUE)), by = "Package"]
     # convert require as a character string to the specific packages to load
     if (is.character(require)) {
-      set(pkgDT, NULL, "userRequestedOrder", NA)
-      pkgDT[Package %in% require, userRequestedOrder := seq(length(require))]
+      whLoad <- pkgDT$Package %in% require
+      pkgDT[whLoad, userRequestedOrder := as.integer(factor(userRequestedOrder))]
+      pkgDT[!whLoad, userRequestedOrder := NA]
     }
     pkgDT[, loadOrder := userRequestedOrder] # this will start out as loadOrder = TRUE, but if install fails, will turn to FALSE
 
