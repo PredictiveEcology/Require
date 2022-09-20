@@ -360,6 +360,7 @@ Require <- function(packages, packageVersionFile,
   }
 
   if (NROW(packages)) {
+    packages <- masterMainToHead(packages) # convert master or main to @HEAD
 
     # Some package names are not derived from their GitHub repo names -- user can supply named packages
     origPackagesHaveNames <- nchar(names(packages)) > 0

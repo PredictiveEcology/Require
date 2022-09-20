@@ -803,6 +803,7 @@ checkCircular <- function(aa) {
 
 #' @inheritParams Require
 getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require.verbose")) {
+  pkg <- masterMainToHead(pkg)
   pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
   needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
   neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
@@ -918,3 +919,14 @@ dealWithCache <- function(purge, checkAge = TRUE) {
 .grepTabCR <- "\n|\t"
 
 newPkgDepEnv <- function() new.env(parent = emptyenv())
+
+masterMainToHead <- function(gitRepo) {
+  masterOrMain <- "@(master|main) *"
+  areMasterOrMain <- grepl(masterOrMain, gitRepo)
+  if (any(areMasterOrMain)) {
+    masterOrMainNoSpace <- "@(master|main)"
+    gitRepo[areMasterOrMain] <-
+      gsub(paste0("(",masterOrMainNoSpace,")"), "@HEAD", gitRepo[areMasterOrMain])
+  }
+  return(gitRepo)
+}

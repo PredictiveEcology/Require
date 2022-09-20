@@ -34,6 +34,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   if (any(pkgDT$repoLocation == "GitHub")) {
     isGitHub <- pkgDT$repoLocation == "GitHub"
     pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
+    pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
     pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
     pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
     pkgDT[isGitHub, hasSubFolder := grepl("/", pkgDT[isGitHub]$Account)]
@@ -1012,34 +1013,14 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
   toInstall <- toInstall[installFrom == "GitHub"]
 
   # Require doesn't actually install a previous version of a Git package at this point,
-  #    it just takes the HEAD, so canusepak can evaluate just the toInstall$Package
-  # canusepak <- usepak(toInstall$Package)# (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
-  # if (isTRUE(canusepak)) {
-  #   doDeps <- if (!is.null(dots$dependencies)) dots$dependencies else NA
-  #   doDeps <- if (is.null(install_githubArgs$dependencies)) doDeps else install_githubArgs$dependencies
-  #
-  #   ipaForPak <- list(pkg = trimVersionNumber(toInstall$packageFullName),
-  #                     upgrade = FALSE,
-  #                     ask = FALSE,
-  #                     dependencies = doDeps)
-  #   out <- do.call(pak::pkg_install, ipaForPak)
-  #   pkgDT <- updateInstalled(pkgDT, installPkgNames = toInstall$Package, out)
-  # } else {
-
-    # if (!is.data.table(pkgDT)) {
-    #   pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
-    # }
-    if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
+  #    it just takes the HEAD
+  if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
       dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
     #  but there are weird cases where the internals of Require don't get correct
     #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
     #  which has R.oo
-    #sortedTopologically <- pkgDepTopoSort(pkgDT$packageFullName)
-    #installPkgNames <- names(sortedTopologically)
     installPkgNames <- toInstall$packageFullName
-
     names(installPkgNames) <- toInstall$Package
-
     ord <- match(extractPkgName(installPkgNames), toInstall$Package)
     toInstall <- toInstall[ord]
     installPkgNames <- installPkgNames[ord]
@@ -2070,20 +2051,20 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
 
   if (!useRemotes) {
-    for (i in 1:2) {
-      out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
-      if (is(out, "try-error")) {
-        if (gr$br %in% masterMain) {
-          # possibly change order -- i.e., put user choice first
-          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
-          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
-          gr <- splitGitRepo(gitRepo, masterOrMain = br)
-          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
-        }
-      } else {
-        break
-      }
-    }
+    # for (i in 1:2) {
+    out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+    #   if (is(out, "try-error")) {
+    #     if (gr$br %in% masterMain) {
+    #       # possibly change order -- i.e., put user choice first
+    #       br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
+    #       messageVerbose(gr$br, " branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
+    #       gr <- splitGitRepo(gitRepo, masterOrMain = br)
+    #       gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
+    #     }
+    #   } else {
+    #     break
+    #   }
+    # }
     if (is(out, "try-error"))
       useRemotes <- TRUE
   }
@@ -2186,29 +2167,47 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
   ar <- file.path(gr$acct, gr$repo)
   repoFull <- file.path(modulePath, gr$repo)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
-  for (i in 1:2) {
-    url <- paste0("https://github.com/", ar, "/archive/", gr$br, ".zip")
-    out <- try(download.file(url, destfile = zipFileName, quiet = TRUE), silent = TRUE)
-    if (is(out, "try-error") && identical(gr$br, "master"))
-      gr$br <- "main"
-    else
-      break
-  }
+  # masterMain <- c("main", "master")
+  # br <- if (gr$br %in% masterMain) {
+  #   # possibly change order -- i.e., put user choice first
+  #   masterMain[rev(masterMain %in% gr$br + 1)]
+  # } else {
+  #   gr$br
+  # }
+
+  # for (branch in br) {
+  url <- paste0("https://github.com/", ar, "/archive/", gr$br, ".zip")
+  out <- suppressWarnings(
+    try(download.file(url, destfile = zipFileName, quiet = TRUE), silent = TRUE))
+  #   if (!is(out, "try-error")) {
+  #     break
+  #   } else {
+  #     if (branch %in% masterMain)
+  #       messageVerbose(branch, " branch does not exist; trying ", setdiff(masterMain, branch),
+  #                      verbose = 0)
+  #   }
+  # }
   if (is(out, "try-error")){
     return(out)
   }
 
-  out <- unzip(zipFileName, exdir = modulePath) # unzip it
-  if (dir.exists(repoFull))
+  out <- lapply(zipFileName, function(zfn) unzip(zfn, exdir = modulePath)) # unzip it)
+
+  de <- dir.exists(repoFull)
+  if (any(de))
     if (isTRUE(overwrite)) {
-      unlink(repoFull, recursive = TRUE)
+      unlink(repoFull[de], recursive = TRUE)
     } else {
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
-  badDirname <- unique(dirname(out))[1]
-  file.rename(badDirname, gsub(basename(badDirname), gr$repo, badDirname)) # it was downloaded with a branch suffix
+  badDirname <- lapply(out, function(d) unique(dirname(d))[1])
+  badDirname <- unlist(badDirname)
+  Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
+    file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix
+  })
+
   unlink(zipFileName)
-  messageVerbose(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"),
+  messageVerbose(paste0(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"), collapse = "\n"),
                  verbose = verbose, verboseLevel = 2)
   return(normalizePath(repoFull))
 }
@@ -2217,8 +2216,10 @@ getSHAfromGitHub <- function(acct, repo, br) {
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   if (missing(br))
     br <- "main"
+  if (identical(br, "HEAD"))
+    br <- "main"
   masterMain <- c("main", "master")
-  if (br %in% masterMain) {
+  if (br %in% c(masterMain)) {
     # possibly change order -- i.e., put user choice first
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
