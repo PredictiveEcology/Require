@@ -1404,35 +1404,45 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       unlink(tmpPath, recursive = TRUE)
       setwd(orig)
     })
-    Map(installPkgNames = installPkgNamesList, repos = reposList,
-        function(installPkgNames, repos) {
+    if (!is.null(getOption("Ncpus"))) tries <- 5
+    for (attempt in seq(tries)) {
+      Map(installPkgNames = installPkgNamesList, repos = reposList,
+          function(installPkgNames, repos) {
 
-          ipaFull <- append(list(installPkgNames, repos = repos), ipa)
-          installPackagesQuoted <-
+            ipaFull <- append(list(installPkgNames, repos = repos), ipa)
+            installPackagesQuoted <-
               quote(do.call(install.packages, ipaFull))
 
-          warn <<- withCallingHandlers({
-            out <- eval(installPackagesQuoted)
-          }, warning = function(condition) {
-            if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
-              outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
-              withRestarts("muffleWarning")
-            } else {
-              outFromWarn <- condition
-            }
-            outFromWarn
-          }, error = function(e) {
-            av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
-            if (grepl('argument \\"av2\\" is missing', e)) {
-              tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ", R.version.string,")")),
-                       warning = function(w) w)
-            } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
-              tryInstallAgainWithoutAPCache(installPackagesQuoted)
-            } else {
-              stop(e)
-            }
+            warn <<- withCallingHandlers({
+              out <- eval(installPackagesQuoted)
+            }, warning = function(condition) {
+              if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
+                outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
+                withRestarts("muffleWarning")
+              } else {
+                outFromWarn <- condition
+              }
+              outFromWarn
+            }, error = function(e) {
+              av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
+              if (grepl('argument \\"av2\\" is missing', e)) {
+                tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ", R.version.string,")")),
+                         warning = function(w) w)
+              } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
+                tryInstallAgainWithoutAPCache(installPackagesQuoted)
+              } else {
+                stop(e)
+              }
+            })
           })
-        })
+      # Sanity check -- try again for the ones that failed
+      ip <- as.data.table(installed.packages())
+      success <- c(installPkgNamesList$Reg) %in% ip$Package
+      if (all(success)) {
+        break
+      }
+      installPkgNamesList$Reg <- installPkgNamesList$Reg[!success]
+    }
 
     if (any(grepl("--build", c(dots, install.packagesArgs))))
       copyTarball(installPkgNames, TRUE)
