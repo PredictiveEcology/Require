@@ -1437,11 +1437,13 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
           })
       # Sanity check -- try again for the ones that failed
       ip <- as.data.table(installed.packages())
-      success <- c(installPkgNamesList$Reg) %in% ip$Package
-      if (all(success)) {
+      successReg <- c(installPkgNamesList$Reg) %in% ip$Package
+      successSrc <- c(installPkgNamesList$Src) %in% ip$Package
+      if (all(c(successReg, successSrc))) {
         break
       }
-      installPkgNamesList$Reg <- installPkgNamesList$Reg[!success]
+      installPkgNamesList$Reg <- installPkgNamesList$Reg[!successReg]
+      installPkgNamesList$Src <- installPkgNamesList$Src[!successSrc]
     }
 
     if (any(grepl("--build", c(dots, install.packagesArgs))))
