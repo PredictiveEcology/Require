@@ -1035,50 +1035,52 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
         all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
       }))]
       ipa <- modifyList2(install_githubArgs, dots)
-      for (p in gitPkgDeps2) {
-        warns <- messes <- errors <- list()
-        out1 <- withCallingHandlers(
-          do.call(installGithubPackage, append(list(p), ipa)),
-          # error=function(e) {
-          #   errors <<- append(errors, list(e))
-          # },
-          warning=function(w) {
-            warns <<- append(warns, list(w))
-            invokeRestart("muffleWarning")
-            # }, message = function(m) {
-            #   messes <<- append(messes, list(m))
-            #   invokeRestart("muffleMessage")
-          })
-        warns <- lapply(warns, function(w) grep("in use and will not be", w$message,
-                                                invert = TRUE, value = TRUE))
-
-        if (length(unlist(warns))) {
-          # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
-          if (requireNamespace("remotes")) {
-            messageVerbose("Require::installGithubPackage is still experimental and it failed; ",
-                      "Trying remotes::install_github instead",
-                      verbose = verbose, verboseLevel = 1)
-            out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-                            error = function(e) e)
-          } else {
-            warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
-                    "install.packages('remotes')")
-          }
-        }
-        # if (identical(out, extractPkgName(p)))
-        #   out <- NULL
-        # warn <- out
-        if (length(warns)) {
-          # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
-          warning(warns)
-          pkgDT[packageFullName == p,
-                installResult := warns[[1]]]
-        }
-        pkgDT <- updateInstalled(pkgDT, extractPkgName(p), warns)
-        pkgDT
+      warns <- messes <- errors <- list()
+      out1 <- withCallingHandlers(
+        do.call(installGithubPackage, append(list(gitPkgDeps2), ipa)),
+        warning=function(w) {
+          warns <<- append(warns, list(w))
+          invokeRestart("muffleWarning")
+        })
+      # for (p in gitPkgDeps2) {
+      # warns <- messes <- errors <- list()
+      # out1 <- withCallingHandlers(
+      #   do.call(installGithubPackage, append(list(p), ipa)),
+      #   warning=function(w) {
+      #     warns <<- append(warns, list(w))
+      #     invokeRestart("muffleWarning")
+      #   })
+      # warns <- lapply(warns, function(w) grep("in use and will not be", w$message,
+      #                                         invert = TRUE, value = TRUE))
+      #
+      # if (length(unlist(warns))) {
+      #   # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
+      #   if (requireNamespace("remotes")) {
+      #     messageVerbose("Require::installGithubPackage is still experimental and it failed; ",
+      #               "Trying remotes::install_github instead",
+      #               verbose = verbose, verboseLevel = 1)
+      #     out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
+      #                     error = function(e) e)
+      #   } else {
+      #     warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
+      #             "install.packages('remotes')")
+      #   }
+      # }
+      # # if (identical(out, extractPkgName(p)))
+      # #   out <- NULL
+      # # warn <- out
+      gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
+      if (length(warns)) {
+        # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
+        warning(warns)
+        pkgDT[Package %in% gitPkgNamesSimple,
+              installResult := warns[[1]]]
       }
+      pkgDT <- updateInstalled(pkgDT, gitPkgNamesSimple, warns)
+      pkgDT
+      #}
     }
-  # }
+    # }
   pkgDT
 }
 
@@ -1966,22 +1968,22 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 
 
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
-  grSplit <- strsplit(gitRepo, "/|@")[[1]]
-  grAcct <- strsplit(gitRepo, "/")[[1]] # only account and repo
-  if (length(grAcct) == 1) {
+  grSplit <- strsplit(gitRepo, "/|@")
+  grAcct <- strsplit(gitRepo, "/") # only account and repo
+  lenGT1 <- lengths(grAcct) == 1
+  if (any(lenGT1)) {
     acct <- default
-    grSplit <- append(list(acct), grSplit)
+    grSplit[lenGT1] <- lapply(grSplit[lenGT1], function(grsplit) append(list(acct), grsplit))
   } else {
-    acct <- grSplit[[1]]
+    acct <- lapply(grSplit, function(grsplit) grsplit[[1]])
   }
-  repo <- grSplit[[2]]
-  if (length(grSplit) > 2) {
-    br <- grSplit[[3]]
-  } else {
-    br <- "main"
+  repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
+  lenGT2 <- lengths(grSplit) > 2
+  if (any(lenGT2)) {
+    br <- lapply(grSplit, function(x) list())
+    br[lenGT2] <- lapply(grSplit[lenGT2], function(grsplit) grsplit[[3]])
   }
-  if (!is.null(masterOrMain))
-    br <- masterOrMain
+  br[!lenGT2] <- "HEAD"
 
   list(acct = acct, repo = repo, br = br)
 }
@@ -2019,25 +2021,14 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                            mustWork = FALSE, winslash = "\\")
   checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
-  alreadyExistingDESCRIPTIONFile <- file.path(libPath, gr$repo, "DESCRIPTION")
+  alreadyExistingDESCRIPTIONFile <- lapply(gr$repo, function(repo) file.path(libPath, repo, "DESCRIPTION"))
   useRemotes <- FALSE
-  if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+  filesExist <- file.exists(unlist(alreadyExistingDESCRIPTIONFile))
+  if (any(filesExist)) {
     packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
 
-    for (i in 1:2) {
-      shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
-      if (is(shaOnGitHub, "try-error")) {
-        if (gr$br %in% masterMain) {
-          # possibly change order -- i.e., put user choice first
-          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
-          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
-          gr <- splitGitRepo(gitRepo, masterOrMain = br)
-          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
-        }
-      } else {
-        break
-      }
-    }
+    shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+
     if (is(shaOnGitHub, "try-error")) {
       useRemotes <- TRUE
     } else {
@@ -2092,34 +2083,39 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                 "--no-build-vignettes")
     Rpath1 <- Sys.getenv("R_HOME")
     Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
-    out1 <- system(paste(Rpath, "CMD build ", gr$repo, paste(extras, collapse = " ")),
-                   intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
+    out1 <- lapply(gr$repo, function(repo) {
+      system(paste(Rpath, "CMD build ", repo, paste(extras, collapse = " ")),
+                     intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
+    })
     # cat(out1, file = "/home/emcintir/tmp.R")
-    if (identical(1L, out1)) stop("")
+    if (any(unlist(out) == 1L)) stop("Error 456; contact developer")
     theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
     packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
-    packageTarName <- if (interactive()) {
-      versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
-      paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
-    } else {
-      buildingLine <- grep("building", out1, value = TRUE)
-      packageTarName <- strsplit(buildingLine, "'")[[1]][2]
-      if (is.na(packageTarName)) { # linux didn't have that character
-        packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
-      }
-      packageTarName
-    }
+    #if (interactive()) {
+    versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
+    packageTarName <- paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
+    # } else {
+    #   buildingLine <- grep("building", out1, value = TRUE)
+    #   packageTarName <- strsplit(buildingLine, "'")[[1]][2]
+    #   if (is.na(packageTarName)) { # linux didn't have that character
+    #     packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
+    #   }
+    #   packageTarName
+    # }
     opts2 <- append(dots,
                     list(packageTarName,
                          repos = NULL,
                          lib = normalizePath(libPath, winslash = "/")))
-    messageVerbose("* building ",packageTarName," ... Built!",
+    messageVerbose("  ... Built!",
                    verbose = verbose, verboseLevel = 1)
-    opts2$type <- NULL # it may have "binary", which is incorrect
+    opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
     do.call(install.packages, opts2)
-    postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
-                               acct = gr$acct, br = gr$br,
-                               lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
+    lapply(packageName, function(pack) {
+      postInstallDESCRIPTIONMods(pkg = pack, repo = gr$repo[[pack]],
+                                 acct = gr$acct[[pack]], br = gr$br[[pack]],
+                                 lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
+    })
+
   } else {
     stop("Can't install packages this way because R is not on the search path")
   }
