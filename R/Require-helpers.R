@@ -1989,8 +1989,8 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   }
   repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
   lenGT2 <- lengths(grSplit) > 2
+  br <- lapply(grSplit, function(x) list())
   if (any(lenGT2)) {
-    br <- lapply(grSplit, function(x) list())
     br[lenGT2] <- lapply(grSplit[lenGT2], function(grsplit) grsplit[[3]])
   }
   br[!lenGT2] <- "HEAD"
