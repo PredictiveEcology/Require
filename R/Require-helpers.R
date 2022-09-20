@@ -21,6 +21,14 @@ utils::globalVariables(c(
 #' @rdname GitHubTools
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
+  ghp <- Sys.getenv("GITHUB_PAT")
+  if (nzchar(ghp)) {
+    if (is.null(.pkgEnv$hasGHP)) {
+      .pkgEnv$hasGHP <- TRUE
+      messageVerbose("Using GITHUB_PAT to access files on GitHub",
+                     verboseLevel = 0, verbose = verbose)
+    }
+  }
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
@@ -645,11 +653,15 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT[repoLocation == "GitHub",
             filepath := {
               ret <- NA
-              dl <- try(download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE))
-              ret <- if (!is(dl, "try-error"))
-                destFile
-              else
-                NA
+              dl <- downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1], need = "master",
+                                               verbose = verbose, verboseLevel = 2)
+              #for (i in 1:2) {
+              #  dl <- try(download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE))
+              ret <- if (!is(dl, "try-error")) {
+                  destFile
+                } else {
+                  NA
+              }
 
               ret
             }, by = c("Package", "Branch")]
@@ -1981,6 +1993,9 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
   grSplit <- strsplit(gitRepo, "/|@")
+  repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
+  names(grSplit) <- repo
+  names(repo) <- repo
   grAcct <- strsplit(gitRepo, "/") # only account and repo
   lenGT1 <- lengths(grAcct) == 1
   if (any(lenGT1)) {
@@ -1989,7 +2004,6 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   } else {
     acct <- lapply(grSplit, function(grsplit) grsplit[[1]])
   }
-  repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
   lenGT2 <- lengths(grSplit) > 2
   br <- lapply(grSplit, function(x) list())
   if (any(lenGT2)) {
@@ -2042,10 +2056,11 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
 
     if (is(shaOnGitHub, "try-error")) {
+      browser()
       useRemotes <- TRUE
     } else {
       shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-      if (identical(shaLocal, shaOnGitHub)) {
+      if (identical(unname(shaLocal), shaOnGitHub)) {
         messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
                        verbose = verbose, verboseLevel = 1)
         return(invisible())
@@ -2175,25 +2190,25 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
   ar <- file.path(gr$acct, gr$repo)
   repoFull <- file.path(modulePath, gr$repo)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
-  # masterMain <- c("main", "master")
-  # br <- if (gr$br %in% masterMain) {
-  #   # possibly change order -- i.e., put user choice first
-  #   masterMain[rev(masterMain %in% gr$br + 1)]
-  # } else {
-  #   gr$br
-  # }
+  masterMain <- c("main", "master")
+  br <- if (any(gr$br %in% masterMain)) {
+    # possibly change order -- i.e., put user choice first
+    masterMain[rev(masterMain %in% gr$br + 1)]
+  } else {
+    gr$br
+  }
 
   # for (branch in br) {
-  url <- paste0("https://github.com/", ar, "/archive/", gr$br, ".zip")
+  url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
   out <- suppressWarnings(
-    try(download.file(url, destfile = zipFileName, quiet = TRUE), silent = TRUE))
-  #   if (!is(out, "try-error")) {
-  #     break
-  #   } else {
-  #     if (branch %in% masterMain)
-  #       messageVerbose(branch, " branch does not exist; trying ", setdiff(masterMain, branch),
-  #                      verbose = 0)
-  #   }
+    try(downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE))
+  # if (!is(out, "try-error")) {
+  #   break
+  # } else {
+  #   if (br %in% masterMain)
+  #     messageVerbose(br, " branch does not exist; trying ", setdiff(masterMain, br),
+  #                    verbose = 0)
+  # }
   # }
   if (is(out, "try-error")){
     return(out)
@@ -2233,7 +2248,8 @@ getSHAfromGitHub <- function(acct, repo, br) {
   }
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
-  sha <- suppressWarnings(readLines(urlConn))
+  sha <- try(suppressWarnings(readLines(urlConn)))
+  if (is(sha, "try-error")) return(sha)
   if (length(sha) > 1) {
     # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
     #   Was easier to collapse the individual lines, then re-split
@@ -2494,4 +2510,68 @@ getOptionRPackageCache <- function() {
     }
   }
   curVal
+}
+
+downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
+                                       verbose = getOption("Require.verbose"), verboseLevel = 2) {
+  #gr <- splitGitRepo(gitRepo)
+  #ar <- file.path(gr$acct, gr$repo)
+  #repoFull <- file.path(modulePath, gr$repo)
+  #zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
+  masterMain <- c("main", "master")
+  masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
+  masterGrep <- paste0("/", "master", "(/|\\.)")
+  mainGrep <- paste0("/", "main", "(/|\\.)")
+  hasMasterMain <- grepl(masterMainGrep, url)
+  hasMaster <- grepl(masterGrep, url)
+  hasMain <- grepl(mainGrep, url)
+  if (any(hasMasterMain) && need %in% masterMain) {
+    # Good -- try both master and main
+    br <- need
+  } else if (any(hasMasterMain) && need %in% "HEAD") {
+    # need change
+    br <- "HEAD"
+    url <- gsub(masterMainGrep, paste0("/", br, "\\1"), url)
+  }
+  HEADgrep <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
+  hasHEAD <- grepl(HEADgrep, url)
+  if (any(hasHEAD) && need %in% masterMain) {
+    br <- need
+    url <- gsub(HEADgrep, paste0("/", br, "\\1"), url)
+  }
+  if (any(hasHEAD) && need %in% "HEAD") {
+    br <- "HEAD"
+  }
+  urls <- list(url)
+  if (any(hasMasterMain) && length(url) == 1) {
+    newBr <- masterMain[hasMain + 1]
+    url[[2]] <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
+  }
+
+  # gitPat <- Sys.getenv("GITHUB_PAT")
+  # if (nzchar(gitPat)) {
+  #   messageVerbose("Using GITHUB_PAT to access file on GitHub",
+  #                  verboseLevel = verboseLevel, verbose = verbose)
+  #   url <- sprintf(paste0("https://%s:@", gsub("https://", "", url)), gitPat)
+  # }
+  urls <- url
+  if (length(urls) > 1) {
+    url <- urls[1]
+  }
+  for (URL in urls) {
+    out <- suppressWarnings(
+      try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+    if (!is(out, "try-error")) {
+      break
+    } #else {
+      # if (branch %in% masterMain) {
+      #   newBr <- setdiff(masterMain, branch)
+      #   messageVerbose(branch, " branch does not exist; trying ", newBr,
+      #                  verbose = 0)
+      #   if (length(urls) == 1)
+      #     url <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
+      # }
+      # url <- urls[2]
+    #}
+  }
 }
