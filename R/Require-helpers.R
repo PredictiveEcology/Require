@@ -1287,7 +1287,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
     buildBinDots <- grepl("--build", dots)
     buildBinIPA <- grepl("--build", install.packagesArgs)
     buildBin <- any(buildBinDots, buildBinIPA)
-    if (buildBin && isBin) {
+    if (buildBin && any(isBin)) {
       if (any(buildBinDots)) dots[buildBinDots] <- setdiff(dots[buildBinIPA][[1]], "--build")
       if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <-
           list(setdiff(install.packagesArgs[buildBinIPA][[1]], "--build"))
