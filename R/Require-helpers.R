@@ -22,8 +22,6 @@ utils::globalVariables(c(
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   ghp <- Sys.getenv("GITHUB_PAT")
-  messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
-
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
@@ -35,6 +33,8 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   }
 
   if (any(pkgDT$repoLocation == "GitHub")) {
+    messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
+
     isGitHub <- pkgDT$repoLocation == "GitHub"
     pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
     pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
