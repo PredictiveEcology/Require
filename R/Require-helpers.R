@@ -21,14 +21,9 @@ utils::globalVariables(c(
 #' @rdname GitHubTools
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
-  # ghp <- Sys.getenv("GITHUB_PAT")
-  # if (nzchar(ghp)) {
-  #   if (is.null(.pkgEnv$hasGHP)) {
-  #     .pkgEnv$hasGHP <- TRUE
-  #     messageVerbose("Using GITHUB_PAT to access files on GitHub",
-  #                    verboseLevel = 0, verbose = verbose)
-  #   }
-  # }
+  ghp <- Sys.getenv("GITHUB_PAT")
+  messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
+
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
@@ -1053,17 +1048,17 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
     gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
     ipa <- modifyList2(install_githubArgs, dots)
     warns <- messes <- errors <- list()
-    if (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usePak"))) {
-      messageVerbose("Using pak ...", verboseLevel = 1, verbose = verbose)
-      out2 <- pak::pkg_install(gitPkgDeps2)
-      out2 <- out2[out2$ref %in% gitPkgDeps2,]
-      warns <- out2$status
-      whichOK <- unlist(lapply(warns, function(w) w == "OK"))
-      warns <- warns[!whichOK]
-      if (any(!whichOK)) {
-        gitPkgDeps2 <- gitPkgDeps2[!whichOK]
-      }
-    } #else {
+    # if (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usePak"))) {
+    #   messageVerbose("Using pak ...", verboseLevel = 1, verbose = verbose)
+    #   out2 <- pak::pkg_install(gitPkgDeps2)
+    #   out2 <- out2[out2$ref %in% gitPkgDeps2,]
+    #   warns <- out2$status
+    #   whichOK <- unlist(lapply(warns, function(w) w == "OK"))
+    #   warns <- warns[!whichOK]
+    #   if (any(!whichOK)) {
+    #     gitPkgDeps2 <- gitPkgDeps2[!whichOK]
+    #   }
+    # } #else {
 
     if (NROW(gitPkgDeps2)) {
       out1 <- withCallingHandlers(
@@ -2247,7 +2242,7 @@ getSHAfromGitHub <- function(acct, repo, br) {
   }
   urlConn <- url(shaPath)
   on.exit(close(urlConn))
-  sha <- try(suppressWarnings(readLines(urlConn)))
+  sha <- try(suppressWarnings(readLines(urlConn)), silent = TRUE)
   if (is(sha, "try-error")) return(sha)
   if (length(sha) > 1) {
     # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
@@ -2547,12 +2542,13 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
     url[[2]] <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
   }
 
-  # gitPat <- Sys.getenv("GITHUB_PAT")
-  # if (nzchar(gitPat)) {
-  #   messageVerbose("Using GITHUB_PAT to access file on GitHub",
-  #                  verboseLevel = verboseLevel, verbose = verbose)
-  #   url <- sprintf(paste0("https://%s:@", gsub("https://", "", url)), gitPat)
-  # }
+  # Authentication
+  ghp <- Sys.getenv("GITHUB_PAT")
+  messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
+  if (nzchar(ghp)) {
+    url <- sprintf(paste0("https://%s:@", gsub("https://", "", url)), ghp)
+  }
+
   urls <- url
   urls <- split(urls, hasMasterMain) #
   outNotMasterMain <- outMasterMain <- character()
@@ -2570,4 +2566,14 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
     }
   c(outNotMasterMain, outMasterMain)
 
+}
+
+messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
+  if (nzchar(ghp)) {
+    if (is.null(.pkgEnv$hasGHP)) {
+      .pkgEnv$hasGHP <- TRUE
+      messageVerbose("Using GITHUB_PAT to access files on GitHub",
+                     verboseLevel = 0, verbose = verbose)
+    }
+  }
 }
