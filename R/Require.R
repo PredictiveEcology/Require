@@ -256,6 +256,8 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
+  .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
+
   if (verbose == 0 || verbose %in% FALSE) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = TRUE))
     install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet = TRUE))
