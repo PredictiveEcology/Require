@@ -148,8 +148,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
 # Code coverage -- run 2x so it won't reinstall
 
-out1 <- installGitHubPackage("PredictiveEcology/peutils@main", verbose = 1)
-out2 <- installGitHubPackage("PredictiveEcology/peutils@main", verbose = 1)
+out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
+out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
 
 
 
