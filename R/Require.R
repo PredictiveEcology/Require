@@ -578,7 +578,7 @@ Require <- function(packages, packageVersionFile,
 usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = FALSE,
                    verbose = getOption("Require.verbose")) {
 
-  wantpak <- isTRUE(getOption("Require.usepak", FALSE))
+  wantpak <- isTRUE(getOption("Require.usePak", FALSE))
   if (!is.null(installFrom) && wantpak) {
     wantpak <- all(installFrom[needInstall %in% TRUE] %in% c("GitHub", "CRAN"))
     return(wantpak)
@@ -586,7 +586,7 @@ usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = 
 
   if (!missing(packageFullName)) { # would occur when using packageVersionFile
     hasVersionNumberSpec <- !identical(trimVersionNumber(packageFullName), packageFullName)
-    wantpak <- isTRUE(getOption("Require.usepak", FALSE))
+    wantpak <- isTRUE(getOption("Require.usePak", FALSE))
   } else {
     wantpak <- FALSE
     hasVersionNumberSpec <- FALSE
