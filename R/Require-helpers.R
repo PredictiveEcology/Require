@@ -381,10 +381,13 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     whFails <- ifelse(is.na(pkgDT$correctVersionAvail), FALSE,
                       ifelse(pkgDT$needInstall == TRUE & pkgDT$correctVersionAvail == FALSE, TRUE, FALSE))
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
-    if (any(whFails))
+    anyWhFails <- any(whFails)
+    if (length(anyWhFails) == 0) browser()
+    if (anyWhFails) {
       messageVerbose("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall %in% TRUE], collapse = ", "),
                               " could not be installed because no available version\033[39m",
                      verbose = verbose, verboseLevel = 1)
+    }
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
       pkgDT[needInstall == TRUE & # installed == FALSE &
               (correctVersionAvail == TRUE) &
@@ -1027,72 +1030,62 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
   # Require doesn't actually install a previous version of a Git package at this point,
   #    it just takes the HEAD
   if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
-      dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
-    #  but there are weird cases where the internals of Require don't get correct
-    #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
-    #  which has R.oo
-    installPkgNames <- toInstall$packageFullName
-    names(installPkgNames) <- toInstall$Package
-    ord <- match(extractPkgName(installPkgNames), toInstall$Package)
-    toInstall <- toInstall[ord]
-    installPkgNames <- installPkgNames[ord]
+    dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
+  #  but there are weird cases where the internals of Require don't get correct
+  #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
+  #  which has R.oo
+  installPkgNames <- toInstall$packageFullName
+  names(installPkgNames) <- toInstall$Package
+  ord <- match(extractPkgName(installPkgNames), toInstall$Package)
+  toInstall <- toInstall[ord]
+  installPkgNames <- installPkgNames[ord]
 
-    gitPkgs <- trimVersionNumber(toInstall$packageFullName)
-    names(gitPkgs) <- toInstall$Package
-    isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
-    attempts <- rep(0, length(gitPkgs))
-    names(attempts) <- gitPkgs
-    if (length(gitPkgs)) {
-      gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
-        all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
-      }))]
-      ipa <- modifyList2(install_githubArgs, dots)
-      warns <- messes <- errors <- list()
+  gitPkgs <- trimVersionNumber(toInstall$packageFullName)
+  names(gitPkgs) <- toInstall$Package
+  isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
+  attempts <- rep(0, length(gitPkgs))
+  names(attempts) <- gitPkgs
+  if (length(gitPkgs)) {
+    gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
+      all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
+    }))]
+    gitPkgDepOrig <- gitPkgDeps2
+    gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
+    ipa <- modifyList2(install_githubArgs, dots)
+    warns <- messes <- errors <- list()
+    if (requireNamespace("pak", quietly = TRUE)) {
+      messageVerbose("Using pak ...", verboseLevel = 1, verbose = verbose)
+      out2 <- pak::pkg_install(gitPkgDeps2)
+      out2 <- out2[out2$ref %in% gitPkgDeps2,]
+      warns <- out2$status
+      whichOK <- unlist(lapply(warns, function(w) w == "OK"))
+      warns <- warns[!whichOK]
+      if (any(!whichOK)) {
+        gitPkgDeps2 <- gitPkgDeps2[!whichOK]
+      }
+    } #else {
+
+    if (NROW(gitPkgDeps2)) {
       out1 <- withCallingHandlers(
         do.call(installGithubPackage, append(list(gitPkgDeps2), ipa)),
         warning=function(w) {
           warns <<- append(warns, list(w))
           invokeRestart("muffleWarning")
         })
-      # for (p in gitPkgDeps2) {
-      # warns <- messes <- errors <- list()
-      # out1 <- withCallingHandlers(
-      #   do.call(installGithubPackage, append(list(p), ipa)),
-      #   warning=function(w) {
-      #     warns <<- append(warns, list(w))
-      #     invokeRestart("muffleWarning")
-      #   })
-      # warns <- lapply(warns, function(w) grep("in use and will not be", w$message,
-      #                                         invert = TRUE, value = TRUE))
-      #
-      # if (length(unlist(warns))) {
-      #   # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
-      #   if (requireNamespace("remotes")) {
-      #     messageVerbose("Require::installGithubPackage is still experimental and it failed; ",
-      #               "Trying remotes::install_github instead",
-      #               verbose = verbose, verboseLevel = 1)
-      #     out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-      #                     error = function(e) e)
-      #   } else {
-      #     warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
-      #             "install.packages('remotes')")
-      #   }
-      # }
-      # # if (identical(out, extractPkgName(p)))
-      # #   out <- NULL
-      # # warn <- out
-      gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
-      if (length(warns)) {
-        # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
-        warning(warns)
-        pkgDT[Package %in% gitPkgNamesSimple,
-              installResult := warns[[1]]]
-      }
-      pkgDT <- updateInstalled(pkgDT, gitPkgNamesSimple, warns)
-      pkgDT
-      #}
     }
-    # }
+
+    if (length(warns)) {
+      # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
+      warning(warns)
+      pkgDT[Package %in% gitPkgNamesSimple,
+            installResult := warns[[1]]]
+    }
+
+    pkgDT <- updateInstalled(pkgDT, gitPkgNamesSimple, warns)
+    pkgDT
+    #}
+  }
+  # }
   pkgDT
 }
 
@@ -2222,7 +2215,8 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
     } else {
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
-  badDirname <- lapply(out, function(d) unique(dirname(d))[1])
+  badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
+  if (is(badDirname, "try-error")) browser()
   badDirname <- unlist(badDirname)
   Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
     file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix
@@ -2541,7 +2535,7 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   if (any(hasHEAD) && need %in% "HEAD") {
     br <- "HEAD"
   }
-  urls <- list(url)
+  # urls <- list(url)
   if (any(hasMasterMain) && length(url) == 1) {
     newBr <- masterMain[hasMain + 1]
     url[[2]] <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
@@ -2554,23 +2548,20 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   #   url <- sprintf(paste0("https://%s:@", gsub("https://", "", url)), gitPat)
   # }
   urls <- url
-  if (length(urls) > 1) {
-    url <- urls[1]
-  }
-  for (URL in urls) {
-    out <- suppressWarnings(
-      try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
-    if (!is(out, "try-error")) {
-      break
-    } #else {
-      # if (branch %in% masterMain) {
-      #   newBr <- setdiff(masterMain, branch)
-      #   messageVerbose(branch, " branch does not exist; trying ", newBr,
-      #                  verbose = 0)
-      #   if (length(urls) == 1)
-      #     url <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
-      # }
-      # url <- urls[2]
-    #}
-  }
+  urls <- split(urls, hasMasterMain) #
+  outNotMasterMain <- outMasterMain <- character()
+  if (!is.null(urls[["FALSE"]]))
+    for (URL in urls["FALSE"]) # vectorized;
+      outNotMasterMain <- suppressWarnings(
+        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+  if (!is.null(urls[["TRUE"]]))
+    for (URL in urls[["TRUE"]]) {
+      outMasterMain <- suppressWarnings(
+        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+      if (!is(outMasterMain, "try-error")) {
+        break
+      }
+    }
+  c(outNotMasterMain, outMasterMain)
+
 }
