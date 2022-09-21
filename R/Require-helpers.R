@@ -21,14 +21,14 @@ utils::globalVariables(c(
 #' @rdname GitHubTools
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
-  ghp <- Sys.getenv("GITHUB_PAT")
-  if (nzchar(ghp)) {
-    if (is.null(.pkgEnv$hasGHP)) {
-      .pkgEnv$hasGHP <- TRUE
-      messageVerbose("Using GITHUB_PAT to access files on GitHub",
-                     verboseLevel = 0, verbose = verbose)
-    }
-  }
+  # ghp <- Sys.getenv("GITHUB_PAT")
+  # if (nzchar(ghp)) {
+  #   if (is.null(.pkgEnv$hasGHP)) {
+  #     .pkgEnv$hasGHP <- TRUE
+  #     messageVerbose("Using GITHUB_PAT to access files on GitHub",
+  #                    verboseLevel = 0, verbose = verbose)
+  #   }
+  # }
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
@@ -2056,7 +2056,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
 
     if (is(shaOnGitHub, "try-error")) {
-      browser()
       useRemotes <- TRUE
     } else {
       shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
