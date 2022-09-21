@@ -1053,7 +1053,7 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
     gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
     ipa <- modifyList2(install_githubArgs, dots)
     warns <- messes <- errors <- list()
-    if (requireNamespace("pak", quietly = TRUE)) {
+    if (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usePak"))) {
       messageVerbose("Using pak ...", verboseLevel = 1, verbose = verbose)
       out2 <- pak::pkg_install(gitPkgDeps2)
       out2 <- out2[out2$ref %in% gitPkgDeps2,]
