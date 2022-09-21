@@ -4,7 +4,7 @@ Title: Installing and Loading R Packages for Reproducible Workflows
 Description: A single key function, 'Require' that makes rerun-tolerant
     versions of 'install.packages' and `require` for CRAN packages, packages
     no longer on CRAN (i.e., archived), specific versions of packages, 
-    and github packages. This approach is developed to create reproducible 
+    and GitHub packages. This approach is developed to create reproducible 
     workflows that are flexible enough to use while in development stages. 
     As with other functions in a reproducible workflow, this package 
     emphasizes functions that return the same result whether it is 
