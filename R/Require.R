@@ -256,6 +256,8 @@ Require <- function(packages, packageVersionFile,
                     verbose = getOption("Require.verbose", FALSE),
                     ...) {
 
+  .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
+
   if (verbose == 0 || verbose %in% FALSE) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = TRUE))
     install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet = TRUE))
@@ -360,6 +362,7 @@ Require <- function(packages, packageVersionFile,
   }
 
   if (NROW(packages)) {
+    packages <- masterMainToHead(packages) # convert master or main to @HEAD
 
     # Some package names are not derived from their GitHub repo names -- user can supply named packages
     origPackagesHaveNames <- nchar(names(packages)) > 0
@@ -577,7 +580,7 @@ Require <- function(packages, packageVersionFile,
 usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = FALSE,
                    verbose = getOption("Require.verbose")) {
 
-  wantpak <- isTRUE(getOption("Require.usepak", FALSE))
+  wantpak <- isTRUE(getOption("Require.usePak", FALSE))
   if (!is.null(installFrom) && wantpak) {
     wantpak <- all(installFrom[needInstall %in% TRUE] %in% c("GitHub", "CRAN"))
     return(wantpak)
@@ -585,7 +588,7 @@ usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = 
 
   if (!missing(packageFullName)) { # would occur when using packageVersionFile
     hasVersionNumberSpec <- !identical(trimVersionNumber(packageFullName), packageFullName)
-    wantpak <- isTRUE(getOption("Require.usepak", FALSE))
+    wantpak <- isTRUE(getOption("Require.usePak", FALSE))
   } else {
     wantpak <- FALSE
     hasVersionNumberSpec <- FALSE
