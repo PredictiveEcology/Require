@@ -2032,12 +2032,14 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = getOption("Require.verbose"),
                                  ...) {
+  dir.create(libPath, showWarnings = FALSE, recursive = TRUE)
   masterMain <- c("main", "master")
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
   quiet <- isTRUE(dots$quiet)
-  tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
-                           mustWork = FALSE, winslash = "\\")
+  tmpPath <- tempdir2(.rndstr())
+  #tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
+  #                         mustWork = FALSE, winslash = "\\")
   checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
   alreadyExistingDESCRIPTIONFile <- lapply(gr$repo, function(repo) file.path(libPath, repo, "DESCRIPTION"))
@@ -2128,6 +2130,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     messageVerbose("  ... Built!",
                    verbose = verbose, verboseLevel = 1)
     opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
+    if (is.null(opts2$destdir)) {
+      cachePath <- getOptionRPackageCache()
+      opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
+    }
     do.call(install.packages, opts2)
     lapply(packageName, function(pack) {
       postInstallDESCRIPTIONMods(pkg = pack, repo = gr$repo[[pack]],
