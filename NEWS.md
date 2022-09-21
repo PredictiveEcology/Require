@@ -6,6 +6,8 @@ version 0.1.2
 * drop support for R 3.6 (R >= 4.0 are supported)
 
 ## enhancements
+* Now can use `GITHUB_PAT` environment variable, if set, when it accesses GitHub.com repositories (files or entire repository)
+* Attempt to capture and correct cases where GitHub.com branches are incorrectly labelled `master` instead of `main` (or vice versa)
 * much quieter messaging by default (can increase with verbose = 1)
 * `require` argument in `Require` can now be a character vector indicating which packages should be attached, not just installed. Note: by default, all packages that are passed to `packages` are attached if `require = TRUE`
 
@@ -26,6 +28,7 @@ version 0.1.2
 
 ## bugfixes
 * fix issue with 'dot directories' in `normPath()`.
+* identified possible bug with `install.packages` when `options(Ncpus = XX)` where XX is a number > 1. Some packages are skipped. `Require` now captures this and attempts to install the ones that did not get correctly installed.
 * multiple fixes for certain edge cases.
 
 version 0.1.1
