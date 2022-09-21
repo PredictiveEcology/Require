@@ -136,7 +136,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   dir4 <- Require:::rpackageFolder(tempdir2("test4"))
   checkPath(dir4, create = TRUE)
   mess <- utils::capture.output({
-    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
   testit::assert({isFALSE(inst)})
