@@ -15,7 +15,7 @@ pkgSnapshot(
 }
 \arguments{
 \item{packageVersionFile}{A filename to save the packages and their currently
-installed version numbers. Defaults to \code{".packageVersions.txt"}.
+installed version numbers. Defaults to \code{"packageVersions.txt"}.
 If this is specified to be \code{NULL}, the function will return the exact
 \code{Require} call needed to install all the packages at their current
 versions. This can be useful to add to a script to allow for reproducibility of
@@ -46,13 +46,13 @@ defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::
 Internally, there are calls to \code{available.packages}.}
 
 \item{exact}{Logical. If \code{TRUE}, the default, then for GitHub packages, it
-will install the exact SHA, rather than the head of the account/repo@branch. For
+will install the exact SHA, rather than the head of the \code{account/repo@branch}. For
 CRAN packages, it will install the exact version. If \code{FALSE}, then GitHub
 packages will identify their branch if that had been specified upon installation,
 not a SHA. If the package had been installed with reference to a SHA, then it
 will return the SHA as it does not know what branch it came from.
-Similarly, CRAN packages will
-report their version and specify with a \code{>=}, allowing a subsequent user
+Similarly, CRAN packages will report their version and specify with a \code{>=},
+allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
@@ -67,13 +67,12 @@ A file is written with the package names and versions of all packages within \co
 This can later be passed to \code{Require}.
 }
 \examples{
-checkPath(tempdir(), create = TRUE) # need to make sure the temp folder is there
-pkgSnapFile <- tempfile()
+tmpdir <- checkPath(file.path(tempdir(), "example_pkgSnapshot"), create = TRUE)
+pkgSnapFile <- tempfile(tmpdir = tmpdir)
 pkgSnapshot(pkgSnapFile, .libPaths()[1])
 data.table::fread(pkgSnapFile)
 
 \dontrun{
-
 # An example to move this file to a new computer
 library(Require)
 setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
@@ -90,7 +89,7 @@ library(Require)
 # library(googledrive)
 # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
 setLibPaths("~/RPackages") # start with an empty folder for new
-                           # library to minimize package version conflicts
+# library to minimize package version conflicts
 Require(packageVersionFile = fileName)
 
 # Passing NULL --> results in output to console with exact Require call to
@@ -104,7 +103,10 @@ sink()
 
 # Will show "minimum package version"
 pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
+
 }
-unlink(tempdir(), recursive = TRUE) # clean up
+
+# cleanup
+unlink(tmpdir, recursive = TRUE)
 
 }
