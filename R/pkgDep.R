@@ -91,12 +91,13 @@ pkgDep <- function(packages, libPath = .libPaths(),
     }
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
     needGet <- unlist(lapply(neededFull1, is.null))
+    Npackages <- NROW(packages[needGet])
+    messageIfGTN <- Npackages > 5
 
     if (any(needGet)) {
-      Npackages <- NROW(packages[needGet])
       NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packages[needGet])))
       NpackagesCRAN <- Npackages - NpackagesGitHub
-      if (Npackages > 5)
+      if (messageIfGTN)
         messageVerbose("Getting dependencies for ",
                        if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
                        if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
@@ -107,8 +108,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
       NpackagesRecursive <- NROW(neededFull2)
-      if (NpackagesRecursive > 30)
-        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies\n",
+      if (messageIfGTN)
+        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies  ",
                        verbose = verbose, verboseLevel = 0)
       if (NROW(neededFull2)) {
         curDots <- 0

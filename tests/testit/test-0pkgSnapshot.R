@@ -85,15 +85,16 @@ message("\033[32m --------------------------------- Starting ", thisFilename, " 
     ## There might be more than one version
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     localBinsFull <- dts
+    Rpath <- Sys.which("Rscript")
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
-        system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2] ,
+        system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2] ,
                       "'), quiet = TRUE, type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
       else
-        system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+        system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
                       "'), quiet = TRUE, lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
     } else {
-      system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
+      system(paste0(Rpath, " -e \"install.packages(c('data.table'), lib ='",
                     .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
     }
 
