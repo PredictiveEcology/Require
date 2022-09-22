@@ -27,6 +27,7 @@ jobs:
           extra-packages: |
             any::pkgdown
             any::XML
+        needs: website
 
       - name: Deploy package
         run: |
