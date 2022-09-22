@@ -108,17 +108,17 @@ pkgDep <- function(packages, libPath = .libPaths(),
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
       NpackagesRecursive <- NROW(neededFull2)
-      if (messageIfGTN)
-        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies  ",
+      if (messageIfGTN) {
+        nchars <- rep(" ", 2 * nchar(NpackagesRecursive) + 5)
+        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies", nchars,
                        verbose = verbose, verboseLevel = 0)
+      }
       if (NROW(neededFull2)) {
-        curDots <- 0
-        curWidth <- 0
-        width <- getOption("width")
-
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
+          counter <<- 0
           neededFull2 <- lapply(neededFull2, function(needed) {
+            counter <<- counter + 1
             i <- 1
             pkgsNew <- list()
             pkgsNew[[i]] <- needed
@@ -127,12 +127,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
               pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
               names(pkgsToLookup) <- pkgsToLookup
               pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
-                curDots <<- curDots + 1
-                if (curDots %% 20 == 0) {
-                  curWidth <<- curWidth + 1
-                  char <-if (curWidth %% width == 0) "\r" else "\b"
-                  messageVerbose(char, ".", verbose = verbose, verboseLevel = 0)
-                }
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
                                           purge = purge, repos = repos, verbose = verbose)))
               })
@@ -210,6 +204,12 @@ pkgDep <- function(packages, libPath = .libPaths(),
               pkgsNew[[i]] <- dt4$Package
             }
             needed <- unique(unlist(pkgsNew))
+            if (messageIfGTN) {
+              mess <- paste0(paddedFloatToChar(counter, padL = nchar(NpackagesRecursive), pad = " ")
+                             , " of ", NpackagesRecursive)
+              messageVerbose(rep("\b", nchar(mess) + 1),  mess, verbose = verbose, verboseLevel = 0)
+            }
+            needed
           })
         }
       }
@@ -234,10 +234,11 @@ pkgDep <- function(packages, libPath = .libPaths(),
     if (!isTRUE(includeBase)) {
       neededFull1 <- lapply(neededFull1, setdiff, .basePkgs)
     }
+    if (messageIfGTN)
+      messageVerbose("\b Done!", verbose = verbose, verboseLevel = 0)
   } else {
     neededFull1 <- list()
   }
-  messageVerbose("\b Done!", verbose = verbose, verboseLevel = 1)
   neededFull1
 }
 
