@@ -20,7 +20,7 @@ and arguments in setLibPaths and Require."><!-- mathjax --><script src="https://
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
       </span>
     </div>
 
@@ -59,14 +59,15 @@ and arguments in <code>setLibPaths</code> and <code>Require</code>.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">setup</span><span class="op">(</span>
-  RPackageFolders <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.RPackageFolders"</span>, <span class="st">"R"</span><span class="op">)</span>,
-  RPackageCache <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.RPackageCache"</span>, <span class="fu"><a href="RequireCacheDir.html">RequirePkgCacheDir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,
-  buildBinaries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.buildBinaries"</span>, <span class="cn">TRUE</span><span class="op">)</span>,
-  standAlone <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.standAlone"</span>, <span class="cn">TRUE</span><span class="op">)</span>
-<span class="op">)</span>
-
-<span class="fu">setupOff</span><span class="op">(</span>removePackages <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">setup</span><span class="op">(</span></span>
+<span>  RPackageFolders <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.RPackageFolders"</span>, <span class="st">"R"</span><span class="op">)</span>,</span>
+<span>  RPackageCache <span class="op">=</span> <span class="fu"><a href="getOptionRPackageCache.html">getOptionRPackageCache</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  buildBinaries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.buildBinaries"</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  standAlone <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.standAlone"</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">setupOff</span><span class="op">(</span>removePackages <span class="op">=</span> <span class="cn">FALSE</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -75,36 +76,52 @@ and arguments in <code>setLibPaths</code> and <code>Require</code>.</p>
 <dd><p>One or more folders where R packages are
 installed to and loaded from. In the case of more than one
 folder provided, installation will only happen in the first one.</p></dd>
+
+
 <dt>RPackageCache</dt>
 <dd><p>See <code><a href="RequireOptions.html">?RequireOptions</a></code>.</p></dd>
+
+
 <dt>buildBinaries</dt>
 <dd><p>See <code><a href="RequireOptions.html">?RequireOptions</a></code>.</p></dd>
+
+
 <dt>standAlone</dt>
 <dd><p>Logical. If <code>TRUE</code>, all packages will be installed to and loaded from
-the <code>libPaths</code> only.
+the <code>libPaths</code> only. NOTE: If <code>TRUE</code>, THIS WILL CHANGE THE USER'S <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, similar
+to e.g., the <code>checkpoint</code> package.
 If <code>FALSE</code>, then <code>libPath</code> will be prepended to <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> during the <code>Require</code> call,
 resulting in shared packages, i.e., it will include the user's default package folder(s).
 This can be create dramatically faster installs if the user has a substantial number of
 the packages already in their personal library.
 Default <code>FALSE</code> to minimize package installing.</p></dd>
+
+
+<dt>verbose</dt>
+<dd><p>Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
+
+
 <dt>removePackages</dt>
 <dd><p>Logical. If <code>TRUE</code>, then all packages that
 were installed in the custom library will be deleted when <code>setupOff</code>
 is run. The default is <code>FALSE</code>, and when <code>TRUE</code> is selected,
 and it is an interactive session, the user will be prompted to confirm
 deletions.</p></dd>
+
 </dl></div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span>
-<span class="r-in"><span class="co"># Place this as the first line of a project</span></span>
-<span class="r-in"><span class="fu">Require</span><span class="fu">::</span><span class="fu">setup</span><span class="op">(</span><span class="op">)</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># To turn it off and return to normal</span></span>
-<span class="r-in"><span class="fu">Require</span><span class="fu">::</span><span class="fu">setupOff</span><span class="op">(</span><span class="op">)</span></span>
-<span class="r-in"><span class="op">}</span></span>
-<span class="r-in"></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="co"># Place this as the first line of a project</span></span></span>
+<span class="r-in"><span><span class="fu">Require</span><span class="fu">::</span><span class="fu">setup</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># To turn it off and return to normal</span></span></span>
+<span class="r-in"><span><span class="fu">Require</span><span class="fu">::</span><span class="fu">setupOff</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -119,8 +136,7 @@ deletions.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

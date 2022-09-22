@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
       </span>
     </div>
 
@@ -53,11 +53,11 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">tempfile2</span><span class="op">(</span>
-  sub <span class="op">=</span> <span class="st">""</span>,
-  tempdir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.tempPath"</span>, <span class="fu">.RequireTempPath</span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,
-  <span class="va">...</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tempfile2</span><span class="op">(</span></span>
+<span>  sub <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  tempdir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.tempPath"</span>, <span class="fu">.RequireTempPath</span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -66,15 +66,20 @@
 <dd><p>Character string, length 1. Can be a result of
 <code>file.path("smth", "smth2")</code> for nested temporary sub
 directories.</p></dd>
+
+
 <dt>tempdir</dt>
 <dd><p>Optional character string where the temporary dir should be placed.
 Defaults to <code>.RequireTempPath()</code></p></dd>
+
+
 <dt>...</dt>
 <dd><p>passed to <code>tempfile</code>, e.g., <code>fileext</code></p></dd>
+
 </dl></div>
     <div id="see-also">
     <h2>See also</h2>
-    <div class="dont-index"><p><code><a href="tempdir2.html">tempdir2</a></code></p></div>
+    <div class="dont-index"><p><code><a href="tempdir2.html">tempdir2()</a></code></p></div>
     </div>
 
   </div>
@@ -89,8 +94,7 @@ Defaults to <code>.RequireTempPath()</code></p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

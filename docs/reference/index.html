@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
       </span>
     </div>
 
@@ -51,57 +51,13 @@
           <p class="section-desc"></p>
         </th>
       </tr></tbody><tbody><tr><td>
-          <p><code><a href="checkPath.html">checkPath</a></code> </p>
-        </td>
-        <td><p>Check directory path</p></td>
-      </tr><tr><td>
           <p><code><a href="DESCRIPTION-helpers.html">DESCRIPTIONFileVersionV()</a></code> <code><a href="DESCRIPTION-helpers.html">DESCRIPTIONFileOtherV()</a></code> <code><a href="DESCRIPTION-helpers.html">getGitHubDESCRIPTION()</a></code> </p>
         </td>
         <td><p>GitHub package tools</p></td>
       </tr><tr><td>
-          <p><code><a href="detachAll.html">detachAll()</a></code> </p>
-        </td>
-        <td><p>Detach and unload all packages</p></td>
-      </tr><tr><td>
-          <p><code><a href="extractPkgName.html">extractPkgName()</a></code> <code><a href="extractPkgName.html">extractVersionNumber()</a></code> <code><a href="extractPkgName.html">extractInequality()</a></code> <code><a href="extractPkgName.html">extractPkgGitHub()</a></code> </p>
-        </td>
-        <td><p>Extract info from package character strings</p></td>
-      </tr><tr><td>
-          <p><code><a href="GitHubTools.html">parseGitHub()</a></code> <code><a href="GitHubTools.html">install_githubV()</a></code> </p>
+          <p><code><a href="GitHubTools.html">parseGitHub()</a></code> <code><a href="GitHubTools.html">installGitHub()</a></code> </p>
         </td>
         <td><p>GitHub specific helpers</p></td>
-      </tr><tr><td>
-          <p><code><a href="installGithubPackage.html">installGithubPackage()</a></code> <code><a href="installGithubPackage.html">installGitHubPackage()</a></code> </p>
-        </td>
-        <td><p>Install R Package from GitHub source code</p></td>
-      </tr><tr><td>
-          <p><code><a href="invertList.html">invertList()</a></code> </p>
-        </td>
-        <td><p>Invert a 2-level list</p></td>
-      </tr><tr><td>
-          <p><code><a href="messageDF.html">messageDF()</a></code> </p>
-        </td>
-        <td><p>Use message to print a clean square data structure</p></td>
-      </tr><tr><td>
-          <p><code><a href="modifyList2.html">modifyList2()</a></code> </p>
-        </td>
-        <td><p><code>modifyList</code> for multiple lists</p></td>
-      </tr><tr><td>
-          <p><code><a href="normPath.html">normPath</a></code> </p>
-        </td>
-        <td><p>Normalize filepath</p></td>
-      </tr><tr><td>
-          <p><code><a href="pkgDep.html">pkgDep()</a></code> <code><a href="pkgDep.html">pkgDep2()</a></code> <code><a href="pkgDep.html">pkgDepTopoSort()</a></code> <code><a href="pkgDep.html">pkgDepAlt()</a></code> </p>
-        </td>
-        <td><p>Determine package dependencies</p></td>
-      </tr><tr><td>
-          <p><code><a href="pkgDepIfDepRemoved.html">pkgDepIfDepRemoved()</a></code> </p>
-        </td>
-        <td><p>Package dependencies when one or more packages removed</p></td>
-      </tr><tr><td>
-          <p><code><a href="pkgSnapshot.html">pkgSnapshot()</a></code> </p>
-        </td>
-        <td><p>Take a snapshot of all the packages and version numbers</p></td>
       </tr><tr><td>
           <p><code><a href="Require-internals.html">getPkgVersions()</a></code> <code><a href="Require-internals.html">getAvailable()</a></code> <code><a href="Require-internals.html">installFrom()</a></code> <code><a href="Require-internals.html">doInstalls()</a></code> <code><a href="Require-internals.html">doLoading()</a></code> <code><a href="Require-internals.html">archiveVersionsAvailable()</a></code> </p>
         </td>
@@ -115,13 +71,77 @@
         </td>
         <td><p>Path to (package) cache directory</p></td>
       </tr><tr><td>
-          <p><code><a href="RequireOptions.html">RequireOptions()</a></code> </p>
+          <p><code><a href="RequireOptions.html">RequireOptions()</a></code> <code><a href="RequireOptions.html">getRequireOptions()</a></code> </p>
         </td>
         <td><p><code>Require</code> options</p></td>
+      </tr><tr><td>
+          <p><code><a href="checkPath.html">checkPath()</a></code> </p>
+        </td>
+        <td><p>Check directory path</p></td>
+      </tr><tr><td>
+          <p><code><a href="detachAll.html">detachAll()</a></code> </p>
+        </td>
+        <td><p>Detach and unload all packages</p></td>
+      </tr><tr><td>
+          <p><code><a href="extractPkgName.html">extractPkgName()</a></code> <code><a href="extractPkgName.html">extractVersionNumber()</a></code> <code><a href="extractPkgName.html">extractInequality()</a></code> <code><a href="extractPkgName.html">extractPkgGitHub()</a></code> </p>
+        </td>
+        <td><p>Extract info from package character strings</p></td>
+      </tr><tr><td>
+          <p><code><a href="getOptionRPackageCache.html">getOptionRPackageCache()</a></code> </p>
+        </td>
+        <td><p>Get the option for <code>Require.RPackageCache</code></p></td>
+      </tr><tr><td>
+          <p><code><a href="installGithubPackage.html">installGithubPackage()</a></code> <code><a href="installGithubPackage.html">installGitHubPackage()</a></code> </p>
+        </td>
+        <td><p>Install R Package from GitHub source code</p></td>
+      </tr><tr><td>
+          <p><code><a href="invertList.html">invertList()</a></code> </p>
+        </td>
+        <td><p>Invert a 2-level list</p></td>
+      </tr><tr><td>
+          <p><code><a href="linkOrCopy.html">linkOrCopy()</a></code> </p>
+        </td>
+        <td><p>Create link to file, falling back to making a copy if linking fails.</p></td>
+      </tr><tr><td>
+          <p><code><a href="messageVerbose.html">messageDF()</a></code> <code><a href="messageVerbose.html">messageVerbose()</a></code> </p>
+        </td>
+        <td><p>Use message to print a clean square data structure</p></td>
+      </tr><tr><td>
+          <p><code><a href="modifyList2.html">modifyList2()</a></code> </p>
+        </td>
+        <td><p><code>modifyList</code> for multiple lists</p></td>
+      </tr><tr><td>
+          <p><code><a href="normPath.html">normPath()</a></code> </p>
+        </td>
+        <td><p>Normalize filepath</p></td>
+      </tr><tr><td>
+          <p><code><a href="pkgDep.html">pkgDep()</a></code> <code><a href="pkgDep.html">pkgDep2()</a></code> <code><a href="pkgDep.html">pkgDepTopoSort()</a></code> </p>
+        </td>
+        <td><p>Determine package dependencies</p></td>
+      </tr><tr><td>
+          <p><code><a href="pkgDepIfDepRemoved.html">pkgDepIfDepRemoved()</a></code> </p>
+        </td>
+        <td><p>Package dependencies when one or more packages removed</p></td>
+      </tr><tr><td>
+          <p><code><a href="pkgSnapshot.html">pkgSnapshot()</a></code> </p>
+        </td>
+        <td><p>Take a snapshot of all the packages and version numbers</p></td>
+      </tr><tr><td>
+          <p><code><a href="rCurrentVersion.html">rCurrentVersion()</a></code> </p>
+        </td>
+        <td><p>Get or compare current R version to a known version</p></td>
+      </tr><tr><td>
+          <p><code><a href="rversions.html">rversions</a></code> </p>
+        </td>
+        <td><p>R versions</p></td>
       </tr><tr><td>
           <p><code><a href="setLibPaths.html">setLibPaths()</a></code> </p>
         </td>
         <td><p>Set <code>.libPaths</code></p></td>
+      </tr><tr><td>
+          <p><code><a href="setLinuxBinaryRepo.html">setLinuxBinaryRepo()</a></code> </p>
+        </td>
+        <td><p>Setup for binary Linux repositories</p></td>
       </tr><tr><td>
           <p><code><a href="setup.html">setup()</a></code> <code><a href="setup.html">setupOff()</a></code> </p>
         </td>
@@ -138,6 +158,10 @@
           <p><code><a href="trimVersionNumber.html">trimVersionNumber()</a></code> </p>
         </td>
         <td><p>Trim version number off a compound package name</p></td>
+      </tr><tr><td>
+          <p><code><a href="useLinuxSourceCache.html">useLinuxSourceCache()</a></code> </p>
+        </td>
+        <td><p>Use cache for R package compilation</p></td>
       </tr></tbody></table></div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -151,8 +175,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

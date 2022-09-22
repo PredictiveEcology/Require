@@ -24,7 +24,7 @@ associated with it, even through an R restart.'><!-- mathjax --><script src="htt
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
       </span>
     </div>
 
@@ -67,12 +67,13 @@ associated with it, even through an R restart.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">setLibPaths</span><span class="op">(</span>
-  <span class="va">libPaths</span>,
-  standAlone <span class="op">=</span> <span class="cn">TRUE</span>,
-  updateRprofile <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.updateRprofile"</span>, <span class="cn">FALSE</span><span class="op">)</span>,
-  exact <span class="op">=</span> <span class="cn">FALSE</span>
-<span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">setLibPaths</span><span class="op">(</span></span>
+<span>  <span class="va">libPaths</span>,</span>
+<span>  standAlone <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  updateRprofile <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.updateRprofile"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>  exact <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -80,14 +81,19 @@ associated with it, even through an R restart.</p>
     <dl><dt>libPaths</dt>
 <dd><p>A new path to append to, or replace all existing user
 components of <code>.libPath()</code></p></dd>
+
+
 <dt>standAlone</dt>
 <dd><p>Logical. If <code>TRUE</code>, all packages will be installed to and loaded from
-the <code>libPaths</code> only.
+the <code>libPaths</code> only. NOTE: If <code>TRUE</code>, THIS WILL CHANGE THE USER'S <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, similar
+to e.g., the <code>checkpoint</code> package.
 If <code>FALSE</code>, then <code>libPath</code> will be prepended to <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> during the <code>Require</code> call,
 resulting in shared packages, i.e., it will include the user's default package folder(s).
 This can be create dramatically faster installs if the user has a substantial number of
 the packages already in their personal library.
 Default <code>FALSE</code> to minimize package installing.</p></dd>
+
+
 <dt>updateRprofile</dt>
 <dd><p>Logical or Character string. If <code>TRUE</code>, then
 this function will put several lines of code in the current directory's <code>.Rprofile</code>
@@ -96,16 +102,27 @@ a character string, then this should be the path to an <code>.Rprofile</code> fi
 To reset back to normal, run <code>setLibPaths()</code> without a <code>libPath</code>. Default:
 <code>getOption("Require.updateRprofile", FALSE)</code>, meaning <code>FALSE</code>, but it
 can be set with an option or within a single call.</p></dd>
+
+
 <dt>exact</dt>
 <dd><p>Logical. This function will automatically append the R version number to the
 <code>libPaths</code> to maintain separate R package libraries for each R version
 on the system. There are some cases where this behaviour is not desirable.
 Set <code>exact</code> to <code>TRUE</code> to override this automatic appending and use
 the exact, unaltered <code>libPaths</code>. Default is <code>FALSE</code></p></dd>
+
+
+<dt>verbose</dt>
+<dd><p>Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>The main point of this function is to set <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, which
+    
+
+<p>The main point of this function is to set <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, which
 will be changed as a side effect of this function.
 As when setting <code>options</code>, this will return the previous state of
 <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> allowing the user to reset easily.</p>
@@ -119,23 +136,21 @@ A different, likely non-approved by CRAN approach that also works is here:
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="va">origDir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span class="r-in"><span class="fu">setLibPaths</span><span class="op">(</span><span class="st">"newProjectLib"</span><span class="op">)</span> <span class="co"># set a new R package library locally</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> .libPaths() is now: C:/Users/emcintir/AppData/Local/Temp/RtmpOo42y7/newProjectLib/4.1, C:/Program Files/R/R-4.1.2/library</span>
-<span class="r-in"><span class="fu">setLibPaths</span><span class="op">(</span><span class="op">)</span> <span class="co"># reset it to original</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> There was no custom libPaths setting in .Rprofile; nothing changed</span>
-<span class="r-in"><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd</a></span><span class="op">(</span><span class="va">origDir</span><span class="op">)</span></span>
-<span class="r-in"><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span>
-<span class="r-in"><span class="co"># Using standAlone = FALSE means that newly installed packages will be installed</span></span>
-<span class="r-in"><span class="co">#   in the new package library, but loading packages can come from any of the ones</span></span>
-<span class="r-in"><span class="co">#   listed in .libPaths()</span></span>
-<span class="r-in"><span class="fu">setLibPaths</span><span class="op">(</span><span class="st">"~/newProjectLib"</span>, standAlone <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># will have 2 or more paths</span></span>
-<span class="r-in"><span class="co"># Can restart R, and changes will stay</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="co"># remove the custom .libPaths()</span></span>
-<span class="r-in"><span class="fu">Require</span><span class="fu">::</span><span class="fu">setLibPaths</span><span class="op">(</span><span class="op">)</span> <span class="co"># reset to previous; remove from .Rprofile because libPath arg is empty</span></span>
-<span class="r-in"></span>
-<span class="r-in"><span class="op">}</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="va">origDir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">td</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">setLibPaths</span><span class="op">(</span><span class="va">td</span><span class="op">)</span> <span class="co"># set a new R package library locally</span></span></span>
+<span class="r-in"><span><span class="fu">setLibPaths</span><span class="op">(</span><span class="op">)</span> <span class="co"># reset it to original</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd</a></span><span class="op">(</span><span class="va">origDir</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Using standAlone = FALSE means that newly installed packages will be installed</span></span></span>
+<span class="r-in"><span><span class="co">#   in the new package library, but loading packages can come from any of the ones</span></span></span>
+<span class="r-in"><span><span class="co">#   listed in .libPaths()</span></span></span>
+<span class="r-in"><span><span class="fu">setLibPaths</span><span class="op">(</span><span class="st">"~/newProjectLib"</span>, standAlone <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># will have 2 or more paths</span></span></span>
+<span class="r-in"><span><span class="co"># Can restart R, and changes will stay</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># remove the custom .libPaths()</span></span></span>
+<span class="r-in"><span><span class="fu">Require</span><span class="fu">::</span><span class="fu">setLibPaths</span><span class="op">(</span><span class="op">)</span> <span class="co"># reset to previous; remove from .Rprofile because libPath arg is empty</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -150,8 +165,7 @@ A different, likely non-approved by CRAN approach that also works is here:
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

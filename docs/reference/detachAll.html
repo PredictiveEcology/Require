@@ -22,7 +22,7 @@ glue, rlang, ps, ellipsis, and, processx."><!-- mathjax --><script src="https://
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
       </span>
     </div>
 
@@ -63,7 +63,12 @@ are identified internally and <em>not</em> unloaded. Currently, these are
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">detachAll</span><span class="op">(</span><span class="va">pkgs</span>, dontTry <span class="op">=</span> <span class="cn">NULL</span>, doSort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">detachAll</span><span class="op">(</span></span>
+<span>  <span class="va">pkgs</span>,</span>
+<span>  dontTry <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  doSort <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -71,17 +76,30 @@ are identified internally and <em>not</em> unloaded. Currently, these are
     <dl><dt>pkgs</dt>
 <dd><p>A character vector of packages to detach. Will be topologically sorted
 unless <code>doSort</code> is <code>FALSE</code>.</p></dd>
+
+
 <dt>dontTry</dt>
 <dd><p>A character vector of packages to not try. This can be used
 by a user if they find a package fails in attempts to unload it, e.g., "ps"</p></dd>
+
+
 <dt>doSort</dt>
 <dd><p>If <code>TRUE</code> (the default), then the <code>pkgs</code> will be
 topologically sorted. If <code>FALSE</code>, then it won't. Useful if the
 <code>pkgs</code> are already sorted.</p></dd>
+
+
+<dt>verbose</dt>
+<dd><p>Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>A numeric named vector, with names of the packages that were attempted.
+    
+
+<p>A numeric named vector, with names of the packages that were attempted.
 <code>2</code> means the package was successfully unloaded, <code>1</code> it was
 tried, but failed, <code>3</code> it was in the search path and was detached
 and unloaded.</p>
@@ -99,8 +117,7 @@ and unloaded.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>

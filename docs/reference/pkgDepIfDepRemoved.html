@@ -19,7 +19,7 @@ from the immediate dependencies."><!-- mathjax --><script src="https://cdnjs.clo
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
       </span>
     </div>
 
@@ -57,28 +57,47 @@ from the immediate dependencies.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">pkgDepIfDepRemoved</span><span class="op">(</span>pkg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>, depsRemoved <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pkgDepIfDepRemoved</span><span class="op">(</span></span>
+<span>  pkg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  depsRemoved <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>pkg</dt>
 <dd><p>A package name to be testing the dependencies</p></dd>
+
+
 <dt>depsRemoved</dt>
 <dd><p>A vector of package names who are to be "removed"
 from the <code>pkg</code> immediate dependencies</p></dd>
+
+
+<dt>verbose</dt>
+<dd><p>Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>A character vector of the packages that would removed from recursive dependencies
-of <code>pkg</code>if <code>depsRemoved</code> were removed from first level dependencies</p>
+    
+
+<p>A list with 3 named lists <code>Direct</code>, <code>Recursive</code> and <code>IfRemoved</code>.
+<code>Direct</code> will show the top level direct dependencies, either <code>Remaining</code> or <code>Removed</code>.
+<code>Recursive</code> will show the full recursive dependencies, either <code>Remaining</code> or <code>Removed</code>.
+<code>IfRemoved</code> returns all package dependencies that are removed for each top level dependency.
+If a top level dependency is not listed in this final list, then it means that it is also a
+recursive dependency elsewhere, so its removal has no effect.</p>
     </div>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span>
-<span class="r-in"><span class="fu">pkgDepIfDepRemoved</span><span class="op">(</span><span class="st">"Require"</span>, <span class="st">"remotes"</span><span class="op">)</span></span>
-<span class="r-in"><span class="op">}</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="fu">pkgDepIfDepRemoved</span><span class="op">(</span><span class="st">"Require"</span>, <span class="st">"remotes"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
   </div>
@@ -93,8 +112,7 @@ of <code>pkg</code>if <code>depsRemoved</code> were removed from first level dep
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a>
-2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
 </div>
 
       </footer></div>
