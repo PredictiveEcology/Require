@@ -21,6 +21,7 @@ utils::globalVariables(c(
 #' @rdname GitHubTools
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
+  ghp <- Sys.getenv("GITHUB_PAT")
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
@@ -32,8 +33,11 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   }
 
   if (any(pkgDT$repoLocation == "GitHub")) {
+    messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
+
     isGitHub <- pkgDT$repoLocation == "GitHub"
     pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
+    pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
     pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
     pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
     pkgDT[isGitHub, hasSubFolder := grepl("/", pkgDT[isGitHub]$Account)]
@@ -372,10 +376,12 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     whFails <- ifelse(is.na(pkgDT$correctVersionAvail), FALSE,
                       ifelse(pkgDT$needInstall == TRUE & pkgDT$correctVersionAvail == FALSE, TRUE, FALSE))
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
-    if (any(whFails))
+    anyWhFails <- any(whFails, na.rm = TRUE)
+    if (anyWhFails) {
       messageVerbose("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall %in% TRUE], collapse = ", "),
                               " could not be installed because no available version\033[39m",
                      verbose = verbose, verboseLevel = 1)
+    }
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
       pkgDT[needInstall == TRUE & # installed == FALSE &
               (correctVersionAvail == TRUE) &
@@ -644,11 +650,15 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT[repoLocation == "GitHub",
             filepath := {
               ret <- NA
-              dl <- try(download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE))
-              ret <- if (!is(dl, "try-error"))
-                destFile
-              else
-                NA
+              dl <- downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1], need = "master",
+                                               verbose = verbose, verboseLevel = 2)
+              #for (i in 1:2) {
+              #  dl <- try(download.file(unique(url)[1], unique(destFile)[1], overwrite = TRUE, quiet = TRUE))
+              ret <- if (!is(dl, "try-error")) {
+                  destFile
+                } else {
+                  NA
+              }
 
               ret
             }, by = c("Package", "Branch")]
@@ -1012,91 +1022,63 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
   toInstall <- toInstall[installFrom == "GitHub"]
 
   # Require doesn't actually install a previous version of a Git package at this point,
-  #    it just takes the HEAD, so canusepak can evaluate just the toInstall$Package
-  # canusepak <- usepak(toInstall$Package)# (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usepak", FALSE)))
-  # if (isTRUE(canusepak)) {
-  #   doDeps <- if (!is.null(dots$dependencies)) dots$dependencies else NA
-  #   doDeps <- if (is.null(install_githubArgs$dependencies)) doDeps else install_githubArgs$dependencies
-  #
-  #   ipaForPak <- list(pkg = trimVersionNumber(toInstall$packageFullName),
-  #                     upgrade = FALSE,
-  #                     ask = FALSE,
-  #                     dependencies = doDeps)
-  #   out <- do.call(pak::pkg_install, ipaForPak)
-  #   pkgDT <- updateInstalled(pkgDT, installPkgNames = toInstall$Package, out)
-  # } else {
+  #    it just takes the HEAD
+  if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
+    dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
+  #  but there are weird cases where the internals of Require don't get correct
+  #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
+  #  which has R.oo
+  installPkgNames <- toInstall$packageFullName
+  names(installPkgNames) <- toInstall$Package
+  ord <- match(extractPkgName(installPkgNames), toInstall$Package)
+  toInstall <- toInstall[ord]
+  installPkgNames <- installPkgNames[ord]
 
-    # if (!is.data.table(pkgDT)) {
-    #   pkgDT <- data.table(Package = extractPkgName(pkgDT), packageFullName = c(pkgDT))
-    # }
-    if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
-      dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
-    #  but there are weird cases where the internals of Require don't get correct
-    #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
-    #  which has R.oo
-    #sortedTopologically <- pkgDepTopoSort(pkgDT$packageFullName)
-    #installPkgNames <- names(sortedTopologically)
-    installPkgNames <- toInstall$packageFullName
+  gitPkgs <- trimVersionNumber(toInstall$packageFullName)
+  names(gitPkgs) <- toInstall$Package
+  isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
+  attempts <- rep(0, length(gitPkgs))
+  names(attempts) <- gitPkgs
+  if (length(gitPkgs)) {
+    gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
+      all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
+    }))]
+    gitPkgDepOrig <- gitPkgDeps2
+    gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
+    ipa <- modifyList2(install_githubArgs, dots)
+    warns <- messes <- errors <- list()
+    # if (requireNamespace("pak", quietly = TRUE) && isTRUE(getOption("Require.usePak"))) {
+    #   messageVerbose("Using pak ...", verboseLevel = 1, verbose = verbose)
+    #   out2 <- pak::pkg_install(gitPkgDeps2)
+    #   out2 <- out2[out2$ref %in% gitPkgDeps2,]
+    #   warns <- out2$status
+    #   whichOK <- unlist(lapply(warns, function(w) w == "OK"))
+    #   warns <- warns[!whichOK]
+    #   if (any(!whichOK)) {
+    #     gitPkgDeps2 <- gitPkgDeps2[!whichOK]
+    #   }
+    # } #else {
 
-    names(installPkgNames) <- toInstall$Package
-
-    ord <- match(extractPkgName(installPkgNames), toInstall$Package)
-    toInstall <- toInstall[ord]
-    installPkgNames <- installPkgNames[ord]
-
-    gitPkgs <- trimVersionNumber(toInstall$packageFullName)
-    names(gitPkgs) <- toInstall$Package
-    isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
-    attempts <- rep(0, length(gitPkgs))
-    names(attempts) <- gitPkgs
-    if (length(gitPkgs)) {
-      gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
-        all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
-      }))]
-      ipa <- modifyList2(install_githubArgs, dots)
-      for (p in gitPkgDeps2) {
-        warns <- messes <- errors <- list()
-        out1 <- withCallingHandlers(
-          do.call(installGithubPackage, append(list(p), ipa)),
-          # error=function(e) {
-          #   errors <<- append(errors, list(e))
-          # },
-          warning=function(w) {
-            warns <<- append(warns, list(w))
-            invokeRestart("muffleWarning")
-            # }, message = function(m) {
-            #   messes <<- append(messes, list(m))
-            #   invokeRestart("muffleMessage")
-          })
-        warns <- lapply(warns, function(w) grep("in use and will not be", w$message,
-                                                invert = TRUE, value = TRUE))
-
-        if (length(unlist(warns))) {
-          # if (is(warns, "simpleWarning") || identical(warns, 1L) || is(out, "simpleError")) {
-          if (requireNamespace("remotes")) {
-            messageVerbose("Require::installGithubPackage is still experimental and it failed; ",
-                      "Trying remotes::install_github instead",
-                      verbose = verbose, verboseLevel = 1)
-            out <- tryCatch(do.call(remotes::install_github, append(list(p), ipa)),
-                            error = function(e) e)
-          } else {
-            warning("Failed installation of ", p, ". Perhaps more success using remotes package:\n",
-                    "install.packages('remotes')")
-          }
-        }
-        # if (identical(out, extractPkgName(p)))
-        #   out <- NULL
-        # warn <- out
-        if (length(warns)) {
-          # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
-          warning(warns)
-          pkgDT[packageFullName == p,
-                installResult := warns[[1]]]
-        }
-        pkgDT <- updateInstalled(pkgDT, extractPkgName(p), warns)
-        pkgDT
-      }
+    if (NROW(gitPkgDeps2)) {
+      out1 <- withCallingHandlers(
+        do.call(installGithubPackage, append(list(gitPkgDeps2), ipa)),
+        warning=function(w) {
+          warns <<- append(warns, list(w))
+          invokeRestart("muffleWarning")
+        })
     }
+
+    if (length(warns)) {
+      # if (is(warn, "simpleWarning") || is(warn, "install_error")) {
+      warning(warns)
+      pkgDT[Package %in% gitPkgNamesSimple,
+            installResult := warns[[1]]]
+    }
+
+    pkgDT <- updateInstalled(pkgDT, gitPkgNamesSimple, warns)
+    pkgDT
+    #}
+  }
   # }
   pkgDT
 }
@@ -1421,35 +1403,47 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       unlink(tmpPath, recursive = TRUE)
       setwd(orig)
     })
-    Map(installPkgNames = installPkgNamesList, repos = reposList,
-        function(installPkgNames, repos) {
+    if (!is.null(getOption("Ncpus"))) tries <- 5
+    for (attempt in seq(tries)) {
+      Map(installPkgNames = installPkgNamesList, repos = reposList,
+          function(installPkgNames, repos) {
 
-          ipaFull <- append(list(installPkgNames, repos = repos), ipa)
-          installPackagesQuoted <-
+            ipaFull <- append(list(installPkgNames, repos = repos), ipa)
+            installPackagesQuoted <-
               quote(do.call(install.packages, ipaFull))
 
-          warn <<- withCallingHandlers({
-            out <- eval(installPackagesQuoted)
-          }, warning = function(condition) {
-            if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
-              outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
-              withRestarts("muffleWarning")
-            } else {
-              outFromWarn <- condition
-            }
-            outFromWarn
-          }, error = function(e) {
-            av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
-            if (grepl('argument \\"av2\\" is missing', e)) {
-              tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ", R.version.string,")")),
-                       warning = function(w) w)
-            } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
-              tryInstallAgainWithoutAPCache(installPackagesQuoted)
-            } else {
-              stop(e)
-            }
+            warn <<- withCallingHandlers({
+              out <- eval(installPackagesQuoted)
+            }, warning = function(condition) {
+              if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
+                outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
+                withRestarts("muffleWarning")
+              } else {
+                outFromWarn <- condition
+              }
+              outFromWarn
+            }, error = function(e) {
+              av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
+              if (grepl('argument \\"av2\\" is missing', e)) {
+                tryCatch(warning(paste0("package '" ,installPkgNames,"' is not available (for ", R.version.string,")")),
+                         warning = function(w) w)
+              } else if (length(av3CacheFile) || isTRUE(grepl("cannot open URL.+PACKAGES.rds", e))) {
+                tryInstallAgainWithoutAPCache(installPackagesQuoted)
+              } else {
+                stop(e)
+              }
+            })
           })
-        })
+      # Sanity check -- try again for the ones that failed
+      ip <- as.data.table(installed.packages())
+      successReg <- c(installPkgNamesList$Reg) %in% ip$Package
+      successSrc <- c(installPkgNamesList$Src) %in% ip$Package
+      if (all(c(successReg, successSrc))) {
+        break
+      }
+      installPkgNamesList$Reg <- installPkgNamesList$Reg[!successReg]
+      installPkgNamesList$Src <- installPkgNamesList$Src[!successSrc]
+    }
 
     if (any(grepl("--build", c(dots, install.packagesArgs))))
       copyTarball(installPkgNames, TRUE)
@@ -1985,22 +1979,24 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 
 
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
-  grSplit <- strsplit(gitRepo, "/|@")[[1]]
-  grAcct <- strsplit(gitRepo, "/")[[1]] # only account and repo
-  if (length(grAcct) == 1) {
+  grSplit <- strsplit(gitRepo, "/|@")
+  repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
+  names(grSplit) <- repo
+  names(repo) <- repo
+  grAcct <- strsplit(gitRepo, "/") # only account and repo
+  lenGT1 <- lengths(grAcct) == 1
+  if (any(lenGT1)) {
     acct <- default
-    grSplit <- append(list(acct), grSplit)
+    grSplit[lenGT1] <- lapply(grSplit[lenGT1], function(grsplit) append(list(acct), grsplit))
   } else {
-    acct <- grSplit[[1]]
+    acct <- lapply(grSplit, function(grsplit) grsplit[[1]])
   }
-  repo <- grSplit[[2]]
-  if (length(grSplit) > 2) {
-    br <- grSplit[[3]]
-  } else {
-    br <- "main"
+  lenGT2 <- lengths(grSplit) > 2
+  br <- lapply(grSplit, function(x) list())
+  if (any(lenGT2)) {
+    br[lenGT2] <- lapply(grSplit[lenGT2], function(grsplit) grsplit[[3]])
   }
-  if (!is.null(masterOrMain))
-    br <- masterOrMain
+  br[!lenGT2] <- "HEAD"
 
   list(acct = acct, repo = repo, br = br)
 }
@@ -2030,38 +2026,29 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = getOption("Require.verbose"),
                                  ...) {
+  dir.create(libPath, showWarnings = FALSE, recursive = TRUE)
   masterMain <- c("main", "master")
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
   quiet <- isTRUE(dots$quiet)
-  tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
-                           mustWork = FALSE, winslash = "\\")
+  tmpPath <- tempdir2(.rndstr())
+  #tmpPath <- normalizePath(file.path(tempdir(), paste0(sample(LETTERS, 8), collapse = "")),
+  #                         mustWork = FALSE, winslash = "\\")
   checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
-  alreadyExistingDESCRIPTIONFile <- file.path(libPath, gr$repo, "DESCRIPTION")
+  alreadyExistingDESCRIPTIONFile <- lapply(gr$repo, function(repo) file.path(libPath, repo, "DESCRIPTION"))
   useRemotes <- FALSE
-  if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+  filesExist <- file.exists(unlist(alreadyExistingDESCRIPTIONFile))
+  if (any(filesExist)) {
     packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
 
-    for (i in 1:2) {
-      shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
-      if (is(shaOnGitHub, "try-error")) {
-        if (gr$br %in% masterMain) {
-          # possibly change order -- i.e., put user choice first
-          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
-          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
-          gr <- splitGitRepo(gitRepo, masterOrMain = br)
-          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
-        }
-      } else {
-        break
-      }
-    }
+    shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+
     if (is(shaOnGitHub, "try-error")) {
       useRemotes <- TRUE
     } else {
       shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-      if (identical(shaLocal, shaOnGitHub)) {
+      if (identical(unname(shaLocal), shaOnGitHub)) {
         messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
                        verbose = verbose, verboseLevel = 1)
         return(invisible())
@@ -2070,20 +2057,20 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
 
   if (!useRemotes) {
-    for (i in 1:2) {
-      out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
-      if (is(out, "try-error")) {
-        if (gr$br %in% masterMain) {
-          # possibly change order -- i.e., put user choice first
-          br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
-          messageVerbose(gr$br, "branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
-          gr <- splitGitRepo(gitRepo, masterOrMain = br)
-          gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
-        }
-      } else {
-        break
-      }
-    }
+    # for (i in 1:2) {
+    out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+    #   if (is(out, "try-error")) {
+    #     if (gr$br %in% masterMain) {
+    #       # possibly change order -- i.e., put user choice first
+    #       br <- masterMain[rev(masterMain %in% gr$br + 1)][2]
+    #       messageVerbose(gr$br, " branch did not exist; trying ", br, verbose = verbose, verboseLevel = 1)
+    #       gr <- splitGitRepo(gitRepo, masterOrMain = br)
+    #       gitRepo <- paste0(gr$acct, "/", gr$repo, "@", gr$br)
+    #     }
+    #   } else {
+    #     break
+    #   }
+    # }
     if (is(out, "try-error"))
       useRemotes <- TRUE
   }
@@ -2111,34 +2098,44 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                 "--no-build-vignettes")
     Rpath1 <- Sys.getenv("R_HOME")
     Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
-    out1 <- system(paste(Rpath, "CMD build ", gr$repo, paste(extras, collapse = " ")),
-                   intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
+    out1 <- lapply(gr$repo, function(repo) {
+      system(paste(Rpath, "CMD build ", repo, paste(extras, collapse = " ")),
+                     intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
+    })
     # cat(out1, file = "/home/emcintir/tmp.R")
-    if (identical(1L, out1)) stop("")
+    if (any(unlist(out) == 1L)) stop("Error 456; contact developer")
     theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
+    packageTarName <- dir(pattern = "tar.gz")
     packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
-    packageTarName <- if (interactive()) {
-      versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
-      paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
-    } else {
-      buildingLine <- grep("building", out1, value = TRUE)
-      packageTarName <- strsplit(buildingLine, "'")[[1]][2]
-      if (is.na(packageTarName)) { # linux didn't have that character
-        packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
-      }
-      packageTarName
-    }
+    #if (interactive()) {
+    # versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
+    # packageTarName <- paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
+    # } else {
+    #   buildingLine <- grep("building", out1, value = TRUE)
+    #   packageTarName <- strsplit(buildingLine, "'")[[1]][2]
+    #   if (is.na(packageTarName)) { # linux didn't have that character
+    #     packageTarName <- gsub(paste0("^.*(", gr$repo, ".*tar.gz).*$"), "\\1", buildingLine)
+    #   }
+    #   packageTarName
+    # }
     opts2 <- append(dots,
                     list(packageTarName,
                          repos = NULL,
                          lib = normalizePath(libPath, winslash = "/")))
-    messageVerbose("* building ",packageTarName," ... Built!",
+    messageVerbose("  ... Built!",
                    verbose = verbose, verboseLevel = 1)
-    opts2$type <- NULL # it may have "binary", which is incorrect
+    opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
+    if (is.null(opts2$destdir)) {
+      cachePath <- getOptionRPackageCache()
+      opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
+    }
     do.call(install.packages, opts2)
-    postInstallDESCRIPTIONMods(pkg = packageName, repo = gr$repo,
-                               acct = gr$acct, br = gr$br,
-                               lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
+    lapply(packageName, function(pack) {
+      postInstallDESCRIPTIONMods(pkg = pack, repo = gr$repo[[pack]],
+                                 acct = gr$acct[[pack]], br = gr$br[[pack]],
+                                 lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
+    })
+
   } else {
     stop("Can't install packages this way because R is not on the search path")
   }
@@ -2186,29 +2183,48 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
   ar <- file.path(gr$acct, gr$repo)
   repoFull <- file.path(modulePath, gr$repo)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
-  for (i in 1:2) {
-    url <- paste0("https://github.com/", ar, "/archive/", gr$br, ".zip")
-    out <- try(download.file(url, destfile = zipFileName, quiet = TRUE), silent = TRUE)
-    if (is(out, "try-error") && identical(gr$br, "master"))
-      gr$br <- "main"
-    else
-      break
+  masterMain <- c("main", "master")
+  br <- if (any(gr$br %in% masterMain)) {
+    # possibly change order -- i.e., put user choice first
+    masterMain[rev(masterMain %in% gr$br + 1)]
+  } else {
+    gr$br
   }
+
+  # for (branch in br) {
+  url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
+  out <- suppressWarnings(
+    try(downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE))
+  # if (!is(out, "try-error")) {
+  #   break
+  # } else {
+  #   if (br %in% masterMain)
+  #     messageVerbose(br, " branch does not exist; trying ", setdiff(masterMain, br),
+  #                    verbose = 0)
+  # }
+  # }
   if (is(out, "try-error")){
     return(out)
   }
 
-  out <- unzip(zipFileName, exdir = modulePath) # unzip it
-  if (dir.exists(repoFull))
+  out <- lapply(zipFileName, function(zfn) unzip(zfn, exdir = modulePath)) # unzip it)
+
+  de <- dir.exists(repoFull)
+  if (any(de))
     if (isTRUE(overwrite)) {
-      unlink(repoFull, recursive = TRUE)
+      unlink(repoFull[de], recursive = TRUE)
     } else {
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
-  badDirname <- unique(dirname(out))[1]
-  file.rename(badDirname, gsub(basename(badDirname), gr$repo, badDirname)) # it was downloaded with a branch suffix
+  badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
+  if (is(badDirname, "try-error")) browser()
+  badDirname <- unlist(badDirname)
+  Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
+    file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix
+  })
+
   unlink(zipFileName)
-  messageVerbose(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"),
+  messageVerbose(paste0(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"), collapse = "\n"),
                  verbose = verbose, verboseLevel = 2)
   return(normalizePath(repoFull))
 }
@@ -2217,14 +2233,19 @@ getSHAfromGitHub <- function(acct, repo, br) {
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   if (missing(br))
     br <- "main"
+  if (identical(br, "HEAD"))
+    br <- "main"
   masterMain <- c("main", "master")
-  if (br %in% masterMain) {
+  if (br %in% c(masterMain)) {
     # possibly change order -- i.e., put user choice first
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
-  urlConn <- url(shaPath)
-  on.exit(close(urlConn))
-  sha <- suppressWarnings(readLines(urlConn))
+  #urlConn <- url(shaPath)
+  #on.exit(close(urlConn))
+  tf <- tempfile();
+  downloadFileMasterMainAuth(shaPath, destfile = tf)
+  sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
+  if (is(sha, "try-error")) return(sha)
   if (length(sha) > 1) {
     # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
     #   Was easier to collapse the individual lines, then re-split
@@ -2401,6 +2422,7 @@ dealWithViolations <- function(pkgSnapshotObj) {
   dd <- dd[kk[, c("Package", "DepVersion", "violations")], on = "Package"]
   dd[violations == TRUE, Version := DepVersion]
   set(dd, NULL, c("DepVersion"), NULL)
+  dd <- unique(dd)
   dd[]
 }
 
@@ -2485,4 +2507,76 @@ getOptionRPackageCache <- function() {
     }
   }
   curVal
+}
+
+downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
+                                       verbose = getOption("Require.verbose"), verboseLevel = 2) {
+  #gr <- splitGitRepo(gitRepo)
+  #ar <- file.path(gr$acct, gr$repo)
+  #repoFull <- file.path(modulePath, gr$repo)
+  #zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
+  masterMain <- c("main", "master")
+  masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
+  masterGrep <- paste0("/", "master", "(/|\\.)")
+  mainGrep <- paste0("/", "main", "(/|\\.)")
+  hasMasterMain <- grepl(masterMainGrep, url)
+  hasMaster <- grepl(masterGrep, url)
+  hasMain <- grepl(mainGrep, url)
+  if (any(hasMasterMain) && need %in% masterMain) {
+    # Good -- try both master and main
+    br <- need
+  } else if (any(hasMasterMain) && need %in% "HEAD") {
+    # need change
+    br <- "HEAD"
+    url <- gsub(masterMainGrep, paste0("/", br, "\\1"), url)
+  }
+  HEADgrep <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
+  hasHEAD <- grepl(HEADgrep, url)
+  if (any(hasHEAD) && need %in% masterMain) {
+    br <- need
+    url <- gsub(HEADgrep, paste0("/", br, "\\1"), url)
+  }
+  if (any(hasHEAD) && need %in% "HEAD") {
+    br <- "HEAD"
+  }
+  # urls <- list(url)
+  if (any(hasMasterMain) && length(url) == 1) {
+    newBr <- masterMain[hasMain + 1]
+    url[[2]] <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
+  }
+
+  # Authentication
+  ghp <- Sys.getenv("GITHUB_PAT")
+  messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
+  if (nzchar(ghp)) {
+    url <- sprintf(paste0("https://%s:@", gsub("https://", "", url)), ghp)
+  }
+
+  urls <- url
+  urls <- split(urls, hasMasterMain) #
+  outNotMasterMain <- outMasterMain <- character()
+  if (!is.null(urls[["FALSE"]]))
+    for (URL in urls["FALSE"]) # vectorized;
+      outNotMasterMain <- suppressWarnings(
+        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+  if (!is.null(urls[["TRUE"]]))
+    for (URL in urls[["TRUE"]]) {
+      outMasterMain <- suppressWarnings(
+        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+      if (!is(outMasterMain, "try-error")) {
+        break
+      }
+    }
+  c(outNotMasterMain, outMasterMain)
+
+}
+
+messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
+  if (nzchar(ghp)) {
+    if (is.null(.pkgEnv$hasGHP)) {
+      .pkgEnv$hasGHP <- TRUE
+      messageVerbose("Using GITHUB_PAT to access files on GitHub",
+                     verboseLevel = 0, verbose = verbose)
+    }
+  }
 }

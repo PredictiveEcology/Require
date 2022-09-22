@@ -93,12 +93,27 @@ pkgDep <- function(packages, libPath = .libPaths(),
     needGet <- unlist(lapply(neededFull1, is.null))
 
     if (any(needGet)) {
+      Npackages <- NROW(packages[needGet])
+      NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packages[needGet])))
+      NpackagesCRAN <- Npackages - NpackagesGitHub
+      if (Npackages > 5)
+        messageVerbose("Getting dependencies for ",
+                       if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
+                       if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
+                       verbose = verbose, verboseLevel = 0)
       neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
                                 purge = purge, repos = repos, verbose = verbose)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
+      NpackagesRecursive <- NROW(neededFull2)
+      if (NpackagesRecursive > 30)
+        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies\n",
+                       verbose = verbose, verboseLevel = 0)
       if (NROW(neededFull2)) {
+        curDots <- 0
+        curWidth <- 0
+        width <- getOption("width")
 
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
@@ -111,6 +126,12 @@ pkgDep <- function(packages, libPath = .libPaths(),
               pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
               names(pkgsToLookup) <- pkgsToLookup
               pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
+                curDots <<- curDots + 1
+                if (curDots %% 20 == 0) {
+                  curWidth <<- curWidth + 1
+                  char <-if (curWidth %% width == 0) "\r" else "\b"
+                  messageVerbose(char, ".", verbose = verbose, verboseLevel = 0)
+                }
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
                                           purge = purge, repos = repos, verbose = verbose)))
               })
@@ -215,6 +236,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
   } else {
     neededFull1 <- list()
   }
+  messageVerbose("\b Done!", verbose = verbose, verboseLevel = 1)
   neededFull1
 }
 
@@ -742,7 +764,7 @@ whichToDILES <- function(which) {
 .basePkgs <- # unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
   c("base", "boot", "class", "cluster", "codetools", "compiler",
     "datasets", "foreign", "graphics", "grDevices", "grid", "KernSmooth",
-    "lattice", "MASS", # "Matrix",
+    "lattice", "MASS", "Matrix",
     "methods", "mgcv", "nlme", "nnet",
     "parallel", "rpart", "spatial", "splines", "stats", "stats4",
     "survival", "tcltk", "tools", "translations", "utils")
@@ -760,25 +782,48 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #'   from the `pkg` immediate dependencies
 #' @export
 #' @return
-#' A character vector of the packages that would removed from recursive dependencies
-#' of `pkg`
-#' if `depsRemoved` were removed from first level dependencies
+#' A list with 3 named lists `Direct`, `Recursive` and `IfRemoved`.
+#' `Direct` will show the top level direct dependencies, either `Remaining` or `Removed`.
+#' `Recursive` will show the full recursive dependencies, either `Remaining` or `Removed`.
+#' `IfRemoved` returns all package dependencies that are removed for each top level dependency.
+#' If a top level dependency is not listed in this final list, then it means that it is also a
+#' recursive dependency elsewhere, so its removal has no effect.
+#' @inheritParams Require
 #' @examples
 #' \dontrun{
 #' pkgDepIfDepRemoved("Require", "remotes")
 #' }
-pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
+pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
+                               verbose = getOption()) {
   if (length(pkg)) {
     p2 <- pkgDep2(pkg, recursive = TRUE)
-    p1 <- sort(extractPkgName(pkgDep(pkg, recursive = TRUE)[[1]]))
-    p2Clean <- sort(
-      unique(
-        extractPkgName(
-          setdiff(
-            c(extractPkgName(names(p2)),
-              unlist(unname(p2[!extractPkgName(names(p2)) %in% depsRemoved]))),
-            depsRemoved))))
-    pkg <- paste(paste(setdiff(p1, p2Clean), collapse = ", "))
+    names(p2) <- extractPkgName(names(p2))
+    p1 <- names(p2) # just the immediate
+    p3 <- p2
+    p2All <- unique(extractPkgName(c(names(p2), unname(unlist(p2)))))
+    p3[depsRemoved] <- NULL
+    p3All <- unique(extractPkgName(c(names(p3), unname(unlist(p3)))))
+    removed <- sort(setdiff(p2All, p3All))
+    left <- sort(p3All)
+
+    removedDirect <- intersect(p1, depsRemoved)
+    allInRecursive <- unique(extractPkgName(unname(unlist(p2))))
+    direct <- p1
+    bestToRemove <- setdiff(direct, allInRecursive)
+    bestToRemove <- p2[bestToRemove]
+    bestToRemove <- Map(btr = bestToRemove, top = names(bestToRemove),
+                        function(btr, top) {
+                          p4 <- p2
+                          p4[top] <- NULL
+                          setdiff(extractPkgName(unique(c(names(p4), unname(unlist(p4))))),
+                                  extractPkgName(c(top, btr)))
+                          })
+    leftDirect <- names(p3)
+    pkg <- list(Direct = list(Remaining = leftDirect, Removed = removedDirect,
+                              NRemaining = length(leftDirect), NRemoved = length(removedDirect)),
+                Recursive = list("Remaining" = left, "Removed" = removed,
+                                 NRemaining = length(left), NRemoved = length(removed)),
+                IfRemoved = bestToRemove)
   }
   return(pkg)
 }
@@ -803,6 +848,7 @@ checkCircular <- function(aa) {
 
 #' @inheritParams Require
 getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require.verbose")) {
+  pkg <- masterMainToHead(pkg)
   pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
   needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
   neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
@@ -918,3 +964,14 @@ dealWithCache <- function(purge, checkAge = TRUE) {
 .grepTabCR <- "\n|\t"
 
 newPkgDepEnv <- function() new.env(parent = emptyenv())
+
+masterMainToHead <- function(gitRepo) {
+  masterOrMain <- "@(master|main) *"
+  areMasterOrMain <- grepl(masterOrMain, gitRepo)
+  if (any(areMasterOrMain)) {
+    masterOrMainNoSpace <- "@(master|main)"
+    gitRepo[areMasterOrMain] <-
+      gsub(paste0("(",masterOrMainNoSpace,")"), "@HEAD", gitRepo[areMasterOrMain])
+  }
+  return(gitRepo)
+}

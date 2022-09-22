@@ -135,8 +135,9 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   # Try github with version
   dir4 <- Require:::rpackageFolder(tempdir2("test4"))
   checkPath(dir4, create = TRUE)
+  # browser()
   mess <- utils::capture.output({
-    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
   testit::assert({isFALSE(inst)})
@@ -144,6 +145,12 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert({sum(grepl("could not be installed", mess)) == 1})
   unlink(dirname(dir3), recursive = TRUE)
 }
+
+# Code coverage -- run 2x so it won't reinstall
+
+out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
+out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
+
 
 
 # Code coverage
