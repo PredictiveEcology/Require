@@ -376,8 +376,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     whFails <- ifelse(is.na(pkgDT$correctVersionAvail), FALSE,
                       ifelse(pkgDT$needInstall == TRUE & pkgDT$correctVersionAvail == FALSE, TRUE, FALSE))
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
-    anyWhFails <- any(whFails)
-    if (length(anyWhFails) == 0) browser()
+    anyWhFails <- any(whFails, na.rm = TRUE)
     if (anyWhFails) {
       messageVerbose("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall %in% TRUE], collapse = ", "),
                               " could not be installed because no available version\033[39m",
