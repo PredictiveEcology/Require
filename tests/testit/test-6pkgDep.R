@@ -96,7 +96,14 @@ if (interactive()) {
   testit::assert({length(test) == 0})
 }
 
-pkg <- c("Require (==0.0.6)")
+repr <- pkgDep2("reproducible", recursive = TRUE)
+reprWRSQLIte <- extractPkgName(c(names(repr), unname(unlist(repr))))
+reprSimple <- pkgDepIfDepRemoved("reproducible", "RSQLite")
+repr[["RSQLite"]] <- NULL
+reprWORSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
+testit::assert(identical(sort(reprSimple$Recursive$Remaining), sort(reprWORSQLIte)))
+
+
 
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)

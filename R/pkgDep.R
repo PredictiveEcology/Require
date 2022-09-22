@@ -809,14 +809,14 @@ pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
     removedDirect <- intersect(p1, depsRemoved)
     allInRecursive <- unique(extractPkgName(unname(unlist(p2))))
     direct <- p1
-    browser()
     bestToRemove <- setdiff(direct, allInRecursive)
     bestToRemove <- p2[bestToRemove]
     bestToRemove <- Map(btr = bestToRemove, top = names(bestToRemove),
                         function(btr, top) {
                           p4 <- p2
                           p4[top] <- NULL
-                          c(top, setdiff(extractPkgName(btr), unique(unname(unlist(p4)))))
+                          setdiff(extractPkgName(unique(c(names(p4), unname(unlist(p4))))),
+                                  extractPkgName(c(top, btr)))
                           })
     leftDirect <- names(p3)
     pkg <- list(Direct = list(Remaining = leftDirect, Removed = removedDirect,
