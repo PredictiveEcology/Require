@@ -15,7 +15,8 @@ If not enough, \code{pad} will be used to pad.}
 \item{padR}{numeric. Desired number of digits on right side of decimal.
 If not enough, \code{pad} will be used to pad.}
 
-\item{pad}{character to use as padding (\code{nchar(pad) == 1} must be \code{TRUE}).}
+\item{pad}{character to use as padding (\code{nchar(pad) == 1} must be \code{TRUE}).
+Currently, can be only \code{"0"} or \code{" "} (i.e., space).}
 }
 \value{
 Character string representing the filename.

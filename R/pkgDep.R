@@ -995,6 +995,7 @@ masterMainToHead <- function(gitRepo) {
 #'              If not enough, \code{pad} will be used to pad.
 #'
 #' @param pad character to use as padding (\code{nchar(pad) == 1} must be \code{TRUE}).
+#'   Currently, can be only `"0"` or `" "` (i.e., space).
 #'
 #' @return Character string representing the filename.
 #'
@@ -1007,9 +1008,18 @@ masterMainToHead <- function(gitRepo) {
 #' paddedFloatToChar(1.25, padL = 3, padR = 5)
 #' paddedFloatToChar(1.25, padL = 3, padR = 1) # no rounding, so keeps 2 right of decimal
 paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = "0") {
-  xf <- x%%1
-  numDecimals <- nchar(gsub("(.*)(\\.)|([0]*$)", "", xf))
-  newPadR <- ifelse(xf %==% 0, 0, pmax(numDecimals, padR))
-  xFCEnd <- sprintf(paste0(paste0("%", pad), padL + newPadR + 1 * (newPadR > 0), ".", newPadR, "f"), x)
+  if (!pad %in% c("0", " ")) {
+    stop("pad must be either '0' or ' '")
+  }
+  xf <- x %% 1
+  numDecimals <- nchar(gsub("(.*)(\\.)|([0]*$)","",xf))
+
+  # this == used to be fpCompare -- but this function is more or less deprecated
+  newPadR <- ifelse(abs(xf - 0) < sqrt(.Machine$double.eps), 0, pmax(numDecimals, padR))
+  string <- paste0(paste0("%", pad), padL+newPadR+1*(newPadR > 0),".", newPadR, "f")
+  xFCEnd <- sprintf(string, x)
   return(xFCEnd)
 }
+
+eq <- function(x, y) (abs(x - y) > getOption("fpCompare.tolerance"))
+
