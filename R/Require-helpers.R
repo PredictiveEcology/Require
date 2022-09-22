@@ -2239,9 +2239,11 @@ getSHAfromGitHub <- function(acct, repo, br) {
     # possibly change order -- i.e., put user choice first
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
-  urlConn <- url(shaPath)
-  on.exit(close(urlConn))
-  sha <- try(suppressWarnings(readLines(urlConn)), silent = TRUE)
+  #urlConn <- url(shaPath)
+  #on.exit(close(urlConn))
+  tf <- tempfile();
+  downloadFileMasterMainAuth(shaPath, destfile = tf)
+  sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
   if (is(sha, "try-error")) return(sha)
   if (length(sha) > 1) {
     # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
