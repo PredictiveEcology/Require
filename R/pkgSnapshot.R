@@ -2,9 +2,12 @@
 #'
 #' This can be used later by `installVersions` to install or re-install the correct versions.
 #'
-#' @export
+#' @details
+#' A file is written with the package names and versions of all packages within `libPaths`.
+#' This can later be passed to `Require`.
+#'
 #' @param packageVersionFile A filename to save the packages and their currently
-#'        installed version numbers. Defaults to `".packageVersions.txt"`.
+#'        installed version numbers. Defaults to `"packageVersions.txt"`.
 #'        If this is specified to be `NULL`, the function will return the exact
 #'        `Require` call needed to install all the packages at their current
 #'        versions. This can be useful to add to a script to allow for reproducibility of
@@ -12,29 +15,26 @@
 #' @param libPaths The path to the local library where packages are installed.
 #'        Defaults to the `.libPaths()[1]`.
 #' @param exact Logical. If `TRUE`, the default, then for GitHub packages, it
-#'        will install the exact SHA, rather than the head of the account/repo@branch. For
+#'        will install the exact SHA, rather than the head of the `account/repo@branch`. For
 #'        CRAN packages, it will install the exact version. If `FALSE`, then GitHub
 #'        packages will identify their branch if that had been specified upon installation,
 #'        not a SHA. If the package had been installed with reference to a SHA, then it
 #'        will return the SHA as it does not know what branch it came from.
-#'        Similarly, CRAN packages will
-#'        report their version and specify with a `>=`, allowing a subsequent user
+#'        Similarly, CRAN packages will report their version and specify with a `>=`,
+#'        allowing a subsequent user
 #'        to install with a minimum version number, as opposed to an exact version number.
-#' @details
-#' A file is written with the package names and versions of all packages within `libPaths`.
-#' This can later be passed to `Require`.
 #'
+#' @export
 #' @inheritParams Require
 #' @importFrom utils write.table
 #' @importFrom data.table fwrite
 #' @examples
-#' checkPath(tempdir(), create = TRUE) # need to make sure the temp folder is there
-#' pkgSnapFile <- tempfile()
+#' tmpdir <- checkPath(file.path(tempdir(), "example_pkgSnapshot"), create = TRUE)
+#' pkgSnapFile <- tempfile(tmpdir = tmpdir)
 #' pkgSnapshot(pkgSnapFile, .libPaths()[1])
 #' data.table::fread(pkgSnapFile)
 #'
 #' \dontrun{
-#'
 #' # An example to move this file to a new computer
 #' library(Require)
 #' setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
@@ -51,7 +51,7 @@
 #' # library(googledrive)
 #' # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
 #' setLibPaths("~/RPackages") # start with an empty folder for new
-#'                            # library to minimize package version conflicts
+#' # library to minimize package version conflicts
 #' Require(packageVersionFile = fileName)
 #'
 #' # Passing NULL --> results in output to console with exact Require call to
@@ -65,9 +65,13 @@
 #'
 #' # Will show "minimum package version"
 #' pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
-#' }
-#' unlink(tempdir(), recursive = TRUE) # clean up
 #'
+#' }
+#'
+#' # cleanup
+#' unlink(tmpdir, recursive = TRUE)
+#'
+#' @rdname pkgSnapshot
 pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
                         purge = getOption("Require.purge", FALSE), exact = TRUE,
                         verbose = getOption("Require.verbose")) {
