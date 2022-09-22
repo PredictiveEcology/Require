@@ -286,8 +286,7 @@ Require <- function(packages, packageVersionFile,
 
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
-
-    packages <- dealWithViolations(packages)
+    packages <- dealWithViolations(packages) # i.e., packages that can't coexist
     packages <- packages[!packages$Package %in% .basePkgs]
     uniqueLibPaths <- unique(packages$LibPath)
     if (length(uniqueLibPaths) > 1) {
@@ -304,7 +303,7 @@ Require <- function(packages, packageVersionFile,
       messageVerbose(
         "packageVersionFile is covering more than one library; installing packages in reverse order; ",
         "also -- .libPaths() will be altered to be\n",
-        verbose = verbose, verboseLevel = 1
+        verbose = verbose, verboseLevel = 0
       )
       messageDF(dt, verbose = verbose, verboseLevel = 0)
 
@@ -358,7 +357,7 @@ Require <- function(packages, packageVersionFile,
       add = TRUE
     )
     messageVerbose("Using ", packageVersionFile, "; setting `require = FALSE`",
-                   verbose = verbose, verboseLevel = 1)
+                   verbose = verbose, verboseLevel = 0)
   }
 
   if (NROW(packages)) {
@@ -386,8 +385,6 @@ Require <- function(packages, packageVersionFile,
 
 
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-      messageVerbose("Identifying package dependencies...",
-                     verbose = verbose, verboseLevel = 1)
       packages <- getPkgDeps(packages, which = which, purge = purge)
     }
 

@@ -93,12 +93,25 @@ pkgDep <- function(packages, libPath = .libPaths(),
     needGet <- unlist(lapply(neededFull1, is.null))
 
     if (any(needGet)) {
+      Npackages <- NROW(packages[needGet])
+      NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packages[needGet])))
+      NpackagesCRAN <- Npackages - NpackagesGitHub
+      messageVerbose("Getting dependencies for ",
+                     if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
+                     if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
+                     verbose = verbose, verboseLevel = 0)
       neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
                                 purge = purge, repos = repos, verbose = verbose)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
+      NpackagesRecursive <- NROW(neededFull2)
+      messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies\n",
+                     verbose = verbose, verboseLevel = 0)
       if (NROW(neededFull2)) {
+        curDots <- 0
+        curWidth <- 0
+        width <- getOption("width")
 
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
@@ -111,6 +124,12 @@ pkgDep <- function(packages, libPath = .libPaths(),
               pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
               names(pkgsToLookup) <- pkgsToLookup
               pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
+                curDots <<- curDots + 1
+                if (curDots %% 20 == 0) {
+                  curWidth <<- curWidth + 1
+                  char <-if (curWidth %% width == 0) "\r" else "\b"
+                  messageVerbose(char, ".", verbose = verbose, verboseLevel = 0)
+                }
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
                                           purge = purge, repos = repos, verbose = verbose)))
               })
@@ -215,6 +234,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
   } else {
     neededFull1 <- list()
   }
+  messageVerbose("\b Done!", verbose = verbose, verboseLevel = 0)
   neededFull1
 }
 
