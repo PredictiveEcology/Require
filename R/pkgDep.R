@@ -762,7 +762,7 @@ whichToDILES <- function(which) {
 .basePkgs <- # unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
   c("base", "boot", "class", "cluster", "codetools", "compiler",
     "datasets", "foreign", "graphics", "grDevices", "grid", "KernSmooth",
-    "lattice", "MASS", # "Matrix",
+    "lattice", "MASS", "Matrix",
     "methods", "mgcv", "nlme", "nnet",
     "parallel", "rpart", "spatial", "splines", "stats", "stats4",
     "survival", "tcltk", "tools", "translations", "utils")

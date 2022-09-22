@@ -2421,6 +2421,7 @@ dealWithViolations <- function(pkgSnapshotObj) {
   dd <- dd[kk[, c("Package", "DepVersion", "violations")], on = "Package"]
   dd[violations == TRUE, Version := DepVersion]
   set(dd, NULL, c("DepVersion"), NULL)
+  dd <- unique(dd)
   dd[]
 }
 
