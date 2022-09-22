@@ -212,11 +212,11 @@ Require(packageVersionFile = "mySnapshot.txt")
 
 ### Using local package cache
 
-When installing on many machines on a network, having a local cache can speed up installations. Setting `options("Require.RPackageCache" = TRUE)` will turn on local cache. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later (turned off with `options("Require.RPackageCache" = NULL)`)
+When installing on many machines on a network, having a local cache can speed up installations. By default, this is activated, with a message upon package load as to where the cache folder is. Setting `options("Require.RPackageCache" = "somePath")` will move it to that location; or setting  `options("Require.RPackageCache" = NULL)` will turn caching off. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later.
 
 # Conclusion
 
-`Require` package offers a simple, lightweight, package focused around a single function that is resilient to being called multiple times (unlike `install.packages`).
+`Require` package offers a simple, lightweight, package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time that it can be left in your script even for ongoing work.
 The package has one dependencies (`data.table`) and so can be used to install packages without interfering with itself.
 
 ## Contributions
