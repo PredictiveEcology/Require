@@ -96,18 +96,20 @@ pkgDep <- function(packages, libPath = .libPaths(),
       Npackages <- NROW(packages[needGet])
       NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packages[needGet])))
       NpackagesCRAN <- Npackages - NpackagesGitHub
-      messageVerbose("Getting dependencies for ",
-                     if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
-                     if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
-                     verbose = verbose, verboseLevel = 0)
+      if (Npackages > 5)
+        messageVerbose("Getting dependencies for ",
+                       if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
+                       if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
+                       verbose = verbose, verboseLevel = 0)
       neededFull <- pkgDepInner(packages[needGet], libPath, which[[1]], keepVersionNumber,
                                 purge = purge, repos = repos, verbose = verbose)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
       NpackagesRecursive <- NROW(neededFull2)
-      messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies\n",
-                     verbose = verbose, verboseLevel = 0)
+      if (NpackagesRecursive > 30)
+        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies\n",
+                       verbose = verbose, verboseLevel = 0)
       if (NROW(neededFull2)) {
         curDots <- 0
         curWidth <- 0
@@ -234,7 +236,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
   } else {
     neededFull1 <- list()
   }
-  messageVerbose("\b Done!", verbose = verbose, verboseLevel = 0)
+  messageVerbose("\b Done!", verbose = verbose, verboseLevel = 1)
   neededFull1
 }
 
