@@ -135,55 +135,15 @@ pkgDep <- function(packages, libPath = .libPaths(),
               prevPkgs <- unlist(pkgsNew[prevIndices])
               dt <- data.table(Package = c(prevPkgs, curPkgs),
                                Current = c(rep(FALSE, length(prevPkgs)), rep(TRUE, length(curPkgs))))
-              # rdtOrig <- data.table::copy(dt)
-              # if (TRUE) {
-              #   dt[, PackageTrimmed := extractPkgName(Package)]
-              #   dt[, versionSpec := extractVersionNumber(Package)]
-              #   dt[, hasVers := !is.na(versionSpec)]
-              #   dt[hasVers == TRUE, inequality := extractInequality(Package)]
-              #   dt[hasVers == FALSE, versionSpec := NA]
-              #   dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
-              #   dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
-              #   dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
-              #   keepCols3 <- c("PackageTrimmed", "Package", "Current",
-              #                  "hasVers", "inequality", "atLeastOneWithVersionSpec", "versionSpec")
-              #
-              #   versionSpecNA <- is.na(dt$versionSpec)
-              #   dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
-              #   if (NROW(dt1)) {
-              #     ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
-              #     dt1 <- dt1[ord]
-              #     dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
-              #   }
-              #
-              #   dt2 <- dt[versionSpecNA]
-              #
-              #   dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
-              #   dt3 <- dt[!duplicated(dt$PackageTrimmed)]
-              #   dt4 <- dt3[Current == TRUE]
-              #   dt4Stable <- data.table::copy(dt4)
-              # #} else {
-              #dt <- data.table::copy(rdtOrig)
-
               set(dt, NULL, "PackageTrimmed", extractPkgName(dt$Package))
               set(dt, NULL, "versionSpec", extractVersionNumber(dt$Package))
               set(dt, NULL, "hasVers", !is.na(dt$versionSpec))
               hasV <- dt$hasVers == TRUE
-              # set(dt, which(hasV), "inequality", extractInequality(dt$Package[hasV]))
-              # set(dt, which(!hasV), "versionSpec", NA)
-              # browser(expr = any(duplicated(dt$PackageTrimmed)))
               dt[, `:=`(atLeastOneWithVersionSpec = any(hasVers),
                         Current = all(Current == TRUE)), by = "PackageTrimmed"]
               dt <- dt[!(dt$atLeastOneWithVersionSpec == TRUE & dt$hasVers == FALSE)] # remove cases where no version spec >1 case
 
               versionSpecNA <- is.na(dt$versionSpec)
-              #keepCols3 <- c("PackageTrimmed", "Package", "Current",
-              #               "hasVers", #"inequality",
-              #               "atLeastOneWithVersionSpec", "versionSpec")
-              # keepCols3 <- intersect(colnames(dt), keepCols3)
-
-              #if (length(setdiff(keepCols3, colnames(dt))))
-                # dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
               dt1 <- dt[versionSpecNA == FALSE]
 
               if (NROW(dt1)) {
@@ -497,28 +457,10 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
     } else {
       pkgDep(pkgs, recursive = TRUE, purge = purge)
     }
-    # testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
-    # if (!identical(sort(unlist(testVal)), sort(unlist(aa)))) {
-    #   cat(unlist(testVal), file = "c:/Eliot/tmp/test.txt")
-    #   cat("-----------------", file = "c:/Eliot/tmp/test.txt", append = TRUE)
-    #   cat(unlist(aa), file = "c:/Eliot/tmp/test.txt", append = TRUE)
-    #   stop("new recursive reverse dependencies is not correct")
-    # }
-
-
   }
   else
     aa <- deps
   bb <- list()
-
-  # firsts <- unlist(lapply(aa, function(ps) {
-  #   if (length(ps) == 0 || all(ps %in% .basePkgs))
-  #     "first"
-  #   else
-  #     "later"
-  # }))
-  # aaa <- split(aa, firsts)
-  # aa <- aaa$later
 
   aa <- checkCircular(aa)
   cc <- lapply(aa, function(x) character())
@@ -549,7 +491,6 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
           overlapPkgs <- pkgName[overlapFull]
           isCorrectOrder <- !any(overlap)
           if (isCorrectOrder) {
-            # bb[names(aa)[j]] <- list(overlapPkgs)
             cc[j] <- list(overlapPkgs)
             priorsBeingInstalled <- vapply(dd, function(x) if (is.numeric(x)) x == ddIndex else FALSE, logical(1))
             priorsBeingInstalled <- extractPkgName(names(priorsBeingInstalled)[priorsBeingInstalled])
@@ -558,10 +499,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
               ddIndex <- ddIndex + 1
               priorsAlreadyInstalled <- vapply(dd, function(x) if (is.numeric(x)) x < ddIndex else FALSE, logical(1))
               priorsAlreadyInstalled <- extractPkgName(names(priorsAlreadyInstalled)[priorsAlreadyInstalled])
-              # priorDeps <- union(priorDeps, overlapPkgs)
-            } #else {
-              #priorsBeingInstalled <- c(priorsBeingInstalled, pkgNameNames[j])
-            #}
+            }
             dd[j] <- list(ddIndex)
 
             newOrd <- c(newOrd, j)
@@ -581,7 +519,6 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
   } else {
     cc
   }
-  # out <- append(aaa$first, out)
   attr(out, "installSafeGroups") <- dd
 
   return(out)
@@ -881,7 +818,6 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
     needed <- c(needed[!needSomeRemotes], remotesAll)
   }
 
-  #if (FALSE) {
   # Check NAMESPACE too -- because imperfect DESCRIPTION files
   namespaceFile <- getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE
   if (is.null(namespaceFile)) {
@@ -895,7 +831,6 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
     depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
     depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
     pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), .basePkgs))
-    # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
     if (NROW(pkgDT2)) {
       pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
       setorderv(pkgDT2, "isGitPkg", order = -1)
@@ -1021,5 +956,4 @@ paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = 
   return(xFCEnd)
 }
 
-eq <- function(x, y) (abs(x - y) > getOption("fpCompare.tolerance"))
 

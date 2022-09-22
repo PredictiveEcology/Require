@@ -33,13 +33,6 @@ setMethod("normPath",
                 path[nas] <- NA_character_
               }
 
-              # path <- lapply(path, function(x) {
-              #   if (is.na(x)) {
-              #     NA_character_
-              #   } else {
-              #     normalizePath(x, winslash = "/", mustWork = FALSE)
-              #   }
-              # })
               # Eliot changed this Sept 24, 2019 because weird failures with getwd()
               # in non-interactive testing
               path <- unlist(path)
@@ -121,9 +114,6 @@ setMethod(
   "checkPath",
   signature(path = "character", create = "logical"),
   definition = function(path, create) {
-    # if (length(path) != 1) {
-    #   stop("path must be a character vector of length 1.")
-    # } else {
     if (isTRUE(all(is.na(path)))) {
       stop("Invalid path: cannot be NA.")
     } else {
@@ -149,8 +139,7 @@ setMethod(
 
       return(path)
     }
-    #}
-})
+  })
 
 #' @export
 #' @rdname checkPath
@@ -196,7 +185,7 @@ setMethod("checkPath",
 #' @importFrom utils capture.output
 #' @rdname messageVerbose
 messageDF <- function(df, round, verbose = getOption("Require.verbose"),
-                      verboseLevel = 1) {#}, colour = NULL) {
+                      verboseLevel = 1) {
   if (is.matrix(df))
     df <- as.data.frame(df)
   if (!is.data.table(df)) {
