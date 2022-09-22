@@ -116,7 +116,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
       if (NROW(neededFull2)) {
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
-          counter <<- 0
+          counter <- 0
           neededFull2 <- lapply(neededFull2, function(needed) {
             counter <<- counter + 1
             i <- 1
