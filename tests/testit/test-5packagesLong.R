@@ -8,7 +8,7 @@ if (interactive()) {
   library(Require)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.verbose" = FALSE,
+  outOpts <- options(#"Require.verbose" = 1,
                      "Require.persistentPkgEnv" = TRUE,
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
@@ -254,7 +254,6 @@ if (interactive()) {
                c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
-  options("Require.verbose" = FALSE)
 
   i <- 0
   pkg <- pkgs[[i + 1]] # redundant, but kept for interactive use
