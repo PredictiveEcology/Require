@@ -2201,9 +2201,10 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
   TRUE
 }
 
+.spatialPkgs <- c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units")
+
 sourcePkgs <- function(additional = NULL) {
-  c("cpp11", "igraph", "lwgeom", "qs", "raster", "Rcpp", "RcppParallel",
-    "rgdal", "rgeos", "sf", "sp", "stringfish", "terra", "units", additional)
+  sort(c(.spatialPkgs, c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"), additional))
 }
 
 srcPackageURLOnCRAN <- "https://cloud.r-project.org/"
