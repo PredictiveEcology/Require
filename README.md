@@ -28,7 +28,7 @@ Finally, how do we do all this for many concurrent projects without installing h
 
 `Require` also will call `require` (lower case `r`) on all the named packages, if the `require = TRUE`. 
 
-```{r example, eval=FALSE}
+```r
 # These lines
 if (!require("data.table")) {install.packages("data.table"); require("data.table")}
 if (!require("dplyr")) {install.packages("dplyr"); require("dplyr")}
@@ -46,7 +46,7 @@ The below descriptions are necessarily simple; please go see each package for mo
 
 `pak` focuses on fast installations of *current* versions of packages on CRAN-like packages and GitHub.com and other similar code-sharing pages. This works well if the objective is to keep current. It is fast.
 
-```{r example_pak, eval=FALSE}
+```r
 # These lines
 pak::pkg_install(c("data.table", "dplyr", "lme4"))
 
@@ -71,7 +71,7 @@ This approach takes a date as an input and will install all the packages a user 
 ### Features
 
 * reproducible workflows -- rerun-tolerant
-* fast
+* fast (see one example of timings below)
 * packages can be on CRAN, CRAN-alikes, or GitHub.com
 * uses `.libPaths()` like base-R
 * true *stand alone*, not the folder-based approach used in `.libPaths()`. For example, if a user e.g., on Windows Home has packages installed in the system folder because admin priviledges allows it, setting `standAlone = TRUE` will ignore those packages and only use the ones in `.libPaths()[1]`
@@ -126,7 +126,7 @@ remotes::install_github("PredictiveEcology/Require@development")
 
 `Require` is a wrapper around functions `utils::install packages` and one of the main function to load packages, `base::require`. Like `install.packages`, it is vectorized on package names.
 
-```{r Intro, eval=FALSE}
+```r
 if (!require("Require")) {install.packages("Require")} # sadly, Require can't install itself, so must comment this line
 Require::Require("data.table")
 
@@ -140,7 +140,7 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ## Timings
 
 `Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is much faster. Below, in cases where all packages are already installed, `Require` is 3x faster.
-```{r timings, eval=FALSE}
+```r
 # First time run, before cache exists
 > system.time(pak::pkg_install(c("data.table", "dplyr", "lme4")))
 ✔ Loading metadata database ... done
@@ -168,14 +168,14 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 
 Require can make install to and use from a single directory, so a project can be fully isolated (unlike `.libPaths()`, which will always see packages in the R_HOME directory)
 
-```{r standALone, eval=FALSE}
+```r
 .libPaths("projectPackages")
 Require("data.table (>=1.12.8)", standAlone = TRUE)
 ```
 
 Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
 
-```{r standALone, eval=FALSE}
+```r
 .libPaths("projectPackages")
 Require("fpCompare (>=0.2.0)")
 ```
@@ -184,7 +184,7 @@ Require("fpCompare (>=0.2.0)")
 In the same way as above, we can specify maximum or exact package versions. 
 `Require` will retrieve these on CRAN archives.
 
-```{r archiveVersions}
+```r
 Require("fpCompare (<=0.1.0)")
 ```
 
@@ -192,7 +192,7 @@ Require("fpCompare (<=0.1.0)")
 
 Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.
 
-```{r LongPackageList, eval=FALSE}
+```r
 Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
           "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"), 
         standAlone = TRUE)
@@ -202,7 +202,7 @@ Require(c("data.table (==1.12.8)", "dplyr", "reproducible",
 
 When a system is set up with the correct packages and versions, we can take a snapshot and give that file to another person or machine:
 
-```{r packageSnaptop}
+```r
 library(Require)
 pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project specific ones
 
@@ -216,7 +216,7 @@ When installing on many machines on a network, having a local cache can speed up
 
 # Conclusion
 
-`Require` package offers a simple, lightweight, package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time that it can be left in your script even for ongoing work.
+`Require` package offers a simple, lightweight, package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work.
 The package has one dependencies (`data.table`) and so can be used to install packages without interfering with itself.
 
 ## Contributions

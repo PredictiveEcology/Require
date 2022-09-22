@@ -1,13 +1,13 @@
 ## Updated release
 
-This update deals with several bugfixes, a removed package dependency (remotes), and changes to tests.
+This update deals with several enhancements (see NEWS.md), a removed package dependency (remotes), minor bugfixes, and changes to tests.
 
 ## Test environments
 
 ### GitHub Actions
 - os: macOS-latest,   r: 'release'
 - os: windows-latest, r: 'release'
-- os: windows-latest, r: '4.0'
+- os: windows-latest, r: '4.2'
 - os: ubuntu-20.04,   r: 'devel', 
 - os: ubuntu-20.04,   r: 'release'
 - os: ubuntu-20.04,   r: 'oldrel'
