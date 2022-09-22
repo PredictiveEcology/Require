@@ -2105,10 +2105,11 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     # cat(out1, file = "/home/emcintir/tmp.R")
     if (any(unlist(out) == 1L)) stop("Error 456; contact developer")
     theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
+    packageTarName <- dir(pattern = "tar.gz")
     packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
     #if (interactive()) {
-    versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
-    packageTarName <- paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
+    # versionOfPkg <- DESCRIPTIONFileVersionV(theDESCRIPTIONfile)
+    # packageTarName <- paste0(gr$repo, "_", versionOfPkg, ".tar.gz")
     # } else {
     #   buildingLine <- grep("building", out1, value = TRUE)
     #   packageTarName <- strsplit(buildingLine, "'")[[1]][2]
