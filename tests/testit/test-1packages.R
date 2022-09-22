@@ -147,9 +147,9 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 }
 
 # Code coverage -- run 2x so it won't reinstall
-
-out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
-out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
+# This line fails on CRAN for some reason; not on GA x9, E x3, A x1, WinBuilder x3 etc.
+try(out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1), silent = TRUE)
+try(out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1), silent = TRUE)
 
 
 
