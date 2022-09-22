@@ -760,25 +760,48 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #'   from the `pkg` immediate dependencies
 #' @export
 #' @return
-#' A character vector of the packages that would removed from recursive dependencies
-#' of `pkg`
-#' if `depsRemoved` were removed from first level dependencies
+#' A list with 3 named lists `Direct`, `Recursive` and `IfRemoved`.
+#' `Direct` will show the top level direct dependencies, either `Remaining` or `Removed`.
+#' `Recursive` will show the full recursive dependencies, either `Remaining` or `Removed`.
+#' `IfRemoved` returns all package dependencies that are removed for each top level dependency.
+#' If a top level dependency is not listed in this final list, then it means that it is also a
+#' recursive dependency elsewhere, so its removal has no effect.
+#' @inheritParams Require
 #' @examples
 #' \dontrun{
 #' pkgDepIfDepRemoved("Require", "remotes")
 #' }
-pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character()) {
+pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
+                               verbose = getOption()) {
   if (length(pkg)) {
     p2 <- pkgDep2(pkg, recursive = TRUE)
-    p1 <- sort(extractPkgName(pkgDep(pkg, recursive = TRUE)[[1]]))
-    p2Clean <- sort(
-      unique(
-        extractPkgName(
-          setdiff(
-            c(extractPkgName(names(p2)),
-              unlist(unname(p2[!extractPkgName(names(p2)) %in% depsRemoved]))),
-            depsRemoved))))
-    pkg <- paste(paste(setdiff(p1, p2Clean), collapse = ", "))
+    names(p2) <- extractPkgName(names(p2))
+    p1 <- names(p2) # just the immediate
+    p3 <- p2
+    p2All <- unique(extractPkgName(c(names(p2), unname(unlist(p2)))))
+    p3[depsRemoved] <- NULL
+    p3All <- unique(extractPkgName(c(names(p3), unname(unlist(p3)))))
+    removed <- sort(setdiff(p2All, p3All))
+    left <- sort(p3All)
+
+    removedDirect <- intersect(p1, depsRemoved)
+    allInRecursive <- unique(extractPkgName(unname(unlist(p2))))
+    direct <- p1
+    browser()
+    bestToRemove <- setdiff(direct, allInRecursive)
+    bestToRemove <- p2[bestToRemove]
+    bestToRemove <- Map(btr = bestToRemove, top = names(bestToRemove),
+                        function(btr, top) {
+                          p4 <- p2
+                          p4[top] <- NULL
+                          c(top, setdiff(extractPkgName(btr), unique(unname(unlist(p4)))))
+                          })
+    leftDirect <- names(p3)
+    pkg <- list(Direct = list(Remaining = leftDirect, Removed = removedDirect,
+                              NRemaining = length(leftDirect), NRemoved = length(removedDirect)),
+                Recursive = list("Remaining" = left, "Removed" = removed,
+                                 NRemaining = length(left), NRemoved = length(removed)),
+                IfRemoved = bestToRemove)
   }
   return(pkg)
 }
