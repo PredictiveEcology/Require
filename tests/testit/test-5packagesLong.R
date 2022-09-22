@@ -111,7 +111,7 @@ if (interactive()) {
     out <- try(testit::assert({
       all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)
     }))
-    if (is(out, "try-error")) browser()
+    if (is(out, "try-error")) stop("Error 855; please contact developer")
     couldHaveLoaded <- gsub(".*\\<mumin\\>.*", "MuMIn", unique(pkgs))
     # couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
 

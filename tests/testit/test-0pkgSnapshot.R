@@ -115,7 +115,7 @@ message("\033[32m --------------------------------- Starting ", thisFilename, " 
     if (Require:::isWindows())
       anyMissing <- anyMissing[!Package %in% "littler"]
     # here[!there, on = "Package"]
-    if (NROW(anyMissing) != 0) browser()
+    if (NROW(anyMissing) != 0) stop("Error 832; please contact developer")
     testit::assert(NROW(anyMissing) == 0)
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
