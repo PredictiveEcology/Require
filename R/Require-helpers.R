@@ -2058,7 +2058,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
 
   if (!useRemotes) {
     # for (i in 1:2) {
-    out <- downloadRepo(gitRepo, overwrite = TRUE, modulePath = tmpPath, verbose = !quiet)
+    out <- downloadRepo(gitRepo, overwrite = TRUE, destDir = tmpPath, verbose = !quiet)
     #   if (is(out, "try-error")) {
     #     if (gr$br %in% masterMain) {
     #       # possibly change order -- i.e., put user choice first
@@ -2176,12 +2176,12 @@ installGitHubPackage <- installGithubPackage
 
 #' @importFrom utils unzip
 #' @inheritParams Require
-downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
+downloadRepo <- function(gitRepo, overwrite = FALSE, destDir = ".",
                          verbose = getOption("Require.verbose")) {
-  if (!dir.exists(modulePath)) dir.create(modulePath, recursive = TRUE)
+  dir.create(destDir, recursive = TRUE, showWarnings = FALSE)
   gr <- splitGitRepo(gitRepo)
   ar <- file.path(gr$acct, gr$repo)
-  repoFull <- file.path(modulePath, gr$repo)
+  repoFull <- file.path(destDir, gr$repo)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   masterMain <- c("main", "master")
   br <- if (any(gr$br %in% masterMain)) {
@@ -2191,23 +2191,14 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
     gr$br
   }
 
-  # for (branch in br) {
   url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
   out <- suppressWarnings(
     try(downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE))
-  # if (!is(out, "try-error")) {
-  #   break
-  # } else {
-  #   if (br %in% masterMain)
-  #     messageVerbose(br, " branch does not exist; trying ", setdiff(masterMain, br),
-  #                    verbose = 0)
-  # }
-  # }
   if (is(out, "try-error")){
     return(out)
   }
 
-  out <- lapply(zipFileName, function(zfn) unzip(zfn, exdir = modulePath)) # unzip it)
+  out <- lapply(zipFileName, function(zfn) unzip(zfn, exdir = destDir)) # unzip it)
 
   de <- dir.exists(repoFull)
   if (any(de))
@@ -2217,7 +2208,7 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, modulePath = ".",
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
   badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
-  if (is(badDirname, "try-error")) browser()
+  if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
   Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
     file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix
@@ -2511,10 +2502,6 @@ getOptionRPackageCache <- function() {
 
 downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
-  #gr <- splitGitRepo(gitRepo)
-  #ar <- file.path(gr$acct, gr$repo)
-  #repoFull <- file.path(modulePath, gr$repo)
-  #zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   masterMain <- c("main", "master")
   masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
   masterGrep <- paste0("/", "master", "(/|\\.)")
