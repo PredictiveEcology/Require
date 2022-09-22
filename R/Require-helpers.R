@@ -2378,17 +2378,21 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   urls <- split(urls, hasMasterMain)
   outNotMasterMain <- outMasterMain <- character()
   if (!is.null(urls[["FALSE"]]))
-    for (URL in urls["FALSE"]) # vectorized;
-      outNotMasterMain <- suppressWarnings(
-        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+    outNotMasterMain <- Map(URL = urls[["FALSE"]], df = destfile, function(URL, df)
+      try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE))
+    # for (URL in urls["FALSE"]) # vectorized;
+    #   outNotMasterMain <- suppressWarnings(
+    #     try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
   if (!is.null(urls[["TRUE"]]))
-    for (URL in urls[["TRUE"]]) {
-      outMasterMain <- suppressWarnings(
-        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
-      if (!is(outMasterMain, "try-error")) {
-        break
-      }
-    }
+    outMasterMain <- Map(URL = urls[["TRUE"]], df = destfile, function(URL, df)
+      try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE))
+    # for (URL in urls[["TRUE"]]) {
+    #   outMasterMain <- suppressWarnings(
+    #     try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
+    #   if (!is(outMasterMain, "try-error")) {
+    #     break
+    #   }
+    # }
   c(outNotMasterMain, outMasterMain)
 
 }
