@@ -9,7 +9,8 @@ pkgSnapshot(
   libPaths,
   standAlone = FALSE,
   purge = getOption("Require.purge", FALSE),
-  exact = TRUE
+  exact = TRUE,
+  verbose = getOption("Require.verbose")
 )
 }
 \arguments{
@@ -24,7 +25,8 @@ a script.}
 Defaults to the \code{.libPaths()[1]}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only.
+the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
+to e.g., the \code{checkpoint} package.
 If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
 resulting in shared packages, i.e., it will include the user's default package folder(s).
 This can be create dramatically faster installs if the user has a substantial number of
@@ -39,7 +41,7 @@ However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
+defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
 
@@ -52,6 +54,10 @@ will return the SHA as it does not know what branch it came from.
 Similarly, CRAN packages will
 report their version and specify with a \code{>=}, allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 }
 \description{
 This can be used later by \code{installVersions} to install or re-install the correct versions.

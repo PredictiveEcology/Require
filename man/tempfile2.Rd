@@ -24,5 +24,5 @@ Defaults to \code{.RequireTempPath()}}
 Make a temporary subfile in a temporary (sub-)directory
 }
 \seealso{
-\code{\link{tempdir2}}
+\code{\link[=tempdir2]{tempdir2()}}
 }

@@ -1,17 +1,22 @@
 Package: Require
 Type: Package
 Title: Installing and Loading R Packages for Reproducible Workflows
-Description: A single key function, 'Require' that wraps 'install.packages',
-    'remotes::install_github', 'versions::install.versions', and 'base::require'
-    that allows for reproducible workflows. As with other functions in a
-    reproducible workflow, this package emphasizes functions that return the 
-    same result whether it is the first or subsequent times running the function.
-    Maturing.
+Description: A single key function, 'Require' that makes rerun-tolerant
+    versions of 'install.packages' and `require` for CRAN packages, packages
+    no longer on CRAN (i.e., archived), specific versions of packages, 
+    and GitHub packages. This approach is developed to create reproducible 
+    workflows that are flexible and fast enough to use while in development stages,
+    while able to build snapshots once a stable package collection is found. 
+    As with other functions in a reproducible workflow, this package 
+    emphasizes functions that return the same result whether it is 
+    the first or subsequent times running the function, with subsequent times being
+    sufficiently fast that they can be run every time without undue waiting burden on 
+    the user or developer.
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2022-04-12
-Version: 0.1.0
+Date: 2022-09-21
+Version: 0.1.2
 Authors@R: c(
     person("Eliot J B", "McIntire", email = "eliot.mcintire@canada.ca",
     role = c("aut", "cre"), comment = c(ORCID = "0000-0002-6914-8316")),
@@ -19,14 +24,15 @@ Authors@R: c(
     role = "cph")
     )
 Depends:
-    R (>= 3.6)
+    R (>= 4.0)
 Imports:
     data.table (>= 1.10.4),
     methods,
     utils
 Suggests:
-    remotes,
     covr,
+    remotes,
+    pak,
     testit
 Encoding: UTF-8
 Language: en-CA
@@ -34,4 +40,4 @@ License: GPL-3
 BugReports: https://github.com/PredictiveEcology/Require/issues
 ByteCompile: yes
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.1

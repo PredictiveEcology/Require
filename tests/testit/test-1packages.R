@@ -1,17 +1,19 @@
-message("\033[34m --------------------------------- Starting test-1packages.R \033[39m")
+thisFilename <- "test-1packages.R"
+startTime <- Sys.time()
+message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.verbose" = TRUE,
+                   "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "emcintir2") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                      "Require.RPackageCache" = "~/._RPackageCache/")
-} else {
+if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+} else {
+  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
 #isInteractiveOrig <- Require:::isInteractive
 #isInteractive <- function() TRUE
@@ -58,8 +60,7 @@ library(testit)
 
 dir1 <- Require:::rpackageFolder(tempdir2("test1"))
 checkPath(dir1, create = TRUE)
-options("Require.verbose" = TRUE)
-out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1)
+out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1, verbose = 2)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
@@ -67,7 +68,7 @@ isInstalled <- tryCatch({
   if (length(out)) TRUE else FALSE
 }, error = function(x) FALSE)
 testit::assert({isTRUE(isInstalled)})
-out <- detachAll(c("Require", "fpCompare", "sdfd"))
+out <- detachAll(c("Require", "fpCompare", "sdfd"), dontTry = "testit")
 out <- out[names(out) != "testit"]
 expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
 keep <- intersect(names(expectedPkgs), names(out))
@@ -134,8 +135,9 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   # Try github with version
   dir4 <- Require:::rpackageFolder(tempdir2("test4"))
   checkPath(dir4, create = TRUE)
+  # browser()
   mess <- utils::capture.output({
-    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
   testit::assert({isFALSE(inst)})
@@ -144,11 +146,22 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   unlink(dirname(dir3), recursive = TRUE)
 }
 
+# Code coverage -- run 2x so it won't reinstall
+
+out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
+out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1)
+
+
+
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
 names(pkg) <- c("MuMIn", "")
 out <- Require(pkg, install = FALSE, require = FALSE)
 testit::assert({isFALSE(all(out))})
+
+# Try a package taken off CRAN
+out <- Require("ggplot")
+testit::assert(isTRUE(out)) # it got installed, even though off CRAN
 
 out <- getPkgVersions("Require")
 testit::assert({is.data.table(out)})
@@ -181,14 +194,18 @@ testit::assert({length(out) == 0})
 #                                 install = "force"),
 #                  error = function(x) x)
 if (interactive()) {
-  warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
-                   warning = function(x) x)
-  warn <- tryCatch(out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force"),
-                   warning = function(x) x)
+  warn <- tryCatch({
+    out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
+  }, warning = function(x) x)
+  warn <- tryCatch({
+    out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
+  }, warning = function(x) x)
 }
 
 options(opt)
 options(outOpts)
-options(outOpts2)
+if (exists("outOpts2")) options(outOpts2)
 if (!identical(origLibPathsAllTests, .libPaths()))
   Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+endTime <- Sys.time()
+message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

@@ -1,4 +1,43 @@
-Known issues: https://github.com/PredictiveEcology/Require/issues
+Known issues: <https://github.com/PredictiveEcology/Require/issues>
+
+version 0.1.2
+==============
+## dependencies
+* drop support for R 3.6 (R >= 4.0 are supported)
+
+## enhancements
+* Now can use `GITHUB_PAT` environment variable, if set, when it accesses GitHub.com repositories (files or entire repository)
+* Attempt to capture and correct cases where GitHub.com branches are incorrectly labelled `master` instead of `main` (or vice versa)
+* much quieter messaging by default (can increase with verbose = 1)
+* `require` argument in `Require` can now be a character vector indicating which packages should be attached, not just installed. Note: by default, all packages that are passed to `packages` are attached if `require = TRUE`
+
+* much faster installations:
+
+  * When source packages, they are grouped and installed together using the internal parallelism of install.packages (setting Ncpus option to 4)
+  * when binary, passes vectors to install.packages so much faster.
+  * all packages are installed in install-safe groups for speed
+
+* can use pak package under the hood when options("Require.usepak" = TRUE), though there are still many cases that pak cannot deal with. Users should try and determine if this option delivers as expected. pak installs tend to be slightly faster if they work correctly.
+* binary package caching is turned in by default in a user-specific standard directory, making repeat installations (on same system, or shared drive systems) much faster.
+* MRAN installs for Windows are now much more robust under many conditions.
+* archived packages (ie no longer on CRAN) will now be found and installed (latest available version)
+* more robust dependency identification even for archived or older packages or package versions (including their dependencies)
+* MRAN binaries will be used in MacOSX.
+* improved installation of older packages (e.g. when dependencies are removed from CRAN, or source versions can't be easily compiled)
+* several other minor improvements in package dependency resolution and installation.
+
+## bugfixes
+* fix issue with 'dot directories' in `normPath()`.
+* identified possible bug with `install.packages` when `options(Ncpus = XX)` where XX is a number > 1. Some packages are skipped. `Require` now captures this and attempts to install the ones that did not get correctly installed.
+* multiple fixes for certain edge cases.
+
+version 0.1.1
+==============
+## enhancements
+* can now use `pak` if `options("Require.usepak" = TRUE)` and there are no version specifications (i.e., if a user specifies e.g., `Require("reproducible (<= 1.2.9))`, then the non-`pak` approach will be used)
+
+## bugfixes
+* fixed an error installing certain GitHub packages
 
 version 0.1.0
 ==============

@@ -47,7 +47,8 @@ inside \code{installGitHubPackage}.}
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only.
+the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
+to e.g., the \code{checkpoint} package.
 If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
 resulting in shared packages, i.e., it will include the user's default package folder(s).
 This can be create dramatically faster installs if the user has a substantial number of
@@ -60,9 +61,11 @@ mimicking a call to e.g., \code{install.packages}.
 If \code{TRUE}, the default, then this function will try to install any missing
 packages or dependencies.}
 
-\item{require}{Logical. If \code{TRUE}, the default, then the function will
+\item{require}{Logical or character string. If \code{TRUE}, the default, then the function will
 attempt to call \code{require} on all requested \code{packages}, possibly
-after they are installed.}
+after they are installed. If a character string, then it will only call \code{require}
+on those specific packages (i.e., it will install the ones listed in \code{packages}, but
+load the packages listed in \code{require})}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
@@ -75,12 +78,13 @@ However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils]{available.packages}}).
+defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
 
-\item{verbose}{Numeric. If \code{1} (less) or \code{2} (more), there will be
-a \code{data.table} with many details attached to the output.}
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{...}{Passed to \code{install.packages}.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
@@ -88,7 +92,7 @@ used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 }
 \description{
-A single key function, 'Require' that wraps 'install.packages', 'remotes::install_github', 'versions::install.versions', and 'base::require' that allows for reproducible workflows. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function. Maturing.
+A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and `require` for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and GitHub packages. This approach is developed to create reproducible workflows that are flexible enough to use while in development stages. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the developer.
 
 This is an "all in one" function that will run \code{install.packages} for CRAN and
 GitHub \url{https://github.com/} packages and will install
@@ -139,7 +143,7 @@ If a \code{libPaths} is used, it must be used in both functions.
 This function works best if all required packages are called within one
 \code{Require} call, as all dependencies can be identified together, and all
 package versions will be addressed (if there are no conflicts),
-allowing a call to \code{\link{pkgSnapshot}} to take a snapshot or "record" of
+allowing a call to \code{\link[=pkgSnapshot]{pkgSnapshot()}} to take a snapshot or "record" of
 the current collection of packages and versions.
 }
 
@@ -147,10 +151,10 @@ the current collection of packages and versions.
 
 When installing new packages, \code{Require} will put all source and binary files
 in an R-version specific subfolder of
-\code{getOption("Require.RPackageCache")} whose default is \code{NULL}, meaning
-\emph{do not cache packages locally},
+\code{getOption("Require.RPackageCache")} whose default is \code{RPackageCache()}, meaning
+\emph{cache packages locally in a project-independent location},
 and will reuse them if needed. To turn
-on this feature, set \code{options("Require.RPackageCache" = "someExistingFolder")}.
+off this feature, set \code{options("Require.RPackageCache" = FALSE)}.
 }
 
 \examples{
@@ -255,7 +259,7 @@ Require::Require("SpaDES") # not necessary to specify standAlone here because .l
 ############################################################################
 # Installing on many machines that are connected by a shared drive
 ############################################################################
-options("Require.RPackageCache" = "~/binaryRPackages") # create binaries on the fly.
+options("Require.RPackageCache" = TRUE) # will binaries on the fly.
 # Put thes in a shared location.
 # May need to install Require in main user library before setting library paths for project
 if (!require("Require")) install.packages("Require")

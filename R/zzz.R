@@ -10,23 +10,24 @@ utils::globalVariables(c(
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
 
-  if (!is.null(getOption("Require.RPackageCache"))) {
-    RequirePkgCacheDir()
-  }
-
   if (getOption("Require.persistentPkgEnv")) {
     if (file.exists(.thePersistentFile())) {
       pkgEnvLast <- readRDS(.thePersistentFile())
       list2env(pkgEnvLast, .pkgEnv)
     }
   }
+
   invisible()
 }
 
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
-    mess <- c("Require version: ", as.character(utils::packageVersion("Require")), ". ")
-    mess <- c(mess, "See ?RequireOptions for additional settings.")
+    mess <- c(
+      "Require version: ", as.character(utils::packageVersion("Require")), ".\n",
+      "  Using cache directory: ", RequireCacheDir(), ".\n",
+      "  See ?RequireOptions for additional settings."
+    )
+
     packageStartupMessage(mess)
   }
 }

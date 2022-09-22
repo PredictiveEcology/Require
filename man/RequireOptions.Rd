@@ -2,16 +2,25 @@
 % Please edit documentation in R/RequireOptions.R
 \name{RequireOptions}
 \alias{RequireOptions}
+\alias{getRequireOptions}
 \title{\code{Require} options}
 \usage{
 RequireOptions()
+
+getRequireOptions()
 }
 \description{
 These provide top-level, powerful settings for a comprehensive
-reproducible workflow. To see defaults, run \code{RequireOptions()}.
+reproducible workflow.
 See Details below.
 }
 \details{
+\describe{
+\item{\code{RequireOptions()}}{prints the default values of package options set at startup,
+which may have been changed (e.g., by the user) during the current session.}
+\item{\code{getRequireOptions()}}{prints the current values of package options.}
+}
+
 Below are options that can be set with \code{options("Require.xxx" = newValue)},
 where \code{xxx} is one of the values below, and \code{newValue} is a new value to
 give the option. Sometimes these options can be placed in the user's \code{.Rprofile}
@@ -20,14 +29,23 @@ file so they persist between sessions.
 The following options are likely of interest to most users:
 \describe{
 \item{\code{RPackageCache}}{
-Default: \code{NULL}. If a folder is provided, then binary and source packages will
-be cached here. Subsequent downloads of same package will use local copy. Default
-is to have packages not be cached locally so each install of the same version will
+Default: \code{getOptionRPackageCache()}, which must be either a path or a logical.
+This can be set using an environment
+variable e.g. \code{Sys.setenv(Require.RPackageCache = "somePath")}, or
+\code{Sys.setenv(Require.RPackageCache = "TRUE")}; if that is not
+set, then an either a path or logical option (\code{options(Require.RPackageCache = "somePath")}
+or \code{options(Require.RPackageCache = TRUE)}). If \code{TRUE}, the default
+folder location \code{RequirePkgCacheDir()} will be used.
+If this is \code{TRUE} or a path is provided,
+then binary and source packages will be cached here. Subsequent downloads
+of same package will use local copy.
+Default is to have packages not be cached locally so each install of the same version will
 be from the original source, e.g., CRAN, GitHub.
 }
 \item{\code{buildBinaries}}{
 Default: \code{TRUE}. Only relevant on *nix systems and if
-\code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE}, then
+\code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE} or a
+valid path, then
 \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the
 package binary will be built and then saved in the
 \code{getOption("Require.RPackageCache")}. This means that subsequent installs
@@ -59,6 +77,9 @@ This can be complicated, resulting in broken states that can only be recovered
 by restarting R. Default is to attempt to do this. \code{FALSE} will not attempt
 to do this. User must deal with inability to install packages due to package already
 being loaded.
+}
+\item{\code{usePak}}{
+Default: \code{FALSE}. Should \code{pak} be used to resolve package dependencies and installation.
 }
 \item{\code{verbose}}{
 Default: \code{0}. During a \code{Require}, there is a lot of information collected

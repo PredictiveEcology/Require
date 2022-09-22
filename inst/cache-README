@@ -1,0 +1,6 @@
+This directory was created by the R package 'Require',
+available on CRAN [https://cran.r-project.org/package=Require].
+It stores cache files used to download and install R packages.
+It is safe to delete all or part of these files at any time.
+By definition, if cached packages are missing, they are
+redownloaded etc. as needed.

@@ -1,0 +1,12 @@
+## ~/.R/Makevars
+##
+CXX_STD = CXX14
+
+VER=
+CCACHE=ccache
+CC=$(CCACHE) gcc$(VER) -std=gnu99
+CXX=$(CCACHE) g++$(VER)
+C11=$(CCACHE) g++$(VER)
+C14=$(CCACHE) g++$(VER)
+FC=$(CCACHE) gfortran$(VER)
+F77=$(CCACHE) gfortran$(VER)

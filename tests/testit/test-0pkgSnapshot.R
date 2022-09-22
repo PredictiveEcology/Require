@@ -1,14 +1,20 @@
-message("\033[34m --------------------------------- Starting test-0pkgSnapshot.R \033[39m")
+thisFilename <- "test-0pkgSnapshot.R"
+startTimeAll <- startTime <- Sys.time()
+tdOuter <- tempdir2("tests")
+try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
+message("\033[32m --------------------------------- Starting ", thisFilename, "  at: ",
+        format(startTime),"---------------------------\033[39m")
 
-if (interactive()) {
+#if (interactive()) {
   library(Require)
   srch <- search()
   anyNamespaces <- srch[!gsub("package:", "", srch) %in%
-                          c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads")]
+                          c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
   if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
   library(testit)
   origLibPathsAllTests <- .libPaths()
-  pkgVF <- "packageVersions.txt"
+  tmpdir <- checkPath(tempdir2("testingA"), create = TRUE)
+  pkgVF <- file.path(tmpdir, "packageVersions.txt")
   aa <- pkgSnapshot(packageVersionFile = pkgVF)
   bb <- list()
   for (lp in unique(aa$LibPath)) {
@@ -16,7 +22,7 @@ if (interactive()) {
     if (!all(pack %in% Require:::.basePkgs)) {
       deps <- pkgDep(pack, recursive = TRUE)
       haveNoDeps <- unlist(lapply(deps, length)) == 2
-      sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 10))
+      sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 3))
       pkgs <- c(names(deps[haveNoDeps][sam]), Require::extractPkgName(unname(unlist(deps[haveNoDeps][sam]))))
       bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
     }
@@ -24,29 +30,33 @@ if (interactive()) {
   bb <- data.table::rbindlist(bb)
   data.table::fwrite(x = bb, file = pkgVF)
 
+  outOpts <- options(
+    install.packages.check.source = "never",
+    install.packages.compile.from.source = "never",
+    Require.persistentPkgEnv = TRUE,
+    Require.unloadNamespaces = TRUE,
+    Require.verbose = FALSE
+  )
+  if (Sys.info()["user"] == "achubaty") {
+    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  } else {
+    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+  }
 
-  if (file.exists("packageVersions.txt")) {
+  if (file.exists(pkgVF)) {
     fileNames <- list()
     baseFN <- "packageVersions"
     tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
     fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
-    fileNames[["fn0"]][["txt"]] <- paste0(baseFN, ".txt")
+    fileNames[["fn0"]][["txt"]] <- file.path(tmpdir, paste0(baseFN, ".txt"))
+
     try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
     Sys.setenv("R_REMOTES_UPGRADE" = "never")
     Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-    outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                       "install.packages.check.source" = "never",
-                       "install.packages.compile.from.source" = "never",
-                       "Require.unloadNamespaces" = TRUE)
-    if (Sys.info()["user"] == "emcintir2") {
-      outOpts2 <- options("Require.Home" = "~/GitHub/Require",
-                          "Require.RPackageCache" = "~/._RPackageCache/")
-    } else {
-      outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-    }
+
     origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
 
-    theDir <- Require:::rpackageFolder(getOption("Require.RPackageCache"))
+    theDir <- Require:::rpackageFolder(getOptionRPackageCache())
     if (!is.null(theDir)) {
       localBins <- dir(theDir, pattern = "data.table|remotes")
       localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
@@ -65,42 +75,37 @@ if (interactive()) {
       if (any(grepl("tar.gz", localBinsFull))) {
         localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
       }
-      # THere might be more than one version
+      # There might be more than one version
       dts <- grep("data.table", localBinsFull, value = TRUE)[1]
       rems <- grep("remotes", localBinsFull, value = TRUE)[1]
       localBinsFull <- na.omit(c(dts, rems))
     } else {
       localBinsFull <- NULL
     }
-    # THere might be more than one version
+    ## There might be more than one version
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
     localBinsFull <- dts
-    #localBinsFull <- c(dts, rems)
     if (length(localBinsFull) == 2) {
       if (Require:::isWindows())
-        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), type = 'binary', lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+        system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2] ,
+                      "'), quiet = TRUE, type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
       else
-        system(paste0("Rscript -e \"install.packages(c('",localBinsFull[1],"', '",localBinsFull[2],"'), lib ='",.libPaths()[1],"', repos = NULL)\""), wait = TRUE)
+        system(paste0("Rscript -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+                      "'), quiet = TRUE, lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
     } else {
       system(paste0("Rscript -e \"install.packages(c('data.table'), lib ='",
-                    .libPaths()[1], "', repos = '", getOption('repos')[["CRAN"]],"')\""), wait = TRUE)
+                    .libPaths()[1], "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
     }
 
-    # oldDir <- getwd()
     if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
     Require:::installRequire(getOption("Require.Home"))
-    # on.exit(setwd(oldDir))
-    # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
-    #setwd(oldDir)
 
     st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
-    print(st)
 
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")
-    here <- pkgSnapshot("packageVersionsEliot.txt", libPaths = .libPaths())
+    here <- pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths())
     anyMissing <- there[!here, on = c("Package", "Version")]
     anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
     anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
@@ -114,6 +119,14 @@ if (interactive()) {
   }
   if (!identical(origLibPathsAllTests, .libPaths()))
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
+
+  pkgGrep <- paste0(unlist(lapply(strsplit(names(out), " "), `[`, 1)), ".*[.]tar[.]gz", collapse = "|")
+  pkgs2rm <- dir(path = getOption("Require.Home"), pattern = pkgGrep, full.names = TRUE)
+  unlink(pkgs2rm)
+
   options(outOpts)
-  options(outOpts2)
-}
+  if (exists("outOpts2")) options(outOpts2)
+#}
+
+endTime <- Sys.time()
+message("\033[32m ----------------------------------", thisFilename, ": ", format(endTime - startTime), " \033[39m")
