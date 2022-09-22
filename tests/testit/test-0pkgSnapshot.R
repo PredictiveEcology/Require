@@ -9,7 +9,7 @@ library(Require)
 srch <- search()
 anyNamespaces <- srch[!gsub("package:", "", srch) %in%
                         c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
-# if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
+if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
 library(testit)
 origLibPathsAllTests <- .libPaths()
 tmpdir <- checkPath(tempdir2("testingA"), create = TRUE)
