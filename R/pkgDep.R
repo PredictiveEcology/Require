@@ -91,12 +91,13 @@ pkgDep <- function(packages, libPath = .libPaths(),
     }
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
     needGet <- unlist(lapply(neededFull1, is.null))
+    Npackages <- NROW(packages[needGet])
+    messageIfGTN <- Npackages > 5
 
     if (any(needGet)) {
-      Npackages <- NROW(packages[needGet])
       NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packages[needGet])))
       NpackagesCRAN <- Npackages - NpackagesGitHub
-      if (Npackages > 5)
+      if (messageIfGTN)
         messageVerbose("Getting dependencies for ",
                        if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
                        if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
@@ -107,17 +108,17 @@ pkgDep <- function(packages, libPath = .libPaths(),
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
       NpackagesRecursive <- NROW(neededFull2)
-      if (NpackagesRecursive > 30)
-        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies\n",
+      if (messageIfGTN) {
+        nchars <- rep(" ", 2 * nchar(NpackagesRecursive) + 5)
+        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies", nchars,
                        verbose = verbose, verboseLevel = 0)
+      }
       if (NROW(neededFull2)) {
-        curDots <- 0
-        curWidth <- 0
-        width <- getOption("width")
-
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
+          counter <- 0
           neededFull2 <- lapply(neededFull2, function(needed) {
+            counter <<- counter + 1
             i <- 1
             pkgsNew <- list()
             pkgsNew[[i]] <- needed
@@ -126,12 +127,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
               pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
               names(pkgsToLookup) <- pkgsToLookup
               pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
-                curDots <<- curDots + 1
-                if (curDots %% 20 == 0) {
-                  curWidth <<- curWidth + 1
-                  char <-if (curWidth %% width == 0) "\r" else "\b"
-                  messageVerbose(char, ".", verbose = verbose, verboseLevel = 0)
-                }
                 unique(unlist(pkgDepInner(needed, libPath, which, keepVersionNumber,
                                           purge = purge, repos = repos, verbose = verbose)))
               })
@@ -140,55 +135,15 @@ pkgDep <- function(packages, libPath = .libPaths(),
               prevPkgs <- unlist(pkgsNew[prevIndices])
               dt <- data.table(Package = c(prevPkgs, curPkgs),
                                Current = c(rep(FALSE, length(prevPkgs)), rep(TRUE, length(curPkgs))))
-              # rdtOrig <- data.table::copy(dt)
-              # if (TRUE) {
-              #   dt[, PackageTrimmed := extractPkgName(Package)]
-              #   dt[, versionSpec := extractVersionNumber(Package)]
-              #   dt[, hasVers := !is.na(versionSpec)]
-              #   dt[hasVers == TRUE, inequality := extractInequality(Package)]
-              #   dt[hasVers == FALSE, versionSpec := NA]
-              #   dt[, atLeastOneWithVersionSpec := any(hasVers), by = "PackageTrimmed"]
-              #   dt[, Current := all(Current == TRUE), by = "PackageTrimmed"] # don't need to redo depdencies of one that already did it
-              #   dt <- dt[!(atLeastOneWithVersionSpec == TRUE & hasVers == FALSE)] # remove cases where no version spec >1 case
-              #   keepCols3 <- c("PackageTrimmed", "Package", "Current",
-              #                  "hasVers", "inequality", "atLeastOneWithVersionSpec", "versionSpec")
-              #
-              #   versionSpecNA <- is.na(dt$versionSpec)
-              #   dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
-              #   if (NROW(dt1)) {
-              #     ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
-              #     dt1 <- dt1[ord]
-              #     dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
-              #   }
-              #
-              #   dt2 <- dt[versionSpecNA]
-              #
-              #   dt <- rbindlist(list(dt1, dt2), use.names = TRUE, fill = TRUE)
-              #   dt3 <- dt[!duplicated(dt$PackageTrimmed)]
-              #   dt4 <- dt3[Current == TRUE]
-              #   dt4Stable <- data.table::copy(dt4)
-              # #} else {
-              #dt <- data.table::copy(rdtOrig)
-
               set(dt, NULL, "PackageTrimmed", extractPkgName(dt$Package))
               set(dt, NULL, "versionSpec", extractVersionNumber(dt$Package))
               set(dt, NULL, "hasVers", !is.na(dt$versionSpec))
               hasV <- dt$hasVers == TRUE
-              # set(dt, which(hasV), "inequality", extractInequality(dt$Package[hasV]))
-              # set(dt, which(!hasV), "versionSpec", NA)
-              # browser(expr = any(duplicated(dt$PackageTrimmed)))
               dt[, `:=`(atLeastOneWithVersionSpec = any(hasVers),
                         Current = all(Current == TRUE)), by = "PackageTrimmed"]
               dt <- dt[!(dt$atLeastOneWithVersionSpec == TRUE & dt$hasVers == FALSE)] # remove cases where no version spec >1 case
 
               versionSpecNA <- is.na(dt$versionSpec)
-              #keepCols3 <- c("PackageTrimmed", "Package", "Current",
-              #               "hasVers", #"inequality",
-              #               "atLeastOneWithVersionSpec", "versionSpec")
-              # keepCols3 <- intersect(colnames(dt), keepCols3)
-
-              #if (length(setdiff(keepCols3, colnames(dt))))
-                # dt1 <- dt[versionSpecNA == FALSE, ..keepCols3]
               dt1 <- dt[versionSpecNA == FALSE]
 
               if (NROW(dt1)) {
@@ -209,6 +164,12 @@ pkgDep <- function(packages, libPath = .libPaths(),
               pkgsNew[[i]] <- dt4$Package
             }
             needed <- unique(unlist(pkgsNew))
+            if (messageIfGTN) {
+              mess <- paste0(paddedFloatToChar(counter, padL = nchar(NpackagesRecursive), pad = " ")
+                             , " of ", NpackagesRecursive)
+              messageVerbose(rep("\b", nchar(mess) + 1),  mess, verbose = verbose, verboseLevel = 0)
+            }
+            needed
           })
         }
       }
@@ -233,10 +194,11 @@ pkgDep <- function(packages, libPath = .libPaths(),
     if (!isTRUE(includeBase)) {
       neededFull1 <- lapply(neededFull1, setdiff, .basePkgs)
     }
+    if (messageIfGTN)
+      messageVerbose("\b Done!", verbose = verbose, verboseLevel = 0)
   } else {
     neededFull1 <- list()
   }
-  messageVerbose("\b Done!", verbose = verbose, verboseLevel = 1)
   neededFull1
 }
 
@@ -495,28 +457,10 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
     } else {
       pkgDep(pkgs, recursive = TRUE, purge = purge)
     }
-    # testVal <- lapply(pkgs, function(p) sort(tools::dependsOnPkgs(p, recursive = TRUE)))
-    # if (!identical(sort(unlist(testVal)), sort(unlist(aa)))) {
-    #   cat(unlist(testVal), file = "c:/Eliot/tmp/test.txt")
-    #   cat("-----------------", file = "c:/Eliot/tmp/test.txt", append = TRUE)
-    #   cat(unlist(aa), file = "c:/Eliot/tmp/test.txt", append = TRUE)
-    #   stop("new recursive reverse dependencies is not correct")
-    # }
-
-
   }
   else
     aa <- deps
   bb <- list()
-
-  # firsts <- unlist(lapply(aa, function(ps) {
-  #   if (length(ps) == 0 || all(ps %in% .basePkgs))
-  #     "first"
-  #   else
-  #     "later"
-  # }))
-  # aaa <- split(aa, firsts)
-  # aa <- aaa$later
 
   aa <- checkCircular(aa)
   cc <- lapply(aa, function(x) character())
@@ -547,7 +491,6 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
           overlapPkgs <- pkgName[overlapFull]
           isCorrectOrder <- !any(overlap)
           if (isCorrectOrder) {
-            # bb[names(aa)[j]] <- list(overlapPkgs)
             cc[j] <- list(overlapPkgs)
             priorsBeingInstalled <- vapply(dd, function(x) if (is.numeric(x)) x == ddIndex else FALSE, logical(1))
             priorsBeingInstalled <- extractPkgName(names(priorsBeingInstalled)[priorsBeingInstalled])
@@ -556,10 +499,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
               ddIndex <- ddIndex + 1
               priorsAlreadyInstalled <- vapply(dd, function(x) if (is.numeric(x)) x < ddIndex else FALSE, logical(1))
               priorsAlreadyInstalled <- extractPkgName(names(priorsAlreadyInstalled)[priorsAlreadyInstalled])
-              # priorDeps <- union(priorDeps, overlapPkgs)
-            } #else {
-              #priorsBeingInstalled <- c(priorsBeingInstalled, pkgNameNames[j])
-            #}
+            }
             dd[j] <- list(ddIndex)
 
             newOrd <- c(newOrd, j)
@@ -579,7 +519,6 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
   } else {
     cc
   }
-  # out <- append(aaa$first, out)
   attr(out, "installSafeGroups") <- dd
 
   return(out)
@@ -879,7 +818,6 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
     needed <- c(needed[!needSomeRemotes], remotesAll)
   }
 
-  #if (FALSE) {
   # Check NAMESPACE too -- because imperfect DESCRIPTION files
   namespaceFile <- getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE
   if (is.null(namespaceFile)) {
@@ -893,7 +831,6 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
     depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
     depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
     pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), .basePkgs))
-    # needed <- setdiff(union(depsFromNamespace, needed), .basePkgs)
     if (NROW(pkgDT2)) {
       pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
       setorderv(pkgDT2, "isGitPkg", order = -1)
@@ -975,3 +912,48 @@ masterMainToHead <- function(gitRepo) {
   }
   return(gitRepo)
 }
+
+################################################################################
+#' Convert numeric to character with padding
+#'
+#' This will pad floating point numbers, right or left. For integers, either class
+#' integer or functionally integer (e.g., 1.0), it will not pad right of the decimal.
+#' For more specific control or to get exact padding right and left of decimal,
+#' try the \code{stringi} package. It will also not do any rounding. See examples.
+#'
+#' @param x numeric. Number to be converted to character with padding
+#'
+#' @param padL numeric. Desired number of digits on left side of decimal.
+#'              If not enough, \code{pad} will be used to pad.
+#'
+#' @param padR numeric. Desired number of digits on right side of decimal.
+#'              If not enough, \code{pad} will be used to pad.
+#'
+#' @param pad character to use as padding (\code{nchar(pad) == 1} must be \code{TRUE}).
+#'   Currently, can be only `"0"` or `" "` (i.e., space).
+#'
+#' @return Character string representing the filename.
+#'
+#' @author Eliot McIntire and Alex Chubaty
+#' @export
+#' @rdname paddedFloatToChar
+#'
+#' @examples
+#' paddedFloatToChar(1.25)
+#' paddedFloatToChar(1.25, padL = 3, padR = 5)
+#' paddedFloatToChar(1.25, padL = 3, padR = 1) # no rounding, so keeps 2 right of decimal
+paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = "0") {
+  if (!pad %in% c("0", " ")) {
+    stop("pad must be either '0' or ' '")
+  }
+  xf <- x %% 1
+  numDecimals <- nchar(gsub("(.*)(\\.)|([0]*$)","",xf))
+
+  # this == used to be fpCompare -- but this function is more or less deprecated
+  newPadR <- ifelse(abs(xf - 0) < sqrt(.Machine$double.eps), 0, pmax(numDecimals, padR))
+  string <- paste0(paste0("%", pad), padL+newPadR+1*(newPadR > 0),".", newPadR, "f")
+  xFCEnd <- sprintf(string, x)
+  return(xFCEnd)
+}
+
+
