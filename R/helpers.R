@@ -345,16 +345,9 @@ messageVerboseCounter <- function(pre = "", post = "", verbose = getOption("Requ
                  , " of ", total)
   numCharsNeeded <- nchar(mess) + 1
   messWithPrePost <- paste0(pre, mess, post)
-  numCharsNeededPrePost <- nchar(messWithPrePost)
-  element <- "numCharsNeededPrev"
   if (counter == minCounter) {
-    .pkgEnv[[element]] <- 0 # numCharsNeeded
+    messageVerbose(rep(" ", numCharsNeeded), verbose = verbose, verboseLevel = verboseLevel)
   }
-  messageVerbose(paste0(
-    paste(rep("\b", .pkgEnv[[element]]), collapse = ""),  messWithPrePost
-    ), verbose = verbose,
-                  verboseLevel = verboseLevel)
-  .pkgEnv[[element]] <- numCharsNeededPrePost
-  .pkgEnv[["test"]] <- messWithPrePost
-
+  messageVerbose(rep("\b", numCharsNeeded),  messWithPrePost,
+                 verbose = verbose, verboseLevel = verboseLevel)
 }
