@@ -1231,30 +1231,58 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
       if (any(buildBinIPA)) install.packagesArgs[buildBinIPA] <-
           list(setdiff(install.packagesArgs[buildBinIPA][[1]], "--build"))
     }
-    ipa <- modifyList2(list(type = type), install.packagesArgs, dots, list(repos = NULL))
+    ipa <- modifyList2(list(type = type), install.packagesArgs, dots)
+    ipa <- append(ipa, list(repos = NULL))
     prevWD <- setwd(tempdir2(.rndstr(1)))
     on.exit(setwd(prevWD), add = TRUE)
-    warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
-      warn <- suppressMessages(tryCatch({
-        do.call(install.packages,
-                # using ap meant that it was messing up the src vs bin paths
-                append(list(installPkgName), ipa))
-      }, warning = function(w) {
-        ww <- list(w)
-        pack <- names(installPackage)[unlist(lapply(names(installPackage),
-                                                    function(pak) grepl(pak, w$message)))]
-        names(ww) <- pack
-        warnings1 <<- append(warnings1, ww)
-        w
-        })
-      )
-      if (!all(isBin) && buildBin) copyTarball(basename(installPkgName), TRUE)
-      warn
-    })
-  })
+    curPkgs <- toIn$Package
+    while (NROW(installPkgNames)) {
+      a <- try(do.call(install.packages, append(list(installPkgNames), ipa)))
+      if (is(a, "try-error")) {
+        # because previous line is vectorized
+        curPkgsFailed <- unlist(lapply(curPkgs, function(cp)
+          any(grep(x = a, pattern = cp), na.rm = TRUE)))
+        failedDueToUCRT <- grepl("UCRT", a)
+        if (failedDueToUCRT) {
+          unlink(installPkgNames[curPkgsFailed])
+          curPkgsFailed <- curPkgs[curPkgsFailed]
+          pkgDT[Package %in% curPkgsFailed, `:=`(
+            installFrom = "Archive",
+            localFileName = NA)]
+          upToDone <- grep(curPkgsFailed, curPkgs)
+          installPkgNames <- installPkgNames[!seq(upToDone)]
+          if (upToDone > 1) {
+            pkgDT[Package %in% curPkgs[seq(upToDone - 1)], installed := TRUE]
+          }
+        } else {
+          stop(a)
+        }
+      } else {
+        installPkgNames <- character()
+      }
+    }})
 
-  pkgDT[Package %in% toInstall$Package, installResult := NA]
-  if (length(warnings1)) {
+  #   warns <- lapply(installPkgNames, function(installPkgName) { # use lapply so any one package fail won't stop whole thing
+  #     warn <- suppressMessages(withCallingHandlers({
+  #       do.call(install.packages,
+  #               # using ap meant that it was messing up the src vs bin paths
+  #               append(list(installPkgName), ipa))
+  #     }, warning = function(w) {
+  #       ww <- list(w)
+  #       pack <- names(installPackage)[unlist(lapply(names(installPackage),
+  #                                                   function(pak) grepl(pak, w$message)))]
+  #       names(ww) <- pack
+  #       warnings1 <<- append(warnings1, ww)
+  #       w
+  #       })
+  #     )
+  #     if (!all(isBin) && buildBin) copyTarball(basename(installPkgName), TRUE)
+  #     warn
+  #   })
+  # })
+
+    pkgDT[Package %in% toInstall$Package, installResult := NA]
+    if (length(warnings1)) {
     whWarnings <- match(names(warnings1), pkgDT$Package)
     pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x$message))]
   }
