@@ -340,7 +340,7 @@ Require <- function(packages, packageVersionFile,
       }
     }
     packages <- packages$Package
-    which <- NULL
+    # which <- NULL
     install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
     install.packagesArgs["dependencies"] <- FALSE
     require <- FALSE
@@ -379,9 +379,8 @@ Require <- function(packages, packageVersionFile,
     packagesFullNameOrder <- packagesOrder
     names(packagesFullNameOrder) <- packageNamesOrig
 
-
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-      packages <- getPkgDeps(packages, which = which, purge = purge)
+      packages <- getPkgDeps(packages, which = which, purge = FALSE)
     }
 
 
@@ -400,6 +399,18 @@ Require <- function(packages, packageVersionFile,
     ]
     pkgDT[!is.na(packagesRequired),
           userRequestedOrder := as.integer(min(userRequestedOrder, na.rm = TRUE)), by = "Package"]
+
+    if (!missing(packageVersionFile)) {
+      setorderv(pkgDT, "packagesRequired", na.last = TRUE)
+      pkgDT <- pkgDT[, .SD[1], by = "Package"]
+      pkgDT <- pkgDT[!Package %in% .basePkgs]
+      notInPkgSnapshot <- pkgDT[is.na(packagesRequired)]
+      if (NROW(notInPkgSnapshot))
+        messageVerbose("The pkgSnapshot appears to be missing: ",
+                       paste(notInPkgSnapshot$Package, collapse = ", "),
+                       "; adding to installs", verbose = verbose, verboseLevel = 0)
+
+    }
     # convert require as a character string to the specific packages to load
     if (is.character(require)) {
       whLoad <- pkgDT$Package %in% require

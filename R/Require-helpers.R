@@ -121,6 +121,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       notCorrectVersions[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
                                 inequality = NA)]
     }
+
     if (internetExists(paste0("cannot check for available packages", verbose = verbose))) {
       # do CRAN first
       if (any(notCorrectVersions$repoLocation == "CRAN")) {
@@ -128,27 +129,48 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version", "Archs")]
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         notCorrectVersions <- cachedAvailablePackages[notCorrectVersions, on = "Package"]
-        notCorrectVersions[repoLocation != "GitHub",
-                           compareVersionAvail := {
-                             v <- !is.na(AvailableVersion)
-                             v[v] <- .compareVersionV(AvailableVersion[v], versionSpec[v])
-                             v
-                           }]
-        notCorrectVersions[repoLocation != "GitHub" ,
-                           correctVersionAvail := {
-                             v <- !is.na(AvailableVersion)
-                             v1 <- !is.na(inequality)
-                             v[v1] <- .evalV(.parseV(text = paste(compareVersionAvail[v1], inequality[v1], "0")))
-                             v
-                           }]
+
+        notCorrectVersions[!is.na(inequality) ,
+                           compareVersionAvail := !is.na(AvailableVersion)]
+
+        notCorrectVersions[!is.na(inequality) ,
+                           correctVersionAvail :=
+                             eval(parse(text = paste0("'", AvailableVersion,"'",
+                                                      inequality,
+                                                      "'", versionSpec, "'"))),
+                           by = seq(sum(!is.na(inequality)))]
+
+
+        # notCorrectVersions[repoLocation != "GitHub",
+        #                    compareVersionAvail := {
+        #                      v <- NA_integer_
+        #                      v1 <- !is.na(AvailableVersion)
+        #                      v[v1] <- .compareVersionV(AvailableVersion[v], versionSpec[v])
+        #                      v
+        #                    }]
+        # notCorrectVersions[
+        #   repoLocation != "GitHub" ,
+        #   correctVersionAvail := {
+        #     v0 <- NA_integer
+        #     needsAVersion <- hasVersionSpec %in% TRUE
+        #     v0[
+        #     v <- !is.na(AvailableVersion)
+        #     v1 <- !is.na(inequality)
+        #     v[v1] <- .evalV(
+        #       .parseV(text = paste(compareVersionAvail[v1], inequality[v1], "0")))
+        #     v
+        #   }]
 
         notCorrectVersions[Package %in% .basePkgs, correctVersionAvail := TRUE]
 
-        takenOffCran <- is.na(notCorrectVersions$inequality) &
-          (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
-              is.na(notCorrectVersions$AvailableVersion)) &
-          !notCorrectVersions$Package %in% .basePkgs & notCorrectVersions$repoLocation == "CRAN"
-        takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
+        # notCorrectVersions$correctVersionAvail %in% FALSE &
+        #   notCorrectVersions$hasVersionSpec %in% TRUE &
+        #   notCorrectVersions$repoLocation %in% "CRAN"
+        # takenOffCran <- is.na(notCorrectVersions$inequality) &
+        #   (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
+        #       is.na(notCorrectVersions$AvailableVersion)) &
+        #   !notCorrectVersions$Package %in% .basePkgs & notCorrectVersions$repoLocation == "CRAN"
+        # takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
         notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
@@ -181,7 +203,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
       if (any(needOlderNotGH)) {
 
-        pkg <- notCorrectVersions[repoLocation != "GitHub" & needOlder]$Package
+        pkg <- notCorrectVersions[needOlderNotGH]$Package #repoLocation != "GitHub" & needOlder]$Package
         oldAvailableVersions <- if (!is.null(.pkgEnv[["pkgDep"]][["oldAvailableVersions"]])) {
           .pkgEnv[["pkgDep"]][["oldAvailableVersions"]]
         } else {
@@ -273,8 +295,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           oldAvailableVersions <- oldAvailableVersions[, if (NROW(.SD) == 0) .SD else .SD[1], by = "Package"]
           set(oldAvailableVersions, NULL, c("OlderVersionsAvailableCh"), NULL)
 
-          notCorrectVersions1 <- rbindlist(list(notCorrectVersions[!(repoLocation != "GitHub" & needOlder)],
-                                                oldAvailableVersions), fill = TRUE, use.names = TRUE)
+          notCorrectVersions1 <- rbindlist(
+            list(notCorrectVersions[!packageFullName %in% oldAvailableVersions$packageFullName],
+                 oldAvailableVersions), fill = TRUE, use.names = TRUE)
           if (!identical(NROW(notCorrectVersions1), NROW(notCorrectVersions))) {
             stillDontHave <- notCorrectVersions[!notCorrectVersions1, on = "packageFullName"]
             if (NROW(stillDontHave)) {
@@ -286,6 +309,18 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           notCorrectVersions <- notCorrectVersions1
         }
       }
+
+      #notCorrectVersions$correctVersionAvail %in% FALSE &
+      takenOffCran <- notCorrectVersions$hasVersionSpec %in% TRUE &
+        notCorrectVersions$repoLocation %in% "Archive" &
+        is.na(notCorrectVersions$AvailableVersion)
+      # takenOffCran <- is.na(notCorrectVersions$inequality) &
+      #   (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
+      #      is.na(notCorrectVersions$AvailableVersion)) &
+      #   !notCorrectVersions$Package %in% .basePkgs & notCorrectVersions$repoLocation == "CRAN"
+      takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
+
+
       # do GitHub second
       if (any(pkgDT[whNotCorrect][packageFullName %in% notCorrectVersions$packageFullName]$repoLocation == "GitHub")) {
         notCorrectVersions <- getGitHubDESCRIPTION(notCorrectVersions, purge = purge)
@@ -303,11 +338,11 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         if (any(takenOffCranDT$correctVersionAvail))
           messageVerbose(paste(takenOffCranDT$Package[takenOffCranDT$correctVersionAvail],
                           collapse = ", "), " not on CRAN; found an older Archive",
-                         verbose = verbose, verboseLevel = 2)
+                         verbose = verbose, verboseLevel = 0)
         if (!any(takenOffCranDT$correctVersionAvail))
           messageVerbose(paste(takenOffCranDT$Package[!takenOffCranDT$correctVersionAvail],
                                collapse = ", "), " not on CRAN; did not find Archive",
-                         verbose = verbose, verboseLevel = 1)
+                         verbose = verbose, verboseLevel = 0)
       }
 
     } else {
@@ -664,7 +699,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        verbose = getOption("Require.verbose"),
                        ...) {
 
-  if (any(!is.na(pkgDT$needInstall))) {
+  if (any(pkgDT$needInstall %in% TRUE)) {
     install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
     install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
     if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
@@ -1681,7 +1716,8 @@ toDT <- function(...) {
 }
 
 rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
-  dups <- pkgDT[installed == FALSE, .N, by = "Package"][N > 1]
+  pkgDT <- unique(pkgDT)
+  dups <- pkgDT[installed %in% FALSE, .N, by = "Package"][N > 1]
   if (NROW(dups)) {
     messageVerbose("Some packages are needed; multiple minimum version requirements; using most stringent",
                    verbose = verbose, verboseLevel = 2)
