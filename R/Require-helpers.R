@@ -70,7 +70,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
 #' @inheritParams parseGitHub
 #' @rdname Require-internals
 #' @export
-getPkgVersions <- function(pkgDT, install = TRUE) {
+getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.verbose")) {
   pkgDT <- toPkgDT(pkgDT)
   pkgDT[, hasVersionSpec := grepl(.grepVersionNumber, packageFullName)]
 
@@ -199,8 +199,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
 
       # do Older Versions
 
-      needOlder <- notCorrectVersions$correctVersionAvail == FALSE
+      needOlder <- notCorrectVersions$correctVersionAvail %in% FALSE
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
+      browser()
+      if (is.na(any(needOlderNotGH))) browser()
       if (any(needOlderNotGH)) {
 
         pkg <- notCorrectVersions[needOlderNotGH]$Package #repoLocation != "GitHub" & needOlder]$Package
@@ -2468,19 +2470,14 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   if (!is.null(urls[["FALSE"]]))
     outNotMasterMain <- Map(URL = urls[["FALSE"]], df = destfile, function(URL, df)
       try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE))
-    # for (URL in urls["FALSE"]) # vectorized;
-    #   outNotMasterMain <- suppressWarnings(
-    #     try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
-  if (!is.null(urls[["TRUE"]]))
-    outMasterMain <- Map(URL = urls[["TRUE"]], df = destfile, function(URL, df)
-      try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE))
-    # for (URL in urls[["TRUE"]]) {
-    #   outMasterMain <- suppressWarnings(
-    #     try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE))
-    #   if (!is(outMasterMain, "try-error")) {
-    #     break
-    #   }
-    # }
+  if (!is.null(urls[["TRUE"]])) # should be sequential because they are master OR main
+    for (wh in seq(urls[["TRUE"]])) {
+      outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE), silent = TRUE)
+      if (!is(outMasterMain, "try-error")) {
+        names(outMasterMain) <- urls[["TRUE"]][wh]
+        break
+      }
+    }
   c(outNotMasterMain, outMasterMain)
 
 }

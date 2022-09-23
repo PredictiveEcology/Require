@@ -34,7 +34,7 @@ outOpts <- options(
   install.packages.compile.from.source = "never",
   Require.persistentPkgEnv = TRUE,
   Require.unloadNamespaces = TRUE,
-  Require.verbose = FALSE
+  Require.verbose = -1
 )
 if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")

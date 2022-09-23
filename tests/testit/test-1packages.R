@@ -5,8 +5,7 @@ origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.verbose" = TRUE,
-                   "Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
@@ -135,7 +134,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   # Try github with version
   dir4 <- Require:::rpackageFolder(tempdir2("test4"))
   checkPath(dir4, create = TRUE)
-  # browser()
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
@@ -160,7 +158,7 @@ out <- Require(pkg, install = FALSE, require = FALSE)
 testit::assert({isFALSE(all(out))})
 
 # Try a package taken off CRAN
-out <- Require("ggplot")
+out <- Require("ggplot", verbose = 2, require = FALSE)
 testit::assert(isTRUE(out)) # it got installed, even though off CRAN
 
 out <- getPkgVersions("Require")
