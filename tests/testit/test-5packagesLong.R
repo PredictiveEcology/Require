@@ -301,6 +301,17 @@ if (interactive()) {
     #   try(remove.packages(c("tinytest", "LearnBayes")))
     # }
   }
+
+  # two sources, where both are OK; use CRAN by preference
+  out <- capture.output(remove.packages("SpaDES.core"))
+  out <- Require(c("PredictiveEcology/SpaDES.core (>= 1.0.0)", "SpaDES.core (>=1.0.0)"),
+                 require = FALSE, verbose = 2)
+  out2 <- attr(out, "Require")
+  try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
+  testit::assert(out2[Package == "SpaDES.core"]$installFrom == "CRAN")
+  testit::assert(out2[Package == "SpaDES.core"]$installed)
+
+
   unlink(tmpdir, recursive = TRUE)
   options(outOpts)
   if (exists("outOpts2")) options(outOpts2)

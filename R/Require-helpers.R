@@ -111,7 +111,8 @@ getPkgVersions <- function(pkgDT, install = TRUE) {
 #' @importFrom data.table setkeyv
 #' @rdname Require-internals
 #' @inheritParams Require
-getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbose = getOption("Require.verbose")) {
+getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
+                         verbose = getOption("Require.verbose")) {
   if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)])) {
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     notCorrectVersions <- pkgDT#[whNotCorrect]
@@ -151,14 +152,24 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"), verbo
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
         notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
-        setorderv(notCorrectVersions, "correctVersionAvail", order = -1) # put TRUE first
-        notCorrectVersions <- notCorrectVersions[, .SD[1], by = "Package"] # Take first of multiples
-        notCorrectVersions[, N := .N, by = "Package"]
-        if (any(notCorrectVersions[correctVersionAvail == TRUE]$N > 1)) {
-          notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
-          notCorrectVersions[N > 1, type := ifelse(is.na(Archs), "source", "binary")]
-        }
-        set(notCorrectVersions, NULL, "N", NULL)
+        setorderv(notCorrectVersions, c("correctVersionAvail"), order = -1, na.last = TRUE) # put TRUE first
+        notCorrectVersions[, keep :=
+                             if (isTRUE(any(correctVersionAvail, na.rm = TRUE))) {
+                               min(.I)
+                             } else if (all(is.na(correctVersionAvail))) {
+                               min(.I)
+                             } else {
+                               NA_integer_
+                             }
+                           , by = "Package"]
+        notCorrectVersions <- notCorrectVersions[unique(notCorrectVersions$keep), ]
+        notCorrectVersions <- notCorrectVersions[, .SD[1], by = c("Package")] # Take first of multiples; but should do nothing
+        # notCorrectVersions[, N := .N, by = "Package"]
+        #if (any(notCorrectVersions[correctVersionAvail == TRUE]$N > 1)) {
+        #  notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
+        #  notCorrectVersions[N > 1, type := ifelse(is.na(Archs), "source", "binary")]
+        #}
+        set(notCorrectVersions, NULL, "keep", NULL)
       }
 
       # do Older Versions
