@@ -153,17 +153,20 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         # If package has both a binary and source available on CRAN, there will be 2 entries
         notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
         setorderv(notCorrectVersions, c("correctVersionAvail"), order = -1, na.last = TRUE) # put TRUE first
-        notCorrectVersions[, keep :=
-                             if (isTRUE(any(correctVersionAvail, na.rm = TRUE))) {
-                               min(.I)
-                             } else if (all(is.na(correctVersionAvail))) {
-                               min(.I)
-                             } else {
-                               NA_integer_
-                             }
-                           , by = "Package"]
-        notCorrectVersions <- notCorrectVersions[unique(notCorrectVersions$keep), ]
-        notCorrectVersions <- notCorrectVersions[, .SD[1], by = c("Package")] # Take first of multiples; but should do nothing
+        notCorrectVersions[, keep := min(.I), by = "Package"]
+        notCorrectVersions <- notCorrectVersions[notCorrectVersions$keep,]
+
+        # notCorrectVersions[, keep :=
+        #                      if (isTRUE(any(correctVersionAvail, na.rm = TRUE))) {
+        #                        min(.I)
+        #                      } else if (all(is.na(correctVersionAvail))) {
+        #                        min(.I)
+        #                      } else {
+        #                        .I#"c"#NA_integer_ # The FALSE -- i.e need older packages
+        #                      }
+        #                    , by = "Package"]
+        # notCorrectVersions <- notCorrectVersions[unique(notCorrectVersions$keep), ]
+        # notCorrectVersions <- notCorrectVersions[, .SD[1], by = c("Package")] # Take first of multiples; but should do nothing
         # notCorrectVersions[, N := .N, by = "Package"]
         #if (any(notCorrectVersions[correctVersionAvail == TRUE]$N > 1)) {
         #  notCorrectVersions <- notCorrectVersions[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
