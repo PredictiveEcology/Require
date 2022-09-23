@@ -1905,7 +1905,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   masterMain <- c("main", "master")
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
-  quiet <- isTRUE(dots$quiet)
+  quiet <- dots$quiet
+  if (is.null(quiet)) quiet <- !(verbose >= 0)
   tmpPath <- tempdir2(.rndstr())
   checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
@@ -1930,7 +1931,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
 
   if (!useRemotes) {
-    out <- downloadRepo(gitRepo, overwrite = TRUE, destDir = tmpPath, verbose = !quiet)
+    out <- downloadRepo(gitRepo, overwrite = TRUE, destDir = tmpPath, verbose = verbose)
     if (is(out, "try-error"))
       useRemotes <- TRUE
   }
@@ -1974,7 +1975,16 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       cachePath <- getOptionRPackageCache()
       opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
     }
-    do.call(install.packages, opts2)
+    warns <- list()
+    out <- withCallingHandlers(
+      do.call(install.packages, opts2),
+      warning = function(w)
+        warns <<- append(warns, list(w$message))
+    )
+    if (length(unlist(warns))) {
+      if (grepl("non-zero", unlist(warns)))
+        stop(paste(unlist(warns), collapse = "\n"))
+    }
     lapply(packageName, function(pack) {
       postInstallDESCRIPTIONMods(pkg = pack, repo = gr$repo[[pack]],
                                  acct = gr$acct[[pack]], br = gr$br[[pack]],
@@ -2227,7 +2237,7 @@ tryInstallAgainWithoutAPCache <- function(installPackagesQuoted) {
   out <- eval(installPackagesQuoted)
 }
 
-dealWithViolations <- function(pkgSnapshotObj) {
+dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose")) {
   dd <- pkgSnapshotObj
   ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
                paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))

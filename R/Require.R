@@ -258,10 +258,8 @@ Require <- function(packages, packageVersionFile,
 
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
 
-  if (verbose == 0 || verbose %in% FALSE) {
-    install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = TRUE))
-    install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet = TRUE))
-  }
+  install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = !(verbose >= 1)))
+  install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet =  !(verbose >= 0)))
   libPaths <- checkLibPaths(libPaths = libPaths)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   allrepos <- c(repos, getOption("repos"))
@@ -284,7 +282,7 @@ Require <- function(packages, packageVersionFile,
 
   if (!missing(packageVersionFile)) {
     packages <- data.table::fread(packageVersionFile)
-    packages <- dealWithViolations(packages) # i.e., packages that can't coexist
+    packages <- dealWithViolations(packages, verbose = verbose) # i.e., packages that can't coexist
     packages <- packages[!packages$Package %in% .basePkgs]
     uniqueLibPaths <- unique(packages$LibPath)
     if (length(uniqueLibPaths) > 1) {
