@@ -328,3 +328,33 @@ messageVerbose <- function(..., verbose = getOption("Require.verbose"),
   if (verbose >= verboseLevel)
     message(...)
 }
+
+
+#' @rdname messageVerbose
+#' @inheritParams Require
+#' @param pre A single text string to paste before the counter
+#' @param post A single text string to paste after the counter
+#' @param counter. An integer indicating which iteration is being done
+#' @param total. An integer indicating the total number to be done.
+messageVerboseCounter <- function(pre = "", post = "", verbose = getOption("Require.verbose"),
+                                  verboseLevel = 1, counter = 1,
+                                  total = 1, minCounter = 1) {
+  total <- max(counter, total)
+  minCounter <- min(minCounter, counter)
+  mess <- paste0(paddedFloatToChar(counter, padL = nchar(total), pad = " ")
+                 , " of ", total)
+  numCharsNeeded <- nchar(mess) + 1
+  messWithPrePost <- paste0(pre, mess, post)
+  numCharsNeededPrePost <- nchar(messWithPrePost)
+  element <- "numCharsNeededPrev"
+  if (counter == minCounter) {
+    .pkgEnv[[element]] <- 0 # numCharsNeeded
+  }
+  messageVerbose(paste0(
+    paste(rep("\b", .pkgEnv[[element]]), collapse = ""),  messWithPrePost
+    ), verbose = verbose,
+                  verboseLevel = verboseLevel)
+  .pkgEnv[[element]] <- numCharsNeededPrePost
+  .pkgEnv[["test"]] <- messWithPrePost
+
+}

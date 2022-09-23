@@ -3,11 +3,22 @@
 \name{messageDF}
 \alias{messageDF}
 \alias{messageVerbose}
+\alias{messageVerboseCounter}
 \title{Use message to print a clean square data structure}
 \usage{
 messageDF(df, round, verbose = getOption("Require.verbose"), verboseLevel = 1)
 
 messageVerbose(..., verbose = getOption("Require.verbose"), verboseLevel = 1)
+
+messageVerboseCounter(
+  pre = "",
+  post = "",
+  verbose = getOption("Require.verbose"),
+  verboseLevel = 1,
+  counter = 1,
+  total = 1,
+  minCounter = 1
+)
 }
 \arguments{
 \item{df}{A data.frame, data.table, matrix}
@@ -25,6 +36,14 @@ this message will show.}
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
+
+\item{pre}{A single text string to paste before the counter}
+
+\item{post}{A single text string to paste after the counter}
+
+\item{counter.}{An integer indicating which iteration is being done}
+
+\item{total.}{An integer indicating the total number to be done.}
 }
 \description{
 Sends to \code{message}, but in a structured way so that a data.frame-like can
