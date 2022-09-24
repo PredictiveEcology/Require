@@ -268,7 +268,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
               }
               if (!is.null(packageURL)) {
                 if (endsWith(packageURL, "tar.gz")) {
-                  srcContrib <- "src/contrib"
                   url <- file.path(repos, srcContrib, "/Archive", packageURL)
                   url2 <- file.path(repos, srcContrib, basename(packageURL))
                   tf <- tempfile()
@@ -960,3 +959,4 @@ paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = 
 }
 
 
+srcContrib <- "src/contrib"

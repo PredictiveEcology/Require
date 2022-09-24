@@ -302,6 +302,16 @@ if (interactive()) {
     # }
   }
 
+  # Use a mixture of different types of "off CRAN"
+  pkgs <- c("ggplot", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
+  pkgsClean <- extractPkgName(pkgs)
+  lala <- capture.output(suppressMessages(remove.packages(pkgsClean)))
+  Require(pkgs, verbose = -1, require = FALSE)
+  ip <- installed.packages()
+  testit::assert(sum(pkgsClean %in% ip[, "Package"]) == length(pkgsClean) - 1) # silly1 won't be installed
+
+
+
   # two sources, where both are OK; use CRAN by preference
   out <- capture.output(remove.packages("SpaDES.core"))
   out <- Require(c("PredictiveEcology/SpaDES.core (>= 1.0.0)", "SpaDES.core (>=1.0.0)"),

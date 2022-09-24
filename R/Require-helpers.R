@@ -23,7 +23,8 @@ utils::globalVariables(c(
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   ghp <- Sys.getenv("GITHUB_PAT")
   pkgDT <- toPkgDT(pkgDT)
-  pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
+  set(pkgDT, NULL, "githubPkgName", extractPkgGitHub(pkgDT$packageFullName))
+  # pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
   if (is.null(pkgDT$repoLocation)) {
     set(pkgDT, which(isGH), "repoLocation", "GitHub")
@@ -33,28 +34,40 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   if (any(pkgDT$repoLocation == "GitHub")) {
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
 
-    isGitHub <- pkgDT$repoLocation == "GitHub"
-    pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
-    pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
-    pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
-    pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
-    pkgDT[isGitHub, hasSubFolder := grepl("/", pkgDT[isGitHub]$Account)]
+    isGH <- pkgDT$repoLocation == "GitHub"
+    isGitHub <- which(isGH)
+    set(pkgDT, isGitHub, "fullGit", trimVersionNumber(pkgDT$packageFullName))
+    # pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
+    set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit))
+    # pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
+    set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", pkgDT$fullGit))
+    # pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
+    set(pkgDT, isGitHub, "RepoWBranch", gsub("^(.*)/(.*)@*.*$", "\\2", pkgDT$fullGit))
+    # pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
+    set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT[isGitHub]$Account))
+    # pkgDT[isGitHub, hasSubFolder := grepl("/", pkgDT[isGitHub]$Account)]
     if (any(pkgDT$hasSubFolder, na.rm = TRUE)) { # fix both Account and RepoWBranch
       hasSubFold <- pkgDT$hasSubFolder
-      subFoldIndices <- seq_len(NROW(pkgDT[hasSubFold]))
-      pkgDT[hasSubFold, Account := gsub("^(.*)/(.*)$", "\\1", Account)]
+      subFoldIndices <- seq_len(NROW(pkgDT$hasSubFold))
+      set(pkgDT, hasSubFold, "Account", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account))
+      # pkgDT[hasSubFold, Account := gsub("^(.*)/(.*)$", "\\1", Account)]
+      # set(pkgDT, hasSubFold, "RepoWBranch", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account))
       pkgDT[hasSubFold, RepoWBranch := gsub(paste0("^",Account,"/"), "", fullGit), by = subFoldIndices]
       pkgDT[hasSubFold, GitSubFolder := strsplit(pkgDT[hasSubFold]$RepoWBranch, split = "/|@")[[1]][2],
             by = subFoldIndices]
       pkgDT[hasSubFold, RepoWBranch := gsub(paste0("/",GitSubFolder), "", RepoWBranch), by = subFoldIndices]
     }
-    pkgDT[isGitHub, Repo := gsub("^(.*)@(.*)$", "\\1", RepoWBranch)]
-    pkgDT[isGitHub, Branch := "HEAD"]
-    pkgDT[isGitHub & grepl("@", RepoWBranch), Branch := gsub("^.*@(.*)$", "\\1", RepoWBranch)]
+    set(pkgDT, isGitHub, "Repo", gsub("^(.*)@(.*)$", "\\1", pkgDT$RepoWBranch))
+    # pkgDT[isGitHub, Repo := gsub("^(.*)@(.*)$", "\\1", RepoWBranch)]
+    set(pkgDT, isGitHub, "Branch", "HEAD")
+    # pkgDT[isGitHub, Branch := "HEAD"]
+    set(pkgDT, isGH & grepl("@", pkgDT$RepoWBranch), "Branch", gsub("^.*@(.*)$", "\\1", pkgDT$RepoWBranch))
+    # pkgDT[isGitHub & grepl("@", RepoWBranch), Branch := gsub("^.*@(.*)$", "\\1", RepoWBranch)]
     set(pkgDT, NULL, c("RepoWBranch", "fullGit"), NULL)
   }
   pkgDT[]
 }
+
 
 #' Internals used by `Require`
 #'
@@ -170,7 +183,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         #   (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
         #       is.na(notCorrectVersions$AvailableVersion)) &
         #   !notCorrectVersions$Package %in% .basePkgs & notCorrectVersions$repoLocation == "CRAN"
-        # takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
+        # possiblyArchivedPkg <- notCorrectVersions$Package[takenOffCran]
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
         notCorrectVersions[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
@@ -198,10 +211,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       }
 
       # do Older Versions
-
       needOlder <- notCorrectVersions$correctVersionAvail %in% FALSE
       needOlderNotGH <- needOlder & notCorrectVersions$repoLocation != "GitHub"
-      browser()
       if (is.na(any(needOlderNotGH))) browser()
       if (any(needOlderNotGH)) {
 
@@ -312,16 +323,76 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         }
       }
 
-      #notCorrectVersions$correctVersionAvail %in% FALSE &
-      takenOffCran <- notCorrectVersions$hasVersionSpec %in% TRUE &
-        notCorrectVersions$repoLocation %in% "Archive" &
+      possiblyArchived <- is.na(notCorrectVersions$AvailableVersion) &
+        notCorrectVersions$hasVersionSpec %in% FALSE &
+        notCorrectVersions$installed %in% FALSE
+
+      takenOffCran <- !notCorrectVersions$hasVersionSpec %in% TRUE &
+        notCorrectVersions$repoLocation %in% c("CRAN", "Archive") &
         is.na(notCorrectVersions$AvailableVersion)
       # takenOffCran <- is.na(notCorrectVersions$inequality) &
       #   (!(notCorrectVersions$correctVersionAvail | is.na(notCorrectVersions$correctVersionAvail)) |
       #      is.na(notCorrectVersions$AvailableVersion)) &
       #   !notCorrectVersions$Package %in% .basePkgs & notCorrectVersions$repoLocation == "CRAN"
-      takenOffCranPkg <- notCorrectVersions$Package[takenOffCran]
+      possiblyArchivedPkg <- notCorrectVersions$Package[possiblyArchived]
+      if (length(possiblyArchivedPkg)) {
+        messageVerbose(paste(possiblyArchivedPkg, collapse = ", "),
+                       " not on the CRAN repo supplied. Checking Archives.",
+                       verbose = verbose, verboseLevel = 2)
+        if (length(possiblyArchivedPkg) > 10)
+          messageVerbose("Checking the dates of the individual package Archives on the canonical CRAN mirror;",
+                         " This will take some time")
+        areTheyArchived <- Map(pk = possiblyArchivedPkg, counter = seq(possiblyArchivedPkg), USE.NAMES = TRUE,
+                               function(pk, counter) {
+          messageVerbose(counter, " of ", length(possiblyArchivedPkg), ": ", pk, verbose = verbose,
+                         verboseLevel = 2)
+          uu <- url(paste0("https://cran.r-project.org/package=", pk))
+          on.exit(try(close(uu), silent = TRUE))
+          rl <- suppressWarnings(try(readLines(uu), silent = TRUE))
+          close(uu)
+          wasRemoved <- any(grepl("was removed from the CRAN repository", rl))
+          archivedOn <- ""
+          if (wasRemoved) {
+            yy <- url(file.path(repos, srcContrib, "Archive", pk))
+            on.exit(try(close(yy), silent = TRUE))
+            rl2 <- readLines(yy)
+            close(yy)
 
+            archivedOn <- grep("Archived on", rl, value = TRUE)
+            lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
+            pkgFilename <- gsub(paste0(".+(",pk,"_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
+            PackageUrl <- file.path(pk, pkgFilename)
+
+            if (length(archivedOn)) {
+              archivedOn <- as.POSIXct(gsub("Archived on (.+) as.+", "\\1", archivedOn))
+            } else {
+              archivedOn <- gsub(".+([[:digit:]]{4,4}-[[:digit:]]{2,2}-[[:digit:]]{2,2}).+", "\\1", lineWDateAndPkgFilename)
+              archivedOn <- as.POSIXct(archivedOn) + 5 * 3600 * 24
+            }
+            archivedOn <- as.character(as.POSIXct(archivedOn) - 3600 * 24)
+          } else {
+            archivedOn <- notInArchives
+            PackageUrl <- ""
+          }
+          list(PackageUrl = PackageUrl, archivedOn = archivedOn)
+        })
+        areTheyArchived <- invertList(areTheyArchived)
+        inArchives <- !grepl(notInArchives, areTheyArchived$archivedOn)
+        notArchived <- areTheyArchived$archivedOn[inArchives %in% FALSE]
+        areTheyArchived$archivedOn[inArchives %in% FALSE] <- as.POSIXct(NA_character_)
+        # areTheyArchived <- areTheyArchived[inArchives]
+        latestDates <- data.table(Package = names(areTheyArchived$archivedOn),
+                                  dayAfterPutOnCRAN = as.POSIXct(unlist(areTheyArchived$archivedOn)),
+                                  PackageUrl = areTheyArchived$PackageUrl)
+        aa <- notCorrectVersions[, -c("dayAfterPutOnCRAN", "PackageUrl")][latestDates, on = "Package"]
+        set(aa, NULL, "correctVersionAvail", !is.na(aa$dayAfterPutOnCRAN))
+        whGood <- aa$correctVersionAvail %in% TRUE
+        set(aa, which(!whGood), "repoLocation", "Fail")
+        set(aa, which(whGood), "repoLocation", "Archive")
+
+        notCorrectVersions <-
+          rbindlist(list(aa, notCorrectVersions[!Package %in% aa$Package]), use.names = TRUE, fill = TRUE)
+      }
 
       # do GitHub second
       if (any(pkgDT[whNotCorrect][packageFullName %in% notCorrectVersions$packageFullName]$repoLocation == "GitHub")) {
@@ -334,9 +405,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         set(notCorrectVersions, NULL, c("url", "DESCFile"), NULL)
 
       }
+
       pkgDT <- notCorrectVersions
       if (any(takenOffCran)) {
-        takenOffCranDT <- notCorrectVersions[Package %in% takenOffCranPkg]
+        takenOffCranDT <- notCorrectVersions[Package %in% possiblyArchivedPkg]
         if (any(takenOffCranDT$correctVersionAvail))
           messageVerbose(paste(takenOffCranDT$Package[takenOffCranDT$correctVersionAvail],
                           collapse = ", "), " not on CRAN; found an older Archive",
@@ -379,7 +451,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
     anyWhFails <- any(whFails, na.rm = TRUE)
     if (anyWhFails) {
-      messageVerbose("\033[36m", paste(pkgDT$packageFullName[pkgDT$needInstall %in% TRUE], collapse = ", "),
+      messageVerbose("\033[36m", paste(pkgDT$packageFullName[whFails], collapse = ", "),
                               " could not be installed because no available version\033[39m",
                      verbose = verbose, verboseLevel = 1)
     }
@@ -1637,7 +1709,8 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
 
 
   if (any("Local" %in% toInstall$installFrom)) {
-    pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs)
+    pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
+                          verbose = verbose)
     anyFaultyBinaries <- grepl("error 1 in extracting from zip file", pkgDT$installResult)
     if (isTRUE(anyFaultyBinaries)) {
       messageVerbose("Local cache of ", paste(pkgDT[anyFaultyBinaries]$localFileName, collapse = ", "),
@@ -2491,3 +2564,5 @@ messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
     }
   }
 }
+
+notInArchives <- "Not in Archives"
