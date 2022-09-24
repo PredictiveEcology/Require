@@ -146,8 +146,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         if (all(is.na(pDT$inequality))) {
           set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA)
         } else {
-          set(pDT, which(!is.na(pDT$inequality)),
-              "compareVersionAvail", !is.na(pDT$AvailableVersion))
+          whChange <- which(!is.na(pDT$inequality))
+          set(pDT, whChange, "compareVersionAvail", !is.na(pDT$AvailableVersion[whChange]))
           # pDT[!is.na(inequality) ,
           #                    compareVersionAvail := !is.na(AvailableVersion)]
           pDT[!is.na(inequality) ,
