@@ -161,7 +161,7 @@ testit::assert({isFALSE(all(out))})
 
 # Try a package taken off CRAN
 out <- Require("ggplot", verbose = 2, require = FALSE)
-testit::assert(isTRUE(out)) # it got installed, even though off CRAN
+testit::assert(isTRUE(attr(out, "Require")[Package == "ggplot"]$installed)) # it got installed, even though off CRAN
 
 out <- getPkgVersions("Require")
 testit::assert({is.data.table(out)})
