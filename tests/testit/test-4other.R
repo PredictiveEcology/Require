@@ -17,8 +17,8 @@ if (Sys.info()["user"] == "achubaty") {
 }
 
 # Test misspelled
-out <- tryCatch(Require("data.tt"), warning = function(w) w)
-testit::assert({is(out, "simpleWarning")})
+out <- capture.output(type = "message", Require("data.tt", verbose = 1))
+testit::assert(any(grepl("could not be installed", out)))#{out, "simpleWarning")})
 
 # for coverages that were missing
 pkgDTEmpty <- Require:::toPkgDT(character())

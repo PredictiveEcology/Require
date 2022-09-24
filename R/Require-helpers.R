@@ -36,20 +36,20 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
 
     isGH <- pkgDT$repoLocation == "GitHub"
     isGitHub <- which(isGH)
-    set(pkgDT, isGitHub, "fullGit", trimVersionNumber(pkgDT$packageFullName))
+    set(pkgDT, isGitHub, "fullGit", trimVersionNumber(pkgDT$packageFullName[isGitHub]))
     # pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
-    set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit))
+    set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit[isGitHub]))
     # pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
-    set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", pkgDT$fullGit))
+    set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", pkgDT$fullGit[isGitHub]))
     # pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
-    set(pkgDT, isGitHub, "RepoWBranch", gsub("^(.*)/(.*)@*.*$", "\\2", pkgDT$fullGit))
+    set(pkgDT, isGitHub, "RepoWBranch", gsub("^(.*)/(.*)@*.*$", "\\2", pkgDT$fullGit[isGitHub]))
     # pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
-    set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT[isGitHub]$Account))
+    set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT[isGitHub]$Account[isGitHub]))
     # pkgDT[isGitHub, hasSubFolder := grepl("/", pkgDT[isGitHub]$Account)]
     if (any(pkgDT$hasSubFolder, na.rm = TRUE)) { # fix both Account and RepoWBranch
       hasSubFold <- which(pkgDT$hasSubFolder)
       subFoldIndices <- seq_len(NROW(pkgDT$hasSubFold))
-      set(pkgDT, hasSubFold, "Account", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account))
+      set(pkgDT, hasSubFold, "Account", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account[hasSubFold]))
       # pkgDT[hasSubFold, Account := gsub("^(.*)/(.*)$", "\\1", Account)]
       # set(pkgDT, hasSubFold, "RepoWBranch", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account))
       pkgDT[hasSubFold, RepoWBranch := gsub(paste0("^",Account,"/"), "", fullGit), by = subFoldIndices]
@@ -57,11 +57,12 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
             by = subFoldIndices]
       pkgDT[hasSubFold, RepoWBranch := gsub(paste0("/",GitSubFolder), "", RepoWBranch), by = subFoldIndices]
     }
-    set(pkgDT, isGitHub, "Repo", gsub("^(.*)@(.*)$", "\\1", pkgDT$RepoWBranch))
+    set(pkgDT, isGitHub, "Repo", gsub("^(.*)@(.*)$", "\\1", pkgDT$RepoWBranch[isGitHub]))
     # pkgDT[isGitHub, Repo := gsub("^(.*)@(.*)$", "\\1", RepoWBranch)]
     set(pkgDT, isGitHub, "Branch", "HEAD")
     # pkgDT[isGitHub, Branch := "HEAD"]
-    set(pkgDT, which(isGH & grepl("@", pkgDT$RepoWBranch)), "Branch", gsub("^.*@(.*)$", "\\1", pkgDT$RepoWBranch))
+    wh1 <- which(isGH & grepl("@", pkgDT$RepoWBranch))
+    set(pkgDT, wh1, "Branch", gsub("^.*@(.*)$", "\\1", pkgDT$RepoWBranch[wh1]))
     # pkgDT[isGitHub & grepl("@", RepoWBranch), Branch := gsub("^.*@(.*)$", "\\1", RepoWBranch)]
     set(pkgDT, NULL, c("RepoWBranch", "fullGit"), NULL)
   }
@@ -390,8 +391,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
                                   PackageUrl = areTheyArchived$PackageUrl)
         removeCols <- intersect(c("dayAfterPutOnCRAN", "PackageUrl"), colnames(pDT))
         aa <- data.table::copy(pDT)
-        if (length(removeCols))
-          aa <- aa[, -removeCols]
+        if (length(removeCols)) {
+          aa <- aa[, -c(..removeCols)]
+      }
         aa <- aa[latestDates, on = "Package"]
         set(aa, NULL, "correctVersionAvail", !is.na(aa$dayAfterPutOnCRAN))
         whGood <- aa$correctVersionAvail %in% TRUE
