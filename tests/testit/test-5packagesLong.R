@@ -321,6 +321,13 @@ if (interactive()) {
   testit::assert(out2[Package == "SpaDES.core"]$installFrom == "CRAN")
   testit::assert(out2[Package == "SpaDES.core"]$installed)
 
+  ## Long pkgSnapshot -- issue 41
+  pkgPath <- file.path(tempdir2("packages"))
+  checkPath(pkgPath, create = TRUE)
+  download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt", destfile = file.path(pkgPath, "pkgSnapshot.txt"))
+  .libPaths(pkgPath)
+  Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"), require = FALSE)
+
 
   unlink(tmpdir, recursive = TRUE)
   options(outOpts)
