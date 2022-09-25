@@ -264,10 +264,11 @@ if (interactive()) {
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
-    print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
+    messageVerbose(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")),
+                   verboseLevel = 0)
     #if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
-    # Rerun it to capture the messages; should be no installs
+    # Rerun it to get output table, but capture messages for quiet; should be no installs
     silent <- capture.output(type = "message", out <- Require(pkg, standAlone = FALSE,
                                                               require = FALSE, verbose = 2))
     testit::assert({all.equal(outFromRequire, out)})
@@ -350,7 +351,6 @@ if (interactive()) {
   lastLineOfMessageDF <- tail(grep(":", lala), 1)
   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
   theTest <- length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0
-  if (isFALSE) browser()
   testit::assert(theTest)
 
   testit::assert(NROW(ip) == NROW(installed) + length(missings) - NnotInstalled)
