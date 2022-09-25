@@ -1301,12 +1301,13 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   names(installPkgNames) <- installPkgNames
 
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
+  installPackageBoth <- split(installPackage, endsWith(installPkgNames, "zip"))
 
   warnings1 <- list()
-  warn <- Map(installPkgNames = installPkgNamesBoth, Package = installPackage,
-              function(installPkgNames, Package) {
+  warn <- Map(installPkgNamesInner = installPkgNamesBoth, Package = installPackageBoth,
+              function(installPkgNamesInner, Package) {
                 # Deal with "binary" mumbo jumbo
-                isBin <- isBinary(installPkgNames)
+                isBin <- isBinary(installPkgNamesInner)
                 isBinNotLinux <- all(isBin ) && (isWindows() || isMacOSX())
                 type <- c("source", "binary")[isBinNotLinux + 1]
                 buildBinDots <- grepl("--build", dots)
@@ -1322,21 +1323,21 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                 prevWD <- setwd(tempdir2(.rndstr(1)))
                 on.exit(setwd(prevWD), add = TRUE)
                 curPkgs <- toIn$Package
-                while (NROW(installPkgNames)) {
-                  a <- try(do.call(install.packages, append(list(installPkgNames), ipa)))
+                while (NROW(installPkgNamesInner)) {
+                  a <- try(do.call(install.packages, append(list(installPkgNamesInner), ipa)))
                   if (is(a, "try-error")) {
                     # because previous line is vectorized
                     curPkgsFailed <- unlist(lapply(curPkgs, function(cp)
                       any(grep(x = a, pattern = cp), na.rm = TRUE)))
                     failedDueToUCRT <- grepl("UCRT", a)
                     if (failedDueToUCRT) {
-                      unlink(installPkgNames[curPkgsFailed])
+                      unlink(installPkgNamesInner[curPkgsFailed])
                       curPkgsFailed <- curPkgs[curPkgsFailed]
                       pkgDT[Package %in% curPkgsFailed, `:=`(
                         installFrom = "Archive",
                         localFileName = NA)]
                       upToDone <- grep(curPkgsFailed, curPkgs)
-                      installPkgNames <- installPkgNames[!seq(upToDone)]
+                      installPkgNamesInner <- installPkgNamesInner[!seq(upToDone)]
                       if (upToDone > 1) {
                         pkgDT[Package %in% curPkgs[seq(upToDone - 1)], installed := TRUE]
                       }
@@ -1344,7 +1345,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                       stop(a)
                     }
                   } else {
-                    installPkgNames <- character()
+                    installPkgNamesInner <- character()
                   }
                 }
                 if (!all(isBin) && buildBin) {
