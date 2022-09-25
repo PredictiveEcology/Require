@@ -388,7 +388,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         # areTheyArchived <- areTheyArchived[inArchives]
         latestDates <- data.table(Package = names(areTheyArchived$archivedOn),
                                   dayAfterPutOnCRAN = as.POSIXct(unlist(areTheyArchived$archivedOn)),
-                                  PackageUrl = areTheyArchived$PackageUrl)
+                                  PackageUrl = unlist(areTheyArchived$PackageUrl))
         removeCols <- intersect(c("dayAfterPutOnCRAN", "PackageUrl"), colnames(pDT))
         aa <- data.table::copy(pDT)
         if (length(removeCols)) {
@@ -1837,6 +1837,8 @@ toDT <- function(...) {
 }
 
 rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
+  pkgDT <- try(unique(pkgDT))
+  if (is(pkgDT, "try-error")) browser()
   dups <- pkgDT[installed %in% FALSE, .N, by = "Package"][N > 1]
   if (NROW(dups)) {
     messageVerbose("Some packages are needed; multiple minimum version requirements; using most stringent",
