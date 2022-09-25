@@ -1,7 +1,7 @@
 utils::globalVariables(c(
   ".", "..colsToKeep", "..colsToKeep2", "..keepCols",
   "Account",  "archiveSource", "AvailableVersion", "bothDepAndOrig", "Branch",
-  "compareVersionAvail", "correctVersion", "correctVersionAvail",
+  "correctVersion", "correctVersionAvail",
   "depOrOrig", "DESCFile", "detached", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
   "LibPath", "libPaths", "loaded", "loadOrder", "needInstall",

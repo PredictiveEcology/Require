@@ -173,7 +173,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA)
         } else {
           whChange <- which(!is.na(pDT$inequality))
-          set(pDT, whChange, "compareVersionAvail", !is.na(pDT$AvailableVersion[whChange]))
+          set(pDT, whChange, "compareVersionAvail",
+              .compareVersionV(pDT$AvailableVersion[whChange], pDT$versionSpec[whChange]))
           # pDT[!is.na(inequality) ,
           #                    compareVersionAvail := !is.na(AvailableVersion)]
           whCheckVersion <- (pDT$repoLocation != "GitHub") & !is.na(pDT$inequality)
@@ -431,13 +432,18 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       }
 
       # do GitHub second
-      if (any(pkgDT[whNotCorrect][packageFullName %in% pDT$packageFullName]$repoLocation == "GitHub")) {
+      if (any(pDT[whNotCorrect][packageFullName %in% pDT$packageFullName]$repoLocation == "GitHub")) {
         pDT <- getGitHubDESCRIPTION(pDT, purge = purge)
-        pDT[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
-        pDT[repoLocation == "GitHub",
-                           compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
-        pDT[repoLocation == "GitHub" & !is.na(inequality),
-                           correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+        whGH <- which(pDT$repoLocation == "GitHub")
+        if (length(whGH)) {
+          set(pDT, whGH, "AvailableVersion", DESCRIPTIONFileVersionV(pDT$DESCFile[whGH]))
+          # pDT[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
+          set(pDT, whGH, "compareVersionAvail", .compareVersionV(pDT$AvailableVersion[whGH], pDT$versionSpec[whGH]))
+          # pDT[repoLocation == "GitHub",
+          #                    compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
+          pDT[repoLocation == "GitHub" & !is.na(inequality),
+              correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+        }
         set(pDT, NULL, c("url", "DESCFile"), NULL)
 
       }
@@ -2099,6 +2105,7 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 #' @export
 installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = getOption("Require.verbose"),
                                  ...) {
+  # Can be vectorized on gitRepo
   dir.create(libPath, showWarnings = FALSE, recursive = TRUE)
   masterMain <- c("main", "master")
   gr <- splitGitRepo(gitRepo)
@@ -2119,10 +2126,15 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
 
   if (!is.null(getOptionRPackageCache()) || any(filesExist)) {
 
-  # if (any(filesExist)) {
+    # if (any(filesExist)) {
     # packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
 
-    shaOnGitHub <- try(getSHAfromGitHub(repo = gr$repo, acct = gr$acct, br = gr$br), silent = TRUE)
+    # if (length(nchar(gr$br) == 40) > 1) browser()
+    shaOnGitHub <-
+      unlist(Map(repoInner = gr$repo, acctInner = gr$acct, brInner = gr$br,
+              function(repoInner, acctInner, brInner)
+                getSHAfromGitHub(repo = repoInner, acct = acctInner, br = brInner)))
+
 
     if (any(filesExist)) { # means already installed here; no new install
       if (is(shaOnGitHub, "try-error")) {
@@ -2136,9 +2148,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
         }
       }
     } else { # this means, not installed, but it may be in Cache
-      cachedFiles <- dir(getOptionRPackageCache(), pattern = shaOnGitHub, full.names = TRUE)
+      orPattern <- paste(shaOnGitHub, collapse = "|")
+      cachedFiles <- dir(getOptionRPackageCache(), pattern = orPattern, full.names = TRUE)
       if (length(cachedFiles)) {
-        cachedFilesHere <- file.copy(cachedFiles, basename(gsub(paste0(".", shaOnGitHub), "", cachedFiles)))
+        cachedFilesHere <- file.copy(cachedFiles, basename(gsub(paste0(".(", orPattern, ")"), "", cachedFiles)))
         if (all(cachedFilesHere)) {
           skipDLandBuild <- TRUE
           messageVerbose("Identical SHA in ", RequirePkgCacheDir(), "; using it",
@@ -2188,15 +2201,23 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       stop("Can't install packages this way because R is not on the search path")
     }
   }
-  packageTarName <- dir(pattern = "tar.gz")[1]
+  packageTarName <- dir(pattern = "tar.gz")# [1]
+  isBin <- isBinary(packageTarName)
+  if (any(isBin)) {
+    packageTarName <- packageTarName[isBin]
+  }
   packageName <- gsub("(.+)\\_[[:digit:]]+\\..+", "\\1", packageTarName)
-  if (!grepl("--build", dots$INSTALL_opts) && !is.null(getOptionRPackageCache()))
-    dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
+  if (!grepl("--build", dots$INSTALL_opts) && !is.null(getOptionRPackageCache())) {
+    if (!all(isBinary(packageTarName)))
+      dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
+  }
+
   opts2 <- append(dots,
                   list(packageTarName,
                        repos = NULL,
                        lib = normalizePath(libPath, winslash = "/")))
   opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
+  opts2 <- modifyList2(opts2, list(quiet = !(verbose >= 1)))
   if (is.null(opts2$destdir)) {
     cachePath <- getOptionRPackageCache()
     opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
@@ -2295,7 +2316,7 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, destDir = ".",
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
   badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
-  if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
+  if (is(badDirname, "try-error")) browser()#stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
   Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
     file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix
@@ -2308,6 +2329,8 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, destDir = ".",
 }
 
 getSHAfromGitHub <- function(acct, repo, br) {
+  if (nchar(br) == 40) return(br)
+
   shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   if (missing(br))
     br <- "main"

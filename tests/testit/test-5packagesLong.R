@@ -267,7 +267,9 @@ if (interactive()) {
     print(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")))
     #if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
-    silent <- capture.output(type = "message", out <- Require(pkg, require = FALSE, verbose = 2))
+    # Rerun it to capture the messages; should be no installs
+    silent <- capture.output(type = "message", out <- Require(pkg, standAlone = FALSE,
+                                                              require = FALSE, verbose = 2))
     testit::assert({all.equal(outFromRequire, out)})
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
@@ -347,7 +349,9 @@ if (interactive()) {
 
   lastLineOfMessageDF <- tail(grep(":", lala), 1)
   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  testit::assert(length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0)
+  theTest <- length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0
+  if (isFALSE) browser()
+  testit::assert(theTest)
 
   testit::assert(NROW(ip) == NROW(installed) + length(missings) - NnotInstalled)
 
