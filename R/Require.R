@@ -119,6 +119,8 @@ utils::globalVariables(c(
 #' @param verbose Numeric or logical indicating how verbose should the function be.
 #'   If -1 or less, then as little verbosity as possible.
 #'   If 0 or FALSE, then minimal outputs; if `1` or TRUE, more outputs; `2` even more.
+#'   NOTE: in `Require` function, when `verbose >= 2`, the return object will have an attribute:
+#'   `attr(.., "Require")` which has lots of information about the processes of the installs.
 #' @param ... Passed to `install.packages`.
 #'   Good candidates are e.g., `type` or `dependencies`. This can be
 #'   used with `install_githubArgs` or `install.packageArgs` which
