@@ -264,7 +264,7 @@ if (interactive()) {
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
-    messageVerbose(paste0(i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", ")),
+    messageVerbose(paste0("\033[32m", i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", "), "\033[39m"),
                    verboseLevel = 0)
     #if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
