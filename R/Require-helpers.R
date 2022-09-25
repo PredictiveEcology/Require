@@ -130,7 +130,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
   if (NROW(pkgDT[correctVersion == FALSE | is.na(correctVersion)])) {
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     pDT <- pkgDT#[whNotCorrect]
-    takenOffCran <- FALSE # This is an object that will be modified only if in the CRAN section
+    # takenOffCran <- FALSE # This is an object that will be modified only if in the CRAN section
     if (is.null(pDT$versionSpec)) {
       pDT[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
                                 inequality = NA)]
@@ -151,12 +151,12 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           set(pDT, whChange, "compareVersionAvail", !is.na(pDT$AvailableVersion[whChange]))
           # pDT[!is.na(inequality) ,
           #                    compareVersionAvail := !is.na(AvailableVersion)]
-          pDT[!is.na(inequality) ,
-                             correctVersionAvail :=
+          whCheckVersion <- (pDT$repoLocation != "GitHub") & !is.na(pDT$inequality)
+          pDT[which(whCheckVersion), correctVersionAvail :=
                                eval(parse(text = paste0("'", AvailableVersion,"'",
                                                         inequality,
                                                         "'", versionSpec, "'"))),
-                             by = seq(sum(!is.na(inequality)))]
+                             by = seq(sum(whCheckVersion))]
         }
 
         # pDT[repoLocation != "GitHub",
@@ -328,13 +328,13 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         }
       }
 
-      possiblyArchived <- is.na(pDT$AvailableVersion) &
+      possiblyArchived <- pDT$repoLocation != "GitHub" & is.na(pDT$AvailableVersion) &
         pDT$hasVersionSpec %in% FALSE &
         pDT$installed %in% FALSE
 
-      takenOffCran <- !pDT$hasVersionSpec %in% TRUE &
-        pDT$repoLocation %in% c("CRAN", "Archive") &
-        is.na(pDT$AvailableVersion)
+      # takenOffCran <- !pDT$hasVersionSpec %in% TRUE &
+      #   pDT$repoLocation %in% c("CRAN", "Archive") &
+      #   is.na(pDT$AvailableVersion)
       # takenOffCran <- is.na(pDT$inequality) &
       #   (!(pDT$correctVersionAvail | is.na(pDT$correctVersionAvail)) |
       #      is.na(pDT$AvailableVersion)) &
@@ -418,7 +418,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       }
 
       pkgDT <- pDT
-      if (any(takenOffCran)) {
+      if (any(possiblyArchived)) {
         takenOffCranDT <- pDT[Package %in% possiblyArchivedPkg]
         if (any(takenOffCranDT$correctVersionAvail))
           messageVerbose(paste(takenOffCranDT$Package[takenOffCranDT$correctVersionAvail],
@@ -1305,7 +1305,6 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   warnings1 <- list()
   warn <- Map(installPkgNames = installPkgNamesBoth, Package = installPackage,
               function(installPkgNames, Package) {
-                browser()
                 # Deal with "binary" mumbo jumbo
                 isBin <- isBinary(installPkgNames)
                 isBinNotLinux <- all(isBin ) && (isWindows() || isMacOSX())
@@ -1667,7 +1666,6 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
   }
 
-  browser()
   if (any(!onMRAN) ) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
     cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
