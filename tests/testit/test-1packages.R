@@ -1,7 +1,7 @@
 thisFilename <- "test-1packages.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = -1)
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
 
 origLibPathsAllTests <- .libPaths()
 
@@ -137,15 +137,18 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Try github with version
   dir4 <- Require:::rpackageFolder(tempdir2("test4"))
-  checkPath(dir4, create = TRUE)
+  silent <- checkPath(dir4, create = TRUE)
+  inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+                           require = FALSE, standAlone = FALSE, libPaths = dir4)
+  testit::assert({isFALSE(inst)})
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
-  testit::assert({isFALSE(inst)})
   testit::assert({length(mess) > 0})
   testit::assert({sum(grepl("could not be installed", mess)) == 1})
   unlink(dirname(dir3), recursive = TRUE)
+  unlink(dirname(dir4), recursive = TRUE)
 }
 
 # Code coverage -- run 2x so it won't reinstall
@@ -160,8 +163,10 @@ out <- Require(pkg, install = FALSE, require = FALSE)
 testit::assert({isFALSE(all(out))})
 
 # Try a package taken off CRAN
-out <- Require("ggplot", verbose = 2, require = FALSE)
-testit::assert(isTRUE(attr(out, "Require")[Package == "ggplot"]$installed)) # it got installed, even though off CRAN
+reallyOldPkg <- "ggplot"
+out <- Require(reallyOldPkg, require = FALSE)
+ip <- data.table::as.data.table(installed.packages())
+testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
 out <- getPkgVersions("Require")
 testit::assert({is.data.table(out)})

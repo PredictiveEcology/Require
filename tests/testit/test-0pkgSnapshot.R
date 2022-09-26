@@ -4,7 +4,7 @@ tdOuter <- tempdir2("tests")
 try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
 message("\033[32m --------------------------------- Starting ", thisFilename, "  at: ",
         format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = -1)
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
 
 library(Require)
 srch <- search()
@@ -46,7 +46,7 @@ if (file.exists(pkgVF)) {
   baseFN <- "packageVersions"
   tmpLibPath <- tempdir2(paste(sample(LETTERS, size = 6), collapse = ""))
   fileNames[["fn0"]][["lp"]] <- file.path(tmpLibPath)
-  fileNames[["fn0"]][["txt"]] <- file.path(tmpdir, paste0(baseFN, ".txt"))
+  fileNames[["fn0"]][["txt"]] <- pkgVF
 
   try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -100,7 +100,7 @@ if (file.exists(pkgVF)) {
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
   Require:::installRequire(getOption("Require.Home"))
 
-  st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]])}))
+  st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)}))
 
   # Test
   there <- data.table::fread(fileNames[["fn0"]][["txt"]])
@@ -114,7 +114,7 @@ if (file.exists(pkgVF)) {
   if (Require:::isWindows())
     anyMissing <- anyMissing[!Package %in% "littler"]
   # here[!there, on = "Package"]
-  if (NROW(anyMissing) != 0) browser() # stop("Error 832; please contact developer")
+  if (NROW(anyMissing) != 0)  stop("Error 832; please contact developer")
   testit::assert(NROW(anyMissing) == 0)
 }
 if (!identical(origLibPathsAllTests, .libPaths()))
