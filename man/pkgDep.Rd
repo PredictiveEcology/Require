@@ -20,8 +20,7 @@ pkgDep(
   includeBase = FALSE,
   sort = TRUE,
   purge = getOption("Require.purge", FALSE),
-  verbose = getOption("Require.verbose"),
-  verboseLevel = 1
+  verbose = getOption("Require.verbose")
 )
 
 pkgDep2(
@@ -46,8 +45,7 @@ pkgDepTopoSort(
   returnFull = TRUE,
   recursive = TRUE,
   purge = getOption("Require.purge", FALSE),
-  verbose = getOption("Require.verbose"),
-  verboseLevel = 1
+  verbose = getOption("Require.verbose")
 )
 }
 \arguments{

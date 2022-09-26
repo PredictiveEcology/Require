@@ -43,9 +43,11 @@ give individual options for those 2 internal function calls.}
 
 \item{post}{A single text string to paste after the counter}
 
-\item{counter.}{An integer indicating which iteration is being done}
+\item{counter}{An integer indicating which iteration is being done}
 
-\item{total.}{An integer indicating the total number to be done.}
+\item{total}{An integer indicating the total number to be done.}
+
+\item{minCounter}{An integer indicating the minimum (i.e,. starting value)}
 }
 \description{
 Sends to \code{message}, but in a structured way so that a data.frame-like can
