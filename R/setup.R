@@ -200,19 +200,26 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 #' Setup for binary Linux repositories
 #'
 #' Enable use of binary package builds for Linux from the Rstudio Package Manager repo.
-#' This will set the `repos` option, affecting the current R session.
+#' This will set the `repos` option, affecting the current R session. It will put this
+#' `binaryLinux` in the first position. If the `getOption("repos")` is `NULL`, it will
+#' put `backupCRAN` in second position.
 #'
 #' @param binaryLinux A CRAN repository serving binary Linux packages.
+#' @param backupCRAN If there is no CRAN repository set
 #'
 #' @export
-setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/") {
+setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/",
+                               backupCRAN = "https://cloud.r-project.org") {
   if (Sys.info()["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
-      options(
-        repos = c(CRAN =
-          paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest")
-        )
-      )
+      repo <- c(CRAN =
+                  paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest"))
+      if (!is.null(getOption("repos"))) {
+        backupCRAN <- getOption("repos")
+      }
+      if (is.null(names(backupCRAN))) names(backupCRAN) <- "CRAN"
+      repo <- c(repo, backupCRAN)
+      options(repos = repo)
     }
   }
 }
