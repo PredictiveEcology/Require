@@ -1818,8 +1818,21 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   pkgDT
 }
 
-isBinary <- function(fn) {
-  endsWith(fn, "zip") | grepl("R_x86", fn)
+isBinary <- function(fn, fromCRAN = TRUE) {
+  theTest <- endsWith(fn, "zip") | grepl("R_x86", fn)
+  if (isTRUE(fromCRAN)) {
+    binRepo <- isBinaryCRANRepo()
+    # rspmURL <- formals(setLinuxBinaryRepo)[["binaryLinux"]]
+    # binRepo <- startsWith(prefix = rspmURL, getOption("repos")[["CRAN"]])
+    theTest <- theTest | binRepo
+  }
+  theTest
+}
+
+
+isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
+                             repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
+  startsWith(prefix = repoToTest, curCRANRepo)
 }
 
 copyTarball <- function(pkg, builtBinary) {
@@ -2226,13 +2239,13 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     }
   }
   packageTarName <- dir(pattern = "tar.gz")# [1]
-  isBin <- isBinary(packageTarName)
+  isBin <- isBinary(packageTarName, fromCRAN = FALSE)
   if (any(isBin)) {
     packageTarName <- packageTarName[isBin]
   }
   packageName <- gsub("(.+)\\_[[:digit:]]+\\..+", "\\1", packageTarName)
-  if (!grepl("--build", dots$INSTALL_opts) && !is.null(getOptionRPackageCache())) {
-    if (!all(isBinary(packageTarName)))
+  if (!isTRUE(grepl("--build", dots$INSTALL_opts)) && !is.null(getOptionRPackageCache())) {
+    if (!all(isBinary(packageTarName, fromCRAN = FALSE)))
       dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
   }
 
