@@ -3,12 +3,13 @@ library(Require)
 optsListNew <- list()
 optsListPrev <- list()
 
-verbosity <- if (interactive()) 1 else -1
+verbosity <- if (interactive()) 1 else 2
 optsListPrevLinux <- if (interactive()) setLinuxBinaryRepo() else NULL
 
 optsListNew <- modifyList2(optsListNew, list(Require.verbose = verbosity))
-if (is.null(getOption("repos")))
-  optsListNew <- modifyList2(optsListNew, list(repos = c(CRAN = "https://cloud.r-project.org")))
+Sys.setenv("CRAN_REPO" = "https://cloud.r-project.org")
+if (!startsWith(getOption("repos")[[1]], "http"))
+  optsListNew <- modifyList2(optsListNew, list(repos = c(CRAN = Sys.getenv("CRAN_REPO"))))
 optsListPrev <- options(optsListNew)
 optsListNew <- modifyList2(optsListNew, options("repos"))
 optsListPrev <- modifyList2(optsListPrev, optsListPrevLinux)
