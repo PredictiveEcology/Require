@@ -21,8 +21,8 @@ if (Sys.info()["user"] == "achubaty") {
 #isInteractive <- function() TRUE
 #assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
-repos <- getCRANrepos()
-opt <- options(repos = repos)
+# repos <- getCRANrepos()
+# opt <- options(repos = repos)
 
 # # Mock the internal functions
 # chooseCRANmirror2 <- function() {
@@ -33,6 +33,7 @@ opt <- options(repos = repos)
 #   repos
 # }
 # assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
+messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
@@ -208,7 +209,7 @@ if (interactive()) {
   }, warning = function(x) x)
 }
 
-options(opt)
+# options(opt)
 options(outOpts)
 if (exists("outOpts2")) options(outOpts2)
 if (!identical(origLibPathsAllTests, .libPaths()))
