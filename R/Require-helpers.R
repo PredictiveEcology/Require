@@ -358,13 +358,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         pDT$hasVersionSpec %in% FALSE &
         pDT$installed %in% FALSE
 
-      # takenOffCran <- !pDT$hasVersionSpec %in% TRUE &
-      #   pDT$repoLocation %in% c("CRAN", "Archive") &
-      #   is.na(pDT$AvailableVersion)
-      # takenOffCran <- is.na(pDT$inequality) &
-      #   (!(pDT$correctVersionAvail | is.na(pDT$correctVersionAvail)) |
-      #      is.na(pDT$AvailableVersion)) &
-      #   !pDT$Package %in% .basePkgs & pDT$repoLocation == "CRAN"
       possiblyArchivedPkg <- pDT$Package[possiblyArchived]
       if (length(possiblyArchivedPkg)) {
         messageVerbose(paste(possiblyArchivedPkg, collapse = ", "),
@@ -384,10 +377,19 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           wasRemoved <- any(grepl("was removed from the CRAN repository", rl))
           archivedOn <- ""
           if (wasRemoved) {
-            yy <- url(file.path(repos, srcContrib, "Archive", pk))
-            on.exit(try(close(yy), silent = TRUE))
-            rl2 <- readLines(yy)
-            close(yy)
+            # some CRAN repos e.g., RStudioPackage Manager is not a full CRAN mirror; try all repos
+            for (repo in repos) {
+              yy <- url(file.path(repo, srcContrib, "Archive", pk))
+              on.exit(try(close(yy), silent = TRUE))
+              rl2 <- suppressWarnings(try(readLines(yy), silent = TRUE))
+              close(yy)
+              if (!is(rl2, "try-error")) {
+                break
+              }
+              messageVerbose("Could not get ", pk, " at ", repo, verbose = verbose, verboseLevel = 2)
+              if (length(repos) > 1)
+                messageVerbose("; trying next CRAN repo", verbose = verbose, verboseLevel = 2)
+            }
 
             archivedOn <- grep("Archived on", rl, value = TRUE)
             lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
