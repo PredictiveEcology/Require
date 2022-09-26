@@ -2500,8 +2500,25 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
 
 .spatialPkgs <- c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units")
 
-sourcePkgs <- function(additional = NULL) {
-  sort(c(.spatialPkgs, c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"), additional))
+.otherPkgs <- c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish")
+
+#' A list of R packages that should likely be installed from Source, not Binary
+#'
+#' This list can be updated by the user by setting the value of `.spatialPkgs` or
+#' `.otherPkgs` in the `.GlobalEnv` or another environment. If this function does
+#' not find either of those two objects, then it will default to the (non exported)
+#' ones in `Require`
+#' @param spatialPkgs A character vector of package names that focus on spatial analyses.
+#' @param otherPkgs A character vector of package names that often
+#'   require system specific compilation.
+#' @param additional Any other packages to be added to the other 2 argument vectors
+#' @export
+#' @return
+#' A sorted concatenation of the 3 input parameters.
+sourcePkgs <- function(additional = NULL,
+                       spatialPkgs = get(".spatialPkgs", envir = parent.frame()),
+                       otherPkgs = get(".otherPkgs", envir = parent.frame())) {
+  unique(sort(c(spatialPkgs, otherPkgs, additional)))
 }
 
 srcPackageURLOnCRAN <- "https://cloud.r-project.org/"
