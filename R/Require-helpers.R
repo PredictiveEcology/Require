@@ -2491,7 +2491,7 @@ stripHTTPAddress <- function(addr) {
   addr
 }
 
-tryInstallAgainWithoutAPCache <- function(installPackagesQuoted) {
+tryInstallAgainWithoutAPCache <- function(installPackagesQuoted, envir = parent.frame()) {
   nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
   prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
   val <- 0
@@ -2499,7 +2499,7 @@ tryInstallAgainWithoutAPCache <- function(installPackagesQuoted) {
   do.call(Sys.setenv, val)
   prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
   on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
-  out <- eval(installPackagesQuoted)
+  out <- eval(installPackagesQuoted, envir = envir)
 }
 
 dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose")) {
