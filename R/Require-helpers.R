@@ -608,7 +608,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         if (isWindows() && interactive() && NROW(nfs[localType == "source"])) {
           srcFromCRAN <- neededVersions$installFrom == "CRAN" & neededVersions$localType == "source"
           if (NROW(neededVersions[srcFromCRAN])) {
-            messageDF(neededVersions[srcFromCRAN, c("packageFullName", "Package", "localFileName")],
+            messageDF(unique(neededVersions[srcFromCRAN, c("packageFullName", "Package", "localFileName")]),
                       verbose = verbose, verboseLevel = 0)
             messageVerbose(paste0("Local *source* file(s) exist for the above package(s).\nWould you like to delete it/them ",
                                   "and let Require try to find the binary on CRAN (or MRAN if older)? Y or N: "),
