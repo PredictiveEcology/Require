@@ -321,7 +321,7 @@ Require <- function(packages, packageVersionFile,
       out <- unlist(out)
       setLibPaths(dt$newLibPaths, standAlone = TRUE)
       messageVerbose(" to echo the multiple paths in ", packageVersionFile,
-                     verbose = verbose, verboseLevel = 1)
+                     verbose = verbose, verboseLevel = 0)
 
       if (isTRUE(require)) {
         return(out)

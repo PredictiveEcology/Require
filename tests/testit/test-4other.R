@@ -1,6 +1,8 @@
 thisFilename <- "test-4other.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = -1)
+
 library(Require)
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -17,7 +19,7 @@ if (Sys.info()["user"] == "achubaty") {
 }
 
 # Test misspelled
-out <- capture.output(type = "message", Require("data.tt", verbose = 1))
+out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
 testit::assert(any(grepl("could not be installed", out)))#{out, "simpleWarning")})
 
 # for coverages that were missing
@@ -83,13 +85,14 @@ options(outOpts)
 if (exists("outOpts2")) options(outOpts2)
 ## setup
 # assign("aaaa", 1, envir = .GlobalEnv)
-options(RequireOptions())
+# options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-setup(setupTestDir, RPackageCache = ccc)
+out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
 testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
-setupOff()
-message("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache())
+out2222 <- capture.output(setupOff())
+messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
+               verboseLevel = 0)
 RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
 if (identical(RPackageCacheSysEnv, "FALSE")) {
   testit::assert(identical(NULL, getOptionRPackageCache()))

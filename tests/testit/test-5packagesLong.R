@@ -1,6 +1,7 @@
 thisFilename <- "test-5packagesLong.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = -1)
 origLibPathsAllTests <- .libPaths()
 
 if (interactive()) {
@@ -8,8 +9,7 @@ if (interactive()) {
   library(Require)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options(#"Require.verbose" = 1,
-                     "Require.persistentPkgEnv" = TRUE,
+  outOpts <- options("Require.persistentPkgEnv" = TRUE,
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
                      "Require.unloadNamespaces" = FALSE)
@@ -350,8 +350,7 @@ if (interactive()) {
 
   lastLineOfMessageDF <- tail(grep(":", lala), 1)
   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  theTest <- length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0
-  testit::assert(theTest)
+  testit::assert(length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0)
 
   testit::assert(NROW(ip) == NROW(installed) + length(missings) - NnotInstalled)
 

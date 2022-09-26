@@ -4,6 +4,7 @@ tdOuter <- tempdir2("tests")
 try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
 message("\033[32m --------------------------------- Starting ", thisFilename, "  at: ",
         format(startTime),"---------------------------\033[39m")
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = -1)
 
 library(Require)
 srch <- search()
@@ -33,9 +34,7 @@ outOpts <- options(
   install.packages.check.source = "never",
   install.packages.compile.from.source = "never",
   Require.persistentPkgEnv = TRUE,
-  Require.unloadNamespaces = TRUE,
-  Require.verbose = -1
-)
+  Require.unloadNamespaces = TRUE)
 if (Sys.info()["user"] == "achubaty") {
   outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
 } else {

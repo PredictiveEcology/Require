@@ -1,6 +1,7 @@
 thisFilename <- "test-6pkgDep.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = -1)
 
 origLibPathsAllTests <- .libPaths()
 

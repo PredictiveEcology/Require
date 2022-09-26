@@ -24,7 +24,8 @@ utils::globalVariables(c(
   if (isInteractive()) {
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), ".\n",
-      "  Using cache directory: ", RequireCacheDir(), ".\n",
+      if (!is.null(getOptionRPackageCache()))
+        paste0("  Using cache directory: ", getOptionRPackageCache(), ".\n"),
       "  See ?RequireOptions for additional settings."
     )
 
