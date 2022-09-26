@@ -859,7 +859,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     if (any(!toInstall$installFrom %in% c("Fail", "Duplicate"))) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail", "Duplicate"))]
       setkeyv(toInstall, "installFromFac")
-      topoSorted <- pkgDepTopoSort(toInstall$packageFullName, returnFull = TRUE, verbose = verbose)
+      topoSorted <- pkgDepTopoSort(toInstall$packageFullName, returnFull = TRUE, verbose = verbose, purge = FALSE)
       installSafeGroups <- attr(topoSorted, "installSafeGroups")
       correctOrder <- match(names(topoSorted), toInstall$packageFullName)
       toInstall <- toInstall[correctOrder, ]
@@ -877,7 +877,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         stopErrMess <- "The attempt to unload loaded packages failed. Please restart R and run again"
         if (is(si, "try-error")) stop(stopErrMess)
         allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
-        topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded, verbose = verbose)))
+        topoSortedAllLoaded <- try(names(pkgDepTopoSort(allLoaded, verbose = verbose, purge = FALSE)))
 
         if (is(topoSortedAllLoaded, "try-error"))
           stop(stopErrMess)
@@ -1949,14 +1949,14 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
   depsToUnload <- c(pkgs, unname(unlist(origDeps)))
   si <- sessionInfo()
   allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
-  others <- pkgDepTopoSort(pkgs, deps = allLoaded, reverse = TRUE, verbose = verbose)
+  others <- pkgDepTopoSort(pkgs, deps = allLoaded, reverse = TRUE, verbose = verbose, purge = FALSE)
   names(others) <- others
   depsToUnload <- c(others, depsToUnload)
   depsToUnload <- depsToUnload[!duplicated(depsToUnload)]
   depsToUnload <- setdiff(depsToUnload, dontTry)
 
   if (length(depsToUnload) > 0) {
-    out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload) else NULL
+    out <- if (isTRUE(doSort)) pkgDepTopoSort(depsToUnload, purge = FALSE) else NULL
     pkgs <- rev(c(names(out), pkgs))
   }
   pkgs <- extractPkgName(pkgs)
