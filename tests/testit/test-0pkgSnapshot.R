@@ -15,15 +15,19 @@ library(testit)
 origLibPathsAllTests <- .libPaths()
 tmpdir <- checkPath(tempdir2("testingA"), create = TRUE)
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
-aa <- pkgSnapshot(packageVersionFile = pkgVF)
+aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
 bb <- list()
 for (lp in unique(aa$LibPath)) {
   pack <- aa$Package[aa$LibPath == lp]
+  pack <- sample(pack, size = min(10, length(pack)))
   if (!all(pack %in% Require:::.basePkgs)) {
     deps <- pkgDep(pack, recursive = TRUE)
-    haveNoDeps <- unlist(lapply(deps, length)) == 2
-    sam <- sample(sum(haveNoDeps), pmin(sum(haveNoDeps), 3))
-    pkgs <- c(names(deps[haveNoDeps][sam]), Require::extractPkgName(unname(unlist(deps[haveNoDeps][sam]))))
+    lens <- lengths(deps)
+    haveFewDeps <- order(lens)
+    deps <- deps[haveFewDeps]
+    wh <- min(4, max(which(cumsum(lengths(deps)+1) < 10)))
+    deps <- deps[seq(wh)]
+    pkgs <- c(names(deps), Require::extractPkgName(unname(unlist(deps))))
     bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
   }
 }
@@ -76,8 +80,8 @@ if (file.exists(pkgVF)) {
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
     localBinsFull <- na.omit(c(dts))#, rems))
-    dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    localBinsFull <- dts
+    # dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+    # localBinsFull <- dts
   } else {
     localBinsFull <- NULL
   }
