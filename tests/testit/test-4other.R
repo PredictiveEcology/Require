@@ -94,10 +94,11 @@ out2222 <- capture.output(setupOff())
 messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
                verboseLevel = 0)
 RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
-if (identical(RPackageCacheSysEnv, "FALSE")) {
+if (identical(RPackageCacheSysEnv, "FALSE") ) {
   testit::assert(identical(NULL, getOptionRPackageCache()))
 } else {
-  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+  if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
+    testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
 }
 
 # reset options after setupOff()
@@ -120,7 +121,8 @@ RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
 if (identical(RPackageCacheSysEnv, "FALSE")) {
   testit::assert(identical(NULL, getOptionRPackageCache()))
 } else {
-  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+  if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
+    testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
 }
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
