@@ -328,31 +328,6 @@ if (interactive()) {
   testit::assert(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
   testit::assert(out2[Package == "SpaDES.core"]$installed)
 
-  ## Long pkgSnapshot -- issue 41
-  pkgPath <- file.path(tempdir2("packages"))
-  checkPath(pkgPath, create = TRUE)
-  download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt", destfile = file.path(pkgPath, "pkgSnapshot.txt"))
-  .libPaths(pkgPath)
-  pkgs <- data.table::fread(file.path(pkgPath, "pkgSnapshot.txt"))
-  out <- Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"), require = FALSE)
-  persLibPathOld <- pkgs$LibPath[which(pkgs$Package == "amc")]
-  pkgsInOut <- extractPkgName(names(out))
-  installed <- pkgs[LibPath == persLibPathOld]$Package %in% pkgsInOut#[out$installed]
-  testit::assert(all(installed))
-  ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1]))
-  testit::assert(NROW(ip) >= NROW(installed))
-  lala <- capture.output(type = "message",
-                         Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
-                                 require = FALSE, verbose = 2))
-  missings <- grep("pkgSnapshot appears to be missing", lala, value = TRUE)
-  missings <- gsub(".+: (.+); adding .+", "\\1", missings)
-  missings <- strsplit(missings, ", ")[[1]]
-
-  lastLineOfMessageDF <- tail(grep(":", lala), 1)
-  NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  testit::assert(length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0)
-
-  testit::assert(NROW(ip) == NROW(installed) + length(missings) - NnotInstalled)
 
 
 
@@ -363,6 +338,6 @@ if (interactive()) {
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 
-# unlink(tmpdir, recursive = TRUE)
+unlink(tempdir2(), recursive = TRUE)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
