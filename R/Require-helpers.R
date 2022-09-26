@@ -1755,17 +1755,35 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
+  pkgToReportBySource <- split(toInstall$Package, toInstall$installFrom)
   installRangeCh <- paste(installRange, collapse = ":")
 
 
-  messageVerbose(" -- Installing ", pkgToReport, " \n \033[34m-- ", installRangeCh, " of ", numPackages,
+  srces <- names(pkgToReportBySource)
+  messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
+  nxtSrc <- "Local"
+  if (nxtSrc %in% srces)
+    messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
+                   , verbose = verbose, verboseLevel = 0)
+  nxtSrc <- "CRAN"
+  if (nxtSrc %in% srces)
+    messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
+                   , verbose = verbose, verboseLevel = 0)
+  nxtSrc <- "Archive"
+  if ("Archive" %in% srces)
+    messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
+                   , verbose = verbose, verboseLevel = 0)
+  nxtSrc <- "GitHub"
+  if (nxtSrc %in% srces)
+    messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
+                   , verbose = verbose, verboseLevel = 0)
+  messageVerbose("\033[34m-- ", installRangeCh, " of ", numPackages,
                  if (numGroups > 1)
                    paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
                  else  "",
                  ". Estimated time left: ",
                  timeLeftAlt, "; est. finish: ", estTimeFinish, "\033[39m",
                  verbose = verbose, verboseLevel = 0)
-
 
   if (any("Local" %in% toInstall$installFrom)) {
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
