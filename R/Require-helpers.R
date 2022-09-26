@@ -2599,7 +2599,7 @@ getOptionRPackageCache <- function() {
           if (identical("TRUE", curVal)) {
             curVal <- TRUE
           } else if (identical("FALSE", curVal)) {
-            curVal <- FALSE
+            curVal <- NULL
           } else {
             break
           }
