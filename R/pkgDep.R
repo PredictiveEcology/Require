@@ -65,8 +65,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE),
-                   verbose = getOption("Require.verbose"),
-                   verboseLevel = 1) {
+                   verbose = getOption("Require.verbose")) {
 
   purge <- dealWithCache(purge)
 
@@ -268,7 +267,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
               }
               if (!is.null(packageURL)) {
                 if (endsWith(packageURL, "tar.gz")) {
-                  srcContrib <- "src/contrib"
                   url <- file.path(repos, srcContrib, "/Archive", packageURL)
                   url2 <- file.path(repos, srcContrib, basename(packageURL))
                   tf <- tempfile()
@@ -415,7 +413,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            useAllInSearch = FALSE,
                            returnFull = TRUE, recursive = TRUE,
                            purge = getOption("Require.purge", FALSE),
-                           verbose = getOption("Require.verbose"), verboseLevel = 1) {
+                           verbose = getOption("Require.verbose")) {
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
@@ -458,7 +456,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
       }
     } else {
       pkgDep(pkgs, recursive = TRUE, purge = purge,
-             verbose = verbose, verboseLevel = verboseLevel)
+             verbose = verbose)
     }
   }
   else
@@ -880,7 +878,7 @@ dealWithCache <- function(purge, checkAge = TRUE) {
   if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
-      purge = TRUE
+      purge = FALSE
     } else {
       purgeDiff <- if (identical(purgeDiff, "")  || is.na(purgeDiff)) 3600 else purgeDiff
       autoPurge <- purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
@@ -960,3 +958,4 @@ paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = 
 }
 
 
+srcContrib <- "src/contrib"

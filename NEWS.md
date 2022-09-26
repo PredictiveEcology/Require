@@ -6,6 +6,7 @@ version 0.1.2
 * drop support for R 3.6 (R >= 4.0 are supported)
 
 ## enhancements
+* The `Require` argument, `require`, can now be a character string, indicating which packages should be attached via `require`
 * Now can use `GITHUB_PAT` environment variable, if set, when it accesses GitHub.com repositories (files or entire repository)
 * Attempt to capture and correct cases where GitHub.com branches are incorrectly labelled `master` instead of `main` (or vice versa)
 * much quieter messaging by default (can increase with verbose = 1)

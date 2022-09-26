@@ -1,7 +1,7 @@
 utils::globalVariables(c(
   ".", "..colsToKeep", "..colsToKeep2", "..keepCols",
   "Account",  "archiveSource", "AvailableVersion", "bothDepAndOrig", "Branch",
-  "compareVersionAvail", "correctVersion", "correctVersionAvail",
+  "correctVersion", "correctVersionAvail",
   "depOrOrig", "DESCFile", "detached", "download.file", "fullGit", "githubPkgName", "GitSubFolder",
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
   "LibPath", "libPaths", "loaded", "loadOrder", "needInstall",
@@ -119,6 +119,8 @@ utils::globalVariables(c(
 #' @param verbose Numeric or logical indicating how verbose should the function be.
 #'   If -1 or less, then as little verbosity as possible.
 #'   If 0 or FALSE, then minimal outputs; if `1` or TRUE, more outputs; `2` even more.
+#'   NOTE: in `Require` function, when `verbose >= 2`, the return object will have an attribute:
+#'   `attr(.., "Require")` which has lots of information about the processes of the installs.
 #' @param ... Passed to `install.packages`.
 #'   Good candidates are e.g., `type` or `dependencies`. This can be
 #'   used with `install_githubArgs` or `install.packageArgs` which
@@ -319,7 +321,7 @@ Require <- function(packages, packageVersionFile,
       out <- unlist(out)
       setLibPaths(dt$newLibPaths, standAlone = TRUE)
       messageVerbose(" to echo the multiple paths in ", packageVersionFile,
-                     verbose = verbose, verboseLevel = 1)
+                     verbose = verbose, verboseLevel = 0)
 
       if (isTRUE(require)) {
         return(out)
@@ -340,7 +342,7 @@ Require <- function(packages, packageVersionFile,
       }
     }
     packages <- packages$Package
-    which <- NULL
+    # which <- NULL
     install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
     install.packagesArgs["dependencies"] <- FALSE
     require <- FALSE
@@ -379,9 +381,8 @@ Require <- function(packages, packageVersionFile,
     packagesFullNameOrder <- packagesOrder
     names(packagesFullNameOrder) <- packageNamesOrig
 
-
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-      packages <- getPkgDeps(packages, which = which, purge = purge)
+      packages <- getPkgDeps(packages, which = which, purge = FALSE)
     }
 
 
@@ -400,6 +401,18 @@ Require <- function(packages, packageVersionFile,
     ]
     pkgDT[!is.na(packagesRequired),
           userRequestedOrder := as.integer(min(userRequestedOrder, na.rm = TRUE)), by = "Package"]
+
+    if (!missing(packageVersionFile)) {
+      setorderv(pkgDT, "packagesRequired", na.last = TRUE)
+      pkgDT <- pkgDT[, .SD[1], by = "Package"]
+      pkgDT <- pkgDT[!Package %in% .basePkgs]
+      notInPkgSnapshot <- pkgDT[is.na(packagesRequired)]
+      if (NROW(notInPkgSnapshot))
+        messageVerbose("The pkgSnapshot appears to be missing: ",
+                       paste(notInPkgSnapshot$Package, collapse = ", "),
+                       "; adding to installs", verbose = verbose, verboseLevel = 0)
+
+    }
     # convert require as a character string to the specific packages to load
     if (is.character(require)) {
       whLoad <- pkgDT$Package %in% require
@@ -435,9 +448,9 @@ Require <- function(packages, packageVersionFile,
     if (length(packages)) {
       if (isTRUE(install) || identical(install, "force")) {
         pkgDT <- parseGitHub(pkgDT, verbose = verbose)
-        pkgDT <- getPkgVersions(pkgDT, install = install)
+        pkgDT <- getPkgVersions(pkgDT, install = install, verbose = verbose)
         pkgDT <- getAvailable(pkgDT, purge = purge, repos = repos, verbose = verbose)
-        pkgDT <- installFrom(pkgDT, purge = purge, repos = repos)
+        pkgDT <- installFrom(pkgDT, purge = purge, repos = repos, verbose = verbose)
         pkgDT <- rmDuplicatePkgs(pkgDT, verbose = verbose)
         pkgDT <- pkgDT[Package %in% .basePkgs, needInstall := NA]
         canusepak <- usepak(packageFullName = pkgDT$packageFullName,

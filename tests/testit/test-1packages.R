@@ -1,12 +1,14 @@
 thisFilename <- "test-1packages.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
+
 origLibPathsAllTests <- .libPaths()
 
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.verbose" = TRUE,
-                   "Require.persistentPkgEnv" = TRUE,
+outOpts <- options("Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
                    "Require.unloadNamespaces" = TRUE)
@@ -19,8 +21,8 @@ if (Sys.info()["user"] == "achubaty") {
 #isInteractive <- function() TRUE
 #assignInNamespace("isInteractive", isInteractive, ns = "Require")
 
-repos <- getCRANrepos()
-opt <- options(repos = repos)
+# repos <- getCRANrepos()
+# opt <- options(repos = repos)
 
 # # Mock the internal functions
 # chooseCRANmirror2 <- function() {
@@ -31,6 +33,7 @@ opt <- options(repos = repos)
 #   repos
 # }
 # assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
+messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
@@ -109,12 +112,14 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
+  prevDir <- setwd(tempdir2("test11"))
   out <- pkgSnapshot()
   pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
   testit::assert({is.data.frame(out)})
   testit::assert({file.exists(formals("pkgSnapshot")$packageVersionFile)})
   out1 <- data.table::as.data.table(out)
   testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
+  setwd(prevDir)
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(tempdir2("test3"))
@@ -134,24 +139,29 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Try github with version
   dir4 <- Require:::rpackageFolder(tempdir2("test4"))
-  checkPath(dir4, create = TRUE)
-  # browser()
+  silent <- checkPath(dir4, create = TRUE)
+  inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+                           require = FALSE, standAlone = FALSE, libPaths = dir4)
+  testit::assert({isFALSE(inst)})
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
                              require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
-  testit::assert({isFALSE(inst)})
   testit::assert({length(mess) > 0})
   testit::assert({sum(grepl("could not be installed", mess)) == 1})
   unlink(dirname(dir3), recursive = TRUE)
+  unlink(dirname(dir4), recursive = TRUE)
 }
 
 # Code coverage -- run 2x so it won't reinstall
-# This line fails on CRAN for some reason; not on GA x9, E x3, A x1, WinBuilder x3, IE etc.
-try(out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1), silent = TRUE)
-try(out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 1), silent = TRUE)
+# This line fails on CRAN testing for some reason; not on GA x9, E x3, A x1, WinBuilder x3, IE etc.
 
-
+try(mess1 <- capture.output(type = "message",
+                            out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+    silent = TRUE)
+try(mess2 <- capture.output(type = "message",
+                            out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+    silent = TRUE)
 
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
@@ -160,8 +170,10 @@ out <- Require(pkg, install = FALSE, require = FALSE)
 testit::assert({isFALSE(all(out))})
 
 # Try a package taken off CRAN
-out <- Require("ggplot")
-testit::assert(isTRUE(out)) # it got installed, even though off CRAN
+reallyOldPkg <- "ggplot"
+out <- Require(reallyOldPkg, require = FALSE)
+ip <- data.table::as.data.table(installed.packages())
+testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
 out <- getPkgVersions("Require")
 testit::assert({is.data.table(out)})
@@ -202,7 +214,7 @@ if (interactive()) {
   }, warning = function(x) x)
 }
 
-options(opt)
+# options(opt)
 options(outOpts)
 if (exists("outOpts2")) options(outOpts2)
 if (!identical(origLibPathsAllTests, .libPaths()))

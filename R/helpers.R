@@ -334,8 +334,9 @@ messageVerbose <- function(..., verbose = getOption("Require.verbose"),
 #' @inheritParams Require
 #' @param pre A single text string to paste before the counter
 #' @param post A single text string to paste after the counter
-#' @param counter. An integer indicating which iteration is being done
-#' @param total. An integer indicating the total number to be done.
+#' @param counter An integer indicating which iteration is being done
+#' @param total An integer indicating the total number to be done.
+#' @param minCounter An integer indicating the minimum (i.e,. starting value)
 messageVerboseCounter <- function(pre = "", post = "", verbose = getOption("Require.verbose"),
                                   verboseLevel = 1, counter = 1,
                                   total = 1, minCounter = 1) {

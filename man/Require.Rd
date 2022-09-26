@@ -84,7 +84,9 @@ Internally, there are calls to \code{available.packages}.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
+NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
+\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
 
 \item{...}{Passed to \code{install.packages}.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
