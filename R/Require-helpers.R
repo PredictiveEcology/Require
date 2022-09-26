@@ -7,7 +7,7 @@ utils::globalVariables(c(
     "keep", "keep2", "lastRow", "localFileName", "localType", "maxVers",
     "mtime", "N", "Names", "neededFiles", "needLaterDate", "nextRow",
     "Package", "packageFullName", "repoLocation", "tmpOrder", "type",
-    "version", "violations", "VersionFromPV")
+    "version", "violations", "VersionFromPV", "..removeCols", "compareVersionAvail")
 ))
 
 #' @details
@@ -244,7 +244,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       # do Older Versions
       needOlder <- pDT$correctVersionAvail %in% FALSE
       needOlderNotGH <- needOlder & pDT$repoLocation != "GitHub"
-      if (is.na(any(needOlderNotGH))) browser()
+      if (is.na(any(needOlderNotGH))) stop("Error 642; please contact developer")
       if (any(needOlderNotGH)) {
 
         pkg <- pDT[needOlderNotGH]$Package #repoLocation != "GitHub" & needOlder]$Package
@@ -1873,7 +1873,7 @@ installRequire <- function(requireHome = getOption("Require.Home"),
             on.exit(setwd(origDir), add = TRUE)
             messageVerbose("Installing Require ver: ", pkgVersionAtRequireHome," from source at ", requireHome,
                            verbose = verbose, verboseLevel = 2)
-            out <- system(paste0("R CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
+            out <- system(paste0(Rpath, " CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
                           wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE)
           }
         }
@@ -2355,7 +2355,7 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, destDir = ".",
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
   badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
-  if (is(badDirname, "try-error")) browser()#stop("Error 654; something went wrong with downloading & building the package")
+  if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
   Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
     file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix

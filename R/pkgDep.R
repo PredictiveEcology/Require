@@ -65,8 +65,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE),
-                   verbose = getOption("Require.verbose"),
-                   verboseLevel = 1) {
+                   verbose = getOption("Require.verbose")) {
 
   purge <- dealWithCache(purge)
 
@@ -414,7 +413,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            useAllInSearch = FALSE,
                            returnFull = TRUE, recursive = TRUE,
                            purge = getOption("Require.purge", FALSE),
-                           verbose = getOption("Require.verbose"), verboseLevel = 1) {
+                           verbose = getOption("Require.verbose")) {
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
@@ -457,7 +456,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
       }
     } else {
       pkgDep(pkgs, recursive = TRUE, purge = purge,
-             verbose = verbose, verboseLevel = verboseLevel)
+             verbose = verbose)
     }
   }
   else
