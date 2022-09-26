@@ -76,13 +76,13 @@ if (file.exists(pkgVF)) {
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
     localBinsFull <- na.omit(c(dts))#, rems))
+    dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+    localBinsFull <- dts
   } else {
     localBinsFull <- NULL
   }
 
   ## There might be more than one version
-  dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-  localBinsFull <- dts
   Rpath <- Sys.which("Rscript")
   quiet <- !(getOption("Require.verbose") >= 1)
   if (length(localBinsFull) == 1) {
@@ -114,7 +114,7 @@ if (file.exists(pkgVF)) {
   if (Require:::isWindows())
     anyMissing <- anyMissing[!Package %in% "littler"]
   # here[!there, on = "Package"]
-  if (NROW(anyMissing) != 0) stop("Error 832; please contact developer")
+  if (NROW(anyMissing) != 0) browser() # stop("Error 832; please contact developer")
   testit::assert(NROW(anyMissing) == 0)
 }
 if (!identical(origLibPathsAllTests, .libPaths()))

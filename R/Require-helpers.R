@@ -1351,6 +1351,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                 }
                 ipa <- modifyList2(list(type = type), install.packagesArgs, dots)
                 ipa <- append(ipa, list(repos = NULL))
+                ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
                 prevWD <- setwd(tempdir2(.rndstr(1)))
                 on.exit(setwd(prevWD), add = TRUE)
                 curPkgs <- toIn$Package
@@ -1512,7 +1513,9 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       Map(installPkgNames = installPkgNamesList, repos = reposList,
           function(installPkgNames, repos) {
 
+            ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
             ipaFull <- append(list(installPkgNames, repos = repos), ipa)
+
             installPackagesQuoted <-
               quote(do.call(install.packages, ipaFull))
 
@@ -1647,8 +1650,10 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     ipa <- modifyList2(install.packagesArgs, dots)
     ipa <- append(ipa, list(repos = NULL, type = "bin"))
 
+
     urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
     urlsFail <- urlsOuter[urlsOuter == "Fail"]
+    ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
 
     withCallingHandlers(
         do.call(install.packages, append(list(unname(urlsSuccess)), ipa)),
@@ -1709,6 +1714,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     dots$type <- "source" # must be a source
     ipa <- modifyList2(install.packagesArgs, dots)
     ipa <- append(ipa, list(repos = NULL))
+    ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
 
     withCallingHandlers({
       do.call(install.packages,
