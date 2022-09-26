@@ -6,7 +6,7 @@
 \usage{
 setLinuxBinaryRepo(
   binaryLinux = "https://packagemanager.rstudio.com/",
-  backupCRAN = "https://cloud.r-project.org"
+  backupCRAN = srcPackageURLOnCRAN
 )
 }
 \arguments{

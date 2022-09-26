@@ -209,7 +209,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 #'
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/",
-                               backupCRAN = "https://cloud.r-project.org") {
+                               backupCRAN = srcPackageURLOnCRAN) {
   if (Sys.info()["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(CRAN =
@@ -219,6 +219,7 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
       }
       if (is.null(names(backupCRAN))) names(backupCRAN) <- "CRAN"
       repo <- c(repo, backupCRAN)
+      repo <- repo[!duplicated(repo)]
       options(repos = repo)
     }
   }

@@ -378,6 +378,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           archivedOn <- ""
           if (wasRemoved) {
             # some CRAN repos e.g., RStudioPackage Manager is not a full CRAN mirror; try all repos
+            if (all(isBinaryCRANRepo(repos))) {
+              repos <- c(repos, CRAN = srcPackageURLOnCRAN)
+            }
             for (repo in repos) {
               yy <- url(file.path(repo, srcContrib, "Archive", pk))
               on.exit(try(close(yy), silent = TRUE))
@@ -389,6 +392,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
               messageVerbose("Could not get ", pk, " at ", repo, verbose = verbose, verboseLevel = 2)
               if (length(repos) > 1)
                 messageVerbose("; trying next CRAN repo", verbose = verbose, verboseLevel = 2)
+
             }
 
             archivedOn <- grep("Archived on", rl, value = TRUE)
