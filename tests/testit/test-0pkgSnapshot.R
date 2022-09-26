@@ -5,6 +5,7 @@ try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = T
 message("\033[32m --------------------------------- Starting ", thisFilename, "  at: ",
         format(startTime),"---------------------------\033[39m")
 messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 library(Require)
 srch <- search()

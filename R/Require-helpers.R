@@ -1840,6 +1840,7 @@ copyTarball <- function(pkg, builtBinary) {
 
 installRequire <- function(requireHome = getOption("Require.Home"),
                            verbose = getOption("Require.verbose")) {
+  Rpath <- Sys.which("R")
   dFileAtInstalledRequire <- file.path(.libPaths()[1], "Require", "DESCRIPTION")
   haveIt <- file.exists(dFileAtInstalledRequire)
   installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(dFileAtInstalledRequire) else NULL
@@ -2153,11 +2154,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   skipDLandBuild <- FALSE
 
   if (!is.null(getOptionRPackageCache()) || any(filesExist)) {
-
-    # if (any(filesExist)) {
-    # packageName <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "Package")
-
-    # if (length(nchar(gr$br) == 40) > 1) browser()
     shaOnGitHub <-
       unlist(Map(repoInner = gr$repo, acctInner = gr$acct, brInner = gr$br,
               function(repoInner, acctInner, brInner)
