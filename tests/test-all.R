@@ -1,6 +1,7 @@
 library(testit)
-opts <- options(Require.verbose = -1,
-                Require.RPackageCache = FALSE)
+opts <- options(Require.verbose = -1#,
+                #Require.RPackageCache = FALSE
+                )
 # optsCRAN <- options(repos = c(CRAN = "https://muug.ca/mirror/cran"))
 # optsCRAN <- options(repos = c(CRAN = "https://cloud.r-project.org"))
 test_pkg("Require")

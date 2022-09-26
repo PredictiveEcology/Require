@@ -84,7 +84,7 @@ if (interactive()) {
   setwd(origDir)
 
   on.exit({
-    message(".libPaths during packagesLong: ", .libPaths())
+    message(".libPaths during packagesLong: ", paste(.libPaths(), collapse = "; "))
     Require::setLibPaths(orig, updateRprofile = FALSE)
     })
 
