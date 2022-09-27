@@ -1717,28 +1717,35 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
 
   if (any(!onMRAN) ) {
     install.packagesArgs <- modifyList2(install.packagesArgs, list(type = "source"))
-    cranArchivePath <- file.path(getOption("repos"), "src/contrib/Archive/")
-    errorMess <- list()
-    warn <- list()
-    p <- toIn$PackageUrl[!onMRAN]
     installPkgNamesArchiveOnly <- toIn$Package[!onMRAN]
-    p <- file.path(cranArchivePath, p)
-    dots$type <- "source" # must be a source
-    ipa <- modifyList2(install.packagesArgs, dots)
-    ipa <- append(ipa, list(repos = NULL))
-    ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
+    for (repo in repos) {
+      cranArchivePath <- file.path(repo, "src/contrib/Archive/")
+      errorMess <- list()
+      warn <- list()
+      p <- toIn$PackageUrl[!onMRAN]
+      p <- file.path(cranArchivePath, p)
+      dots$type <- "source" # must be a source
+      ipa <- modifyList2(install.packagesArgs, dots)
+      ipa <- append(ipa, list(repos = NULL))
+      ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
 
-    withCallingHandlers({
-      do.call(install.packages,
-              # using ap meant that it was messing up the src vs bin paths
-              append(list(unname(p)), ipa))
-    },
-    warning = function(w) {
-      warn <<- append(warn, list(w$message))
-      invokeRestart("muffleWarning")
+      out <- withCallingHandlers({
+        do.call(install.packages,
+                # using ap meant that it was messing up the src vs bin paths
+                append(list(unname(p)), ipa))
+      },
+      warning = function(w) {
+        warn <<- append(warn, list(w$message))
+        invokeRestart("muffleWarning")
+      }
+
+      )
+      # check installed
+      pkgsInstalled <- dir(.libPaths()[1])
+      p <- p[!installPkgNamesArchiveOnly %in% pkgsInstalled]
+      if (length(p) == 0)
+        break
     }
-
-    )
     warn <- unlist(warn)
     if (length(warn)) {
       warning(warn)
