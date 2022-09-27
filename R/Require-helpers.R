@@ -170,6 +170,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         pDT <- cachedAvailablePackages[pDT, on = "Package"]
 
+        # browser()
         if (all(is.na(pDT$inequality))) {
           set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA)
         } else {
@@ -179,11 +180,12 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
           # pDT[!is.na(inequality) ,
           #                    compareVersionAvail := !is.na(AvailableVersion)]
           whCheckVersion <- (pDT$repoLocation != "GitHub") & !is.na(pDT$inequality)
-          pDT[which(whCheckVersion), correctVersionAvail :=
-                               eval(parse(text = paste0("'", AvailableVersion,"'",
-                                                        inequality,
-                                                        "'", versionSpec, "'"))),
-                             by = seq(sum(whCheckVersion))]
+          pDT[whChange, correctVersionAvail :=
+                               # eval(parse(text = paste0("'", AvailableVersion,"'",
+                               #                          inequality,
+                               #                          "'", versionSpec, "'"))),
+                .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+                #             by = seq(sum(whCheckVersion))]
         }
 
         # pDT[repoLocation != "GitHub",
@@ -500,7 +502,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
     anyWhFails <- any(whFails, na.rm = TRUE)
     if (anyWhFails) {
-      messageVerbose("\033[36m", paste(pkgDT$packageFullName[whFails], collapse = ", "),
+      messageVerbose("\033[36m", paste(unique(pkgDT$packageFullName[whFails]), collapse = ", "),
                               " could not be installed because no available version\033[39m",
                      verbose = verbose, verboseLevel = 1)
     }

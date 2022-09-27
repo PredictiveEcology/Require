@@ -8,6 +8,9 @@ version 0.1.3
 ## enhancement
 * `verbose` argument is now widespread, with -1, 0, 1, 2 all valid and correctly inherited values. See argument description in e.g., `?Require`
 
+## bugfixes
+* more edge cases found and dealt with
+
 version 0.1.2
 ==============
 ## dependencies
