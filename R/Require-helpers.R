@@ -170,7 +170,6 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         pDT <- cachedAvailablePackages[pDT, on = "Package"]
 
-        # browser()
         if (all(is.na(pDT$inequality))) {
           set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA)
         } else {
@@ -2206,11 +2205,11 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       orPattern <- paste(shaOnGitHub, collapse = "|")
       cachedFiles <- dir(getOptionRPackageCache(), pattern = orPattern, full.names = TRUE)
       if (length(cachedFiles)) {
-        cachedFilesHere <- file.copy(cachedFiles, basename(gsub(paste0(".(", orPattern, ")"), "", cachedFiles)))
+        cachedFilesHere <- file.copy(cachedFiles, gsub(paste0("(", orPattern, ")."), "", basename(cachedFiles)))
         if (all(cachedFilesHere)) {
           skipDLandBuild <- TRUE
           messageVerbose("Identical SHA in ", RequirePkgCacheDir(), "; using it",
-                         verbose = verbose, verboseLevel = 1)
+                         verbose = verbose, verboseLevel = 0)
         }
 
 
@@ -2298,7 +2297,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       theDESCRIPTIONfile <- file.path(.libPaths()[1], pack, "DESCRIPTION")
       # system.file("DESCRIPTION", package = "peutils", lib.loc = .libPaths()[1])
       sha <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "RemoteSha")
-      file.rename(fns, paste0(fns, ".", sha))
+      file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
     }
   })
 
