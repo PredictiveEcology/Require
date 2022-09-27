@@ -173,7 +173,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
         fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
         if (!newPathExists) {
           messageVerbose("Placing copy of ", pkg, " in ", RPackageFolders,
-                  verbose = verbose, verboseLevel = 1)
+                  verbose = verbose, verboseLevel = 2)
           dirs <- unique(dirname(fromFiles))
           dirs <- gsub(thePath, theNewPath, dirs)
           lapply(dirs, checkPath, create = TRUE)
