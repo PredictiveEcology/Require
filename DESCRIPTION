@@ -33,6 +33,7 @@ Suggests:
     covr,
     remotes,
     pak,
+    parallel,
     testit
 Encoding: UTF-8
 Language: en-CA
