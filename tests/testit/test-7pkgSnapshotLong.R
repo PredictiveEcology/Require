@@ -20,8 +20,14 @@ if (interactive()) {
   checkPath(pkgPath, create = TRUE)
   download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt", destfile = file.path(pkgPath, "pkgSnapshot.txt"))
   origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
-  pkgs <- data.table::fread(file.path(pkgPath, "pkgSnapshot.txt"))
-  out <- Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"), require = FALSE)
+  fn <- file.path(pkgPath, "pkgSnapshot.txt")
+  pkgs <- data.table::fread(fn)
+  # pks <- c("ymlthis", "SpaDES.tools", "amc")
+  # pkgs <- pkgs[Package %in% pks]
+  # data.table::fwrite(pkgs, fn)
+  # remove.packages(pks)
+  # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
+  out <- Require(packageVersionFile = fn, require = FALSE, verbose = 2)
   persLibPathOld <- pkgs$LibPath[which(pkgs$Package == "amc")]
   pkgsInOut <- extractPkgName(names(out))
   installed <- pkgs[LibPath == persLibPathOld]$Package %in% pkgsInOut#[out$installed]
