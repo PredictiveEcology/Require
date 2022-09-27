@@ -221,7 +221,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
 
         # If package has both a binary and source available on CRAN, there will be 2 entries
         pDT[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
-        setorderv(pDT, c("correctVersionAvail"), order = -1, na.last = TRUE) # put TRUE first
+        # # CRAN before GitHub, if "correctVersionAvail" is TRUE
+        setorderv(pDT, c("correctVersionAvail", "repoLocation"), order = c(-1L, 1L), na.last = TRUE) # put TRUE first
         pDT[, keep := min(.I), by = "Package"]
         pDT <- pDT[pDT$keep,]
 
