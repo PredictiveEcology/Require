@@ -2258,6 +2258,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
   }
 
+  packageTarName <- packageTarName[pmatch(names(gitRepo), packageTarName)]
   opts2 <- append(dots,
                   list(packageTarName,
                        repos = NULL,
