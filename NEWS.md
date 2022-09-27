@@ -1,5 +1,13 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.1.3
+==============
+* Make corrections for 2 failing architectures on CRAN
+* MUCH less verbose during automated testing
+
+## enhancement
+* `verbose` argument is now widespread, with -1, 0, 1, 2 all valid and correctly inherited values. See argument description in e.g., `?Require`
+
 version 0.1.2
 ==============
 ## dependencies
