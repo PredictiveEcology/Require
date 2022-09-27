@@ -269,7 +269,12 @@ Require <- function(packages, packageVersionFile,
   opts <- options(repos = allrepos)
 
   Ncpus <- getOption("Ncpus")
-  if (is.null(Ncpus)) opts <- append(opts, options(Ncpus = 4))
+  if (is.null(Ncpus)) {
+    newVal <- if (requireNamespace("parallel", quietly = TRUE))
+      min(16, parallel::detectCores()) else 4
+
+    opts <- append(opts, options(Ncpus = newVal))
+  }
   on.exit({
     options(opts)}
     , add = TRUE)
