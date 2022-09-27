@@ -1147,6 +1147,7 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
     gitPkgDepOrig <- gitPkgDeps2
     gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
     ipa <- modifyList2(install_githubArgs, dots)
+    ipa <- modifyList2(ipa, list(verbose = verbose))
     warns <- messes <- errors <- list()
 
     if (NROW(gitPkgDeps2)) {
@@ -1813,10 +1814,11 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
 
     if (any("Archive" %in% toInstall$installFrom))
         pkgDT <- installArchive(pkgDT, toInstall, dots, install.packagesArgs, install_githubArgs,
-                                                  repos = repos)
+                                                  repos = repos, verbose = verbose)
 
     if (any("GitHub" %in% toInstall$installFrom)) {
-        pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots)
+        pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots,
+                               verbose = verbose)
     }
   } else {
     pkgDT[pkgDT$packageFullName %in% toInstall$packageFullName, installFrom := "Fail"]
