@@ -2221,9 +2221,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     }
   }
 
-  if (!skipDLandBuild) {
+  stillNeedDLandBuild <- !skipDLandBuild
+  if (any(stillNeedDLandBuild)) {
     if (!useRemotes) {
-      out <- downloadRepo(gitRepo, overwrite = TRUE, destDir = tmpPath, verbose = verbose)
+      out <- downloadRepo(gitRepo[stillNeedDLandBuild], overwrite = TRUE, destDir = tmpPath, verbose = verbose)
       if (is(out, "try-error"))
         useRemotes <- TRUE
     }
@@ -2237,7 +2238,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
         return(invisible())
     }
   }
-  if (!skipDLandBuild) {
+  if (any(stillNeedDLandBuild)) {
     if (nchar(Sys.which("R")) > 0) {
       messageVerbose("building package (R CMD build)",
                      verbose = verbose, verboseLevel = 1)
@@ -2246,7 +2247,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                   "--no-build-vignettes")
       Rpath1 <- Sys.getenv("R_HOME")
       Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
-      out1 <- lapply(gr$repo, function(repo) {
+      out1 <- lapply(gr$repo[stillNeedDLandBuild], function(repo) {
         system(paste(Rpath, "CMD build ", repo, paste(extras, collapse = " ")),
                intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
       })
@@ -2255,24 +2256,37 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
       messageVerbose("  ... Built!",
                      verbose = verbose, verboseLevel = 1)
+      shaOnGitHub2 <- shaOnGitHub[packageName]
+      Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
+        fns <- copyTarball(pack, builtBinary = TRUE)
+        file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
+      })
+
     } else {
       stop("Can't install packages this way because R is not on the search path")
     }
   }
-  packageTarName <- dir(pattern = "tar.gz")# [1]
-  isBin <- isBinary(packageTarName, fromCRAN = FALSE)
-  if (any(isBin)) {
-    packageTarName <- packageTarName[isBin]
-  }
-  packageName <- gsub("(.+)\\_[[:digit:]]+\\..+", "\\1", packageTarName)
+  localDir <- dir()
+  packageFNtoInstall <- lapply(gr$repo, function(pak) {
+    packageFNtoInstall <- grep(pattern = paste0(pak, ".+(tar.gz|zip)"), localDir, value = TRUE)
+    isBin <- isBinary(packageFNtoInstall, fromCRAN = FALSE)
+    if (any(isBin)) {
+      packageFNtoInstall <- packageFNtoInstall[isBin]
+    }
+    packageFNtoInstall
+  })
+
   if (!isTRUE(grepl("--build", dots$INSTALL_opts)) && !is.null(getOptionRPackageCache())) {
-    if (!all(isBinary(packageTarName, fromCRAN = FALSE)))
+    if (!all(isBinary(unlist(packageFNtoInstall), fromCRAN = FALSE)))
       dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
   }
 
-  packageTarName <- packageTarName[pmatch(names(gitRepo), packageTarName)]
+  packageFNtoInstall <- unlist(packageFNtoInstall[pmatch(names(gitRepo), packageFNtoInstall)])
+  packageName <- names(packageFNtoInstall)
+  names(packageName) <- packageName
+
   opts2 <- append(dots,
-                  list(packageTarName,
+                  list(packageFNtoInstall,
                        repos = NULL,
                        lib = normalizePath(libPath, winslash = "/")))
   opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
@@ -2310,8 +2324,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
     }
   })
-
-
+  return(installStatus)
 
 }
 
@@ -2796,6 +2809,12 @@ masterMain <- c("main", "master")
 masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
 masterGrep <- paste0("/", "master", "(/|\\.)")
 mainGrep <- paste0("/", "main", "(/|\\.)")
+
+extractPkgNameFromFileName <- function(x) {
+  out <- gsub(".+\u2018(.+)_.+\u2019.+", "\\1", x) # those two escape characters are the inverted commas
+  gsub(".+\u2018(.+)\u2019.+", "\\1", out)         # package XXX is in use and will not be installed
+}
+
 
 appendToWarns <- function(w, warns) {
   pkgName <- extractPkgNameFromFileName(w)
