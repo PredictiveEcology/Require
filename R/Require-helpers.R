@@ -169,17 +169,15 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         cachedAvailablePackages <- cachedAvailablePackages[, c("Package", "Version", "Archs")]
         setnames(cachedAvailablePackages, "Version", "AvailableVersion")
         pDT <- cachedAvailablePackages[pDT, on = "Package"]
-
-        if (all(is.na(pDT$inequality))) {
-          set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA)
-        } else {
+        set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA_integer_)
+        if (!all(is.na(pDT$inequality))) {
           whChange <- which(!is.na(pDT$inequality))
-          set(pDT, whChange, "compareVersionAvail",
-              .compareVersionV(pDT$AvailableVersion[whChange], pDT$versionSpec[whChange]))
+          whCheckVersion <- which((pDT$repoLocation != "GitHub") & !is.na(pDT$inequality))
+          set(pDT, whCheckVersion, "compareVersionAvail",
+              .compareVersionV(pDT$AvailableVersion[whCheckVersion], pDT$versionSpec[whCheckVersion]))
           # pDT[!is.na(inequality) ,
           #                    compareVersionAvail := !is.na(AvailableVersion)]
-          whCheckVersion <- (pDT$repoLocation != "GitHub") & !is.na(pDT$inequality)
-          pDT[whChange, correctVersionAvail :=
+          pDT[whCheckVersion, correctVersionAvail :=
                                # eval(parse(text = paste0("'", AvailableVersion,"'",
                                #                          inequality,
                                #                          "'", versionSpec, "'"))),
@@ -501,7 +499,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
     anyWhFails <- any(whFails, na.rm = TRUE)
     if (anyWhFails) {
-      messageVerbose("\033[36m", paste(unique(pkgDT$packageFullName[whFails]), collapse = ", "),
+      messageVerbose("\033[36m", paste(unique(pkgDT$packageFullName[whFails %in% TRUE]), collapse = ", "),
                               " could not be installed because no available version\033[39m",
                      verbose = verbose, verboseLevel = 1)
     }
