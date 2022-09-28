@@ -838,7 +838,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
                        verbose = getOption("Require.verbose"),
                        ...) {
 
-  if (any(pkgDT$needInstall %in% TRUE)) {
+  doPackages <- ((pkgDT$needInstall %in% TRUE) &  # needs to be installed
+    !(pkgDT$installFrom %in% c("Fail", "Duplicate")) &  # can be installed
+    pkgDT$installed %in% FALSE)  # and isn't already installed
+  if (any(doPackages) ) {
     install.packagesArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install.packagesArgs[["INSTALL_opts"]]))
     install_githubArgs["INSTALL_opts"] <- unique(c("--no-multiarch", install_githubArgs[["INSTALL_opts"]]))
     if (is.null(list(...)$destdir) && (isTRUE(install) || identical(install, "force"))) {
@@ -868,10 +871,12 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     }
   }
 
-  if (any(!pkgDT$installed | NROW(pkgDT[correctVersion == FALSE]) > 0) &&
-      (isTRUE(install) || install == "force")) {
+  # if (any(pkgDT$Package %in% "LandR.CS")) browser()
+
+  if (any(doPackages) && (isTRUE(install) || install == "force")) {
     dots <- list(...)
-    pkgDT[, tmpOrder := seq_len(NROW(pkgDT))]
+    set(pkgDT, NULL, "tmpOrder", seq_len(NROW(pkgDT)))
+    # pkgDT[, tmpOrder := seq_len(NROW(pkgDT))]
 
     toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & !(installFrom %in% c("Fail", "Duplicate"))]
     hasRequireDeps <- pkgDT[(installed == FALSE  | !correctVersion) & Package == "Require"]
