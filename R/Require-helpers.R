@@ -2204,13 +2204,15 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
         }
       }
     } else { # this means, not installed, but it may be in Cache
-      orPattern <- paste(shaOnGitHub, collapse = "|")
-      cachedFiles <- dir(getOptionRPackageCache(), pattern = orPattern, full.names = TRUE)
-      if (length(cachedFiles)) {
-        cachedFilesHere <- file.copy(cachedFiles, gsub(paste0("(", orPattern, ")."), "", basename(cachedFiles)))
-        if (all(cachedFilesHere)) {
-          skipDLandBuild <- TRUE
-          messageVerbose("Identical SHA in ", RequirePkgCacheDir(), "; using it",
+      dd <- dir(getOptionRPackageCache(), full.names = TRUE)
+      cachedFiles <- lapply(shaOnGitHub, function(sha) grep(sha, dd, value = TRUE))
+      if (any(lengths(cachedFiles) > 0)) {
+        cachedFilesHere <- Map(cf = cachedFiles, sha = shaOnGitHub, function(cf, sha)
+          file.copy(cf, gsub(paste0("(", sha, ")."), "", basename(cf))))
+        skipDLandBuild <- lengths(cachedFilesHere) > 0
+        if (any(skipDLandBuild)) {
+          messageVerbose("Identical SHA for '", paste(names(skipDLandBuild)[skipDLandBuild], collapse = "', '"),
+                         "' found in ", RequirePkgCacheDir(), "; using it",
                          verbose = verbose, verboseLevel = 0)
         }
 
