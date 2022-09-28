@@ -438,18 +438,29 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       }
 
       # do GitHub second
-      if (any(pDT[whNotCorrect][packageFullName %in% pDT$packageFullName]$repoLocation == "GitHub")) {
-        pDT <- getGitHubDESCRIPTION(pDT, purge = purge)
-        whGH <- which(pDT$repoLocation == "GitHub")
-        if (length(whGH)) {
-          set(pDT, whGH, "AvailableVersion", DESCRIPTIONFileVersionV(pDT$DESCFile[whGH]))
-          # pDT[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
-          set(pDT, whGH, "compareVersionAvail", .compareVersionV(pDT$AvailableVersion[whGH], pDT$versionSpec[whGH]))
-          # pDT[repoLocation == "GitHub",
-          #                    compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
-          pDT[repoLocation == "GitHub" & !is.na(inequality),
-              correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
-        }
+      # if (any(pkgDT$Package %in% "LandR.CS")) browser()
+      githubNeedInstall <- !pDT$correctVersion %in% FALSE & pDT$installed %in% FALSE & pDT$repoLocation %in% "GitHub"
+      if (any(githubNeedInstall)) {
+        set(pDT, NULL, "tmpOrder", seq(NROW(pDT)))
+        needInstallInd <- githubNeedInstall %in% TRUE # deals with NAs
+        whNeedInstall <- which(needInstallInd)
+        pDT2 <- getGitHubFile(pDT[whNeedInstall, ])
+        pDT1 <- pDT[which(!needInstallInd), ]
+        pDT <- rbindlist(list(pDT1, pDT2), use.names = TRUE, fill = TRUE)[]
+        setorderv(pDT, "tmpOrder")
+        set(pDT, NULL, "tmpOrder", NULL)
+
+        # pDT <- getGitHubDESCRIPTION(pDT, purge = purge)
+        # whGH <- which(pDT$repoLocation == "GitHub")
+        # if (length(whGH)) {
+        set(pDT, whNeedInstall, "AvailableVersion", DESCRIPTIONFileVersionV(pDT$DESCFile[whNeedInstall]))
+        # pDT[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
+        set(pDT, whNeedInstall, "compareVersionAvail", .compareVersionV(pDT$AvailableVersion[whNeedInstall], pDT$versionSpec[whNeedInstall]))
+        # pDT[repoLocation == "GitHub",
+        #                    compareVersionAvail := .compareVersionV(AvailableVersion, versionSpec)]
+        pDT[repoLocation == "GitHub" & !is.na(inequality),
+            correctVersionAvail := .evalV(.parseV(text = paste(compareVersionAvail, inequality, "0")))]
+        # }
         set(pDT, NULL, c("url", "DESCFile"), NULL)
 
       }
