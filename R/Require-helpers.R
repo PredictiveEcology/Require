@@ -511,7 +511,7 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     anyWhFails <- any(whFails, na.rm = TRUE)
     if (anyWhFails) {
       messageVerbose("\033[36m", paste(unique(pkgDT$packageFullName[whFails %in% TRUE]), collapse = ", "),
-                              " could not be installed because no available version\033[39m",
+                              " could not be installed the version specification cannot be met\033[39m",
                      verbose = verbose, verboseLevel = 1)
     }
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
