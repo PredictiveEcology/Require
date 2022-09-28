@@ -2827,7 +2827,6 @@ extractPkgNameFromFileName <- function(x) {
 
 
 appendToWarns <- function(w, warns, Package) {
-  browser()
   pkgName <- unique(unlist(lapply(Package, function(p) p[grepl(p, w)])))
   # pkgName <- extractPkgNameFromFileName(w)
   newWarn <- list(w)

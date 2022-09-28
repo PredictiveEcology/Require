@@ -451,6 +451,8 @@ Require <- function(packages, packageVersionFile,
     }
 
     if (length(packages)) {
+      # if (any(pkgDT$Package %in% "LandR.CS")) browser()
+
       if (isTRUE(install) || identical(install, "force")) {
         pkgDT <- parseGitHub(pkgDT, verbose = verbose)
         pkgDT <- getPkgVersions(pkgDT, install = install, verbose = verbose)
@@ -469,17 +471,18 @@ Require <- function(packages, packageVersionFile,
         if (!canusepak) {
           warns <- list()
           #tryCatch(
-            withCallingHandlers(
-              pkgDT <- doInstalls(pkgDT,
-                                  install_githubArgs = install_githubArgs,
-                                  install.packagesArgs = install.packagesArgs,
-                                  install = install, repos = repos, verbose = verbose,
-                                  ...
-              ), warning = function(w) {
-                warns <<- appendToWarns(w$message, warns, pkgDT$Package[pkgDT$needInstall %in% TRUE])
-              })#, error = function(e) {
-            #  })
-          pkgDT <- updateInstalled(pkgDT, pkgDT$Package[pkgDT$needInstall], warns)
+          withCallingHandlers(
+            pkgDT <- doInstalls(pkgDT,
+                                install_githubArgs = install_githubArgs,
+                                install.packagesArgs = install.packagesArgs,
+                                install = install, repos = repos, verbose = verbose,
+                                ...
+            ), warning = function(w) {
+              warns <<- appendToWarns(w$message, warns, Package = pkgDT$Package[pkgDT$needInstall %in% TRUE])
+            })#, error = function(e) {
+          #  })
+          PackagesInstalled <- pkgDT$Package[pkgDT$needInstall %in% TRUE & !(pkgDT$installFrom %in% c("Fail", "Duplicate"))]
+          pkgDT <- updateInstalled(pkgDT, PackagesInstalled, warns)
         }
         if ("detached" %in% colnames(pkgDT)) {
           unloaded <- pkgDT[!is.na(detached)]
