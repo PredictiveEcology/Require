@@ -467,12 +467,19 @@ Require <- function(packages, packageVersionFile,
             canusepak <- FALSE
         }
         if (!canusepak) {
-          pkgDT <- doInstalls(pkgDT,
-                              install_githubArgs = install_githubArgs,
-                              install.packagesArgs = install.packagesArgs,
-                              install = install, repos = repos, verbose = verbose,
-                              ...
-          )
+          warns <- list()
+          tryCatch(
+            withCallingHandlers(
+              pkgDT <- doInstalls(pkgDT,
+                                  install_githubArgs = install_githubArgs,
+                                  install.packagesArgs = install.packagesArgs,
+                                  install = install, repos = repos, verbose = verbose,
+                                  ...
+              ), warning = function(w) {
+                warns <<- appendToWarns(w$message, warns, pkgDT$Package[pkgDT$needInstall %in% TRUE])
+              }), error = function(e) {
+              })
+          pkgDT <- updateInstalled(pkgDT, pkgDT$Package[pkgDT$needInstall], warns)
         }
         if ("detached" %in% colnames(pkgDT)) {
           unloaded <- pkgDT[!is.na(detached)]
