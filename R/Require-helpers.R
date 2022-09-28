@@ -946,113 +946,118 @@ doLoading <- function(pkgDT, require = TRUE, verbose = getOption("Require.verbos
   if (NROW(pkgDTForLoad) && !isFALSE(require)) {
     names(packages) <- packages
     packages <- packages[order(packageOrder)]
-    requireOut <- lapply(packages, function(pkg) {
-      outMess <- capture.output({
-        out <- require(pkg, character.only = TRUE)
-      }, type = "message")
-      warn <- warnings()
-      grep4a <- "version.*cannot be unloaded" # means that prior to changing .libPaths, the package was loaded; .libPaths version is older
-      grep3a <- "no package called"
-      grep3b <- "could not be found"
-      missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
+    requireOut <- lapply(packages, require, character.only = TRUE)
+    # requireOut <- lapply(packages, function(pkg) {
+    #   outMess <- capture.output({
+    #     out <- require(pkg, character.only = TRUE)
+    #   }, type = "message")
+    #   warn <- warnings()
+    #   grep4a <- "version.*cannot be unloaded" # means that prior to changing .libPaths, the package was loaded; .libPaths version is older
+    #   grep3a <- "no package called"
+    #   grep3b <- "could not be found"
+    #   missingDeps <- grepl(paste0(grep3a, "|", grep3b), outMess)
+    #
+    #   grep2 <- "package or namespace load failed for"
+    #   grep1 <- "onLoad failed in loadNamespace"
+    #   otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
+    #   libPathsVersTooOld <- grepl(grep4a, outMess)
+    #   toInstall <- character()
+    #   pkgsWarned <- c()
+    #   if (any(otherErrors) || any(missingDeps)) {
+    #     if (any(otherErrors)) {
+    #       error1 <- grepl(.libPaths()[1], outMess)
+    #       error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
+    #       packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
+    #       error2 <- grepl("no such symbol", outMess)
+    #       if (any(error2)) {
+    #         pkgs <- paste(packageNames, collapse = "', '")
+    #         pkgsWarned <- c(pkgsWarned, pkgs)
+    #         warningCantInstall(pkgs)
+    #       }
+    #       error3 <- grepl("is being loaded, but", outMess)
+    #       packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"),
+    #                            "\\1", outMess[error3])
+    #       if (any(error3)) {
+    #         pkgs <- paste(packageNames, collapse = "', '")
+    #         if (length(setdiff(pkgs, pkgsWarned)) > 0)
+    #           warningCantInstall(pkgs)
+    #         else
+    #           pkgsWarned <- c(pkgsWarned, pkgs)
+    #       }
+    #     }
+    #     doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
+    #     if (any(missingDeps) && doDeps) {
+    #       grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
+    #       packageNames <- character()
+    #       if (any(grepl(grep3a, outMess[missingDeps])))
+    #         packageNames <- unique(gsub(grep3a_1, "\\1", outMess[missingDeps]))
+    #       grep3b_1 <- paste0(".*package.{2}(.*).{2}required.*$")
+    #       if (any(grepl(grep3b, outMess[missingDeps])))
+    #         packageNames <- unique(c(packageNames,
+    #                                  unique(gsub(grep3b_1, "\\1", outMess[missingDeps]))))
+    #       toInstall <- c(toInstall, packageNames)
+    #       outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
+    #       outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
+    #       outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
+    #     }
+    #   }
+    #   if (any(libPathsVersTooOld)) {
+    #     p <- pkgDT[Package == pkg]
+    #     libPathsVers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], pkg, "DESCRIPTION"),
+    #                                             purge = TRUE)
+    #     otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
+    #     firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
+    #                             "The version in .libPaths() is ", libPathsVers)
+    #     if (isTRUE(otherIsCorrect)) {
+    #       messageVerbose(firstPartMess, ". Because the newer version still accommodates the minimum version number (",
+    #                      p$packageFullName,", updating now.",
+    #                      verbose = verbose, verboseLevel = 1)
+    #       browser()
+    #
+    #       oo <- Require(pkg, require = FALSE, install = "force")
+    #       outMessToRm <- grep("Loading required|Failed with error|Error in unloadNamespace", outMess)
+    #       outMessToRm <- c(outMessToRm, max(outMessToRm) + 1) # There is non ASCII character in the message that can't be explicitly used
+    #       outMess <- outMess[-outMessToRm]
+    #     } else {
+    #       warning(firstPartMess, ". The newer version fails the version number test.",
+    #               " Please either change the version number requested,",
+    #               " or prevent the newer version from loading by changing the .libPaths() prior",
+    #               " to any packages being loaded.")
+    #     }
+    #   }
+    #   if (length(outMess) > 0)
+    #     messageVerbose(paste0(outMess, collapse = "\n"),
+    #                    verbose = verbose, verboseLevel = 2)
+    #   return(list(out = out, toInstall = toInstall))
+    # })
+    # out <- unlist(lapply(requireOut, function(x) x$out))
+    # toInstall <- unlist(lapply(requireOut, function(x) x$toInstall))
 
-      grep2 <- "package or namespace load failed for"
-      grep1 <- "onLoad failed in loadNamespace"
-      otherErrors <- grepl(paste(grep1, "|", grep2), outMess)
-      libPathsVersTooOld <- grepl(grep4a, outMess)
-      toInstall <- character()
-      pkgsWarned <- c()
-      if (any(otherErrors) || any(missingDeps)) {
-        if (any(otherErrors)) {
-          error1 <- grepl(.libPaths()[1], outMess)
-          error1Val <- gsub(paste0("^.*",.libPaths()[1], "\\/(.*)", "\\/.*$"), "\\1", outMess[error1])
-          packageNames <- unique(unlist(lapply(strsplit(error1Val, "\\/"), function(x) x[[1]])))
-          error2 <- grepl("no such symbol", outMess)
-          if (any(error2)) {
-            pkgs <- paste(packageNames, collapse = "', '")
-            pkgsWarned <- c(pkgsWarned, pkgs)
-            warningCantInstall(pkgs)
-          }
-          error3 <- grepl("is being loaded, but", outMess)
-          packageNames <- gsub(paste0("^.*namespace .{1}([[:alnum:][:punct:]]+).{1} .+is being.+$"),
-                               "\\1", outMess[error3])
-          if (any(error3)) {
-            pkgs <- paste(packageNames, collapse = "', '")
-            if (length(setdiff(pkgs, pkgsWarned)) > 0)
-              warningCantInstall(pkgs)
-            else
-              pkgsWarned <- c(pkgsWarned, pkgs)
-          }
-        }
-        doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else TRUE
-        if (any(missingDeps) && doDeps) {
-          grep3a_1 <- paste0(".*",grep3a,".{2}(.*).{1}")
-          packageNames <- character()
-          if (any(grepl(grep3a, outMess[missingDeps])))
-            packageNames <- unique(gsub(grep3a_1, "\\1", outMess[missingDeps]))
-          grep3b_1 <- paste0(".*package.{2}(.*).{2}required.*$")
-          if (any(grepl(grep3b, outMess[missingDeps])))
-            packageNames <- unique(c(packageNames,
-                                     unique(gsub(grep3b_1, "\\1", outMess[missingDeps]))))
-          toInstall <- c(toInstall, packageNames)
-          outMess <- grep(grep2, outMess, value = TRUE, invert = TRUE)
-          outMess <- grep(grep3a, outMess, value = TRUE, invert = TRUE)
-          outMess <- grep(grep3b, outMess, value = TRUE, invert = TRUE)
-        }
-      }
-      if (any(libPathsVersTooOld)) {
-        p <- pkgDT[Package == pkg]
-        libPathsVers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], pkg, "DESCRIPTION"),
-                                                purge = TRUE)
-        otherIsCorrect <- getPkgVersions(p, install = FALSE)$correctVersion
-        firstPartMess <- paste0(pkg, " is already loaded from ", p$LibPath, " with version ", p$Version, ". ",
-                                "The version in .libPaths() is ", libPathsVers)
-        if (isTRUE(otherIsCorrect)) {
-          messageVerbose(firstPartMess, ". Because the newer version still accommodates the minimum version number (",
-                         p$packageFullName,", updating now.",
-                         verbose = verbose, verboseLevel = 1)
-          oo <- Require(pkg, require = FALSE, install = "force")
-          outMessToRm <- grep("Loading required|Failed with error|Error in unloadNamespace", outMess)
-          outMessToRm <- c(outMessToRm, max(outMessToRm) + 1) # There is non ASCII character in the message that can't be explicitly used
-          outMess <- outMess[-outMessToRm]
-        } else {
-          warning(firstPartMess, ". The newer version fails the version number test.",
-                  " Please either change the version number requested,",
-                  " or prevent the newer version from loading by changing the .libPaths() prior",
-                  " to any packages being loaded.")
-        }
-      }
-      if (length(outMess) > 0)
-        messageVerbose(paste0(outMess, collapse = "\n"),
-                       verbose = verbose, verboseLevel = 2)
-      return(list(out = out, toInstall = toInstall))
-    })
-    out <- unlist(lapply(requireOut, function(x) x$out))
-    toInstall <- unlist(lapply(requireOut, function(x) x$toInstall))
+    # if (length(toInstall)) {
+    #   messageVerbose("Installed package(s) didn't have all dependencies installed,",
+    #             " possibly because they were unknown; trying again",
+    #             verbose = verbose, verboseLevel = 1)
+    #   # These should only be loaded if they are in the original pkgDT,
+    #   #   which in all cases should be "none of the toInstall should be loaded"
+    #   browser()
+    #
+    #   out2 <- Require(unique(toInstall), require = FALSE, ...)
+    #   out2 <- unlist(out2)
+    #   names(out2) <- unique(toInstall)
+    #   if (any(!out)) {
+    #
+    #     pkgToTryAgain <- pkgDTForLoad[Package %in% names(out)]
+    #     if (NROW(pkgToTryAgain)) {
+    #       retryOut <- doLoading(pkgToTryAgain)
+    #       if (isTRUE(any(retryOut$loaded))) {
+    #         out[match(retryOut[loaded == TRUE]$Package, names(out))] <- TRUE
+    #       }
+    #     }
+    #   }
+    #
+    # }
 
-    if (length(toInstall)) {
-      messageVerbose("Installed package(s) didn't have all dependencies installed,",
-                " possibly because they were unknown; trying again",
-                verbose = verbose, verboseLevel = 1)
-      # These should only be loaded if they are in the original pkgDT,
-      #   which in all cases should be "none of the toInstall should be loaded"
-      out2 <- Require(unique(toInstall), require = FALSE, ...)
-      out2 <- unlist(out2)
-      names(out2) <- unique(toInstall)
-      if (any(!out)) {
-
-        pkgToTryAgain <- pkgDTForLoad[Package %in% names(out)]
-        if (NROW(pkgToTryAgain)) {
-          retryOut <- doLoading(pkgToTryAgain)
-          if (isTRUE(any(retryOut$loaded))) {
-            out[match(retryOut[loaded == TRUE]$Package, names(out))] <- TRUE
-          }
-        }
-      }
-
-    }
-
-    pkgDT[, loaded := (pkgDT$Package %in% names(out)[unlist(out)] & loadOrder > 0)]
+    pkgDT[, loaded := (pkgDT$Package %in% names(requireOut)[unlist(requireOut)] & loadOrder > 0)]
   }
   pkgDT[]
 }
