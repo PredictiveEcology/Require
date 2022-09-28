@@ -468,7 +468,7 @@ Require <- function(packages, packageVersionFile,
         }
         if (!canusepak) {
           warns <- list()
-          tryCatch(
+          #tryCatch(
             withCallingHandlers(
               pkgDT <- doInstalls(pkgDT,
                                   install_githubArgs = install_githubArgs,
@@ -477,8 +477,8 @@ Require <- function(packages, packageVersionFile,
                                   ...
               ), warning = function(w) {
                 warns <<- appendToWarns(w$message, warns, pkgDT$Package[pkgDT$needInstall %in% TRUE])
-              }), error = function(e) {
-              })
+              })#, error = function(e) {
+            #  })
           pkgDT <- updateInstalled(pkgDT, pkgDT$Package[pkgDT$needInstall], warns)
         }
         if ("detached" %in% colnames(pkgDT)) {

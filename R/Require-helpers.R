@@ -2305,14 +2305,14 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     cachePath <- getOptionRPackageCache()
     opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
   }
-  #warns <- list()
-  #out <- withCallingHandlers(
-    do.call(install.packages, opts2)#,
-  #   warning = function(w) {
-  #     warns <<- append(warns, list(w$message))
-  #     # invokeRestart("muffleWarning")
-  #   }
-  # )
+  warns <- list()
+  # Need this internal wCH because need to know which one failed
+  withCallingHandlers(
+    do.call(install.packages, opts2),
+    warning = function(w) {
+      warns <<- append(warns, list(w$message))
+    }
+  )
 
   installStatus <- vapply(packageName, function(x) TRUE, logical(1))
   pkgsToModify <- packageName
