@@ -2553,23 +2553,25 @@ urlExists <- function(url) {
 
 #' @inheritParams Require
 internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
-  internetMightExist <- TRUE
-  if (!is.null(.pkgEnv$internetExistsTime)) {
-    if ((Sys.time() - getOption('Require.internetExistsTimeout', 30)) < .pkgEnv$internetExistsTime) {
+  if (getOption("Require.checkInternet", FALSE)) {
+    internetMightExist <- TRUE
+    if (!is.null(.pkgEnv$internetExistsTime)) {
+      if ((Sys.time() - getOption('Require.internetExistsTimeout', 30)) < .pkgEnv$internetExistsTime) {
         internetMightExist <- FALSE
+      }
     }
-  }
-  if (internetMightExist) {
-    opts2 <- options(timeout = 2)
-    on.exit(options(opts2))
-    ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
-    if (isFALSE(ue)) {
-      internetMightExist <- FALSE
+    if (internetMightExist) {
+      opts2 <- options(timeout = 2)
+      on.exit(options(opts2))
+      ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
+      if (isFALSE(ue)) {
+        internetMightExist <- FALSE
 
-      messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
-                     verbose = verbose, verboseLevel = 2)
+        messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
+                       verbose = verbose, verboseLevel = 2)
+      }
+      .pkgEnv$internetExistsTime <- Sys.time()
     }
-    .pkgEnv$internetExistsTime <- Sys.time()
   }
   TRUE
 }
