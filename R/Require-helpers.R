@@ -792,19 +792,23 @@ updateInstalled <- function(pkgDT, installPkgNames, warn = NULL) {
                installed = warn[match(installPkgNames, pkgs), "status"] == "OK")]
   } else {
     if (NROW(installPkgNames)) {
-      if (is.null(warn)) warn <- warnings()
-      if (is(warn, "simpleWarning"))
-        warn <- warn$message
-      if (is(warn, "warnings")) {
-        warn <- names(warn)
-      }
-      warnOut <- unlist(lapply(installPkgNames, function(ip) any(grepl(ip, warn))))
-      if (isTRUE(any(!warnOut) || length(warnOut) == 0 || all(is.na(warnOut))) ||
-          all(is.null(warn) )) {
+      pkgsWithWarns <- names(warn)
+      pkgsWithoutWarns <- setdiff(installPkgNames, pkgsWithWarns)
+      if (NROW(pkgsWithoutWarns)) {
         set(pkgDT, which(pkgDT$Package %in% installPkgNames), "installed", TRUE)
-      } else if (!is.null(warn)) {
+      }
+      if (NROW(pkgsWithWarns)) {
         set(pkgDT, which(pkgDT$Package %in% extractPkgName(names(warn))), "installed", FALSE)
       }
+
+      if (length(unlist(warn))) {
+        # warning(warn)
+        concat <- lapply(warn, function(x) paste(x, collapse = ";"))
+        pkgDT[match(names(warn), Package), installResult := unlist(concat)]
+
+      }
+
+
     }
   }
 
@@ -1142,28 +1146,23 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
   attempts <- rep(0, length(gitPkgs))
   names(attempts) <- gitPkgs
   if (length(gitPkgs)) {
-    gitPkgDeps2 <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
+    gitPkgsToInstall <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
       all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
     }))]
-    gitPkgDepOrig <- gitPkgDeps2
-    gitPkgNamesSimple <- extractPkgName(gitPkgDeps2)
+    gitPkgDepOrig <- gitPkgsToInstall
+    gitPkgNamesSimple <- extractPkgName(gitPkgsToInstall)
     ipa <- modifyList2(install_githubArgs, dots)
     ipa <- modifyList2(ipa, list(verbose = verbose))
     warns <- messes <- errors <- list()
 
-    if (NROW(gitPkgDeps2)) {
+    if (NROW(gitPkgsToInstall)) {
       out1 <- withCallingHandlers(
-        do.call(installGithubPackage, append(list(gitPkgDeps2), ipa)),
-        warning=function(w) {
-          warns <<- append(warns, list(w))
+        do.call(installGithubPackage, append(list(gitPkgsToInstall), ipa)),
+        warning = function(w) {
+          browser()
+          warns <<- appendToWarns(w$message, warns)
           invokeRestart("muffleWarning")
         })
-    }
-
-    if (length(warns)) {
-      warning(warns)
-      pkgDT[Package %in% gitPkgNamesSimple,
-            installResult := warns[[1]]]
     }
 
     pkgDT <- updateInstalled(pkgDT, gitPkgNamesSimple, warns)
@@ -1343,7 +1342,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   installPkgNamesBoth <- split(installPkgNames, endsWith(installPkgNames, "zip"))
   installPackageBoth <- split(installPackage, endsWith(installPkgNames, "zip"))
 
-  warnings1 <- list()
+  warngs <- warnings1 <- list()
   warn <- Map(installPkgNamesInner = installPkgNamesBoth, Package = installPackageBoth,
               function(installPkgNamesInner, Package) {
                 # Deal with "binary" mumbo jumbo
@@ -1365,7 +1364,11 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                 on.exit(setwd(prevWD), add = TRUE)
                 curPkgs <- toIn$Package
                 while (NROW(installPkgNamesInner)) {
-                  a <- try(do.call(install.packages, append(list(installPkgNamesInner), ipa)))
+                  a <- try(withCallingHandlers({
+                    do.call(install.packages, append(list(installPkgNamesInner), ipa))
+                  }, warning = function(w) {
+                    warns <<- appendToWarns(w$message, warns)
+                  }))
                   if (is(a, "try-error")) {
                     # because previous line is vectorized
                     curPkgsFailed <- unlist(lapply(curPkgs, function(cp)
@@ -1414,35 +1417,29 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   #   })
   # })
 
-    pkgDT[Package %in% toInstall$Package, installResult := NA]
-    if (length(warnings1)) {
-    whWarnings <- match(names(warnings1), pkgDT$Package)
-    pkgDT[whWarnings, installResult := unlist(lapply(warnings1, function(x) x$message))]
-  }
-
-  pkgDT <- updateInstalled(pkgDT, toInstall$Package, warnings1)
-  permDen <- grepl("Permission denied", sapply(warnings1, function(w) w$message))
-  packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warnings1))
-  if (any(permDen)) {
-    stopMess <- character()
-    if (any(pkgDT[Package %in% packagesDen]$installFrom == installFromCur))
-      stopMess <- c(
-        stopMess,
-        paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-               "------\n",
-               "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",
-               libPaths[1],"')")
-      )
-    if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
-      stopMess <- c(
-        stopMess,
-        paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
-               "------\n", "remotes::install_github(c('",
-               paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
-                      collapse = "', '"), "'), lib = '",libPaths[1],"')")
-      )
-    stop(stopMess)
-  }
+  pkgDT <- updateInstalled(pkgDT, toInstall$Package, warns)
+  # permDen <- grepl("Permission denied", sapply(warns, function(w) w$message))
+  # packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warnings1))
+  # if (any(permDen)) {
+  #   stopMess <- character()
+  #   if (any(pkgDT[Package %in% packagesDen]$installFrom == installFromCur))
+  #     stopMess <- c(
+  #       stopMess,
+  #       paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+  #              "------\n",
+  #              "install.packages(c('", paste(packagesDen, collapse = "', '"), "'), lib = '",
+  #              libPaths[1],"')")
+  #     )
+  #   if (any(pkgDT[Package %in% packagesDen]$installFrom == "GitHub"))
+  #     stopMess <- c(
+  #       stopMess,
+  #       paste0("Due to permission denied, you will have to restart R, and reinstall:\n",
+  #              "------\n", "remotes::install_github(c('",
+  #              paste0(trimVersionNumber(pkgDT[Package %in% packagesDen]$packageFullName),
+  #                     collapse = "', '"), "'), lib = '",libPaths[1],"')")
+  #     )
+  #   stop(stopMess)
+  #}
   pkgDT
 }
 
@@ -1510,7 +1507,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (internetExists("cannot install packages from CRAN because internet appears unavailable",
                      verbose = verbose)) {
     td <- tempdir2(paste(collapse = "", sample(LETTERS, 8)))
-    warn <- NULL
+    # warn <- NULL
     tmpPath <- tempdir2(.rndstr())
     orig <- setwd(tmpPath)
     on.exit({
@@ -1519,6 +1516,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     })
     if (!is.null(getOption("Ncpus"))) tries <- 5
     for (attempt in seq(tries)) {
+      warns <- list()
       Map(installPkgNames = installPkgNamesList, repos = reposList,
           function(installPkgNames, repos) {
 
@@ -1528,16 +1526,14 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
             installPackagesQuoted <-
               quote(do.call(install.packages, ipaFull))
 
-            warn <<- withCallingHandlers({
+            withCallingHandlers({
               out <- eval(installPackagesQuoted)
-            }, warning = function(condition) {
-              if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", condition))) {
+            }, warning=function(w) {
+              if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", w$message))) {
                 outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
-                withRestarts("muffleWarning")
-              } else {
-                outFromWarn <- condition
               }
-              outFromWarn
+              warns <<- appendToWarns(w$message, warns)
+              # invokeRestart("muffleWarning")
             }, error = function(e) {
               av3CacheFile <- dir(tempdir(), pattern = paste0("^repos.+", gsub(".*\\/\\/", "", repos)), full.names = TRUE)
               if (grepl('argument \\"av2\\" is missing', e)) {
@@ -1554,7 +1550,13 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       ip <- as.data.table(installed.packages())
       successReg <- c(installPkgNamesList$Reg) %in% ip$Package
       successSrc <- c(installPkgNamesList$Src) %in% ip$Package
-      if (all(c(successReg, successSrc))) {
+      done <- c(successReg, successSrc)
+      if (length(warns)) {
+        failedReg <- installPkgNamesList$Reg %in% names(warns)
+        failedSrc <- installPkgNamesList$Src %in% names(warns)
+        done <- done | c(failedReg, failedSrc)
+      }
+      if (all(done) ) {
         break
       }
       installPkgNamesList$Reg <- installPkgNamesList$Reg[!successReg]
@@ -1564,13 +1566,9 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     if (any(grepl("--build", c(dots, install.packagesArgs))))
       copyTarball(installPkgNames, TRUE)
 
-    if (!is.null(warn)) {
-      warning(warn)
-      pkgDT[Package %in% installPkgNames, installResult := warn$message]
-    }
-    pkgDT <- updateInstalled(pkgDT, installPkgNames, warn)
-    permDen <- grepl("Permission denied", names(warn))
-    packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warn))
+    pkgDT <- updateInstalled(pkgDT, installPkgNames, warns)
+    permDen <- grepl("Permission denied", names(warns))
+    packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warns))
     if (any(permDen)) {
       stopMess <- character()
       if (any(pkgDT[Package %in% packagesDen]$installFrom == "CRAN"))
@@ -1736,8 +1734,9 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                 append(list(unname(p)), ipa))
       },
       warning = function(w) {
-        warn <<- append(warn, list(w$message))
-        invokeRestart("muffleWarning")
+        browser()
+        warn <<- appendToWarns(w$message, warns)
+        # invokeRestart("muffleWarning")
       }
 
       )
@@ -2280,15 +2279,21 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   warns <- list()
   out <- withCallingHandlers(
     do.call(install.packages, opts2),
-    warning = function(w)
+    warning = function(w) {
       warns <<- append(warns, list(w$message))
+      # invokeRestart("muffleWarning")
+    }
   )
 
+  installStatus <- vapply(packageName, function(x) TRUE, logical(1))
+  pkgsToModify <- packageName
   if (length(unlist(warns))) {
-    if (grepl("non-zero", unlist(warns)))
-      stop(paste(unlist(warns), collapse = "\n"))
+    problems <- unlist(lapply(packageName, function(pn) grepl(pn, warns)))
+    installStatus[problems] <- FALSE
+    pkgsToModify <- packageName[problems %in% FALSE]
   }
-  lapply(packageName, function(pack) {
+
+  lapply(pkgsToModify, function(pack) {
     postInstallDESCRIPTIONMods(pkg = pack, repo = gr$repo[[pack]],
                                acct = gr$acct[[pack]], br = gr$br[[pack]],
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
@@ -2786,3 +2791,10 @@ masterMain <- c("main", "master")
 masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
 masterGrep <- paste0("/", "master", "(/|\\.)")
 mainGrep <- paste0("/", "main", "(/|\\.)")
+
+appendToWarns <- function(w, warns) {
+  pkgName <- extractPkgNameFromFileName(w)
+  newWarn <- list(w)
+  names(newWarn) <- pkgName
+  append(warns, newWarn)
+}

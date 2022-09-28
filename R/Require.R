@@ -551,7 +551,7 @@ Require <- function(packages, packageVersionFile,
         nonZ <- pkgDT[notCorrectly == TRUE, ..colsToKeep2]
         messageVerbose(
           "It may be necessary to simply run:\ninstall.packages(c('", paste(nonZ$Package, collapse = "', '"), "'))",
-          "\nbut this will cause a different version to be installed.",
+          "\nbut this may cause a different version to be installed.",
           verbose = verbose, verboseLevel = 0
         )
         if (!missing(packageVersionFile)) {
