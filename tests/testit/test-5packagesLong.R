@@ -108,8 +108,11 @@ if (interactive()) {
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
     testit::assert({all(!is.na(have[installed == TRUE]$Version))})
-    if ("installResult" %in% colnames(have))
-      testit::assert(NROW(have[is.na(installResult)]) == sum(have$installed))
+    if ("installResult" %in% colnames(have)) {
+      theTest <- NROW(have[is.na(installResult)]) == sum(have$installed)
+      if (!isTRUE(theTest)) browser()
+      testit::assert(isTRUE(theTest))
+    }
     # out <- try(testit::assert({
     #   all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)
     # }))
