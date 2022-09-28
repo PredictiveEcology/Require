@@ -1214,9 +1214,17 @@ installedVers <- function(pkgDT) {
       names(pkgs) <- pkgDT$packageFullName
       ln <- loadedNamespaces()
       ln <- ln[!ln %in% .basePkgs]
+      # Need both the next lines
       pkgs <- pkgs[pkgs %in% ln]
+      pkgs <- pkgs[pkgs %in% ip$Package] # can be loadedNamespace, but not installed, if it had been removed in this session
       if (NROW(pkgs)) {
-        installedPkgsCurrent <- lapply(pkgs, function(x) data.table(VersionFromPV = as.character(numeric_version(packageVersion(x)))))
+        installedPkgsCurrent <- lapply(pkgs, function(x) {
+          pv <- try(as.character(numeric_version(packageVersion(x))), silent = TRUE)
+          if (is(pv, "try-error")) {
+            pv <- NA_character_
+          }
+          data.table(VersionFromPV = pv)
+          } )
         installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
         set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
