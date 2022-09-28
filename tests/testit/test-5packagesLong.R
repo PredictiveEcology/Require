@@ -107,7 +107,9 @@ if (interactive()) {
 
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
-    testit::assert({all(!is.na(have[installed == TRUE]$Version))})
+    theTest <- all(!is.na(have[installed == TRUE]$Version))
+    if (!isTRUE(theTest)) browser()
+    testit::assert(isTRUE(theTest))
     if ("installResult" %in% colnames(have)) {
       theTest <- NROW(have[is.na(installResult)]) == sum(have$installed)
       if (!isTRUE(theTest)) browser()
@@ -279,6 +281,8 @@ if (interactive()) {
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     runTests(have, pkg)
+    endTime <- Sys.time()
+    message("\033[32m --- ",i," --------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
 
     # suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
     #                                function(p) tryCatch(require(p, character.only = TRUE),
