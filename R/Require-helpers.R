@@ -1659,9 +1659,15 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     urlsOuter <- c()
     extension <- if (isWindows()) ".zip" else ".tgz"
     osNameOnMRAN <- if (isWindows()) "windows" else "macosx"
+    messageVerbose("-- Determining dates on MRAN to get correct versions ... ",
+                   verbose = verbose, verboseLevel = 1)
+    total <- length(unname(installPkgNames)[onMRAN])
     out <- Map(p = unname(installPkgNames)[onMRAN], earliestDateMRAN = earliestDateOnMRAN[onMRAN],
-               lastestDateMRAN = latestDateOnMRAN[onMRAN],
-               v = installVersions[onMRAN], function(p, earliestDateMRAN, lastestDateMRAN, v, ...) {
+               lastestDateMRAN = latestDateOnMRAN[onMRAN], tot = total, counter = seq(total),
+               v = installVersions[onMRAN], function(p, earliestDateMRAN, lastestDateMRAN, v, tot, counter, ...) {
+                 if (tot > 1)
+                   messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
+
                  for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
                    rver <- rversion()
                    evenOrOdd <- attempt %% 2 == 0
