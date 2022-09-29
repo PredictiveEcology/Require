@@ -881,8 +881,19 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     toInstall <- pkgDT[(installed == FALSE  | !correctVersion) & !(installFrom %in% c("Fail", "Duplicate"))]
     hasRequireDeps <- pkgDT[(installed == FALSE  | !correctVersion) & Package == "Require"]
     if (NROW(hasRequireDeps) && NROW(pkgDT[Package == "Require" & installed != TRUE])) {
-      installRequire()
-      pkgDT[Package == "Require", installed := TRUE]
+      installRequire(verbose = verbose)
+      ip <- as.data.table(installed.packages())
+      installedRequireVersion <- ip[Package == "Require"]$Version
+      test <- paste0("compareVersion('", installedRequireVersion, "'", ", '",
+                    pkgDT[Package == "Require"]$versionSpec, "')")
+      comp <- eval(parse(text = test))
+      test2 <- paste(comp, pkgDT[Package == "Require"]$inequality, "0")
+      comp2 <- eval(parse(text = test2))
+      if (isFALSE(comp2))
+        messageVerbose("Require was not able to install the requested version of itself because it is in use; ",
+                       "Version ", installedRequireVersion, " installed", verbose = verbose, verboseLevel = 1)
+      toInstall <- toInstall[!Package %in% "Require"]
+      pkgDT[Package == "Require", `:=`(needInstall = FALSE, installed = TRUE)]
     }
     if (any(!toInstall$installFrom %in% c("Fail", "Duplicate"))) {
       toInstall[, installFromFac := factor(installFrom, levels = c("Local", "CRAN", "Archive", "GitHub", "Fail", "Duplicate"))]

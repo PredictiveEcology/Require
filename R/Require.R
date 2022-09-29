@@ -6,7 +6,7 @@ utils::globalVariables(c(
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
   "LibPath", "libPaths", "loaded", "loadOrder", "needInstall",
   "OlderVersionsAvailable", "OlderVersionsAvailableCh",
-  "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
+  "Package", "packageFullName", "packagesRequired", "PackageUrl",
   "Repo", "repoLocation", "RepoWBranch", "userRequestedOrder", "Version", "versionSpec"
 ))
 
