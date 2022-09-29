@@ -14,7 +14,7 @@ if (interactive() && Require:::isWindows()) {
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
                      "Require.unloadNamespaces" = FALSE)
-  projectDir <- tempdir2(Require:::.rndstr(1))
+  projectDir <- Require:::tempdir2(Require:::.rndstr(1))
   pkgDir <- file.path(projectDir, "R")
   setLibPaths(pkgDir, standAlone = TRUE)
   dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
@@ -51,7 +51,7 @@ if (interactive() && Require:::isWindows()) {
 }
 
 try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE) # doesn't seem to keep globals from other scripts; recreate here
-unlink(tempdir2(), recursive = TRUE)
+unlink(Require:::tempdir2(), recursive = TRUE)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
 try(message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m"), silent = TRUE)
