@@ -36,7 +36,7 @@ if (interactive() && Require:::isWindows()) {
                          out2 <- withCallingHandlers(
                            Require("PredictiveEcology/SpaDES.project@development", require = FALSE, verbose = 2)
                            , warning = function(w) {
-                             warns <<- appendToWarns(w$message, warns)
+                             warns <<- Require:::appendToWarns(w$message, warns, Package = c("whisker", "SpaDES.project"))
                              invokeRestart("muffleWarning")
                            })
   )
