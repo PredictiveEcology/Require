@@ -1007,6 +1007,7 @@ pkgDepInnerMemoise <- function(...) {
     if (length(packages) > 1) {
       dots2 <- dots
       dots2[[1]] <- NULL
+      if (!is.null(names(packages))) names(packages) <- NULL
       ret <- lapply(packages, function(p) do.call(pkgDepInnerMemoise, append(list(p), dots2)))
       ret <- unlist(ret, recursive = FALSE)
     } else {
