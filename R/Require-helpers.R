@@ -884,14 +884,16 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       installRequire(verbose = verbose)
       ip <- as.data.table(installed.packages())
       installedRequireVersion <- ip[Package == "Require"]$Version
-      test <- paste0("compareVersion('", installedRequireVersion, "'", ", '",
-                    pkgDT[Package == "Require"]$versionSpec, "')")
-      comp <- eval(parse(text = test))
-      test2 <- paste(comp, pkgDT[Package == "Require"]$inequality, "0")
-      comp2 <- eval(parse(text = test2))
-      if (isFALSE(comp2))
-        messageVerbose("Require was not able to install the requested version of itself because it is in use; ",
-                       "Version ", installedRequireVersion, " installed", verbose = verbose, verboseLevel = 1)
+      if (!is.na(pkgDT[Package == "Require"]$versionSpec)) {
+        test <- paste0("compareVersion('", installedRequireVersion, "'", ", '",
+                       pkgDT[Package == "Require"]$versionSpec, "')")
+        comp <- eval(parse(text = test))
+        test2 <- paste(comp, pkgDT[Package == "Require"]$inequality, "0")
+        comp2 <- eval(parse(text = test2))
+        if (isFALSE(comp2))
+          messageVerbose("Require was not able to install the requested version of itself because it is in use; ",
+                         "Version ", installedRequireVersion, " installed", verbose = verbose, verboseLevel = 1)
+      }
       toInstall <- toInstall[!Package %in% "Require"]
       pkgDT[Package == "Require", `:=`(needInstall = FALSE, installed = TRUE)]
     }
