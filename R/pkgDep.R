@@ -247,9 +247,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                           td <- tempdir2(pkgName)
                           packageTD <- file.path(td, pkgName)
                           if (!dir.exists(packageTD)) {
-                            if (verbose %in% 1) # covers TRUE also
-                              message("available.packages() does not have correct information on package dependencies for ", pkgName,
-                                      "; downloading tar.gz")
+                            messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgName,
+                                      "; downloading tar.gz", verbose = verbose, verboseLevel = 1)
                             verNum <- extractVersionNumber(pkg)
                             if (is.na(verNum)) {
                               ava <- archiveVersionsAvailable(pkgName, repos = repos)
@@ -1009,7 +1008,9 @@ pkgDepInnerMemoise <- function(...) {
       dots2 <- dots
       dots2[[1]] <- NULL
       ret <- lapply(packages, function(p) do.call(pkgDepInnerMemoise, append(list(p), dots2)))
-      ret <- unlist(ret, recursive = FALSE)
+      ret2 <- unlist(ret, recursive = FALSE)
+      names(ret2) <- names(ret) # the above doubles the names, which is wrong
+      ret <- ret2
 
     } else {
       if (!exists(packages, envir = .pkgEnv$pkgDepInner, inherits = FALSE)) {
@@ -1063,3 +1064,36 @@ getGitHubDepsMemoise <- function(...) {
   return(ret)
 }
 
+
+pkgDepTopoSortMemoise <- function(...) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    dots <- list(...)
+    fnName <- "pkgDepTopoSort"
+    fn <- eval(parse(text = fnName))
+    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
+      .pkgEnv[[fnName]] <- new.env()
+    ret <- NULL
+    ss <- match.call(definition = fn)
+    pkg <- eval(ss$pkg, envir = parent.frame())
+    hash <- sum(as.integer(serialize(object =  pkg, ascii = T, NULL)))
+    hash <- as.character(hash)
+    if (!exists(hash, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
+      .pkgEnv[[fnName]][[hash]] <- list()
+    } else {
+      whIdent <- unlist(lapply(.pkgEnv[[fnName]][[hash]], function(x) identical(x$input, dots)))
+      if (any(whIdent))
+        ret <- .pkgEnv[[fnName]][[hash]][[which(whIdent)]]$output
+    }
+    if (is.null(ret)) {
+      inputs <- data.table::copy(dots)
+      ret <- fn(...)
+      .pkgEnv[[fnName]][[hash]] <-
+        list(.pkgEnv[[fnName]][[hash]], list(input = inputs, output = ret))
+    }
+
+  } else {
+    ret <- fn(...)
+  }
+
+  return(ret)
+}
