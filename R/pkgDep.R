@@ -1008,10 +1008,7 @@ pkgDepInnerMemoise <- function(...) {
       dots2 <- dots
       dots2[[1]] <- NULL
       ret <- lapply(packages, function(p) do.call(pkgDepInnerMemoise, append(list(p), dots2)))
-      ret2 <- unlist(ret, recursive = FALSE)
-      names(ret2) <- names(ret) # the above doubles the names, which is wrong
-      ret <- ret2
-
+      ret <- unlist(ret, recursive = FALSE)
     } else {
       if (!exists(packages, envir = .pkgEnv$pkgDepInner, inherits = FALSE)) {
         .pkgEnv$pkgDepInner[[packages]] <- list()
