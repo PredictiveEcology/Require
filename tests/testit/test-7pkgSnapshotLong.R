@@ -25,15 +25,34 @@ if (interactive()) {
   # pks <- c("ymlthis", "SpaDES.tools", "amc")
   # pkgs <- pkgs[Package %in% pks]
   # data.table::fwrite(pkgs, fn)
+  packageFullName <- ifelse(is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
+                            paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1))
+  names(packageFullName) <- packageFullName
+  out11 <- pkgDep(packageFullName, recursive = TRUE)
+  unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
+
   # remove.packages(pks)
   # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-  out <- Require(packageVersionFile = fn, require = FALSE, verbose = 2)
+  out <- Require(packageVersionFile = fn, require = FALSE)
   persLibPathOld <- pkgs$LibPath[which(pkgs$Package == "amc")]
-  pkgsInOut <- extractPkgName(names(out))
-  installed <- pkgs[LibPath == persLibPathOld]$Package %in% pkgsInOut#[out$installed]
-  testit::assert(all(installed))
-  ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1]))
-  testit::assert(NROW(ip) >= NROW(installed))
+  pkgDT <- attr(out, "Require")
+  # pkgsInOut <- extractPkgName(pkgDT$Package[pkgDT$installed])
+  installedInFistLib <- pkgs[LibPath == persLibPathOld]
+  # testit::assert(all(installed))
+  ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+  allInIPareInpkgDT <- all(ip$Package %in% pkgDT$Package[pkgDT$installed] )
+  allInpkgDTareInIP <- all(pkgDT$Package[pkgDT$installed] %in% ip$Package  )
+
+
+  testit::assert(isTRUE(allInIPareInpkgDT))
+  testit::assert(isTRUE(allInpkgDTareInIP))
+  installedNotInIP <- pkgDT[!unique(pkgDT$Package) %in% ip$Package]
+  testit::assert(all(installedNotInIP$installResult == "No available version"))
+
+  pkgsInOut <- pkgDT[installed %in% TRUE]
+  theTest <- NROW(ip) >= NROW(pkgsInOut)
+  testit::assert(isTRUE(theTest))
+
   lala <- capture.output(type = "message",
                          Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
                                  require = FALSE, verbose = 2))
@@ -43,9 +62,9 @@ if (interactive()) {
 
   lastLineOfMessageDF <- tail(grep(":", lala), 1)
   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  testit::assert(length(pkgsInOut[!pkgsInOut %in% ip$Package]) - NnotInstalled == 0)
+  testit::assert(NROW(pkgDT) - NnotInstalled == NROW(pkgsInOut))
 
-  testit::assert(NROW(ip) == NROW(installed) + length(missings) - NnotInstalled)
+  testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 
   setLibPaths(origLibPaths)
 }
