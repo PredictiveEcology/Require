@@ -128,6 +128,8 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
         set(pkgDT, wh, "correctVersion",
             .evalV(.parseV(text = paste(pkgDT$compareVersion[wh], pkgDT$inequality[wh], "0"))))
         # pkgDT[whNOTNAVersions & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
+        if (any(pkgDT$installed %in% TRUE & pkgDT$correctVersion %in% FALSE))
+          pkgDT[installed %in% TRUE & correctVersion %in% FALSE, installed := FALSE]
       }
       # set(pkgDT, which(pkgDT$hasVersionSpec %in% FALSE), "correctVersion", NA)
       # pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
