@@ -16,7 +16,7 @@ if (interactive()) {
 
 
   ## Long pkgSnapshot -- issue 41
-  pkgPath <- file.path(tempdir2("packages"))
+  pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
   checkPath(pkgPath, create = TRUE)
   download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt", destfile = file.path(pkgPath, "pkgSnapshot.txt"))
   origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
@@ -28,28 +28,34 @@ if (interactive()) {
   packageFullName <- ifelse(is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                             paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1))
   names(packageFullName) <- packageFullName
-  out11 <- pkgDep(packageFullName, recursive = TRUE)
-  unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
 
   # remove.packages(pks)
   # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-  out <- Require(packageVersionFile = fn, require = FALSE)
+  output <- capture.output(type = "message",
+                 out <- Require(packageVersionFile = fn, require = FALSE)
+  )
+  out11 <- pkgDep(packageFullName, recursive = TRUE)
+  allNeeded <- unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
+  allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
   persLibPathOld <- pkgs$LibPath[which(pkgs$Package == "amc")]
-  pkgDT <- attr(out, "Require")
+  # pkgDT <- attr(out, "Require")
   # pkgsInOut <- extractPkgName(pkgDT$Package[pkgDT$installed])
   installedInFistLib <- pkgs[LibPath == persLibPathOld]
   # testit::assert(all(installed))
   ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
-  allInIPareInpkgDT <- all(ip$Package %in% pkgDT$Package[pkgDT$installed] )
-  allInpkgDTareInIP <- all(pkgDT$Package[pkgDT$installed] %in% ip$Package  )
+  allInIPareInpkgDT <- all(ip$Package %in% allNeeded )
+  installedNotInIP <- setdiff(allNeeded, ip$Package)
 
+  installedPkgs <- setdiff(allNeeded, installedNotInIP)
+  allInpkgDTareInIP <- all(installedPkgs %in% ip$Package  )
+  if (!isTRUE(allInpkgDTareInIP)) browser()
+  if (!isTRUE(allInIPareInpkgDT)) browser()
 
   testit::assert(isTRUE(allInIPareInpkgDT))
   testit::assert(isTRUE(allInpkgDTareInIP))
-  installedNotInIP <- pkgDT[!unique(pkgDT$Package) %in% ip$Package]
-  testit::assert(all(installedNotInIP$installResult == "No available version"))
+  # testit::assert(all(installedNotInIP$installResult == "No available version"))
 
-  pkgsInOut <- pkgDT[installed %in% TRUE]
+  pkgsInOut <- allInpkgDTareInIP
   theTest <- NROW(ip) >= NROW(pkgsInOut)
   testit::assert(isTRUE(theTest))
 
@@ -62,7 +68,7 @@ if (interactive()) {
 
   lastLineOfMessageDF <- tail(grep(":", lala), 1)
   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  testit::assert(NROW(pkgDT) - NnotInstalled == NROW(pkgsInOut))
+  testit::assert(NROW(installedPkgs) + NnotInstalled == NROW(allNeeded))
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 
