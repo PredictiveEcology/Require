@@ -3,7 +3,7 @@ library(Require)
 optsListNew <- list()
 optsListPrev <- list()
 
-verbosity <- if (interactive()) 1 else 2
+verbosity <- if (interactive()) 1 else -1
 optsListPrevLinux <- if (interactive()) setLinuxBinaryRepo() else NULL
 
 optsListNew <- modifyList2(optsListNew, list(Require.verbose = verbosity))
@@ -14,6 +14,6 @@ if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
 optsListPrev <- options(optsListNew)
 optsListNew <- modifyList2(optsListNew, options("repos"))
 optsListPrev <- modifyList2(optsListPrev, optsListPrevLinux)
-unlink(dir(getOptionRPackageCache(), full.names = TRUE), recursive = TRUE)
+# unlink(dir(getOptionRPackageCache(), full.names = TRUE), recursive = TRUE)
 test_pkg("Require")
 options(optsListPrev)
