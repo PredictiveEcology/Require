@@ -4,7 +4,8 @@ message("\033[32m --------------------------------- Starting ",thisFilename,"  a
 Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
 origLibPathsAllTests <- .libPaths()
 
-if (interactive()) {
+# This error doesn't occur on Linux
+if (interactive() && Require:::isWindows()) {
   library(testit)
   library(Require)
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
@@ -13,8 +14,8 @@ if (interactive()) {
                      "install.packages.check.source" = "never",
                      "install.packages.compile.from.source" = "never",
                      "Require.unloadNamespaces" = FALSE)
-  projectDir <- "~/Testing11"
-  pkgDir <- file.path(projectDir, "EliotTest4.2")
+  projectDir <- tempdir2(Require:::.rndstr(1))
+  pkgDir <- file.path(projectDir, "R")
   setLibPaths(pkgDir, standAlone = TRUE)
   dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
   origDir <- setwd(projectDir)
