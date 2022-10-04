@@ -935,7 +935,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       startTime <- Sys.time()
 
       if (isWindows()) { # binaries on CRAN
-        toInstall[installFrom == "CRAN", installSafeGroups := -1]
+        toInstall[installFrom %in% c("CRAN", "Local"), installSafeGroups := -1]
         data.table::setorderv(toInstall, c("installSafeGroups"))
         toInstall[, installOrder := seq(.N)]
       }
