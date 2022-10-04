@@ -93,7 +93,7 @@ RequireOptions <- function() {
        Require.updateRprofile = FALSE,
        # Require.useCranCache = NULL,
        Require.usePak = FALSE,
-       Require.verbose = 0
+       Require.verbose = 1
   )
 }
 
