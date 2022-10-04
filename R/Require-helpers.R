@@ -936,9 +936,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
       if (isWindows()) { # binaries on CRAN
         toInstall[installFrom %in% c("CRAN", "Local"), installSafeGroups := -1]
-        data.table::setorderv(toInstall, c("installSafeGroups"))
-        toInstall[, installOrder := seq(.N)]
       }
+      data.table::setorderv(toInstall, c("installSafeGroups", "Package")) # alphabetical order
+      toInstall[, installOrder := seq(.N)]
       set(toInstall, NULL, "installSafeGroups", as.integer(factor(toInstall$installSafeGroups)))
       maxGroup <- max(toInstall$installSafeGroups)
       if (maxGroup > 1)
