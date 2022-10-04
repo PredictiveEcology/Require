@@ -1978,7 +1978,7 @@ toDT <- function(...) {
 
 rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
   pkgDT <- try(unique(pkgDT))
-  if (is(pkgDT, "try-error")) browser()
+  if (is(pkgDT, "try-error")) stop("Error 856; please contact developer")
   dups <- pkgDT[installed %in% FALSE, .N, by = "Package"][N > 1]
   if (NROW(dups)) {
     messageVerbose("Some packages are needed; multiple minimum version requirements; using most stringent",
