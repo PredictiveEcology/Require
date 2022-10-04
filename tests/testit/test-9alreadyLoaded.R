@@ -54,7 +54,8 @@ if (interactive() && Require:::isWindows()) {
   setwd(origDir)
 }
 
-try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE) # doesn't seem to keep globals from other scripts; recreate here
+tdOuter <- Require::tempdir2("tests")
+suppressWarnings(try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE)) # doesn't seem to keep globals from other scripts; recreate here
 unlink(Require:::tempdir2(), recursive = TRUE)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
