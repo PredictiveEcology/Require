@@ -19,6 +19,10 @@ if (interactive() && Require:::isWindows()) {
   setLibPaths(pkgDir, standAlone = TRUE)
   dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
   origDir <- setwd(projectDir)
+  on.exit({
+    setLibPaths(origLibPathsAllTests)
+    setwd(origDir)
+  })
 
 
 
