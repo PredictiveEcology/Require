@@ -121,14 +121,14 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setwd(prevDir)
 
   # Skip on CRAN
-  dir3 <- Require:::rpackageFolder(tempdir2("test3"))
+  dir3 <- Require:::rpackageFolder(tempdir2(Require:::.rndstr(1)))
   checkPath(dir3, create = TRUE)
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
   # Try github
-  try({
-    inst <- Require::Require("achubaty/fpCompare", install = "force",
+  #try({
+    inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
                              require = FALSE, standAlone = TRUE, libPaths = dir3)
-  }, silent = TRUE)
+  #}, silent = TRUE)
   pkgs <- c("fpCompare")
 
   isInstalled <- tryCatch( {
