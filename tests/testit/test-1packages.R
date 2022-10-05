@@ -33,7 +33,6 @@ if (Sys.info()["user"] == "achubaty") {
 #   repos
 # }
 # assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
-messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")

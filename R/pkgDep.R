@@ -45,6 +45,8 @@ utils::globalVariables(c(
 #'        concatenation of the possibly recursive package dependencies.
 #' @param includeBase Logical. Should R base packages be included, specifically, those in
 #'   `tail(.libPath(), 1)`
+#' @param includeSelf Logical. If `TRUE`, the default, then the dependencies will include
+#'   the package itself in the returned list elements, otherwise, only the "dependencies"
 #' @inheritParams Require
 #'
 #' @export
@@ -65,7 +67,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    repos = getOption("repos"),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE),
-                   verbose = getOption("Require.verbose")) {
+                   verbose = getOption("Require.verbose"),
+                   includeSelf = TRUE) {
 
   purge <- dealWithCache(purge)
 
@@ -201,8 +204,10 @@ pkgDep <- function(packages, libPath = .libPaths(),
   } else {
     neededFull1 <- list()
   }
-  neededFull1 <- Map(needed = neededFull1, names = names(neededFull1), function(needed, names)
-    rmExtraSpaces(c(names, needed)))
+  neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
+    rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p)))
+  # neededFull1 <- Map(needed = neededFull1, names = names(neededFull1), function(needed, names)
+  #   rmExtraSpaces(c(names, needed)))
   neededFull1
 }
 
