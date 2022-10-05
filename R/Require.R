@@ -478,7 +478,8 @@ Require <- function(packages, packageVersionFile,
                                 install = install, repos = repos, verbose = verbose,
                                 ...
             ), warning = function(w) {
-              warns <<- appendToWarns(w$message, warns, Package = pkgDT$Package[pkgDT$needInstall %in% TRUE])
+              if (length(pkgDT$Package[pkgDT$needInstall %in% TRUE]) > 1) browser()
+              warns <<- appendToWarns(w$message, warns, Packages = pkgDT$Package[pkgDT$needInstall %in% TRUE])
             })#, error = function(e) {
           #  })
           PackagesInstalled <- pkgDT$Package[pkgDT$needInstall %in% TRUE & !(pkgDT$installFrom %in% c("Fail", "Duplicate"))]
