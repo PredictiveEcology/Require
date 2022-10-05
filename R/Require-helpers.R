@@ -1209,12 +1209,13 @@ installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = 
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
   pkgs <- trimVersionNumber(packages)
-  out1 <- pkgDep(pkgs, recursive = TRUE, which = which, purge = purge)
+  out1 <- pkgDep(packages, recursive = TRUE, which = which, purge = purge,
+                 includeSelf = FALSE)
   out1 <- unique(unname(unlist(out1)))
   out2 <- c(out1, pkgs)
   out3 <- c(out1, packages)
   dt <- data.table(github = extractPkgGitHub(out2), Package = extractPkgName(out2),
-                   depOrOrig = c(rep("dep", length(out1)), rep("orig", length(pkgs))),
+                   depOrOrig = c(rep("dep", length(out1)), rep("orig", length(packages))),
                    packageFullName = out3)
   set(dt, NULL, "origOrder", seq_along(dt$github))
   dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
@@ -1281,7 +1282,6 @@ installedVers <- function(pkgDT) {
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose")) {
   if (internetExists("cannot get available packages", verbose = verbose)) {
     repos <- getCRANrepos(repos)
-
     if (!exists("cachedAvailablePackages", envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
       cap <- list()
       isMac <- tolower(Sys.info()["sysname"]) == "darwin"
