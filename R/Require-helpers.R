@@ -2338,7 +2338,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       stop("Can't install packages this way because R is not on the search path")
     }
   }
-  localDir <- dir()
+  localDir <- dir(full.names = TRUE, recursive = TRUE)
   if (exists("aaaa")) print(paste("3b localDir ", localDir))
   packageFNtoInstall <- lapply(gr$repo, function(pak) {
     packageFNtoInstall <- grep(pattern = paste0(pak, ".+(tar.gz|zip)"), localDir, value = TRUE)
@@ -2356,7 +2356,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
   }
 
-  packageFNtoInstall <- unlist(packageFNtoInstall[pmatch(names(gitRepo), packageFNtoInstall)])
+  packageFNtoInstallList <- lapply(names(gitRepo), function(pack)  grep(pack, unlist(packageFNtoInstall), value = TRUE))
+  packageFNtoInstall <- unlist(packageFNtoInstallList)
+  # packageFNtoInstall <- unlist(packageFNtoInstall[pmatch(names(gitRepo), unlist(packageFNtoInstall))])
   if (exists("aaaa")) print(paste("3e packageFNtoInstall ", packageFNtoInstall))
   packageName <- names(packageFNtoInstall)
   if (exists("aaaa")) print(paste("3f packageName ", packageName))
