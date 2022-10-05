@@ -2635,7 +2635,6 @@ srcPackageURLOnCRAN <- "https://cloud.r-project.org/"
 stripHTTPAddress <- function(addr) {
   addr <- gsub("https://(.+)", "\\1", unname(addr))
   addr <- gsub("/$", "", unname(addr))
-
   addr
 }
 
