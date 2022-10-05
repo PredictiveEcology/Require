@@ -125,10 +125,10 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   checkPath(dir3, create = TRUE)
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
   # Try github
-  try({
+  #try({
     inst <- Require::Require("achubaty/fpCompare", install = "force",
                              require = FALSE, standAlone = TRUE, libPaths = dir3)
-  }, silent = TRUE)
+  #}, silent = TRUE)
   pkgs <- c("fpCompare")
 
   isInstalled <- tryCatch( {
