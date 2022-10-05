@@ -2240,17 +2240,21 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   skipDLandBuild <- FALSE
 
   if (!is.null(getOptionRPackageCache()) || any(filesExist)) {
+    if (exists("aaaa")) print(paste("11 getOptionRPackageCache ", getOptionRPackageCache()))
+
     shaOnGitHub <-
       unlist(Map(repoInner = gr$repo, acctInner = gr$acct, brInner = gr$br,
               function(repoInner, acctInner, brInner)
                 getSHAfromGitHub(repo = repoInner, acct = acctInner, br = brInner)))
 
+    if (exists("aaaa")) print(paste("12 shaOnGitHub ", shaOnGitHub))
 
     if (any(filesExist)) { # means already installed here; no new install
       if (is(shaOnGitHub, "try-error")) {
         useRemotes <- TRUE
       } else {
         shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+        if (exists("aaaa")) print(paste("13 shaLocal ", shaLocal))
         if (identical(unname(shaLocal), unname(shaOnGitHub))) {
           messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
                          verbose = verbose, verboseLevel = 1)
@@ -2260,10 +2264,12 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     } else { # this means, not installed, but it may be in Cache
       dd <- dir(getOptionRPackageCache(), full.names = TRUE)
       cachedFiles <- lapply(shaOnGitHub, function(sha) grep(sha, dd, value = TRUE))
+      if (exists("aaaa")) print(paste("14 cachedFiles ", cachedFiles))
       if (any(lengths(cachedFiles) > 0)) {
         cachedFilesHere <- Map(cf = cachedFiles, sha = shaOnGitHub, function(cf, sha)
           file.copy(cf, gsub(paste0("(", sha, ")."), "", basename(cf))))
         skipDLandBuild <- lengths(cachedFilesHere) > 0
+        if (exists("aaaa")) print(paste("15 skipDLandBuild ", skipDLandBuild))
         if (any(skipDLandBuild)) {
           messageVerbose("Identical SHA for '", paste(names(skipDLandBuild)[skipDLandBuild], collapse = "', '"),
                          "' found in ", RequirePkgCacheDir(), "; using it",
@@ -2277,6 +2283,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
 
   stillNeedDLandBuild <- !skipDLandBuild
   if (any(stillNeedDLandBuild)) {
+    if (exists("aaaa")) print(paste("16 stillNeedDLandBuild ", stillNeedDLandBuild))
+
     if (!useRemotes) {
       out <- downloadRepo(gitRepo[stillNeedDLandBuild], overwrite = TRUE, destDir = tmpPath, verbose = verbose)
       if (is(out, "try-error"))
@@ -2294,6 +2302,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
   if (any(stillNeedDLandBuild)) {
     if (nchar(Sys.which("R")) > 0) {
+      if (exists("aaaa")) print(paste("17 stillNeedDLandBuild ", stillNeedDLandBuild))
       messageVerbose("building package (R CMD build)",
                      verbose = verbose, verboseLevel = 1)
       internal <- !interactive()
@@ -2307,7 +2316,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       })
       if (any(unlist(out) == 1L)) stop("Error 456; contact developer")
       theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
+      if (exists("aaaa")) print(paste("18 theDESCRIPTIONfile ", theDESCRIPTIONfile))
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
+      if (exists("aaaa")) print(paste("19 packageName ", packageName))
       messageVerbose("  ... Built!",
                      verbose = verbose, verboseLevel = 1)
       if (exists("aaaa")) print(paste("1 packageName ", packageName))
@@ -2361,7 +2372,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   withCallingHandlers(
     do.call(install.packages, opts2),
     warning = function(w) {
-      warns <<- append(warns, list(w$message))
+      warns <<- appendToWarns(w = w$message, warns = warns, Packages = packageName)
     }
   )
   if (exists("aaaa")) print(paste("6 Done ", "Done"))
