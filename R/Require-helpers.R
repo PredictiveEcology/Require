@@ -2326,7 +2326,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
         fns <- copyTarball(pack, builtBinary = TRUE)
         if (exists("aaaa")) print(paste("2 fns ", fns))
-        out <- file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
+        newFP <- file.path(dirname(fns), paste0(sha, ".", basename(fns)))
+        if (exists("aaaa")) print(paste("3a newFP ", newFP))
+        out <- file.rename(fns, newFP)
         if (exists("aaaa")) print(paste("3 out ", out))
         return(out)
       })
@@ -2337,12 +2339,15 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     }
   }
   localDir <- dir()
+  if (exists("aaaa")) print(paste("3b localDir ", localDir))
   packageFNtoInstall <- lapply(gr$repo, function(pak) {
     packageFNtoInstall <- grep(pattern = paste0(pak, ".+(tar.gz|zip)"), localDir, value = TRUE)
+    if (exists("aaaa")) print(paste("3c packageFNtoInstall ", packageFNtoInstall))
     isBin <- isBinary(packageFNtoInstall, fromCRAN = FALSE)
     if (any(isBin)) {
       packageFNtoInstall <- packageFNtoInstall[isBin]
     }
+    if (exists("aaaa")) print(paste("3d packageFNtoInstall ", packageFNtoInstall))
     packageFNtoInstall
   })
 
@@ -2352,7 +2357,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
 
   packageFNtoInstall <- unlist(packageFNtoInstall[pmatch(names(gitRepo), packageFNtoInstall)])
+  if (exists("aaaa")) print(paste("3e packageFNtoInstall ", packageFNtoInstall))
   packageName <- names(packageFNtoInstall)
+  if (exists("aaaa")) print(paste("3f packageName ", packageName))
   names(packageName) <- packageName
 
   if (exists("aaaa")) print(paste("4 packageName ", packageName))
