@@ -2878,7 +2878,9 @@ extractPkgNameFromFileName <- function(x) {
 appendToWarns <- function(w, warns, Package) {
   pkgName <- unique(unlist(lapply(Package, function(p) p[grepl(p, w)])))
   # pkgName <- extractPkgNameFromFileName(w)
+  pkgName <- na.omit(pkgName)
   newWarn <- list(w)
+  if (length(pkgName) != 1) stop(paste(pkgName, collapse = ", "))
   names(newWarn) <- pkgName
   append(warns, newWarn)
 }
