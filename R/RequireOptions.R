@@ -99,11 +99,11 @@
 #' @rdname RequireOptions
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
-       Require.otherPkgs <- c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
+       Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL,
        Require.RPackageCache = "default", # RequirePkgCacheDir(),
-       Require.spatialPkgs <- c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units"),
+       Require.spatialPkgs = c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units"),
        Require.standAlone = TRUE,
        Require.unloadNamespaces = FALSE,
        Require.updateRprofile = FALSE,

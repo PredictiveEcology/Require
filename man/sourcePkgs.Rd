@@ -18,8 +18,8 @@ require system specific compilation.}
 A sorted concatenation of the 3 input parameters.
 }
 \description{
-This list can be updated by the user by setting the value of \code{Require.spatialPkgs} or
-\code{Require.otherPkgs} in the \code{options} or another environment. See \code{RequireOptions()}. If this function does
-not find either of those two objects, then it will default to the (non exported)
-ones in \code{Require}
+The list of R packages that \code{Require} installs from source on Linux, even if
+the \code{getOptions("repos")} is a binary repository. This list can be updated by
+the user by modifying the options \code{Require.spatialPkgs} or
+\code{Require.otherPkgs}. Default "force source only packages" are visible with \code{RequireOptions()}.
 }

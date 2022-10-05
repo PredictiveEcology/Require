@@ -1533,11 +1533,13 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     rep(FALSE, NROW(pkgDT))
   } else {
     anyFromSrc <- installPkgNames %in% sourcePkgs()
-    if (length(anyFromSrc))
+    if (any(anyFromSrc))
       messageVerbose(verboseLevel = 1, verbose = verbose,
-                     paste(anyFromSrc, collapse = ", "), " are forcibly being installed",
+                     paste(installPkgNames[anyFromSrc], collapse = ", "),
+                     " being forcibly installed",
                      " from source. To modify this, modify options('Require.spatialPkgs') or ",
                      "options('Require.otherPkgs')")
+    anyFromSrc
   }
   installPkgNamesList <- list()
   reposList <- list()
