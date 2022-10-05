@@ -3,7 +3,7 @@ library(Require)
 optsListNew <- list()
 optsListPrev <- list()
 
-verbosity <- if (interactive()) 1 else -1
+verbosity <- if (interactive()) 1 else 2
 optsListPrevLinux <- if (interactive()) setLinuxBinaryRepo() else NULL
 
 optsListNew <- modifyList2(optsListNew, list(Require.verbose = verbosity))
