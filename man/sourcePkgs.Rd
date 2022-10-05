@@ -4,11 +4,7 @@
 \alias{sourcePkgs}
 \title{A list of R packages that should likely be installed from Source, not Binary}
 \usage{
-sourcePkgs(
-  additional = NULL,
-  spatialPkgs = get(".spatialPkgs", envir = parent.frame()),
-  otherPkgs = get(".otherPkgs", envir = parent.frame())
-)
+sourcePkgs(additional = NULL, spatialPkgs = NULL, otherPkgs = NULL)
 }
 \arguments{
 \item{additional}{Any other packages to be added to the other 2 argument vectors}
@@ -22,8 +18,8 @@ require system specific compilation.}
 A sorted concatenation of the 3 input parameters.
 }
 \description{
-This list can be updated by the user by setting the value of \code{.spatialPkgs} or
-\code{.otherPkgs} in the \code{.GlobalEnv} or another environment. If this function does
+This list can be updated by the user by setting the value of \code{Require.spatialPkgs} or
+\code{Require.otherPkgs} in the \code{options} or another environment. See \code{RequireOptions()}. If this function does
 not find either of those two objects, then it will default to the (non exported)
 ones in \code{Require}
 }

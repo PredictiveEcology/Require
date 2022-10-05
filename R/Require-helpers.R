@@ -1532,7 +1532,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   needSomeSrc <- if (isWindows()) {
     rep(FALSE, NROW(pkgDT))
   } else {
-    installPkgNames %in% sourcePkgs()
+    anyFromSrc <- installPkgNames %in% sourcePkgs()
+    if (length(anyFromSrc))
+      messageVerbose(verboseLevel = 1, verbose = verbose,
+                     paste(anyFromSrc, collapse = ", "), " are forcibly being installed",
+                     " from source. To modify this, modify options('Require.spatialPkgs') or ",
+                     "options('Require.otherPkgs')")
   }
   installPkgNamesList <- list()
   reposList <- list()
@@ -2597,16 +2602,13 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
   TRUE
 }
 
-.spatialPkgs <- c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units")
-
-.otherPkgs <- c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish")
 
 #' A list of R packages that should likely be installed from Source, not Binary
 #'
-#' This list can be updated by the user by setting the value of `.spatialPkgs` or
-#' `.otherPkgs` in the `.GlobalEnv` or another environment. If this function does
-#' not find either of those two objects, then it will default to the (non exported)
-#' ones in `Require`
+#' The list of R packages that `Require` installs from source on Linux, even if
+#' the `getOptions("repos")` is a binary repository. This list can be updated by
+#' the user by modifying the options `Require.spatialPkgs` or
+#' `Require.otherPkgs`. Default "force source only packages" are visible with `RequireOptions()`.
 #' @param spatialPkgs A character vector of package names that focus on spatial analyses.
 #' @param otherPkgs A character vector of package names that often
 #'   require system specific compilation.
@@ -2615,8 +2617,14 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
 #' @return
 #' A sorted concatenation of the 3 input parameters.
 sourcePkgs <- function(additional = NULL,
-                       spatialPkgs = get(".spatialPkgs", envir = parent.frame()),
-                       otherPkgs = get(".otherPkgs", envir = parent.frame())) {
+                       spatialPkgs = NULL,
+                       otherPkgs = NULL) {
+  spatialPkgs <- getOption("Require.spatialPkgs")
+  if (is.null(spatialPkgs))
+    spatialPkgs <- .spatialPkgs
+  otherPkgs <- getOption("Require.otherPkgs")
+  if (is.null(otherPkgs))
+    otherPkgs <- .otherPkgs
   unique(sort(c(spatialPkgs, otherPkgs, additional)))
 }
 
