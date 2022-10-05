@@ -1911,14 +1911,14 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
 copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
     theDir <- dir(full.names = TRUE)
-    newFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
-    if (length(unlist(newFiles))) {
-      newFiles <- unlist(newFiles)
-      newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
+    origFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
+    if (length(unlist(origFiles))) {
+      origFiles <- unlist(origFiles)
+      newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(origFiles)))
       filesAlreadyExist <- file.exists(newNames)
       if (any(!filesAlreadyExist))
-        try(linkOrCopy(newFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
-      unlink(newFiles)
+        try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
+      # unlink(origFiles)
       return(invisible(newNames))
     }
   }
@@ -2223,6 +2223,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   # Can be vectorized on gitRepo
   dir.create(libPath, showWarnings = FALSE, recursive = TRUE)
   masterMain <- c("main", "master")
+  if (is.null(names(gitRepo))) {
+    names(gitRepo) <- extractPkgName(gitRepo)
+  }
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
   quiet <- dots$quiet
@@ -2235,6 +2238,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   filesExist <- file.exists(unlist(alreadyExistingDESCRIPTIONFile))
   orig <- setwd(tmpPath)
   on.exit({
+    unlink(tmpPath, recursive = TRUE)
     setwd(orig)
   })
   skipDLandBuild <- FALSE
@@ -2338,7 +2342,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       stop("Can't install packages this way because R is not on the search path")
     }
   }
-  localDir <- dir(full.names = TRUE, recursive = TRUE)
+  localDir <- dir()
   if (exists("aaaa")) print(paste("3b localDir ", localDir))
   packageFNtoInstall <- lapply(gr$repo, function(pak) {
     packageFNtoInstall <- grep(pattern = paste0(pak, ".+(tar.gz|zip)"), localDir, value = TRUE)
