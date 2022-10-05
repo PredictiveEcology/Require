@@ -1,8 +1,8 @@
 thisFilename <- "test-1packages.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
+Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+Require:::messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 origLibPathsAllTests <- .libPaths()
 
@@ -17,32 +17,16 @@ if (Sys.info()["user"] == "achubaty") {
 } else {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
-#isInteractiveOrig <- Require:::isInteractive
-#isInteractive <- function() TRUE
-#assignInNamespace("isInteractive", isInteractive, ns = "Require")
-
-# repos <- getCRANrepos()
-# opt <- options(repos = repos)
-
-# # Mock the internal functions
-# chooseCRANmirror2 <- function() {
-#   repos <- NULL
-#   repos2 <- chooseCRANmirror(ind = 1)
-#   repos["CRAN"] <- repos2
-#   options("repos" = repos)
-#   repos
-# }
-# assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
 Sys.setenv("CRAN_REPO" = "")
 isInteractive <- function() FALSE
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
-out <- getCRANrepos("")
+out <- Require:::getCRANrepos("")
 Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
-repos <- getCRANrepos("")
+repos <- Require:::getCRANrepos("")
 testit::assert({is.character(repos)})
 testit::assert({nchar(repos) > 0})
 
@@ -176,7 +160,7 @@ ip <- data.table::as.data.table(installed.packages())
 testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
 out <- getPkgVersions("Require")
-testit::assert({is.data.table(out)})
+testit::assert({data.table::is.data.table(out)})
 testit::assert({is.na(out$correctVersion)})
 out2 <- getAvailable(out)
 testit::assert({is.na(out2$correctVersion)})
@@ -191,7 +175,7 @@ testit::assert({is.na(out3$installFrom)})
 testit::assert({is.na(out3$needInstall)})
 
 out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "rforge/mumin/pkg"))
-testit::assert({is.data.table(out)})
+testit::assert({data.table::is.data.table(out)})
 testit::assert({!is.null(out$DESCFile)})
 testit::assert({file.exists(out$DESCFile)})
 
