@@ -111,6 +111,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
   print(paste("dir.exists: ", dir.exists(dir3)))# Try github
   #try({
+  aaaa <<- 1
   inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
                              require = FALSE, standAlone = TRUE, libPaths = dir3)
   attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))

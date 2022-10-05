@@ -2310,11 +2310,16 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
       messageVerbose("  ... Built!",
                      verbose = verbose, verboseLevel = 1)
+      if (exists("aaaa")) print(paste("1 packageName ", packageName))
       shaOnGitHub2 <- shaOnGitHub[packageName]
       Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
         fns <- copyTarball(pack, builtBinary = TRUE)
-        file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
+        if (exists("aaaa")) print(paste("2 fns ", fns))
+        out <- file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
+        if (exists("aaaa")) print(paste("3 out ", out))
+        return(out)
       })
+
 
     } else {
       stop("Can't install packages this way because R is not on the search path")
@@ -2339,12 +2344,14 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   packageName <- names(packageFNtoInstall)
   names(packageName) <- packageName
 
+  if (exists("aaaa")) print(paste("4 packageName ", packageName))
   opts2 <- append(dots,
                   list(packageFNtoInstall,
                        repos = NULL,
                        lib = normalizePath(libPath, winslash = "/")))
   opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
   opts2 <- modifyList2(opts2, list(quiet = !(verbose >= 1)))
+  if (exists("aaaa")) print(paste("5 opts2 ", opts2))
   if (is.null(opts2$destdir)) {
     cachePath <- getOptionRPackageCache()
     opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
@@ -2357,13 +2364,16 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       warns <<- append(warns, list(w$message))
     }
   )
+  if (exists("aaaa")) print(paste("6 Done ", "Done"))
 
   installStatus <- vapply(packageName, function(x) TRUE, logical(1))
   pkgsToModify <- packageName
   if (length(unlist(warns))) {
+    if (exists("aaaa")) print(paste("7 warns ", warns))
     problems <- unlist(lapply(packageName, function(pn) grepl(pn, warns)))
     installStatus[problems] <- FALSE
     pkgsToModify <- packageName[problems %in% FALSE]
+    if (exists("aaaa")) print(paste("8 pkgsToModify ", pkgsToModify))
   }
 
   lapply(pkgsToModify, function(pack) {
@@ -2372,12 +2382,16 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
     if (!is.null(getOptionRPackageCache())) {
       fns <- copyTarball(pack, builtBinary = TRUE)
+      if (exists("aaaa")) print(paste("9 fns ", fns))
       theDESCRIPTIONfile <- file.path(.libPaths()[1], pack, "DESCRIPTION")
       # system.file("DESCRIPTION", package = "peutils", lib.loc = .libPaths()[1])
       sha <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "RemoteSha")
+      if (exists("aaaa")) print(paste("10 sha ", sha))
       file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
     }
   })
+  if (exists("aaaa")) print(paste("11 installStatus ", installStatus))
+
   return(installStatus)
 
 }
