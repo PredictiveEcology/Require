@@ -44,8 +44,8 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-dir1 <- Require:::rpackageFolder(tempdir2("test1"))
-checkPath(dir1, create = TRUE)
+dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
+Require::checkPath(dir1, create = TRUE)
 out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1, verbose = 2)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
@@ -69,8 +69,8 @@ remove.packages("fpCompare", lib = dir1)
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-  dir2 <- Require:::rpackageFolder(tempdir2("test2"))
-  checkPath(dir2, create = TRUE)
+  dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
+  Require::checkPath(dir2, create = TRUE)
   pvWant <- "0.2.2"
   inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"), standAlone = TRUE,
                            libPaths = dir2, dependencies = FALSE, require = FALSE)
@@ -83,8 +83,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
-  dir6 <- Require:::rpackageFolder(tempdir2("test6"))
-  checkPath(dir6, create = TRUE)
+  dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
+  Require::checkPath(dir6, create = TRUE)
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
   testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
@@ -95,7 +95,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
-  prevDir <- setwd(tempdir2("test11"))
+  prevDir <- setwd(Require::tempdir2("test11"))
   out <- pkgSnapshot()
   pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
   testit::assert({is.data.frame(out)})
@@ -105,13 +105,16 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setwd(prevDir)
 
   # Skip on CRAN
-  dir3 <- Require:::rpackageFolder(tempdir2(Require:::.rndstr(1)))
-  checkPath(dir3, create = TRUE)
+  dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
+  print(paste("dir3: ", dir3))
+  Require::checkPath(dir3, create = TRUE)
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
-  # Try github
+  print(paste("dir.exists: ", dir.exists(dir3)))# Try github
   #try({
-    inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
+  inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
                              require = FALSE, standAlone = TRUE, libPaths = dir3)
+  attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
+  print(paste("inst Attr: ", attrOut))# Try github
   #}, silent = TRUE)
   pkgs <- c("fpCompare")
 
@@ -119,11 +122,12 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     out <- find.package(pkgs, lib.loc = dir3)
     if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
+  print(paste("isInstalled: ", isInstalled))# Try github
   testit::assert({isTRUE(isInstalled)})
 
   # Try github with version
-  dir4 <- Require:::rpackageFolder(tempdir2("test4"))
-  silent <- checkPath(dir4, create = TRUE)
+  dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
+  silent <- Require::checkPath(dir4, create = TRUE)
   inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                            require = FALSE, standAlone = FALSE, libPaths = dir4)
   testit::assert({isFALSE(inst)})
