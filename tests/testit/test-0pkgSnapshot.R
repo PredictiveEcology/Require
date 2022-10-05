@@ -14,7 +14,8 @@ anyNamespaces <- srch[!gsub("package:", "", srch) %in%
 if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
 library(testit)
 origLibPathsAllTests <- .libPaths()
-tmpdir <- checkPath(tempdir2("testingA"), create = TRUE)
+tmpdir <- tempdir2(Require:::.rndstr(1))
+created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
 aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
 bb <- list()
@@ -105,7 +106,7 @@ if (file.exists(pkgVF)) {
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
   Require:::installRequire(getOption("Require.Home"))
 
-  st <- try(system.time({out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)}))
+  out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
 
   # Test
   there <- data.table::fread(fileNames[["fn0"]][["txt"]])

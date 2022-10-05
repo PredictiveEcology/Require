@@ -935,10 +935,10 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       startTime <- Sys.time()
 
       if (isWindows()) { # binaries on CRAN
-        toInstall[installFrom == "CRAN", installSafeGroups := -1]
-        data.table::setorderv(toInstall, c("installSafeGroups"))
-        toInstall[, installOrder := seq(.N)]
+        toInstall[installFrom %in% c("CRAN", "Local"), installSafeGroups := -1]
       }
+      data.table::setorderv(toInstall, c("installSafeGroups", "Package")) # alphabetical order
+      toInstall[, installOrder := seq(.N)]
       set(toInstall, NULL, "installSafeGroups", as.integer(factor(toInstall$installSafeGroups)))
       maxGroup <- max(toInstall$installSafeGroups)
       if (maxGroup > 1)
@@ -1983,7 +1983,7 @@ toDT <- function(...) {
 
 rmDuplicatePkgs <- function(pkgDT, verbose = getOption("Require.verbose", 1)) {
   pkgDT <- try(unique(pkgDT))
-  if (is(pkgDT, "try-error")) browser()
+  if (is(pkgDT, "try-error")) stop("Error 856; please contact developer")
   dups <- pkgDT[installed %in% FALSE, .N, by = "Package"][N > 1]
   if (NROW(dups)) {
     messageVerbose("Some packages are needed; multiple minimum version requirements; using most stringent",
