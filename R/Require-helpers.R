@@ -2881,6 +2881,7 @@ appendToWarns <- function(w, warns, Package) {
   pkgName <- na.omit(pkgName)
   newWarn <- list(w)
   if (length(pkgName) != 1) stop(paste(pkgName, collapse = ", "))
-  names(newWarn) <- pkgName
+  out <- try(names(newWarn) <- pkgName, silent = TRUE)
+  if (is(out, "try-error")) stop(paste(pkgName, collapse = ", "))
   append(warns, newWarn)
 }
