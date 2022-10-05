@@ -117,6 +117,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   print(paste("inst Attr: ", attrOut))# Try github
   #}, silent = TRUE)
   pkgs <- c("fpCompare")
+  print(paste("find.package: ", find.package(pkgs, lib.loc = dir3)))
+  print(paste("dir dir3: ", dir(dir3, full.names = TRUE)))
 
   isInstalled <- tryCatch( {
     out <- find.package(pkgs, lib.loc = dir3)
