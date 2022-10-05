@@ -2619,10 +2619,10 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
 sourcePkgs <- function(additional = NULL,
                        spatialPkgs = NULL,
                        otherPkgs = NULL) {
-  spatialPkgs <- getOption("Require.spatialPkgs")
+  .spatialPkgs <- getOption("Require.spatialPkgs")
   if (is.null(spatialPkgs))
     spatialPkgs <- .spatialPkgs
-  otherPkgs <- getOption("Require.otherPkgs")
+  .otherPkgs <- getOption("Require.otherPkgs")
   if (is.null(otherPkgs))
     otherPkgs <- .otherPkgs
   unique(sort(c(spatialPkgs, otherPkgs, additional)))
