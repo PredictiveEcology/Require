@@ -2879,5 +2879,6 @@ appendToWarns <- function(w, warns, Packages) {
   newWarn <- lapply(Packages, function(p) {
     grep(p, w, value = TRUE)
     })
+  newWarn <- newWarn[lengths(newWarn) > 0]
   append(warns, newWarn)
 }
