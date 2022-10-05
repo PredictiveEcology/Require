@@ -343,13 +343,14 @@ pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
                     depends, imports, suggests, linkingTo,
                     repos = getOption("repos"),
-                    sorted = TRUE, purge = getOption("Require.purge", FALSE)) {
+                    sorted = TRUE, purge = getOption("Require.purge", FALSE),
+                    includeSelf = TRUE) {
   a <- lapply(pkgDep(packages, recursive = FALSE, which = which, depends = depends,
                      imports = imports, suggests = suggests, linkingTo = linkingTo,
-                     repos = repos)[[1]],
+                     repos = repos, includeSelf = includeSelf)[[1]],
               pkgDep,
               depends = depends, imports = imports, suggests = suggests, linkingTo = linkingTo,
-              repos = repos, recursive = recursive
+              repos = repos, recursive = recursive, includeSelf = includeSelf
   )
   a <- unlist(a, recursive = FALSE)
   if (sorted) {

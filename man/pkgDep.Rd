@@ -34,7 +34,8 @@ pkgDep2(
   linkingTo,
   repos = getOption("repos"),
   sorted = TRUE,
-  purge = getOption("Require.purge", FALSE)
+  purge = getOption("Require.purge", FALSE),
+  includeSelf = TRUE
 )
 
 pkgDepTopoSort(

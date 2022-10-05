@@ -24,8 +24,8 @@ if (interactive()) {
   # repo <- chooseCRANmirror(ind = 1)
 
 
-  pkgDepTest1 <- Require::pkgDep("Require")
-  pkgDepTest2 <- Require::pkgDep2("Require")
+  pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE)
+  pkgDepTest2 <- Require::pkgDep2("Require", includeSelf = FALSE)
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
   origDir <- setwd("~/GitHub/");
 
