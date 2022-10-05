@@ -2876,7 +2876,7 @@ extractPkgNameFromFileName <- function(x) {
 
 appendToWarns <- function(w, warns, Packages) {
   names(Packages) <- Packages
-  pkgName <- lapply(Packages, function(p) {
+  newWarn <- lapply(Packages, function(p) {
     grep(p, w, value = TRUE)
     })
   append(warns, newWarn)
