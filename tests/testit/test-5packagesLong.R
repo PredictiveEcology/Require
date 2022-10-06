@@ -345,6 +345,5 @@ if (interactive()) {
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 
-unlink(tempdir2(), recursive = TRUE)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")

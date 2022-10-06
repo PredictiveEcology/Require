@@ -31,9 +31,7 @@ if (interactive()) {
 
   # remove.packages(pks)
   # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-  output <- capture.output(type = "message",
-                 out <- Require(packageVersionFile = fn, require = FALSE)
-  )
+  out <- Require(packageVersionFile = fn, require = FALSE)
   out11 <- pkgDep(packageFullName, recursive = TRUE)
   allNeeded <- unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
   allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
@@ -75,6 +73,7 @@ if (interactive()) {
   theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
   if (!isTRUE(theTest)) browser()
   testit::assert(isTRUE(theTest))
+  if (interactive()) if (!isTRUE(theTest)) browser()
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 
