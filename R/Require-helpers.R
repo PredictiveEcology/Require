@@ -159,9 +159,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     pDT <- pkgDT#[whNotCorrect]
     # takenOffCran <- FALSE # This is an object that will be modified only if in the CRAN section
+    # if (exists("aaaa")) browser()
     if (is.null(pDT$versionSpec)) {
       pDT[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
-                                inequality = NA)]
+                 inequality = NA)]
     }
 
     if (internetExists(paste0("cannot check for available packages", verbose = verbose))) {
@@ -480,9 +481,14 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
                          verbose = verbose, verboseLevel = 0)
       }
 
-    } else {
-      pkgDT[, correctVersionAvail := NA]
-    }
+    } #else {
+      #pkgDT[, correctVersionAvail := NA]
+    #}
+    # Sanity check -- make sure all columns are present
+    needCols <- setdiff(c("correctVersionAvail"), colnames(pDT) )
+    if (length(needCols))
+      set(pDT, NULL, needCols, NA)
+
   }
 
   pkgDT
