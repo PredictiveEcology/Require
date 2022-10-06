@@ -2324,13 +2324,13 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
       messageVerbose("  ... Built!",
                      verbose = verbose, verboseLevel = 1)
-      shaOnGitHub2 <- shaOnGitHub[packageName]
-      Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
-        fns <- copyTarball(pack, builtBinary = TRUE)
-        newFP <- file.path(dirname(fns), paste0(sha, ".", basename(fns)))
-        out <- file.rename(fns, newFP)
-        return(out)
-      })
+      # shaOnGitHub2 <- shaOnGitHub[packageName]
+      # Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
+      #   fns <- copyTarball(pack, builtBinary = TRUE)
+      #   newFP <- file.path(dirname(fns), paste0(sha, ".", basename(fns)))
+      #   out <- file.rename(fns, newFP)
+      #   return(out)
+      # })
 
 
     } else {
@@ -2352,7 +2352,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
   }
 
-  packageFNtoInstallList <- lapply(names(gitRepo), function(pack)  grep(pack, unlist(packageFNtoInstall), value = TRUE))
+  pkgsSimple <- names(gitRepo)
+  names(pkgsSimple) <- pkgsSimple
+  packageFNtoInstallList <- lapply(pkgsSimple, function(pack)
+    unname(grep(pack, unlist(packageFNtoInstall), value = TRUE)))
   packageFNtoInstall <- unlist(packageFNtoInstallList)
   # packageFNtoInstall <- unlist(packageFNtoInstall[pmatch(names(gitRepo), unlist(packageFNtoInstall))])
   packageName <- names(packageFNtoInstall)
