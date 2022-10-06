@@ -62,13 +62,19 @@ if (interactive()) {
   lala <- capture.output(type = "message",
                          Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
                                  require = FALSE, verbose = 2))
-  missings <- grep("pkgSnapshot appears to be missing", lala, value = TRUE)
+  missings <- grep(Require:::messagePkgSnapshotMissing, lala, value = TRUE)
   missings <- gsub(".+: (.+); adding .+", "\\1", missings)
   missings <- strsplit(missings, ", ")[[1]]
 
-  lastLineOfMessageDF <- tail(grep(":", lala), 1)
-  NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  testit::assert(NROW(installedPkgs) + NnotInstalled == NROW(allNeeded))
+  if (any(grepl(Require:::messageFollowingPackagesIncorrect, lala))) {
+    lastLineOfMessageDF <- tail(grep(":", lala), 1)
+    NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
+  } else {
+    NnotInstalled <- 0
+  }
+  theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
+  if (!isTRUE(theTest)) browser()
+  testit::assert(isTRUE(theTest))
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 

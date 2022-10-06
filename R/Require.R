@@ -413,7 +413,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- pkgDT[!Package %in% .basePkgs]
       notInPkgSnapshot <- pkgDT[is.na(packagesRequired)]
       if (NROW(notInPkgSnapshot))
-        messageVerbose("The pkgSnapshot appears to be missing: ",
+        messageVerbose(messagePkgSnapshotMissing, ": ",
                        paste(notInPkgSnapshot$Package, collapse = ", "),
                        "; adding to installs", verbose = verbose, verboseLevel = 0)
 
@@ -548,7 +548,7 @@ Require <- function(packages, packageVersionFile,
 
     notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
     if (isTRUE(any(notCorrectly))) {
-      messageVerbose("The following packages did not get installed correctly.",
+      messageVerbose(messageFollowingPackagesIncorrect,
                      verbose = verbose, verboseLevel = 0)
       colsToKeep2 <- c(
         "packageFullName", "Package", "LibPath", "Version",
@@ -631,3 +631,6 @@ usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = 
 
   wantpak
 }
+
+messageFollowingPackagesIncorrect <- "The following packages did not get installed correctly."
+messagePkgSnapshotMissing <- "The pkgSnapshot appears to be missing"
