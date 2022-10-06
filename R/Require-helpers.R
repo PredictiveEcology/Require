@@ -159,9 +159,10 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     whNotCorrect <- pkgDT[, .I[hasVersionSpec == TRUE & (correctVersion == FALSE | is.na(correctVersion))]]
     pDT <- pkgDT#[whNotCorrect]
     # takenOffCran <- FALSE # This is an object that will be modified only if in the CRAN section
+    # if (exists("aaaa")) browser()
     if (is.null(pDT$versionSpec)) {
       pDT[, `:=`(compareVersionAvail = NA, correctVersionAvail = NA, versionSpec = NA,
-                                inequality = NA)]
+                 inequality = NA)]
     }
 
     if (internetExists(paste0("cannot check for available packages", verbose = verbose))) {
@@ -441,7 +442,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
 
       # do GitHub second
       # if (any(pkgDT$Package %in% "LandR.CS")) browser()
-      githubNeedInstall <- !pDT$correctVersion %in% FALSE & pDT$installed %in% FALSE & pDT$repoLocation %in% "GitHub"
+      githubNeedInstall <- #!pDT$correctVersion %in% FALSE &
+        pDT$installed %in% FALSE & pDT$repoLocation %in% "GitHub"
       if (any(githubNeedInstall)) {
         set(pDT, NULL, "tmpOrder", seq(NROW(pDT)))
         needInstallInd <- githubNeedInstall %in% TRUE # deals with NAs
@@ -481,8 +483,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
       }
 
     } else {
-      pkgDT[, correctVersionAvail := NA]
+      set(pDT, NULL, "correctVersionAvail", NA)
     }
+
   }
 
   pkgDT
@@ -501,6 +504,13 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
 
   pkgDT <- pkgDT[correctVersion == FALSE | is.na(correctVersion) & installed == FALSE, needInstall := TRUE]
   if (NROW(pkgDT[needInstall == TRUE])) {
+
+    # Sanity check -- make sure all columns are present
+    needCols <- setdiff(c("correctVersionAvail"), colnames(pkgDT[needInstall == TRUE]) )
+    if (length(needCols))  {
+      set(pkgDT, NULL, needCols, NA)
+    }
+
     pkgDT[needInstall == TRUE &
             (correctVersionAvail == TRUE | is.na(correctVersionAvail)) & repoLocation == "CRAN",
           installFrom := repoLocation]
@@ -1911,14 +1921,14 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
 copyTarball <- function(pkg, builtBinary) {
   if (builtBinary) {
     theDir <- dir(full.names = TRUE)
-    newFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
-    if (length(unlist(newFiles))) {
-      newFiles <- unlist(newFiles)
-      newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(newFiles)))
+    origFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
+    if (length(unlist(origFiles))) {
+      origFiles <- unlist(origFiles)
+      newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(origFiles)))
       filesAlreadyExist <- file.exists(newNames)
       if (any(!filesAlreadyExist))
-        try(linkOrCopy(newFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
-      unlink(newFiles)
+        try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
+      # unlink(origFiles)
       return(invisible(newNames))
     }
   }
@@ -2223,6 +2233,9 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   # Can be vectorized on gitRepo
   dir.create(libPath, showWarnings = FALSE, recursive = TRUE)
   masterMain <- c("main", "master")
+  if (is.null(names(gitRepo))) {
+    names(gitRepo) <- extractPkgName(gitRepo)
+  }
   gr <- splitGitRepo(gitRepo)
   dots <- list(...)
   quiet <- dots$quiet
@@ -2235,26 +2248,22 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   filesExist <- file.exists(unlist(alreadyExistingDESCRIPTIONFile))
   orig <- setwd(tmpPath)
   on.exit({
+    unlink(tmpPath, recursive = TRUE)
     setwd(orig)
   })
   skipDLandBuild <- FALSE
 
   if (!is.null(getOptionRPackageCache()) || any(filesExist)) {
-    if (exists("aaaa")) print(paste("11 getOptionRPackageCache ", getOptionRPackageCache()))
-
     shaOnGitHub <-
       unlist(Map(repoInner = gr$repo, acctInner = gr$acct, brInner = gr$br,
               function(repoInner, acctInner, brInner)
                 getSHAfromGitHub(repo = repoInner, acct = acctInner, br = brInner)))
-
-    if (exists("aaaa")) print(paste("12 shaOnGitHub ", shaOnGitHub))
 
     if (any(filesExist)) { # means already installed here; no new install
       if (is(shaOnGitHub, "try-error")) {
         useRemotes <- TRUE
       } else {
         shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-        if (exists("aaaa")) print(paste("13 shaLocal ", shaLocal))
         if (identical(unname(shaLocal), unname(shaOnGitHub))) {
           messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
                          verbose = verbose, verboseLevel = 1)
@@ -2264,12 +2273,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
     } else { # this means, not installed, but it may be in Cache
       dd <- dir(getOptionRPackageCache(), full.names = TRUE)
       cachedFiles <- lapply(shaOnGitHub, function(sha) grep(sha, dd, value = TRUE))
-      if (exists("aaaa")) print(paste("14 cachedFiles ", cachedFiles))
       if (any(lengths(cachedFiles) > 0)) {
         cachedFilesHere <- Map(cf = cachedFiles, sha = shaOnGitHub, function(cf, sha)
           file.copy(cf, gsub(paste0("(", sha, ")."), "", basename(cf))))
         skipDLandBuild <- lengths(cachedFilesHere) > 0
-        if (exists("aaaa")) print(paste("15 skipDLandBuild ", skipDLandBuild))
         if (any(skipDLandBuild)) {
           messageVerbose("Identical SHA for '", paste(names(skipDLandBuild)[skipDLandBuild], collapse = "', '"),
                          "' found in ", RequirePkgCacheDir(), "; using it",
@@ -2283,7 +2290,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
 
   stillNeedDLandBuild <- !skipDLandBuild
   if (any(stillNeedDLandBuild)) {
-    if (exists("aaaa")) print(paste("16 stillNeedDLandBuild ", stillNeedDLandBuild))
 
     if (!useRemotes) {
       out <- downloadRepo(gitRepo[stillNeedDLandBuild], overwrite = TRUE, destDir = tmpPath, verbose = verbose)
@@ -2302,7 +2308,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
   if (any(stillNeedDLandBuild)) {
     if (nchar(Sys.which("R")) > 0) {
-      if (exists("aaaa")) print(paste("17 stillNeedDLandBuild ", stillNeedDLandBuild))
       messageVerbose("building package (R CMD build)",
                      verbose = verbose, verboseLevel = 1)
       internal <- !interactive()
@@ -2316,20 +2321,14 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       })
       if (any(unlist(out) == 1L)) stop("Error 456; contact developer")
       theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
-      if (exists("aaaa")) print(paste("18 theDESCRIPTIONfile ", theDESCRIPTIONfile))
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
-      if (exists("aaaa")) print(paste("19 packageName ", packageName))
       messageVerbose("  ... Built!",
                      verbose = verbose, verboseLevel = 1)
-      if (exists("aaaa")) print(paste("1 packageName ", packageName))
       shaOnGitHub2 <- shaOnGitHub[packageName]
       Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
         fns <- copyTarball(pack, builtBinary = TRUE)
-        if (exists("aaaa")) print(paste("2 fns ", fns))
         newFP <- file.path(dirname(fns), paste0(sha, ".", basename(fns)))
-        if (exists("aaaa")) print(paste("3a newFP ", newFP))
         out <- file.rename(fns, newFP)
-        if (exists("aaaa")) print(paste("3 out ", out))
         return(out)
       })
 
@@ -2338,16 +2337,13 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       stop("Can't install packages this way because R is not on the search path")
     }
   }
-  localDir <- dir(full.names = TRUE, recursive = TRUE)
-  if (exists("aaaa")) print(paste("3b localDir ", localDir))
+  localDir <- dir()
   packageFNtoInstall <- lapply(gr$repo, function(pak) {
     packageFNtoInstall <- grep(pattern = paste0(pak, ".+(tar.gz|zip)"), localDir, value = TRUE)
-    if (exists("aaaa")) print(paste("3c packageFNtoInstall ", packageFNtoInstall))
     isBin <- isBinary(packageFNtoInstall, fromCRAN = FALSE)
     if (any(isBin)) {
       packageFNtoInstall <- packageFNtoInstall[isBin]
     }
-    if (exists("aaaa")) print(paste("3d packageFNtoInstall ", packageFNtoInstall))
     packageFNtoInstall
   })
 
@@ -2359,19 +2355,15 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   packageFNtoInstallList <- lapply(names(gitRepo), function(pack)  grep(pack, unlist(packageFNtoInstall), value = TRUE))
   packageFNtoInstall <- unlist(packageFNtoInstallList)
   # packageFNtoInstall <- unlist(packageFNtoInstall[pmatch(names(gitRepo), unlist(packageFNtoInstall))])
-  if (exists("aaaa")) print(paste("3e packageFNtoInstall ", packageFNtoInstall))
   packageName <- names(packageFNtoInstall)
-  if (exists("aaaa")) print(paste("3f packageName ", packageName))
   names(packageName) <- packageName
 
-  if (exists("aaaa")) print(paste("4 packageName ", packageName))
   opts2 <- append(dots,
                   list(packageFNtoInstall,
                        repos = NULL,
                        lib = normalizePath(libPath, winslash = "/")))
   opts2 <- append(opts2, list(type = "source")) # it may have "binary", which is incorrect
   opts2 <- modifyList2(opts2, list(quiet = !(verbose >= 1)))
-  if (exists("aaaa")) print(paste("5 opts2 ", opts2))
   if (is.null(opts2$destdir)) {
     cachePath <- getOptionRPackageCache()
     opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
@@ -2384,16 +2376,13 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       warns <<- appendToWarns(w = w$message, warns = warns, Packages = packageName)
     }
   )
-  if (exists("aaaa")) print(paste("6 Done ", "Done"))
 
   installStatus <- vapply(packageName, function(x) TRUE, logical(1))
   pkgsToModify <- packageName
   if (length(unlist(warns))) {
-    if (exists("aaaa")) print(paste("7 warns ", warns))
     problems <- unlist(lapply(packageName, function(pn) grepl(pn, warns)))
     installStatus[problems] <- FALSE
     pkgsToModify <- packageName[problems %in% FALSE]
-    if (exists("aaaa")) print(paste("8 pkgsToModify ", pkgsToModify))
   }
 
   lapply(pkgsToModify, function(pack) {
@@ -2402,15 +2391,12 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
     if (!is.null(getOptionRPackageCache())) {
       fns <- copyTarball(pack, builtBinary = TRUE)
-      if (exists("aaaa")) print(paste("9 fns ", fns))
       theDESCRIPTIONfile <- file.path(.libPaths()[1], pack, "DESCRIPTION")
       # system.file("DESCRIPTION", package = "peutils", lib.loc = .libPaths()[1])
       sha <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "RemoteSha")
-      if (exists("aaaa")) print(paste("10 sha ", sha))
       file.rename(fns, file.path(dirname(fns), paste0(sha, ".", basename(fns))))
     }
   })
-  if (exists("aaaa")) print(paste("11 installStatus ", installStatus))
 
   return(installStatus)
 
