@@ -71,9 +71,8 @@ if (interactive()) {
     NnotInstalled <- 0
   }
   theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
-  if (!isTRUE(theTest)) browser()
-  testit::assert(isTRUE(theTest))
   if (interactive()) if (!isTRUE(theTest)) browser()
+  testit::assert(isTRUE(theTest))
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 
