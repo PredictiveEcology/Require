@@ -482,13 +482,9 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
                          verbose = verbose, verboseLevel = 0)
       }
 
-    } #else {
-      #pkgDT[, correctVersionAvail := NA]
-    #}
-    # Sanity check -- make sure all columns are present
-    needCols <- setdiff(c("correctVersionAvail"), colnames(pDT) )
-    if (length(needCols))
-      set(pDT, NULL, needCols, NA)
+    } else {
+      set(pDT, NULL, "correctVersionAvail", NA)
+    }
 
   }
 
@@ -508,6 +504,13 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
 
   pkgDT <- pkgDT[correctVersion == FALSE | is.na(correctVersion) & installed == FALSE, needInstall := TRUE]
   if (NROW(pkgDT[needInstall == TRUE])) {
+
+    # Sanity check -- make sure all columns are present
+    needCols <- setdiff(c("correctVersionAvail"), colnames(pkgDT[needInstall == TRUE]) )
+    if (length(needCols))  {
+      set(pkgDT, NULL, needCols, NA)
+    }
+
     pkgDT[needInstall == TRUE &
             (correctVersionAvail == TRUE | is.na(correctVersionAvail)) & repoLocation == "CRAN",
           installFrom := repoLocation]
