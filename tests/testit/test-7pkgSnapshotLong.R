@@ -31,9 +31,7 @@ if (interactive()) {
 
   # remove.packages(pks)
   # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-  output <- capture.output(type = "message",
-                 out <- Require(packageVersionFile = fn, require = FALSE)
-  )
+  out <- Require(packageVersionFile = fn, require = FALSE)
   out11 <- pkgDep(packageFullName, recursive = TRUE)
   allNeeded <- unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
   allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
@@ -68,7 +66,9 @@ if (interactive()) {
 
   lastLineOfMessageDF <- tail(grep(":", lala), 1)
   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  testit::assert(NROW(installedPkgs) + NnotInstalled == NROW(allNeeded))
+  theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
+  if (interactive()) if (!isTRUE(theTest)) browser()
+  testit::assert(isTRUE(theTest))
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 
