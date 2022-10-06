@@ -1,8 +1,8 @@
 thisFilename <- "test-1packages.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
+Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+Require:::messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 origLibPathsAllTests <- .libPaths()
 
@@ -17,33 +17,16 @@ if (Sys.info()["user"] == "achubaty") {
 } else {
   outOpts2 <- options("Require.Home" = "~/GitHub/Require")
 }
-#isInteractiveOrig <- Require:::isInteractive
-#isInteractive <- function() TRUE
-#assignInNamespace("isInteractive", isInteractive, ns = "Require")
-
-# repos <- getCRANrepos()
-# opt <- options(repos = repos)
-
-# # Mock the internal functions
-# chooseCRANmirror2 <- function() {
-#   repos <- NULL
-#   repos2 <- chooseCRANmirror(ind = 1)
-#   repos["CRAN"] <- repos2
-#   options("repos" = repos)
-#   repos
-# }
-# assignInNamespace("chooseCRANmirror2", chooseCRANmirror2, ns = "Require")
-messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
 Sys.setenv("CRAN_REPO" = "")
 isInteractive <- function() FALSE
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
-out <- getCRANrepos("")
+out <- Require:::getCRANrepos("")
 Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
-repos <- getCRANrepos("")
+repos <- Require:::getCRANrepos("")
 testit::assert({is.character(repos)})
 testit::assert({nchar(repos) > 0})
 
@@ -61,8 +44,8 @@ Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
-dir1 <- Require:::rpackageFolder(tempdir2("test1"))
-checkPath(dir1, create = TRUE)
+dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
+Require::checkPath(dir1, create = TRUE)
 out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1, verbose = 2)
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
@@ -86,8 +69,8 @@ remove.packages("fpCompare", lib = dir1)
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
     interactive() || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-  dir2 <- Require:::rpackageFolder(tempdir2("test2"))
-  checkPath(dir2, create = TRUE)
+  dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
+  Require::checkPath(dir2, create = TRUE)
   pvWant <- "0.2.2"
   inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"), standAlone = TRUE,
                            libPaths = dir2, dependencies = FALSE, require = FALSE)
@@ -100,8 +83,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
 
-  dir6 <- Require:::rpackageFolder(tempdir2("test6"))
-  checkPath(dir6, create = TRUE)
+  dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
+  Require::checkPath(dir6, create = TRUE)
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
                           install = "force")
   testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
@@ -112,7 +95,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setLibPaths(orig, updateRprofile = FALSE)
 
   # Test snapshot file with no args
-  prevDir <- setwd(tempdir2("test11"))
+  prevDir <- setwd(Require::tempdir2("test11"))
   out <- pkgSnapshot()
   pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
   testit::assert({is.data.frame(out)})
@@ -122,24 +105,31 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setwd(prevDir)
 
   # Skip on CRAN
-  dir3 <- Require:::rpackageFolder(tempdir2("test3"))
-  checkPath(dir3, create = TRUE)
-  # Try github
-  try({
-    inst <- Require::Require("achubaty/fpCompare", install = "force",
+  dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
+  print(paste("dir3: ", dir3))
+  Require::checkPath(dir3, create = TRUE)
+  dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
+  print(paste("dir.exists: ", dir.exists(dir3)))# Try github
+  #try({
+  inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
                              require = FALSE, standAlone = TRUE, libPaths = dir3)
-  }, silent = TRUE)
+  attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
+  print(paste("inst Attr: ", attrOut))# Try github
+  #}, silent = TRUE)
   pkgs <- c("fpCompare")
+  print(paste("dir dir3: ", dir(dir3, full.names = TRUE)))
+  print(paste("find.package: ", find.package(pkgs, lib.loc = dir3)))
 
   isInstalled <- tryCatch( {
     out <- find.package(pkgs, lib.loc = dir3)
     if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
+  print(paste("isInstalled: ", isInstalled))# Try github
   testit::assert({isTRUE(isInstalled)})
 
   # Try github with version
-  dir4 <- Require:::rpackageFolder(tempdir2("test4"))
-  silent <- checkPath(dir4, create = TRUE)
+  dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
+  silent <- Require::checkPath(dir4, create = TRUE)
   inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                            require = FALSE, standAlone = FALSE, libPaths = dir4)
   testit::assert({isFALSE(inst)})
@@ -176,7 +166,7 @@ ip <- data.table::as.data.table(installed.packages())
 testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
 out <- getPkgVersions("Require")
-testit::assert({is.data.table(out)})
+testit::assert({data.table::is.data.table(out)})
 testit::assert({is.na(out$correctVersion)})
 out2 <- getAvailable(out)
 testit::assert({is.na(out2$correctVersion)})
@@ -191,7 +181,7 @@ testit::assert({is.na(out3$installFrom)})
 testit::assert({is.na(out3$needInstall)})
 
 out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "rforge/mumin/pkg"))
-testit::assert({is.data.table(out)})
+testit::assert({data.table::is.data.table(out)})
 testit::assert({!is.null(out$DESCFile)})
 testit::assert({file.exists(out$DESCFile)})
 

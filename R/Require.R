@@ -6,7 +6,7 @@ utils::globalVariables(c(
   "hasSubFolder", "hasVersionSpec", "inequality", "installed", "isGH", "isInteractive",
   "LibPath", "libPaths", "loaded", "loadOrder", "needInstall",
   "OlderVersionsAvailable", "OlderVersionsAvailableCh",
-  "Package", "packageFullName", "packagesRequired", "PackageUrl", "pkgDepTopoSort",
+  "Package", "packageFullName", "packagesRequired", "PackageUrl",
   "Repo", "repoLocation", "RepoWBranch", "userRequestedOrder", "Version", "versionSpec"
 ))
 
@@ -413,7 +413,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- pkgDT[!Package %in% .basePkgs]
       notInPkgSnapshot <- pkgDT[is.na(packagesRequired)]
       if (NROW(notInPkgSnapshot))
-        messageVerbose("The pkgSnapshot appears to be missing: ",
+        messageVerbose(messagePkgSnapshotMissing, ": ",
                        paste(notInPkgSnapshot$Package, collapse = ", "),
                        "; adding to installs", verbose = verbose, verboseLevel = 0)
 
@@ -451,6 +451,8 @@ Require <- function(packages, packageVersionFile,
     }
 
     if (length(packages)) {
+      # if (any(pkgDT$Package %in% "LandR.CS")) browser()
+
       if (isTRUE(install) || identical(install, "force")) {
         pkgDT <- parseGitHub(pkgDT, verbose = verbose)
         pkgDT <- getPkgVersions(pkgDT, install = install, verbose = verbose)
@@ -467,12 +469,20 @@ Require <- function(packages, packageVersionFile,
             canusepak <- FALSE
         }
         if (!canusepak) {
-          pkgDT <- doInstalls(pkgDT,
-                              install_githubArgs = install_githubArgs,
-                              install.packagesArgs = install.packagesArgs,
-                              install = install, repos = repos, verbose = verbose,
-                              ...
-          )
+          warns <- list()
+          #tryCatch(
+          withCallingHandlers(
+            pkgDT <- doInstalls(pkgDT,
+                                install_githubArgs = install_githubArgs,
+                                install.packagesArgs = install.packagesArgs,
+                                install = install, repos = repos, verbose = verbose,
+                                ...
+            ), warning = function(w) {
+              warns <<- appendToWarns(w$message, warns, Packages = pkgDT$Package[pkgDT$needInstall %in% TRUE])
+            })#, error = function(e) {
+          #  })
+          PackagesInstalled <- pkgDT$Package[pkgDT$needInstall %in% TRUE & !(pkgDT$installFrom %in% c("Fail", "Duplicate"))]
+          pkgDT <- updateInstalled(pkgDT, PackagesInstalled, warns)
         }
         if ("detached" %in% colnames(pkgDT)) {
           unloaded <- pkgDT[!is.na(detached)]
@@ -538,7 +548,7 @@ Require <- function(packages, packageVersionFile,
 
     notCorrectly <- pkgDT$installed == FALSE & pkgDT$needInstall == TRUE
     if (isTRUE(any(notCorrectly))) {
-      messageVerbose("The following packages did not get installed correctly.",
+      messageVerbose(messageFollowingPackagesIncorrect,
                      verbose = verbose, verboseLevel = 0)
       colsToKeep2 <- c(
         "packageFullName", "Package", "LibPath", "Version",
@@ -551,7 +561,7 @@ Require <- function(packages, packageVersionFile,
         nonZ <- pkgDT[notCorrectly == TRUE, ..colsToKeep2]
         messageVerbose(
           "It may be necessary to simply run:\ninstall.packages(c('", paste(nonZ$Package, collapse = "', '"), "'))",
-          "\nbut this will cause a different version to be installed.",
+          "\nbut this may cause a different version to be installed.",
           verbose = verbose, verboseLevel = 0
         )
         if (!missing(packageVersionFile)) {
@@ -621,3 +631,6 @@ usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = 
 
   wantpak
 }
+
+messageFollowingPackagesIncorrect <- "The following packages did not get installed correctly."
+messagePkgSnapshotMissing <- "The pkgSnapshot appears to be missing"

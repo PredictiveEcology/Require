@@ -11,9 +11,11 @@ optsListNew <- modifyList2(optsListNew, list(Require.verbose = verbosity))
 if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
   optsListNew <- modifyList2(optsListNew,
                              list(repos = c(CRAN = Require:::srcPackageURLOnCRAN)))
+optsNcpus <- options("Ncpus" = 2)
 optsListPrev <- options(optsListNew)
 optsListNew <- modifyList2(optsListNew, options("repos"))
 optsListPrev <- modifyList2(optsListPrev, optsListPrevLinux)
-unlink(dir(getOptionRPackageCache(), full.names = TRUE), recursive = TRUE)
+# unlink(dir(getOptionRPackageCache(), full.names = TRUE), recursive = TRUE)
 test_pkg("Require")
 options(optsListPrev)
+options(optsNcpus)

@@ -16,6 +16,8 @@ utils::globalVariables(c(
       list2env(pkgEnvLast, .pkgEnv)
     }
   }
+  if (!is.null(getOptionRPackageCache()))
+    dir.create(getOptionRPackageCache(), showWarnings = FALSE, recursive = TRUE)
 
   invisible()
 }

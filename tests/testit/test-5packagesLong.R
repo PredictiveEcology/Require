@@ -24,8 +24,8 @@ if (interactive()) {
   # repo <- chooseCRANmirror(ind = 1)
 
 
-  pkgDepTest1 <- Require::pkgDep("Require")
-  pkgDepTest2 <- Require::pkgDep2("Require")
+  pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE)
+  pkgDepTest2 <- Require::pkgDep2("Require", includeSelf = FALSE)
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
   origDir <- setwd("~/GitHub/");
 
@@ -107,9 +107,14 @@ if (interactive()) {
 
   runTests <- function(have, pkgs) {
     # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
-    testit::assert({all(!is.na(have[installed == TRUE]$Version))})
-    if ("installResult" %in% colnames(have))
-      testit::assert(NROW(have[is.na(installResult)]) == sum(have$installed))
+    theTest <- all(!is.na(have[installed == TRUE]$Version))
+    if (!isTRUE(theTest)) browser()
+    testit::assert(isTRUE(theTest))
+    if ("installResult" %in% colnames(have)) {
+      theTest <- NROW(have[is.na(installResult)]) == sum(have$installed)
+      if (!isTRUE(theTest)) browser()
+      testit::assert(isTRUE(theTest))
+    }
     # out <- try(testit::assert({
     #   all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)
     # }))
@@ -276,6 +281,8 @@ if (interactive()) {
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     runTests(have, pkg)
+    endTime <- Sys.time()
+    message("\033[32m --- ",i," --------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
 
     # suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
     #                                function(p) tryCatch(require(p, character.only = TRUE),
@@ -338,6 +345,5 @@ if (interactive()) {
     Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 
-unlink(tempdir2(), recursive = TRUE)
 endTime <- Sys.time()
 message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
