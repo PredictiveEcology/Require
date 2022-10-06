@@ -3,16 +3,14 @@ library(Require)
 optsListNew <- list()
 optsListPrev <- list()
 
-verbosity <- if (interactive()) 1 else 2
+verbosity <- if (interactive()) 1 else -1
 
 if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
-  optsListNew <- modifyList2(optsListNew,
-                             list(repos = c(CRAN = Require:::srcPackageURLOnCRAN)))
+  origRepos <- options(repos = c(CRAN = Require:::srcPackageURLOnCRAN))
 
 optsListPrevLinux <- if (interactive()) setLinuxBinaryRepo() else NULL
 
 optsListNew <- modifyList2(optsListNew, list(Require.verbose = verbosity))
-
 optsNcpus <- options("Ncpus" = 2)
 optsListPrev <- options(optsListNew)
 optsListNew <- modifyList2(optsListNew, options("repos"))
@@ -21,3 +19,4 @@ optsListPrev <- modifyList2(optsListPrev, optsListPrevLinux)
 test_pkg("Require")
 options(optsListPrev)
 options(optsNcpus)
+options(origRepos)
