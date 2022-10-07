@@ -1562,11 +1562,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (any(needSomeSrc) && !identical(stripHTTPAddress(repos), stripHTTPAddress(srcPackageURLOnCRAN))) {
     installPkgNamesList$Src <- installPkgNames[needSomeSrc]
     installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
-    messageVerbose("\033[32mThe following package(s) will be installed from source \n(to ",
-                   "change this, modify options('Require.spatialPkgs') or ",
-                                     "options('Require.otherPkgs') ): \n",
-                   paste(installPkgNamesList$Src, collapse = ", "), "\033[39m",
-                   verbose = verbose, verboseLevel = 1)
+    if (any(isBinaryCRANRepo(repos)))
+      messageVerbose("\033[32mThe following package(s) will be installed from source (to ",
+                     "change this, modify options('Require.spatialPkgs') or ",
+                     "options('Require.otherPkgs') ): \n",
+                     paste(installPkgNamesList$Src, collapse = ", "), "\033[39m",
+                     verbose = verbose, verboseLevel = 1)
     reposList$Src <- c(CRAN = srcPackageURLOnCRAN)
     reposList$Reg <- repos
   } else {
