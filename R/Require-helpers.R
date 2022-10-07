@@ -875,7 +875,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
         checkPath(rpackageFolder(getOptionRPackageCache()), create = TRUE)
         install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOptionRPackageCache())), "/") ## TODO: why need trailing slash here?
-        if (getOption("Require.buildBinaries", TRUE)) {
+        needBuild <- as.logical(getOption("Require.buildBinaries", TRUE)) &&
+                           all(!isBinaryCRANRepo(repos))
+        if (needBuild) {
           install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
         }
 
@@ -955,6 +957,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       if (maxGroup > 1)
         messageVerbose("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "),
                        verbose = verbose, verboseLevel = 1)
+
+      origR_TESTS <- R_TESTSomit()
+      on.exit(Sys.setenv("R_TESTS" = origR_TESTS), add = TRUE)
 
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
                 dots = dots, numGroups = maxGroup,
@@ -1544,12 +1549,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     rep(FALSE, NROW(pkgDT))
   } else {
     anyFromSrc <- installPkgNames %in% sourcePkgs()
-    if (any(anyFromSrc))
-      messageVerbose(verboseLevel = 1, verbose = verbose,
-                     paste(installPkgNames[anyFromSrc], collapse = ", "),
-                     " being forcibly installed",
-                     " from source. To modify this, modify options('Require.spatialPkgs') or ",
-                     "options('Require.otherPkgs')")
+    # if (any(anyFromSrc))
+    #   messageVerbose(verboseLevel = 1, verbose = verbose,
+    #                  "\033[32m", paste(installPkgNames[anyFromSrc], collapse = ", "),
+    #                  " being forcibly installed",
+    #                  " from source. To modify this, modify options('Require.spatialPkgs') or ",
+    #                  "options('Require.otherPkgs')\033[39m")
     anyFromSrc
   }
   installPkgNamesList <- list()
@@ -1557,8 +1562,10 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (any(needSomeSrc) && !identical(stripHTTPAddress(repos), stripHTTPAddress(srcPackageURLOnCRAN))) {
     installPkgNamesList$Src <- installPkgNames[needSomeSrc]
     installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
-    messageVerbose("The following package(s) need to be (and will be) installed from source: ",
-                   paste(installPkgNamesList$Src, collapse = ", "),
+    messageVerbose("\033[32mThe following package(s) will be installed from source \n(to ",
+                   "change this, modify options('Require.spatialPkgs') or ",
+                                     "options('Require.otherPkgs') ): \n",
+                   paste(installPkgNamesList$Src, collapse = ", "), "\033[39m",
                    verbose = verbose, verboseLevel = 1)
     reposList$Src <- c(CRAN = srcPackageURLOnCRAN)
     reposList$Reg <- repos
@@ -1584,12 +1591,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
             ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
             ipaFull <- append(list(installPkgNames, repos = repos), ipa)
-
-            installPackagesQuoted <-
-              quote(do.call(install.packages, ipaFull))
+            out <- do.call(install.packages, ipaFull)
+            # installPackagesQuoted <-
+            #   quote()
 
             #withCallingHandlers({
-              out <- eval(installPackagesQuoted)
+            #   out <- eval(installPackagesQuoted)
             # }, warning=function(w) {
             #   if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", w$message))) {
             #     outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
@@ -1797,9 +1804,10 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
 
       # out <- withCallingHandlers({
-        do.call(install.packages,
-                # using ap meant that it was messing up the src vs bin paths
-                append(list(unname(p)), ipa))
+
+      do.call(install.packages,
+              # using ap meant that it was messing up the src vs bin paths
+              append(list(unname(p)), ipa))
       # },
       # warning = function(w) {
       #   browser()
@@ -2662,16 +2670,16 @@ stripHTTPAddress <- function(addr) {
   addr
 }
 
-tryInstallAgainWithoutAPCache <- function(installPackagesQuoted, envir = parent.frame()) {
-  nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
-  prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
-  val <- 0
-  val <- setNames(list(val), nm = nameOfEnvVari)
-  do.call(Sys.setenv, val)
-  prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
-  on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
-  out <- eval(installPackagesQuoted, envir = envir)
-}
+# tryInstallAgainWithoutAPCache <- function(installPackagesQuoted, envir = parent.frame()) {
+#   nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
+#   prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
+#   val <- 0
+#   val <- setNames(list(val), nm = nameOfEnvVari)
+#   do.call(Sys.setenv, val)
+#   prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
+#   on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
+#   out <- eval(installPackagesQuoted, envir = envir)
+# }
 
 dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose")) {
   dd <- pkgSnapshotObj
