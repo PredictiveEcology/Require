@@ -21,3 +21,4 @@ vignettes/.*\.log$
 ^codecov\.yml$
 ^\.secrets$
 ^\.secret$
+^CRAN-SUBMISSION$
