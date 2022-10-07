@@ -875,7 +875,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
 
         checkPath(rpackageFolder(getOptionRPackageCache()), create = TRUE)
         install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOptionRPackageCache())), "/") ## TODO: why need trailing slash here?
-        if (getOption("Require.buildBinaries", TRUE)) {
+        needBuild <- as.logical(getOption("Require.buildBinaries", TRUE)) &&
+                           all(!isBinaryCRANRepo(repos))
+        if (needBuild) {
           install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
         }
 
@@ -1547,12 +1549,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     rep(FALSE, NROW(pkgDT))
   } else {
     anyFromSrc <- installPkgNames %in% sourcePkgs()
-    if (any(anyFromSrc))
-      messageVerbose(verboseLevel = 1, verbose = verbose,
-                     paste(installPkgNames[anyFromSrc], collapse = ", "),
-                     " being forcibly installed",
-                     " from source. To modify this, modify options('Require.spatialPkgs') or ",
-                     "options('Require.otherPkgs')")
+    # if (any(anyFromSrc))
+    #   messageVerbose(verboseLevel = 1, verbose = verbose,
+    #                  "\033[32m", paste(installPkgNames[anyFromSrc], collapse = ", "),
+    #                  " being forcibly installed",
+    #                  " from source. To modify this, modify options('Require.spatialPkgs') or ",
+    #                  "options('Require.otherPkgs')\033[39m")
     anyFromSrc
   }
   installPkgNamesList <- list()
@@ -1560,8 +1562,10 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   if (any(needSomeSrc) && !identical(stripHTTPAddress(repos), stripHTTPAddress(srcPackageURLOnCRAN))) {
     installPkgNamesList$Src <- installPkgNames[needSomeSrc]
     installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
-    messageVerbose("The following package(s) need to be (and will be) installed from source: ",
-                   paste(installPkgNamesList$Src, collapse = ", "),
+    messageVerbose("\033[32mThe following package(s) will be installed from source \n(to ",
+                   "change this, modify options('Require.spatialPkgs') or ",
+                                     "options('Require.otherPkgs') ): \n",
+                   paste(installPkgNamesList$Src, collapse = ", "), "\033[39m",
                    verbose = verbose, verboseLevel = 1)
     reposList$Src <- c(CRAN = srcPackageURLOnCRAN)
     reposList$Reg <- repos
