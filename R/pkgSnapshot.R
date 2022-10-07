@@ -78,8 +78,8 @@ pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, st
   if (missing(libPaths)) {
     libPaths <- .libPaths()
   }
-  origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
-  on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
+  # origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
+  # on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
 
   ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha",
                                       purge = purge))
