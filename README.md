@@ -74,7 +74,7 @@ This approach takes a date as an input and will install all the packages a user 
 * fast (see one example of timings below)
 * packages can be on CRAN, CRAN-alikes, or GitHub.com
 * uses `.libPaths()` like base-R
-* true *stand alone*, not the folder-based approach used in `.libPaths()`. For example, if a user e.g., on Windows Home has packages installed in the system folder because admin priviledges allows it, setting `standAlone = TRUE` will ignore those packages and only use the ones in `.libPaths()[1]`
+* true *stand alone*, not the folder-based approach used in `.libPaths()`. For example, if a user e.g., on Windows Home has packages installed in the system folder because admin privileges allows it, setting `standAlone = TRUE` will ignore those packages and only use the ones in `.libPaths()[1]`
 * can use hierarchical library paths
 * can take snapshots, keeping version information for reinstallation on another machine/system. See below and `?pkgSnapshot`
 * can use both binary or source installs; yet overrides a user request where this is likely inappropriate, e.g., `Rcpp` often fails when installed on Linux from a binary package manager. Spatial packages are similar. 
