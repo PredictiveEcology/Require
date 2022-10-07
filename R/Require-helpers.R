@@ -1591,12 +1591,12 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
             ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
             ipaFull <- append(list(installPkgNames, repos = repos), ipa)
-
-            installPackagesQuoted <-
-              quote(do.call(install.packages, ipaFull))
+            out <- do.call(install.packages, ipaFull)
+            # installPackagesQuoted <-
+            #   quote()
 
             #withCallingHandlers({
-              out <- eval(installPackagesQuoted)
+            #   out <- eval(installPackagesQuoted)
             # }, warning=function(w) {
             #   if (isTRUE(grepl("cannot open URL.+PACKAGES.rds", w$message))) {
             #     outFromWarn <- tryInstallAgainWithoutAPCache(installPackagesQuoted)
@@ -2670,16 +2670,16 @@ stripHTTPAddress <- function(addr) {
   addr
 }
 
-tryInstallAgainWithoutAPCache <- function(installPackagesQuoted, envir = parent.frame()) {
-  nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
-  prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
-  val <- 0
-  val <- setNames(list(val), nm = nameOfEnvVari)
-  do.call(Sys.setenv, val)
-  prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
-  on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
-  out <- eval(installPackagesQuoted, envir = envir)
-}
+# tryInstallAgainWithoutAPCache <- function(installPackagesQuoted, envir = parent.frame()) {
+#   nameOfEnvVari <- "R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"
+#   prevCacheExpiry <- Sys.getenv(nameOfEnvVari)
+#   val <- 0
+#   val <- setNames(list(val), nm = nameOfEnvVari)
+#   do.call(Sys.setenv, val)
+#   prevCacheExpiry <- setNames(list(prevCacheExpiry), nm = nameOfEnvVari)
+#   on.exit(do.call(Sys.setenv, prevCacheExpiry), add = TRUE)
+#   out <- eval(installPackagesQuoted, envir = envir)
+# }
 
 dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose")) {
   dd <- pkgSnapshotObj
