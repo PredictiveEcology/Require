@@ -9,6 +9,6 @@ getOptionRPackageCache()
 \description{
 First checks if an environment variable \code{Require.RPackageCache} is set and defines a path.
 If not set, checks whether the \code{options("Require.RPackageCache")} is set.
-If a characater string, then it returns that.
+If a character string, then it returns that.
 If \code{TRUE}, then use \code{RequirePkgCacheDir()}. If \code{FALSE} then returns \code{NULL}.
 }
