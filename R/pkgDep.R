@@ -672,7 +672,6 @@ whichToDILES <- function(which) {
     if (any(grepl("github", tolower(other)))) {
       other <- c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")
     }
-
   out <- lapply(lib.loc, function(path) {
     dirs <- dir(path, full.names = TRUE)
     areDirs <- dir.exists(dirs)
@@ -700,11 +699,13 @@ whichToDILES <- function(which) {
   out <- do.call(rbind, out)
   ret <- cbind("Package" = basename(unlist(out[, "Package"])), "LibPath" = rep(lib.loc, lengths),
                "Version" = out[, "Version"])
-  if (length(which))
-    ret <- cbind(ret, "Dependencies" = out[, "Depends"], stringsAsFactors = FALSE)
-  if (!is.null(other)) {
-    ncolBefore <- NCOL(ret)
-    ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
+  if (NROW(ret)) {
+    if (length(which))
+      ret <- cbind(ret, "Dependencies" = out[, "Depends"], stringsAsFactors = FALSE)
+    if (!is.null(other)) {
+      ncolBefore <- NCOL(ret)
+      ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
+    }
   }
   ret
 }
