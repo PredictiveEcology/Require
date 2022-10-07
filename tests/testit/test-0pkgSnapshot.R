@@ -17,6 +17,11 @@ origLibPathsAllTests <- .libPaths()
 tmpdir <- tempdir2(Require:::.rndstr(1))
 created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
+#if (!interactive()) {
+  .libPaths(tmpdir)
+  Require(c("covr (==3.5.0)", "remotes (==2.4.1)", "testit (==0.12)"),
+          require = FALSE)
+#}
 aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
 bb <- list()
 for (lp in unique(aa$LibPath)) {
