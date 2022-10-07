@@ -16,14 +16,30 @@ library(testit)
 
 origLibPathsAllTests <- .libPaths()
 
+# tmpdir <- tempdir2(Require:::.rndstr(1))
+# created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
+#
+# .libPaths(tmpdir)
+# Require("covr (==3.5.0)", require = FALSE)
+# pkgVF <- file.path(tmpdir, "packageVersions.txt")
+# aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
+
 tmpdir <- tempdir2(Require:::.rndstr(1))
+tmpdir2 <- tempdir2(Require:::.rndstr(1))
 created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
-
-.libPaths(tmpdir)
-Require("covr (==3.5.0)", require = FALSE)
-
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
-aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
+setLibPaths(tmpdir, standAlone = TRUE)
+tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
+Require(c("remotes (==2.4.1)", "testit (==0.12)"), require = FALSE)
+
+setLibPaths(tmpdir2, standAlone = TRUE)
+tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
+Require(c("covr (==3.5.0)"), require = FALSE)
+
+.libPaths(c(tmpdirActual, tmpdir2Actual))
+# .libPaths(c(tmpdir, tmpdir2))
+aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1:2])
+
 bb <- list()
 for (lp in unique(aa$LibPath)) {
   pack <- aa$Package[aa$LibPath == lp]
