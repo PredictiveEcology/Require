@@ -20,6 +20,9 @@ This update deals with several enhancements (see NEWS.md), a removed package dep
 * Windows                 (win-builder), 4.1.3 (2022-03-10)
 * Windows                 (win-builder), 4.2.1 (2022-06-23 ucrt)
 
+### R-hub
+* Linux (Debian, Fedora) 
+
 ## R CMD check results
 
 There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer, which is unchanged.
