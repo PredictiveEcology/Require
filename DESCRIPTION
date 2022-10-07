@@ -31,7 +31,6 @@ Imports:
     utils
 Suggests:
     covr,
-    fpCompare,
     remotes,
     pak,
     parallel,
