@@ -29,6 +29,6 @@ There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer,
 
 ## Downstream dependencies
 
-We checked all reverse dependencies, and there are no problems.
+We checked all reverse dependencies, currently, all reverse dependencies are packages we are also maintainers. 
 
-*Wow, no problems at all. :)*
+We will submit new versions of reproducible & SpaDES.core soon after this package is accepted on CRAN.

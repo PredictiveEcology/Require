@@ -702,9 +702,11 @@ whichToDILES <- function(which) {
                "Version" = out[, "Version"])
   if (length(which))
     ret <- cbind(ret, "Dependencies" = out[, "Depends"], stringsAsFactors = FALSE)
-  if (!is.null(other)) {
-    ncolBefore <- NCOL(ret)
-    ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
+  if (NROW(ret)) {
+    if (!is.null(other)) {
+      ncolBefore <- NCOL(ret)
+      ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
+    }
   }
   ret
 }
