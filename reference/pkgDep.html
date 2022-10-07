@@ -38,7 +38,7 @@ of their dependencies are detached or unloaded first.'><!-- mathjax --><script s
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.3.9001</span>
       </span>
     </div>
 
@@ -109,7 +109,8 @@ of their dependencies are detached or unloaded first.</p>
 <span>  includeBase <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  sort <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span></span>
+<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>,</span>
+<span>  includeSelf <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">pkgDep2</span><span class="op">(</span></span>
@@ -122,7 +123,8 @@ of their dependencies are detached or unloaded first.</p>
 <span>  <span class="va">linkingTo</span>,</span>
 <span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span>,</span>
 <span>  sorted <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span></span>
+<span>  purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>  includeSelf <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">pkgDepTopoSort</span><span class="op">(</span></span>
@@ -219,7 +221,14 @@ defaults to 3600  (one hour -- see <code><a href="https://rdrr.io/r/utils/availa
 <dt>verbose</dt>
 <dd><p>Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.
+NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an attribute:
+<code>attr(.., "Require")</code> which has lots of information about the processes of the installs.</p></dd>
+
+
+<dt>includeSelf</dt>
+<dd><p>Logical. If <code>TRUE</code>, the default, then the dependencies will include
+the package itself in the returned list elements, otherwise, only the "dependencies"</p></dd>
 
 
 <dt>sorted</dt>

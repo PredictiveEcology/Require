@@ -20,7 +20,7 @@ the verboseLevel."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/aja
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.3.9001</span>
       </span>
     </div>
 
@@ -61,7 +61,17 @@ the <code>verboseLevel</code>.</p>
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">messageDF</span><span class="op">(</span><span class="va">df</span>, <span class="va">round</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>, verboseLevel <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">messageVerbose</span><span class="op">(</span><span class="va">...</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>, verboseLevel <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">messageVerbose</span><span class="op">(</span><span class="va">...</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>, verboseLevel <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">messageVerboseCounter</span><span class="op">(</span></span>
+<span>  pre <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  post <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>,</span>
+<span>  verboseLevel <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  counter <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  total <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  minCounter <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -77,7 +87,9 @@ the <code>verboseLevel</code>.</p>
 <dt>verbose</dt>
 <dd><p>Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.
+NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an attribute:
+<code>attr(.., "Require")</code> which has lots of information about the processes of the installs.</p></dd>
 
 
 <dt>verboseLevel</dt>
@@ -90,6 +102,26 @@ this message will show.</p></dd>
 Good candidates are e.g., <code>type</code> or <code>dependencies</code>. This can be
 used with <code>install_githubArgs</code> or <code>install.packageArgs</code> which
 give individual options for those 2 internal function calls.</p></dd>
+
+
+<dt>pre</dt>
+<dd><p>A single text string to paste before the counter</p></dd>
+
+
+<dt>post</dt>
+<dd><p>A single text string to paste after the counter</p></dd>
+
+
+<dt>counter</dt>
+<dd><p>An integer indicating which iteration is being done</p></dd>
+
+
+<dt>total</dt>
+<dd><p>An integer indicating the total number to be done.</p></dd>
+
+
+<dt>minCounter</dt>
+<dd><p>An integer indicating the minimum (i.e,. starting value)</p></dd>
 
 </dl></div>
 

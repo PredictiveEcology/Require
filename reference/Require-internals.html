@@ -18,7 +18,7 @@ of some use for advanced users."><!-- mathjax --><script src="https://cdnjs.clou
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.3.9001</span>
       </span>
     </div>
 
@@ -55,7 +55,7 @@ of some use for advanced users.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">getPkgVersions</span><span class="op">(</span><span class="va">pkgDT</span>, install <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">getPkgVersions</span><span class="op">(</span><span class="va">pkgDT</span>, install <span class="op">=</span> <span class="cn">TRUE</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">getAvailable</span><span class="op">(</span></span>
 <span>  <span class="va">pkgDT</span>,</span>
@@ -101,6 +101,14 @@ If <code>TRUE</code>, the default, then this function will try to install any mi
 packages or dependencies.</p></dd>
 
 
+<dt>verbose</dt>
+<dd><p>Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.
+NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an attribute:
+<code>attr(.., "Require")</code> which has lots of information about the processes of the installs.</p></dd>
+
+
 <dt>purge</dt>
 <dd><p>Logical. Should all caches be purged?
 Default is <code>getOption("Require.purge", FALSE)</code>.
@@ -117,12 +125,6 @@ defaults to 3600  (one hour -- see <code><a href="https://rdrr.io/r/utils/availa
 <dt>repos</dt>
 <dd><p>The remote repository (e.g., a CRAN mirror), passed to either
 <code>install.packages</code>, <code>install_github</code> or <code>installVersions</code>.</p></dd>
-
-
-<dt>verbose</dt>
-<dd><p>Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.</p></dd>
 
 
 <dt>install_githubArgs</dt>

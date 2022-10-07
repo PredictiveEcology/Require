@@ -19,7 +19,7 @@ See Details below."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/aj
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.3.9001</span>
       </span>
     </div>
 
@@ -100,6 +100,13 @@ package binary will be built and then saved in the
 <code>getOption("Require.RPackageCache")</code>. This means that subsequent installs
 of this package on this or identical system will be faster.</p></dd>
 
+<dt><code>otherPkgs</code></dt>
+<dd><p>Default: A character vector of packages that are generally more successful if installed
+from Source on Unix-alikes. Since there are repositories that offer binary
+packages builds for Linux (e.g., RStudio Package Manager), the vector of package
+names indicated here will default to a standard CRAN repository, forcing a source
+install. See also <code>spatialPkgs</code> option, which does the same for spatial packages.</p></dd>
+
 <dt><code>persistentPkgEnv</code></dt>
 <dd><p>Default: <code>FALSE</code>. (ADVANCED USE) <code>Require</code> stashes a lot of information in a
 hidden environment, located at <code>Require:::.pkgEnv</code>. This gets reset at each
@@ -118,6 +125,13 @@ automatically be deleted after (by default) 1 hour (set via
 changes that are made to the user's experience. For beginners with <code>Require</code>,
 the messages that are written are important to see. However, these can be turned off
 setting this to <code>FALSE</code></p></dd>
+
+<dt><code>spatialPkgs</code></dt>
+<dd><p>Default: A character vector of packages that are generally more successful if installed
+from Source on Unix-alikes. Since there are repositories that offer binary
+packages builds for Linux (e.g., RStudio Package Manager), the vector of package
+names indicated here will default to a standard CRAN repository, forcing a source
+install. See also <code>otherPkgs</code> option, which does the same for non-spatial packages.</p></dd>
 
 <dt><code>unloadNamespaces</code></dt>
 <dd><p>Default: <code>TRUE</code>. (ADVANCED USE) <code>Require</code> will attempt to detach and unload
