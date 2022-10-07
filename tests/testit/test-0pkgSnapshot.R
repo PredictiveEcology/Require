@@ -16,12 +16,6 @@ library(testit)
 
 origLibPathsAllTests <- .libPaths()
 
-origR_TESTS <- Sys.getenv("R_TESTS")
-if (!identical(origR_TESTS, "")) {
-  Sys.setenv("R_TESTS" = "")
-  on.exit(Sys.setenv(origR_TESTS = origR_TESTS))
-}
-
 tmpdir <- tempdir2(Require:::.rndstr(1))
 created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
 

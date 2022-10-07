@@ -956,6 +956,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         messageVerbose("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "),
                        verbose = verbose, verboseLevel = 1)
 
+      origR_TESTS <- R_TESTSomit()
+      on.exit(Sys.setenv("R_TESTS" = origR_TESTS), add = TRUE)
+
       out <- by(toInstall, toInstall$installSafeGroups, installAny, pkgDT = pkgDT,
                 dots = dots, numGroups = maxGroup,
                 numPackages = NROW(toInstall), startTime = startTime,
@@ -1797,9 +1800,10 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
 
       # out <- withCallingHandlers({
-        do.call(install.packages,
-                # using ap meant that it was messing up the src vs bin paths
-                append(list(unname(p)), ipa))
+
+      do.call(install.packages,
+              # using ap meant that it was messing up the src vs bin paths
+              append(list(unname(p)), ipa))
       # },
       # warning = function(w) {
       #   browser()
