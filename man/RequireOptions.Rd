@@ -51,6 +51,13 @@ package binary will be built and then saved in the
 \code{getOption("Require.RPackageCache")}. This means that subsequent installs
 of this package on this or identical system will be faster.
 }
+\item{\code{otherPkgs}}{
+Default: A character vector of packages that are generally more successful if installed
+from Source on Unix-alikes. Since there are repositories that offer binary
+packages builds for Linux (e.g., RStudio Package Manager), the vector of package
+names indicated here will default to a standard CRAN repository, forcing a source
+install. See also \code{spatialPkgs} option, which does the same for spatial packages.
+}
 \item{\code{persistentPkgEnv}}{
 Default: \code{FALSE}. (ADVANCED USE) \code{Require} stashes a lot of information in a
 hidden environment, located at \code{Require:::.pkgEnv}. This gets reset at each
@@ -69,6 +76,13 @@ Default: \code{TRUE}. Logical. Once \code{setup} is called, there are several im
 changes that are made to the user's experience. For beginners with \code{Require},
 the messages that are written are important to see. However, these can be turned off
 setting this to \code{FALSE}
+}
+\item{\code{spatialPkgs}}{
+Default: A character vector of packages that are generally more successful if installed
+from Source on Unix-alikes. Since there are repositories that offer binary
+packages builds for Linux (e.g., RStudio Package Manager), the vector of package
+names indicated here will default to a standard CRAN repository, forcing a source
+install. See also \code{otherPkgs} option, which does the same for non-spatial packages.
 }
 \item{\code{unloadNamespaces}}{
 Default: \code{TRUE}. (ADVANCED USE) \code{Require} will attempt to detach and unload

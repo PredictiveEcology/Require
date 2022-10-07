@@ -1,11 +1,23 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.1.3
+==============
+* Make corrections for 2 failing architectures on CRAN
+* MUCH less verbose during automated testing
+
+## enhancement
+* `verbose` argument is now widespread, with -1, 0, 1, 2 all valid and correctly inherited values. See argument description in e.g., `?Require`
+
+## bugfixes
+* more edge cases found and dealt with
+
 version 0.1.2
 ==============
 ## dependencies
 * drop support for R 3.6 (R >= 4.0 are supported)
 
 ## enhancements
+* The `Require` argument, `require`, can now be a character string, indicating which packages should be attached via `require`
 * Now can use `GITHUB_PAT` environment variable, if set, when it accesses GitHub.com repositories (files or entire repository)
 * Attempt to capture and correct cases where GitHub.com branches are incorrectly labelled `master` instead of `main` (or vice versa)
 * much quieter messaging by default (can increase with verbose = 1)

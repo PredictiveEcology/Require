@@ -3,11 +3,22 @@
 \name{messageDF}
 \alias{messageDF}
 \alias{messageVerbose}
+\alias{messageVerboseCounter}
 \title{Use message to print a clean square data structure}
 \usage{
 messageDF(df, round, verbose = getOption("Require.verbose"), verboseLevel = 1)
 
 messageVerbose(..., verbose = getOption("Require.verbose"), verboseLevel = 1)
+
+messageVerboseCounter(
+  pre = "",
+  post = "",
+  verbose = getOption("Require.verbose"),
+  verboseLevel = 1,
+  counter = 1,
+  total = 1,
+  minCounter = 1
+)
 }
 \arguments{
 \item{df}{A data.frame, data.table, matrix}
@@ -16,7 +27,9 @@ messageVerbose(..., verbose = getOption("Require.verbose"), verboseLevel = 1)
 
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
+NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
+\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
 
 \item{verboseLevel}{A numeric indicating what verbose threshold (level) above which
 this message will show.}
@@ -25,6 +38,16 @@ this message will show.}
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
+
+\item{pre}{A single text string to paste before the counter}
+
+\item{post}{A single text string to paste after the counter}
+
+\item{counter}{An integer indicating which iteration is being done}
+
+\item{total}{An integer indicating the total number to be done.}
+
+\item{minCounter}{An integer indicating the minimum (i.e,. starting value)}
 }
 \description{
 Sends to \code{message}, but in a structured way so that a data.frame-like can

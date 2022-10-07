@@ -20,7 +20,8 @@ pkgDep(
   includeBase = FALSE,
   sort = TRUE,
   purge = getOption("Require.purge", FALSE),
-  verbose = getOption("Require.verbose")
+  verbose = getOption("Require.verbose"),
+  includeSelf = TRUE
 )
 
 pkgDep2(
@@ -33,7 +34,8 @@ pkgDep2(
   linkingTo,
   repos = getOption("repos"),
   sorted = TRUE,
-  purge = getOption("Require.purge", FALSE)
+  purge = getOption("Require.purge", FALSE),
+  includeSelf = TRUE
 )
 
 pkgDepTopoSort(
@@ -102,7 +104,12 @@ Internally, there are calls to \code{available.packages}.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
+NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
+\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+
+\item{includeSelf}{Logical. If \code{TRUE}, the default, then the dependencies will include
+the package itself in the returned list elements, otherwise, only the "dependencies"}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}

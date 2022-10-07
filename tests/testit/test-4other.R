@@ -1,11 +1,13 @@
 thisFilename <- "test-4other.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
+messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+
 library(Require)
 origLibPathsAllTests <- .libPaths()
 Sys.setenv("R_REMOTES_UPGRADE" = "never")
 Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-outOpts <- options("Require.verbose" = FALSE,
+outOpts <- options(#"Require.verbose" = FALSE,
                    "Require.persistentPkgEnv" = TRUE,
                    "install.packages.check.source" = "never",
                    "install.packages.compile.from.source" = "never",
@@ -17,8 +19,8 @@ if (Sys.info()["user"] == "achubaty") {
 }
 
 # Test misspelled
-out <- tryCatch(Require("data.tt"), warning = function(w) w)
-testit::assert({is(out, "simpleWarning")})
+out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
+testit::assert(any(grepl("could not be installed", out)))#{out, "simpleWarning")})
 
 # for coverages that were missing
 pkgDTEmpty <- Require:::toPkgDT(character())
@@ -83,18 +85,20 @@ options(outOpts)
 if (exists("outOpts2")) options(outOpts2)
 ## setup
 # assign("aaaa", 1, envir = .GlobalEnv)
-options(RequireOptions())
+# options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-setup(setupTestDir, RPackageCache = ccc)
+out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
 testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
-setupOff()
-message("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache())
+out2222 <- capture.output(setupOff())
+messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
+               verboseLevel = 0)
 RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
-if (identical(RPackageCacheSysEnv, "FALSE")) {
+if (identical(RPackageCacheSysEnv, "FALSE") ) {
   testit::assert(identical(NULL, getOptionRPackageCache()))
 } else {
-  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+  if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
+    testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
 }
 
 # reset options after setupOff()
@@ -117,7 +121,8 @@ RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
 if (identical(RPackageCacheSysEnv, "FALSE")) {
   testit::assert(identical(NULL, getOptionRPackageCache()))
 } else {
-  testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+  if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
+    testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
 }
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))

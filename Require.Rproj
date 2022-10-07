@@ -22,5 +22,6 @@ PackageCheckArgs: --as-cran
 PackageRoxygenize: rd,collate,namespace
 
 QuitChildProcessesOnExit: Yes
+DisableExecuteRprofile: Yes
 
 SpellingDictionary: en_CA

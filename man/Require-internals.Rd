@@ -9,7 +9,7 @@
 \alias{archiveVersionsAvailable}
 \title{Internals used by \code{Require}}
 \usage{
-getPkgVersions(pkgDT, install = TRUE)
+getPkgVersions(pkgDT, install = TRUE, verbose = getOption("Require.verbose"))
 
 getAvailable(
   pkgDT,
@@ -49,6 +49,12 @@ mimicking a call to e.g., \code{install.packages}.
 If \code{TRUE}, the default, then this function will try to install any missing
 packages or dependencies.}
 
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
+NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
+\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+
 \item{purge}{Logical. Should all caches be purged?
 Default is \code{getOption("Require.purge", FALSE)}.
 There is a lot of internal caching of results throughout the \code{Require} package.
@@ -63,10 +69,6 @@ Internally, there are calls to \code{available.packages}.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
-
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.}
 
 \item{install_githubArgs}{List of optional named arguments, passed to \code{install.packages}
 inside \code{installGitHubPackage}.}

@@ -43,6 +43,13 @@
 #'        `getOption("Require.RPackageCache")`. This means that subsequent installs
 #'        of this package on this or identical system will be faster.
 #'   }
+#'   \item{`otherPkgs`}{
+#'     Default: A character vector of packages that are generally more successful if installed
+#'     from Source on Unix-alikes. Since there are repositories that offer binary
+#'     packages builds for Linux (e.g., RStudio Package Manager), the vector of package
+#'     names indicated here will default to a standard CRAN repository, forcing a source
+#'     install. See also `spatialPkgs` option, which does the same for spatial packages.
+#'   }
 #'   \item{`persistentPkgEnv`}{
 #'     Default: `FALSE`. (ADVANCED USE) `Require` stashes a lot of information in a
 #'     hidden environment, located at `Require:::.pkgEnv`. This gets reset at each
@@ -61,6 +68,13 @@
 #'     changes that are made to the user's experience. For beginners with `Require`,
 #'     the messages that are written are important to see. However, these can be turned off
 #'     setting this to `FALSE`
+#'   }
+#'   \item{`spatialPkgs`}{
+#'     Default: A character vector of packages that are generally more successful if installed
+#'     from Source on Unix-alikes. Since there are repositories that offer binary
+#'     packages builds for Linux (e.g., RStudio Package Manager), the vector of package
+#'     names indicated here will default to a standard CRAN repository, forcing a source
+#'     install. See also `otherPkgs` option, which does the same for non-spatial packages.
 #'   }
 #'   \item{`unloadNamespaces`}{
 #'     Default: `TRUE`. (ADVANCED USE) `Require` will attempt to detach and unload
@@ -85,15 +99,17 @@
 #' @rdname RequireOptions
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
+       Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL,
        Require.RPackageCache = "default", # RequirePkgCacheDir(),
+       Require.spatialPkgs = c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units"),
        Require.standAlone = TRUE,
        Require.unloadNamespaces = FALSE,
        Require.updateRprofile = FALSE,
        # Require.useCranCache = NULL,
        Require.usePak = FALSE,
-       Require.verbose = 0
+       Require.verbose = 1
   )
 }
 
