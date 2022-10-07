@@ -106,25 +106,19 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
-  print(paste("dir3: ", dir3))
   Require::checkPath(dir3, create = TRUE)
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
-  print(paste("dir.exists: ", dir.exists(dir3)))# Try github
   #try({
   inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
                              require = FALSE, standAlone = TRUE, libPaths = dir3)
   attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
-  print(paste("inst Attr: ", attrOut))# Try github
   #}, silent = TRUE)
   pkgs <- c("fpCompare")
-  print(paste("dir dir3: ", dir(dir3, full.names = TRUE)))
-  print(paste("find.package: ", find.package(pkgs, lib.loc = dir3)))
 
   isInstalled <- tryCatch( {
     out <- find.package(pkgs, lib.loc = dir3)
     if (length(out)) TRUE else FALSE
   }, error = function(x) FALSE)
-  print(paste("isInstalled: ", isInstalled))# Try github
   testit::assert({isTRUE(isInstalled)})
 
   # Try github with version
