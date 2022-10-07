@@ -199,7 +199,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 
 #' Setup for binary Linux repositories
 #'
-#' Enable use of binary package builds for Linux from the Rstudio Package Manager repo.
+#' Enable use of binary package builds for Linux from the RStudio Package Manager repo.
 #' This will set the `repos` option, affecting the current R session. It will put this
 #' `binaryLinux` in the first position. If the `getOption("repos")` is `NULL`, it will
 #' put `backupCRAN` in second position.

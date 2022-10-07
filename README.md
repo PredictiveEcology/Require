@@ -79,7 +79,7 @@ This approach takes a date as an input and will install all the packages a user 
 * can take snapshots, keeping version information for reinstallation on another machine/system. See below and `?pkgSnapshot`
 * can use both binary or source installs; yet overrides a user request where this is likely inappropriate, e.g., `Rcpp` often fails when installed on Linux from a binary package manager. Spatial packages are similar. 
 * uses a local cache of packages (defaults outside the project, but inside the user's home) so multiple projects can install packages quickly without re-downloading from the cloud repositories (see `RequireOptions()$Require.RPackageCache`)
-* puts all package installing into a compact form, so it can be placed within the project source code, enhacing reproducibility and transparency
+* puts all package installing into a compact form, so it can be placed within the project source code, enhancing reproducibility and transparency
 * by default, runs `require` on every package, in order, as supplied to `packages` argument
 
 
@@ -139,7 +139,7 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 ## Timings
 
-`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is much faster. Below, in cases where all packages are already installed, `Require` is 3x faster.
+`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 3x faster.
 ```r
 # First time run, before cache exists
 > system.time(pak::pkg_install(c("data.table", "dplyr", "lme4")))

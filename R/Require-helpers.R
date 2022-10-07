@@ -2744,7 +2744,7 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
 #'
 #' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
 #' If not set, checks whether the `options("Require.RPackageCache")` is set.
-#' If a characater string, then it returns that.
+#' If a character string, then it returns that.
 #' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
 #'
 #' @export
