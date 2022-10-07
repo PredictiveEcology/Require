@@ -13,13 +13,20 @@ anyNamespaces <- srch[!gsub("package:", "", srch) %in%
                         c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
 if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
 library(testit)
-Sys.setenv("R_TESTS" = "")
+
 origLibPathsAllTests <- .libPaths()
+
+origR_TESTS <- Sys.getenv("R_TESTS")
+if (!identical(origR_TESTS, "")) {
+  Sys.setenv("R_TESTS" = "")
+  on.exit(Sys.setenv(origR_TESTS = origR_TESTS))
+}
+
 tmpdir <- tempdir2(Require:::.rndstr(1))
 created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
 
 .libPaths(tmpdir)
-Require("covr (==3.5.0)")
+Require("covr (==3.5.0)", require = FALSE)
 
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
 aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
