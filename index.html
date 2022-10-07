@@ -148,14 +148,14 @@
 <li>fast (see one example of timings below)</li>
 <li>packages can be on CRAN, CRAN-alikes, or GitHub.com</li>
 <li>uses <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> like base-R</li>
-<li>true <em>stand alone</em>, not the folder-based approach used in <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>. For example, if a user e.g., on Windows Home has packages installed in the system folder because admin priviledges allows it, setting <code>standAlone = TRUE</code> will ignore those packages and only use the ones in <code>.libPaths()[1]</code>
+<li>true <em>stand alone</em>, not the folder-based approach used in <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>. For example, if a user e.g., on Windows Home has packages installed in the system folder because admin privileges allows it, setting <code>standAlone = TRUE</code> will ignore those packages and only use the ones in <code>.libPaths()[1]</code>
 </li>
 <li>can use hierarchical library paths</li>
 <li>can take snapshots, keeping version information for reinstallation on another machine/system. See below and <code><a href="reference/pkgSnapshot.html">?pkgSnapshot</a></code>
 </li>
 <li>can use both binary or source installs; yet overrides a user request where this is likely inappropriate, e.g., <code>Rcpp</code> often fails when installed on Linux from a binary package manager. Spatial packages are similar.</li>
 <li>uses a local cache of packages (defaults outside the project, but inside the user’s home) so multiple projects can install packages quickly without re-downloading from the cloud repositories (see <code>RequireOptions()$Require.RPackageCache</code>)</li>
-<li>puts all package installing into a compact form, so it can be placed within the project source code, enhacing reproducibility and transparency</li>
+<li>puts all package installing into a compact form, so it can be placed within the project source code, enhancing reproducibility and transparency</li>
 <li>by default, runs <code>require</code> on every package, in order, as supplied to <code>packages</code> argument</li>
 </ul>
 </div>
@@ -212,7 +212,7 @@
 <div class="section level2">
 <h2 id="timings">Timings<a class="anchor" aria-label="anchor" href="#timings"></a>
 </h2>
-<p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is much faster. Below, in cases where all packages are already installed, <code>Require</code> is 3x faster.</p>
+<p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is faster. Below, in cases where all packages are already installed, <code>Require</code> is 3x faster.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First time run, before cache exists</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>✔ Loading metadata database ... done</span>
