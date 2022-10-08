@@ -37,46 +37,26 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
     isGH <- pkgDT$repoLocation == "GitHub"
     isGitHub <- which(isGH)
     set(pkgDT, isGitHub, "fullGit", trimVersionNumber(pkgDT$packageFullName[isGitHub]))
-    # pkgDT[isGitHub, fullGit := trimVersionNumber(packageFullName)]
     set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit[isGitHub]))
-    # pkgDT[isGitHub, fullGit := masterMainToHead(fullGit)]
     set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", pkgDT$fullGit[isGitHub]))
-    # pkgDT[isGitHub, Account := gsub("^(.*)/.*$", "\\1", fullGit)]
     set(pkgDT, isGitHub, "RepoWBranch", gsub("^(.*)/(.*)@*.*$", "\\2", pkgDT$fullGit[isGitHub]))
-    # pkgDT[isGitHub, RepoWBranch := gsub("^(.*)/(.*)@*.*$", "\\2", fullGit)]
     set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT[isGitHub]$Account[isGitHub]))
-    # pkgDT[isGitHub, hasSubFolder := grepl("/", pkgDT[isGitHub]$Account)]
     if (any(pkgDT$hasSubFolder, na.rm = TRUE)) { # fix both Account and RepoWBranch
       hasSubFold <- which(pkgDT$hasSubFolder)
       subFoldIndices <- seq_len(NROW(pkgDT[hasSubFold]))
-      #pkgDT[hasSubFold, Account := gsub("^(.*)/(.*)$", "\\1", Account)]
-
-
-      # set(pkgDT, hasSubFold, "subFoldIndices", seq_len(NROW(pkgDT[hasSubFold])))
       set(pkgDT, hasSubFold, "Account", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account[hasSubFold]))
-      # pkgDT[hasSubFold, Account := gsub("^(.*)/(.*)$", "\\1", Account)]
-      # set(pkgDT, hasSubFold, "RepoWBranch", gsub("^(.*)/(.*)$", "\\1", pkgDT$Account))
       set(pkgDT, hasSubFold, "RepoWBranch",
           gsub(paste0("^",pkgDT$Account[hasSubFold],"/"), "", pkgDT$fullGit[hasSubFold]))
-      #pp <- data.table::copy(pkgDT)
-      #lala <- try(pkgDT[hasSubFold, RepoWBranch := gsub(paste0("^",Account,"/"), "", fullGit), by = subFoldIndices])
-      #if (is(lala, "try-error")) browser()
       set(pkgDT, hasSubFold, "GitSubFolder",
           strsplit(pkgDT$RepoWBranch[hasSubFold], split = "/|@")[[1]][2])
-      #pkgDT[hasSubFold, GitSubFolder := strsplit(pkgDT[hasSubFold]$RepoWBranch, split = "/|@")[[1]][2],
-      #      by = subFoldIndices]
-      # pkgDT[hasSubFold, RepoWBranch := gsub(paste0("/",GitSubFolder), "", RepoWBranch), by = subFoldIndices]
       set(pkgDT, hasSubFold, "RepoWBranch",
           gsub(paste0("/",pkgDT$GitSubFolder[hasSubFold]), "", pkgDT$RepoWBranch[hasSubFold]))
 
     }
     set(pkgDT, isGitHub, "Repo", gsub("^(.*)@(.*)$", "\\1", pkgDT$RepoWBranch[isGitHub]))
-    # pkgDT[isGitHub, Repo := gsub("^(.*)@(.*)$", "\\1", RepoWBranch)]
     set(pkgDT, isGitHub, "Branch", "HEAD")
-    # pkgDT[isGitHub, Branch := "HEAD"]
     wh1 <- which(isGH & grepl("@", pkgDT$RepoWBranch))
     set(pkgDT, wh1, "Branch", gsub("^.*@(.*)$", "\\1", pkgDT$RepoWBranch[wh1]))
-    # pkgDT[isGitHub & grepl("@", RepoWBranch), Branch := gsub("^.*@(.*)$", "\\1", RepoWBranch)]
     set(pkgDT, NULL, c("RepoWBranch", "fullGit"), NULL)
   }
   pkgDT[]
@@ -891,8 +871,6 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
     }
   }
 
-  # if (any(pkgDT$Package %in% "LandR.CS")) browser()
-
   if (any(doPackages) && (isTRUE(install) || install == "force")) {
     dots <- list(...)
     set(pkgDT, NULL, "tmpOrder", seq_len(NROW(pkgDT)))
@@ -1474,7 +1452,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                 # }
                 #}
                 # if (!all(isBin) && buildBin) {
-                #   copyTarball(Package, TRUE)
+                #   copyTarballsToCache(Package, TRUE)
                 # }
 
               })
@@ -1493,7 +1471,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   #       w
   #       })
   #     )
-  #     if (!all(isBin) && buildBin) copyTarball(basename(installPkgNames), TRUE)
+  #     if (!all(isBin) && buildBin) copyTarballsToCache(basename(installPkgNames), TRUE)
   #     warn
   #   })
   # })
@@ -1569,6 +1547,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   needSomeSrc <- if (isWindows()) {
     rep(FALSE, NROW(pkgDT))
   } else {
+    # browser()
     anyFromSrc <- installPkgNames %in% sourcePkgs()
     # if (any(anyFromSrc))
     #   messageVerbose(verboseLevel = 1, verbose = verbose,
@@ -1664,9 +1643,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       installPkgNamesList$Src <- installPkgNamesList$Src[!successSrc]
     }
 
-    browser()
     # if (any(grepl("--build", c(dots, install.packagesArgs))))#, unlist(buildList)))))
-    #   copyTarball(installPkgNames, TRUE)
+    #   copyTarballsToCache(installPkgNames, TRUE)
 
 
     # pkgDT <- updateInstalled(pkgDT, installPkgNames, warns)
@@ -1837,7 +1815,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       ipa <- append(ipa, list(repos = NULL))
       ipa <- modifyList2(ipa, list(quiet = !(verbose >= 1)))
 
-      browser()
+      # browser()
       # out <- withCallingHandlers({
 
       do.call(install.packages,
@@ -1865,7 +1843,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     # pkgDT <- updateInstalled(pkgDT, installPkgNamesArchiveOnly, warn)
   }
   # if (any(grepl("--build", c(dots, install.packagesArgs))))
-  #   copyTarball(installPkgNames, TRUE)
+  #   copyTarballsToCache(installPkgNames, TRUE)
 
   pkgDT
 }
@@ -1950,11 +1928,11 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
       pkgDT <- installGitHub(pkgDT, toInstall, install_githubArgs, dots,
                              verbose = verbose)
     }
-    if (any(pkgDT$needBuild)) {
+    if (any(toInstall$needBuild)) {
       # Do this copying at the end of each "installSafeGroup" so that if there are fails,
       #   some intermediates will still be made and cached
-      browser() # need copyTarball
-      copyTarball(pkgDT$Package, builtBinary = TRUE)
+      copyTarballsToCache(toInstall$Package[toInstall$needBuild %in% TRUE], builtBinary = TRUE,
+                  unlink = TRUE, verbose = verbose)
     }
   } else {
     pkgDT[pkgDT$packageFullName %in% toInstall$packageFullName, installFrom := "Fail"]
@@ -1980,17 +1958,22 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
   startsWith(prefix = repoToTest, curCRANRepo)
 }
 
-copyTarball <- function(pkg, builtBinary) {
+copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
+                        verbose = getOption("Require.verbose")) {
   if (builtBinary) {
     theDir <- dir(full.names = TRUE)
-    origFiles <- lapply(pkg, function(pat) grep(pattern = paste0("/", pat, "_"), x = theDir, value = TRUE))
+    origFiles <- lapply(pkg, function(pat) grep(pattern = paste0("[/\\._]", pat, "_"), x = theDir, value = TRUE))
     if (length(unlist(origFiles))) {
       origFiles <- unlist(origFiles)
       newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(origFiles)))
       filesAlreadyExist <- file.exists(newNames)
-      if (any(!filesAlreadyExist))
+      if (any(!filesAlreadyExist)) {
+        messageVerbose(verbose = verbose, verboseLevel = 1,
+                       "\033[32mPutting packages in to RequirePkgCacheDir()\033[39m")
         try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
-      # unlink(origFiles)
+      }
+      if (isTRUE(unlink))
+        unlink(origFiles)
       return(invisible(newNames))
     }
   }
@@ -2377,6 +2360,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                   "--no-build-vignettes")
       Rpath1 <- Sys.getenv("R_HOME")
       Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
+      # origPath <- setwd(tmpPath)
+      # on.exit(setwd(origPath), add = TRUE)
       out1 <- lapply(gr$repo[stillNeedDLandBuild], function(repo) {
         system(paste(Rpath, "CMD build ", repo, paste(extras, collapse = " ")),
                intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
@@ -2388,7 +2373,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                      verbose = verbose, verboseLevel = 1)
       # shaOnGitHub2 <- shaOnGitHub[packageName]
       # Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
-      #   fns <- copyTarball(pack, builtBinary = TRUE)
+      #   fns <- copyTarballsToCache(pack, builtBinary = TRUE)
       #   newFP <- file.path(dirname(fns), paste0(sha, ".", basename(fns)))
       #   out <- file.rename(fns, newFP)
       #   return(out)
