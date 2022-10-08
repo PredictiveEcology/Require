@@ -856,9 +856,9 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         checkPath(rpackageFolder(getOptionRPackageCache()), create = TRUE)
         install.packagesArgs["destdir"] <- paste0(gsub("/$", "", rpackageFolder(getOptionRPackageCache())), "/") ## TODO: why need trailing slash here?
 
-        needBuild <- needBuild()
+        needBuild <- needBuild(pkgDT)
 
-        if (needBuild) {
+        if (any(needBuild)) {
           set(pkgDT, NULL, "needBuild", needBuild)
           if ("localFileName" %in% colnames(pkgDT))
             pkgDT[installFrom == "Local", needBuild := !(isBinary(localFileName, fromCRAN = FALSE))]
@@ -1890,7 +1890,7 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
                  verbose = verbose, verboseLevel = 0)
 
   if (any("Local" %in% toInstall$installFrom)) {
-    if (any(toInstall$Package %in% "data.table")) browser()
+    # if (any(toInstall$Package %in% "data.table")) browser()
     install.packagesArgs[["INSTALL_opts"]] <- appendBuild(toInstall, "Local",
                                                           install.packagesArgs[["INSTALL_opts"]])
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs,
@@ -2323,6 +2323,10 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
           file.copy(cf, gsub(paste0("(", sha, ")."), "", basename(cf))))
         skipDLandBuild <- lengths(cachedFilesHere) > 0
         if (any(skipDLandBuild)) {
+          if (all(vapply(cachedFiles, function(cf) any(isBinary(cf, fromCRAN = FALSE)),
+                     FUN.VALUE = logical(1)))) {
+            dots$INSTALL_opts <- setdiff(dots$INSTALL_opts, "--build")
+          }
           messageVerbose("Identical SHA for '", paste(names(skipDLandBuild)[skipDLandBuild], collapse = "', '"),
                          "' found in ", RequirePkgCacheDir(), "; using it",
                          verbose = verbose, verboseLevel = 0)
@@ -2962,7 +2966,8 @@ appendBuild <- function(pkgDT, installFrom, INSTALL_opts) {
   INSTALL_opts
 }
 
-needBuild <- function() {
-  as.logical(getOption("Require.buildBinaries", TRUE)) &&
-    !is.null(RequirePkgCacheDir())
+needBuild <- function(pkgDT) {
+  pkgDT$needInstall & (
+    as.logical(getOption("Require.buildBinaries", TRUE)) &&
+      !is.null(RequirePkgCacheDir()) )
 }
