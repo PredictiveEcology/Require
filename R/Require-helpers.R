@@ -2386,7 +2386,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   }
   localDir <- dir()
   packageFNtoInstall <- lapply(gr$repo, function(pak) {
-    packageFNtoInstall <- grep(pattern = paste0(pak, ".+(tar.gz|zip)"), localDir, value = TRUE)
+    packageFNtoInstall <- grep(pattern = paste0("^", pak, "_[[:digit:]].+(tar.gz|zip)"), localDir, value = TRUE)
     isBin <- isBinary(packageFNtoInstall, fromCRAN = FALSE)
     if (any(isBin)) {
       packageFNtoInstall <- packageFNtoInstall[isBin]
