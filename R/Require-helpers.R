@@ -2285,8 +2285,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   dots <- list(...)
   quiet <- dots$quiet
   if (is.null(quiet)) quiet <- !(verbose >= 0)
-  tmpPath <- tempdir2(.rndstr())
-  checkPath(tmpPath, create = TRUE)
+  # tmpPath <- tempdir2(.rndstr())
+  # checkPath(tmpPath, create = TRUE)
   # Check if it needs new install
   alreadyExistingDESCRIPTIONFile <- lapply(gr$repo, function(repo) file.path(libPath, repo, "DESCRIPTION"))
   useRemotes <- FALSE
@@ -2341,7 +2341,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   if (any(stillNeedDLandBuild)) {
 
     if (!useRemotes) {
-      out <- downloadRepo(gitRepo[stillNeedDLandBuild], overwrite = TRUE, destDir = tmpPath, verbose = verbose)
+      out <- downloadRepo(gitRepo[stillNeedDLandBuild], overwrite = TRUE, destDir = ".", #tmpPath,
+                          verbose = verbose)
       if (is(out, "try-error"))
         useRemotes <- TRUE
     }
@@ -2444,8 +2445,12 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
                                acct = gr$acct[[pack]], br = gr$br[[pack]],
                                lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
     if (!is.null(getOptionRPackageCache())) {
-      # fns <- copyTarball(pack, builtBinary = TRUE)
       fns <- dir(pattern = pack)
+      needUnlink <- fns == pack # only the exact match, i.e., source folder; not the tars
+      if (any(needUnlink)) {
+        unlink(fns[needUnlink], recursive = TRUE)
+        fns <- fns[!needUnlink]
+      }
       theDESCRIPTIONfile <- file.path(.libPaths()[1], pack, "DESCRIPTION")
       # system.file("DESCRIPTION", package = "peutils", lib.loc = .libPaths()[1])
       sha <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "RemoteSha")
