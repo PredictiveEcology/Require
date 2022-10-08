@@ -1565,9 +1565,9 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     installPkgNamesList$Src <- installPkgNames[needSomeSrc]
     installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
     if (any(isBinaryCRANRepo(repos)))
-      messageVerbose("\033[32mThe following package(s) will be installed from source (to ",
-                     "change this, modify options('Require.spatialPkgs') or ",
-                     "options('Require.otherPkgs') ): \n",
+      messageVerbose("\033[32mThe following package(s) are named in either ",
+                     "options('Require.spatialPkgs') or options('Require.otherPkgs') ",
+                     "and will be installed from source: \n",
                      paste(installPkgNamesList$Src, collapse = ", "), "\033[39m",
                      verbose = verbose, verboseLevel = 1)
     reposList$Src <- c(CRAN = srcPackageURLOnCRAN)
@@ -1969,7 +1969,7 @@ copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
       filesAlreadyExist <- file.exists(newNames)
       if (any(!filesAlreadyExist)) {
         messageVerbose(verbose = verbose, verboseLevel = 1,
-                       "\033[32mPutting packages in to RequirePkgCacheDir()\033[39m")
+                       "\033[32mPutting packages into RequirePkgCacheDir()\033[39m")
         try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
       }
       if (isTRUE(unlink))
@@ -2291,11 +2291,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   alreadyExistingDESCRIPTIONFile <- lapply(gr$repo, function(repo) file.path(libPath, repo, "DESCRIPTION"))
   useRemotes <- FALSE
   filesExist <- file.exists(unlist(alreadyExistingDESCRIPTIONFile))
-  # orig <- setwd(tmpPath)
-  # on.exit({
-  #   unlink(tmpPath, recursive = TRUE)
-  #   setwd(orig)
-  # })
   skipDLandBuild <- FALSE
 
   if (!is.null(getOptionRPackageCache()) || any(filesExist)) {
