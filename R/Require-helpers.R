@@ -1582,7 +1582,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
                      verbose = verbose)) {
     td <- tempdir2(paste(collapse = "", sample(LETTERS, 8)))
     # warn <- NULL
-    tmpPath <- tempdir2(.rndstr())
+    # tmpPath <- tempdir2(.rndstr())
     # orig <- setwd(tmpPath)
     # on.exit({
     #   unlink(tmpPath, recursive = TRUE)
@@ -2416,7 +2416,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   opts2 <- modifyList2(opts2, list(quiet = !(verbose >= 1)))
   if (is.null(opts2$destdir)) {
     cachePath <- getOptionRPackageCache()
-    opts2$destdir <- if (is.null(cachePath)) tmpPath else cachePath
+    opts2$destdir <- if (is.null(cachePath)) "." else cachePath
   }
   warns <- list()
   # Need this internal wCH because need to know which one failed
