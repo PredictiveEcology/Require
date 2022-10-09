@@ -1,6 +1,6 @@
 ## Updated release
 
-This update deals with several enhancements (see NEWS.md), a removed package dependency (remotes), minor bugfixes, and changes to tests.
+This update deals with semi-major bugfix, thus requiring a rapid, and unprecedented, resubmission (see NEWS.md). There were minor other enhancements.
 
 ## Test environments
 
@@ -19,6 +19,9 @@ This update deals with several enhancements (see NEWS.md), a removed package dep
 * Windows                 (win-builder), R Under development (unstable) (2022-09-20 r82883 ucrt)
 * Windows                 (win-builder), 4.1.3 (2022-03-10)
 * Windows                 (win-builder), 4.2.1 (2022-06-23 ucrt)
+
+### R-hub
+* Linux (Debian, Fedora, MacOS, Windows) 
 
 ## R CMD check results
 
