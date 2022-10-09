@@ -1397,9 +1397,9 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   warn <- Map(installPkgNamesInner = installPkgNamesBoth, Package = installPackageBoth,
               function(installPkgNamesInner, Package) {
                 # # Deal with "binary" mumbo jumbo
-                # isBin <- isBinary(installPkgNamesInner, fromCRAN = FALSE)
-                # # isBinNotLinux <- all(isBin) && (isWindows() || isMacOSX())
-                # # type <- c("source", "binary")[isBinNotLinux + 1]
+                isBin <- isBinary(installPkgNamesInner, fromCRAN = FALSE)
+                isBinNotLinux <- all(isBin) && (isWindows() || isMacOSX())
+                type <- c("source", "binary")[isBinNotLinux + 1]
                 # buildBinDots <- grepl("--build", dots)
                 # buildBinIPA <- grepl("--build", install.packagesArgs)
                 # buildBin <- any(buildBinDots, buildBinIPA)
@@ -1409,7 +1409,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                 #       list(setdiff(install.packagesArgs[buildBinIPA][[1]], "--build"))
                 # }
 
-                ipa <- modifyList2(# list(type = type),
+                ipa <- modifyList2(list(type = type),
                                    install.packagesArgs, dots)
                 # if (any(!isBin) && !is.null(RequirePkgCacheDir())) {
                 #   if (isFALSE(grepl("--build", ipa$INSTALL_opts))) {
