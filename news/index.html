@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.5</span>
       </span>
     </div>
 
@@ -48,7 +48,17 @@
     </div>
 
     <div class="section level2">
-<h2 class="page-header" data-toc-text="0.1.4" id="version-014">version 0.1.4<a class="anchor" aria-label="anchor" href="#version-014"></a></h2>
+<h2 class="page-header" data-toc-text="0.1.5" id="version-015">version 0.1.5<a class="anchor" aria-label="anchor" href="#version-015"></a></h2>
+<div class="section level3">
+<h3 id="enhancements-0-1-5">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-5"></a></h3>
+<ul><li>package caching for packages that need sources installs (i.e., identified with <code><a href="../reference/sourcePkgs.html">sourcePkgs()</a></code>, which tend to occur when R packages require idiosyncratic system dependencies) cache the binary version and reuse that on the same system with subsequent re-installs.</li></ul></div>
+<div class="section level3">
+<h3 id="bugfix-0-1-5">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-1-5"></a></h3>
+<ul><li>
+<code>pkgDep</code> was misidentifying the correct package dependencies. This would manifest when a user had a version of package “A” installed as well as all its dependencies, e.g., “B”. When the user updated “A” to a new version that required a new version of “B”, it would not corectly identify the new dependency requirement, and not update “B”, causing “A” update to fail. This is fixed.</li></ul></div>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="0.1.4" id="version-014">version 0.1.4<small>2022-10-07</small><a class="anchor" aria-label="anchor" href="#version-014"></a></h2>
 <ul><li>Make corrections for 2 failing architectures on CRAN</li>
 <li>MUCH less verbose during automated testing</li>
 </ul><div class="section level3">
