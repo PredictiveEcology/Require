@@ -127,9 +127,11 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                pkgsNew[[i]] <- needed
                                while (length(unlist(pkgsNew[[i]])) > 0) {
                                  i <- i + 1
-                                 pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
-                                 names(pkgsToLookup) <- pkgsToLookup
-                                 pkgsNew[[i]] <- lapply(pkgsToLookup, function(needed) {
+                                 pkgsToLookupFull <- pkgsNew[[i - 1]]
+                                 #pkgsToLookup <- trimVersionNumber(pkgsNew[[i - 1]])
+                                 #names(pkgsToLookup) <- pkgsToLookup
+                                 names(pkgsToLookupFull) <- pkgsToLookupFull
+                                 pkgsNew[[i]] <- lapply(pkgsToLookupFull, function(needed) {
                                    unique(unlist(pkgDepInnerMemoise(needed, libPath, which, keepVersionNumber,
                                                              purge = purge, repos = repos, verbose = verbose)))
                                  })
@@ -150,7 +152,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                  dt1 <- dt[versionSpecNA == FALSE]
 
                                  if (NROW(dt1)) {
-                                   dt1 <- dt1[!duplicated(dt1$PackageTrimmed)]
+                                   dt1 <- dt1[!duplicated(dt1$Package)]
                                    ord <- order(package_version(dt1$versionSpec), decreasing = TRUE)
                                    dt1 <- dt1[ord]
                                  }
