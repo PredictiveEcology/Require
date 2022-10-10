@@ -288,83 +288,91 @@ Require <- function(packages, packageVersionFile,
 
   suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
 
-  if (!missing(packageVersionFile)) {
-    if (isTRUE(packageVersionFile)) {
-      packageVersionFile <- getOption("Require.packageVersionFile")
-    }
-    packages <- data.table::fread(packageVersionFile)
-    packages <- dealWithViolations(packages, verbose = verbose) # i.e., packages that can't coexist
-    packages <- packages[!packages$Package %in% .basePkgs]
-    uniqueLibPaths <- unique(packages$LibPath)
-    if (length(uniqueLibPaths) > 1) {
-      dt <- data.table(
-        libPathInSnapshot = uniqueLibPaths,
-        newLibPaths = normPath(c(
-          libPaths[1],
-          file.path(
+  if (!missing(packageVersionFile) ) {
+    if (!isFALSE(packageVersionFile)) {
+      if (isTRUE(packageVersionFile)) {
+        packageVersionFile <- getOption("Require.packageVersionFile")
+      }
+      packages <- data.table::fread(packageVersionFile)
+      packages <- dealWithViolations(packages, verbose = verbose) # i.e., packages that can't coexist
+      packages <- packages[!packages$Package %in% .basePkgs]
+      uniqueLibPaths <- unique(packages$LibPath)
+      if (length(uniqueLibPaths) > 1) {
+        dt <- data.table(
+          libPathInSnapshot = uniqueLibPaths,
+          newLibPaths = normPath(c(
             libPaths[1],
-            gsub(":", "", uniqueLibPaths[-1])
-          )
-        ))
-      )
-      messageVerbose(
-        "packageVersionFile is covering more than one library; installing packages in reverse order; ",
-        "also -- .libPaths() will be altered to be\n",
-        verbose = verbose, verboseLevel = 0
-      )
-      messageDF(dt, verbose = verbose, verboseLevel = 0)
+            file.path(
+              libPaths[1],
+              gsub(":", "", uniqueLibPaths[-1])
+            )
+          ))
+        )
+        messageVerbose(
+          "packageVersionFile is covering more than one library; installing packages in reverse order; ",
+          "also -- .libPaths() will be altered to be\n",
+          verbose = verbose, verboseLevel = 0
+        )
+        messageDF(dt, verbose = verbose, verboseLevel = 0)
 
-      callArgs <- as.list(match.call())[-1]
-      out <- Map(
-        lib = rev(dt$libPathInSnapshot),
-        newLib = rev(dt$newLibPaths), function(lib, newLib) {
-          tf <- tempfile2("RequireSnapshot")
-          packages <- packages[packages$LibPath == lib]
-          data.table::fwrite(packages, file = tf)
-          callArgs[["packageVersionFile"]] <- tf
-          callArgs[["libPaths"]] <- newLib
-          callArgs[["standAlone"]] <- TRUE
-          out <- do.call(Require, args = callArgs)
+        callArgs <- as.list(match.call())[-1]
+        out <- Map(
+          lib = rev(dt$libPathInSnapshot),
+          newLib = rev(dt$newLibPaths), function(lib, newLib) {
+            tf <- tempfile2("RequireSnapshot")
+            packages <- packages[packages$LibPath == lib]
+            data.table::fwrite(packages, file = tf)
+            callArgs[["packageVersionFile"]] <- tf
+            callArgs[["libPaths"]] <- newLib
+            callArgs[["standAlone"]] <- TRUE
+            out <- do.call(Require, args = callArgs)
+          }
+        )
+        out <- unlist(out)
+        setLibPaths(dt$newLibPaths, standAlone = TRUE)
+        messageVerbose(" to echo the multiple paths in ", packageVersionFile,
+                       verbose = verbose, verboseLevel = 0)
+
+        if (isTRUE(require)) {
+          return(out)
+        } else {
+          return(invisible(out))
         }
-      )
-      out <- unlist(out)
-      setLibPaths(dt$newLibPaths, standAlone = TRUE)
-      messageVerbose(" to echo the multiple paths in ", packageVersionFile,
-                     verbose = verbose, verboseLevel = 0)
+        packages[, LibPath := .libPaths()[1]]
+      }
 
-      if (isTRUE(require)) {
-        return(out)
+      if (NROW(packages)) {
+        set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
       } else {
-        return(invisible(out))
+        character()
       }
-      packages[, LibPath := .libPaths()[1]]
-    }
-    if (NROW(packages)) {
-      set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
-    } else {
-      character()
-    }
-    if (any(grep("github", tolower(colnames(packages))))) {
-      haveGit <- nchar(packages[["GithubSHA1"]]) > 0
-      if (sum(haveGit, na.rm = TRUE)) {
-        packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1))]
+      if (any(grep("github", tolower(colnames(packages))))) {
+        haveGit <- nchar(packages[["GithubSHA1"]]) > 0
+        if (sum(haveGit, na.rm = TRUE)) {
+          packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1))]
+        }
       }
+      packages <- packages$Package
+      # which <- NULL
+      install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
+      install.packagesArgs["dependencies"] <- FALSE
+      require <- FALSE
+      oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
+      Sys.setenv(R_REMOTES_UPGRADE = "never")
+      on.exit(
+        {
+          Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)
+        },
+        add = TRUE
+      )
+      messageVerbose("Using ", packageVersionFile, "; setting `require = FALSE`",
+                     verbose = verbose, verboseLevel = 0)
     }
-    packages <- packages$Package
-    # which <- NULL
-    install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
-    install.packagesArgs["dependencies"] <- FALSE
-    require <- FALSE
-    oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
-    Sys.setenv(R_REMOTES_UPGRADE = "never")
-    on.exit(
-      {
-        Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)
-      },
-      add = TRUE
-    )
-    messageVerbose("Using ", packageVersionFile, "; setting `require = FALSE`",
-                   verbose = verbose, verboseLevel = 0)
+  }
+
+  if (missing(packages)) {
+    messageVerbose("No packages supplied", verbose = verbose, verboseLevel = 1)
+    return(invisible(NULL))
   }
 
   if (NROW(packages)) {
