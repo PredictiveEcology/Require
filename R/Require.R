@@ -83,8 +83,9 @@ utils::globalVariables(c(
 #'   name of the package. If this is not the case, then pass a named character
 #'   vector here, where the names are the package names that could be different
 #'   than the GitHub repository name.
-#' @param packageVersionFile If provided, then this will override all
-#'   `install.package` calls with `versions::install.versions`
+#' @param packageVersionFile  Character string of a file name or logical. If `TRUE`,
+#'   then this function will load the default file, `getOption("Require.packageVersionFile").
+#'   If this argument is provided, then this will override all any packages passed to `packages`.
 #' @param libPaths The library path (or libraries) where all packages should be
 #'   installed, and looked for to load (i.e., call `library`). This can be
 #'   used to create isolated, stand alone package installations, if used with
@@ -288,6 +289,9 @@ Require <- function(packages, packageVersionFile,
   suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
 
   if (!missing(packageVersionFile)) {
+    if (isTRUE(packageVersionFile)) {
+      packageVersionFile <- getOption("Require.packageVersionFile")
+    }
     packages <- data.table::fread(packageVersionFile)
     packages <- dealWithViolations(packages, verbose = verbose) # i.e., packages that can't coexist
     packages <- packages[!packages$Package %in% .basePkgs]

@@ -2,14 +2,26 @@
 % Please edit documentation in R/pkgSnapshot.R
 \name{pkgSnapshot}
 \alias{pkgSnapshot}
+\alias{pkgSnapshot2}
 \title{Take a snapshot of all the packages and version numbers}
 \usage{
 pkgSnapshot(
-  packageVersionFile = "packageVersions.txt",
+  packageVersionFile = getOption("Require.packageVersionFile"),
   libPaths,
   standAlone = FALSE,
   purge = getOption("Require.purge", FALSE),
   exact = TRUE,
+  includeBase = FALSE,
+  verbose = getOption("Require.verbose")
+)
+
+pkgSnapshot2(
+  packageVersionFile = getOption("Require.packageVersionFile"),
+  libPaths,
+  standAlone = FALSE,
+  purge = getOption("Require.purge", FALSE),
+  exact = TRUE,
+  includeBase = FALSE,
   verbose = getOption("Require.verbose")
 )
 }
@@ -55,60 +67,43 @@ Similarly, CRAN packages will report their version and specify with a \code{>=},
 allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
 
+\item{includeBase}{Logical. Should R base packages be included, specifically, those in
+\code{tail(.libPath(), 1)}}
+
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
 If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
 NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
 \code{attr(.., "Require")} which has lots of information about the processes of the installs.}
 }
+\value{
+Will both write a file, and (invisibly) return a vector of packages with the
+version numbers. This vector can be used directly in \code{Require}, though it should likely
+be used with \code{require = FALSE} to prevent attaching all the packages.
+}
 \description{
-This can be used later by \code{installVersions} to install or re-install the correct versions.
+This can be used later by \code{Require} to install or re-install the correct versions. See examples.
 }
 \details{
 A file is written with the package names and versions of all packages within \code{libPaths}.
 This can later be passed to \code{Require}.
+
+\code{pkgSnapshot2} returns a vector of package names and versions, with no file output. See
+examples.
 }
 \examples{
-tmpdir <- checkPath(file.path(tempdir(), "example_pkgSnapshot"), create = TRUE)
-pkgSnapFile <- tempfile(tmpdir = tmpdir)
-pkgSnapshot(pkgSnapFile, .libPaths()[1])
-data.table::fread(pkgSnapFile)
-
 \dontrun{
-# An example to move this file to a new computer
-library(Require)
-setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
-fileName <- "packageSnapshot.txt"
-pkgSnapshot(fileName)
-# Get file on another computer -- via email, slack, cloud, etc.
-# library(googledrive)
-# (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
+# Normal use
+pkgs <- pkgSnapshot() # writes a file, getOption("Require.packageVersionFile"),
+                      # within project; also returns a vector of packages with version
 
-# On new machine
-fileName <- "packageSnapshot.txt"
-library(Require)
-# get the file from email, slack, cloud etc.
-# library(googledrive)
-# drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
-setLibPaths("~/RPackages") # start with an empty folder for new
-# library to minimize package version conflicts
-Require(packageVersionFile = fileName)
+# Now move this file to another computer e.g. by committing in git, emailing, googledrive
+# on next computer/project
+Require(packageVersionFile = TRUE)
 
-# Passing NULL --> results in output to console with exact Require call to
-#   achieve the packages installations
-pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
-
-# Or shunt it to a file
-sink("packages2.R")
-pkgSnapshot(NULL, libPaths = .libPaths()[1])
-sink()
-
-# Will show "minimum package version"
-pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
-
+# Can also use the vector from above, likely specifying "require = FALSE" so they don't all
+#   get attached
+Require(pkgs, require = FALSE)
 }
-
-# cleanup
-unlink(tmpdir, recursive = TRUE)
 
 }
