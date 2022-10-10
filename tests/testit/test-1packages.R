@@ -103,6 +103,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   out1 <- data.table::as.data.table(out)
   # THis next line fails on CRAN only
   # if (interactive())
+  print(out1)
+  print(pkgSnapFileRes)
     testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
 
   out3 <- pkgSnapshot2()
