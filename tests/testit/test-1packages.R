@@ -101,8 +101,14 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert({is.data.frame(out)})
   testit::assert({file.exists(eval(formals("pkgSnapshot")$packageVersionFile))})
   out1 <- data.table::as.data.table(out)
-  testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
+  # THis next line fails on CRAN only
+  # if (interactive())
+    testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
+
+  out3 <- pkgSnapshot2()
+  testit::assert(is(out3, "expression"))
   setwd(prevDir)
+
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))

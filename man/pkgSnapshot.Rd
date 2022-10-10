@@ -101,9 +101,10 @@ pkgs <- pkgSnapshot() # writes a file, getOption("Require.packageVersionFile"),
 # on next computer/project
 Require(packageVersionFile = TRUE)
 
-# Can also use the vector from above, likely specifying "require = FALSE" so they don't all
-#   get attached
-Require(pkgs, require = FALSE)
+# Using pkgSnapshot2 to get the vector of packages and versions
+pkgs <- pkgSnapshot2()
+Require(pkgs, require = FALSE) # will install packages from previous line
+                               # (likely want require = FALSE and not load them all)
 }
 
 }

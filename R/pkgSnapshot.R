@@ -47,9 +47,10 @@
 #' # on next computer/project
 #' Require(packageVersionFile = TRUE)
 #'
-#' # Can also use the vector from above, likely specifying "require = FALSE" so they don't all
-#' #   get attached
-#' Require(pkgs, require = FALSE)
+#' # Using pkgSnapshot2 to get the vector of packages and versions
+#' pkgs <- pkgSnapshot2()
+#' Require(pkgs, require = FALSE) # will install packages from previous line
+#'                                # (likely want require = FALSE and not load them all)
 #' }
 #'
 #' @rdname pkgSnapshot
@@ -74,11 +75,20 @@ pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFi
 }
 
 #' @rdname pkgSnapshot
+#' @export
 pkgSnapshot2 <- function(packageVersionFile = getOption("Require.packageVersionFile"),
                          libPaths, standAlone = FALSE,
                          purge = getOption("Require.purge", FALSE), exact = TRUE,
                          includeBase = FALSE,
                          verbose = getOption("Require.verbose")) {
+  if (missing(libPaths)) {
+    libPaths <- .libPaths()
+  }
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
+                                      other = "GitHubSha", purge = purge))
+  if (isFALSE(includeBase))
+    ip <- ip[!Package %in% .basePkgs]
+
   if (isTRUE(exact)) {
     ref <- ip$GithubSHA1
     ineq <- "=="
@@ -90,8 +100,9 @@ pkgSnapshot2 <- function(packageVersionFile = getOption("Require.packageVersionF
                                  paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref), # github
                                  paste0(ip$Package, " (",ineq, ip$Version, ")") # cran
   ))
-  theCall <- paste0("Require(c('", paste(thePkgAndVers, collapse = "',\n'"),
-                    "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
+  # theCall <- paste0("Require(c('", paste(thePkgAndVers, collapse = "',\n'"),
+  #                   "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
+  # theCall <- parse(text = theCall)
 
-  theCall
+  thePkgAndVers
 }
