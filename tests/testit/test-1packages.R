@@ -140,13 +140,14 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 # Code coverage -- run 2x so it won't reinstall
 # This line fails on CRAN testing for some reason; not on GA x9, E x3, A x1, WinBuilder x3, IE etc.
 
-#try(mess1 <- capture.output(type = "message",
 prevDir <- setwd(Require::tempdir2("test11"))
-out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)#),
-#silent = TRUE)
-#try(mess2 <- capture.output(type = "message",
-out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)#),
-#   silent = TRUE)
+try(mess1 <- capture.output(type = "message",
+                            out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+    silent = TRUE)
+
+try(mess2 <- capture.output(type = "message",
+                            out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+    silent = TRUE)
 setwd(prevDir)
 
 # Code coverage
