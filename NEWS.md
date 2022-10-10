@@ -3,6 +3,11 @@ Known issues: <https://github.com/PredictiveEcology/Require/issues>
 version 0.1.6
 =============
 
+## enchancements
+* `pkgSnapshot` examples brought up to present usage & simplified; also now uses a default filename that is an option `Require.packageVersionFile`.
+* packages can now be installed using a `packageVersionFile` by simply passing `TRUE` to the `Require(packageVersionFile = TRUE)` if the user has made the package version file using the name as declared in the `Require.packageVersionFile` option.
+
+## bugfix
 * minor bugfix only detected on submission to CRAN
 
 
