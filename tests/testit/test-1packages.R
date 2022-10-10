@@ -99,7 +99,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   out <- pkgSnapshot()
   pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile))
   testit::assert({is.data.frame(out)})
-  testit::assert({file.exists(formals("pkgSnapshot")$packageVersionFile)})
+  testit::assert({file.exists(eval(formals("pkgSnapshot")$packageVersionFile))})
   out1 <- data.table::as.data.table(out)
   testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
   setwd(prevDir)
