@@ -96,6 +96,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
 
     needGet <- unlist(lapply(neededFull1, is.null))
+    if (exists("aaaa")) browser()
     if (any(needGet)) {
       fn <- pkgDepDBFilename()
       if (length(fn)) { # user may not be using Cache
@@ -211,19 +212,20 @@ pkgDep <- function(packages, libPath = .libPaths(),
       })
 
       newOnes <- names(saveNames) %in% names(neededFull)
+      # Add self to vector
       Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
         assign(sn, neededFull2[[n]], envir = .pkgEnv)
       })
       neededFull1 <- append(neededFull1[!needGet], neededFull2)
 
-      # Add self to vector
-      neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
-        rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p)))
 
     }
 
     if (isTRUE(sort))
       neededFull1 <- lapply(neededFull1, function(x) sort(x))
+
+    neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
+      unique(rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p))))
 
     # file-backed cache
     if (any(needGet)) {
@@ -237,6 +239,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
           saveNeededFull1 <- c(saveNeededFull1, prev)
           saveNeededFull1 <- saveNeededFull1[!duplicated(names(saveNeededFull1))]
         }
+        if (exists("aaaa")) browser()
         saveRDS(saveNeededFull1, file = fn)
       }
     }
