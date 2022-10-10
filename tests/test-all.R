@@ -11,7 +11,7 @@ if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
 optsListPrevLinux <- if (interactive()) setLinuxBinaryRepo() else NULL
 
 optsListNew <- modifyList2(optsListNew, list(Require.verbose = verbosity))
-optsNcpus <- options("Ncpus" = 2)
+optsNcpus <- options("Ncpus" = 4)
 optsListPrev <- options(optsListNew)
 optsListNew <- modifyList2(optsListNew, options("repos"))
 optsListPrev <- modifyList2(optsListPrev, optsListPrevLinux)

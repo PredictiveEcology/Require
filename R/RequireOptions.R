@@ -100,6 +100,7 @@
 RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
+       Require.packageVersionFile = "packageVersions.txt",
        Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL,
        Require.RPackageCache = "default", # RequirePkgCacheDir(),

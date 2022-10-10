@@ -1,10 +1,18 @@
 #' Take a snapshot of all the packages and version numbers
 #'
-#' This can be used later by `installVersions` to install or re-install the correct versions.
+#' This can be used later by `Require` to install or re-install the correct versions. See examples.
 #'
 #' @details
 #' A file is written with the package names and versions of all packages within `libPaths`.
 #' This can later be passed to `Require`.
+#'
+#' `pkgSnapshot2` returns a vector of package names and versions, with no file output. See
+#' examples.
+#'
+#' @return
+#' Will both write a file, and (invisibly) return a vector of packages with the
+#' version numbers. This vector can be used directly in `Require`, though it should likely
+#' be used with `require = FALSE` to prevent attaching all the packages.
 #'
 #' @param packageVersionFile A filename to save the packages and their currently
 #'        installed version numbers. Defaults to `"packageVersions.txt"`.
@@ -26,91 +34,75 @@
 #'
 #' @export
 #' @inheritParams Require
+#' @inheritParams pkgDep
 #' @importFrom utils write.table
 #' @importFrom data.table fwrite
 #' @examples
-#' tmpdir <- checkPath(file.path(tempdir(), "example_pkgSnapshot"), create = TRUE)
-#' pkgSnapFile <- tempfile(tmpdir = tmpdir)
-#' pkgSnapshot(pkgSnapFile, .libPaths()[1])
-#' data.table::fread(pkgSnapFile)
-#'
 #' \dontrun{
-#' # An example to move this file to a new computer
-#' library(Require)
-#' setLibPaths(.libPaths()[1])  # this will only do a snapshot of the main user library
-#' fileName <- "packageSnapshot.txt"
-#' pkgSnapshot(fileName)
-#' # Get file on another computer -- via email, slack, cloud, etc.
-#' # library(googledrive)
-#' # (out <- googledrive::drive_upload(fileName)) # copy the file id to clipboard
+#' # Normal use
+#' pkgs <- pkgSnapshot() # writes a file, getOption("Require.packageVersionFile"),
+#'                       # within project; also returns a vector of packages with version
 #'
-#' # On new machine
-#' fileName <- "packageSnapshot.txt"
-#' library(Require)
-#' # get the file from email, slack, cloud etc.
-#' # library(googledrive)
-#' # drive_download(as_id(PASTE-THE-FILE-ID-HERE), path = fileName)
-#' setLibPaths("~/RPackages") # start with an empty folder for new
-#' # library to minimize package version conflicts
-#' Require(packageVersionFile = fileName)
+#' # Now move this file to another computer e.g. by committing in git, emailing, googledrive
+#' # on next computer/project
+#' Require(packageVersionFile = TRUE)
 #'
-#' # Passing NULL --> results in output to console with exact Require call to
-#' #   achieve the packages installations
-#' pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
-#'
-#' # Or shunt it to a file
-#' sink("packages2.R")
-#' pkgSnapshot(NULL, libPaths = .libPaths()[1])
-#' sink()
-#'
-#' # Will show "minimum package version"
-#' pkgSnapshot(NULL, libPaths = .libPaths()[1], exact = FALSE)
-#'
+#' # Using pkgSnapshot2 to get the vector of packages and versions
+#' pkgs <- pkgSnapshot2()
+#' Require(pkgs, require = FALSE) # will install packages from previous line
+#'                                # (likely want require = FALSE and not load them all)
 #' }
 #'
-#' # cleanup
-#' unlink(tmpdir, recursive = TRUE)
-#'
 #' @rdname pkgSnapshot
-pkgSnapshot <- function(packageVersionFile = "packageVersions.txt", libPaths, standAlone = FALSE,
+pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),
+                        libPaths, standAlone = FALSE,
                         purge = getOption("Require.purge", FALSE), exact = TRUE,
+                        includeBase = FALSE,
                         verbose = getOption("Require.verbose")) {
   if (missing(libPaths)) {
     libPaths <- .libPaths()
   }
-  # origLibPaths <- suppressMessages(setLibPaths(libPaths, standAlone))
-  # on.exit({suppressMessages(setLibPaths(origLibPaths, standAlone = TRUE))}, add = TRUE)
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
+                                      other = "GitHubSha", purge = purge))
+  if (isFALSE(includeBase))
+    ip <- ip[!Package %in% .basePkgs]
 
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(), other = "GitHubSha",
-                                      purge = purge))
-  if (is.null(packageVersionFile)) {
-    # aa <- pkgDep("SpaDES", recursive = T)
-    tmpPkgSnapshotFile <- ".tmppackageVersions.txt"
-    on.exit({try(unlink(tmpPkgSnapshotFile), silent = TRUE)}, add = TRUE)
-    co <- suppressMessages({
-      pkgSnapshot(tmpPkgSnapshotFile, libPaths = libPaths, standAlone = standAlone, purge = purge)
-    })
-    cc <- data.table::fread(tmpPkgSnapshotFile)
-    # cc <- bb[bb$Package %in% extractPkgName(aa$SpaDES) & bb$LibPath == bb$LibPath[1],]
-    if (isTRUE(exact)) {
-      ref <- cc$GithubSHA1
-      dd <- paste0(ifelse(!is.na(cc$GithubRepo), paste0(cc$GithubUsername, "/", cc$GithubRepo, "@", ref),
-                          paste0(cc$Package, " (==", cc$Version, ")")))
-    } else {
-      ref <- cc$GithubRef
-      dd <- paste0(ifelse(!is.na(cc$GithubRepo), paste0(cc$GithubUsername, "/", cc$GithubRepo, "@", ref),
-                          paste0(cc$Package, " (>=", cc$Version, ")")))
-    }
-    ee <- paste0("Require(c('", paste(dd, collapse = "',\n'"),
-                 "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
-    cat(ee)
-    # cat(ee, file = "packages.R")
-    # source("packages.R")
-  } else {
-    fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
-    messageVerbose("package version file saved in ", packageVersionFile,
-                   verbose = verbose, verboseLevel = 1)
-  }
+  fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
+  messageVerbose("package version file saved in ", packageVersionFile,
+                 verbose = verbose, verboseLevel = 1)
 
   return(invisible(ip))
+}
+
+#' @rdname pkgSnapshot
+#' @export
+pkgSnapshot2 <- function(packageVersionFile = getOption("Require.packageVersionFile"),
+                         libPaths, standAlone = FALSE,
+                         purge = getOption("Require.purge", FALSE), exact = TRUE,
+                         includeBase = FALSE,
+                         verbose = getOption("Require.verbose")) {
+  if (missing(libPaths)) {
+    libPaths <- .libPaths()
+  }
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
+                                      other = "GitHubSha", purge = purge))
+  if (isFALSE(includeBase))
+    ip <- ip[!Package %in% .basePkgs]
+
+  if (isTRUE(exact)) {
+    ref <- ip$GithubSHA1
+    ineq <- "=="
+  } else {
+    ref <- ip$GithubRef
+    ineq <- ">="
+  }
+  thePkgAndVers <- paste0(ifelse(!is.na(ip$GithubRepo),
+                                 paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref), # github
+                                 paste0(ip$Package, " (",ineq, ip$Version, ")") # cran
+  ))
+  # theCall <- paste0("Require(c('", paste(thePkgAndVers, collapse = "',\n'"),
+  #                   "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
+  # theCall <- parse(text = theCall)
+
+  thePkgAndVers
 }

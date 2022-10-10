@@ -30,8 +30,8 @@ name of the package. If this is not the case, then pass a named character
 vector here, where the names are the package names that could be different
 than the GitHub repository name.}
 
-\item{packageVersionFile}{If provided, then this will override all
-\code{install.package} calls with \code{versions::install.versions}}
+\item{packageVersionFile}{Character string of a file name or logical. If \code{TRUE},
+then this function will load the default file, \verb{getOption("Require.packageVersionFile"). If this argument is provided, then this will override all any packages passed to }packages`.}
 
 \item{libPaths}{The library path (or libraries) where all packages should be
 installed, and looked for to load (i.e., call \code{library}). This can be
