@@ -669,6 +669,7 @@ whichToDILES <- function(which) {
 
 .installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL,
                             purge = getOption("Require.purge", FALSE)) {
+
   purge <- dealWithCache(purge)
   if (!is.null(other))
     if (any(grepl("github", tolower(other)))) {
@@ -694,7 +695,9 @@ whichToDILES <- function(which) {
     }
     mat <- cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
     if (!is.null(other)) {
-      mat <- cbind(mat, as.data.frame(others, stringsAsFactors = FALSE), stringsAsFactors = FALSE)
+      others <- lapply(others, function(co) if (!is(co, "character")) as.character(co))
+      othersDF <- as.data.frame(others, stringsAsFactors = FALSE)
+      mat <- cbind(mat, othersDF, stringsAsFactors = FALSE)
     }
     mat
   })
