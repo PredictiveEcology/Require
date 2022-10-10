@@ -110,6 +110,13 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert(is(out3, "character"))
   setwd(prevDir)
 
+  # Check for packageVersionFile = FALSE
+  mess11 <- capture.output(type = "message",
+                           outInner <- Require(packageVersionFile = FALSE, verbose = 1))
+  print(mess11)
+  testit::assert(any(grepl(NoPkgsSupplied, mess11)))
+  testit::assert(is.null(outInner))
+
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))

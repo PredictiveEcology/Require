@@ -371,7 +371,7 @@ Require <- function(packages, packageVersionFile,
   }
 
   if (missing(packages)) {
-    messageVerbose("No packages supplied", verbose = verbose, verboseLevel = 1)
+    messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     return(invisible(NULL))
   }
 
@@ -646,3 +646,5 @@ usepak <- function(packageFullName, needInstall, installFrom = NULL, toplevel = 
 
 messageFollowingPackagesIncorrect <- "The following packages did not get installed correctly."
 messagePkgSnapshotMissing <- "The pkgSnapshot appears to be missing"
+
+NoPkgsSupplied <- "No packages supplied"
