@@ -217,7 +217,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
       neededFull1 <- append(neededFull1[!needGet], neededFull2)
 
       # Add self to vector
-      browser()
       neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
         rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p)))
 
