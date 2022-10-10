@@ -59,13 +59,9 @@ pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFi
                         purge = getOption("Require.purge", FALSE), exact = TRUE,
                         includeBase = FALSE,
                         verbose = getOption("Require.verbose")) {
-  if (missing(libPaths)) {
-    libPaths <- .libPaths()
-  }
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
-                                      other = "GitHubSha", purge = purge))
-  if (isFALSE(includeBase))
-    ip <- ip[!Package %in% .basePkgs]
+  libPaths <- doLibPaths(libPaths, standAlone)
+
+  ip <- doInstalledPackages(libPaths, purge, includeBase)
 
   fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
   messageVerbose("package version file saved in ", packageVersionFile,
@@ -81,13 +77,9 @@ pkgSnapshot2 <- function(packageVersionFile = getOption("Require.packageVersionF
                          purge = getOption("Require.purge", FALSE), exact = TRUE,
                          includeBase = FALSE,
                          verbose = getOption("Require.verbose")) {
-  if (missing(libPaths)) {
-    libPaths <- .libPaths()
-  }
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
-                                      other = "GitHubSha", purge = purge))
-  if (isFALSE(includeBase))
-    ip <- ip[!Package %in% .basePkgs]
+  libPaths <- doLibPaths(libPaths, standAlone)
+
+  ip <- doInstalledPackages(libPaths, purge, includeBase)
 
   if (isTRUE(exact)) {
     ref <- ip$GithubSHA1
@@ -100,9 +92,25 @@ pkgSnapshot2 <- function(packageVersionFile = getOption("Require.packageVersionF
                                  paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref), # github
                                  paste0(ip$Package, " (",ineq, ip$Version, ")") # cran
   ))
-  # theCall <- paste0("Require(c('", paste(thePkgAndVers, collapse = "',\n'"),
-  #                   "'), require = FALSE, dependencies = FALSE, upgrades = FALSE)")
-  # theCall <- parse(text = theCall)
-
   thePkgAndVers
+}
+
+
+doLibPaths <- function(libPaths, standAlone) {
+  if (missing(libPaths)) {
+    libPaths <- .libPaths()
+  }
+  if (isTRUE(standAlone)) {
+    libPaths <- libPaths[1]
+  }
+  libPaths
+}
+
+doInstalledPackages <- function(libPaths, purge, includeBase) {
+  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
+                                      other = "GitHubSha", purge = purge))
+  if (isFALSE(includeBase))
+    ip <- ip[!Package %in% .basePkgs]
+
+  ip
 }

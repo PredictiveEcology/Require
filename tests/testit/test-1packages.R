@@ -89,26 +89,25 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                           install = "force")
   testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
                             packageVersion("fpCompare", lib.loc = dir6))})
+
+
   remove.packages("fpCompare", lib = dir2)
   remove.packages("fpCompare", lib = dir6)
 
   setLibPaths(orig, updateRprofile = FALSE)
 
-  # Test snapshot file with no args
+  # Test snapshot file with no args # on CRAN and GA, this is likely empty
   prevDir <- setwd(Require::tempdir2("test11"))
   out <- pkgSnapshot()
-  pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile))
+  pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile),
+                                      colClasses = "character") # if empty, they become logical
   testit::assert({is.data.frame(out)})
   testit::assert({file.exists(eval(formals("pkgSnapshot")$packageVersionFile))})
   out1 <- data.table::as.data.table(out)
-  # THis next line fails on CRAN only
-  # if (interactive())
-  print(out1)
-  print(pkgSnapFileRes)
-    testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
+  testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
 
   out3 <- pkgSnapshot2()
-  testit::assert(is(out3, "expression"))
+  testit::assert(is(out3, "character"))
   setwd(prevDir)
 
 
