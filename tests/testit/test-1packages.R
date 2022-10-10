@@ -97,7 +97,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   # Test snapshot file with no args
   prevDir <- setwd(Require::tempdir2("test11"))
   out <- pkgSnapshot()
-  pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
+  pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile))
   testit::assert({is.data.frame(out)})
   testit::assert({file.exists(formals("pkgSnapshot")$packageVersionFile)})
   out1 <- data.table::as.data.table(out)
