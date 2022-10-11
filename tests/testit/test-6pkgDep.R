@@ -65,7 +65,6 @@ testit::assert({isTRUE(all.equal(d$Require, e$Require))})
 # testit::assert({length(e) == length(eAlt)})
 # testit::assert({names(e) == names(eAlt)})
 
-browser()
 aaaa <- 1
 a <- pkgDep("Require", which = "all", recursive = FALSE)
 b <- pkgDep("Require", which = "most", recursive = FALSE)
