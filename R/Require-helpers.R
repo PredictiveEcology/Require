@@ -520,7 +520,8 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
   if (!is.null(rpackageFolder(getOptionRPackageCache()))) {
     localFiles <- dir(rpackageFolder(getOptionRPackageCache()), full.names = TRUE)
     # sanity check -- there are bad files, quite often
-    fileSizeEq0 <- is.na(file.size(localFiles)) | file.size(localFiles) == 0
+    fs <- file.size(localFiles)
+    fileSizeEq0 <- is.na(fs) | fs == 0
     if (any(fileSizeEq0)) {
       unlink(localFiles[fileSizeEq0])
       localFiles <- localFiles[!fileSizeEq0]
