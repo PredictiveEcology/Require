@@ -1289,6 +1289,8 @@ installedVers <- function(pkgDT) {
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose")) {
   if (internetExists("cannot get available packages", verbose = verbose)) {
     repos <- getCRANrepos(repos)
+
+    purge <- dealWithCache(purge = purge)
     if (!exists("cachedAvailablePackages", envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
       cap <- list()
       isMac <- tolower(Sys.info()["sysname"]) == "darwin"
@@ -1303,10 +1305,24 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         c("binary", "source")
       }
 
-      for (type in types)
-        cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
-                                error = function(x)
-                                  available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
+
+      for (type in types) {
+        fn <- availablePackagesCachedPath(repos, type)
+        if (isTRUE(purge))
+          unlink(fn)
+        if (file.exists(fn)) {
+          cap[[type]] <- readRDS(fn)
+        } else {
+          cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
+                                  error = function(x)
+                                    available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
+          if (!is.null(RequirePkgCacheDir())) {
+            checkPath(dirname(fn), create = TRUE)
+            saveRDS(cap[[type]], file = fn)
+          }
+        }
+
+      }
       cap <- do.call(rbind, cap)
       if (length(types) > 1) {
         dups <- duplicated(cap[, c("Package", "Version")])
@@ -2971,4 +2987,8 @@ needBuild <- function(pkgDT) {
   pkgDT$needInstall & (
     as.logical(getOption("Require.buildBinaries", TRUE)) &&
       !is.null(RequirePkgCacheDir()) )
+}
+
+availablePackagesCachedPath <- function(repos, type) {
+  file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, ".availablePackages.rds")
 }
