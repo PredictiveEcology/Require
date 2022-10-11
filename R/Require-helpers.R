@@ -2724,11 +2724,12 @@ stripHTTPAddress <- function(addr) {
 #   out <- eval(installPackagesQuoted, envir = envir)
 # }
 
-dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose")) {
+dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
+                               purge = getOption("Require.purge", FALSE)) {
   dd <- pkgSnapshotObj
   ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
                paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
-  gg <- pkgDep(ff, recursive = TRUE)
+  gg <- pkgDep(ff, recursive = TRUE, purge = purge)
   hh <- sort(unique(gsub(" ", "", gsub("\n", "", unname(unlist(gg))))))
   ii <- data.table::data.table(packageNameFull = hh,
                                Package = extractPkgName(hh),

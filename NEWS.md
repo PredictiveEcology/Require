@@ -1,7 +1,19 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.1.6
+=============
+
+## enhancements
+* `pkgSnapshot` examples brought up to present usage & simplified
+* `pkgSnapshot` now uses a default filename that is an option `Require.packageVersionFile`.
+* `Require` can now accept `packageVersionFile = TRUE`, meaning use the package version file that is set in the `Require.packageVersionFile` option.
+
+## bugfix
+* minor bugfix only detected on submission to CRAN
+
+
 version 0.1.5
-==============
+=============
 
 ## enhancements
 * package caching for packages that need sources installs (i.e., identified with `sourcePkgs()`, which tend to occur when R packages require idiosyncratic system dependencies) cache the binary version and reuse that on the same system with subsequent re-installs.
@@ -10,7 +22,8 @@ version 0.1.5
 * `pkgDep` was misidentifying the correct package dependencies. This would manifest when a user had a version of package "A" installed as well as all its dependencies, e.g., "B". When the user updated "A" to a new version that required a new version of "B", it would not correctly identify the new dependency requirement, and not update "B", causing "A" update to fail. This is fixed.
 
 version 0.1.4
-==============
+=============
+
 * Make corrections for 2 failing architectures on CRAN
 * MUCH less verbose during automated testing
 

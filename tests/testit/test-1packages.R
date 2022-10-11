@@ -89,20 +89,34 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                           install = "force")
   testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
                             packageVersion("fpCompare", lib.loc = dir6))})
+
+
   remove.packages("fpCompare", lib = dir2)
   remove.packages("fpCompare", lib = dir6)
 
   setLibPaths(orig, updateRprofile = FALSE)
 
-  # Test snapshot file with no args
+  # Test snapshot file with no args # on CRAN and GA, this is likely empty
   prevDir <- setwd(Require::tempdir2("test11"))
   out <- pkgSnapshot()
-  pkgSnapFileRes <- data.table::fread(formals("pkgSnapshot")$packageVersionFile)
+  pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile),
+                                      colClasses = "character") # if empty, they become logical
   testit::assert({is.data.frame(out)})
-  testit::assert({file.exists(formals("pkgSnapshot")$packageVersionFile)})
+  testit::assert({file.exists(eval(formals("pkgSnapshot")$packageVersionFile))})
   out1 <- data.table::as.data.table(out)
   testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
+
+  out3 <- pkgSnapshot2()
+  testit::assert(is(out3, "character"))
   setwd(prevDir)
+
+  # Check for packageVersionFile = FALSE
+  mess11 <- capture.output(type = "message",
+                           outInner <- Require(packageVersionFile = FALSE, verbose = 1))
+  print(mess11)
+  testit::assert(any(grepl(NoPkgsSupplied, mess11)))
+  testit::assert(is.null(outInner))
+
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
@@ -140,13 +154,14 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 # Code coverage -- run 2x so it won't reinstall
 # This line fails on CRAN testing for some reason; not on GA x9, E x3, A x1, WinBuilder x3, IE etc.
 
-#try(mess1 <- capture.output(type = "message",
 prevDir <- setwd(Require::tempdir2("test11"))
-out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)#),
-#silent = TRUE)
-#try(mess2 <- capture.output(type = "message",
-out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)#),
-#   silent = TRUE)
+try(mess1 <- capture.output(type = "message",
+                            out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+    silent = TRUE)
+
+try(mess2 <- capture.output(type = "message",
+                            out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+    silent = TRUE)
 setwd(prevDir)
 
 # Code coverage
