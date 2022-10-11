@@ -1,7 +1,7 @@
 thisFilename <- "test-6pkgDep.R"
 startTime <- Sys.time()
 message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
 
 origLibPathsAllTests <- .libPaths()
 
@@ -26,7 +26,7 @@ a1 <- pkgDep("Require", keepVersionNumber = FALSE, recursive = TRUE) # just name
 testit::assert({isTRUE(all.equal(lapply(a1, trimVersionNumber), a1))})
 
 pkg <- "PredictiveEcology/reproducible"
-a2 <- pkgDep(pkg) # GitHub
+a2 <- pkgDep(pkg, purge = TRUE) # GitHub
 testit::assert({length(a2) == 1})
 testit::assert({all(names(a2) == pkg)})
 
@@ -53,6 +53,8 @@ testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), d$Require))})
 pkg3 <- c(pkg2, "plyr")
 e <- pkgDep(pkg3) # GitHub, local, and CRAN packages
 testit::assert({length(e) == 3})
+print(e[[pkg]])
+print(d[[pkg]])
 testit::assert({isTRUE(all.equal(e[[pkg]], d[[pkg]]))})
 testit::assert({isTRUE(all.equal(d$Require, e$Require))})
 
@@ -63,11 +65,16 @@ testit::assert({isTRUE(all.equal(d$Require, e$Require))})
 # testit::assert({length(e) == length(eAlt)})
 # testit::assert({names(e) == names(eAlt)})
 
+browser()
+aaaa <- 1
 a <- pkgDep("Require", which = "all", recursive = FALSE)
 b <- pkgDep("Require", which = "most", recursive = FALSE)
 d <- pkgDep("Require", which = TRUE, recursive = FALSE)
 e <- pkgDep("Require", recursive = FALSE)
 testit::assert({isTRUE(all.equal(a, b))})
+print(a)
+print("##")
+print(d)
 testit::assert({isTRUE(all.equal(a, d))})
 testit::assert({!isTRUE(all.equal(a, e))})
 # aAlt <- pkgDepAlt("Require", which = "all", recursive = FALSE, purge = TRUE)

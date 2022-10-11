@@ -94,7 +94,32 @@ pkgDep <- function(packages, libPath = .libPaths(),
         suppressWarnings(rm(list = saveNames[whExist], envir = .pkgEnv))
     }
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
+
     needGet <- unlist(lapply(neededFull1, is.null))
+    if (exists("aaaa")) browser()
+    if (any(needGet)) {
+      fn <- pkgDepDBFilename()
+      if (length(fn)) { # user may not be using Cache
+        if (file.exists(fn)) { # may be first time through, so there would be none yet
+          if (purge) {
+            unlink(fn)
+          } else {
+            savedNeededFull1 <- readRDS(fn)
+            ord <- match(saveNames, names(savedNeededFull1))
+            have <- savedNeededFull1[ord]
+            names(have) <- names(saveNames)
+            toGet <- names(needGet)[needGet]
+            toGet <- toGet[toGet %in% names(have)]
+            neededFull1[toGet] <- have[toGet]
+            needGet <- unlist(lapply(neededFull1, is.null))
+            messageVerbose("Using file-backed cache; to refresh this, set purge = TRUE", verbose = verbose,
+                           verboseLevel = 2)
+          }
+
+        }
+      }
+    }
+
     Npackages <- NROW(packages[needGet])
     messageIfGTN <- Npackages > 5
 
@@ -187,14 +212,38 @@ pkgDep <- function(packages, libPath = .libPaths(),
       })
 
       newOnes <- names(saveNames) %in% names(neededFull)
+      # Add self to vector
       Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
         assign(sn, neededFull2[[n]], envir = .pkgEnv)
       })
       neededFull1 <- append(neededFull1[!needGet], neededFull2)
+
+
     }
 
     if (isTRUE(sort))
       neededFull1 <- lapply(neededFull1, function(x) sort(x))
+
+    neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
+      unique(rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p))))
+
+    # file-backed cache
+    if (any(needGet)) {
+      fn <- pkgDepDBFilename()
+      if (length(fn)) { #ie. using Cache mechanism
+        saveNamesOrdered <- saveNames[names(neededFull1)]
+        saveNeededFull1 <- neededFull1
+        names(saveNeededFull1) <- saveNamesOrdered
+        if (file.exists(fn)) {
+          prev <- readRDS(fn)
+          saveNeededFull1 <- c(saveNeededFull1, prev)
+          saveNeededFull1 <- saveNeededFull1[!duplicated(names(saveNeededFull1))]
+        }
+        if (exists("aaaa")) browser()
+        saveRDS(saveNeededFull1, file = fn)
+      }
+    }
+
     if (isFALSE(keepVersionNumber)) {
       neededFull1 <- lapply(neededFull1, trimVersionNumber)
     }
@@ -206,8 +255,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
   } else {
     neededFull1 <- list()
   }
-  neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
-    rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p)))
   # neededFull1 <- Map(needed = neededFull1, names = names(neededFull1), function(needed, names)
   #   rmExtraSpaces(c(names, needed)))
   neededFull1
@@ -695,7 +742,9 @@ whichToDILES <- function(which) {
     }
     mat <- cbind("Package" = dirs[filesExist], "Version" = versions, "Depends" = deps)
     if (!is.null(other)) {
-      others <- lapply(others, function(co) if (!is(co, "character")) as.character(co))
+      others <- lapply(others, function(co) {
+        if (!is(co, "character")) as.character(co) else co
+        })
       othersDF <- as.data.frame(others, stringsAsFactors = FALSE)
       mat <- cbind(mat, othersDF, stringsAsFactors = FALSE)
     }
@@ -1110,3 +1159,6 @@ pkgDepTopoSortMemoise <- function(...) {
 
   return(ret)
 }
+
+pkgDepDBFilename <- function()
+  file.path(getOptionRPackageCache(), ".pkgDepDB.rds")
