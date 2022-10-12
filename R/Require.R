@@ -261,8 +261,11 @@ Require <- function(packages, packageVersionFile,
 
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
 
-  install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = !(verbose >= 1)))
-  install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet =  !(verbose >= 0)))
+  dots <- list(...)
+  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
+                                      dots, keep.null = TRUE)
+  install_githubArgs <-  modifyList2(list(quiet = !(verbose >= 0)), install_githubArgs,
+                                     dots, keep.null = TRUE)
   libPaths <- checkLibPaths(libPaths = libPaths)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   allrepos <- c(repos, getOption("repos"))

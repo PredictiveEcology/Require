@@ -264,12 +264,14 @@ invertList <- function(l) {
 #' [`base::Reduce`], so it can handle >2 lists.
 #' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
-#' It also will handle the case where any list is a `NULL`
+#' It also will handle the case where any list is a `NULL`. Note:
+#' default `keep.null = TRUE`, which is different than `modifyList`
 #'
 #' @details
-#' Simply a convenience around
-#' `Reduce(modifyList, list(...))`, with some checks.
-#'
+#' More or less a convenience around
+#' `Reduce(modifyList, list(...))`, with some checks, and the addition of
+#' `keep.null = TRUE` by default.
+#' @inheritParams utils::modifyList
 #'
 #' @export
 #' @param ... One or more named lists.
@@ -278,10 +280,27 @@ invertList <- function(l) {
 #' modifyList2(list(a = 1), list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
-modifyList2 <- function(...) {
+modifyList2 <- function(..., keep.null = FALSE) {
   dots <- list(...)
   dots <- dots[!unlist(lapply(dots, is.null))]
-  do.call(Reduce, alist(modifyList, dots))
+  if (length(dots) > 1) {
+    for (i in seq(length(dots) - 1)) {
+      subsequentDots <- dots[-(1:2)]
+      dots <- modifyList(dots[[1]], dots[[2]], keep.null = keep.null)
+      if (length(subsequentDots))
+        dots <- append(list(dots), subsequentDots)
+    }
+  } else {
+    dots <- modifyList(dots[[1]], val = list(NULL), keep.null = keep.null)
+  }
+  # do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
+  dots
+}
+
+modifyList3 <- function(..., keep.null = TRUE) {
+  dots <- list(...)
+  dots <- dots[!unlist(lapply(dots, is.null))]
+  do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
 }
 
 #' Create link to file, falling back to making a copy if linking fails.

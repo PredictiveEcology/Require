@@ -4,21 +4,27 @@
 \alias{modifyList2}
 \title{\code{modifyList} for multiple lists}
 \usage{
-modifyList2(...)
+modifyList2(..., keep.null = FALSE)
 }
 \arguments{
 \item{...}{One or more named lists.}
+
+\item{keep.null}{ If \code{TRUE}, \code{NULL} elements in \code{val}
+    become \code{NULL} elements in \code{x}.  Otherwise, the
+    corresponding element, if present, is deleted from \code{x}. }
 }
 \description{
 This calls \code{\link[utils:modifyList]{utils::modifyList}} iteratively using
 \code{\link[base:funprog]{base::Reduce}}, so it can handle >2 lists.
 The subsequent list elements that share a name will override
 previous list elements with that same name.
-It also will handle the case where any list is a \code{NULL}
+It also will handle the case where any list is a \code{NULL}. Note:
+default \code{keep.null = TRUE}, which is different than \code{modifyList}
 }
 \details{
-Simply a convenience around
-\code{Reduce(modifyList, list(...))}, with some checks.
+More or less a convenience around
+\code{Reduce(modifyList, list(...))}, with some checks, and the addition of
+\code{keep.null = TRUE} by default.
 }
 \examples{
 modifyList2(list(a = 1), list(a = 2, b = 2))
