@@ -122,7 +122,8 @@ setMethod(
       if (any(!dirsThatExist)) {
         isExistingFile <- file.exists(path)
         if (all(isExistingFile)) {
-          message("That path is an existing file(s)")
+          messageVerbose("That path is an existing file(s)", verboseLevel = 0,
+                         verbose = getOption("Require.verbose"))
         } else {
           if (create == TRUE) {
             lapply(path[!dirsThatExist[!isExistingFile]], function(pth) {

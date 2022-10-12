@@ -4,11 +4,17 @@
 \alias{useLinuxSourceCache}
 \title{Use cache for R package compilation}
 \usage{
-useLinuxSourceCache(overwrite = FALSE)
+useLinuxSourceCache(overwrite = FALSE, verbose = getOption("Require.verbose"))
 }
 \arguments{
 \item{overwrite}{Logical. Should the existing configuration be overwritten?
 For safety, a backup copy of the old configuration is created.}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function be.
+If -1 or less, then as little verbosity as possible.
+If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
+NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
+\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
 }
 \value{
 Invoked for the side effect of copying files needed to configure \code{ccache} for R packages.

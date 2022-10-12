@@ -85,8 +85,8 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
 
   environment(shim_fun) <- shim_env
   shim_fun(unique(libPaths))
-  message(".libPaths() is now: ", paste(.libPaths(), collapse = ", "),
-          verbose = verbose, verboseLevel = 1)
+  messageVerbose(".libPaths() is now: ", paste(.libPaths(), collapse = ", "),
+                 verbose = verbose, verboseLevel = 1)
   return(invisible(oldLibPaths))
 }
 
@@ -104,7 +104,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
       }
     }
     if (any(grepl(setLibPathsStartText, readLines(".Rprofile")))) {
-      message(alreadyInRprofileMessage, verbose = verbose, verboseLevel = 1)
+      messageVerbose(alreadyInRprofileMessage, verbose = verbose, verboseLevel = 1)
     } else {
       bodyFn <- format(body(Require::setLibPaths))
       lineWCheckPath <- grepl("checkPath.normPath|checkLibPaths", bodyFn)

@@ -342,9 +342,10 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                                 which = which, keepVersionNumber = keepVersionNumber,
                                                 purge = purge)
                           else {
+                            messageVerbose(pkg,
+                                           " dependencies not found on CRAN; perhaps incomplete description? On GitHub?",
+                                           verbose = verbose, verboseLevel = 1)
                             character()
-                            if (verbose %in% 1) # covers TRUE also
-                              message(pkg, " dependencies not found on CRAN; perhaps incomplete description? On GitHub?")
                           }
                         }
                         purge <<- FALSE
@@ -479,8 +480,8 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
       a <- gsub("package:", "", a)
       pkgs <- unique(c(pkgs, a))
     } else {
-      if (verbose %in% 1) # covers TRUE also
-        message("deps is provided; useAllInSearch will be set to FALSE")
+      messageVerbose("deps is provided; useAllInSearch will be set to FALSE",
+              verbose = verbose, verboseLevel = 1)
     }
   }
 
@@ -927,9 +928,9 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
       pkgDT2 <- pkgDT2[dup == FALSE]
       differences <- setdiff(pkgDT2$Package, extractPkgName(needed))
       if (length(differences)) {
-        if (verbose %in% 1) # covers TRUE also
-          message(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
-                  paste(differences, collapse = ", "), " --) ")
+        messageVerbose(" (-- The DESCRIPTION file for ", pkg, " is incomplete; there are missing imports:\n",
+                  paste(differences, collapse = ", "), " --) ",
+                  verbose = verbose, verboseLevel = 1)
       }
     }
     needed <- pkgDT2$packageFullName

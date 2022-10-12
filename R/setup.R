@@ -155,7 +155,8 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
         unlink(lps[1], recursive = TRUE)
     }
   } else {
-    message("Project is not setup yet; nothing to do")
+    messageVerbose("Project is not setup yet; nothing to do",
+                   verbose = verbose, verboseLevel = 0)
   }
 }
 
@@ -186,7 +187,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          message("Updating version of ", pkg, " in ", RPackageFolders,
+          messageVerbose("Updating version of ", pkg, " in ", RPackageFolders,
                   verbose = verbose, verboseLevel = 1)
           unlink(toFiles)
         }
@@ -238,13 +239,14 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
 #' @return Invoked for the side effect of copying files needed to configure `ccache` for R packages.
 #'
 #' @author Dirk Eddelbuettel and Alex Chubaty
+#' @inheritParams Require
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'  useLinuxSourceCache()
 #' }
-useLinuxSourceCache <- function(overwrite = FALSE) {
+useLinuxSourceCache <- function(overwrite = FALSE, verbose = getOption("Require.verbose")) {
   if (identical(Sys.info()[["sysname"]], "Linux")) {
     hasccache <- nzchar(Sys.which("ccache"))
     if (isTRUE(hasccache)) {
@@ -257,7 +259,8 @@ useLinuxSourceCache <- function(overwrite = FALSE) {
       warning("'ccache' not found. Is it installed? Try e.g., 'sudo apt install ccache'.")
     }
   } else {
-    message("Setting up ccache for R package compilation is currently only supported on Linux.")
+    messageVerbose("Setting up ccache for R package compilation is currently only supported on Linux.",
+                   verbose = verbose, verboseLevel = 1)
   }
 
   invisible()
