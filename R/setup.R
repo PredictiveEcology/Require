@@ -1,9 +1,15 @@
 
 #' Path to (package) cache directory
 #'
+#' Sets or gets the cache directory associated with the `Require` package.
+#' @return
+#' If `create = TRUE`, the default behaviour, the cache directory will be created,
+#'   with a README placed in the folder. Otherwise, this function will just
+#'   return the path of what the cache directory would be.
+#' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
-RequireCacheDir <- function() {
+RequireCacheDir <- function(create = TRUE) {
   appName <- "R-Require"
 
   ## use cache dir following OS conventions used by rappdirs package:
@@ -19,12 +25,15 @@ RequireCacheDir <- function() {
       Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
     )
   }
-  cacheDir <- checkPath(cacheDir, create = TRUE)
+  cacheDir <- checkPath(cacheDir, create = create)
 
   readme <- file.path(cacheDir, "README")
   if (!file.exists(readme)) {
-    file.copy(system.file("cache-README", package = "Require"), readme)
+    if (isTRUE(create)) {
+      file.copy(system.file("cache-README", package = "Require"), readme)
+    }
   }
+
 
   return(cacheDir)
 }
