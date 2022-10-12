@@ -1,7 +1,4 @@
-thisFilename <- "test-2extract.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-origLibPathsAllTests <- .libPaths()
+setupInitial <- setupTest()
 
 library(Require)
 
@@ -41,7 +38,4 @@ out <- getPkgVersions("Require (>=0.0.1)")
 testit::assert({is.data.table(out)})
 testit::assert({all(c("versionSpec", "hasVersionSpec") %in% colnames(out))})
 
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)

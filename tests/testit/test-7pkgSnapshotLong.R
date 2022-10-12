@@ -1,19 +1,6 @@
-thisFilename <- "test-7pkgSnapshotLong.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-origLibPathsAllTests <- .libPaths()
+setupInitial <- setupTest()
 
-if (interactive()) {
-  library(testit)
-  library(Require)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                     "install.packages.check.source" = "never",
-                     "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = FALSE)
-
+if (.isDevTestAndInteractive) {
 
   ## Long pkgSnapshot -- issue 41
   pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
@@ -71,16 +58,11 @@ if (interactive()) {
     NnotInstalled <- 0
   }
   theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
-  if (interactive()) if (!isTRUE(theTest)) browser()
+  if (.isDevTestAndInteractive) if (!isTRUE(theTest)) browser()
   testit::assert(isTRUE(theTest))
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
 
   setLibPaths(origLibPaths)
 }
-
-try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE) # doesn't seem to keep globals from other scripts; recreate here
-# unlink(tempdir2(), recursive = TRUE)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
-try(message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m"), silent = TRUE)
+endTest(setupInitial)

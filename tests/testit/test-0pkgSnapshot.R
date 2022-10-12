@@ -1,28 +1,11 @@
-thisFilename <- "test-0pkgSnapshot.R"
-startTimeAll <- startTime <- Sys.time()
-tdOuter <- tempdir2("tests")
-try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
-message("\033[32m --------------------------------- Starting ", thisFilename, "  at: ",
-        format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
+setupInitial <- setupTest()
 
 library(Require)
 srch <- search()
 anyNamespaces <- srch[!gsub("package:", "", srch) %in%
-                        c("Require", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
-if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
+                        c("Require", "data.table", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
+if (length(anyNamespaces) > 0) browser()#stop("Please restart R before running this test")
 library(testit)
-
-origLibPathsAllTests <- .libPaths()
-
-# tmpdir <- tempdir2(Require:::.rndstr(1))
-# created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
-#
-# .libPaths(tmpdir)
-# Require("covr (==3.5.0)", require = FALSE)
-# pkgVF <- file.path(tmpdir, "packageVersions.txt")
-# aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1])
 
 tmpdir <- tempdir2(Require:::.rndstr(1))
 tmpdir2 <- tempdir2(Require:::.rndstr(1))
@@ -57,17 +40,6 @@ for (lp in unique(aa$LibPath)) {
 }
 bb <- data.table::rbindlist(bb)
 data.table::fwrite(x = bb, file = pkgVF)
-
-outOpts <- options(
-  install.packages.check.source = "never",
-  install.packages.compile.from.source = "never",
-  Require.persistentPkgEnv = TRUE,
-  Require.unloadNamespaces = TRUE)
-if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-} else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-}
 
 if (file.exists(pkgVF)) {
   fileNames <- list()
@@ -145,15 +117,4 @@ if (file.exists(pkgVF)) {
   if (NROW(anyMissing) != 0)  stop("Error 832; please contact developer")
   testit::assert(NROW(anyMissing) == 0)
 }
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-
-pkgGrep <- paste0(unlist(lapply(strsplit(names(out), " "), `[`, 1)), ".*[.]tar[.]gz", collapse = "|")
-pkgs2rm <- dir(path = getOption("Require.Home"), pattern = pkgGrep, full.names = TRUE)
-unlink(pkgs2rm)
-
-options(outOpts)
-if (exists("outOpts2")) options(outOpts2)
-
-endTime <- Sys.time()
-message("\033[32m ----------------------------------", thisFilename, ": ", format(endTime - startTime), " \033[39m")
+endTest(setupInitial)

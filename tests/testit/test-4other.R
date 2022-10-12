@@ -1,23 +1,5 @@
-thisFilename <- "test-4other.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-
+setupInitial <- setupTest()
 library(Require)
-origLibPathsAllTests <- .libPaths()
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-outOpts <- options(#"Require.verbose" = FALSE,
-                   "Require.persistentPkgEnv" = TRUE,
-                   "install.packages.check.source" = "never",
-                   "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-} else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-}
-
 # Test misspelled
 out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
 testit::assert(any(grepl("could not be installed", out)))#{out, "simpleWarning")})
@@ -47,7 +29,8 @@ if (Sys.info()["user"] == "emcintir2") {
   options("Require.RPackageCache" = TRUE,
           "Require.unloadNamespaces" = FALSE)
 }
-Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"))
+Require("data.table", install = "force", require = FALSE, libPaths = tempdir2("other"),
+        quiet = !(getOption("Require.verbose") >= 1))
 suppressWarnings(Require("Require", install = "force", require = FALSE,
                          libPaths = tempdir2("other")))
 
@@ -68,8 +51,8 @@ warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w)
 testit::assert({grepl("you will likely", warn)})
 
 origLP <- setLibPaths(tempdir2("other"), updateRprofile = FALSE)
-warn <- tryCatch(Require("data.table"), warning = function(w) w$message)
-setLibPaths(origLP, updateRprofile = FALSE)
+warn <- tryCatch(Require("data.table", require = FALSE), warning = function(w) w$message)
+silent <- setLibPaths(origLP, updateRprofile = FALSE)
 
 # Test the setLibPaths with changed .Rprofile
 origDir <- setwd(tempdir2("other"))
@@ -77,15 +60,8 @@ setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package librar
 setLibPaths() # reset it to original
 setwd(origDir)
 
-if (!identical(origLibPathsAllTests, .libPaths())) {
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-}
 
-options(outOpts)
-if (exists("outOpts2")) options(outOpts2)
 ## setup
-# assign("aaaa", 1, envir = .GlobalEnv)
-# options(RequireOptions())
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
@@ -105,9 +81,9 @@ if (identical(RPackageCacheSysEnv, "FALSE") ) {
 secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
 opt22 <- options("Require.RPackageCache" = secondTry)
 ccc <- checkPath(secondTry, create = TRUE)
-setup(setupTestDir, RPackageCache = ccc) ## TODO: warnings in file() cannot open DESCRIPTION files
+out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
 testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
-setupOff()
+out2222 <- capture.output(setupOff())
 testit::assert(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
 
 ooo <- options(Require.RPackageCache = TRUE)
@@ -127,7 +103,4 @@ if (identical(RPackageCacheSysEnv, "FALSE")) {
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
 
-
-options(opt22)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)

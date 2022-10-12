@@ -1,24 +1,5 @@
-thisFilename <- "test-6pkgDep.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+setupInitial <- setupTest()
 
-origLibPathsAllTests <- .libPaths()
-
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options(# "Require.verbose" = FALSE,
-                   "Require.persistentPkgEnv" = TRUE,
-                   "install.packages.check.source" = "never",
-                   "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-} else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-}
-
-#library(Require)
 a <- pkgDep("Require", recursive = TRUE)
 testit::assert({length(a) == 1})
 testit::assert({!isTRUE(all.equal(lapply(a, trimVersionNumber), a))})
@@ -53,8 +34,6 @@ testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), d$Require))})
 pkg3 <- c(pkg2, "plyr")
 e <- pkgDep(pkg3) # GitHub, local, and CRAN packages
 testit::assert({length(e) == 3})
-print(e[[pkg]])
-print(d[[pkg]])
 testit::assert({isTRUE(all.equal(e[[pkg]], d[[pkg]]))})
 testit::assert({isTRUE(all.equal(d$Require, e$Require))})
 
@@ -71,9 +50,6 @@ b <- pkgDep("Require", which = "most", recursive = FALSE)
 d <- pkgDep("Require", which = TRUE, recursive = FALSE)
 e <- pkgDep("Require", recursive = FALSE)
 testit::assert({isTRUE(all.equal(a, b))})
-print(a)
-print("##")
-print(d)
 testit::assert({isTRUE(all.equal(a, d))})
 testit::assert({!isTRUE(all.equal(a, e))})
 # aAlt <- pkgDepAlt("Require", which = "all", recursive = FALSE, purge = TRUE)
@@ -99,7 +75,8 @@ knownRevDeps <- lapply(knownRevDeps, function(krd) intersect(krd, installedPkgs)
 test <- unlist(lapply(names(out), function(p) {
   knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
 }))
-if (interactive()) {
+
+if (.isDevTestAndInteractive) {
   testit::assert({length(test) == 0})
 }
 
@@ -110,14 +87,4 @@ repr[["RSQLite"]] <- NULL
 reprWORSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
 testit::assert(identical(sort(reprSimple$Recursive$Remaining), sort(reprWORSQLIte)))
 
-
-
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-options(outOpts)
-unlink("~/._R", recursive = TRUE)
-tdOuter <- tempdir2("tests")
-# unlink(tempdir2(), recursive = TRUE)
-if (exists("outOpts2")) options(outOpts2)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)
