@@ -9,6 +9,7 @@ if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
   Sys.setenv("RunAllRequireTests"="yes")
 }
 
+# Can emulate CRAN by setting Sys.setenv("Require.checkAsCRAN" = "true"); source()
 if (identical(Sys.getenv("Require.checkAsCRAN"), "true")) {
   .isDevTest <- FALSE
   .isDevTestAndInteractive <- .isDevTest
@@ -16,6 +17,7 @@ if (identical(Sys.getenv("Require.checkAsCRAN"), "true")) {
   .isDevTest <- Sys.getenv("RunAllRequireTests") == "yes"
   .isDevTestAndInteractive <- interactive() && .isDevTest
 }
+if (isFALSE(.isDevTest)) try(unlink(RequireCacheDir(create = FALSE), recursive = TRUE))
 
 # Put this in a function so we can wrap it in a try, so that we can revert everything
 runTests <- function() {
