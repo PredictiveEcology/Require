@@ -1573,11 +1573,15 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       ipa <- modifyList2(install.packagesArgs, dots, keep.null = TRUE)
       ipa <- modifyList2(list(quiet = !(verbose >= 1)), ipa, keep.null = TRUE)
       ipa <- append(ipa, list(repos = NULL))
+      ipa <- append(list(pkgs = unname(p)), ipa)
+
+      if (isTRUE(ipa$quiet)) {
+        messSupp <- capture.output(type = "message", do.call(install.packages, ipa))
+      } else {
+        do.call(install.packages, ipa)
+      }
 
       # The install
-      do.call(install.packages,
-              # using ap meant that it was messing up the src vs bin paths
-              append(list(pkgs = unname(p)), ipa))
 
       # check installed
       pkgsInstalled <- dir(.libPaths()[1])

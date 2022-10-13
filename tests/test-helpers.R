@@ -21,7 +21,7 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
   env <- whereInStack("ee")
   startTime <- Sys.time()
   Require:::messageVerbose("\033[32m --------------------------------- Starting ",
-                           thisFilename,"  at: ",format(startTime),"---------------------------\033[39m",
+                           thisFilename,"  at: ",format(startTime, digits = 2),"---------------------------\033[39m",
                            verbose = verbose, verboseLevel = 0)
   Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
   Require:::messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
@@ -41,7 +41,7 @@ endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
   thisFilename <- setupInitial$thisFilename
   endTime <- Sys.time()
   ee <- getInStack("ee")
-  ee[[thisFilename]] <- format(endTime - setupInitial$startTime)
+  ee[[thisFilename]] <- format(endTime - setupInitial$startTime, digits = 2)
   Require:::messageVerbose("\033[32m ----------------------------------",
                            thisFilename, ": ", ee[[thisFilename]], " \033[39m",
                            verboseLevel = -1, verbose = verbose)

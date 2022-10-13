@@ -4,8 +4,10 @@ library(Require)
 srch <- search()
 anyNamespaces <- srch[!gsub("package:", "", srch) %in%
                         c("Require", "data.table", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
-if (length(anyNamespaces) > 0) browser()#stop("Please restart R before running this test")
+if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
 library(testit)
+
+quiet <- !(getOption("Require.verbose") >= 1)
 
 tmpdir <- tempdir2(Require:::.rndstr(1))
 tmpdir2 <- tempdir2(Require:::.rndstr(1))
@@ -13,11 +15,11 @@ created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
 setLibPaths(tmpdir, standAlone = TRUE)
 tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
-Require(c("remotes (==2.4.1)", "testit (==0.12)"), require = FALSE)
+Require(c("remotes (==2.4.1)", "testit (==0.12)"), require = FALSE, quiet = quiet)
 
 setLibPaths(tmpdir2, standAlone = TRUE)
 tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
-Require(c("covr (==3.5.0)"), require = FALSE)
+Require(c("covr (==3.5.0)"), require = FALSE, quiet = quiet)
 
 .libPaths(c(tmpdirActual, tmpdir2Actual))
 # .libPaths(c(tmpdir, tmpdir2))
@@ -84,8 +86,7 @@ if (file.exists(pkgVF)) {
 
   ## There might be more than one version
   Rpath <- Sys.which("Rscript")
-  quiet <- !(getOption("Require.verbose") >= 1)
-  if (length(localBinsFull) == 1) {
+  if (length(localBinsFull) == 1) { # already have the binary in the Cache
     if (Require:::isWindows())
       system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1],
                     "'), quiet = ", quiet,", type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
@@ -93,8 +94,15 @@ if (file.exists(pkgVF)) {
       system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1],
                     "'), quiet = ", quiet,", lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
   } else {
-    system(paste0(Rpath, " -e \"install.packages(c('data.table'), lib ='",
-                  .libPaths()[1], "', quiet = ", quiet,", repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
+    # For some reason, when using Rscript, the RStudio Package Manager repository the Rscript install doesn't use binary
+    pkg <- "data.table"
+    withCallingHandlers(install.packages(pkg, lib = .libPaths()[1],
+                                         quiet = quiet, repos = getOption('repos')[["CRAN"]]),
+                        warning = function(w) {
+      system(paste0(Rpath, " -e \"install.packages(c('",pkg,"'), lib ='",
+                    .libPaths()[1], "', quiet = ", quiet,", repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
+                          invokeRestart("muffleWarning")
+    })
   }
 
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
