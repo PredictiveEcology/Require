@@ -25,12 +25,15 @@ RequireCacheDir <- function(create = TRUE) {
       Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
     )
   }
-  cacheDir <- checkPath(cacheDir, create = create)
+  cacheDir <- normPath(cacheDir)
 
-  readme <- file.path(cacheDir, "README")
-  if (!file.exists(readme)) {
-    if (isTRUE(create)) {
-      file.copy(system.file("cache-README", package = "Require"), readme)
+  if (isTRUE(create)) {
+    cacheDir <- checkPath(cacheDir, create = create)
+    readme <- file.path(cacheDir, "README")
+    if (!file.exists(readme)) {
+      if (isTRUE(create)) {
+        file.copy(system.file("cache-README", package = "Require"), readme)
+      }
     }
   }
 
