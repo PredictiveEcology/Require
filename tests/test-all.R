@@ -1,7 +1,8 @@
 library(testit)
 suppressPackageStartupMessages(library(Require)) # this will trigger data.table options to be set so that we have them part of our "before" snapshot
 envOrig <- Sys.getenv()
-source("test-helpers.R")
+
+source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 
 
 if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
