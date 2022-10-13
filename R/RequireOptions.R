@@ -22,6 +22,7 @@
 #' \describe{
 #'   \item{`RPackageCache`}{
 #'     Default: `getOptionRPackageCache()`, which must be either a path or a logical.
+#'     To turn off package caching, set this to `FALSE`.
 #'     This can be set using an environment
 #'     variable e.g. `Sys.setenv(Require.RPackageCache = "somePath")`, or
 #'     `Sys.setenv(Require.RPackageCache = "TRUE")`; if that is not

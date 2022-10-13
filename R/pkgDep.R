@@ -96,7 +96,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
 
     needGet <- unlist(lapply(neededFull1, is.null))
-    if (exists("aaaa")) browser()
     if (any(needGet)) {
       fn <- pkgDepDBFilename()
       if (length(fn)) { # user may not be using Cache
@@ -239,7 +238,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
           saveNeededFull1 <- c(saveNeededFull1, prev)
           saveNeededFull1 <- saveNeededFull1[!duplicated(names(saveNeededFull1))]
         }
-        if (exists("aaaa")) browser()
         saveRDS(saveNeededFull1, file = fn)
       }
     }
@@ -267,6 +265,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         repos = repos, includeBase = FALSE, verbose = getOption("Require.verbose")) {
   names(packages) <- packages
   pkgsNoVersion <- extractPkgName(packages)
+  purge <- dealWithCache(purge, checkAge = TRUE)
   if (!isTRUE(includeBase)) {
     isBase <- pkgsNoVersion %in% .basePkgs
     packagesToCheck <- packages[!isBase]
@@ -294,7 +293,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                                                   pkgsNoVersion = pkgNoVersion,
                                                                   which = which,
                                                                   keepVersionNumber = keepVersionNumber,
-                                                                  purge = purge,
+                                                                  purge = FALSE,
                                                                   repos = repos,
                                                                   verbose = verbose))))
 
@@ -955,12 +954,17 @@ dealWithCache <- function(purge, checkAge = TRUE) {
     .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
     .pkgEnv[["startTime"]] <- Sys.time()
   }
+  if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
+    unlink(RequireCacheDir(FALSE), recursive = TRUE)
+    recreate <- RequireCacheDir()
+    recreate <- getOptionRPackageCache()
+  }
 
   if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
   if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge)
     .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
 
-  purge
+  FALSE
 }
 
 .grepTooManySpaces <- " {2,}"
@@ -1072,6 +1076,7 @@ pkgDepInnerMemoise <- function(...) {
     if (length(packages) > 1) {
       dots2 <- dots
       dots2[[1]] <- NULL
+      dots2 <- modifyList2(dots2, list(purge = FALSE))
       if (!is.null(names(packages))) names(packages) <- NULL
       ret <- lapply(packages, function(p) do.call(pkgDepInnerMemoise, append(list(p), dots2)))
       ret <- unlist(ret, recursive = FALSE)
@@ -1161,5 +1166,7 @@ pkgDepTopoSortMemoise <- function(...) {
   return(ret)
 }
 
-pkgDepDBFilename <- function()
-  file.path(getOptionRPackageCache(), ".pkgDepDB.rds")
+pkgDepDBFilename <- function() {
+  if (!is.null(getOptionRPackageCache()))
+    file.path(RequireCacheDir(), ".pkgDepDB.rds")
+}

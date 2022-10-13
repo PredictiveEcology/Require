@@ -1200,7 +1200,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
           cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
                                   error = function(x)
                                     available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
-          if (!is.null(RequirePkgCacheDir())) {
+          if (!is.null(getOptionRPackageCache())) {
             checkPath(dirname(fn), create = TRUE)
             saveRDS(cap[[type]], file = fn)
           }
@@ -1644,7 +1644,6 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
                  verbose = verbose, verboseLevel = 0)
 
   if (any("Local" %in% toInstall$installFrom)) {
-    # if (any(toInstall$Package %in% "data.table")) browser()
     install.packagesArgs[["INSTALL_opts"]] <- appendBuild(toInstall, "Local",
                                                           install.packagesArgs[["INSTALL_opts"]])
     pkgDT <- installLocal(pkgDT, toInstall, dots, install.packagesArgs,
@@ -2565,7 +2564,7 @@ getOptionRPackageCache <- function() {
   try <- 1
   while (try < 3) {
     if (isTRUE(curVal)) {
-      curVal <- RequirePkgCacheDir()
+      curVal <- RequirePkgCacheDir(FALSE)
       break
     } else if (isFALSE(curVal)) {
       curVal <- NULL
@@ -2574,7 +2573,7 @@ getOptionRPackageCache <- function() {
       if (identical("default", curVal)) {
         fromEnvVars <- Sys.getenv("Require.RPackageCache")
         if (nchar(fromEnvVars) == 0  ) {
-          curVal <- RequirePkgCacheDir()
+          curVal <- RequirePkgCacheDir(FALSE)
           break
         } else {
           try <- try + 1
@@ -2591,6 +2590,9 @@ getOptionRPackageCache <- function() {
         break
       }
     }
+  }
+  if (!is.null(curVal)) {
+    checkPath(curVal, create = TRUE)
   }
   curVal
 }

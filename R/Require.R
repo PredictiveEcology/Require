@@ -286,7 +286,7 @@ Require <- function(packages, packageVersionFile,
   origDTThreads <- data.table::setDTthreads(1)
   on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
 
-  purge <- dealWithCache(purge)
+  purge <- dealWithCache(purge) # this purges it; returns FALSE
   which <- whichToDILES(doDeps)
 
   suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
@@ -402,7 +402,7 @@ Require <- function(packages, packageVersionFile,
     names(packagesFullNameOrder) <- packageNamesOrig
 
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-      packages <- getPkgDeps(packages, which = which, purge = FALSE)
+      packages <- getPkgDeps(packages, which = which, purge = purge)
     }
 
 

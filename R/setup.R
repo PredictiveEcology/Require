@@ -3,13 +3,18 @@
 #'
 #' Sets or gets the cache directory associated with the `Require` package.
 #' @return
-#' If `create = TRUE`, the default behaviour, the cache directory will be created,
+#' If `!is.null(getOptionRPackageCache())`, i.e., a cache path exists,
+#' the cache directory will be created,
 #'   with a README placed in the folder. Otherwise, this function will just
 #'   return the path of what the cache directory would be.
 #' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
-RequireCacheDir <- function(create = TRUE) {
+RequireCacheDir <- function(create) {
+
+  if (missing(create))
+    create <- !is.null(getOptionRPackageCache())
+
   appName <- "R-Require"
 
   ## use cache dir following OS conventions used by rappdirs package:
@@ -25,6 +30,7 @@ RequireCacheDir <- function(create = TRUE) {
       Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
     )
   }
+
   cacheDir <- normPath(cacheDir)
 
   if (isTRUE(create)) {
@@ -43,8 +49,12 @@ RequireCacheDir <- function(create = TRUE) {
 
 #' @export
 #' @rdname RequireCacheDir
-RequirePkgCacheDir <- function() {
-  pkgCacheDir <- checkPath(file.path(RequireCacheDir(), "packages", rversion()), create = TRUE)
+RequirePkgCacheDir <- function(create) {
+  if (missing(create))
+    create <- !is.null(getOptionRPackageCache())
+  pkgCacheDir <- normPath(file.path(RequireCacheDir(create), "packages", rversion()))
+  if (isTRUE(create))
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
 
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
