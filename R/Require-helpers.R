@@ -1356,8 +1356,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   needSomeSrc <- if (isWindows()) {
     rep(FALSE, NROW(pkgDT))
   } else {
-    anyFromSrc <- installPkgNames %in% sourcePkgs()
-    anyFromSrc
+    installPkgNames %in% sourcePkgs()
   }
   installPkgNamesList <- list()
   reposList <- list()
@@ -1411,8 +1410,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     # if (any(grepl("--build", c(dots, install.packagesArgs))))#, unlist(buildList)))))
     #   copyTarballsToCache(installPkgNames, TRUE)
 
-
-    # pkgDT <- updateInstalled(pkgDT, installPkgNames, warns)
+    # Don't need to copy to cache as cache was the destdir
     permDen <- grepl("Permission denied", names(warns))
     packagesDen <- gsub("^.*[\\/](.*).dll.*$", "\\1", names(warns))
     if (any(permDen)) {
