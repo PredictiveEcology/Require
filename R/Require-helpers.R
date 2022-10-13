@@ -1305,7 +1305,9 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
                 ipa <- modifyList2(list(quiet = !(verbose >= 1)), ipa, keep.null = TRUE)
                 ipa <- append(ipa, list(repos = NULL))
                 curPkgs <- toIn$Package
-                do.call(install.packages, append(list(pkgs = installPkgNamesInner), ipa))
+                ipa <- append(list(pkgs = installPkgNamesInner), ipa)
+                installPackagesWithQuiet(ipa)
+                # do.call(install.packages, ipa)
               })
 
   pkgDT
@@ -1388,7 +1390,8 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
 
             ipa <- modifyList2(list(quiet = !(verbose >= 1)), ipa, keep.null = TRUE)
             ipaFull <- append(list(pkgs = installPkgNames, repos = repos), ipa)
-            out <- do.call(install.packages, ipaFull)
+            out <- installPackagesWithQuiet(ipaFull)
+            # out <- do.call(install.packages, ipaFull)
           })
       # Sanity check -- try again for the ones that failed
       ip <- as.data.table(installed.packages())
@@ -1515,9 +1518,11 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
     urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
     urlsFail <- urlsOuter[urlsOuter == "Fail"]
     ipa <- modifyList2(list(quiet = !(verbose >= 1)), ipa, keep.null = TRUE)
+    ipa <- append(list(pkgs = unname(urlsSuccess)), ipa)
 
     # The install
-    do.call(install.packages, append(list(pkgs = unname(urlsSuccess)), ipa))
+    installPackagesWithQuiet(ipa)
+    # do.call(install.packages, ipa)
 
     installedVers <- suppressWarnings(try(DESCRIPTIONFileVersionV(
       file.path(.libPaths()[1], names(urlsSuccess), "DESCRIPTION"), purge = TRUE),
@@ -1574,11 +1579,7 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       ipa <- append(ipa, list(repos = NULL))
       ipa <- append(list(pkgs = unname(p)), ipa)
 
-      if (isTRUE(ipa$quiet)) {
-        messSupp <- capture.output(type = "message", do.call(install.packages, ipa))
-      } else {
-        do.call(install.packages, ipa)
-      }
+      installPackagesWithQuiet(ipa)
 
       # The install
 
@@ -2179,7 +2180,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   warns <- list()
   # Need this internal wCH because need to know which one failed
   withCallingHandlers(
-    do.call(install.packages, opts2),
+    installPackagesWithQuiet(opts2),
+    # do.call(install.packages, opts2),
     warning = function(w) {
       warns <<- appendToWarns(w = w$message, warns = warns, Packages = packageName)
     }
@@ -2733,4 +2735,13 @@ needBuild <- function(pkgDT) {
 
 availablePackagesCachedPath <- function(repos, type) {
   file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, ".availablePackages.rds")
+}
+
+installPackagesWithQuiet <- function(ipa) {
+  if (isTRUE(ipa$quiet)) {
+    messSupp <- capture.output(type = "message", do.call(install.packages, ipa))
+  } else {
+    do.call(install.packages, ipa)
+  }
+
 }

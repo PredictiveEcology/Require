@@ -86,7 +86,8 @@ runTests <- function() {
     envCur <- Sys.getenv()
     envNeedRm <- envCur[!names(envCur) %in% names(envOrig)]
     envNeedRevert <- envCur[match(names(envOrig), names(envCur) )] != envOrig
-    if (any(envNeedRevert)) {
+    print("envNeedRevert")
+    if (any(na.omit(envNeedRevert))) {
       envNeedRevert <- envOrig[envNeedRevert]
     }
     Sys.unsetenv(names(envNeedRm))
