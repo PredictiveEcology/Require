@@ -51,13 +51,6 @@
 #'     names indicated here will default to a standard CRAN repository, forcing a source
 #'     install. See also `spatialPkgs` option, which does the same for spatial packages.
 #'   }
-#'   \item{`persistentPkgEnv`}{
-#'     Default: `FALSE`. (ADVANCED USE) `Require` stashes a lot of information in a
-#'     hidden environment, located at `Require:::.pkgEnv`. This gets reset at each
-#'     restart of R and each reload of Require. To make the stashes more persistent,
-#'     set this option to `TRUE`. A file will be placed at
-#'     `file.path("~", "._Require_pkgEnv.rdata")`, which will be restored at package load
-#'   }
 #'   \item{`purge`}{
 #'     Default: `FALSE`. If set to (almost) all internal caches used by `Require`
 #'     will be deleted and rebuilt. This should not generally be necessary as it will
@@ -102,7 +95,7 @@ RequireOptions <- function() {
   list(Require.buildBinaries = TRUE,
        Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
        Require.packageVersionFile = "packageVersions.txt",
-       Require.persistentPkgEnv = FALSE, # TRUE
+       # Require.persistentPkgEnv = FALSE, # TRUE
        Require.RPackageFolders = NULL,
        Require.RPackageCache = "default", # RequirePkgCacheDir(),
        Require.spatialPkgs = c("lwgeom", "raster", "rgdal", "rgeos", "s2", "sf", "sp", "terra", "units"),

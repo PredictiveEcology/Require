@@ -30,6 +30,7 @@ The following options are likely of interest to most users:
 \describe{
 \item{\code{RPackageCache}}{
 Default: \code{getOptionRPackageCache()}, which must be either a path or a logical.
+To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment
 variable e.g. \code{Sys.setenv(Require.RPackageCache = "somePath")}, or
 \code{Sys.setenv(Require.RPackageCache = "TRUE")}; if that is not

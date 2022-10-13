@@ -4,7 +4,7 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv("CRANCACHE_DISABLE" = TRUE)
   outOpts <- options(
-    "Require.persistentPkgEnv" = TRUE,
+    # "Require.persistentPkgEnv" = TRUE,
     "install.packages.check.source" = "never",
     "install.packages.compile.from.source" = "never",
     "Require.unloadNamespaces" = TRUE)

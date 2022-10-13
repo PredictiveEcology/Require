@@ -5,9 +5,9 @@
 \alias{RequirePkgCacheDir}
 \title{Path to (package) cache directory}
 \usage{
-RequireCacheDir(create = TRUE)
+RequireCacheDir(create = FALSE)
 
-RequirePkgCacheDir()
+RequirePkgCacheDir(create = TRUE)
 }
 \arguments{
 \item{create}{A logical indicating whether the path should
