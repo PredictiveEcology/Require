@@ -2741,7 +2741,10 @@ availablePackagesCachedPath <- function(repos, type) {
 
 installPackagesWithQuiet <- function(ipa) {
   if (isTRUE(ipa$quiet)) {
-    messSupp <- capture.output(type = "message", do.call(install.packages, ipa))
+    messSupp2 <- capture.output(
+      messSupp <- capture.output(
+        type = "message", do.call(install.packages, ipa))
+    )
   } else {
     do.call(install.packages, ipa)
   }
