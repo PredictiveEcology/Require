@@ -1460,7 +1460,6 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
   onMRANvec <- earliestDateOnMRAN > .earliestMRANDate
   earliestDateOnMRAN[!onMRANvec] <- as.Date(.earliestMRANDate) + 10
   onMRAN <- earliestDateOnMRAN > .earliestMRANDate & unname( isWindows() | isMacOSX() )
-
   # prevWD <- setwd(tempdir2(.rndstr(1)))
   # on.exit(setwd(prevWD), add = TRUE)
 

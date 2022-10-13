@@ -19,7 +19,7 @@ Require(c("remotes (==2.4.1)", "testit (==0.12)"), require = FALSE, quiet = quie
 
 setLibPaths(tmpdir2, standAlone = TRUE)
 tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
-Require(c("covr (==3.5.0)"), require = FALSE, quiet = quiet)
+Require(c("covr (==3.6.0)"), require = FALSE, quiet = quiet)
 
 .libPaths(c(tmpdirActual, tmpdir2Actual))
 # .libPaths(c(tmpdir, tmpdir2))

@@ -6,7 +6,7 @@ checks$start[["envVars"]] <- Sys.getenv()
 envOrig <- checks$start[["envVars"]]
 
 if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
-  Sys.setenv("Require_RunAllTests"="yes")
+  Sys.setenv("RequireRunAllTests"="yes")
 }
 if (identical(Sys.getenv("Require.checkAsCRAN"), "true")) {
   .isDevTest <- FALSE
