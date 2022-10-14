@@ -1,5 +1,6 @@
 setupInitial <- setupTest()
 
+
 if (.isDevTestAndInteractive) {
   tmpdir <- file.path(tempdir2(basename(setupInitial$thisFilename)), paste0("RequireTmp", sample(1e5, 1)))
 
@@ -266,7 +267,7 @@ if (.isDevTestAndInteractive) {
     runTests(have, pkg)
     endTime <- Sys.time()
     message("\033[32m --- ",i," --------------------------",
-            basename(setupInitial$thisFilename), ": ", format(endTime - startTime)," \033[39m")
+            basename(setupInitial$thisFilename), ": ", format(endTime - setupInitial$startTime)," \033[39m")
 
   }
 
