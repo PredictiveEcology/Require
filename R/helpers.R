@@ -283,25 +283,27 @@ invertList <- function(l) {
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
 modifyList2 <- function(..., keep.null = FALSE) {
   dots <- list(...)
-  areLists <- unlist(lapply(dots, is, "list"))
-  if (all(areLists)) {
-    dots <- dots[!unlist(lapply(dots, is.null))]
-    if (length(dots) > 1) {
-      for (i in seq(length(dots) - 1)) {
-        subsequentDots <- dots[-(1:2)]
-        dots <- modifyList(dots[[1]], dots[[2]], keep.null = keep.null)
-        if (length(subsequentDots))
-          dots <- append(list(dots), subsequentDots)
+  if (length(dots) > 0) {
+    areLists <- unlist(lapply(dots, is, "list"))
+    if (all(areLists)) {
+      dots <- dots[!unlist(lapply(dots, is.null))]
+      if (length(dots) > 1) {
+        for (i in seq(length(dots) - 1)) {
+          subsequentDots <- dots[-(1:2)]
+          dots <- modifyList(dots[[1]], dots[[2]], keep.null = keep.null)
+          if (length(subsequentDots))
+            dots <- append(list(dots), subsequentDots)
+        }
+      } else {
+        dots <- modifyList(dots[[1]], val = list(NULL), keep.null = keep.null)
       }
     } else {
-      dots <- modifyList(dots[[1]], val = list(NULL), keep.null = keep.null)
-    }
-  } else {
-    if (all(!areLists)) {
-      out <- Reduce(c, dots)#(toRevert1, toRevert2, toRevert3)
-      dots <- out[!duplicated(names(out), out)]
-    } else {
-      stop("All elements must be named lists or named vectors")
+      if (all(!areLists)) {
+        out <- Reduce(c, dots)#(toRevert1, toRevert2, toRevert3)
+        dots <- out[!duplicated(names(out), out)]
+      } else {
+        stop("All elements must be named lists or named vectors")
+      }
     }
   }
   # do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
