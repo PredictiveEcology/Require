@@ -5,16 +5,17 @@
 \alias{RequirePkgCacheDir}
 \title{Path to (package) cache directory}
 \usage{
-RequireCacheDir(create = FALSE)
+RequireCacheDir(create)
 
-RequirePkgCacheDir(create = TRUE)
+RequirePkgCacheDir(create)
 }
 \arguments{
 \item{create}{A logical indicating whether the path should
 be created if it does not exist. Default is \code{FALSE}.}
 }
 \value{
-If \code{create = TRUE}, the default behaviour, the cache directory will be created,
+If \code{!is.null(getOptionRPackageCache())}, i.e., a cache path exists,
+the cache directory will be created,
 with a README placed in the folder. Otherwise, this function will just
 return the path of what the cache directory would be.
 }
