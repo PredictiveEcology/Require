@@ -1153,6 +1153,7 @@ installedVers <- function(pkgDT) {
         } )
         installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
         set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
+        installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error")) stop("Error number 234; please contact developers")
         ip[!is.na(VersionFromPV), Version := VersionFromPV]

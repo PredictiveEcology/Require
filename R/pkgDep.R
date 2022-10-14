@@ -253,8 +253,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
   } else {
     neededFull1 <- list()
   }
-  # neededFull1 <- Map(needed = neededFull1, names = names(neededFull1), function(needed, names)
-  #   rmExtraSpaces(c(names, needed)))
   neededFull1
 }
 
