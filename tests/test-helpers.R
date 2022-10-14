@@ -1,6 +1,10 @@
 setupTest <- function(verbose = getOption("Require.verbose")) {
   opts <- options()
 
+  # cannot open file 'startup.Rs': No such file or directory
+  # suggested solution https://stackoverflow.com/a/27994299/3890027
+  Sys.setenv("R_TESTS" = "")
+
   Sys.setenv("R_REMOTES_UPGRADE" = "never")
   Sys.setenv("CRANCACHE_DISABLE" = TRUE)
   outOpts <- options(
@@ -8,6 +12,7 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
     "install.packages.check.source" = "never",
     "install.packages.compile.from.source" = "never",
     "Require.unloadNamespaces" = TRUE)
+
 
   if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")

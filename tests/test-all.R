@@ -1,5 +1,5 @@
 # Sys.setenv("Require.checkAsCRAN" = "true")
-
+# source("tests/test-all.R")
 checks <- list()
 checks$start <- list()
 checks$start[["getwd"]] <- getwd()
@@ -10,14 +10,12 @@ envOrig <- checks$start[["envVars"]]
 if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
   Sys.setenv("RequireRunAllTests"="yes")
 }
-if (identical(Sys.getenv("Require.checkAsCRAN"), "true")) {
-  .isDevTest <- FALSE
-  .isDevTestAndInteractive <- .isDevTest
-} else {
-  .isDevTest <- Sys.getenv("RequireRunAllTests") == "yes"
-  .isDevTestAndInteractive <- interactive() && .isDevTest
-}
-if (!.isDevTestAndInteractive) # i.e., CRAN
+# GitHub Actions, R CMD check locally
+isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true"
+# Actually interactive
+isDevAndInteractive <- interactive() && isDev
+
+if (!isDevAndInteractive) # i.e., CRAN
   Sys.setenv(Require.RPackageCache = "FALSE")
 
 suppressPackageStartupMessages(library(Require)) # this will trigger data.table options to be set so that we have them part of our "before" snapshot
@@ -33,7 +31,7 @@ checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 
 # Can emulate CRAN by setting Sys.setenv("Require.checkAsCRAN" = "true"); source()
-# if (isFALSE(.isDevTest)) {
+# if (isFALSE(isDev)) {
 #   try(unlink(RequireCacheDir(), recursive = TRUE))
 # }
 
@@ -48,13 +46,13 @@ runTests <- function(checks) {
   try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
 
   optsListNew <- list()
-  verbosity <- if (.isDevTestAndInteractive) 1 else -2
+  verbosity <- if (isDevAndInteractive) 1 else -2
     # options(Require.RPackageCache = FALSE)
 
   if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
     origRepos <- options(repos = c(CRAN = Require:::srcPackageURLOnCRAN))
 
-  optsListPrevLinux <- if (.isDevTestAndInteractive) Require::setLinuxBinaryRepo() else NULL
+  optsListPrevLinux <- if (isDevAndInteractive) Require::setLinuxBinaryRepo() else NULL
 
   optsListNew <- Require::modifyList2(optsListNew, list(Require.verbose = verbosity),
                                       keep.null = TRUE)
@@ -103,8 +101,8 @@ runTests <- function(checks) {
     # 3 options
     options(toRevert)
 
-    # 4 Cache
-    if (!.isDevTest) {
+    # 4 Cache -- remove everything that was added in this test
+    if (!isDev) {
       if (length(checks$start[["cacheDir"]]) == 0)
         try(unlink(checks$prior[["cacheDir"]], recursive = TRUE))
       else
@@ -112,12 +110,20 @@ runTests <- function(checks) {
     }
 
     # 5 Sys.env
-    ma <- match(names(envOrig), names(envCur) )
-    envNeedRevert <- envCur[ma] != envOrig
-    if (any(na.omit(envNeedRevert))) {
-      envNeedRevert <- envOrig[envNeedRevert]
+    envVarsChanged <- c("CRANCACHE_DISABLE", "R_REMOTES_UPGRADE", "Require.RPackageCache",
+                        "RequireRunAllTests", "R_TESTS")
+    envVarsChangedNeedUnset <- names(envCur)[names(envCur) %in% envVarsChanged]
+    if (length(envVarsChangedNeedUnset))
+      Sys.unsetenv(envVarsChangedNeedUnset)
+
+    if (FALSE) { # This will try to unset all env vars; this is too broad as there seem to be many that are set by GA
+      ma <- match(names(envOrig), names(envCur) )
+      envNeedRevert <- envCur[ma] != envOrig
+      if (any(na.omit(envNeedRevert))) {
+        envNeedRevert <- envOrig[envNeedRevert]
+      }
+      Sys.unsetenv(names(envNeedRm))
     }
-    Sys.unsetenv(names(envNeedRm))
 
     # 6 tempdir2
     unlink(Require::tempdir2(), recursive = TRUE)
@@ -132,30 +138,30 @@ runTests <- function(checks) {
 
     Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 
-    if (.isDevTestAndInteractive)
+    if (isDevAndInteractive)
       saveRDS(checks, file = ".checks.RDS")
 
     # Check everything is reset to original
-    nam <- names(checks$start)
-    compare <- lapply(nam, function(x) {
-      a <- checks$start[[x]]
-      if (!is.null(names(a))) a <- a[order(names(a))]
-      b <- checks$post[[x]]
-      if (!is.null(names(b))) b <- b[order(names(b))]
-      ae <- all.equal(a, b)
-      if (!isTRUE(ae)) {
-        print(paste(x, ae))
-        print("##################")
-        print(checks$start[[x]])
-        print("##################")
-        print(checks$post[[x]])
-        print("##################")
-      }
-      ae
+    if (isDev) {
+      nam <- names(checks$start)
+      hashes <- "########################################################################"
+      compare <- lapply(nam, function(x) {
+        a <- checks$start[[x]]
+        if (!is.null(names(a))) a <- a[order(names(a))]
+        b <- checks$post[[x]]
+        if (!is.null(names(b))) b <- b[order(names(b))]
+        ae <- all.equal(a, b)
+        if (!isTRUE(ae)) {
+          print(paste(x, hashes))
+          try(print(setdiffNamed(a, b, missingFill = NULL)), silent = TRUE)
+          try(print(setdiffNamed(a, b, missingFill = "")), silent = TRUE)
+        }
+        ae
       })
-    theTest <- all(unlist(compare))
-    if (!isTRUE(theTest)) browser()
-    testit::assert()
+      theTest <- all(unlist(compare))
+    }
+    # if (!isTRUE(theTest)) browser()
+    # testit::assert()
 
   }, add = TRUE)
 

@@ -1,6 +1,6 @@
 setupInitial <- setupTest()
 
-if (.isDevTestAndInteractive) {
+if (isDevAndInteractive) {
 
   ## Long pkgSnapshot -- issue 41
   pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
@@ -58,7 +58,7 @@ if (.isDevTestAndInteractive) {
     NnotInstalled <- 0
   }
   theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
-  if (.isDevTestAndInteractive) if (!isTRUE(theTest)) browser()
+  if (isDevAndInteractive) if (!isTRUE(theTest)) browser()
   testit::assert(isTRUE(theTest))
 
   testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)

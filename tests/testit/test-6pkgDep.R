@@ -76,7 +76,7 @@ test <- unlist(lapply(names(out), function(p) {
   knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
 }))
 
-if (.isDevTestAndInteractive) {
+if (isDevAndInteractive) {
   testit::assert({length(test) == 0})
 }
 

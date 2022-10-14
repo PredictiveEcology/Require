@@ -1,6 +1,6 @@
 setupInitial <- setupTest()
 
-if (.isDevTestAndInteractive) {
+if (isDevAndInteractive) {
   projectDir <- Require:::tempdir2(Require:::.rndstr(1))
   pkgDir <- file.path(projectDir, "R")
   setLibPaths(pkgDir, standAlone = TRUE)

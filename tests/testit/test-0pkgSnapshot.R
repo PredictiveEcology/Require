@@ -51,8 +51,6 @@ if (file.exists(pkgVF)) {
   fileNames[["fn0"]][["txt"]] <- pkgVF
 
   try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
 
   origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
 

@@ -13,12 +13,10 @@ repos <- Require:::getCRANrepos("")
 testit::assert({is.character(repos)})
 testit::assert({nchar(repos) > 0})
 
-options("Require.purge" = FALSE)
-
-# cannot open file 'startup.Rs': No such file or directory
-# suggested solution https://stackoverflow.com/a/27994299/3890027
-Sys.setenv("R_TESTS" = "")
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
+# # cannot open file 'startup.Rs': No such file or directory
+# # suggested solution https://stackoverflow.com/a/27994299/3890027
+# Sys.setenv("R_TESTS" = "")
+# Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
@@ -46,7 +44,7 @@ remove.packages("fpCompare", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
-    .isDevTestAndInteractive || # interactive
+    isDevAndInteractive || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
   Require::checkPath(dir2, create = TRUE)
@@ -185,7 +183,7 @@ testit::assert({length(out) == 0})
 # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
 #                                 install = "force"),
 #                  error = function(x) x)
-if (.isDevTestAndInteractive) {
+if (isDevAndInteractive) {
   warn <- tryCatch({
     out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
   }, warning = function(x) x)

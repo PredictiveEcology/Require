@@ -1,7 +1,7 @@
 setupInitial <- setupTest()
 
 
-if (.isDevTestAndInteractive) {
+if (isDevAndInteractive) {
   tmpdir <- file.path(tempdir2(basename(setupInitial$thisFilename)), paste0("RequireTmp", sample(1e5, 1)))
 
   dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
