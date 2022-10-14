@@ -138,7 +138,11 @@ runTests <- function(checks) {
     # Check everything is reset to original
     nam <- names(checks$start)
     compare <- lapply(nam, function(x) {
-      ae <- all.equal(checks$start[[x]], checks$post[[x]])
+      a <- checks$start[[x]]
+      if (!is.null(names(a))) a <- a[order(names(a))]
+      b <- checks$post[[x]]
+      if (!is.null(names(b))) b <- b[order(names(b))]
+      ae <- all.equal(a, b)
       if (!isTRUE(ae)) {
         print(paste(x, ae))
         print("##################")
