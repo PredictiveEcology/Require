@@ -280,32 +280,28 @@ invertList <- function(l) {
 #' @examples
 #' modifyList2(list(a = 1), list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
-#' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
+#' modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2), list(a = 3, c = list(1:10)))
 modifyList2 <- function(..., keep.null = FALSE) {
   dots <- list(...)
   if (length(dots) > 0) {
+    dots <- dots[!unlist(lapply(dots, is.null))]
     areLists <- unlist(lapply(dots, is, "list"))
     if (all(areLists)) {
-      dots <- dots[!unlist(lapply(dots, is.null))]
-      if (length(dots) > 1) {
-        for (i in seq(length(dots) - 1)) {
-          subsequentDots <- dots[-(1:2)]
-          dots <- modifyList(dots[[1]], dots[[2]], keep.null = keep.null)
-          if (length(subsequentDots))
-            dots <- append(list(dots), subsequentDots)
-        }
-      } else {
-        dots <- modifyList(dots[[1]], val = list(NULL), keep.null = keep.null)
+      # Create a function where I can pass `keep.null` and also pass to Reduce, which is binary only
+      ml <- function(x, val) {
+        modifyList(x, val, keep.null = keep.null)
       }
+      dots <- Reduce(ml, dots)
     } else {
       if (all(!areLists)) {
-        out <- Reduce(c, dots)#(toRevert1, toRevert2, toRevert3)
+        out <- Reduce(c, dots)
         dots <- out[!duplicated(names(out), out)]
       } else {
         stop("All elements must be named lists or named vectors")
       }
     }
   }
+
   # do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
   dots
 }
