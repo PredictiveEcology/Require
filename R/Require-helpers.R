@@ -937,7 +937,8 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
       set(toInstall, NULL, "installSafeGroups", as.integer(factor(toInstall$installSafeGroups)))
       maxGroup <- max(toInstall$installSafeGroups)
       if (maxGroup > 1)
-        messageVerbose("Installing in groups to maintain dependencies: ", paste(pkgsCleaned, collapse = ", "),
+        messageVerbose("Installing in groups to maintain dependencies: ",
+                       paste(sort(pkgsCleaned), collapse = ", "),
                        verbose = verbose, verboseLevel = 1)
 
       # This is necessary so that tests don't have the "R_TESTS" set to a path
