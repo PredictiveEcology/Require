@@ -1,3 +1,5 @@
+# Sys.setenv("Require.checkAsCRAN" = "true")
+
 checks <- list()
 checks$start <- list()
 checks$start[["getwd"]] <- getwd()
@@ -27,12 +29,13 @@ origOptions <- checks$start[["options"]]
 checks$start[["cacheDir"]] <- dir(Require::RequireCacheDir(), recursive = TRUE)
 checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 
+# helper files for this test
 source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 
-
-
 # Can emulate CRAN by setting Sys.setenv("Require.checkAsCRAN" = "true"); source()
-if (isFALSE(.isDevTest)) try(unlink(RequireCacheDir(), recursive = TRUE))
+# if (isFALSE(.isDevTest)) {
+#   try(unlink(RequireCacheDir(), recursive = TRUE))
+# }
 
 # Put this in a function so we can wrap it in a try, so that we can revert everything
 runTests <- function(checks) {
@@ -63,17 +66,8 @@ runTests <- function(checks) {
 
   on.exit({
     currOptions <- options()
-    changedOptions1 <- setdiff(names(currOptions), names(origOptions)) # new option
-    changedOptions2 <- setdiff(names(origOptions), names(currOptions)) # option set to NULL
-    changedOptions3 <- vapply(names(origOptions), FUN.VALUE = logical(1), function(nam)
-                              identical(currOptions[nam], origOptions[nam]), USE.NAMES = TRUE) # changed values of existing
-    changedOptions3 <- origOptions[names(changedOptions3[!changedOptions3])]
-    toRevert1 <- mapply(x = changedOptions1, function(x) NULL, USE.NAMES = TRUE)
-    toRevert2 <- origOptions[changedOptions2]
-    toRevert3 <- origOptions[names(changedOptions3)]
-    toRevert <- modifyList2(toRevert1, toRevert2, toRevert3)
+    toRevert <- Require:::setdiffList(currOptions, origOptions)
     toRevert <- toRevert[grep("^datatable", names(toRevert), value = TRUE, invert = TRUE)] # don't revert data.table options
-
 
     envCur <- Sys.getenv()
     envNeedRm <- envCur[!names(envCur) %in% names(envOrig)]
@@ -111,7 +105,10 @@ runTests <- function(checks) {
 
     # 4 Cache
     if (!.isDevTest) {
-      try(unlink(RequireCacheDir(), recursive = TRUE))
+      if (length(checks$start[["cacheDir"]]) == 0)
+        try(unlink(checks$prior[["cacheDir"]], recursive = TRUE))
+      else
+        try(unlink(setdiff(checks$start[["cacheDir"]], checks$prior[["cacheDir"]])))
     }
 
     # 5 Sys.env
@@ -140,9 +137,21 @@ runTests <- function(checks) {
 
     # Check everything is reset to original
     nam <- names(checks$start)
-    compare <- lapply(nam, function(x)
-      all.equal(checks$start[[x]], checks$post[[x]]))
-    testit::assert(all(unlist(compare)))
+    compare <- lapply(nam, function(x) {
+      ae <- all.equal(checks$start[[x]], checks$post[[x]])
+      if (!isTRUE(ae)) {
+        print(paste(x, ae))
+        print("##################")
+        print(checks$start[[x]])
+        print("##################")
+        print(checks$post[[x]])
+        print("##################")
+      }
+      ae
+      })
+    theTest <- all(unlist(compare))
+    if (!isTRUE(theTest)) browser()
+    testit::assert()
 
   }, add = TRUE)
 

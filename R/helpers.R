@@ -388,3 +388,17 @@ R_TESTSomit <- function() {
   }
   return(origR_TESTS)
 }
+
+
+setdiffList <- function(l1, l2) {
+  changedOptions1 <- setdiff(names(l1), names(l2)) # new option
+  changedOptions2 <- setdiff(names(l2), names(l1)) # option set to NULL
+  changedOptions3 <- vapply(names(l2), FUN.VALUE = logical(1), function(nam)
+    identical(l1[nam], l2[nam]), USE.NAMES = TRUE) # changed values of existing
+  changedOptions3 <- l2[names(changedOptions3[!changedOptions3])]
+  toRevert1 <- mapply(x = changedOptions1, function(x) NULL, USE.NAMES = TRUE)
+  toRevert2 <- l2[changedOptions2]
+  toRevert3 <- l2[names(changedOptions3)]
+  toRevert <- modifyList2(toRevert1, toRevert2, toRevert3)
+  toRevert
+}
