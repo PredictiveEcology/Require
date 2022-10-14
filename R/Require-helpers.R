@@ -153,7 +153,8 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA_integer_)
         if (!all(is.na(pDT$inequality))) {
           whChange <- which(!is.na(pDT$inequality))
-          whCheckVersion <- which((pDT$repoLocation != "GitHub") & !is.na(pDT$inequality))
+          whCheckVersion <- which(!is.na(pDT$inequality))
+          # whCheckVersion <- which((pDT$repoLocation != "GitHub") & !is.na(pDT$inequality))
           set(pDT, whCheckVersion, "compareVersionAvail",
               .compareVersionV(pDT$AvailableVersion[whCheckVersion], pDT$versionSpec[whCheckVersion]))
           # pDT[!is.na(inequality) ,
@@ -187,39 +188,12 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         #   }]
 
         pDT[Package %in% .basePkgs, correctVersionAvail := TRUE]
-
-        # pDT$correctVersionAvail %in% FALSE &
-        #   pDT$hasVersionSpec %in% TRUE &
-        #   pDT$repoLocation %in% "CRAN"
-        # takenOffCran <- is.na(pDT$inequality) &
-        #   (!(pDT$correctVersionAvail | is.na(pDT$correctVersionAvail)) |
-        #       is.na(pDT$AvailableVersion)) &
-        #   !pDT$Package %in% .basePkgs & pDT$repoLocation == "CRAN"
-        # possiblyArchivedPkg <- pDT$Package[takenOffCran]
-
         # If package has both a binary and source available on CRAN, there will be 2 entries
         pDT[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
         # # CRAN before GitHub, if "correctVersionAvail" is TRUE
-        setorderv(pDT, c("correctVersionAvail", "repoLocation"), order = c(-1L, 1L), na.last = TRUE) # put TRUE first
+        setorderv(pDT, c("correctVersionAvail", "repoLocation"), order = c(1L, 1L), na.last = TRUE) # put TRUE first
         pDT[, keep := min(.I), by = "Package"]
-        pDT <- pDT[pDT$keep,]
-
-        # pDT[, keep :=
-        #                      if (isTRUE(any(correctVersionAvail, na.rm = TRUE))) {
-        #                        min(.I)
-        #                      } else if (all(is.na(correctVersionAvail))) {
-        #                        min(.I)
-        #                      } else {
-        #                        .I#"c"#NA_integer_ # The FALSE -- i.e need older packages
-        #                      }
-        #                    , by = "Package"]
-        # pDT <- pDT[unique(pDT$keep), ]
-        # pDT <- pDT[, .SD[1], by = c("Package")] # Take first of multiples; but should do nothing
-        # pDT[, N := .N, by = "Package"]
-        #if (any(pDT[correctVersionAvail == TRUE]$N > 1)) {
-        #  pDT <- pDT[correctVersionAvail == TRUE, .SD[1], by = "packageFullName"] # take smaller one, as it will be binary
-        #  pDT[N > 1, type := ifelse(is.na(Archs), "source", "binary")]
-        #}
+        pDT <- pDT[unique(pDT$keep),]
         set(pDT, NULL, "keep", NULL)
       }
 
