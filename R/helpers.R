@@ -283,16 +283,26 @@ invertList <- function(l) {
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
 modifyList2 <- function(..., keep.null = FALSE) {
   dots <- list(...)
-  dots <- dots[!unlist(lapply(dots, is.null))]
-  if (length(dots) > 1) {
-    for (i in seq(length(dots) - 1)) {
-      subsequentDots <- dots[-(1:2)]
-      dots <- modifyList(dots[[1]], dots[[2]], keep.null = keep.null)
-      if (length(subsequentDots))
-        dots <- append(list(dots), subsequentDots)
+  areLists <- unlist(lapply(dots, is, "list"))
+  if (all(areLists)) {
+    dots <- dots[!unlist(lapply(dots, is.null))]
+    if (length(dots) > 1) {
+      for (i in seq(length(dots) - 1)) {
+        subsequentDots <- dots[-(1:2)]
+        dots <- modifyList(dots[[1]], dots[[2]], keep.null = keep.null)
+        if (length(subsequentDots))
+          dots <- append(list(dots), subsequentDots)
+      }
+    } else {
+      dots <- modifyList(dots[[1]], val = list(NULL), keep.null = keep.null)
     }
   } else {
-    dots <- modifyList(dots[[1]], val = list(NULL), keep.null = keep.null)
+    if (all(!areLists)) {
+      out <- Reduce(c, dots)#(toRevert1, toRevert2, toRevert3)
+      dots <- out[!duplicated(names(out), out)]
+    } else {
+      stop("All elements must be named lists or named vectors")
+    }
   }
   # do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
   dots
@@ -390,15 +400,42 @@ R_TESTSomit <- function() {
 }
 
 
-setdiffList <- function(l1, l2) {
-  changedOptions1 <- setdiff(names(l1), names(l2)) # new option
-  changedOptions2 <- setdiff(names(l2), names(l1)) # option set to NULL
-  changedOptions3 <- vapply(names(l2), FUN.VALUE = logical(1), function(nam)
-    identical(l1[nam], l2[nam]), USE.NAMES = TRUE) # changed values of existing
-  changedOptions3 <- l2[names(changedOptions3[!changedOptions3])]
-  toRevert1 <- mapply(x = changedOptions1, function(x) NULL, USE.NAMES = TRUE)
-  toRevert2 <- l2[changedOptions2]
-  toRevert3 <- l2[names(changedOptions3)]
-  toRevert <- modifyList2(toRevert1, toRevert2, toRevert3)
-  toRevert
+#' Like `setdiff`, but takes into account names
+#'
+#' This will identify the elements in `l1` that are not in `l2`. If `missingFill`
+#' is provided, then elements that are in `l2`, but not in `l1` will be returned,
+#' assigning `missingFill` to their values. This might be `NULL` or `""`, i.e., some
+#' sort of empty value. This function will work on named lists, named vectors and likely
+#' on other named classes.
+#'
+#' @return
+#' A vector or list of the elements in `l1` that are not in `l2`, and optionally the
+#' elements of `l2` that are not in `l1`, with values set to `missingFill`
+#'
+#' @details
+#' There are 3 types of differences that might occur with named elements: 1. a new
+#' named element, 2. an removed named element, and 3. a modified named element. This function
+#' captures all of these. In the case of unnamed elements, e.g., `setdiff`, the first
+#' two are not seen as differences, if the values are not different.
+#'
+#' @param l1 A named list or named vector
+#' @param l2 A named list or named vector (must be same class as `l1`)
+#' @param missingFill A value, such as `NULL` or `""` or `"missing"` that will be
+#'   given to the elements returned, that are in `l2`, but not in `l1`
+#'
+#' @export
+setdiffNamed <- function(l1, l2, missingFill) {
+  changed1 <- setdiff(names(l2), names(l1)) # new option
+  changed2 <- setdiff(names(l1), names(l2)) # option set to NULL
+  changed3 <- vapply(names(l1), FUN.VALUE = logical(1), function(nam)
+    identical(l2[nam], l1[nam]), USE.NAMES = TRUE) # changed values of existing
+  changed3 <- l1[names(changed3[!changed3])]
+  dif <- list()
+  if (!missing(missingFill)) {
+    dif[[1]] <- mapply(x = changed1, function(x) missingFill, USE.NAMES = TRUE)
+  }
+  dif[[2]] <- l1[changed2]
+  dif[[3]] <- l1[names(changed3)]
+  dif <- do.call(modifyList2, dif)
+  dif
 }

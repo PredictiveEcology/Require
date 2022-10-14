@@ -66,7 +66,7 @@ runTests <- function(checks) {
 
   on.exit({
     currOptions <- options()
-    toRevert <- Require:::setdiffList(currOptions, origOptions)
+    toRevert <- Require::setdiffNamed(currOptions, origOptions, missingFill = NULL)
     toRevert <- toRevert[grep("^datatable", names(toRevert), value = TRUE, invert = TRUE)] # don't revert data.table options
 
     envCur <- Sys.getenv()
