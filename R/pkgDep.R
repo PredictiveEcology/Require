@@ -277,88 +277,90 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
     pkgsNoVersionToCheck <- pkgsNoVersion
   }
 
-  desc_paths <- getDescPath(packagesToCheck, libPath)
-  needed <- Map(desc_path = desc_paths, pkg = packagesToCheck,
-                pkgNoVersion = pkgsNoVersionToCheck,
-                function(desc_path, pkg, pkgNoVersion) {
-                  if (!file.exists(desc_path)) {
-                    pkgDT <- parseGitHub(pkg, verbose = verbose)
-                    if ("GitHub" %in% pkgDT$repoLocation) {
-                      needed <- getGitHubDepsMemoise(pkg, pkgDT, which, purge)
+  # desc_paths <- getDescPath(packagesToCheck, libPath)
+  needed <- Map(# desc_path = desc_paths,
+    pkg = packagesToCheck,
+    pkgNoVersion = pkgsNoVersionToCheck,
+    function(# desc_path,
+      pkg, pkgNoVersion) {
+      # if (!file.exists(desc_path)) {
+      pkgDT <- parseGitHub(pkg, verbose = verbose)
+      if ("GitHub" %in% pkgDT$repoLocation) {
+        needed <- getGitHubDepsMemoise(pkg, pkgDT, which, purge)
 
-                    } else {
-                      if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"),
-                                         verbose = verbose)) {
-                        needed <- unique(unname(unlist(pkgDepCRANMemoise(pkg,
-                                                                  pkgsNoVersion = pkgNoVersion,
-                                                                  which = which,
-                                                                  keepVersionNumber = keepVersionNumber,
-                                                                  purge = FALSE,
-                                                                  repos = repos,
-                                                                  verbose = verbose))))
+      } else {
+        if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"),
+                           verbose = verbose)) {
+          needed <- unique(unname(unlist(pkgDepCRANMemoise(pkg,
+                                                           pkgsNoVersion = pkgNoVersion,
+                                                           which = which,
+                                                           keepVersionNumber = keepVersionNumber,
+                                                           purge = FALSE,
+                                                           repos = repos,
+                                                           verbose = verbose))))
 
-                        if (is.null(needed)) { # essesntially, failed
-                          pkgName <- extractPkgName(pkg)
-                          td <- tempdir2(pkgName)
-                          packageTD <- file.path(td, pkgName)
-                          if (!dir.exists(packageTD)) {
-                            messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgName,
-                                      "; downloading tar.gz", verbose = verbose, verboseLevel = 1)
-                            verNum <- extractVersionNumber(pkg)
-                            if (is.na(verNum)) {
-                              ava <- archiveVersionsAvailable(pkgName, repos = repos)
-                              dt <- if (is(ava, "list"))
-                                rbindlist(lapply(ava, as.data.table, keep.rownames = "packageURL"))
-                              else
-                                as.data.table(ava, keep.rownames = "packageURL")
-                              colNamesToSortOn <- intersect(colnames(dt), "mtime")
-                              if (length(colNamesToSortOn))
-                                data.table::setorderv(dt, "mtime") # order it so last one is the most recent one
-                              packageURL <- if (NROW(dt)) tail(dt$packageURL, 1) else character()
-                            } else {
-                              pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
-                              packageURL <- file.path(pkgName, pkgFilename)
-                              dt <- numeric()
-                            }
-                            if (!is.null(packageURL)) {
-                              if (endsWith(packageURL, "tar.gz")) {
-                                url <- file.path(repos, srcContrib, "/Archive", packageURL)
-                                url2 <- file.path(repos, srcContrib, basename(packageURL))
-                                tf <- tempfile()
-                                haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
-                                  tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
-                                if (file.exists(tf)) {
-                                  untar(tarfile = tf, exdir = td)
-                                  filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
-                                  filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
-                                  unlink(filesToDel, recursive = TRUE)
-                                }
-                              }
-                            }
-                          }
-                          needed <- if (dir.exists(packageTD))
-                            DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"),
-                                                which = which, keepVersionNumber = keepVersionNumber,
-                                                purge = purge)
-                          else {
-                            messageVerbose(pkg,
-                                           " dependencies not found on CRAN; perhaps incomplete description? On GitHub?",
-                                           verbose = verbose, verboseLevel = 1)
-                            character()
-                          }
-                        }
-                        purge <<- FALSE
-                        needed
-                      } else {
-                        needed <- NULL
-                        needed
-                      }
-                    }
-                  } else {
-                    needed <- DESCRIPTIONFileDeps(desc_path, which = which, keepVersionNumber = keepVersionNumber)
+          if (is.null(needed)) { # essesntially, failed
+            pkgName <- extractPkgName(pkg)
+            td <- tempdir2(pkgName)
+            packageTD <- file.path(td, pkgName)
+            if (!dir.exists(packageTD)) {
+              messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgName,
+                             "; downloading tar.gz", verbose = verbose, verboseLevel = 1)
+              verNum <- extractVersionNumber(pkg)
+              if (is.na(verNum)) {
+                ava <- archiveVersionsAvailable(pkgName, repos = repos)
+                dt <- if (is(ava, "list"))
+                  rbindlist(lapply(ava, as.data.table, keep.rownames = "packageURL"))
+                else
+                  as.data.table(ava, keep.rownames = "packageURL")
+                colNamesToSortOn <- intersect(colnames(dt), "mtime")
+                if (length(colNamesToSortOn))
+                  data.table::setorderv(dt, "mtime") # order it so last one is the most recent one
+                packageURL <- if (NROW(dt)) tail(dt$packageURL, 1) else character()
+              } else {
+                pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
+                packageURL <- file.path(pkgName, pkgFilename)
+                dt <- numeric()
+              }
+              if (!is.null(packageURL)) {
+                if (endsWith(packageURL, "tar.gz")) {
+                  url <- file.path(repos, srcContrib, "/Archive", packageURL)
+                  url2 <- file.path(repos, srcContrib, basename(packageURL))
+                  tf <- tempfile()
+                  haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
+                    tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
+                  if (file.exists(tf)) {
+                    untar(tarfile = tf, exdir = td)
+                    filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
+                    filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
+                    unlink(filesToDel, recursive = TRUE)
                   }
-                  needed
-                })
+                }
+              }
+            }
+            needed <- if (dir.exists(packageTD))
+              DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"),
+                                  which = which, keepVersionNumber = keepVersionNumber,
+                                  purge = purge)
+            else {
+              messageVerbose(pkg,
+                             " dependencies not found on CRAN; perhaps incomplete description? On GitHub?",
+                             verbose = verbose, verboseLevel = 1)
+              character()
+            }
+          }
+          purge <<- FALSE
+          needed
+        } else {
+          needed <- NULL
+          needed
+        }
+      }
+      # } else {
+      #  needed <- DESCRIPTIONFileDeps(desc_path, which = which, keepVersionNumber = keepVersionNumber)
+      # }
+      needed
+    })
   if (!isTRUE(includeBase)) {
     needed1 <- append(needed, packagesBase)
     needed <- needed1[match(names(packages), names(needed1))]
@@ -964,7 +966,7 @@ dealWithCache <- function(purge, checkAge = TRUE) {
   if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge)
     .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- new.env(parent = emptyenv())
 
-  FALSE
+  purge
 }
 
 .grepTooManySpaces <- " {2,}"
@@ -1068,6 +1070,8 @@ pkgDepCRANMemoise <- function(...) {
 pkgDepInnerMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
+    if (isTRUE(dots$purge) && exists("pkgDepInner", envir = .pkgEnv))
+      rm(list = "pkgDepInner", envir = .pkgEnv)
     if (!exists("pkgDepInner", envir = .pkgEnv, inherits = FALSE))
       .pkgEnv$pkgDepInner <- new.env()
     ret <- NULL
