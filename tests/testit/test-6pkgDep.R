@@ -23,6 +23,8 @@ pkg2 <- c(pkg, "Require")
 d <- pkgDep(pkg2) # GitHub package and local packages
 testit::assert({length(d) == 2})
 # Dependencies changed... remotes removed
+print(setdiff(a$Require, "remotes"))
+print(d$Require)
 testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), d$Require))})
 
 # dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
