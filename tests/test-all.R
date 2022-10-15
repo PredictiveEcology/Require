@@ -48,7 +48,7 @@ tdOuter <- Require::tempdir2("tests")
 try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
 
 optsListNew <- list()
-verbosity <- if (isDevAndInteractive) 1 else -2
+verbosity <- if (isDev) 1 else -2
 # options(Require.RPackageCache = FALSE)
 
 if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
