@@ -96,7 +96,8 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
 
     if ("Version" %in% colnames(pkgDT)) {
       theNAVersions <- is.na(pkgDT$Version)
-      whNOTNAVersions <- which(!theNAVersions)
+      NOTNAVersions <- !theNAVersions & !pkgDT$hasHEAD
+      whNOTNAVersions <- which(NOTNAVersions)
       set(pkgDT, NULL, "correctVersion", NA)
       if (all(theNAVersions)) {
         set(pkgDT, NULL, "compareVersion", NA)
@@ -104,7 +105,7 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
         set(pkgDT, whNOTNAVersions, "compareVersion",
             .compareVersionV(pkgDT$Version[whNOTNAVersions], pkgDT$versionSpec[whNOTNAVersions]))
         # pkgDT[!is.na(Version), compareVersion := .compareVersionV(Version, versionSpec)]
-        wh <- which(!theNAVersions & pkgDT$hasVersionSpec == TRUE)
+        wh <- which(NOTNAVersions & pkgDT$hasVersionSpec == TRUE)
         set(pkgDT, wh, "correctVersion",
             .evalV(.parseV(text = paste(pkgDT$compareVersion[wh], pkgDT$inequality[wh], "0"))))
         # pkgDT[whNOTNAVersions & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
@@ -153,7 +154,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         set(pDT, NULL, c("compareVersionAvail", "correctVersionAvail"), NA_integer_)
         if (!all(is.na(pDT$inequality))) {
           whChange <- which(!is.na(pDT$inequality))
-          whCheckVersion <- which(!is.na(pDT$inequality))
+          whCheckVersion <- which(!is.na(pDT$inequality) & !pDT$hasHEAD)
           # whCheckVersion <- which((pDT$repoLocation != "GitHub") & !is.na(pDT$inequality))
           set(pDT, whCheckVersion, "compareVersionAvail",
               .compareVersionV(pDT$AvailableVersion[whCheckVersion], pDT$versionSpec[whCheckVersion]))
@@ -191,7 +192,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         # If package has both a binary and source available on CRAN, there will be 2 entries
         pDT[correctVersionAvail == TRUE, N := .N, by = "packageFullName"]
         # # CRAN before GitHub, if "correctVersionAvail" is TRUE
-        setorderv(pDT, c("correctVersionAvail", "repoLocation"), order = c(1L, 1L), na.last = TRUE) # put TRUE first
+        setorderv(pDT, c("hasHEAD", "correctVersionAvail", "repoLocation"), order = c(-1L, 1L, 1L), na.last = TRUE) # put TRUE first
         pDT[, keep := min(.I), by = "Package"]
         pDT <- pDT[unique(pDT$keep),]
         set(pDT, NULL, "keep", NULL)
@@ -395,7 +396,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
 
       # do GitHub second
       githubNeedInstall <- #!pDT$correctVersion %in% FALSE &
-        pDT$installed %in% FALSE & pDT$repoLocation %in% "GitHub"
+        (pDT$installed %in% FALSE | pDT$hasHEAD) & pDT$repoLocation %in% "GitHub"
       if (any(githubNeedInstall)) {
         set(pDT, NULL, "tmpOrder", seq(NROW(pDT)))
         needInstallInd <- githubNeedInstall %in% TRUE # deals with NAs
@@ -410,6 +411,7 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         # whGH <- which(pDT$repoLocation == "GitHub")
         # if (length(whGH)) {
         set(pDT, whNeedInstall, "AvailableVersion", DESCRIPTIONFileVersionV(pDT$DESCFile[whNeedInstall]))
+        pDT[hasHEAD %in% TRUE, `:=`(versionSpec = AvailableVersion, inequality = ">=")]
         # pDT[repoLocation == "GitHub", AvailableVersion := DESCRIPTIONFileVersionV(DESCFile)]
         set(pDT, whNeedInstall, "compareVersionAvail", .compareVersionV(pDT$AvailableVersion[whNeedInstall], pDT$versionSpec[whNeedInstall]))
         # pDT[repoLocation == "GitHub",
@@ -420,6 +422,17 @@ getAvailable <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
         set(pDT, NULL, c("url", "DESCFile"), NULL)
 
       }
+
+      if (any(pDT$hasHEAD)) {
+        toUninstall <- pDT$hasHEAD %in% TRUE & pDT$correctVersionAvail > 0 & pDT$installed %in% TRUE &
+          pDT$AvailableVersion != pDT$Version
+        pkgsToUninstall <- pDT$Package[toUninstall]
+        if (length(pkgsToUninstall)) {
+          suppressMessages(remove.packages(pkgsToUninstall))
+          set(pDT, which(toUninstall), "installed", FALSE)
+        }
+      }
+
 
       pkgDT <- pDT
       if (any(possiblyArchived)) {
@@ -2724,4 +2737,11 @@ installPackagesWithQuiet <- function(ipa) {
     do.call(install.packages, ipa)
   }
 
+}
+
+#' @importFrom utils remove.packages
+checkHEAD <- function(pkgDT) {
+  HEADgrep <- " *\\(HEAD\\)"
+  set(pkgDT, NULL, "hasHEAD", grepl(HEADgrep, pkgDT$packageFullName))
+  pkgDT
 }

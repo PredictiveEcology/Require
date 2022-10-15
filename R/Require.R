@@ -410,6 +410,8 @@ Require <- function(packages, packageVersionFile,
     if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
 
     pkgDT <- toPkgDT(packages, deepCopy = TRUE)
+    pkgDT <- checkHEAD(pkgDT)
+
     # identify the packages that were asked by user to load -- later dependencies will be in table too
     # some cases, original was without version, but due to a dependency that does have a version,
     # it is no longer the same as orig package name
@@ -651,3 +653,4 @@ messageFollowingPackagesIncorrect <- "The following packages did not get install
 messagePkgSnapshotMissing <- "The pkgSnapshot appears to be missing"
 
 NoPkgsSupplied <- "No packages supplied"
+
