@@ -158,7 +158,7 @@ runTests <- function(checks) {
         }
         ae
       })
-      theTest <- all(unlist(compare))
+      # theTest <- all(unlist(compare))
     }
     # if (!isTRUE(theTest)) browser()
     # testit::assert()
