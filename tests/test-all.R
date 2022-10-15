@@ -1,4 +1,5 @@
 # Sys.setenv("Require.checkAsCRAN" = "true")
+# Sys.setenv("Require.testAsInteractive" = "false")
 # source("tests/test-all.R")
 checks <- list()
 checks$start <- list()
@@ -11,7 +12,8 @@ if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
   Sys.setenv("RequireRunAllTests"="yes")
 }
 # GitHub Actions, R CMD check locally
-isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true"
+isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true" &&
+  Sys.getenv("Require.testAsInteractive") != "false"
 # Actually interactive
 isDevAndInteractive <- interactive() && isDev
 
@@ -137,9 +139,6 @@ runTests <- function(checks) {
     checks$post[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 
     Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
-
-    if (isDevAndInteractive)
-      saveRDS(checks, file = ".checks.RDS")
 
     # Check everything is reset to original
     if (FALSE) {

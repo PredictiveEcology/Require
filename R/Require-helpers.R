@@ -2,7 +2,7 @@ utils::globalVariables(c(
   c("..colsKeep", "..colsToNAfill", ".I", ".N", "Archs", "AvailableVersion",
     "correctVersion", "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup",
     "filepath", "github", "groupCRANtogether", "groupCRANtogetherChange",
-    "groupCRANtogetherDif", "hasVersionSpec", "i.neededFiles", "inequality",
+    "groupCRANtogetherDif", "hasHEAD", "hasVersionSpec", "i.neededFiles", "inequality",
     "installFromFac", "installOrder", "installResult", "isGitPkg",
     "keep", "keep2", "lastRow", "localFileName", "localType", "maxVers",
     "mtime", "N", "Names", "neededFiles", "needLaterDate", "nextRow",
