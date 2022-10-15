@@ -142,23 +142,25 @@ runTests <- function(checks) {
       saveRDS(checks, file = ".checks.RDS")
 
     # Check everything is reset to original
-    if (isDev) {
-      nam <- names(checks$start)
-      hashes <- "########################################################################"
-      compare <- lapply(nam, function(x) {
-        a <- checks$start[[x]]
-        if (!is.null(names(a))) a <- a[order(names(a))]
-        b <- checks$post[[x]]
-        if (!is.null(names(b))) b <- b[order(names(b))]
-        ae <- all.equal(a, b)
-        if (!isTRUE(ae)) {
-          print(paste(x, hashes))
-          try(print(setdiffNamed(a, b, missingFill = NULL)), silent = TRUE)
-          try(print(setdiffNamed(a, b, missingFill = "")), silent = TRUE)
-        }
-        ae
-      })
-      # theTest <- all(unlist(compare))
+    if (FALSE) {
+      if (isDev) {
+        nam <- names(checks$start)
+        hashes <- "########################################################################"
+        compare <- lapply(nam, function(x) {
+          a <- checks$start[[x]]
+          if (!is.null(names(a))) a <- a[order(names(a))]
+          b <- checks$post[[x]]
+          if (!is.null(names(b))) b <- b[order(names(b))]
+          ae <- all.equal(a, b)
+          if (!isTRUE(ae)) {
+            print(paste(x, hashes))
+            try(print(setdiffNamed(a, b, missingFill = NULL)), silent = TRUE)
+            try(print(setdiffNamed(a, b, missingFill = "")), silent = TRUE)
+          }
+          ae
+        })
+        # theTest <- all(unlist(compare))
+      }
     }
     # if (!isTRUE(theTest)) browser()
     # testit::assert()
