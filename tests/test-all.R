@@ -1,6 +1,6 @@
-# Sys.setenv("Require.checkAsCRAN" = "true")
-# Sys.setenv("Require.testAsInteractive" = "false")
-# source("tests/test-all.R")
+# Sys.setenv("Require.checkAsCRAN" = "true") # set this to test as if it is CRAN (short and silent)
+# Sys.setenv("Require.testAsInteractive" = "false") # set this to test as if GitHub Actions (short and loud)
+# source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
 checks <- list()
 checks$start <- list()
 checks$start[["getwd"]] <- getwd()
@@ -12,10 +12,9 @@ if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
   Sys.setenv("RequireRunAllTests"="yes")
 }
 # GitHub Actions, R CMD check locally
-isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true" &&
-  Sys.getenv("Require.testAsInteractive") != "false"
+isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true"
 # Actually interactive
-isDevAndInteractive <- interactive() && isDev
+isDevAndInteractive <- interactive() && isDev && Sys.getenv("Require.testAsInteractive") != "false"
 
 if (!isDevAndInteractive) # i.e., CRAN
   Sys.setenv(Require.RPackageCache = "FALSE")
