@@ -30,6 +30,7 @@ The following options are likely of interest to most users:
 \describe{
 \item{\code{RPackageCache}}{
 Default: \code{getOptionRPackageCache()}, which must be either a path or a logical.
+To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment
 variable e.g. \code{Sys.setenv(Require.RPackageCache = "somePath")}, or
 \code{Sys.setenv(Require.RPackageCache = "TRUE")}; if that is not
@@ -57,13 +58,6 @@ from Source on Unix-alikes. Since there are repositories that offer binary
 packages builds for Linux (e.g., RStudio Package Manager), the vector of package
 names indicated here will default to a standard CRAN repository, forcing a source
 install. See also \code{spatialPkgs} option, which does the same for spatial packages.
-}
-\item{\code{persistentPkgEnv}}{
-Default: \code{FALSE}. (ADVANCED USE) \code{Require} stashes a lot of information in a
-hidden environment, located at \code{Require:::.pkgEnv}. This gets reset at each
-restart of R and each reload of Require. To make the stashes more persistent,
-set this option to \code{TRUE}. A file will be placed at
-\code{file.path("~", "._Require_pkgEnv.rdata")}, which will be restored at package load
 }
 \item{\code{purge}}{
 Default: \code{FALSE}. If set to (almost) all internal caches used by \code{Require}

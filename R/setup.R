@@ -1,9 +1,20 @@
 
 #' Path to (package) cache directory
 #'
+#' Sets or gets the cache directory associated with the `Require` package.
+#' @return
+#' If `!is.null(getOptionRPackageCache())`, i.e., a cache path exists,
+#' the cache directory will be created,
+#'   with a README placed in the folder. Otherwise, this function will just
+#'   return the path of what the cache directory would be.
+#' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
-RequireCacheDir <- function() {
+RequireCacheDir <- function(create) {
+
+  if (missing(create))
+    create <- !is.null(getOptionRPackageCache())
+
   appName <- "R-Require"
 
   ## use cache dir following OS conventions used by rappdirs package:
@@ -19,20 +30,31 @@ RequireCacheDir <- function() {
       Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
     )
   }
-  cacheDir <- checkPath(cacheDir, create = TRUE)
 
-  readme <- file.path(cacheDir, "README")
-  if (!file.exists(readme)) {
-    file.copy(system.file("cache-README", package = "Require"), readme)
+  cacheDir <- normPath(cacheDir)
+
+  if (isTRUE(create)) {
+    cacheDir <- checkPath(cacheDir, create = create)
+    readme <- file.path(cacheDir, "README")
+    if (!file.exists(readme)) {
+      if (isTRUE(create)) {
+        file.copy(system.file("cache-README", package = "Require"), readme)
+      }
+    }
   }
+
 
   return(cacheDir)
 }
 
 #' @export
 #' @rdname RequireCacheDir
-RequirePkgCacheDir <- function() {
-  pkgCacheDir <- checkPath(file.path(RequireCacheDir(), "packages", rversion()), create = TRUE)
+RequirePkgCacheDir <- function(create) {
+  if (missing(create))
+    create <- !is.null(getOptionRPackageCache())
+  pkgCacheDir <- normPath(file.path(RequireCacheDir(create), "packages", rversion()))
+  if (isTRUE(create))
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
 
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
@@ -155,7 +177,8 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
         unlink(lps[1], recursive = TRUE)
     }
   } else {
-    message("Project is not setup yet; nothing to do")
+    messageVerbose("Project is not setup yet; nothing to do",
+                   verbose = verbose, verboseLevel = 0)
   }
 }
 
@@ -186,7 +209,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          message("Updating version of ", pkg, " in ", RPackageFolders,
+          messageVerbose("Updating version of ", pkg, " in ", RPackageFolders,
                   verbose = verbose, verboseLevel = 1)
           unlink(toFiles)
         }
@@ -238,13 +261,14 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
 #' @return Invoked for the side effect of copying files needed to configure `ccache` for R packages.
 #'
 #' @author Dirk Eddelbuettel and Alex Chubaty
+#' @inheritParams Require
 #' @export
 #'
 #' @examples
 #' \dontrun{
 #'  useLinuxSourceCache()
 #' }
-useLinuxSourceCache <- function(overwrite = FALSE) {
+useLinuxSourceCache <- function(overwrite = FALSE, verbose = getOption("Require.verbose")) {
   if (identical(Sys.info()[["sysname"]], "Linux")) {
     hasccache <- nzchar(Sys.which("ccache"))
     if (isTRUE(hasccache)) {
@@ -257,7 +281,8 @@ useLinuxSourceCache <- function(overwrite = FALSE) {
       warning("'ccache' not found. Is it installed? Try e.g., 'sudo apt install ccache'.")
     }
   } else {
-    message("Setting up ccache for R package compilation is currently only supported on Linux.")
+    messageVerbose("Setting up ccache for R package compilation is currently only supported on Linux.",
+                   verbose = verbose, verboseLevel = 1)
   }
 
   invisible()

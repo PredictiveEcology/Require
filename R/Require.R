@@ -261,8 +261,11 @@ Require <- function(packages, packageVersionFile,
 
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
 
-  install.packagesArgs <- modifyList2(install.packagesArgs, list(quiet = !(verbose >= 1)))
-  install_githubArgs <-  modifyList2(install.packagesArgs, list(quiet =  !(verbose >= 0)))
+  dots <- list(...)
+  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
+                                      dots, keep.null = TRUE)
+  install_githubArgs <-  modifyList2(list(quiet = !(verbose >= 0)), install_githubArgs,
+                                     dots, keep.null = TRUE)
   libPaths <- checkLibPaths(libPaths = libPaths)
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   allrepos <- c(repos, getOption("repos"))
@@ -283,7 +286,7 @@ Require <- function(packages, packageVersionFile,
   origDTThreads <- data.table::setDTthreads(1)
   on.exit(data.table::setDTthreads(origDTThreads), add = TRUE)
 
-  purge <- dealWithCache(purge)
+  purge <- dealWithCache(purge) # this purges it; returns FALSE
   which <- whichToDILES(doDeps)
 
   suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
@@ -399,7 +402,7 @@ Require <- function(packages, packageVersionFile,
     names(packagesFullNameOrder) <- packageNamesOrig
 
     if (length(which) && (isTRUE(install) || identical(install, "force"))) {
-      packages <- getPkgDeps(packages, which = which, purge = FALSE)
+      packages <- getPkgDeps(packages, which = which, purge = purge)
     }
 
 
@@ -407,6 +410,8 @@ Require <- function(packages, packageVersionFile,
     if (is(packages, "list")) packages <- unlist(packages, recursive = FALSE)
 
     pkgDT <- toPkgDT(packages, deepCopy = TRUE)
+    pkgDT <- checkHEAD(pkgDT)
+
     # identify the packages that were asked by user to load -- later dependencies will be in table too
     # some cases, original was without version, but due to a dependency that does have a version,
     # it is no longer the same as orig package name
@@ -648,3 +653,4 @@ messageFollowingPackagesIncorrect <- "The following packages did not get install
 messagePkgSnapshotMissing <- "The pkgSnapshot appears to be missing"
 
 NoPkgsSupplied <- "No packages supplied"
+

@@ -1,26 +1,9 @@
-thisFilename <- "test-1packages.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-Require:::messageVerbose("\033[34m getOption('repos'): ", paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
+setupInitial <- setupTest()
 
-origLibPathsAllTests <- .libPaths()
-
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                   "install.packages.check.source" = "never",
-                   "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-} else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-}
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
-Sys.setenv("CRAN_REPO" = "")
+Sys.unsetenv("CRAN_REPO")
 isInteractive <- function() FALSE
 assignInNamespace("isInteractive", isInteractive, ns = "Require")
 out <- Require:::getCRANrepos("")
@@ -30,23 +13,17 @@ repos <- Require:::getCRANrepos("")
 testit::assert({is.character(repos)})
 testit::assert({nchar(repos) > 0})
 
-#repos <- NULL
-#chooseCRANmirror(ind = 1)
-#repos <- getOption("repos")
-
-options("Require.purge" = FALSE)
-
-# Failure on Travis:
-# cannot open file 'startup.Rs': No such file or directory
-# suggested solution https://stackoverflow.com/a/27994299/3890027
-Sys.setenv("R_TESTS" = "")
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
+# # cannot open file 'startup.Rs': No such file or directory
+# # suggested solution https://stackoverflow.com/a/27994299/3890027
+# Sys.setenv("R_TESTS" = "")
+# Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
 library(testit)
 
 dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
 Require::checkPath(dir1, create = TRUE)
-out <- Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1, verbose = 2)
+out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)", standAlone = TRUE, libPaths = dir1,
+                        quiet = TRUE, verbose = 2))
 testit::assert({data.table::is.data.table(attr(out, "Require"))})
 testit::assert({isTRUE(out)})
 isInstalled <- tryCatch({
@@ -67,13 +44,13 @@ remove.packages("fpCompare", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
-    interactive() || # interactive
+    isDevAndInteractive || # interactive
     identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
   Require::checkPath(dir2, create = TRUE)
   pvWant <- "0.2.2"
   inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"), standAlone = TRUE,
-                           libPaths = dir2, dependencies = FALSE, require = FALSE)
+                           libPaths = dir2, dependencies = FALSE, quiet = TRUE, require = FALSE)
   pv <- packageVersion("fpCompare", lib.loc = dir2)
   testit::assert({pv == pvWant})
 
@@ -86,7 +63,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
   Require::checkPath(dir6, create = TRUE)
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
-                          install = "force")
+                          quiet = TRUE, install = "force")
   testit::assert({identical(packageVersion("fpCompare", lib.loc = dir2),
                             packageVersion("fpCompare", lib.loc = dir6))})
 
@@ -112,8 +89,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Check for packageVersionFile = FALSE
   mess11 <- capture.output(type = "message",
-                           outInner <- Require(packageVersionFile = FALSE, verbose = 1))
-  print(mess11)
+                           outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE))
   testit::assert(any(grepl(NoPkgsSupplied, mess11)))
   testit::assert(is.null(outInner))
 
@@ -123,8 +99,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   Require::checkPath(dir3, create = TRUE)
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
   #try({
-  inst <- Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
-                             require = FALSE, standAlone = TRUE, libPaths = dir3)
+  inst <- suppressMessages(Require::Require("achubaty/fpCompare", install = "force", verbose = 2,
+                           quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3))
   attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
   #}, silent = TRUE)
   pkgs <- c("fpCompare")
@@ -139,11 +115,11 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
   silent <- Require::checkPath(dir4, create = TRUE)
   inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
-                           require = FALSE, standAlone = FALSE, libPaths = dir4)
+                           quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4)
   testit::assert({isFALSE(inst)})
   mess <- utils::capture.output({
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)", verbose = 1,
-                             require = FALSE, standAlone = FALSE, libPaths = dir4)
+                             quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4)
   }, type = "message")
   testit::assert({length(mess) > 0})
   testit::assert({sum(grepl("could not be installed", mess)) == 1})
@@ -153,14 +129,15 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
 # Code coverage -- run 2x so it won't reinstall
 # This line fails on CRAN testing for some reason; not on GA x9, E x3, A x1, WinBuilder x3, IE etc.
-
 prevDir <- setwd(Require::tempdir2("test11"))
 try(mess1 <- capture.output(type = "message",
-                            out1 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+                            out1 <- installGitHubPackage("PredictiveEcology/peutils@master", #verbose = 2,
+                                                         quiet = TRUE)),
     silent = TRUE)
 
 try(mess2 <- capture.output(type = "message",
-                            out2 <- installGitHubPackage("PredictiveEcology/peutils@master", verbose = 2)),
+                            out2 <- installGitHubPackage("PredictiveEcology/peutils@master", #verbose = 2,
+                                                         quiet = TRUE)),
     silent = TRUE)
 setwd(prevDir)
 
@@ -206,7 +183,7 @@ testit::assert({length(out) == 0})
 # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
 #                                 install = "force"),
 #                  error = function(x) x)
-if (interactive()) {
+if (isDevAndInteractive) {
   warn <- tryCatch({
     out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
   }, warning = function(x) x)
@@ -214,11 +191,4 @@ if (interactive()) {
     out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
   }, warning = function(x) x)
 }
-
-# options(opt)
-options(outOpts)
-if (exists("outOpts2")) options(outOpts2)
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)

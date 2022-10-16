@@ -1,26 +1,10 @@
-thisFilename <- "test-5packagesLong.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-origLibPathsAllTests <- .libPaths()
+setupInitial <- setupTest()
 
-if (interactive()) {
-  library(testit)
-  library(Require)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                     "install.packages.check.source" = "never",
-                     "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = FALSE)
-  if (Sys.info()["user"] == "achubaty") {
-    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-  } else {
-    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-  }
-  tmpdir <- file.path(tempdir2("other"), paste0("RequireTmp", sample(1e5, 1)))
 
-  suppressWarnings(dir.create(tmpdir))
+if (isDevAndInteractive) {
+  tmpdir <- file.path(tempdir2(basename(setupInitial$thisFilename)), paste0("RequireTmp", sample(1e5, 1)))
+
+  dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
   # repo <- chooseCRANmirror(ind = 1)
 
 
@@ -282,38 +266,9 @@ if (interactive()) {
     names(pkgsToTest) <- pkgsToTest
     runTests(have, pkg)
     endTime <- Sys.time()
-    message("\033[32m --- ",i," --------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+    message("\033[32m --- ",i," --------------------------",
+            basename(setupInitial$thisFilename), ": ", format(endTime - setupInitial$startTime)," \033[39m")
 
-    # suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
-    #                                function(p) tryCatch(require(p, character.only = TRUE),
-    #                                                     error = function(x) FALSE))))
-    # out2 <- out
-    # out2 <- out2[names(out2) %in% names(normalRequire)]
-    # whMatch <- match(names(normalRequire), names(out2))
-    # whMatch <- whMatch[!is.na(whMatch)]
-    # out2 <- out2[whMatch]
-    # have2 <- have[loadOrder > 0]
-    # normalRequire2 <- if (NROW(have2))
-    #   normalRequire[have2$Package]
-    # else
-    #   normalRequire
-
-    # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
-    # if (length(out2)) {
-    #   out2 <- out2[out2]
-    #   normalRequire2 <- normalRequire2[!is.na(normalRequire2)][normalRequire2]
-    #   browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
-    #   testit::assert({all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))])})
-    #   runTests(have, pkg)
-    # } else {
-    #   # TODO: what goes here?
-    # }
-    # suppressWarnings(rm(outFromRequire, out, have, normalRequire))
-    # if (any("tinytest" %in% Require::extractPkgName(pkg))) {
-    #   try(unloadNamespace("LearnBayes"))
-    #   try(unloadNamespace("tinytest"))
-    #   try(remove.packages(c("tinytest", "LearnBayes")))
-    # }
   }
 
   # Use a mixture of different types of "off CRAN"
@@ -335,15 +290,6 @@ if (interactive()) {
   testit::assert(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
   testit::assert(out2[Package == "SpaDES.core"]$installed)
 
-
-
-
-  unlink(tmpdir, recursive = TRUE)
-  options(outOpts)
-  if (exists("outOpts2")) options(outOpts2)
-  if (!identical(origLibPathsAllTests, .libPaths()))
-    Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)

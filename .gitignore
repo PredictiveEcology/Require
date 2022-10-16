@@ -17,3 +17,5 @@ tmp*
 .secrets/
 
 .RData
+
+.checks.RDS

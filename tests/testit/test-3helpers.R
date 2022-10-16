@@ -1,22 +1,4 @@
-thisFilename <- "test-3helpers.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-
-origLibPathsAllTests <- .libPaths()
-
-Sys.setenv("R_REMOTES_UPGRADE" = "never")
-Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                   "install.packages.check.source" = "never",
-                   "install.packages.compile.from.source" = "never",
-                   "Require.unloadNamespaces" = TRUE)
-if (Sys.info()["user"] == "achubaty") {
-  outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-} else {
-  outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-}
-
+setupInitial <- setupTest()
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232), round = 2,
                                                                    verboseLevel = 1))
 testit::assert({is.character(out)})
@@ -85,9 +67,11 @@ f1 <- tempfile()
 testit::assert({file.create(f1)}) ## TRUE
 testit::assert({file.exists(f1)}) ## TRUE
 
+opts <- options(Require.verbose = 0)
 out <- utils::capture.output(type = "message", {
-  a <- checkPath(f1)
+  a <- Require::checkPath(f1)
 })
+options(opts)
 testit::assert({isTRUE(grepl("is an existing file", out))})
 
 rst <- .rndstr(1, 6)
@@ -106,16 +90,17 @@ testit::assert({isTRUE(all.equal(Require::normPath(dirname(out)),
 f1 <- list(a = 1, e = 3)
 f2 <- list(a = 2, b = 3)
 f3 <- list(d = 3, b = 5)
-a <- modifyList2(f1)
-b <- modifyList2(f1, f2)
-d <- modifyList2(f1, f2, f3)
+f4 <- list(g = NULL)
+
+a <- modifyList2(f1, keep.null = TRUE)
+b <- modifyList2(f1, f2, keep.null = TRUE)
+d <- modifyList2(f1, f2, f3, keep.null = TRUE)
 testit::assert({identical(a, f1)})
 testit::assert({identical(modifyList(f1, f2), b)})
 testit::assert({identical(modifyList(modifyList(f1, f2), f3), d)})
+mm <- modifyList2(f1, f2, f3, f4, keep.null = TRUE)
+testit::assert("g" %in% names(mm))
+mm2 <- modifyList2(f1, f2, f3, f4, keep.null = FALSE)
+testit::assert(!"g" %in% names(mm2))
 
-if (!identical(origLibPathsAllTests, .libPaths()))
-  Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
-options(outOpts)
-if (exists("outOpts2")) options(outOpts2)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)

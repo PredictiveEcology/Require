@@ -122,7 +122,8 @@ setMethod(
       if (any(!dirsThatExist)) {
         isExistingFile <- file.exists(path)
         if (all(isExistingFile)) {
-          message("That path is an existing file(s)")
+          messageVerbose("That path is an existing file(s)", verboseLevel = 0,
+                         verbose = getOption("Require.verbose"))
         } else {
           if (create == TRUE) {
             lapply(path[!dirsThatExist[!isExistingFile]], function(pth) {
@@ -264,12 +265,14 @@ invertList <- function(l) {
 #' [`base::Reduce`], so it can handle >2 lists.
 #' The subsequent list elements that share a name will override
 #' previous list elements with that same name.
-#' It also will handle the case where any list is a `NULL`
+#' It also will handle the case where any list is a `NULL`. Note:
+#' default `keep.null = TRUE`, which is different than `modifyList`
 #'
 #' @details
-#' Simply a convenience around
-#' `Reduce(modifyList, list(...))`, with some checks.
-#'
+#' More or less a convenience around
+#' `Reduce(modifyList, list(...))`, with some checks, and the addition of
+#' `keep.null = TRUE` by default.
+#' @inheritParams utils::modifyList
 #'
 #' @export
 #' @param ... One or more named lists.
@@ -277,11 +280,36 @@ invertList <- function(l) {
 #' @examples
 #' modifyList2(list(a = 1), list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
-#' modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
-modifyList2 <- function(...) {
+#' modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2), list(a = 3, c = list(1:10)))
+modifyList2 <- function(..., keep.null = FALSE) {
+  dots <- list(...)
+  if (length(dots) > 0) {
+    dots <- dots[!unlist(lapply(dots, is.null))]
+    areLists <- unlist(lapply(dots, is, "list"))
+    if (all(areLists)) {
+      # Create a function where I can pass `keep.null` and also pass to Reduce, which is binary only
+      ml <- function(x, val) {
+        modifyList(x, val, keep.null = keep.null)
+      }
+      dots <- Reduce(ml, dots)
+    } else {
+      if (all(!areLists)) {
+        out <- Reduce(c, dots)
+        dots <- out[!duplicated(names(out), out)]
+      } else {
+        stop("All elements must be named lists or named vectors")
+      }
+    }
+  }
+
+  # do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
+  dots
+}
+
+modifyList3 <- function(..., keep.null = TRUE) {
   dots <- list(...)
   dots <- dots[!unlist(lapply(dots, is.null))]
-  do.call(Reduce, alist(modifyList, dots))
+  do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
 }
 
 #' Create link to file, falling back to making a copy if linking fails.
@@ -367,4 +395,45 @@ R_TESTSomit <- function() {
     Sys.setenv("R_TESTS" = "")
   }
   return(origR_TESTS)
+}
+
+
+#' Like `setdiff`, but takes into account names
+#'
+#' This will identify the elements in `l1` that are not in `l2`. If `missingFill`
+#' is provided, then elements that are in `l2`, but not in `l1` will be returned,
+#' assigning `missingFill` to their values. This might be `NULL` or `""`, i.e., some
+#' sort of empty value. This function will work on named lists, named vectors and likely
+#' on other named classes.
+#'
+#' @return
+#' A vector or list of the elements in `l1` that are not in `l2`, and optionally the
+#' elements of `l2` that are not in `l1`, with values set to `missingFill`
+#'
+#' @details
+#' There are 3 types of differences that might occur with named elements: 1. a new
+#' named element, 2. an removed named element, and 3. a modified named element. This function
+#' captures all of these. In the case of unnamed elements, e.g., `setdiff`, the first
+#' two are not seen as differences, if the values are not different.
+#'
+#' @param l1 A named list or named vector
+#' @param l2 A named list or named vector (must be same class as `l1`)
+#' @param missingFill A value, such as `NULL` or `""` or `"missing"` that will be
+#'   given to the elements returned, that are in `l2`, but not in `l1`
+#'
+#' @export
+setdiffNamed <- function(l1, l2, missingFill) {
+  changed1 <- setdiff(names(l2), names(l1)) # new option
+  changed2 <- setdiff(names(l1), names(l2)) # option set to NULL
+  changed3 <- vapply(names(l1), FUN.VALUE = logical(1), function(nam)
+    identical(l2[nam], l1[nam]), USE.NAMES = TRUE) # changed values of existing
+  changed3 <- l1[names(changed3[!changed3])]
+  dif <- list()
+  if (!missing(missingFill)) {
+    dif[[1]] <- mapply(x = changed1, function(x) missingFill, USE.NAMES = TRUE)
+  }
+  dif[[2]] <- l1[changed2]
+  dif[[3]] <- l1[names(changed3)]
+  dif <- do.call(modifyList2, dif)
+  dif
 }
