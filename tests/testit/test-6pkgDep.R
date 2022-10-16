@@ -20,12 +20,13 @@ testit::assert({length(b[[1]]) > length(a1[[1]])})
 # testit::assert({length(setdiff(extractPkgName(b[[1]]), extractPkgName(bAlt[[1]]))) == 0})
 
 pkg2 <- c(pkg, "Require")
-d <- pkgDep(pkg2) # GitHub package and local packages
+d <- pkgDep(pkg2) # GitHub package and CRAN package
 testit::assert({length(d) == 2})
 # Dependencies changed... remotes removed
-print(setdiff(a$Require, "remotes"))
-print(d$Require)
-testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"), d$Require))})
+# remotes was in, now it isn't; depending on which version of R, result shows up different;
+#   ignore `remotes` for now
+testit::assert({isTRUE(all.equal(setdiff(a$Require, "remotes"),
+                                 setdiff(d$Require, "remotes")))})
 
 # dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
 # testit::assert({length(setdiff(extractPkgName(d[[1]]), extractPkgName(dAlt[[1]]))) == 0})
