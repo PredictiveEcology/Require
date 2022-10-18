@@ -144,6 +144,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
       if (NROW(neededFull2)) {
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
+          which <- setdiff(which, "Suggests") # Suggests is never recursive
           neededFull2 <- Map(needed = neededFull2, counter = seq_along(neededFull2),
                              function(needed, counter) {
                                i <- 1
