@@ -247,7 +247,7 @@ utils::globalVariables(c(
 #' )
 #' }
 #'
-Require <- function(packages, packageVersionFile,
+Require3 <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
                     install.packagesArgs = list(),
