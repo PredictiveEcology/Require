@@ -15,22 +15,11 @@ Require2 <- function(packages, packageVersionFile,
   deps <- pkgDep(packages)
   allPackages <- unname(unlist(deps))
   pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+  pkgDT[packageFullName %in% packages, loadOrder := seq_along(packages)]
   pkgDT <- parseGitHub(pkgDT)
   pkgDT <- pkgDT[!duplicated(pkgDT$packageFullName)]
   pkgDT <- installedVers(pkgDT)
-  pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
-  setorderv(pkgDT, c("Package", "versionSpec"), na.last = TRUE)
-  pkgDT[, keep := if (any(!is.na(versionSpec))) .I[1] else .I, by = "Package"]
-  pkgDT <- pkgDT[unique(pkgDT$keep)]
-  set(pkgDT, NULL, "keep", NULL)
-  set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT$Version))
-  pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
-  set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT$Version))
-  hasVersionsToCompare <- (nchar(pkgDT$inequality) > 0) %in% TRUE & !is.na(pkgDT$Version)
-  pkgDT[hasVersionsToCompare, installedVersionOK := {
-    do.call(inequality, list(package_version(Version), versionSpec))
-    }, by = seq(sum(hasVersionsToCompare))]
-  set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
+  pkgDT <- whichToInstall(pkgDT)
   if (any(pkgDT$needInstall %in% "install")) {
     tmpdir <- if (is.null(getOptionRPackageCache())) tempdir2(.rndstr(1)) else getOptionRPackageCache()
     origGetwd <- getwd()
@@ -40,9 +29,13 @@ Require2 <- function(packages, packageVersionFile,
     pkgDT <- doInstalls2(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
                          dots = dots, install.packagesArgs = install.packagesArgs)
   }
-  browser()
-  # if ()
-  pkgDT
+
+  doLoads(require, pkgDT)
+
+  if (verbose >= 2)
+    attr(out, "Require") <- pkgDT[]
+
+  out
 }
 
 rbindlistRecursive <- function(ll) {
@@ -180,12 +173,20 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, dots, in
         ret
       }, by = "Package"]
       # Check MRAN
-      outs <- downloadMRAN(pkgArchive, install.packagesArgs, verbose, dots)
-      browser()
+      pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose, dots)
 
-
+      if (any(pkgArchive$repoLocation %in% "Archive")) {
+        pkgArchive <- split(pkgArchive, pkgArchive$repoLocation)
+        pkgArchOnly <- pkgArchive[["Archive"]]
+        pkgArchOnly[, PackageUrl := file.path(repo, srcContrib, "Archive", PackageUrl)]
+        pkgArchOnly[, localFile := basename(PackageUrl)]
+        pkgArchOnly[, {
+          download.file(PackageUrl, destfile = localFile)
+        }, by = seq(NROW(pkgArchOnly))]
+      }
+      pkgArchive <- rbindlistRecursive(pkgArchive)
+      pkgDTList[["install"]][["noLocal"]][["Archive"]] <- pkgArchive
     }
-
 
     # GitHub
     pkgGitHub <- pkgDTList[["install"]][["noLocal"]][["GitHub"]]
@@ -217,9 +218,6 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, dots, in
           fn <- build(Package, verbose = verbose, quiet = FALSE)
           normPath(fn)
         }]
-        browser()
-        if (!is.null(getOptionRPackageCache()))
-          copyTarballsToCache(pkgGitHub$Package, builtBinary = TRUE, unlink = FALSE)
       }
     }
   }
@@ -251,7 +249,6 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose, dots) {
   # on.exit(setwd(prevWD), add = TRUE)
 
   if (any(onMRAN)) {
-    browser()
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
     install.packagesArgs["ignore_repo_cache"] <- TRUE
     installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onMRAN])
@@ -274,7 +271,6 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose, dots) {
                  if (tot > 1)
                    messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
 
-                 browser()
                  for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
                    rver <- rversion()
                    evenOrOdd <- attempt %% 2 == 0
@@ -296,7 +292,6 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose, dots) {
                      break
 
                  }
-                 browser()
                  names(urls) <- p
                  urlsOuter <<- c(urlsOuter, urls)
                })
@@ -310,6 +305,14 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose, dots) {
     ipa <- modifyList2(list(quiet = !(verbose >= 1)), ipa, keep.null = TRUE)
     ipa <- append(list(pkgs = unname(urlsSuccess)), ipa)
   }
+  toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
+                                                     repoLocation = "MRAN",
+                                                     localFile = basename(urlsSuccess))]
+  # toInstall[match(names(urlsFail), Package), PackageUrl := urlsFail]
+  toInstall[repoLocation %in% "MRAN", {
+    download.file(PackageUrl, destfile = localFile)
+  }]
+  toInstall
 }
 
 secondsInADay <- 3600 * 24
@@ -364,4 +367,34 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, srcPackageURLOnCRAN,
         }
         list(PackageUrl = PackageUrl, archivedOn = archivedOn)
       })
+}
+
+whichToInstall <- function(pkgDT) {
+  pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
+  setorderv(pkgDT, c("Package", "versionSpec"), na.last = TRUE)
+  pkgDT[, keep := if (any(!is.na(versionSpec))) .I[1] else .I, by = "Package"]
+  pkgDT <- pkgDT[unique(pkgDT$keep)]
+  set(pkgDT, NULL, "keep", NULL)
+  set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT$Version))
+  pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
+  set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT$Version))
+  hasVersionsToCompare <- (nchar(pkgDT$inequality) > 0) %in% TRUE & !is.na(pkgDT$Version)
+  pkgDT[hasVersionsToCompare, installedVersionOK := {
+    do.call(inequality, list(package_version(Version), versionSpec))
+  }, by = seq(sum(hasVersionsToCompare))]
+  set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
+}
+
+
+doLoads <- function(require, pkgDT) {
+  if (require %in% TRUE) {
+    require <- pkgDT[!is.na(pkgDT$loadOrder)]
+    setorderv(require, "loadOrder")
+    require <- require$Package
+  }
+  if (is.character(require)) {
+    out <- mapply(require, require, character.only = TRUE, USE.NAMES = TRUE)
+  } else {
+    out <- mapply(x = require, function(x) FALSE, USE.NAMES = TRUE)
+  }
 }
