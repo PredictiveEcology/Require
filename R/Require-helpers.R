@@ -2112,7 +2112,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
         system(paste(Rpath, "CMD build ", repo, paste(extras, collapse = " ")),
                intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
       })
-      if (any(unlist(out) == 1L)) stop("Error 456; contact developer")
+      if (any(unlist(out1) == 1L)) stop("Error 456; contact developer")
       theDESCRIPTIONfile <- dir(out, pattern = "DESCRIPTION", full.names = TRUE)
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
       messageVerbose("  ... Built!",
