@@ -257,10 +257,12 @@ Require <- function(packages, packageVersionFile,
   install.packagesArgs <- modifyList2(install.packagesArgs,
                                       list(destdir = ".", repos = repos, type = types()))
 
-  out22 <- doPkgSnapshot(packageVersionFile, verbose, purge, libPaths,
-                         install_githubArgs, install.packagesArgs)
-
   libPaths <- checkLibPaths(libPaths = libPaths)
+  packages <- doPkgSnapshot(packages, packageVersionFile, verbose, purge, libPaths,
+                         install_githubArgs, install.packagesArgs, standAlone)
+  if (is.logical(packages)) # from doPkgSnapshot -- short circuit here
+    return(packages)
+
   if (missing(libPaths))
     libPaths <- .libPaths()
   deps <- pkgDep(packages)
@@ -572,12 +574,13 @@ whichToInstall <- function(pkgDT, install) {
 
 
 doLoads <- function(require, pkgDT) {
-  if (require %in% TRUE) {
+  needRequire <- require
+  if (is.logical(require)) {
     require <- pkgDT[!is.na(pkgDT$loadOrder)]
     setorderv(require, "loadOrder")
     require <- require$Package # convert to character
   }
-  if (is.character(require)) {
+  if (is.character(require) && isTRUE(needRequire)) {
     # rstudio intercepts `require` and doesn't work internally
     out <- mapply(x = require, function(x) base::require(x, character.only = TRUE), USE.NAMES = TRUE)
   } else {
@@ -655,6 +658,8 @@ identifyLocalDownloads <- function(pkgInstall) {
                               theGrep <- theGrep[isBinary(theGrep)]
                             }
                             theGrep <- paste(theGrep[1], collapse = ",")
+                          } else {
+                            theGrep <- ""
                           }
                           theGrep
                         },
@@ -807,9 +812,9 @@ types <- function(length = 1L) {
 }
 
 
-doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths, install_githubArgs, install.packagesArgs) {
+doPkgSnapshot <- function(packages, packageVersionFile, verbose, purge, libPaths,
+                          install_githubArgs, install.packagesArgs, standAlone = TRUE) {
   if (!missing(packageVersionFile) ) {
-    browser()
     if (!isFALSE(packageVersionFile)) {
       if (isTRUE(packageVersionFile)) {
         packageVersionFile <- getOption("Require.packageVersionFile")
@@ -817,77 +822,88 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths, install_
       packages <- data.table::fread(packageVersionFile)
       packages <- dealWithViolations(packages, verbose = verbose, purge = purge) # i.e., packages that can't coexist
       packages <- packages[!packages$Package %in% .basePkgs]
-      uniqueLibPaths <- unique(packages$LibPath)
-      if (length(uniqueLibPaths) > 1) {
-        dt <- data.table(
-          libPathInSnapshot = uniqueLibPaths,
-          newLibPaths = normPath(c(
-            libPaths[1],
-            file.path(
-              libPaths[1],
-              gsub(":", "", uniqueLibPaths[-1])
-            )
-          ))
-        )
-        messageVerbose(
-          "packageVersionFile is covering more than one library; installing packages in reverse order; ",
-          "also -- .libPaths() will be altered to be\n",
-          verbose = verbose, verboseLevel = 0
-        )
-        messageDF(dt, verbose = verbose, verboseLevel = 0)
-
-        callArgs <- as.list(match.call())[-1]
-        out <- Map(
-          lib = rev(dt$libPathInSnapshot),
-          newLib = rev(dt$newLibPaths), function(lib, newLib) {
-            tf <- tempfile2("RequireSnapshot")
-            packages <- packages[packages$LibPath == lib]
-            data.table::fwrite(packages, file = tf)
-            callArgs[["packageVersionFile"]] <- tf
-            callArgs[["libPaths"]] <- newLib
-            callArgs[["standAlone"]] <- TRUE
-            out <- do.call(Require, args = callArgs)
-          }
-        )
-        out <- unlist(out)
-        setLibPaths(dt$newLibPaths, standAlone = TRUE)
-        messageVerbose(" to echo the multiple paths in ", packageVersionFile,
-                       verbose = verbose, verboseLevel = 0)
-
-        if (isTRUE(require)) {
-          return(out)
-        } else {
-          return(invisible(out))
-        }
-        packages[, LibPath := .libPaths()[1]]
-      }
-
-      if (NROW(packages)) {
-        set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
-      } else {
-        character()
-      }
-      if (any(grep("github", tolower(colnames(packages))))) {
-        haveGit <- nchar(packages[["GithubSHA1"]]) > 0
-        if (sum(haveGit, na.rm = TRUE)) {
-          packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1))]
-        }
-      }
-      packages <- packages$Package
-      # which <- NULL
-      install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
-      install.packagesArgs["dependencies"] <- FALSE
-      require <- FALSE
-      oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
-      Sys.setenv(R_REMOTES_UPGRADE = "never")
-      on.exit(
-        {
-          Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)
-        },
-        add = TRUE
-      )
-      messageVerbose("Using ", packageVersionFile, "; setting `require = FALSE`",
-                     verbose = verbose, verboseLevel = 0)
+      packagesForRequire <- packageFullName(packages)
+      out <- Require(packagesForRequire, verbose = verbose, purge = purge, libPaths = libPaths,
+              install_githubArgs = install_githubArgs, install.packagesArgs = install.packagesArgs,
+              standAlone = standAlone, require = FALSE, install = TRUE)
+      return(out)
     }
   }
+  #
+  #
+  #
+  #     uniqueLibPaths <- unique(packages$LibPath)
+  #     if (length(uniqueLibPaths) > 1) {
+  #       dt <- data.table(
+  #         libPathInSnapshot = uniqueLibPaths,
+  #         newLibPaths = normPath(c(
+  #           libPaths[1],
+  #           file.path(
+  #             libPaths[1],
+  #             gsub(":", "", uniqueLibPaths[-1])
+  #           )
+  #         ))
+  #       )
+  #       messageVerbose(
+  #         "packageVersionFile is covering more than one library; installing packages in reverse order; ",
+  #         "also -- .libPaths() will be altered to be\n",
+  #         verbose = verbose, verboseLevel = 0
+  #       )
+  #       messageDF(dt, verbose = verbose, verboseLevel = 0)
+  #
+  #       callArgs <- as.list(match.call())[-1]
+  #       out <- Map(
+  #         lib = rev(dt$libPathInSnapshot),
+  #         newLib = rev(dt$newLibPaths), function(lib, newLib) {
+  #           tf <- tempfile2("RequireSnapshot")
+  #           packages <- packages[packages$LibPath == lib]
+  #           data.table::fwrite(packages, file = tf)
+  #           callArgs[["packageVersionFile"]] <- tf
+  #           callArgs[["libPaths"]] <- newLib
+  #           callArgs[["standAlone"]] <- TRUE
+  #           out <- do.call(Require, args = callArgs)
+  #         }
+  #       )
+  #       out <- unlist(out)
+  #       setLibPaths(dt$newLibPaths, standAlone = TRUE)
+  #       messageVerbose(" to echo the multiple paths in ", packageVersionFile,
+  #                      verbose = verbose, verboseLevel = 0)
+  #
+  #       if (isTRUE(require)) {
+  #         return(out)
+  #       } else {
+  #         return(invisible(out))
+  #       }
+  #       packages[, LibPath := .libPaths()[1]]
+  #     }
+  #
+  #     if (NROW(packages)) {
+  #       set(packages, NULL, "Package", paste0(packages$Package, " (==", packages$Version, ")"))
+  #     } else {
+  #       character()
+  #     }
+  #     if (any(grep("github", tolower(colnames(packages))))) {
+  #       haveGit <- nchar(packages[["GithubSHA1"]]) > 0
+  #       if (sum(haveGit, na.rm = TRUE)) {
+  #         packages[haveGit, `:=`(Package = paste0(GithubUsername, "/", GithubRepo, "@", GithubSHA1))]
+  #       }
+  #     }
+  #     packages <- packages$Package
+  #     # which <- NULL
+  #     install_githubArgs[c("dependencies", "upgrade")] <- list(FALSE, FALSE)
+  #     install.packagesArgs["dependencies"] <- FALSE
+  #     require <- FALSE
+  #     oldEnv <- Sys.getenv("R_REMOTES_UPGRADE")
+  #     Sys.setenv(R_REMOTES_UPGRADE = "never")
+  #     on.exit(
+  #       {
+  #         Sys.setenv("R_REMOTES_UPGRADE" = oldEnv)
+  #       },
+  #       add = TRUE
+  #     )
+  #     messageVerbose("Using ", packageVersionFile, "; setting `require = FALSE`",
+  #                    verbose = verbose, verboseLevel = 0)
+  #   }
+  # }
+  packages
 }

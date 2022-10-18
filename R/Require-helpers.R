@@ -2745,3 +2745,11 @@ checkHEAD <- function(pkgDT) {
   set(pkgDT, NULL, "hasHEAD", grepl(HEADgrep, pkgDT$packageFullName))
   pkgDT
 }
+
+packageFullName <- function(pkgDT) {
+  inequality <- if (is.null(pkgDT[["inequality"]])) "==" else pkgDT[["inequality"]]
+
+  ifelse(!is.na(pkgDT$GithubRepo) & nzchar(pkgDT$GithubRepo),
+         paste0(pkgDT$GithubUsername, "/", pkgDT$Package, "@", pkgDT$GithubSHA1),
+         paste0(pkgDT$Package, " (", inequality, pkgDT$Version, ")"))
+}
