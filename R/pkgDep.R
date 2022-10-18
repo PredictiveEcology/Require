@@ -197,9 +197,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                if (messageIfGTN) {
                                  messageVerboseCounter(counter = counter, total = NpackagesRecursive,
                                                        verbose = verbose, verboseLevel = 0)
-                                 # mess <- paste0(paddedFloatToChar(counter, padL = nchar(NpackagesRecursive), pad = " ")
-                                 #                , " of ", NpackagesRecursive)
-                                 # messageVerbose(rep("\b", nchar(mess) + 1),  mess, verbose = verbose, verboseLevel = 0)
                                }
                                needed
                              })
@@ -207,11 +204,17 @@ pkgDep <- function(packages, libPath = .libPaths(),
       }
       # Remove "R"
       neededFull2 <- append(neededFull2, neededFull[theNulls])
-      neededFull2 <- lapply(neededFull2, function(needed) {
-        grep(.grepR, needed, value = TRUE, invert = TRUE)
-      })
 
       newOnes <- names(saveNames) %in% names(neededFull)
+
+      neededFull2 <- lapply(neededFull2, function(n) {
+        n <- grep(.grepR, n, value = TRUE, invert = TRUE)
+        n <- gsub(.grepTabCR, "", n)
+        n <- gsub(.grepTooManySpaces, "", n)
+        n <- gsub(paste0("([[:alnum:]]{1})(\\()"), "\\1 \\2", n)
+        n
+      })
+
       # Add self to vector
       Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
         assign(sn, neededFull2[[n]], envir = .pkgEnv)
