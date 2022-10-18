@@ -9,28 +9,32 @@ Require2 <- function(packages, packageVersionFile,
                      purge = getOption("Require.purge", FALSE),
                      verbose = getOption("Require.verbose", FALSE),
                      ...) {
+  .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
+
   dots <- list(...)
+  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
+                                      dots, keep.null = TRUE)
+  install_githubArgs <-  modifyList2(list(quiet = !(verbose >= 0)), install_githubArgs,
+                                     dots, keep.null = TRUE)
+  libPaths <- checkLibPaths(libPaths = libPaths)
+
   if (missing(libPaths))
     libPaths <- .libPaths()
   deps <- pkgDep(packages)
   allPackages <- unname(unlist(deps))
   pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
-  pkgDT[packageFullName %in% packages, loadOrder := seq_along(packages)]
+  pkgDT <- recordLoadOrder(packages, pkgDT)
   pkgDT <- parseGitHub(pkgDT)
-  pkgDT <- pkgDT[!duplicated(pkgDT$packageFullName)]
+  pkgDT <- removeDups(pkgDT)
   pkgDT <- installedVers(pkgDT)
-  pkgDT <- whichToInstall(pkgDT)
-  if (any(pkgDT$needInstall %in% "install")) {
-    tmpdir <- if (is.null(getOptionRPackageCache())) tempdir2(.rndstr(1)) else getOptionRPackageCache()
-    origGetwd <- getwd()
-    on.exit(setwd(origGetwd))
-    out <- setwd(tmpdir)
-
+  pkgDT <- dealWithStandAlone(pkgDT, standAlone)
+  pkgDT <- whichToInstall(pkgDT, install)
+  if (any(pkgDT$needInstall %in% "install") && (isTRUE(install) || install %in% "force")) {
     pkgDT <- doInstalls2(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
                          dots = dots, install.packagesArgs = install.packagesArgs)
   }
 
-  doLoads(require, pkgDT)
+  out <- doLoads(require, pkgDT)
 
   if (verbose >= 2)
     attr(out, "Require") <- pkgDT[]
@@ -77,6 +81,12 @@ installAll <- function(toInstall, repos = getOptions("repos")) {
 }
 
 doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, dots, install.packagesArgs) {
+
+  tmpdir <- if (is.null(getOptionRPackageCache())) tempdir2(.rndstr(1)) else getOptionRPackageCache()
+  origGetwd <- getwd()
+  on.exit(setwd(origGetwd))
+  out <- setwd(tmpdir)
+
   pkgDTList <- split(pkgDT, by = c("needInstall"))
   pkgNeedInstall <- pkgDTList[["install"]] # make a new pointer
 
@@ -226,7 +236,8 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, dots, in
   pkgInstall[, isBinaryInstall := isBinary(pkgInstall$localFile)]
 
   # The install
-  by(pkgInstall, list(pkgInstall$installSafeGroups, !pkgInstall$isBinary), installAll, repos = repos)
+  by(pkgInstall, list(pkgInstall[["installSafeGroups"]], !pkgInstall[["isBinaryInstall"]]),
+     installAll, repos = repos)
 
   pkgInstall[, installResult := "OK"]
   pkgDT <- rbindlistRecursive(pkgDTList)
@@ -369,7 +380,7 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, srcPackageURLOnCRAN,
       })
 }
 
-whichToInstall <- function(pkgDT) {
+whichToInstall <- function(pkgDT, install) {
   pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
   setorderv(pkgDT, c("Package", "versionSpec"), na.last = TRUE)
   pkgDT[, keep := if (any(!is.na(versionSpec))) .I[1] else .I, by = "Package"]
@@ -382,7 +393,11 @@ whichToInstall <- function(pkgDT) {
   pkgDT[hasVersionsToCompare, installedVersionOK := {
     do.call(inequality, list(package_version(Version), versionSpec))
   }, by = seq(sum(hasVersionsToCompare))]
-  set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
+  if (identical(install, "force"))
+    set(pkgDT, NULL, "needInstall", TRUE)
+  else
+    set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
+  pkgDT
 }
 
 
@@ -397,4 +412,27 @@ doLoads <- function(require, pkgDT) {
   } else {
     out <- mapply(x = require, function(x) FALSE, USE.NAMES = TRUE)
   }
+  out
+}
+
+recordLoadOrder <- function(packages, pkgDT) {
+  pkgDT[packageFullName %in% packages, loadOrder := seq_along(packages)]
+  pkgDT
+}
+
+removeDups <- function(pkgDT)
+  pkgDT[!duplicated(pkgDT$packageFullName)]
+
+dealWithStandAlone <- function(pkgDT, standAlone) {
+  if (isTRUE(standAlone)) {
+    # Remove any packages that are not in .libPaths()[1], i.e., the main R library
+    notInLibPaths1 <- (!pkgDT$Package %in% .basePkgs) &
+      (!normPath(pkgDT$LibPath) %in% normPath(.libPaths()[1]))
+    if (any(notInLibPaths1))
+      pkgDT[notInLibPaths1, `:=`(
+        installed = FALSE,
+        LibPath = NA_character_,
+        Version = NA_character_)]
+  }
+  pkgDT
 }
