@@ -257,14 +257,15 @@ Require <- function(packages, packageVersionFile,
   install.packagesArgs <- modifyList2(install.packagesArgs,
                                       list(destdir = ".", repos = repos, type = types()))
 
+  if (missing(libPaths))
+    libPaths <- .libPaths()
   libPaths <- checkLibPaths(libPaths = libPaths)
+  suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
   packages <- doPkgSnapshot(packages, packageVersionFile, verbose, purge, libPaths,
                          install_githubArgs, install.packagesArgs, standAlone)
   if (is.logical(packages)) # from doPkgSnapshot -- short circuit here
     return(packages)
 
-  if (missing(libPaths))
-    libPaths <- .libPaths()
   deps <- pkgDep(packages)
   allPackages <- unname(unlist(deps))
   pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
@@ -624,7 +625,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   set(pkgInstall, NULL, "haveLocal", "noLocal")
 
   # check local cache
-  pkgInstall <- identifyLocalDownloads(pkgInstall)
+  pkgInstall <- identifyLocalDownloads(pkgInstall, repos, purge)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
@@ -646,22 +647,58 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstall
 }
 
-identifyLocalDownloads <- function(pkgInstall) {
+identifyLocalDownloads <- function(pkgInstall, repos, purge) {
   if (!is.null(getOptionRPackageCache())) {
+    ap <- available.packagesCached(repos = repos, purge = purge)[, ..apCachedCols]
+    setnames(ap, old = "Version", new = "VersionOnRepos")
+    pkgInstall <- ap[pkgInstall, on = "Package"]
+    N <- pkgInstall[, .N, by = Package]
+    if (any(N$N > 1)) { # this would be binary and source; binary is first in alphabetical
+      pkgInstall <- pkgInstall[, .SD[1], by = "Package"]
+    }
+
+
     localFiles <- dir(getOptionRPackageCache(), full.names = FALSE)
-    origFiles <- mapply(pat = pkgInstall$Package,
-                        function(pat) {
-                          theGrep <- grep(pattern = paste0(".*", pat, "_"),
-                                          x = localFiles, value = TRUE)
-                          if (length(theGrep)) {
-                            if (any(isBinary(theGrep))) {
-                              theGrep <- theGrep[isBinary(theGrep)]
+    origFiles <- mapply(pat = pkgInstall$Package, ver = pkgInstall$versionSpec, ineq = pkgInstall$inequality,
+                        verAv = pkgInstall$VersionOnRepos,
+                        function(pat, ver, ineq, verAv) {
+                          pat <- paste0(".*", pat, "_")
+                          fn <- grep(pattern = pat, x = localFiles, value = TRUE)
+
+                          if (length(fn)) {
+                            if (any(isBinary(fn))) {
+                              fn <- fn[isBinary(fn)]
                             }
-                            theGrep <- paste(theGrep[1], collapse = ",")
+                            localVer <- extractVersionNumber(filenames = fn) # there may be >1 file for a given package; take
+                            if (is.na(ineq)) { # need max --> which will be the ver; so see if localVer is same as ver
+                              ord <- order(c(package_version(tail(localVer, 1)), package_version(verAv)), decreasing = TRUE) # local first
+                              keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
+                              fn <- tail(fn, 1)[keepLoc]
+                            } else {
+                              keepLoc <- do.call(ineq, list(package_version(localVer), ver)) # can be length > 1
+                              if (!identical(ineq, "==")) {
+                                keepRep <- do.call(ineq, list(package_version(verAv), ver))
+                                if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good
+                                  if (any(keepRep %in% TRUE)) { # remote has as at least 1 that is good
+                                    ord <- order(c(package_version(tail(localVer[keepLoc], 1)), package_version(verAv)), decreasing = TRUE) # local first
+                                    keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
+                                    fn <- tail(fn, 1)[keepLoc] # keepLoc is guaranteed to be length 1
+                                  } else {
+                                    fn <- tail(fn[keepLoc], 1) # keepLoc is possibly length > 1
+                                  }
+                                } else {
+                                  fn <- ""
+                                }
+
+                              } else {
+                                fn <- tail(fn[keepLoc], 1) # keepLoc is possibly length > 1
+                              }
+
+                            }
                           } else {
-                            theGrep <- ""
+                            fn <- ""
                           }
-                          theGrep
+                          fn
                         },
                         USE.NAMES = TRUE)
     pkgInstall[, localFile := origFiles]
@@ -677,10 +714,16 @@ identifyLocalDownloads <- function(pkgInstall) {
 downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs) {
   pkgCRAN <- pkgNoLocal[["CRAN"]]
   if (NROW(pkgCRAN)) { # CRAN, Archive, MRAN
-    ap <- available.packagesCached(repos = repos, purge = purge)[, c("Package", "Repository", "Version")]
-    setnames(ap, old = "Version", new = "VersionOnRepos")
-    pkgNoLocal[["CRAN"]] <- ap[pkgCRAN, on = "Package"]
-    pkgCRAN <- pkgNoLocal[["CRAN"]] # pointer
+    if (!all(apCachedCols %in% colnames(pkgCRAN))) {
+      ap <- available.packagesCached(repos = repos, purge = purge)[, ..apCachedCols]
+      setnames(ap, old = "Version", new = "VersionOnRepos")
+      pkgNoLocal[["CRAN"]] <- ap[pkgCRAN, on = "Package"]
+      pkgCRAN <- pkgNoLocal[["CRAN"]] # pointer
+    }
+    N <- pkgCRAN[, .N, by = Package]
+    if (any(N$N > 1)) {
+      pkgCRAN <- pkgCRAN[, .SD[1], by = "Package"]
+    }
     set(pkgCRAN, NULL, "tmpOrder", seq(NROW(pkgCRAN)))
     # First set all to availableVersionOK if there is a version available
     pkgCRAN[, availableVersionOK := !is.na(VersionOnRepos)]
@@ -692,6 +735,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs) {
     # Not on CRAN; so likely Archive
     if (any(pkgCRAN$availableVersionOK %in% FALSE)) {
       pkgCRAN[availableVersionOK %in% FALSE, repoLocation := "Archive"]
+      pkgNoLocal[["CRAN"]] <- pkgCRAN
       pkgNoLocal <- rbindlistRecursive(pkgNoLocal)
       pkgNoLocal <- split(pkgNoLocal, by = "repoLocation")
       pkgCRAN <- pkgNoLocal[["CRAN"]]
@@ -699,10 +743,10 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs) {
     if (NROW(pkgCRAN)) {
       pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
       ipa <- modifyList2(list(pkgs = pkgCRAN$Package), install.packagesArgs)
-      pkgCRAN[, localFile := do.call(download.packages, ipa)[,2]]
+      pkgCRAN[, localFile := basename(do.call(download.packages, ipa)[,2])]
     }
   }
-  pkgNoLocal
+  pkgNoLocal # pkgCRAN is already in this because it was a pointer
 }
 
 downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
@@ -722,8 +766,11 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
         correctVersions <- do.call(inequality, list(package_version(Version2), versionSpec))
         if (all(correctVersions %in% FALSE))
           correctVersions <- NA
-        else
-          correctVersions <- unique(c(which(correctVersions), min(which(correctVersions), length(correctVersions))))
+        else {
+          latestCorrect <- tail(which(correctVersions), 1)
+          correctVersions <- unique(c(latestCorrect, max(latestCorrect, length(correctVersions))))
+        }
+
       }
       if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
       earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
@@ -815,6 +862,7 @@ types <- function(length = 1L) {
 doPkgSnapshot <- function(packages, packageVersionFile, verbose, purge, libPaths,
                           install_githubArgs, install.packagesArgs, standAlone = TRUE) {
   if (!missing(packageVersionFile) ) {
+    browser()
     if (!isFALSE(packageVersionFile)) {
       if (isTRUE(packageVersionFile)) {
         packageVersionFile <- getOption("Require.packageVersionFile")
@@ -907,3 +955,5 @@ doPkgSnapshot <- function(packages, packageVersionFile, verbose, purge, libPaths
   # }
   packages
 }
+
+apCachedCols <- c("Package", "Repository", "Version")

@@ -33,16 +33,24 @@ extractPkgName <- function(pkgs) {
 #' @export
 #' @examples
 #' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))
-extractVersionNumber <- function(pkgs) {
+extractVersionNumber <- function(pkgs, filenames) {
   if (!missing(pkgs)) {
     hasVersionNum <- grepl(grepExtractPkgs, pkgs, perl = FALSE)
     out <- rep(NA, length(pkgs))
     out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum], perl = FALSE)
   } else {
-    out <- character()
+    if (!missing(filenames)) {
+      hasVersionNum <- grepl(grepExtractPkgsFilename, basename(filenames))
+      out <- rep(NA, length(filenames))
+      out[hasVersionNum] <- gsub(grepExtractPkgsFilename, "\\1", filenames[hasVersionNum], perl = FALSE)
+    } else {
+      out <- character()
+    }
   }
   out
 }
+
+
 
 #' @rdname extractPkgName
 #' @export
@@ -104,5 +112,6 @@ rmExtraSpaces <- function(string) {
 .grepVersionNumber <- " *\\(.*"
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
+grepExtractPkgsFilename <- "^[[:alpha:]].*_([0-9]+[.\\-][0-9]+.*)(\\.zip|\\.tar.gz)"
 
 .grepR <- "^ *R( |\\(|$)"
