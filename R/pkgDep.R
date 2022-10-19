@@ -603,27 +603,43 @@ pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
   if (isFALSE(keepVersionNumber)) {
     pkgs <- pkgsNoVersion
   }
-  ap <- ap[ap$Package %in% pkgsNoVersion]
-  keep <- match(ap$Package, pkgsNoVersion)
-  keep <- keep[!is.na(keep)]
-  pkgsNoVersion1 <- pkgsNoVersion[keep]
-  pkgs <- pkgs[keep]
-  ap <- ap[order(pkgsNoVersion1)]
+  ap <- ap[match( pkgsNoVersion, Package)]
+  ap[, versionSpec := extractVersionNumber(pkgs)]
+  ap[!is.na(versionSpec), ineq := extractInequality(pkgs)]
+  ap[is.na(versionSpec), availableVersionOK := TRUE]
+  ap[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, ineq)]
+  apList <- split(ap, by = "availableVersionOK")
+  ap <- apList[["TRUE"]]
 
-  names(which) <- which
-  deps <- lapply (which, function(i) {
-    lapply(ap[[i]], function(x) {
-      out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
-      out <- out[!is.na(out)]
-      out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
+  depsOut <- list()
+  if (!is.null(ap)) {
+    keep <- match(ap$Package, pkgsNoVersion)
+    keep <- keep[!is.na(keep)]
+    pkgsNoVersion1 <- pkgsNoVersion[keep]
+    pkgs <- pkgs[keep]
+    ap <- ap[order(pkgsNoVersion1)]
+
+    names(which) <- which
+    deps <- lapply (which, function(i) {
+      lapply(ap[[i]], function(x) {
+        out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+        out <- out[!is.na(out)]
+        out <- grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
+      })
     })
-  })
 
-  ss <- seq_along(pkgsNoVersion1)
-  names(ss) <- pkgsNoVersion1
-  if (isFALSE(keepSeparate))
-    deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
-  deps
+    ss <- seq_along(pkgsNoVersion1)
+    names(ss) <- pkgsNoVersion1
+    if (isFALSE(keepSeparate))
+      deps <- lapply(ss, function(x) unname(unlist(lapply(deps, function(y) y[[x]]))))
+    depsOut <- modifyList2(depsOut, deps, keep.null = TRUE)
+  }
+  if (!is.null(apList[["FALSE"]])) {
+    depsFALSE <- Map(x = pkgs, function(x) NULL, USE.NAMES = TRUE)
+    depsOut <- modifyList2(depsOut, depsFALSE, keep.null = TRUE)
+  }
+
+  depsOut
 }
 
 DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "LinkingTo"),
