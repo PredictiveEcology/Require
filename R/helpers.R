@@ -286,19 +286,15 @@ modifyList2 <- function(..., keep.null = FALSE) {
   if (length(dots) > 0) {
     dots <- dots[!unlist(lapply(dots, is.null))]
     areLists <- unlist(lapply(dots, is, "list"))
-    if (all(areLists)) {
-      # Create a function where I can pass `keep.null` and also pass to Reduce, which is binary only
+    if (all(!areLists)) {
+      out <- Reduce(c, dots)
+      dots <- out[!duplicated(names(out), out)]
+    } else {
+      ## Create a function where I can pass `keep.null` and also pass to Reduce, which is binary only
       ml <- function(x, val) {
         modifyList(x, val, keep.null = keep.null)
       }
       dots <- Reduce(ml, dots)
-    } else {
-      if (all(!areLists)) {
-        out <- Reduce(c, dots)
-        dots <- out[!duplicated(names(out), out)]
-      } else {
-        stop("All elements must be named lists or named vectors")
-      }
     }
   }
 
@@ -306,6 +302,11 @@ modifyList2 <- function(..., keep.null = FALSE) {
   dots
 }
 
+#' @note `modifyList3` retains the original behaviour of `modifyList2` (prior to Oct 2022);
+#' however, it cannot retain `NULL` values in lists.
+#'
+#' @export
+#' @rdname modifyList2
 modifyList3 <- function(..., keep.null = TRUE) {
   dots <- list(...)
   dots <- dots[!unlist(lapply(dots, is.null))]
