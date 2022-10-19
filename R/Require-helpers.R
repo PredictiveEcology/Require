@@ -40,7 +40,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
     set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit[isGitHub]))
     set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", pkgDT$fullGit[isGitHub]))
     set(pkgDT, isGitHub, "RepoWBranch", gsub("^(.*)/(.*)@*.*$", "\\2", pkgDT$fullGit[isGitHub]))
-    set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT[isGitHub]$Account[isGitHub]))
+    set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT$Account[isGitHub]))
     if (any(pkgDT$hasSubFolder, na.rm = TRUE)) { # fix both Account and RepoWBranch
       hasSubFold <- which(pkgDT$hasSubFolder)
       subFoldIndices <- seq_len(NROW(pkgDT[hasSubFold]))
@@ -736,10 +736,12 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
     }
     pkgDT[repoLocation == "GitHub",
           url := {
-            if (any(hasSubFolder)) {
-              Branch <- paste0(Branch, "/", GitSubFolder)
-            }
-            file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
+            gitHubFileUrl(hasSubFolder = hasSubFolder, Branch = Branch, GitSubFolder = GitSubFolder,
+                          Account = Account, Repo = Repo, filename = filename)
+            # if (any(hasSubFolder)) {
+            #   Branch <- paste0(Branch, "/", GitSubFolder)
+            # }
+            # file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
           },
           by = "Package"]
 
@@ -2238,12 +2240,15 @@ installGitHubPackage <- installGithubPackage
 
 #' @importFrom utils unzip
 #' @inheritParams Require
-downloadRepo <- function(gitRepo, overwrite = FALSE, destDir = ".",
+downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
                          verbose = getOption("Require.verbose")) {
   dir.create(destDir, recursive = TRUE, showWarnings = FALSE)
   gr <- splitGitRepo(gitRepo)
   ar <- file.path(gr$acct, gr$repo)
-  repoFull <- file.path(destDir, gr$repo)
+
+  pkgName <- if (is.null(names(gitRepo))) gr$repo else names(gitRepo)
+
+  repoFull <- file.path(destDir, pkgName)
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   masterMain <- c("main", "master")
   br <- if (any(gr$br %in% masterMain)) {
@@ -2272,10 +2277,21 @@ downloadRepo <- function(gitRepo, overwrite = FALSE, destDir = ".",
   badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
-  Map(bad = badDirname, repo = gr$repo, function(bad, repo) {
-    file.rename(bad, gsub(basename(bad), repo, bad)) # it was downloaded with a branch suffix
-  })
+  if (is.na(subFolder)) {
+    subFolder <- FALSE
+  }
 
+  newName <- unlist(Map(bad = badDirname, subFolder = subFolder, pkgName = pkgName,
+      function(bad, subFolder, pkgName) {
+    badToChange <- if (!isFALSE(subFolder)) {
+      file.path(basename(gsub(subFolder, "", bad)), subFolder)
+    } else {
+      basename(bad)
+    }
+    newName <- gsub(badToChange, pkgName, bad)
+    file.rename(bad, newName) # it was downloaded with a branch suffix
+    newName
+  }))
   unlink(zipFileName)
   messageVerbose(paste0(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"), collapse = "\n"),
                  verbose = verbose, verboseLevel = 2)
@@ -2752,4 +2768,11 @@ packageFullName <- function(pkgDT) {
   ifelse(!is.na(pkgDT$GithubRepo) & nzchar(pkgDT$GithubRepo),
          paste0(pkgDT$GithubUsername, "/", pkgDT$Package, "@", pkgDT$GithubSHA1),
          paste0(pkgDT$Package, " (", inequality, pkgDT$Version, ")"))
+}
+
+gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, filename) {
+  if (any(hasSubFolder)) {
+    Branch <- paste0(Branch, "/", GitSubFolder)
+  }
+  file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
 }
