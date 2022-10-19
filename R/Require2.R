@@ -246,7 +246,6 @@ Require <- function(packages, packageVersionFile,
                      purge = getOption("Require.purge", FALSE),
                      verbose = getOption("Require.verbose", FALSE),
                      ...) {
-  packagesOrig <- packages # keep for
   messageVerbose(verbose = verbose, verboseLevel = 1, "\033[33mUsing New Require\033[39m")
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
 
@@ -278,7 +277,7 @@ Require <- function(packages, packageVersionFile,
     deps <- pkgDep(packages)
     allPackages <- unname(unlist(deps))
     pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
-    pkgDT <- updatePackagesWithNames(pkgDT, packagesOrig)
+    pkgDT <- updatePackagesWithNames(pkgDT, packages)
     pkgDT <- recordLoadOrder(packages, pkgDT)
     pkgDT <- parseGitHub(pkgDT)
     pkgDT <- removeDups(pkgDT)
@@ -439,6 +438,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
   onMRANvec <- earliestDateOnMRAN > .earliestMRANDate
   earliestDateOnMRAN[!onMRANvec] <- as.Date(.earliestMRANDate) + 10
   onMRAN <- earliestDateOnMRAN > .earliestMRANDate & unname( isWindows() | isMacOSX() )
+  onMRAN[is.na(onMRAN)] <- FALSE
 
   if (any(onMRAN)) {
     origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
@@ -490,10 +490,10 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
 
     urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
     urlsFail <- urlsOuter[urlsOuter == "Fail"]
-  }
-  toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
-                                                     repoLocation = "MRAN",
-                                                     localFile = basename(urlsSuccess))]
+
+    toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
+                                                       repoLocation = "MRAN",
+                                                       localFile = basename(urlsSuccess))]
   if (length(urlsFail)) {
     cantGet <- toInstall$packageFullName[toInstall$Package %in% names(urlsFail)]
     messageVerbose("Could not find a binary version of ", paste(cantGet, collapse = ", "), " on MRAN; ",
@@ -501,9 +501,11 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
   }
   if (sum(toInstall$repoLocation %in% "MRAN"))
     toInstall[repoLocation %in% "MRAN", {
-      ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
-      do.call(download.file, ipa)
-    }]
+        ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
+        do.call(download.file, ipa)
+      }]
+  }
+
   toInstall
 }
 
@@ -685,7 +687,8 @@ identifyLocalDownloads <- function(pkgInstall, repos, purge) {
     pkgInstall[, localFile := origFiles]
     pkgInstall[, haveLocal :=
                  unlist(lapply(origFiles, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
-    pkgInstall[haveLocal %in% "Local", installFrom := haveLocal]
+    pkgInstall[haveLocal %in% "Local", `:=`(installFrom = haveLocal,
+                                            availableVersionOK = TRUE)]
   }
   pkgInstall
 }
@@ -749,9 +752,10 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
         }
 
       }
-      if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
-      earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
-      ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
+      if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
+        if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
+        earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
+        ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
       dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
       if (is.na(dayBeforeTakenOffCRAN)) {
         dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos, srcPackageURLOnCRAN, repo, srcContrib, notInArchives)
@@ -760,16 +764,22 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
 
       set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
       setnames(ret, "mtime", "dayAfterPutOnCRAN")
-      set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
-      if (!is.na(correctVersions)[1])
-        set(ret, NULL, "availableVersionOK", TRUE)
+        set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
+        if (!is.na(correctVersions)[1])
+          set(ret, NULL, "availableVersionOK", TRUE)
+      } else {
+        ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
+        ret <- as.data.table(ret)
+        ret[, repo := ava[[Package]][1][, c("repo")]]
+        set(ret, NULL, "availableVersionOK", FALSE)
+      }
       data.table::setcolorder(ret, cols)
       ret
     }, by = "Package"]
     # Check MRAN
     pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
 
-    if (any(pkgArchive$repoLocation %in% "Archive")) {
+    if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
       pkgArchive <- split(pkgArchive, pkgArchive$repoLocation)
       pkgArchOnly <- pkgArchive[["Archive"]]
       pkgArchOnly[, PackageUrl := file.path(repo, srcContrib, "Archive", PackageUrl)]
