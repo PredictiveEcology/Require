@@ -9,7 +9,7 @@
 \usage{
 extractPkgName(pkgs)
 
-extractVersionNumber(pkgs)
+extractVersionNumber(pkgs, filenames)
 
 extractInequality(pkgs)
 
