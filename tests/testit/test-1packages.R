@@ -91,7 +91,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   mess11 <- capture.output(type = "message",
                            outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE))
   testit::assert(any(grepl(NoPkgsSupplied, mess11)))
-  testit::assert(is.null(outInner))
+  testit::assert(isFALSE(outInner))
 
 
   # Skip on CRAN
