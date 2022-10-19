@@ -130,8 +130,9 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
                        if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
                        verbose = verbose, verboseLevel = 0)
-      neededFull <- pkgDepInnerMemoise(packages[needGet], libPath, which[[1]], keepVersionNumber,
-                                purge = purge, repos = repos, verbose = verbose)
+      neededFull <- pkgDepInnerMemoise(packages = packages[needGet], libPath = libPath,
+                                       which = which[[1]], keepVersionNumber = keepVersionNumber,
+                                       purge = purge, repos = repos, verbose = verbose, includeBase = includeBase)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
@@ -157,8 +158,10 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                  #names(pkgsToLookup) <- pkgsToLookup
                                  names(pkgsToLookupFull) <- pkgsToLookupFull
                                  pkgsNew[[i]] <- lapply(pkgsToLookupFull, function(needed) {
-                                   unique(unlist(pkgDepInnerMemoise(needed, libPath, which, keepVersionNumber,
-                                                             purge = purge, repos = repos, verbose = verbose)))
+                                   unique(unlist(pkgDepInnerMemoise(packages = needed, libPath = libPath,
+                                                                    which = which, keepVersionNumber = keepVersionNumber,
+                                                                    purge = purge, repos = repos, verbose = verbose,
+                                                                    includeBase = includeBase)))
                                  })
                                  prevIndices <- 1:(i - 1)
                                  curPkgs <- unlist(pkgsNew[[i]])
@@ -288,12 +291,12 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       # if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
-        needed <- getGitHubDepsMemoise(pkg, pkgDT, which, purge)
+        needed <- getGitHubDepsMemoise(pkg = pkg, pkgDT = pkgDT, which = which, purge = purge, includeBase = includeBase)
 
       } else {
         if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"),
                            verbose = verbose)) {
-          needed <- unique(unname(unlist(pkgDepCRANMemoise(pkg,
+          needed <- unique(unname(unlist(pkgDepCRANMemoise(pkg = pkg,
                                                            pkgsNoVersion = pkgNoVersion,
                                                            which = which,
                                                            keepVersionNumber = keepVersionNumber,
@@ -855,7 +858,7 @@ checkCircular <- function(aa) {
 }
 
 #' @inheritParams Require
-getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require.verbose")) {
+getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require.verbose"), includeBase = FALSE) {
   pkg <- masterMainToHead(pkg)
   pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
   needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
@@ -899,7 +902,9 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
     depsFromNamespace <- unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
     depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
     depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
-    pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), .basePkgs))
+    bp <- if (isTRUE(includeBase)) NULL else .basePkgs
+
+    pkgDT2 <- data.table(packageFullName = setdiff(union(needed, depsFromNamespace), bp))
     if (NROW(pkgDT2)) {
       pkgDT2[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
       setorderv(pkgDT2, "isGitPkg", order = -1)
@@ -1084,7 +1089,7 @@ pkgDepInnerMemoise <- function(...) {
       dots2[[1]] <- NULL
       dots2 <- modifyList2(dots2, list(purge = FALSE))
       if (!is.null(names(packages))) names(packages) <- NULL
-      ret <- lapply(packages, function(p) do.call(pkgDepInnerMemoise, append(list(p), dots2)))
+      ret <- lapply(packages, function(p) do.call(pkgDepInnerMemoise, append(list(packages = p), dots2)))
       ret <- unlist(ret, recursive = FALSE)
     } else {
       if (!exists(packages, envir = .pkgEnv$pkgDepInner, inherits = FALSE)) {
