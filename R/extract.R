@@ -40,9 +40,12 @@ extractVersionNumber <- function(pkgs, filenames) {
     out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum], perl = FALSE)
   } else {
     if (!missing(filenames)) {
-      hasVersionNum <- grepl(grepExtractPkgsFilename, basename(filenames))
-      out <- rep(NA, length(filenames))
-      out[hasVersionNum] <- gsub(grepExtractPkgsFilename, "\\1", filenames[hasVersionNum], perl = FALSE)
+      fnsSplit <- strsplit(filenames, "_")
+      # out <- rep(NA, length(filenames))
+      out <- unlist(lapply(fnsSplit, function(x) gsub(".zip|.tar.gz", "", x[[2]])))
+
+      #hasVersionNum <- grepl(grepExtractPkgsFilename, basename(filenames))
+      #out[hasVersionNum] <- gsub(grepExtractPkgsFilename, "\\1", filenames[hasVersionNum], perl = FALSE)
     } else {
       out <- character()
     }
@@ -112,6 +115,7 @@ rmExtraSpaces <- function(string) {
 .grepVersionNumber <- " *\\(.*"
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
-grepExtractPkgsFilename <- "^[[:alpha:]].*_([0-9]+[.\\-][0-9]+.*)(\\.zip|\\.tar.gz)"
+grepExtractPkgsFilename <-
+  "^[[:alpha:]].*_([0-9]+[.\\-][0-9]+[.\\-][0-9]+[.\\-]*[0-9]*)(_.*)(\\.zip|\\.tar.gz)"
 
 .grepR <- "^ *R( |\\(|$)"

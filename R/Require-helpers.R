@@ -487,8 +487,8 @@ installFrom <- function(pkgDT, purge = FALSE, repos = getOption("repos"),
     pkgDT[whFails, `:=`(installFrom = "Fail", installResult = "No available version")]
     anyWhFails <- any(whFails, na.rm = TRUE)
     if (anyWhFails) {
-      messageVerbose("\033[36m", paste(unique(pkgDT$packageFullName[whFails %in% TRUE]), collapse = ", "),
-                     " could not be installed; the version specification cannot be met\033[39m",
+      messageVerbose(turquoise(paste(unique(pkgDT$packageFullName[whFails %in% TRUE]), collapse = ", "),
+                     " could not be installed; the version specification cannot be met"),
                      verbose = verbose, verboseLevel = 1)
     }
     if ("OlderVersionsAvailable" %in% colnames(pkgDT)) {
@@ -849,7 +849,7 @@ doInstalls <- function(pkgDT, install_githubArgs, install.packagesArgs,
         if (any(needBuild)) {
           set(pkgDT, NULL, "needBuild", needBuild)
           if ("localFileName" %in% colnames(pkgDT))
-            pkgDT[installFrom == "Local", needBuild := !(isBinary(localFileName, fromCRAN = FALSE))]
+            pkgDT[installFrom == "Local", needBuild := !(isBinary(localFileName, needRepoCheck = FALSE))]
           # install.packagesArgs[["INSTALL_opts"]] <- unique(c("--build", install.packagesArgs[["INSTALL_opts"]]))
           # install_githubArgs[["INSTALL_opts"]] <- unique(c("--build", install_githubArgs[["INSTALL_opts"]]))
         }
@@ -1166,7 +1166,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     repos <- getCRANrepos(repos)
 
     purge <- dealWithCache(purge = purge)
-    if (!exists("cachedAvailablePackages", envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
+    if (!exists("cAP", envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
       cap <- list()
       isMac <- tolower(Sys.info()["sysname"]) == "darwin"
       isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
@@ -1199,15 +1199,15 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
       }
       cap <- do.call(rbind, cap)
-      if (length(types) > 1) {
-        dups <- duplicated(cap[, c("Package", "Version")])
-        cap <- cap[!dups,]
-      }
+      # if (length(types) > 1) {
+      #   dups <- duplicated(cap[, c("Package", "Version")])
+      #   cap <- cap[!dups,]
+      # }
       cap <- as.data.table(cap)
-      assign("cachedAvailablePackages", cap, envir = .pkgEnv[["pkgDep"]])
+      assign("cAP", cap, envir = .pkgEnv[["pkgDep"]])
       out <- cap
     } else {
-      out <- get("cachedAvailablePackages", envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
+      out <- get("cAP", envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
     }
   } else {
     out <- NULL
@@ -1288,7 +1288,7 @@ installLocal <- function(pkgDT, toInstall, dots, install.packagesArgs, install_g
   warn <- Map(installPkgNamesInner = installPkgNamesBoth, Package = installPackageBoth,
               function(installPkgNamesInner, Package) {
                 # # Deal with "binary" mumbo jumbo
-                isBin <- isBinary(installPkgNamesInner, fromCRAN = FALSE)
+                isBin <- isBinary(installPkgNamesInner, needRepoCheck = FALSE)
                 isBinNotLinux <- all(isBin) && (isWindows() || isMacOSX())
                 type <- c("source", "binary")[isBinNotLinux + 1]
                 ipa <- modifyList2(list(type = type),
@@ -1330,7 +1330,7 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
   ipa <- modifyList2(install.packagesArgs, dots, keep.null = TRUE)
 
   # manually override "type = 'both'" because it gets it wrong some of the time
-  ap <- as.data.table(.pkgEnv[["pkgDep"]]$cachedAvailablePackages)
+  ap <- as.data.table(.pkgEnv[["pkgDep"]][["cAP"]])
   if (NROW(ap) > 1 && isWindows()) {
     ap <- ap[Package %in% installPkgNames]
     if (NROW(ap)) {
@@ -1358,10 +1358,10 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
     installPkgNamesList$Src <- installPkgNames[needSomeSrc]
     installPkgNamesList$Reg <- installPkgNames[!needSomeSrc]
     if (any(isBinaryCRANRepo(repos)))
-      messageVerbose("\033[32mThe following package(s) are named in either ",
+      messageVerbose(green("The following package(s) are named in either ",
                      "options('Require.spatialPkgs') or options('Require.otherPkgs') ",
                      "and will be installed from source: \n",
-                     paste(installPkgNamesList$Src, collapse = ", "), "\033[39m",
+                     paste(installPkgNamesList$Src, collapse = ", ")),
                      verbose = verbose, verboseLevel = 1)
     reposList$Src <- c(CRAN = srcPackageURLOnCRAN)
     reposList$Reg <- repos
@@ -1625,12 +1625,12 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   if (nxtSrc %in% srces)
     messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
                    , verbose = verbose, verboseLevel = 0)
-  messageVerbose("\033[34m-- ", installRangeCh, " of ", numPackages,
+  messageVerbose(blue("-- ", installRangeCh, " of ", numPackages,
                  if (numGroups > 1)
                    paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
                  else  "",
                  ". Estimated time left: ",
-                 timeLeftAlt, "; est. finish: ", estTimeFinish, "\033[39m",
+                 timeLeftAlt, "; est. finish: ", estTimeFinish),
                  verbose = verbose, verboseLevel = 0)
 
   if (any("Local" %in% toInstall$installFrom)) {
@@ -1684,9 +1684,9 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   pkgDT
 }
 
-isBinary <- function(fn, fromCRAN = TRUE) {
+isBinary <- function(fn, needRepoCheck = TRUE) {
   theTest <- endsWith(fn, "zip") | grepl("R_x86", fn)
-  if (isTRUE(fromCRAN)) {
+  if (isTRUE(needRepoCheck)) {
     binRepo <- isBinaryCRANRepo()
     # rspmURL <- formals(setLinuxBinaryRepo)[["binaryLinux"]]
     # binRepo <- startsWith(prefix = rspmURL, getOption("repos")[["CRAN"]])
@@ -1712,7 +1712,7 @@ copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
       filesAlreadyExist <- file.exists(newNames)
       if (any(!filesAlreadyExist)) {
         messageVerbose(verbose = verbose, verboseLevel = 1,
-                       "\033[32mPutting packages into RequirePkgCacheDir()\033[39m")
+                       grenn("Putting packages into RequirePkgCacheDir()"))
         try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
       }
       if (isTRUE(unlink))
@@ -2066,7 +2066,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
           file.copy(cf, gsub(paste0("(", sha, ")."), "", basename(cf))))
         skipDLandBuild <- lengths(cachedFilesHere) > 0
         if (any(skipDLandBuild)) {
-          if (all(vapply(cachedFiles, function(cf) any(isBinary(cf, fromCRAN = FALSE)),
+          if (all(vapply(cachedFiles, function(cf) any(isBinary(cf, needRepoCheck = FALSE)),
                          FUN.VALUE = logical(1)))) {
             dots$INSTALL_opts <- setdiff(dots$INSTALL_opts, "--build")
           }
@@ -2135,7 +2135,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   localDir <- dir()
   packageFNtoInstall <- lapply(gr$repo, function(pak) {
     packageFNtoInstall <- grep(pattern = paste0("^", pak, "_[[:digit:]].+(tar.gz|zip)"), localDir, value = TRUE)
-    isBin <- isBinary(packageFNtoInstall, fromCRAN = FALSE)
+    isBin <- isBinary(packageFNtoInstall, needRepoCheck = FALSE)
     if (any(isBin)) {
       packageFNtoInstall <- packageFNtoInstall[isBin]
     }
@@ -2143,7 +2143,7 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
   })
 
   # if (!isTRUE(grepl("--build", dots$INSTALL_opts)) && !is.null(getOptionRPackageCache())) {
-  #   if (!all(isBinary(unlist(packageFNtoInstall), fromCRAN = FALSE)))
+  #   if (!all(isBinary(unlist(packageFNtoInstall), needRepoCheck = FALSE)))
   #     dots$INSTALL_opts <- paste(dots$INSTALL_opts, "--build")
   # }
 

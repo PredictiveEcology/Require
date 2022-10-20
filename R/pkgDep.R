@@ -132,7 +132,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        verbose = verbose, verboseLevel = 0)
       neededFull <- pkgDepInnerMemoise(packages = packages[needGet], libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
-                                       purge = purge, repos = repos, verbose = verbose, includeBase = includeBase)
+                                       purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
@@ -160,7 +160,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                  pkgsNew[[i]] <- lapply(pkgsToLookupFull, function(needed) {
                                    unique(unlist(pkgDepInnerMemoise(packages = needed, libPath = libPath,
                                                                     which = which, keepVersionNumber = keepVersionNumber,
-                                                                    purge = purge, repos = repos, verbose = verbose,
+                                                                    purge = FALSE, repos = repos, verbose = verbose,
                                                                     includeBase = includeBase)))
                                  })
                                  prevIndices <- 1:(i - 1)
@@ -291,7 +291,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       # if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
-        needed <- getGitHubDepsMemoise(pkg = pkg, pkgDT = pkgDT, which = which, purge = purge, includeBase = includeBase)
+        needed <- getGitHubDepsMemoise(pkg = pkg, pkgDT = pkgDT, which = which,
+                                       purge = FALSE, includeBase = includeBase)
 
       } else {
         if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"),
@@ -346,7 +347,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
             needed <- if (dir.exists(packageTD))
               DESCRIPTIONFileDeps(file.path(packageTD, "DESCRIPTION"),
                                   which = which, keepVersionNumber = keepVersionNumber,
-                                  purge = purge)
+                                  purge = FALSE)
             else {
               messageVerbose(pkg,
                              " dependencies not found on CRAN; perhaps incomplete description? On GitHub?",
@@ -980,6 +981,9 @@ dealWithCache <- function(purge, checkAge = TRUE) {
     .pkgEnv[["startTime"]] <- Sys.time()
   }
   if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
+    if (identical(normPath(getOptionRPackageCache()), normPath(getwd()))) {
+      on.exit(setwd(getOptionRPackageCache()))
+    }
     unlink(RequireCacheDir(FALSE), recursive = TRUE)
     recreate <- RequireCacheDir()
     recreate <- getOptionRPackageCache()
