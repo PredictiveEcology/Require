@@ -772,7 +772,6 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
       ap <- available.packagesCached(repos = repos, verbose = verbose, purge = purge)
       ipa <- modifyList2(list(pkgs = pkgCRAN$Package, available = ap), install.packagesArgs)
-      browser()
       pkgCRAN[, localFile := basename(do.call(download.packages, ipa)[,2])]
     }
   }

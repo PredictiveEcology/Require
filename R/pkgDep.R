@@ -328,18 +328,22 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                 packageURL <- file.path(pkgName, pkgFilename)
                 dt <- numeric()
               }
+              browser()
               if (!is.null(packageURL)) {
                 if (endsWith(packageURL, "tar.gz")) {
-                  url <- file.path(repos, srcContrib, "/Archive", packageURL)
-                  url2 <- file.path(repos, srcContrib, basename(packageURL))
-                  tf <- tempfile()
-                  haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
-                    tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
-                  if (file.exists(tf)) {
-                    untar(tarfile = tf, exdir = td)
-                    filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
-                    filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
-                    unlink(filesToDel, recursive = TRUE)
+                  for (repo in repos) {
+                    url <- file.path(repo, srcContrib, "/Archive", packageURL)
+                    url2 <- file.path(repo, srcContrib, basename(packageURL))
+                    tf <- tempfile()
+                    haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
+                      tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
+                    if (file.exists(tf)) {
+                      untar(tarfile = tf, exdir = td)
+                      filesToDel <- dir(packageTD, recursive = TRUE, full.names = TRUE, include.dirs = TRUE)
+                      filesToDel <- filesToDel[grep("^DESCRIPTION$", basename(filesToDel), invert = TRUE)]
+                      unlink(filesToDel, recursive = TRUE)
+                      break
+                    }
                   }
                 }
               }
