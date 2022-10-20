@@ -428,6 +428,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
        numGroups = maxGroup, startTime, verbose)
 
     pkgInstall[, installResult := "OK"]
+    pkgDTList[["install"]] <- pkgInstall
   }
   pkgDT <- rbindlistRecursive(pkgDTList)
 }
@@ -625,10 +626,9 @@ doLoads <- function(require, pkgDT) {
 
   # override if version was not OK
   if (any(pkgDT$require %in% TRUE)) {
-    pkgDT[require %in% TRUE, require := installedVersionOK %in% TRUE]
-    if (!is.null(pkgDT$availableVersionOK))
-      pkgDT[require %in% TRUE & !installedVersionOK %in% TRUE,
-            require := availableVersionOK %in% TRUE]
+    missingCols <- setdiff(c("installedVersionOK", "availableVersionOK", "installResult"), colnames(pkgDT))
+    if (length(missingCols)) set(pkgDT, NULL, missingCols, NA)
+    pkgDT[require %in% TRUE, require := (installedVersionOK %in% TRUE | installResult %in% "OK")]
   }
 
   out <- list()

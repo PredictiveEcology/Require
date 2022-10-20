@@ -328,7 +328,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                 packageURL <- file.path(pkgName, pkgFilename)
                 dt <- numeric()
               }
-              browser()
               if (!is.null(packageURL)) {
                 if (endsWith(packageURL, "tar.gz")) {
                   for (repo in repos) {
