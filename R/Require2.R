@@ -494,13 +494,13 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
     toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
                                                        repoLocation = "MRAN",
                                                        localFile = basename(urlsSuccess))]
-  if (length(urlsFail)) {
-    cantGet <- toInstall$packageFullName[toInstall$Package %in% names(urlsFail)]
-    messageVerbose("Could not find a binary version of ", paste(cantGet, collapse = ", "), " on MRAN; ",
-                   "trying source archives", verbose = verbose, verboseLevel = 1)
-  }
-  if (sum(toInstall$repoLocation %in% "MRAN"))
-    toInstall[repoLocation %in% "MRAN", {
+    if (length(urlsFail)) {
+      cantGet <- toInstall$packageFullName[toInstall$Package %in% names(urlsFail)]
+      messageVerbose("Could not find a binary version of ", paste(cantGet, collapse = ", "), " on MRAN; ",
+                     "trying source archives", verbose = verbose, verboseLevel = 1)
+    }
+    if (sum(toInstall$repoLocation %in% "MRAN"))
+      toInstall[repoLocation %in% "MRAN", {
         ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
         do.call(download.file, ipa)
       }]
@@ -598,18 +598,34 @@ whichToInstall <- function(pkgDT, install) {
 
 doLoads <- function(require, pkgDT) {
   needRequire <- require
-  if (is.logical(require)) {
-    require <- pkgDT[!is.na(pkgDT$loadOrder)]
-    setorderv(require, "loadOrder")
-    require <- require$Package # convert to character
+  if (is.character(require)) {
+    pkgDT[Package %in% require, require := TRUE]
+  } else if (isTRUE(require)) {
+    pkgDT[!is.na(loadOrder), require := TRUE]
+  } else if (isFALSE(require)) {
+    pkgDT[!is.na(loadOrder), require := FALSE]
   }
-  if (is.character(require) && isTRUE(needRequire)) {
+
+  # override if version was not OK
+  if (any(pkgDT$require %in% TRUE)) {
+    pkgDT[, require := installedVersionOK %in% TRUE]
+    if (!is.null(pkgDT$availableVersionOK))
+      pkgDT[!installedVersionOK %in% TRUE, require := availableVersionOK %in% TRUE]
+  }
+
+  out <- list()
+  if (any(pkgDT$require %in% TRUE)) {
+    setorderv(pkgDT, "loadOrder")
     # rstudio intercepts `require` and doesn't work internally
-    out <- mapply(x = require, function(x) base::require(x, character.only = TRUE), USE.NAMES = TRUE)
-  } else {
-    out <- mapply(x = require, function(x) FALSE, USE.NAMES = TRUE)
+    out[[1]] <- mapply(x = pkgDT$Package[pkgDT$require %in% TRUE], function(x) base::require(x, character.only = TRUE), USE.NAMES = TRUE)
   }
-  out
+
+  if (any(pkgDT$require %in% FALSE)) {
+    out[[2]] <- mapply(x = pkgDT$Package[pkgDT$require %in% FALSE], function(x) FALSE, USE.NAMES = TRUE)
+  }
+  out <- do.call(c, out)
+  out[na.omit(pkgDT$Package[pkgDT$loadOrder])] # put in order, based on loadOrder
+
 }
 
 recordLoadOrder <- function(packages, pkgDT) {
@@ -733,7 +749,9 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
     ava <- lapply(archiveVersionsAvailable(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"],
                                            repos = repos), function(d) {
                                              aa <- as.data.table(d, keep.rownames = "PackageUrl")
-                                             setorderv(aa, "mtime")
+                                             out <- try(setorderv(aa, "mtime"))
+                                             if (is(out, "try-error")) browser()
+                                             aa
                                            })
     cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
     pkgArchive[, c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK") := {
@@ -756,14 +774,14 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
         if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
         earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
         ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
-      dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
-      if (is.na(dayBeforeTakenOffCRAN)) {
-        dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos, srcPackageURLOnCRAN, repo, srcContrib, notInArchives)
-        dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
-      }
+        dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
+        if (is.na(dayBeforeTakenOffCRAN)) {
+          dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos, srcPackageURLOnCRAN, repo, srcContrib, notInArchives)
+          dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
+        }
 
-      set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
-      setnames(ret, "mtime", "dayAfterPutOnCRAN")
+        set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
+        setnames(ret, "mtime", "dayAfterPutOnCRAN")
         set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
         if (!is.na(correctVersions)[1])
           set(ret, NULL, "availableVersionOK", TRUE)
