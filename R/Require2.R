@@ -749,8 +749,7 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs) {
     ava <- lapply(archiveVersionsAvailable(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"],
                                            repos = repos), function(d) {
                                              aa <- as.data.table(d, keep.rownames = "PackageUrl")
-                                             out <- try(setorderv(aa, "mtime"))
-                                             if (is(out, "try-error")) browser()
+                                             if (!is.null(aa[["mtime"]])) setorderv(aa, "mtime")
                                              aa
                                            })
     cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
