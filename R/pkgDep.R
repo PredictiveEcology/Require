@@ -983,14 +983,14 @@ dealWithCache <- function(purge, checkAge = TRUE) {
     .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
     .pkgEnv[["startTime"]] <- Sys.time()
   }
-  if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
-    if (identical(normPath(getOptionRPackageCache()), normPath(getwd()))) {
-      on.exit(setwd(getOptionRPackageCache()))
-    }
-    unlink(RequireCacheDir(FALSE), recursive = TRUE)
-    recreate <- RequireCacheDir()
-    recreate <- getOptionRPackageCache()
-  }
+  # if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
+  #   if (identical(normPath(getOptionRPackageCache()), normPath(getwd()))) {
+  #     on.exit(setwd(getOptionRPackageCache()))
+  #   }
+  #   unlink(RequireCacheDir(FALSE), recursive = TRUE)
+  #   recreate <- RequireCacheDir()
+  #   recreate <- getOptionRPackageCache()
+  # }
 
   if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
   if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge)
