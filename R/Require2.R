@@ -246,7 +246,6 @@ Require <- function(packages, packageVersionFile,
                      purge = getOption("Require.purge", FALSE),
                      verbose = getOption("Require.verbose", FALSE),
                      ...) {
-  messageVerbose(verbose = verbose, verboseLevel = 1, yellow("Using New Require"))
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
 
   # opts <- options("download.file.method" = "curl")
@@ -885,7 +884,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           gitRepo <- paste0(toDL$Account, "/", toDL$Repo, "@", toDL$Branch)
           names(gitRepo) <- toDL$Package
           out <- downloadRepo(gitRepo, subFolder = toDL$GitSubFolder, overwrite = TRUE, destDir = ".", verbose = verbose)
-          fn <- build(Package, verbose = verbose, quiet = FALSE)
+          fn <- try(build(Package, verbose = verbose, quiet = FALSE))
+          if (is(fn, "try-error")) browser()
           normPath(fn)
         }, by = seq(NROW(pkgGHtoDL))]
       }
@@ -1051,6 +1051,9 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
                  verbose = verbose, verboseLevel = 0)
 }
 
+#' Create a custom "available.packages" object
+#'
+#' This is the mechanism by which `install.packages`
 availablePackagesOverride <- function(toInstall, repos, purge) {
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
@@ -1066,7 +1069,6 @@ availablePackagesOverride <- function(toInstall, repos, purge) {
   } else {
     ap3 <- ap[0,, drop = FALSE]
   }
-  ap3
 
   ap <- ap[ap[, "Package"] %in% toInstall$Package, , drop = FALSE]
   if (NROW(ap3))
@@ -1078,7 +1080,6 @@ availablePackagesOverride <- function(toInstall, repos, purge) {
     ap[match(toInstArch$Package, ap[, "Package"]), "Version"] <- toInstArch$VersionOnRepos
     ap[match(toInstArch$Package, ap[, "Package"]), "Repository"] <-
       file.path(repos[1], srcContrib, "Archive", toInstArch$Package)
-    # file.path("https://cloud.r-project.org/src/contrib/Archive", toInstArch$Package)
   }
   ap
 }
