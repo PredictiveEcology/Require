@@ -2279,7 +2279,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
-  if (isTRUE(is.na(subFolder))) {
+  if (isTRUE(is.na(subFolder)) || isTRUE(is.null(subFolder))) {
     subFolder <- FALSE
   }
 
@@ -2293,7 +2293,8 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
     newName <- gsub(badToChange, pkgName, bad)
     file.rename(bad, newName) # it was downloaded with a branch suffix
     newName
-  }))
+  })
+  )
   unlink(zipFileName)
   messageVerbose(paste0(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"), collapse = "\n"),
                  verbose = verbose, verboseLevel = 2)
