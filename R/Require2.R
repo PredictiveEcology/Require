@@ -347,7 +347,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   } else {
     "source"
   }
-  if (identical(type, "source") && !all(toInstall$isBinaryInstall)) {
+
+  if (identical(type, "source") && !all(toInstall$isBinaryInstall %in% TRUE)) {
     install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
   }
 
@@ -355,7 +356,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
-  if (any(toInstall$installFrom %in% "Local")) {
+  bb <- try(if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ){})
+  if (is(bb, "try-error")) browser()
+  if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ) {
     ipa <- modifyList2(install.packagesArgs,
                        list(pkgs = toInstall$localFile,
                             type = type, dependencies = FALSE, repos = NULL),
@@ -366,7 +369,17 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                        keep.null = TRUE)
 
   }
-  installPackagesWithQuiet(ipa)
+
+  aa <- try(
+    withCallingHandlers(
+    installPackagesWithQuiet(ipa),
+    warning = function(w) {
+      browser()
+      warning(w)
+      invokeRestart("muffleWarning")
+    }))
+  if (is(aa, "try-error")) browser()
+
 }
 
 doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs) {
@@ -388,13 +401,18 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
                    " could not be installed; the version specification cannot be met"),
                    verbose = verbose, verboseLevel = 1)
   if (!is.null(pkgInstall)) {
-    pkgInstall[nchar(localFile) > 0, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)]
+    pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)]
 
     startTime <- Sys.time()
 
     # The install
-    set(pkgInstall, NULL, "installSafeGroups", as.integer(factor(paste0(pkgInstall[["installSafeGroups"]], "_",
-                                                                        !pkgInstall[["isBinaryInstall"]]))))
+    data.table::setorderv(pkgInstall, c("installSafeGroups", "Package", "isBinaryInstall", "localFile"),
+                          order = c(1L, 1L, -1L, 1L)) # alphabetical order
+    set(pkgInstall, NULL, "installSafeGroups",
+        as.integer(factor(paste0(paddedFloatToChar(pkgInstall$installSafeGroups,
+                                                   padL = max(nchar(pkgInstall$installSafeGroups))), "_",
+                                 !pkgInstall[["isBinaryInstall"]],
+                                 !pkgInstall[["localFile"]] %in% useRepository))))
     data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
     maxGroup <- max(pkgInstall[["installSafeGroups"]])
     numPackages <- NROW(pkgInstall)
@@ -752,7 +770,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       # ap <- available.packagesCached(repos = repos, verbose = verbose, purge = purge)
       # pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
       # ipa <- modifyList2(list(pkgs = pkgCRAN$Package, available = ap), install.packagesArgs)
-      pkgCRAN[, localFile := "useRepository"]
+      pkgCRAN[, localFile := useRepository]
     }
   }
   pkgNoLocal # pkgCRAN is already in this because it was a pointer
@@ -834,7 +852,7 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
         ap[, "Repository"] <- file.path("https://cloud.r-project.org/src/contrib/Archive", pkgs)
       }
       pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
-      pkgArchOnly[, localFile := "useRepository"]
+      pkgArchOnly[, localFile := useRepository]
       # pkgArchOnly[, PackageUrl := file.path(repo, srcContrib, "Archive", PackageUrl)]
       # pkgArchOnly[, localFile := basename(PackageUrl)]
       # pkgArchOnly[, {
@@ -888,6 +906,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           if (is(fn, "try-error")) browser()
           normPath(fn)
         }, by = seq(NROW(pkgGHtoDL))]
+        pkgGHtoDL[, installFrom := "GitHub"]
       }
       pkgGitHub <- rbindlistRecursive(pkgGHList)
     }
@@ -935,13 +954,14 @@ apCachedCols <- c("Package", "Repository", "Version")
 filenameOK <- function(Package, versionSpec, inequality, VersionOnRepos, localFiles) {
   mapply(pat = Package, ver = versionSpec, ineq = inequality, verAv = VersionOnRepos,
          function(pat, ver, ineq, verAv) {
-           pat <- paste0(".*", pat, "_")
+           pat <- paste0("^", pat, "_")
            fn <- grep(pattern = pat, x = localFiles, value = TRUE)
 
            if (length(fn)) {
-             if (any(isBinary(fn, needRepoCheck = FALSE))) {
-               fn <- fn[isBinary(fn, needRepoCheck = FALSE)]
-             }
+             if (length(fn) > 1)
+               if (any(isBinary(fn, needRepoCheck = FALSE))) { # pick binary if it exists; faster to install
+                 fn <- fn[isBinary(fn, needRepoCheck = FALSE)]
+               }
              localVer <- extractVersionNumber(filenames = fn) # there may be >1 file for a given package; take
              if (is.na(ineq)) { # need max --> which will be the ver; so see if localVer is same as ver
                if (!is.na(verAv)) {
@@ -955,7 +975,7 @@ filenameOK <- function(Package, versionSpec, inequality, VersionOnRepos, localFi
                fn <- tail(fn, 1)[keepLoc]
              } else {
                keepLoc <- compareVersion2(localVer, ver, ineq)
-               if (!identical(ineq, "==")) {
+               if (!identical(ineq, "==") && !is.na(verAv)) {
                  keepRep <- compareVersion2(verAv, ver, ineq)
                  if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good
                    if (any(keepRep %in% TRUE)) { # remote has as at least 1 that is good
@@ -1037,11 +1057,12 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 
   srces <- names(pkgToReportBySource)
   messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
-  for (nxtSrc in c("Local", "CRAN", "Archive", "GitHub")) {
-    if (nxtSrc %in% srces)
-      messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
+  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = "GitHub")
+  Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
+    if (type %in% srces)
+      messageVerbose(get(colr)("  -- ", type,": ", paste(pkgToReportBySource[[type]], collapse = ", "))
                      , verbose = verbose, verboseLevel = 0)
-  }
+  })
   messageVerbose(blue("-- ", installRangeCh, " of ", numPackages,
                       if (numGroups > 1)
                         paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
@@ -1083,3 +1104,5 @@ availablePackagesOverride <- function(toInstall, repos, purge) {
   }
   ap
 }
+
+useRepository <- "useRepository"

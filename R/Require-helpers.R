@@ -2645,29 +2645,6 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   # masterGrep <- paste0("/", "master", "(/|\\.)")
   # mainGrep <- paste0("/", "main", "(/|\\.)")
   hasMasterMain <- grepl(masterMainGrep, url)
-  # hasMaster <- grepl(masterGrep, url)
-  # hasMain <- grepl(mainGrep, url)
-  # if (any(hasMasterMain) && need %in% masterMain) {
-  #   # Good -- try both master and main
-  #   br <- need
-  # } else if (any(hasMasterMain) && need %in% "HEAD") {
-  #   # need change
-  #   br <- "HEAD"
-  #   url <- gsub(masterMainGrep, paste0("/", br, "\\1"), url)
-  # }
-  # HEADgrep <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
-  # hasHEAD <- grepl(HEADgrep, url)
-  # if (any(hasHEAD) && need %in% masterMain) {
-  #   br <- need
-  #   url <- gsub(HEADgrep, paste0("/", br, "\\1"), url)
-  # }
-  # if (any(hasHEAD) && need %in% "HEAD") {
-  #   br <- "HEAD"
-  # }
-  # if (any(hasMasterMain) && length(url) == 1) {
-  #   newBr <- masterMain[hasMain + 1]
-  #   url[[2]] <- gsub(masterMainGrep, paste0("/", newBr, "\\1"), url)
-  # }
   url <- masterMainHEAD(url, need)
 
   # Authentication
@@ -2681,8 +2658,16 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   urls <- split(urls, hasMasterMain)
   outNotMasterMain <- outMasterMain <- character()
   if (!is.null(urls[["FALSE"]]))
-    outNotMasterMain <- Map(URL = urls[["FALSE"]], df = destfile, function(URL, df)
-      try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE))
+    outNotMasterMain <-
+    withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df)
+      try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE)),
+      warning = function(w) {
+        # strip the ghp from the warning message
+        w$message <- gsub(paste0(ghp, "@"), "", w$message)
+        stop(w)
+        invokeRestart("muffleWarning")
+
+      })
   if (!is.null(urls[["TRUE"]])) # should be sequential because they are master OR main
     for (wh in seq(urls[["TRUE"]])) {
       outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE), silent = TRUE)
