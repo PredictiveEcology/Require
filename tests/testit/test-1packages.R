@@ -53,13 +53,11 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                            libPaths = dir2, dependencies = FALSE, quiet = TRUE, require = FALSE)
   pv <- packageVersion("fpCompare", lib.loc = dir2)
   testit::assert({pv == pvWant})
-
   # Test snapshot file
   orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
   pkgSnapFile <- tempfile()
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
-
   dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
   Require::checkPath(dir6, create = TRUE)
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,

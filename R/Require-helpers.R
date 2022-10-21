@@ -1161,7 +1161,7 @@ installedVers <- function(pkgDT) {
 
 #' @importFrom utils available.packages
 #' @inheritParams Require
-available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose")) {
+available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"), returnDataTable = TRUE) {
   if (internetExists("cannot get available packages", verbose = verbose)) {
     repos <- getCRANrepos(repos)
 
@@ -1203,12 +1203,14 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       #   dups <- duplicated(cap[, c("Package", "Version")])
       #   cap <- cap[!dups,]
       # }
-      cap <- as.data.table(cap)
       assign("cAP", cap, envir = .pkgEnv[["pkgDep"]])
       out <- cap
     } else {
       out <- get("cAP", envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
     }
+    if (isTRUE(returnDataTable))
+      out <- as.data.table(out)
+
   } else {
     out <- NULL
   }
@@ -2277,7 +2279,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
-  if (is.na(subFolder)) {
+  if (isTRUE(is.na(subFolder))) {
     subFolder <- FALSE
   }
 

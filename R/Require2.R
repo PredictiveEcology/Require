@@ -249,6 +249,9 @@ Require <- function(packages, packageVersionFile,
   messageVerbose(verbose = verbose, verboseLevel = 1, yellow("Using New Require"))
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
 
+  # opts <- options("download.file.method" = "curl")
+  # on.exit(opts)
+
   dots <- list(...)
   install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
                                       dots, keep.null = TRUE)
@@ -266,9 +269,11 @@ Require <- function(packages, packageVersionFile,
   which <- whichToDILES(doDeps)
 
   if (!missing(packageVersionFile) ) {
+    if (isFALSE(packageVersionFile))
+      messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
+
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, verbose, purge, libPaths,
                          install_githubArgs, install.packagesArgs, standAlone)
-    messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     return(pkgSnapshotOut)
   }
   if (missing(packages)) {
@@ -334,49 +339,10 @@ build <- function(Package, verbose, quiet, out) {
 }
 
 
-installAll <- function(toInstall, repos = getOptions("repos"), install.packagesArgs,
+installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
                        numPackages, numGroups, startTime, verbose) {
 
-  currentTime <- Sys.time()
-  dft <- difftime(currentTime, startTime, units = "secs")
-  installRange <- unique(c(toInstall$installOrder[1], tail(toInstall$installOrder, 1) ))
-  timeLeft <- dft/installRange[1] * (numPackages - installRange[1] + 1)
-
-  lotsOfTimeLeft <- dft > 10
-  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
-  estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
-  pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
-  pkgToReportBySource <- split(toInstall$Package, toInstall$installFrom)
-  installRangeCh <- paste(installRange, collapse = ":")
-
-  srces <- names(pkgToReportBySource)
-  messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
-  for (nxtSrc in c("Local", "CRAN", "Archive", "GitHub")) {
-    if (nxtSrc %in% srces)
-      messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
-                     , verbose = verbose, verboseLevel = 0)
-  }
-  # nxtSrc <- "CRAN"
-  # if (nxtSrc %in% srces)
-  #   messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
-  #                  , verbose = verbose, verboseLevel = 0)
-  # nxtSrc <- "Archive"
-  # if ("Archive" %in% srces)
-  #   messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
-  #                  , verbose = verbose, verboseLevel = 0)
-  # nxtSrc <- "GitHub"
-  # if (nxtSrc %in% srces)
-  #   messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
-  #                  , verbose = verbose, verboseLevel = 0)
-  messageVerbose(blue("-- ", installRangeCh, " of ", numPackages,
-                 if (numGroups > 1)
-                   paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
-                 else  "",
-                 ". Estimated time left: ",
-                 timeLeftAlt, "; est. finish: ", estTimeFinish),
-                 verbose = verbose, verboseLevel = 0)
-
-
+  messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
     unique(c("source", "binary")[toInstall$isBinaryInstall + 1])
   } else {
@@ -386,10 +352,22 @@ installAll <- function(toInstall, repos = getOptions("repos"), install.packagesA
     install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
   }
 
-  ipa <- modifyList2(install.packagesArgs,
-                     list(pkgs = basename(toInstall$localFile), repos = NULL, type = type, dependencies = FALSE),
-                    keep.null = TRUE)
-  do.call(install.packages, ipa)
+  ap <- availablePackagesOverride(toInstall, repos, purge)
+
+  # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
+  install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
+  if (any(toInstall$installFrom %in% "Local")) {
+    ipa <- modifyList2(install.packagesArgs,
+                       list(pkgs = toInstall$localFile,
+                            type = type, dependencies = FALSE, repos = NULL),
+                       keep.null = TRUE)
+  } else {
+    ipa <- modifyList2(install.packagesArgs,
+                       list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
+                       keep.null = TRUE)
+
+  }
+  installPackagesWithQuiet(ipa)
 }
 
 doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs) {
@@ -411,7 +389,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
                    " could not be installed; the version specification cannot be met"),
                    verbose = verbose, verboseLevel = 1)
   if (!is.null(pkgInstall)) {
-    pkgInstall[, isBinaryInstall := isBinary(pkgInstall$localFile, needRepoCheck = FALSE)]
+    pkgInstall[nchar(localFile) > 0, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)]
 
     startTime <- Sys.time()
 
@@ -421,10 +399,11 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
     maxGroup <- max(pkgInstall[["installSafeGroups"]])
     numPackages <- NROW(pkgInstall)
+    setorderv(pkgInstall, c("installSafeGroups", "Package"))
     pkgInstall[, installOrder := seq(.N)]
 
     by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
-       installAll, repos = repos, install.packagesArgs, numPackages,
+       installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
        numGroups = maxGroup, startTime, verbose)
 
     pkgInstall[, installResult := "OK"]
@@ -762,7 +741,8 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
                      paste(pkgCRAN$packageFullName[pkgCRAN$availableVersionOK %in% FALSE],
                            collapse = ", "), "; trying Archives"),
                      verbose = verbose, verboseLevel = 1)
-      pkgCRAN[availableVersionOK %in% FALSE, repoLocation := "Archive"]
+      pkgCRAN[availableVersionOK %in% FALSE, `:=`(repoLocation = "Archive",
+                                                  installFrom = "Archive")]
       pkgNoLocal[["CRAN"]] <- pkgCRAN
       pkgNoLocal <- rbindlistRecursive(pkgNoLocal)
       pkgNoLocal <- split(pkgNoLocal, by = "repoLocation")
@@ -770,9 +750,10 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     }
     if (NROW(pkgCRAN)) {
       pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
-      ap <- available.packagesCached(repos = repos, verbose = verbose, purge = purge)
-      ipa <- modifyList2(list(pkgs = pkgCRAN$Package, available = ap), install.packagesArgs)
-      pkgCRAN[, localFile := basename(do.call(download.packages, ipa)[,2])]
+      # ap <- available.packagesCached(repos = repos, verbose = verbose, purge = purge)
+      # pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
+      # ipa <- modifyList2(list(pkgs = pkgCRAN$Package, available = ap), install.packagesArgs)
+      pkgCRAN[, localFile := "useRepository"]
     }
   }
   pkgNoLocal # pkgCRAN is already in this because it was a pointer
@@ -844,14 +825,23 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
     pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
 
     if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
-      pkgArchive <- split(pkgArchive, pkgArchive$repoLocation)
+      pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
       pkgArchOnly <- pkgArchive[["Archive"]]
-      pkgArchOnly[, PackageUrl := file.path(repo, srcContrib, "Archive", PackageUrl)]
-      pkgArchOnly[, localFile := basename(PackageUrl)]
-      pkgArchOnly[, {
-        ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
-        do.call(download.file, ipa)
-      }, by = seq(NROW(pkgArchOnly))]
+      if (FALSE) {
+        pkgs <- sort(c("fpCompare", "A3"))
+        ap <- available.packages(repos = repos[1])
+        ap <- ap[ap[, "Package"] %in% pkgs, , drop = FALSE]
+        ap[, "Version"] <- rev(c("0.2.3", "0.9.2"))
+        ap[, "Repository"] <- file.path("https://cloud.r-project.org/src/contrib/Archive", pkgs)
+      }
+      pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
+      pkgArchOnly[, localFile := "useRepository"]
+      # pkgArchOnly[, PackageUrl := file.path(repo, srcContrib, "Archive", PackageUrl)]
+      # pkgArchOnly[, localFile := basename(PackageUrl)]
+      # pkgArchOnly[, {
+      #   ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
+      #   do.call(download.file, ipa)
+      # }, by = seq(NROW(pkgArchOnly))]
     }
     pkgArchive <- rbindlistRecursive(pkgArchive)
   }
@@ -987,6 +977,7 @@ filenameOK <- function(Package, versionSpec, inequality, VersionOnRepos, localFi
            } else {
              fn <- ""
            }
+           if (length(fn) == 0) fn <- ""
            fn
          },
          USE.NAMES = TRUE)
@@ -1030,3 +1021,64 @@ green <- function(...) colr(..., digit = 32)
 yellow <- function(...) colr(..., digit = 33)
 blue <- function(...) colr(..., digit = 34)
 turquoise <- function(...) colr(..., digit = 36)
+
+messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGroups) {
+  currentTime <- Sys.time()
+  dft <- difftime(currentTime, startTime, units = "secs")
+  installRange <- unique(c(toInstall$installOrder[1], tail(toInstall$installOrder, 1) ))
+  timeLeft <- dft/installRange[1] * (numPackages - installRange[1] + 1)
+
+  lotsOfTimeLeft <- dft > 10
+  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
+  estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
+  pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
+  pkgToReportBySource <- split(toInstall$Package, toInstall$installFrom)
+  installRangeCh <- paste(installRange, collapse = ":")
+
+  srces <- names(pkgToReportBySource)
+  messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
+  for (nxtSrc in c("Local", "CRAN", "Archive", "GitHub")) {
+    if (nxtSrc %in% srces)
+      messageVerbose("  -- ", nxtSrc,": ", paste(pkgToReportBySource[[nxtSrc]], collapse = ", ")
+                     , verbose = verbose, verboseLevel = 0)
+  }
+  messageVerbose(blue("-- ", installRangeCh, " of ", numPackages,
+                      if (numGroups > 1)
+                        paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
+                      else  "",
+                      ". Estimated time left: ",
+                      timeLeftAlt, "; est. finish: ", estTimeFinish),
+                 verbose = verbose, verboseLevel = 0)
+}
+
+availablePackagesOverride <- function(toInstall, repos, purge) {
+  ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE)
+  pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
+  if (length(pkgsNotInAP)) { # basically no version is there
+    ap3 <- ap[seq(length(pkgsNotInAP)),, drop = FALSE]
+    ap3[, "Package"] <- pkgsNotInAP
+    ap3[, "Version"] <- toInstall[Package %in% pkgsNotInAP]$VersionOnRepos
+    ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
+    ap3[, "Depends"] <- NA
+    ap3[, "Imports"] <- NA # pkgDep("ggplot", which = "Imports", includeSelf = FALSE)
+    ap3[, "Suggests"] <- NA # pkgDep("ggplot", which = "Imports", includeSelf = FALSE)
+    rownames(ap3) <- pkgsNotInAP
+  } else {
+    ap3 <- ap[0,, drop = FALSE]
+  }
+  ap3
+
+  ap <- ap[ap[, "Package"] %in% toInstall$Package, , drop = FALSE]
+  if (NROW(ap3))
+    ap <- rbind(ap, ap3)
+
+  if (any(toInstall$installFrom %in% c("Archive"))) {
+    toInstallList <- split(toInstall, by = "installFrom")
+    toInstArch <- toInstallList[["Archive"]]
+    ap[match(toInstArch$Package, ap[, "Package"]), "Version"] <- toInstArch$VersionOnRepos
+    ap[match(toInstArch$Package, ap[, "Package"]), "Repository"] <-
+      file.path(repos[1], srcContrib, "Archive", toInstArch$Package)
+    # file.path("https://cloud.r-project.org/src/contrib/Archive", toInstArch$Package)
+  }
+  ap
+}

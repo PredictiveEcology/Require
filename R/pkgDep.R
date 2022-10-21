@@ -310,8 +310,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
             td <- tempdir2(pkgName)
             packageTD <- file.path(td, pkgName)
             if (!dir.exists(packageTD)) {
-              messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgName,
-                             "; downloading tar.gz", verbose = verbose, verboseLevel = 1)
               verNum <- extractVersionNumber(pkg)
               if (is.na(verNum)) {
                 ava <- archiveVersionsAvailable(pkgName, repos = repos)
@@ -334,6 +332,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                     url <- file.path(repo, srcContrib, "/Archive", packageURL)
                     url2 <- file.path(repo, srcContrib, basename(packageURL))
                     tf <- tempfile()
+                    messageVerbose("available.packages() does not have correct information on package dependencies for ", pkg,
+                                   "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
                     haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
                       tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
                     if (file.exists(tf)) {
