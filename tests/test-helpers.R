@@ -22,8 +22,8 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
 
   libPath <- .libPaths()
   origWd <- getwd()
-  thisFilename <- getInStack("r")
-  env <- whereInStack("ee")
+  thisFilename <- Require:::getInStack("r")
+  env <- Require:::whereInStack("ee")
   startTime <- Sys.time()
   Require:::messageVerbose("\033[32m --------------------------------- Starting ",
                            thisFilename,"  at: ",format(startTime, digits = 2),"---------------------------\033[39m",
@@ -45,25 +45,12 @@ endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
 
   thisFilename <- setupInitial$thisFilename
   endTime <- Sys.time()
-  ee <- getInStack("ee")
+  ee <- Require:::getInStack("ee")
   ee[[thisFilename]] <- format(endTime - setupInitial$startTime, digits = 2)
   Require:::messageVerbose("\033[32m ----------------------------------",
                            thisFilename, ": ", ee[[thisFilename]], " \033[39m",
                            verboseLevel = -1, verbose = verbose)
   .libPaths(setupInitial$libPath)
   setwd(setupInitial$origWd)
-}
-
-whereInStack <- function(obj) {
-  for (i in 1:sys.nframe()) {
-    fn <- get0(obj, sys.frame(-i), inherits = FALSE)
-    if (!is.null(fn)) break
-  }
-  return(sys.frame(-i))
-}
-
-getInStack <- function(obj) {
-  env <- whereInStack(obj)
-  return(get(obj, envir = env, inherits = FALSE))
 }
 

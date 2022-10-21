@@ -32,7 +32,6 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   }
 
   if (any(pkgDT$repoLocation == "GitHub")) {
-    messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
 
     isGH <- pkgDT$repoLocation == "GitHub"
     isGitHub <- which(isGH)
@@ -1705,7 +1704,7 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
 
 copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
                                 verbose = getOption("Require.verbose")) {
-  if (builtBinary) {
+  # if (builtBinary) {
     theDir <- dir(full.names = TRUE)
     origFiles <- lapply(pkg, function(pat) grep(pattern = paste0("[/\\._]", pat, "_"), x = theDir, value = TRUE))
     if (length(unlist(origFiles))) {
@@ -1729,7 +1728,7 @@ copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
 
       return(invisible(newNames))
     }
-  }
+  #}
 }
 
 installRequire <- function(requireHome = getOption("Require.Home"),
@@ -2640,10 +2639,6 @@ masterMainHEAD <- function(url, need) {
 
 downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
-  #masterMain <- c("main", "master")
-  #masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
-  # masterGrep <- paste0("/", "master", "(/|\\.)")
-  # mainGrep <- paste0("/", "main", "(/|\\.)")
   hasMasterMain <- grepl(masterMainGrep, url)
   url <- masterMainHEAD(url, need)
 
