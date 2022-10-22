@@ -1155,6 +1155,9 @@ installedVers <- function(pkgDT) {
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
   }
+  installed <- !is.na(pkgDT$Version)
+  if (any(installed))
+    set(pkgDT, which(installed), "installed", TRUE)
   pkgDT[]
 }
 

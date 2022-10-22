@@ -359,7 +359,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
   bb <- try(if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ){})
   if (is(bb, "try-error")) browser()
-  if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ) {
+  if (any(nchar(toInstall$localFile) ) && !any(toInstall$localFile %in% useRepository) ) {
     ipa <- modifyList2(install.packagesArgs,
                        list(pkgs = toInstall$localFile,
                             type = type, dependencies = FALSE, repos = NULL),
@@ -399,6 +399,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
   pkgInstall <- pkgDTList[["install"]] # pointer
 
   on.exit({
+    # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages")
     copyRemainingToCache(pkgInstall, tmpdirPkgs)
     copyRemainingToCache(pkgInstall, tmpdir)
@@ -440,9 +441,11 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
        numGroups = maxGroup, startTime, verbose)
 
     pkgInstall[, installResult := "OK"]
-    pkgDTList[["install"]] <- pkgInstall
   }
-  pkgDT <- rbindlistRecursive(pkgDTList)
+  if (!is.null(pkgInstallList[[noneAvailable]]))
+    pkgInstallList[[noneAvailable]][, installResult := needInstall]
+  pkgInstallList[["install"]] <- pkgInstall
+  pkgDT <- rbindlistRecursive(pkgInstallList)
 }
 
 
@@ -744,6 +747,8 @@ identifyLocalDownloads <- function(pkgInstall, repos, purge, libPaths) {
                  unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
     pkgInstall[haveLocal %in% "Local", `:=`(installFrom = haveLocal,
                                             availableVersionOK = TRUE)]
+  } else {
+    set(pkgInstall, NULL, c("localFile"), "")
   }
   pkgInstall
 }
@@ -890,8 +895,18 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
     # If there was a local cache check, then this was already done; internally this will be fast/skip check
     pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
     pkgGitHub <- availableVersionOK(pkgGitHub)
+    avOK <- which(pkgGitHub$availableVersionOK %in% "TRUE")
 
-    if (any(pkgGitHub$availableVersionOK %in% TRUE)) {
+    if (length(avOK)) {
+
+      if (is.null(pkgGitHub[["SHAonGH"]])) {
+        colsToUpdate <- c("SHAonGH")
+        set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
+        pkgGitHub[avOK, (colsToUpdate) := {
+          SHAonGH <- getSHAfromGitHub(repo = Repo, acct = Account, br = Branch)
+        }, by = "Package"]
+      }
+
       pkgGHList <- split(pkgGitHub, pkgGitHub$availableVersionOK)
       pkgGHtoDL <- pkgGHList[["TRUE"]]
       if (any(!pkgGHtoDL$isPkgInstalled)) {
@@ -987,6 +1002,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
         list(SHAonLocal, SHAonGH)
       }, by = "packageFullName"]
     }
+    pkgWhere[["GitHub"]] <- pkgGitHub
     pkgInstall <- rbindlistRecursive(pkgWhere)
   }
   pkgInstall[, localFile := {
@@ -1008,7 +1024,6 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
           } else {
             ord <- 1
           }
-          if (is(ord, 'try-error')) browser()
           keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
           fn <- tail(fn, 1)[keepLoc]
         } else {
@@ -1124,7 +1139,8 @@ availablePackagesOverride <- function(toInstall, repos, purge) {
     ap3 <- ap[seq(length(pkgsNotInAP)),, drop = FALSE]
     ap3[, "Package"] <- pkgsNotInAP
     ap3[, "Version"] <- toInstall[Package %in% pkgsNotInAP]$VersionOnRepos
-    ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
+    if (!is.null(toInstall$Repository))
+      ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     ap3[, "Depends"] <- NA
     ap3[, "Imports"] <- NA # pkgDep("ggplot", which = "Imports", includeSelf = FALSE)
     ap3[, "Suggests"] <- NA # pkgDep("ggplot", which = "Imports", includeSelf = FALSE)
@@ -1197,7 +1213,10 @@ copyRemainingToCache <- function(pkgInstall, tmpdir) {
 
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
-  dontHaveVOR <- is.na(pkgGitHub$VersionOnRepos)
+  if (is.null(pkgGitHub$VersionOnRepos))
+    dontHaveVOR <- TRUE
+  else
+    dontHaveVOR <- is.na(pkgGitHub$VersionOnRepos)
   if (any(dontHaveVOR)) {
     pkgGitHub <- getGitHubFile(pkgGitHub)
     pkgGitHub[, VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
