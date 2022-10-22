@@ -60,7 +60,6 @@ setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package librar
 setLibPaths() # reset it to original
 setwd(origDir)
 
-
 ## setup
 setupTestDir <- normPath(tempdir2("setupTests"))
 ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
@@ -102,5 +101,6 @@ if (identical(RPackageCacheSysEnv, "FALSE")) {
 }
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
+options(ooo)
 
 endTest(setupInitial)
