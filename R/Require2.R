@@ -359,7 +359,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
   bb <- try(if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ){})
   if (is(bb, "try-error")) browser()
-  browser()
   if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ) {
     ipa <- modifyList2(install.packagesArgs,
                        list(pkgs = toInstall$localFile,
@@ -372,13 +371,19 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   }
 
-  browser()
   aa <- try(
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
-      browser()
-      warning(w)
+      isCacheErr <- extractPkgNameFromFileName(w$message)
+      if (startsWith(isCacheErr, getOptionRPackageCache())) {
+        messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(isCacheErr), " was corrupt; deleting; retrying")
+        unlink(dir(getOptionRPackageCache(), pattern = basename(isCacheErr), full.names = TRUE)) # delete the erroneous Cache item
+        Require(toInstall[Package %in% basename(isCacheErr)]$packageFullName, require = FALSE)
+      } else {
+        warning(w)
+      }
+
       invokeRestart("muffleWarning")
     }))
 }
@@ -393,15 +398,12 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
   pkgDTList <- split(pkgDT, by = c("needInstall"))
   pkgInstall <- pkgDTList[["install"]] # pointer
 
-  browser()
-  pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
   on.exit({
-    browser()
-    if (!is.null(getOptionRPackageCache())) {
-      fns <- dir()
-      file.rename(fns, file.path(getOptionRPackageCache(), fns))
-    }
+    tmpdirPkgs <- file.path(tempdir(), "downloaded_packages")
+    copyRemainingToCache(pkgInstall, tmpdirPkgs)
+    copyRemainingToCache(pkgInstall, tmpdir)
   }, add = TRUE)
+  pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
   pkgDTList[["install"]] <- pkgInstall
   pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
   pkgInstall <- pkgInstallList[["install"]]
@@ -418,10 +420,14 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     # The install
     data.table::setorderv(pkgInstall, c("installSafeGroups", "Package", "isBinaryInstall", "localFile"),
                           order = c(1L, 1L, -1L, 1L)) # alphabetical order
+
+    set(pkgInstall, which(pkgInstall$isBinaryInstall), "installSafeGroups", -1L)
+    setorderv(pkgInstall, "installSafeGroups")
+
     set(pkgInstall, NULL, "installSafeGroups",
         as.integer(factor(paste0(paddedFloatToChar(pkgInstall$installSafeGroups,
                                                    padL = max(nchar(pkgInstall$installSafeGroups))), "_",
-                                 !pkgInstall[["isBinaryInstall"]],
+                                 # !pkgInstall[["isBinaryInstall"]],
                                  !pkgInstall[["localFile"]] %in% useRepository))))
     data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
     maxGroup <- max(pkgInstall[["installSafeGroups"]])
@@ -432,21 +438,6 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
        installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
        numGroups = maxGroup, startTime, verbose)
-
-    whGitHub2 <- pkgInstall$installFrom %in% "GitHub"
-    if (any(whGitHub2)) {
-      pkgInstall[whGitHub2 %in% TRUE, localFile := {
-        file <- dir(pattern = Package)
-        splitted <- strsplit(file, "_")[[1]]
-        newSHAname <- paste0(splitted[1], "-", SHAonGH, "_", paste(splitted[-1], collapse = "_"))
-        file.rename(file, newSHAname)
-        newSHAname
-      }, by = seq(sum(whGitHub2))]
-    }
-    if (!is.null(getOptionRPackageCache())) {
-      curBinaries <- dir()
-      file.rename(curBinaries, file.path(getOptionRPackageCache(), curBinaries))
-    }
 
     pkgInstall[, installResult := "OK"]
     pkgDTList[["install"]] <- pkgInstall
@@ -704,6 +695,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstall <- pkgInstall[correctOrder, ]
   set(pkgInstall, NULL, "installSafeGroups", unname(unlist(installSafeGroups)))
 
+  on.exit()
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
 
@@ -894,6 +886,11 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
   if (NROW(pkgGitHub)) { # GitHub
     messageVerbose(messageDownload(pkgGitHub, NROW(pkgGitHub), "GitHub"), verbose = verbose, verboseLevel = 2)
     if (is(pkgGitHub, "try-error")) browser()
+
+    # If there was a local cache check, then this was already done; internally this will be fast/skip check
+    pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
+    pkgGitHub <- availableVersionOK(pkgGitHub)
+
     if (any(pkgGitHub$availableVersionOK %in% TRUE)) {
       pkgGHList <- split(pkgGitHub, pkgGitHub$availableVersionOK)
       pkgGHtoDL <- pkgGHList[["TRUE"]]
@@ -901,7 +898,12 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         # download and build in a separate dir; gets difficult to separate this addition from existing files otherwise
         td <- tempdir2(.rndstr(1))
         prevDir <- setwd(td)
-        on.exit(setwd(prevDir))
+        on.exit({
+          files <- dir()
+          unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
+          unlink(files[!endsWith(files, "tar.gz")]) # There was a random .zip file; couldn't tell why; remove it
+          copyRemainingToCache(pkgGHtoDL, ".")
+          setwd(prevDir)})
         pkgGHtoDL[, localFile := {
           toDL <- .SD[!SHAonGH %in% FALSE]
           gitRepo <- paste0(toDL$Account, "/", toDL$Repo, "@", toDL$Branch)
@@ -911,9 +913,6 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           fn <- dir(pattern = paste0(Package, ".+tar.gz"))
           normPath(fn)
         }, by = "Package"]# seq(NROW(pkgGHtoDL))]
-        localFileOld <- pkgGHtoDL$localFile
-        set(pkgGHtoDL, NULL, "localFile", file.path(prevDir, basename(pkgGHtoDL$localFile)))
-        file.rename(localFileOld, pkgGHtoDL$localFile)
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
         pkgGHtoDL[, installFrom := "GitHub"]
       }
@@ -965,8 +964,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
   pkgWhere <- split(pkgInstall, pkgInstall[["repoLocation"]])
   pkgGitHub <- pkgWhere[["GitHub"]] # pointer
   if (NROW(pkgWhere[["GitHub"]])) {
-    pkgGitHub <- getGitHubFile(pkgGitHub)
-    pkgGitHub[, VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+    pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
     pkgGitHub <- availableVersionOK(pkgGitHub)
     avOK <- which(pkgGitHub$availableVersionOK %in% "TRUE")
     colsToUpdate <- c("SHAonLocal", "SHAonGH")
@@ -997,13 +995,11 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
     fn <- localFiles[whLocalFile]
 
     if (repoLocation %in% "GitHub") {
-      fn <- if (is.na(SHAonGH)) "" else fn <- grep(SHAonGH, fn, value = TRUE)
+      fn <- if (is.na(SHAonGH)) "" else grep(SHAonGH, fn, value = TRUE)
+      fn <- keepOnlyBinary(fn)
     } else {
       if (length(fn)) {
-        if (length(fn) > 1)
-          if (any(isBinary(fn, needRepoCheck = FALSE))) { # pick binary if it exists; faster to install
-            fn <- fn[isBinary(fn, needRepoCheck = FALSE)]
-          }
+        fn <- keepOnlyBinary(fn)
         localVer <- extractVersionNumber(filenames = fn) # there may be >1 file for a given package; take
         if (is.na(inequality)) { # need max --> which will be the versionSpec; so see if localVer is same as versionSpec
           if (!is.na(VersionOnRepos)) {
@@ -1050,6 +1046,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
 
 
 availableVersionOK <- function(pkgDT) {
+  if (!identical(length(unique(pkgDT$packageFullName)), NROW(pkgDT)))
+    browser()
   tmpOrder <- "tmpOrder"
   set(pkgDT, NULL, tmpOrder, seq(NROW(pkgDT)))
   # First set all to availableVersionOK if there is a version available
@@ -1162,4 +1160,48 @@ setNcpus <- function() {
     opts <- NULL
   }
   opts
+}
+
+keepOnlyBinary <- function(fn) {
+  if (length(fn) > 1)
+    if (any(isBinary(fn, needRepoCheck = FALSE))) { # pick binary if it exists; faster to install
+      fn <- fn[isBinary(fn, needRepoCheck = FALSE)]
+    }
+  fn
+}
+
+
+copyRemainingToCache <- function(pkgInstall, tmpdir) {
+  if (!is.null(getOptionRPackageCache())) {
+    whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
+    if (any(whGitHub2)) {
+      pkgInstall[whGitHub2 %in% TRUE, {
+        file <- dir(tmpdir, pattern = Package)
+        if (length(file)) {
+          splitted <- strsplit(file, "_")
+          newSHAname <- lapply(splitted, function(split) {
+            paste0(split[1], "-", SHAonGH, "_", paste(split[-1], collapse = "_"))
+          })
+          file.rename(file.path(tmpdir, file), file.path(tmpdir, newSHAname))
+          out <- unlist(newSHAname)
+        } else {
+          out <- ""
+        }
+        keepOnlyBinary(out)
+      }, by = seq(sum(whGitHub2))]
+    }
+    fns <- dir(tmpdir, full.names = TRUE)
+    file.rename(fns, file.path(getOptionRPackageCache(), basename(fns)))
+  }
+}
+
+
+getGitHubVersionOnRepos <- function(pkgGitHub) {
+  dontHaveVOR <- is.na(pkgGitHub$VersionOnRepos)
+  if (any(dontHaveVOR)) {
+    pkgGitHub <- getGitHubFile(pkgGitHub)
+    pkgGitHub[, VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+    pkgGitHub
+  }
+  pkgGitHub
 }
