@@ -357,8 +357,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
   install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
-  bb <- try(if (any(nchar(toInstall$localFile)) && !any(toInstall$localFile %in% useRepository) ){})
-  if (is(bb, "try-error")) browser()
   if (any(nchar(toInstall$localFile) ) && !any(toInstall$localFile %in% useRepository) ) {
     ipa <- modifyList2(install.packagesArgs,
                        list(pkgs = toInstall$localFile,
@@ -375,6 +373,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
+      # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
       isCacheErr <- extractPkgNameFromFileName(w$message)
       if (startsWith(isCacheErr, getOptionRPackageCache())) {
         messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(isCacheErr), " was corrupt; deleting; retrying")
@@ -404,6 +403,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     copyRemainingToCache(pkgInstall, tmpdirPkgs)
     copyRemainingToCache(pkgInstall, tmpdir)
   }, add = TRUE)
+
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
   pkgDTList[["install"]] <- pkgInstall
   pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
@@ -440,12 +440,12 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
        installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
        numGroups = maxGroup, startTime, verbose)
 
-    pkgInstall[, installResult := "OK"]
+    pkgInstall[, `:=`(installResult = "OK", installed = TRUE)]
   }
   if (!is.null(pkgInstallList[[noneAvailable]]))
-    pkgInstallList[[noneAvailable]][, installResult := needInstall]
-  pkgInstallList[["install"]] <- pkgInstall
-  pkgDT <- rbindlistRecursive(pkgInstallList)
+    pkgInstallList[[noneAvailable]][, `:=`(installResult = needInstall, installed = FALSE)]
+  pkgDTList[["install"]] <- rbindlistRecursive(pkgInstallList)
+  pkgDT <- rbindlistRecursive(pkgDTList)
 }
 
 
@@ -769,8 +769,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     if (any(N$N > 1)) {
       pkgCRAN <- pkgCRAN[, .SD[1], by = "Package"]
     }
-    pkgCRAN <- try(availableVersionOK(pkgCRAN))
-    if (is(pkgCRAN, "try-error")) browser()
+    pkgCRAN <- availableVersionOK(pkgCRAN)
 
     # Not on CRAN; so likely Archive
     if (any(pkgCRAN$availableVersionOK %in% FALSE)) {
@@ -890,7 +889,6 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
   pkgGitHub <- pkgNoLocal[["GitHub"]]
   if (NROW(pkgGitHub)) { # GitHub
     messageVerbose(messageDownload(pkgGitHub, NROW(pkgGitHub), "GitHub"), verbose = verbose, verboseLevel = 2)
-    if (is(pkgGitHub, "try-error")) browser()
 
     # If there was a local cache check, then this was already done; internally this will be fast/skip check
     pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
