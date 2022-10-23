@@ -746,7 +746,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
 
     checkPath(dirname(tempfile()), create = TRUE)
     set(pkgDT, NULL, "destFile",
-        file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Version, "_", filename)))
+        file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Branch, "_", filename)))
     if (internetExists("cannot download GitHub package", verbose = verbose)) {
       pkgDT[repoLocation == "GitHub",
             filepath := {
@@ -1157,7 +1157,7 @@ installedVers <- function(pkgDT) {
   }
   installed <- !is.na(pkgDT$Version)
   if (any(installed))
-    set(pkgDT, which(installed), "installed", TRUE)
+    set(pkgDT, NULL, "installed", installed)
   pkgDT[]
 }
 
@@ -2657,18 +2657,22 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   outNotMasterMain <- outMasterMain <- character()
   if (!is.null(urls[["FALSE"]]))
     outNotMasterMain <-
-    withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df)
-      try(download.file(URL, destfile = df, quiet = TRUE), silent = TRUE)),
-      warning = function(w) {
-        # strip the ghp from the warning message
-        w$message <- gsub(paste0(ghp, "@"), "", w$message)
-        stop(w)
-        invokeRestart("muffleWarning")
+    withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
+      try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
+    }),
 
-      })
+    warning = function(w) {
+      # strip the ghp from the warning message
+      w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
+      browser()
+      stop(w)
+      invokeRestart("muffleWarning")
+
+    })
   if (!is.null(urls[["TRUE"]])) # should be sequential because they are master OR main
     for (wh in seq(urls[["TRUE"]])) {
-      outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE), silent = TRUE)
+      outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE),
+                           silent = TRUE)
       if (!is(outMasterMain, "try-error")) {
         names(outMasterMain) <- urls[["TRUE"]][wh]
         break

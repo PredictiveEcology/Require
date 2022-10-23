@@ -95,7 +95,7 @@ if (isDevAndInteractive) {
     if (!isTRUE(theTest)) browser()
     testit::assert(isTRUE(theTest))
     if ("installResult" %in% colnames(have)) {
-      theTest <- NROW(have[is.na(installResult)]) == sum(have$installed)
+      theTest <- NROW(have[is.na(installResult) | installResult %in% "OK"]) == sum(have$installed)
       if (!isTRUE(theTest)) browser()
       testit::assert(isTRUE(theTest))
     }
