@@ -1163,27 +1163,28 @@ installedVers <- function(pkgDT) {
 
 #' @importFrom utils available.packages
 #' @inheritParams Require
-available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"), returnDataTable = TRUE) {
+available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
+                                     returnDataTable = TRUE) {
   if (internetExists("cannot get available packages", verbose = verbose)) {
     repos <- getCRANrepos(repos)
-
     purge <- dealWithCache(purge = purge)
-    if (!exists("cAP", envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
-      cap <- list()
-      isMac <- tolower(Sys.info()["sysname"]) == "darwin"
-      isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
-      isWindows <- isWindows()
 
-      types <- if (isOldMac) {
-        c("mac.binary.el-capitan", "source")
-      } else if (!isWindows && !isMac) {
-        c("source")
-      } else {
-        c("binary", "source")
-      }
+    cap <- list()
+    isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+    isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
+    isWindows <- isWindows()
 
+    types <- if (isOldMac) {
+      c("mac.binary.el-capitan", "source")
+    } else if (!isWindows && !isMac) {
+      c("source")
+    } else {
+      c("binary", "source")
+    }
 
-      for (type in types) {
+    objNam <- paste0("availablePackages", "_", repos)
+    for (type in types) {
+      if (!exists(objNam, envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
         fn <- availablePackagesCachedPath(repos, type)
         if (isTRUE(purge))
           unlink(fn)
@@ -1193,31 +1194,41 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
           cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
                                   error = function(x)
                                     available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
+          cap[[type]] <-  cap[[type]]
+
+          cap[[type]] <- as.data.table(cap[[type]])
+
           if (!is.null(getOptionRPackageCache())) {
             checkPath(dirname(fn), create = TRUE)
             saveRDS(cap[[type]], file = fn)
           }
         }
 
+
+        cap <- do.call(rbind, cap)
+
+        assign(objNam, cap, envir = .pkgEnv[["pkgDep"]])
+        out <- cap
+      } else {
+        out <- get(objNam, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
       }
-      cap <- do.call(rbind, cap)
-      # if (length(types) > 1) {
-      #   dups <- duplicated(cap[, c("Package", "Version")])
-      #   cap <- cap[!dups,]
-      # }
-      assign("cAP", cap, envir = .pkgEnv[["pkgDep"]])
-      out <- cap
-    } else {
-      out <- get("cAP", envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
     }
-    if (isTRUE(returnDataTable))
-      out <- as.data.table(out)
+    if (isFALSE(returnDataTable)) {
+      # as.matrix is not rich enough ... do it manually
+      bb <- as.matrix(out)
+      rownames(bb) <- out[["Package"]]
+      dimnames(bb)[[1]] <- unname(bb[, "Package"])
+      out <- bb
+    }
+
 
   } else {
     out <- NULL
   }
   return(out)
 }
+
+
 
 #' @inheritParams Require
 currentCRANPkgDates <- function(pkgs, verbose = getOption("Require.verbose")) {
