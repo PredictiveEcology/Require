@@ -280,6 +280,7 @@ Require <- function(packages, packageVersionFile,
     messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     return(invisible(NULL))
   }
+  browser()
 
   if (NROW(packages)) {
     deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which)
@@ -716,50 +717,9 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
 
-  # This sequence checks for the "simple" redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
-  setorderv(pkgInstall, c("Package", "inequality"), order = c(1L, -1L))
-  pkgInstall[, keepBasedOnRedundantInequalities :=
-               unlist(lapply(.I, function(ind) {
-                 ifelse (is.na(inequality), ind,
-                         ifelse (inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I)))}))
-             ,
-             by = c("Package", "inequality")]
-  pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
-  set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+  # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
   browser()
-
-  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths)
-  pkgInstall <- availableVersionOK(pkgInstall)
-
-  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths)
-  pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
-  browser()
-
-  pkgInstall[Package %in% "MatrixModels"]
-
-  # This is a brutal sequence: can one of the rows meet the other rows' inequalities; if so, remove redundancy
-  keepers <- pkgInstall[, list(keep = {
-    .J <- seq(.N)
-    thisComparedToOthers <- try(.J[unlist(lapply(.J, function(ind)
-      all(compareVersion2(versionSpec[ind], versionSpec[.J], inequality[.J]))))])
-    if (is(thisComparedToOthers, "try-error")) browser()
-
-    ineqEquals <- inequality[thisComparedToOthers] == "=="
-    if (is.na(length(unique(thisComparedToOthers)) > 1 && any(ineqEquals))) {
-      print(thisComparedToOthers)
-      print(ineqEquals)
-    }
-    if (length(unique(thisComparedToOthers)) > 1 && any(ineqEquals, na.rm = TRUE)) {
-      thisComparedToOthers <- thisComparedToOthers[ineqEquals]
-    }
-    .I[thisComparedToOthers]
-  }), by = "Package"]
-  a <- pkgInstall[na.omit(unique(keepers$keep))]
-
-
-  pkgInstall[, keep := if (any(availableVersionOK %in% TRUE))
-    .I[availableVersionOK %in% TRUE][1] else .I, by = "Package"]
-  pkgInstall <- pkgInstall[unique(keep)]
+  pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
@@ -792,6 +752,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths) {
     setnames(ap, old = "Version", new = "VersionOnRepos")
     pkgInstall <- ap[pkgInstall, on = "Package"]
     pkgInstall <- getGitHubVersionOnRepos(pkgInstall)
+    browser()
     # N <- pkgInstall[, .N, by = Package]
     # if (any(N$N > 1)) { # this would be binary and source; binary is first in alphabetical
     #   pkgInstall <- pkgInstall[, .SD[1], by = "Package"]
@@ -1318,4 +1279,76 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths) {
   } else {
     set(pkgInstall, NULL, c("localFile"), "")
   }
+}
+
+
+confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT) {
+  set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
+  pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
+  pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
+    out <- rep(NA, length = .N)
+    wh <- which(isEquals)
+    whNot <- which(!isEquals)
+    if (length(wh)) {
+      # if (any(is.na(isEquals))) browser()
+      out[wh] <- try(unlist(Map(verSpec = versionSpec[wh],  function(verSpec) {
+        all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))})))
+      if (is(out, "try-error")) browser()
+      out
+    }
+    out
+  }
+  , by = "Package"]
+  set(pkgDT, which(pkgDT$isEquals %in% TRUE & pkgDT$hasEqualsAndInequals %in% FALSE), "EqualsDoesntViolate", TRUE)
+  pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE))
+    .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
+    else
+      .I,
+                      by = "Package"]
+  pkgDT <- pkgDT[unique(keep)]
+  set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
+  pkgDT
+}
+
+keepOnlyGitHubAtLines <- function(pkgDT) {
+  pkgDT[, c("versionSpec", "inequality") := {
+    vs <- versionSpec
+    ineq <- inequality
+    whHasSHAasBranch <- nchar(Branch) == 40
+    if (any(whHasSHAasBranch, na.rm = TRUE)) {
+      wh <- which(whHasSHAasBranch %in% TRUE)
+      vs[wh] = VersionOnRepos[wh]
+      ineq[wh] = "=="
+    }
+    list(vs, ineq)
+  }, by = "Package"]
+  pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+  pkgDT
+}
+
+
+trimRedundancies <- function(pkgInstall, repos, purge, libPaths) {
+  setorderv(pkgInstall, c("Package", "inequality"), order = c(1L, -1L))
+  pkgInstall[, keepBasedOnRedundantInequalities :=
+               unlist(lapply(.I, function(ind) {
+                 ifelse (is.na(inequality), ind,
+                         ifelse (inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I)))}))
+             ,
+             by = c("Package", "inequality")]
+  pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+  set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+  pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths)
+  pkgInstall <- availableVersionOK(pkgInstall)
+  pkgInstall <- keepOnlyGitHubAtLines(pkgInstall)
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths)
+  pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
+
+  pkgInstall[, keep := if (any(availableVersionOK %in% TRUE))
+    .I[availableVersionOK %in% TRUE][1] else .I, by = "Package"]
+
+  browser()
+  a <- pkgInstall[na.omit(unique(c(keep)))]
+
+  pkgInstall <- pkgInstall[unique(keep)]
 }
