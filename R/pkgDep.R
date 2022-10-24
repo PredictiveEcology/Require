@@ -987,7 +987,7 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
 }
 
 
-dealWithCache <- function(purge, checkAge = TRUE) {
+dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
   if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
@@ -1002,6 +1002,10 @@ dealWithCache <- function(purge, checkAge = TRUE) {
   if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
     .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
     .pkgEnv[["startTime"]] <- Sys.time()
+    fn <- availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
+    fExists <- file.exists(fn)
+    if (any(fExists))
+      unlink(fn[fExists])
   }
   # if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
   #   if (identical(normPath(getOptionRPackageCache()), normPath(getwd()))) {
