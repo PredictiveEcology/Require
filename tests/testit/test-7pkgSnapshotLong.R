@@ -28,6 +28,7 @@ if (isDevAndInteractive) {
   installedInFistLib <- pkgs[LibPath == persLibPathOld]
   # testit::assert(all(installed))
   ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+  ip <- ip[!Package %in% .basePkgs]
   allInIPareInpkgDT <- all(ip$Package %in% allNeeded )
   installedNotInIP <- setdiff(allNeeded, ip$Package)
 
