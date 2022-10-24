@@ -346,7 +346,6 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
                        numPackages, numGroups, startTime, verbose) {
 
-  if (any(toInstall$Package %in% "RandomFields")) browser()
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
     unique(c("source", "binary")[toInstall$isBinaryInstall + 1])
@@ -805,21 +804,8 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
     if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
       pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
       pkgArchOnly <- pkgArchive[["Archive"]]
-      if (FALSE) {
-        pkgs <- sort(c("fpCompare", "A3"))
-        ap <- available.packages(repos = repos[1])
-        ap <- ap[ap[, "Package"] %in% pkgs, , drop = FALSE]
-        ap[, "Version"] <- rev(c("0.2.3", "0.9.2"))
-        ap[, "Repository"] <- file.path("https://cloud.r-project.org/src/contrib/Archive", pkgs)
-      }
       pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
       pkgArchOnly[, localFile := useRepository]
-      # pkgArchOnly[, PackageUrl := file.path(repo, srcContrib, "Archive", PackageUrl)]
-      # pkgArchOnly[, localFile := basename(PackageUrl)]
-      # pkgArchOnly[, {
-      #   ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
-      #   do.call(download.file, ipa)
-      # }, by = seq(NROW(pkgArchOnly))]
     }
     pkgArchive <- rbindlistRecursive(pkgArchive)
   }
@@ -1381,7 +1367,6 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
     data.table::setcolorder(ret, cols)
     ret
   }, by = "Package"]
-  browser()
 
   pkgArchive
 }
