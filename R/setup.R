@@ -317,3 +317,13 @@ putFile <- function(from, to, overwrite) {
     res1 <- file.copy(from, to)
   }
 }
+
+
+appName <- "R-Require"
+
+defaultCacheDir <- switch(
+  Sys.info()[["sysname"]],
+  Darwin = normPath(file.path("~", "Library", "Caches", appName)),
+  Linux = normPath(file.path("~", ".cache", appName)),
+  Windows = normPath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName))
+)
