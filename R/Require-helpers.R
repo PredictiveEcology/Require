@@ -1950,7 +1950,7 @@ rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE)  {
     }
 
     path <- path[1]
-    if (normPath(path) %in% normPath(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
+    if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
       if (interactive() && !endsWith(path, rversion())) {
