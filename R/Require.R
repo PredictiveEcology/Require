@@ -297,7 +297,7 @@ Require3 <- function(packages, packageVersionFile,
         packageVersionFile <- getOption("Require.packageVersionFile")
       }
       packages <- data.table::fread(packageVersionFile)
-      packages <- dealWithViolations(packages, verbose = verbose, purge = purge) # i.e., packages that can't coexist
+      packages <- dealWithViolations(packages, verbose = verbose, purge = purge, libPaths = libPaths) # i.e., packages that can't coexist
       packages <- packages[!packages$Package %in% .basePkgs]
       uniqueLibPaths <- unique(packages$LibPath)
       if (length(uniqueLibPaths) > 1) {
