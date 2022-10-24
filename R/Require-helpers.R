@@ -2714,7 +2714,7 @@ needBuild <- function(pkgDT) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, ".availablePackages.rds")
+  file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, "availablePackages.rds")
 }
 
 installPackagesWithQuiet <- function(ipa) {
