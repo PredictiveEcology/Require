@@ -48,21 +48,22 @@ if (isDevAndInteractive) {
   lala <- capture.output(type = "message",
                          Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
                                  require = FALSE, verbose = 2))
-  missings <- grep(Require:::messagePkgSnapshotMissing, lala, value = TRUE)
-  missings <- gsub(".+: (.+); adding .+", "\\1", missings)
-  missings <- strsplit(missings, ", ")[[1]]
-
-  if (any(grepl(Require:::messageFollowingPackagesIncorrect, lala))) {
-    lastLineOfMessageDF <- tail(grep(":", lala), 1)
-    NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  } else {
-    NnotInstalled <- 0
-  }
-  theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
+  # missings <- grep("The following shows packages", lala, value = TRUE)
+  # missings <- gsub(".+: (.+); adding .+", "\\1", missings)
+  # missings <- strsplit(missings, ", ")[[1]]
+  #
+  # if (any(grepl(Require:::messageFollowingPackagesIncorrect, lala))) {
+  #   lastLineOfMessageDF <- tail(grep(":", lala), 1)
+  #   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
+  # } else {
+  #   NnotInstalled <- 0
+  # }
+  theTest <- NROW(installedPkgs) == NROW(allNeeded)
   if (isDevAndInteractive) if (!isTRUE(theTest)) browser()
   testit::assert(isTRUE(theTest))
 
-  testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
+  theTest2 <- NROW(ip[Package %in% allNeeded]) == NROW(allNeeded)
+  testit::assert(isTRUE(theTest2))
 
   setLibPaths(origLibPaths)
 }
