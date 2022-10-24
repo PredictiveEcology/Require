@@ -2503,33 +2503,6 @@ stripHTTPAddress <- function(addr) {
 #   out <- eval(installPackagesQuoted, envir = envir)
 # }
 
-dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
-                               purge = getOption("Require.purge", FALSE)) {
-  dd <- pkgSnapshotObj
-  ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
-               paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
-  gg <- pkgDep(ff, recursive = TRUE, purge = purge)
-  hh <- sort(unique(gsub(" ", "", gsub("\n", "", unname(unlist(gg))))))
-  ii <- data.table::data.table(packageNameFull = hh,
-                               Package = extractPkgName(hh),
-                               DepVersion = extractVersionNumber(hh))
-  suppressWarnings(ii[, maxVers := max(DepVersion, na.rm = TRUE), by = "Package"])
-  ii[, keep := DepVersion == maxVers, by = "Package"]
-  data.table::setorderv(ii, c("Package", "keep"), na.last = TRUE, order = -1L)
-  ii <- ii[, .SD[1], by = "Package"]
-  data.table::setorderv(ii, c("Package", "keep"), order = 1L)
-  data.table::set(ii, NULL, c("maxVers", "keep"), NULL)
-  kk <- ii[dd, on = "Package"]
-  kk[is.na(DepVersion), DepVersion := Version]
-  mm <- numeric_version(kk$Version) >= numeric_version(kk$DepVersion)
-  data.table::setnames(kk, old = "Version", "InstalledVersion")
-  kk[, violations := mm %in% FALSE][violations == TRUE, c("Package", "InstalledVersion", "DepVersion")]
-  dd <- dd[kk[, c("Package", "DepVersion", "violations")], on = "Package"]
-  dd[violations == TRUE, Version := DepVersion]
-  set(dd, NULL, c("DepVersion"), NULL)
-  dd <- unique(dd)
-  dd[]
-}
 
 installPackagesSystem <- function(pkg, args, libPath) {
   opts2 <- append(args, list(lib = normalizePath(libPath, winslash = "/")))
