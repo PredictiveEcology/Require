@@ -355,26 +355,16 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     "source"
   }
 
-  if (identical(type, "source") && !all(toInstall$isBinaryInstall %in% TRUE)) {
-    install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
-  }
+  install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
   ap <- availablePackagesOverride(toInstall, repos, purge)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
   install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
-  if (any(nchar(toInstall$localFile) ) && !any(toInstall$localFile %in% useRepository) ) {
-    ipa <- modifyList2(install.packagesArgs,
-                       list(pkgs = toInstall$localFile,
-                            type = type, dependencies = FALSE, repos = NULL),
-                       keep.null = TRUE)
-  } else {
-    ipa <- modifyList2(install.packagesArgs,
-                       list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
-                       keep.null = TRUE)
-
-  }
+  ipa <- modifyList2(install.packagesArgs,
+                     list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
+                     keep.null = TRUE)
 
   aa <- try(
     withCallingHandlers(
@@ -385,18 +375,19 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       if (startsWith(isCacheErr, getOptionRPackageCache())) {
         messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(isCacheErr), " was corrupt; deleting; retrying")
         unlink(dir(getOptionRPackageCache(), pattern = basename(isCacheErr), full.names = TRUE)) # delete the erroneous Cache item
-      }
-      retrying <- try(Require(toInstall[Package %in% basename(isCacheErr)]$packageFullName, require = FALSE))
-      if (is(retrying, "try-error"))
+        retrying <- try(Require(toInstall[Package %in% basename(isCacheErr)]$packageFullName, require = FALSE))
+        if (is(retrying, "try-error"))
+          warning(w)
+      } else {
         warning(w)
+      }
       invokeRestart("muffleWarning")
     }))
 }
 
 doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs) {
 
-  tmpdir <- #if (is.null(getOptionRPackageCache()))
-    tempdir2(.rndstr(1)) #else getOptionRPackageCache()
+  tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
   origDir <- setwd(tmpdir)
   on.exit(setwd(origDir))
 
@@ -405,9 +396,18 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
 
   on.exit({
     # this copies any tar.gz files to the package cache; works even if partial install.packages
-    tmpdirPkgs <- file.path(tempdir(), "downloaded_packages")
-    copyRemainingToCache(pkgInstall, tmpdirPkgs)
-    copyRemainingToCache(pkgInstall, tmpdir)
+    tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
+    tmpdirPkgs <- dir(tmpdirPkgs, full.names = TRUE)
+    tmpdirFiles <- dir(tmpdir, full.names = TRUE)
+    if (length(tmpdirPkgs))
+      file.rename(tmpdirPkgs, file.path(getOptionRPackageCache(), basename(tmpdirPkgs)))
+    pkgs <- Map(td = tmpdirFiles, function(td) strsplit(basename(td), split = "_")[[1]][1])
+    if (length(tmpdirFiles)) {
+      SHA <- pkgInstall[match(pkgs, Package)]$SHAonGH
+      out <- renameLocalGitTarWSHA(tmpdirFiles, SHA)
+      newFile <- file.path(getOptionRPackageCache(), basename(out))
+      file.rename(out, newFile)
+    }
   }, add = TRUE)
 
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
@@ -842,9 +842,10 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         prevDir <- setwd(td)
         on.exit({
           files <- dir()
-          unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
           unlink(files[!endsWith(files, "tar.gz")]) # There was a random .zip file; couldn't tell why; remove it
-          copyRemainingToCache(pkgGHtoDL, ".")
+          unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
+          browser()
+          moveLocalFileToCache(pkgGHtoDL)
           setwd(prevDir)})
         pkgGHtoDL[, localFile := {
           toDL <- .SD[!SHAonGH %in% FALSE]
@@ -857,6 +858,9 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         }, by = "Package"]# seq(NROW(pkgGHtoDL))]
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
         pkgGHtoDL[, installFrom := "GitHub"]
+        browser()
+        pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
+        pkgGHtoDL <- moveLocalFileToCache(pkgGHtoDL)
       }
       pkgGitHub <- rbindlistRecursive(pkgGHList)
     }
@@ -1078,6 +1082,12 @@ availablePackagesOverride <- function(toInstall, repos, purge) {
     if (i %in% "Local") {
       ap[whUpdate, "Repository"] <- paste0("file:///", getOptionRPackageCache())
     }
+    if (i %in% "GitHub") {
+      ap[whUpdate, "Repository"] <- paste0("file:///", dirname(toInstall[whUpdate]$localFile))
+    }
+    if (i %in% c("Local", "GitHub")) {
+      ap[whUpdate, "File"] <- basename(toInstall[whUpdate]$localFile)
+    }
   }
 
   ap
@@ -1107,28 +1117,16 @@ keepOnlyBinary <- function(fn) {
 }
 
 
-copyRemainingToCache <- function(pkgInstall, tmpdir) {
+moveLocalFileToCache <- function(pkgInstall) {
   if (!is.null(getOptionRPackageCache())) {
-    whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
-    if (any(whGitHub2)) {
-      pkgInstall[whGitHub2 %in% TRUE, {
-        file <- dir(tmpdir, pattern = Package)
-        if (length(file)) {
-          splitted <- strsplit(file, "_")
-          newSHAname <- lapply(splitted, function(split) {
-            paste0(split[1], "-", SHAonGH, "_", paste(split[-1], collapse = "_"))
-          })
-          file.rename(file.path(tmpdir, file), file.path(tmpdir, newSHAname))
-          out <- unlist(newSHAname)
-        } else {
-          out <- ""
-        }
-        keepOnlyBinary(out)
-      }, by = seq(sum(whGitHub2))]
+    fns <- pkgInstall$localFile
+    movedFilename <- file.path(getOptionRPackageCache(), basename(fns))
+    if (!identical(fns, movedFilename)) {
+      file.rename(fns, movedFilename)
+      set(pkgInstall, NULL, "localFile", movedFilename)
     }
-    fns <- dir(tmpdir, full.names = TRUE)
-    file.rename(fns, file.path(getOptionRPackageCache(), basename(fns)))
   }
+  pkgInstall
 }
 
 
@@ -1203,7 +1201,7 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths) {
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths)
-    pkgInstall[nchar(localFile) > 0, localFile := useRepository]
+    # pkgInstall[nchar(localFile) > 0, localFile := useRepository]
     pkgInstall[, haveLocal :=
                  unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
     pkgInstall[haveLocal %in% "Local", `:=`(installFrom = haveLocal,
@@ -1392,4 +1390,31 @@ parsePackageFullname <- function(pkgDT) {
 
 removeBasePkgs <- function(pkgDT) {
   pkgDT[!Package %in% .basePkgs]
+}
+
+
+renameLocalGitPkgDT <- function(pkgInstall) {
+  whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
+  fns <- pkgInstall$localFile
+  if (any(whGitHub2)) {
+    pkgInstall[whGitHub2 %in% TRUE, localFile := {
+      out <- basename(renameLocalGitTarWSHA(localFile, SHAonGH))
+      keepOnlyBinary(out)
+    }, by = seq(sum(whGitHub2))]
+  }
+}
+
+renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
+  if (length(localFile)) {
+    splitted <- strsplit(basename(localFile), "_")
+    newSHAname <- lapply(splitted, function(split) {
+      paste0(split[1], "-", SHAonGH, "_", paste(split[-1], collapse = "_"))
+    })
+    newSHAname <- unlist(file.path(dirname(localFile), newSHAname))
+    file.rename(localFile, newSHAname)
+    out <- newSHAname
+  } else {
+    out <- ""
+  }
+  out
 }
