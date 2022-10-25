@@ -401,10 +401,12 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     tmpdirFiles <- dir(tmpdir, full.names = TRUE)
     if (length(tmpdirPkgs))
       file.rename(tmpdirPkgs, file.path(getOptionRPackageCache(), basename(tmpdirPkgs)))
-    pkgs <- Map(td = tmpdirFiles, function(td) strsplit(basename(td), split = "_")[[1]][1])
     if (length(tmpdirFiles)) {
-      SHA <- pkgInstall[match(pkgs, Package)]$SHAonGH
-      out <- renameLocalGitTarWSHA(tmpdirFiles, SHA)
+      pkgs <- Map(td = tmpdirFiles, function(td) strsplit(basename(td), split = "_")[[1]][1])
+      pkgsInstalled <- pkgInstall[match(pkgs, Package)]
+      isGitHub <- pkgsInstalled$repoLocation %in% "GitHub"
+      SHA <- pkgsInstalled$SHAonGH[isGitHub]
+      out <- renameLocalGitTarWSHA(tmpdirFiles[isGitHub], SHA)
       newFile <- file.path(getOptionRPackageCache(), basename(out))
       file.rename(out, newFile)
     }
@@ -1397,6 +1399,7 @@ renameLocalGitPkgDT <- function(pkgInstall) {
   whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
   fns <- pkgInstall$localFile
   if (any(whGitHub2)) {
+    browser()
     pkgInstall[whGitHub2 %in% TRUE, localFile := {
       out <- basename(renameLocalGitTarWSHA(localFile, SHAonGH))
       keepOnlyBinary(out)
@@ -1406,9 +1409,10 @@ renameLocalGitPkgDT <- function(pkgInstall) {
 
 renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
   if (length(localFile)) {
-    splitted <- strsplit(basename(localFile), "_")
-    newSHAname <- lapply(splitted, function(split) {
-      paste0(split[1], "-", SHAonGH, "_", paste(split[-1], collapse = "_"))
+    browser()
+    splitted <- lapply(basename(localFile), function(lf) strsplit(lf, "_")[[1]])
+    newSHAname <- Map(spli = splitted, SHA = SHAonGH, function(spli, SHA) {
+      paste0(spli[1], "-", SHA, "_", paste(spli[-1], collapse = "_"))
     })
     newSHAname <- unlist(file.path(dirname(localFile), newSHAname))
     file.rename(localFile, newSHAname)
