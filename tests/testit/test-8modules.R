@@ -2,6 +2,7 @@ setupInitial <- setupTest()
 
 if (isDevAndInteractive) {
   projectDir <- Require:::tempdir2(Require:::.rndstr(1))
+  setLinuxBinaryRepo()
   pkgDir <- file.path(projectDir, "R")
   setLibPaths(pkgDir, standAlone = TRUE)
   dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
