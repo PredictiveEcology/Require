@@ -283,12 +283,14 @@ Require <- function(packages, packageVersionFile,
 
   if (NROW(packages)) {
     deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which)
+    basePkgsToLoad <- packages[packages %in% .basePkgs]
     allPackages <- unname(unlist(deps))
     pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
     pkgDT <- updatePackagesWithNames(pkgDT, packages)
     pkgDT <- parsePackageFullname(pkgDT)
     pkgDT <- parseGitHub(pkgDT)
     pkgDT <- removeDups(pkgDT)
+    pkgDT <- removeBasePkgs(pkgDT)
     pkgDT <- recordLoadOrder(packages, pkgDT)
     pkgDT <- installedVers(pkgDT)
     pkgDT <- dealWithStandAlone(pkgDT, standAlone)
@@ -662,8 +664,9 @@ recordLoadOrder <- function(packages, pkgDT) {
   dups <- duplicated(packages)
   if (any(dups))
     packages <- packages[!dups]
+  packagesWObase <- setdiff(packages, .basePkgs)
   out <- try(
-  pkgDT[packageFullName %in% packages, loadOrder := seq_along(packages)])
+  pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
   if (is(out, "try-error")) browser()
   pkgDT
 }
@@ -1375,4 +1378,8 @@ parsePackageFullname <- function(pkgDT) {
   pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
   pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
   setorderv(pkgDT, c("Package", "versionSpec"), order = c(1L, -1L), na.last = TRUE)
+}
+
+removeBasePkgs <- function(pkgDT) {
+  pkgDT[!Package %in% .basePkgs]
 }
