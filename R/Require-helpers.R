@@ -1702,12 +1702,14 @@ installAny <- function(pkgDT, toInstall, dots, numPackages, numGroups, startTime
   pkgDT
 }
 
-isBinary <- function(fn, needRepoCheck = TRUE) {
+isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest <- endsWith(fn, "zip") | grepl("R_x86", fn)
   if (isTRUE(needRepoCheck)) {
-    binRepo <- isBinaryCRANRepo()
-    # rspmURL <- formals(setLinuxBinaryRepo)[["binaryLinux"]]
-    # binRepo <- startsWith(prefix = rspmURL, getOption("repos")[["CRAN"]])
+    if (isWindows() || isMacOSX()) {
+      binRepo <- isBinaryCRANRepo(curCRANRepo = repos)
+    } else {
+      binRepo <- isBinaryCRANRepo()
+    }
     theTest <- theTest | binRepo
   }
   theTest
@@ -1716,7 +1718,12 @@ isBinary <- function(fn, needRepoCheck = TRUE) {
 
 isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
                              repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
-  startsWith(prefix = repoToTest, curCRANRepo)
+  if (isWindows() || isMacOSX()) {
+    isBin <- grepl("[\\|/])|/bin[\\|/]", curCRANRepo)
+  } else {
+    isBin <- startsWith(prefix = repoToTest, curCRANRepo)
+  }
+  isBin
 }
 
 copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
