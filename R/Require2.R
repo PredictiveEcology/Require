@@ -1409,7 +1409,6 @@ renameLocalGitPkgDT <- function(pkgInstall) {
 
 renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
   if (length(localFile)) {
-    browser()
     splitted <- lapply(basename(localFile), function(lf) strsplit(lf, "_")[[1]])
     newSHAname <- Map(spli = splitted, SHA = SHAonGH, function(spli, SHA) {
       paste0(spli[1], "-", SHA, "_", paste(spli[-1], collapse = "_"))
