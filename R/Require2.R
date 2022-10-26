@@ -357,6 +357,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
+  # if (any(grepl("fontawesome|spatstat.geom", toInstall$Package))) browser()
   ap <- availablePackagesOverride(toInstall, repos, purge)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
@@ -366,10 +367,16 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
+  # if (any(grepl("spatstat.geom", ipa$pkgs))) browser()
   aa <- try(
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
+      browser()
+      pkgName <- gsub(".*\u2018(.+)\u2019.*", "\\1", w$message)
+      gsub(".+\u2018(.+)\u2019.+", "\\1", pkgName)         # package XXX is in use and will not be installed
+      "installation of one or more packages failed,\n  probably ‘spatstat.geom’"
+
       # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
       isCacheErr <- extractPkgNameFromFileName(w$message)
       if (startsWith(isCacheErr, getOptionRPackageCache())) {
@@ -397,19 +404,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
   on.exit({
     # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
-    tmpdirPkgs <- dir(tmpdirPkgs, full.names = TRUE)
-    tmpdirFiles <- dir(tmpdir, full.names = TRUE)
-    if (length(tmpdirPkgs))
-      file.rename(tmpdirPkgs, file.path(getOptionRPackageCache(), basename(tmpdirPkgs)))
-    if (length(tmpdirFiles)) {
-      pkgs <- Map(td = tmpdirFiles, function(td) strsplit(basename(td), split = "_")[[1]][1])
-      pkgsInstalled <- pkgInstall[match(pkgs, Package)]
-      isGitHub <- pkgsInstalled$repoLocation %in% "GitHub"
-      SHA <- pkgsInstalled$SHAonGH[isGitHub]
-      out <- renameLocalGitTarWSHA(tmpdirFiles[isGitHub], SHA)
-      newFile <- file.path(getOptionRPackageCache(), basename(out))
-      file.rename(out, newFile)
-    }
+    copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
   }, add = TRUE)
 
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
@@ -422,7 +417,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
                    verbose = verbose, verboseLevel = 1)
   if (!is.null(pkgInstall)) {
     pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
-    pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinary(localFile, needRepoCheck = TRUE, repos = Repository)] # repository-based
+    pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
 
     startTime <- Sys.time()
 
@@ -689,10 +684,6 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
         LibPath = NA_character_,
         Version = NA_character_)]
     setorderv(pkgDT, c("Package", "LibPath"), na.last = TRUE)
-    # pkgDT[, VersionTest := if (all(is.na(Version)))
-    #   .I[1] else .I[rep(which(!is.na(Version)), length.out = .N)], by = "Package"]
-    # pkgDT <- pkgDT[as.numeric(unique(pkgDT$VersionTest))]
-    # set(pkgDT, NULL, "VersionTest", NULL)
   }
   pkgDT
 }
@@ -706,7 +697,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstall <- pkgInstall[correctOrder, ]
   set(pkgInstall, NULL, "installSafeGroups", unname(unlist(installSafeGroups)))
 
-  on.exit()
+  # on.exit()
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
 
@@ -846,7 +837,6 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           files <- dir()
           unlink(files[!endsWith(files, "tar.gz")]) # There was a random .zip file; couldn't tell why; remove it
           unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
-          browser()
           moveLocalFileToCache(pkgGHtoDL)
           setwd(prevDir)})
         pkgGHtoDL[, localFile := {
@@ -860,7 +850,6 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         }, by = "Package"]# seq(NROW(pkgGHtoDL))]
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
         pkgGHtoDL[, installFrom := "GitHub"]
-        browser()
         pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
         pkgGHtoDL <- moveLocalFileToCache(pkgGHtoDL)
       }
@@ -961,39 +950,31 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
 
 #' Needs VersionOnRepos, versionSpec and inequality columns
 availableVersionOK <- function(pkgDT) {
-  # tmpOrder <- "tmpOrder"
-  # set(pkgDT, NULL, tmpOrder, seq(NROW(pkgDT)))
-
   # First set all to availableVersionOK if there is a version available
   pkgDT[, availableVersionOK := !is.na(VersionOnRepos)]
 
   # Then update this for the subset that have an actual inequality
-  out <- try(pkgDT[!is.na(inequality), availableVersionOK := {
+  out <- try(pkgDT[!is.na(inequality), c("availableVersionOK", "availableVersionOKthisOne") := {
     out <- Map(vor = VersionOnRepos, function(vor) all(compareVersion2(vor, versionSpec, inequality)))
-    unlist(out)
+    avok <- unlist(out)
+    avokto <- compareVersion2(VersionOnRepos, versionSpec, inequality)
+    list(availableVersionOK = avok, availableVersionOKthisOne = avokto)
   }, by = "Package"])
   if (is(out, "try-error")) browser()
-  # set(pkgDT, NULL, tmpOrder, NULL) # clean up the temp
   pkgDT
 }
 
 compareVersion2 <- function(version, versionSpec, inequality) {
-  #wh <- which(!is.na(inequality) & !is.na(version) & !is.na(versionSpec))
-  #if (length(wh)) {
-    out <- Map(vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
-                function(ineq, vers, verSpec) {
-                  if (!is.na(ineq) && !is.na(vers) && !is.na(verSpec))
-                    out <- do.call(ineq, list(package_version(vers), verSpec))
-                  else
-                    NA
-                }
+  out <- Map(vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
+             function(ineq, vers, verSpec) {
+               if (!is.na(ineq) && !is.na(vers) && !is.na(verSpec))
+                 out <- do.call(ineq, list(package_version(vers), verSpec))
+               else
+                 NA
+             }
 
-    )
-    out <- unlist(out)
-    # out <- try(do.call(inequality[wh], list(package_version(version[wh]), versionSpec[wh])))
-    # if (is(out, "try-error")) browser()
-  #} else
-  #  out <- NA
+  )
+  out <- unlist(out)
   out
 }
 
@@ -1029,15 +1010,21 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
   pkgToReportBySource <- split(toInstall$Package, toInstall$installFrom)
+  pkgFullNameToReportBySource <- split(toInstall$packageFullName, toInstall$installFrom)
   installRangeCh <- paste(installRange, collapse = ":")
 
   srces <- names(pkgToReportBySource)
   messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
   nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = "GitHub")
   Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
-    if (type %in% srces)
-      messageVerbose(get(colr)("  -- ", type,": ", paste(pkgToReportBySource[[type]], collapse = ", "))
+    pp <- pkgToReportBySource[[type]]
+    if (type %in% srces) {
+      if (type %in% "GitHub") {
+        pp <- pkgFullNameToReportBySource[[type]]
+      }
+      messageVerbose(get(colr)("  -- ", type,": ", paste(pp, collapse = ", "))
                      , verbose = verbose, verboseLevel = 0)
+    }
   })
   messageVerbose(blue("-- ", installRangeCh, " of ", numPackages,
                       if (numGroups > 1)
@@ -1075,11 +1062,10 @@ availablePackagesOverride <- function(toInstall, repos, purge) {
   toInstallList <- split(toInstall, by = "installFrom")
   for (i in names(toInstallList)) {
     # First do version number -- this is same for all locations
-    ap[match(toInstallList[[i]]$Package, ap[, "Package"]), "Version"] <- toInstallList[[i]]$VersionOnRepos
     whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
+    ap[whUpdate, "Version"] <- toInstallList[[i]]$VersionOnRepos
     if (i %in% "Archive") {
       ap[whUpdate, "Repository"] <- toInstallList[[i]]$Repository
-      # file.path(repos[1], srcContrib, i, toInstallList[[i]]$Package)
     }
     if (i %in% "Local") {
       ap[whUpdate, "Repository"] <- paste0("file:///", getOptionRPackageCache())
@@ -1148,7 +1134,8 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 
 
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
-  PackagePattern <- paste0("^", Package, "(\\_|\\-)")
+  # if (any(grepl("fontawesome|spatstat.geom", Package))) browser()
+  PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", VersionOnRepos)
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
 
@@ -1202,6 +1189,7 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths) {
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+    # if (any(grepl("fontawesome|spatstat.geom", pkgInstall$Package))) browser()
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths)
     # pkgInstall[nchar(localFile) > 0, localFile := useRepository]
     pkgInstall[, haveLocal :=
@@ -1224,7 +1212,6 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT, ifViolation = c(
     wh <- which(isEquals)
     whNot <- which(!isEquals)
     if (length(wh)) {
-      # if (any(is.na(isEquals))) browser()
       out[wh] <- try(unlist(Map(verSpec = versionSpec[wh],  function(verSpec) {
         all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))})))
       if (is(out, "try-error")) browser()
@@ -1300,13 +1287,13 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
   pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths)
-  pkgInstall <- availableVersionOK(pkgInstall)
+  # pkgInstall <- availableVersionOK(pkgInstall)
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths)
   pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
 
-  pkgInstall[, keep := if (any(availableVersionOK %in% TRUE))
-    .I[availableVersionOK %in% TRUE][1] else .I, by = "Package"]
+  pkgInstall[, keep := if (any(availableVersionOKthisOne %in% TRUE))
+    .I[availableVersionOKthisOne %in% TRUE][1] else .I, by = "Package"]
 
   pkgInstall <- pkgInstall[unique(keep)]
   set(pkgInstall, NULL, "keep", NULL)
@@ -1399,7 +1386,6 @@ renameLocalGitPkgDT <- function(pkgInstall) {
   whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
   fns <- pkgInstall$localFile
   if (any(whGitHub2)) {
-    browser()
     pkgInstall[whGitHub2 %in% TRUE, localFile := {
       out <- basename(renameLocalGitTarWSHA(localFile, SHAonGH))
       keepOnlyBinary(out)
@@ -1420,4 +1406,46 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
     out <- ""
   }
   out
+}
+
+copyBuiltToCache <- function(tmpdirs, pkgInstall) {
+  cacheFiles <- dir(getOptionRPackageCache())
+  Map(td = tmpdirs, function(td) {
+    tdPkgs <- dir(td, full.names = TRUE)
+    if (length(tdPkgs)) {
+      pkgs <- Map(td = tdPkgs, function(td) strsplit(basename(td), split = "_")[[1]][1])
+      pkgsInstalled <- pkgInstall[match(pkgs, Package)]
+      isGitHub <- pkgsInstalled$repoLocation %in% "GitHub"
+      if (any(isGitHub)) {
+        SHA <- pkgsInstalled$SHAonGH[isGitHub]
+        tdPkgs[isGitHub] <- renameLocalGitTarWSHA(tdPkgs[isGitHub], SHA)
+      }
+
+      filesNeedingCopying <- tdPkgs[-na.omit(match(cacheFiles,
+                                                   basename(tdPkgs)))]
+      if (length(filesNeedingCopying)) {
+        newFiles <- file.path(getOptionRPackageCache(), basename(filesNeedingCopying))
+        suppressWarnings(file.rename(filesNeedingCopying, newFiles))
+      }
+    }
+
+  })
+  # tdPkgs <- dir(tdPkgs, full.names = TRUE)
+  # tmpdirFiles <- dir(tmpdir, full.names = TRUE)
+  # if (length(tdPkgs)) {
+  #   filesNeedingCopying <- tdPkgs[-na.omit(match(cacheFiles,
+  #                                                    basename(tdPkgs)))]
+  #   newFiles <- file.path(getOptionRPackageCache(), filesNeedingCopying)
+  #
+  #   suppressWarnings(file.rename(filesNeedingCopying, newFiles))
+  # }
+  #
+  #   if (length(tmpdirFiles)) {
+  #
+  #     filesNeedingCopying <- tmpdirFiles[-na.omit(match(cacheFiles,
+  #                                                       basename(tmpdirFiles)))]
+  #     newFiles <- file.path(getOptionRPackageCache(), filesNeedingCopying)
+  #
+  #     suppressWarnings(file.rename(filesNeedingCopying, newFiles))
+  #   }
 }
