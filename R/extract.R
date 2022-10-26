@@ -30,6 +30,8 @@ extractPkgName <- function(pkgs) {
 }
 
 #' @rdname extractPkgName
+#' @param filenames Can be supplied instead of `pkgs` if it is a filename e.g., a
+#'   .tar.gz or .zip that was downloaded from CRAN.
 #' @export
 #' @examples
 #' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))

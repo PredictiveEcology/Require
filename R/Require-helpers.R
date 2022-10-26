@@ -1737,7 +1737,7 @@ copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
       filesAlreadyExist <- file.exists(newNames)
       if (any(!filesAlreadyExist)) {
         messageVerbose(verbose = verbose, verboseLevel = 1,
-                       grenn("Putting packages into RequirePkgCacheDir()"))
+                       green("Putting packages into RequirePkgCacheDir()"))
         try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
       }
       if (isTRUE(unlink))

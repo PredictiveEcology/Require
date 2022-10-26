@@ -1,3 +1,13 @@
+utils::globalVariables(c(
+   "..apCachedCols", "..cols", "..cols3", ".GRP", "availableVersionOKthisOne",
+    "contrib.url", "EqualsDoesntViolate", "getOptions", "grenn",
+    "hasEqualsAndInequals", "hasVersionsToCompare", "haveLocal",
+    "ineq", "installedVersionOK", "isBinaryInstall", "isEquals",
+    "keepBasedOnRedundantInequalities", "localFile", "repo", "Repository",
+    "SHAonGH", "verbose", "VersionOnRepos", "versionToKeep", "violation"
+  ))
+
+
 #' Repeatability-safe install and load packages, optionally with specific versions
 #'
 #' This is an "all in one" function that will run `install.packages` for CRAN and
@@ -375,7 +385,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       # browser()
       pkgName <- gsub(".*\u2018(.+)\u2019.*", "\\1", w$message)
       gsub(".+\u2018(.+)\u2019.+", "\\1", pkgName)         # package XXX is in use and will not be installed
-      "installation of one or more packages failed,\n  probably ‘spatstat.geom’"
 
       # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
       isCacheErr <- extractPkgNameFromFileName(w$message)
@@ -781,6 +790,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
   pkgNoLocal # pkgCRAN is already in this because it was a pointer
 }
 
+#' @importFrom utils contrib.url
 downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, numToDownload) {
   pkgArchive <- pkgNonLocal[["Archive"]]
   if (NROW(pkgArchive)) {
@@ -949,6 +959,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths) {
 
 
 #' Needs VersionOnRepos, versionSpec and inequality columns
+#' @param pkgDT A `pkgDT` object
 availableVersionOK <- function(pkgDT) {
   # First set all to availableVersionOK if there is a version available
   pkgDT[, availableVersionOK := !is.na(VersionOnRepos)]
@@ -1045,7 +1056,11 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 
 #' Create a custom "available.packages" object
 #'
-#' This is the mechanism by which `install.packages`
+#' This is the mechanism by which `install.packages` determines which packages
+#' should be installed from where. With this override, we can indicate arbitrary
+#' `repos`, `Package`, `File` for each individual package.
+#' @param toInstall A `pkgDT` object
+#' @inheritParams Require
 availablePackagesOverride <- function(toInstall, repos, purge) {
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
@@ -1418,9 +1433,10 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 }
 
 copyBuiltToCache <- function(tmpdirs, pkgInstall) {
-  cacheFiles <- dir(getOptionRPackageCache())
 
   if (!is.null(pkgInstall)) {
+    if (!is.null(getOptionRPackageCache())) {
+    cacheFiles <- dir(getOptionRPackageCache())
     out <- try(Map(td = tmpdirs, function(td) {
       tdPkgs <- dir(td, full.names = TRUE)
       if (length(tdPkgs)) {
@@ -1441,6 +1457,6 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
       }
 
     }))
-    if (is(out, "try-error")) browser()
-  }
+    if (is(out, "try-error")) stop("Error 253; please contact developer")
+  }}
 }
