@@ -37,10 +37,8 @@ pkgDT <- Require:::toPkgDT(pkg)
 data.table::set(pkgDT, NULL, "installFrom", "CRAN")
 data.table::set(pkgDT, NULL, "installed", FALSE)
 data.table::set(pkgDT, NULL, "installResult", TRUE)
-Require:::rmDuplicatePkgs(pkgDT)
 
 data.table::set(pkgDT, NULL, "versionSpec", NA)
-Require:::rmDuplicatePkgs(pkgDT)
 
 out <- detachAll("data.table", dontTry = "testit")
 testit::assert({isTRUE(out['data.table'] == 1)})
