@@ -21,7 +21,8 @@ pkgDep(
   sort = TRUE,
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose"),
-  includeSelf = TRUE
+  includeSelf = TRUE,
+  type = getOption("pkgType")
 )
 
 pkgDep2(
@@ -110,6 +111,8 @@ NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object wi
 
 \item{includeSelf}{Logical. If \code{TRUE}, the default, then the dependencies will include
 the package itself in the returned list elements, otherwise, only the "dependencies"}
+
+\item{type}{See `utils::install.packages``}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}

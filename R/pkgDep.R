@@ -68,7 +68,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    keepVersionNumber = TRUE, includeBase = FALSE,
                    sort = TRUE, purge = getOption("Require.purge", FALSE),
                    verbose = getOption("Require.verbose"),
-                   includeSelf = TRUE) {
+                   includeSelf = TRUE, type = getOption("pkgType")) {
 
   purge <- dealWithCache(purge)
 
@@ -132,7 +132,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        verbose = verbose, verboseLevel = 0)
       neededFull <- pkgDepInnerMemoise(packages = packages[needGet], libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
-                                       purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase)
+                                       purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase,
+                                       type = type)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
@@ -267,7 +268,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
 #' @inheritParams Require
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
-                        repos = repos, includeBase = FALSE, verbose = getOption("Require.verbose")) {
+                        repos = repos, includeBase = FALSE, verbose = getOption("Require.verbose"),
+                        type = getOption("pkgType")) {
   names(packages) <- packages
   pkgsNoVersion <- extractPkgName(packages)
   purge <- dealWithCache(purge, checkAge = TRUE)
@@ -303,7 +305,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                                            keepVersionNumber = keepVersionNumber,
                                                            purge = FALSE,
                                                            repos = repos,
-                                                           verbose = verbose))))
+                                                           verbose = verbose,
+                                                           type = type))))
 
           if (is.null(needed)) { # essesntially, failed
             pkgName <- extractPkgName(pkg)
@@ -427,8 +430,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
                        pkgsNoVersion,
                        keepVersionNumber = TRUE, repos = getOption("repos"),
                        purge = getOption("Require.purge", FALSE),
-                       verbose = getOption("Require.verbose")) {
-  capFull <- available.packagesCached(repos = repos, purge = purge, verbose = verbose)
+                       verbose = getOption("Require.verbose"),
+                       type = getOption("pkgType")) {
+  capFull <- available.packagesCached(repos = repos, purge = purge, verbose = verbose, type = type)
   deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, pkgsNoVersion = pkgsNoVersion,
                           keepVersionNumber = keepVersionNumber, verbose = verbose)
   deps

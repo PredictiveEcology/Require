@@ -18,6 +18,7 @@ Require(
   repos = getOption("repos"),
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
+  type = getOption("pkgType"),
   ...
 )
 }
@@ -41,8 +42,8 @@ prepended to \code{.libPaths()} (temporarily during this call) to
 \code{Require} if \code{standAlone = FALSE} or will set (temporarily)
 \code{.libPaths()} to \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
-\item{install_githubArgs}{List of optional named arguments, passed to \code{install.packages}
-inside \code{installGitHubPackage}.}
+\item{install_githubArgs}{Deprecated. Values passed here are merged with \code{install.packagesArgs},
+with the \code{install.packagesArgs} taking precedence if conflicting.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
 
@@ -87,6 +88,8 @@ If -1 or less, then as little verbosity as possible.
 If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
 NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
 \code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+
+\item{type}{See `utils::install.packages``}
 
 \item{...}{Passed to \code{install.packages}.
 Good candidates are e.g., \code{type} or \code{dependencies}. This can be

@@ -4,7 +4,7 @@
 \alias{availablePackagesOverride}
 \title{Create a custom "available.packages" object}
 \usage{
-availablePackagesOverride(toInstall, repos, purge)
+availablePackagesOverride(toInstall, repos, purge, type = getOption("pkgType"))
 }
 \arguments{
 \item{toInstall}{A \code{pkgDT} object}
@@ -23,6 +23,8 @@ This maximum age can be set in seconds with the environment variable
 defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
+
+\item{type}{See `utils::install.packages``}
 }
 \description{
 This is the mechanism by which \code{install.packages} determines which packages

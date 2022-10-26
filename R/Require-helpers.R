@@ -10,6 +10,11 @@ utils::globalVariables(c(
     "version", "violations", "VersionFromPV", "..removeCols", "compareVersionAvail")
 ))
 
+#' Parse a github package specification
+#'
+#' This converts a specification like `PredictiveEcology/Require@development`
+#' into separate columns, "Account", "Repo", "Branch", "GitSubFolder" (if there is one)
+#'
 #' @details
 #' `parseGitHub` turns the single character string representation into 3 or 4:
 #' `Account`, `Repo`, `Branch`, `SubFolder`.
@@ -21,10 +26,8 @@ utils::globalVariables(c(
 #' @rdname GitHubTools
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
-  ghp <- Sys.getenv("GITHUB_PAT")
   pkgDT <- toPkgDT(pkgDT)
   set(pkgDT, NULL, "githubPkgName", extractPkgGitHub(pkgDT$packageFullName))
-  # pkgDT[, githubPkgName := extractPkgGitHub(packageFullName)]
   isGH <- !is.na(pkgDT$githubPkgName)
   if (is.null(pkgDT$repoLocation)) {
     set(pkgDT, which(isGH), "repoLocation", "GitHub")
@@ -180,10 +183,6 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
           url := {
             gitHubFileUrl(hasSubFolder = hasSubFolder, Branch = Branch, GitSubFolder = GitSubFolder,
                           Account = Account, Repo = Repo, filename = filename)
-            # if (any(hasSubFolder)) {
-            #   Branch <- paste0(Branch, "/", GitSubFolder)
-            # }
-            # file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
           },
           by = "Package"]
 
@@ -349,12 +348,16 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
     isWindows <- isWindows()
 
-    types <- if (isOldMac) {
-      c("mac.binary.el-capitan", "source")
-    } else if (!isWindows && !isMac) {
-      c("source")
+    if (missing(type)) {
+      types <- if (isOldMac) {
+        c("mac.binary.el-capitan", "source")
+      } else if (!isWindows && !isMac) {
+        c("source")
+      } else {
+        c("binary", "source")
+      }
     } else {
-      c("binary", "source")
+      types <- type
     }
 
     reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
@@ -368,6 +371,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         if (file.exists(fn)) {
           cap[[type]] <- readRDS(fn)
         } else {
+          browser()
           cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
                                   error = function(x)
                                     available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
@@ -1311,8 +1315,6 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
     warning = function(w) {
       # strip the ghp from the warning message
       w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
-      browser()
-      stop(w)
       invokeRestart("muffleWarning")
 
     })

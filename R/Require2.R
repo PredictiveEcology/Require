@@ -98,8 +98,8 @@ utils::globalVariables(c(
 #'        `.libPaths()` to `c(libPaths, tail(libPaths(), 1)` to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'              `install.packages`, `install_github` or `installVersions`.
-#' @param install_githubArgs List of optional named arguments, passed to `install.packages`
-#'   inside `installGitHubPackage`.
+#' @param install_githubArgs Deprecated. Values passed here are merged with `install.packagesArgs`,
+#'   with the `install.packagesArgs` taking precedence if conflicting.
 #' @param install.packagesArgs List of optional named arguments, passed to `install.packages`.
 #' @param standAlone Logical. If `TRUE`, all packages will be installed to and loaded from
 #'   the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE USER'S `.libPaths()`, similar
@@ -125,6 +125,7 @@ utils::globalVariables(c(
 #'   If 0 or FALSE, then minimal outputs; if `1` or TRUE, more outputs; `2` even more.
 #'   NOTE: in `Require` function, when `verbose >= 2`, the return object will have an attribute:
 #'   `attr(.., "Require")` which has lots of information about the processes of the installs.
+#' @param type See `utils::install.packages``
 #' @param ... Passed to `install.packages`.
 #'   Good candidates are e.g., `type` or `dependencies`. This can be
 #'   used with `install_githubArgs` or `install.packageArgs` which
@@ -251,12 +252,12 @@ utils::globalVariables(c(
 #' }
 #'
 Require <- function(packages, packageVersionFile,
-                     libPaths, # nolint
-                     install_githubArgs = list(),
-                     install.packagesArgs = list(),
-                     standAlone = getOption("Require.standAlone", FALSE),
-                     install = getOption("Require.install", TRUE),
-                     require = getOption("Require.require", TRUE),
+                    libPaths, # nolint
+                    install_githubArgs = list(),
+                    install.packagesArgs = list(),
+                    standAlone = getOption("Require.standAlone", FALSE),
+                    install = getOption("Require.install", TRUE),
+                    require = getOption("Require.require", TRUE),
                     repos = getOption("repos"),
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
@@ -723,7 +724,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 
     # CRAN
     pkgNeedInternet <- downloadCRAN(pkgNeedInternet, repos, purge, install.packagesArgs,
-                                    verbose, numToDownload)
+                                    verbose, numToDownload, type = type)
 
     # Archive
     pkgNeedInternet <- downloadArchive(pkgNeedInternet, repos, verbose, install.packagesArgs,
@@ -753,12 +754,13 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
 
 
 # CRAN
-downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose, numToDownload) {
+downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose, numToDownload,
+                         type = getOption("pkgType")) {
   pkgCRAN <- pkgNoLocal[["CRAN"]]
   if (NROW(pkgCRAN)) { # CRAN, Archive, MRAN
     # messageVerbose(messageDownload(pkgCRAN, NROW(pkgCRAN), "CRAN"), verbose = verbose, verboseLevel = 2)
     if (!all(apCachedCols %in% colnames(pkgCRAN))) {
-      ap <- available.packagesCached(repos = repos, purge = purge)[, ..apCachedCols]
+      ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
       setnames(ap, old = "Version", new = "VersionOnRepos")
       pkgNoLocal[["CRAN"]] <- ap[pkgCRAN, on = "Package"]
       pkgCRAN <- pkgNoLocal[["CRAN"]] # pointer
@@ -1066,8 +1068,8 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 #' `repos`, `Package`, `File` for each individual package.
 #' @param toInstall A `pkgDT` object
 #' @inheritParams Require
-availablePackagesOverride <- function(toInstall, repos, purge) {
-  ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE)
+availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType")) {
+  ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
   if (length(pkgsNotInAP)) { # basically no version is there
     ap3 <- ap[seq(length(pkgsNotInAP)),, drop = FALSE]
