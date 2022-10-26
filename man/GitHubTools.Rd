@@ -7,6 +7,8 @@
 parseGitHub(pkgDT, verbose = getOption("Require.verbose"))
 }
 \arguments{
+\item{pkgDT}{A pkgDT data.table.}
+
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
 If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.

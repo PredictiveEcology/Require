@@ -3,7 +3,7 @@ utils::globalVariables(c(
     "correctVersion", "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup",
     "filepath", "github", "groupCRANtogether", "groupCRANtogetherChange",
     "groupCRANtogetherDif", "hasHEAD", "hasVersionSpec", "i.neededFiles", "inequality",
-    "installFromFac", "installOrder", "installResult", "isGitPkg",
+    "installFrom", "installFromFac", "installOrder", "installResult", "isGitPkg",
     "keep", "keep2", "lastRow", "localFileName", "localType", "maxVers",
     "mtime", "N", "Names", "neededFiles", "needLaterDate", "nextRow",
     "Package", "packageFullName", "repoLocation", "tmpOrder", "type",
@@ -24,6 +24,7 @@ utils::globalVariables(c(
 #'
 #' @export
 #' @rdname GitHubTools
+#' @param pkgDT A pkgDT data.table.
 #' @inheritParams Require
 parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   pkgDT <- toPkgDT(pkgDT)
@@ -412,6 +413,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
 
 
+#' @importFrom utils download.file
 #' @inheritParams Require
 currentCRANPkgDates <- function(pkgs, verbose = getOption("Require.verbose")) {
   if (!exists("currentCranDates", envir = .pkgEnv[["pkgDep"]])) {
@@ -736,6 +738,7 @@ toDT <- function(...) {
 #'   topologically sorted. If `FALSE`, then it won't. Useful if the
 #'   `pkgs` are already sorted.
 #' @inheritParams Require
+#' @importFrom utils sessionInfo
 #'
 #'
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("Require.verbose")) {

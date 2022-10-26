@@ -1162,7 +1162,7 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 }
 
 
-
+#' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
   PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", VersionOnRepos)
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
@@ -1447,6 +1447,7 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
   out
 }
 
+#' @importFrom stats na.omit
 copyBuiltToCache <- function(tmpdirs, pkgInstall) {
 
   if (!is.null(pkgInstall)) {

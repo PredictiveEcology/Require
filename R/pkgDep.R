@@ -264,7 +264,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
   neededFull1
 }
 
-#' @importFrom utils untar
+#' @importFrom utils untar download.file
 #' @inheritParams Require
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
