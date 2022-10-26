@@ -1301,15 +1301,19 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 }
 
 
-trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose")) {
-  setorderv(pkgInstall, c("Package", "inequality"), order = c(1L, -1L))
+trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
+                             type = getOption("pkgType")) {
+  pkgAndInequality <- c("Package", "inequality")
+  ord <- order(package_version(pkgInstall$versionSpec), decreasing = TRUE) # can't use setorderv because data.table can't sort on package_version class
+  pkgInstall <- pkgInstall[ord]
+  setorderv(pkgInstall, pkgAndInequality, order = c(1L, -1L))
   setorderv(pkgInstall, c("repoLocation"), order = 1L) # "CRAN" comes before "GitHub" ... so CRAN is selected if both fulfill min requirement
   pkgInstall[, keepBasedOnRedundantInequalities :=
                unlist(lapply(.I, function(ind) {
                  ifelse (is.na(inequality), ind,
                          ifelse (inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I)))}))
              ,
-             by = c("Package", "inequality")]
+             by = pkgAndInequality]
   pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
