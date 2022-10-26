@@ -336,6 +336,8 @@ installedVers <- function(pkgDT) {
 
 #' @importFrom utils available.packages
 #' @rdname availableVersions
+#' @param returnDataTable Logical. If `TRUE`, the default, then the return is a data.table.
+#'   Otherwise, it is a `matrix`, as per `available.packages`
 #' @inheritParams Require
 #' @inheritParams utils::install.packages
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
