@@ -1101,23 +1101,32 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     ap <- rbind(ap, ap3)
 
   toInstallList <- split(toInstall, by = "installFrom")
+  browser()
   for (i in names(toInstallList)) {
     # First do version number -- this is same for all locations
     whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
-    ap <- ap[whUpdate,, drop = FALSE]
+    ap <- ap[whUpdate,]
+    ap[, "Version"] <- toInstallList[[i]]$VersionOnRepos
     if (i %in% "Archive") {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
-    if (i %in% "Local") {
-      ap[, "Repository"] <- paste0("file:///", getOptionRPackageCache())
-    }
-    if (i %in% "GitHub") {
-      ap[, "Repository"] <-
-        paste0("file:///", normPath(dirname(toInstall[whUpdate]$localFile)))
-    }
     if (i %in% c("Local", "GitHub")) {
-      ap[, "File"] <- basename(toInstall[whUpdate]$localFile)
+      localFile2 <- toInstall[]$localFile
+      fnBase <- basename(localFile2)
+      file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
+      newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
+      file.rename(fnBase, newNameWithoutSHA)
+      ap[, "File"] <- newNameWithoutSHA
+      ap[, "Repository"] <-
+        paste0("file:///", normPath("."))
     }
+    # if (i %in% "Local") {
+    #   ap[whUpdate, "Repository"] <- paste0("file:///", ".")
+    # }
+    # if (i %in% "GitHub") {
+    #   ap[whUpdate, "Repository"] <-
+    #     paste0("file:///", normPath("."))
+    # }
   }
 
   ap
