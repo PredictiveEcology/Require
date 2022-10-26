@@ -937,7 +937,7 @@ dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verb
 apCachedCols <- c("Package", "Repository", "Version", "Archs", "Depends", "Imports", "Suggests", "LinkingTo")
 
 
-localFilename <- function(pkgInstall, localFiles, libPaths) {
+localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
 
   pkgWhere <- split(pkgInstall, pkgInstall[["repoLocation"]])
   pkgGitHub <- pkgWhere[["GitHub"]] # pointer
@@ -1238,10 +1238,10 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 }
 
 
-identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths) {
+identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
-    pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths)
+    pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
     # pkgInstall[nchar(localFile) > 0, localFile := useRepository]
     pkgInstall[, haveLocal :=
                  unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
@@ -1351,7 +1351,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   # pkgInstall <- availableVersionOK(pkgInstall)
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
-  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths)
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
 
   pkgInstall[, keep := if (any(availableVersionOKthisOne %in% TRUE))
