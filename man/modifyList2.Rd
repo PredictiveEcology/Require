@@ -2,9 +2,12 @@
 % Please edit documentation in R/helpers.R
 \name{modifyList2}
 \alias{modifyList2}
+\alias{modifyList3}
 \title{\code{modifyList} for multiple lists}
 \usage{
 modifyList2(..., keep.null = FALSE)
+
+modifyList3(..., keep.null = TRUE)
 }
 \arguments{
 \item{...}{One or more named lists.}
@@ -25,6 +28,10 @@ default \code{keep.null = TRUE}, which is different than \code{modifyList}
 More or less a convenience around
 \code{Reduce(modifyList, list(...))}, with some checks, and the addition of
 \code{keep.null = TRUE} by default.
+}
+\note{
+\code{modifyList3} retains the original behaviour of \code{modifyList2} (prior to Oct 2022);
+however, it cannot retain \code{NULL} values in lists.
 }
 \examples{
 modifyList2(list(a = 1), list(a = 2, b = 2))
