@@ -2049,8 +2049,8 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       if (is(shaOnGitHub, "try-error")) {
         useRemotes <- TRUE
       } else {
-        shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-        if (identical(unname(shaLocal), unname(shaOnGitHub))) {
+        shaLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile[filesExist], other = "GithubSHA1")
+        if (identical(unname(shaLocal[filesExist]), unname(shaOnGitHub[filesExist]))) {
           messageVerbose("Skipping install of ", gitRepo, ", the SHA1 has not changed from last install",
                          verbose = verbose, verboseLevel = 1)
           return(invisible())
