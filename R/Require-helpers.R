@@ -2748,10 +2748,17 @@ checkHEAD <- function(pkgDT) {
 
 packageFullName <- function(pkgDT) {
   inequality <- if (is.null(pkgDT[["inequality"]])) "==" else pkgDT[["inequality"]]
-
-  ifelse(!is.na(pkgDT$GithubRepo) & nzchar(pkgDT$GithubRepo),
-         paste0(pkgDT$GithubUsername, "/", pkgDT$Package, "@", pkgDT$GithubSHA1),
-         paste0(pkgDT$Package, " (", inequality, pkgDT$Version, ")"))
+  if (all(colnames(pkgDT) %in% c("GithubRepo", "GithubUsername"))) {
+    ifelse(!is.na(pkgDT$GithubRepo) & nzchar(pkgDT$GithubRepo),
+           paste0(pkgDT$GithubUsername, "/", pkgDT$Package, "@", pkgDT$GithubSHA1),
+           paste0(pkgDT$Package, ifelse(is.na(pkgDT$Version) | is.na(pkgDT$inequality),
+                                        "", paste0(" (", inequality, pkgDT$Version, ")"))))
+  } else {
+    ifelse(!is.na(pkgDT$Repo) & nzchar(pkgDT$Repo),
+           paste0(pkgDT$Account, "/", pkgDT$Package, "@", pkgDT$SHAonGH),
+           paste0(pkgDT$Package, ifelse(is.na(pkgDT$Version) | is.na(pkgDT$inequality),
+                                        "", paste0(" (", inequality, pkgDT$Version, ")"))))
+  }
 }
 
 gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, filename) {
