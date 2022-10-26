@@ -87,7 +87,8 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Check for packageVersionFile = FALSE
   mess11 <- capture.output(type = "message",
-                           outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE))
+                           outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE)
+                           )
   testit::assert(any(grepl(NoPkgsSupplied, mess11)))
   testit::assert(isFALSE(outInner))
 

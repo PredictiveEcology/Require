@@ -1480,3 +1480,4 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
 }
 
 
+NoPkgsSupplied <- "No packages supplied"
