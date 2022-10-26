@@ -1,10 +1,15 @@
 utils::globalVariables(c(
-   "..apCachedCols", "..cols", "..cols3", ".GRP", "availableVersionOKthisOne",
-    "contrib.url", "EqualsDoesntViolate", "getOptions", "grenn",
-    "hasEqualsAndInequals", "hasVersionsToCompare", "haveLocal",
-    "ineq", "installedVersionOK", "isBinaryInstall", "isEquals",
-    "keepBasedOnRedundantInequalities", "localFile", "repo", "Repository",
-    "SHAonGH", "verbose", "VersionOnRepos", "versionToKeep", "violation"
+  "..apCachedCols", "..cols", "..cols3", ".GRP",
+  "Account", "archiveSource", "availableVersionOKthisOne", "bothDepAndOrig",
+  "Branch", "contrib.url", "correctVersionAvail", "depOrOrig",
+  "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
+  "grenn", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
+  "haveLocal", "ineq", "installed", "installedVersionOK", "isBinaryInstall",
+  "isEquals", "keepBasedOnRedundantInequalities", "libPaths",
+  "loaded", "loadOrder", "localFile", "needInstall", "NoPkgsSupplied",
+  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
+  "repo", "Repo", "Repository", "SHAonGH", "verbose", "Version",
+  "VersionOnRepos", "versionSpec", "versionToKeep", "violation"
   ))
 
 
