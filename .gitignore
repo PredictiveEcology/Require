@@ -20,3 +20,4 @@ tmp*
 
 .checks.RDS
 packages/*
+R/SpaDES/*
