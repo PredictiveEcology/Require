@@ -1101,7 +1101,6 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     ap <- rbind(ap, ap3)
 
   toInstallList <- split(toInstall, by = "installFrom")
-  browser()
   for (i in names(toInstallList)) {
     # First do version number -- this is same for all locations
     whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
