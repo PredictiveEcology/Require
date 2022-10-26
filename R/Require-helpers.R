@@ -1230,3 +1230,69 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
   }
   file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
 }
+
+
+
+#' Internals used by `Require`
+#'
+#' While these are not intended to be called manually by users, they may be
+#' of some use for advanced users.
+#'
+#' @return
+#' In general, these functions return a `data.table` with various package
+#' information, installation status, version, available version etc.
+#'
+#' @importFrom data.table setorderv
+#' @inheritParams Require
+#' @inheritParams parseGitHub
+#' @rdname Require-internals
+#' @export
+getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.verbose")) {
+  pkgDT <- toPkgDT(pkgDT)
+  pkgDT[, hasVersionSpec := grepl(.grepVersionNumber, packageFullName)]
+
+  if (any(pkgDT$hasVersionSpec)) {
+    pkgDT <- pkgDT[hasVersionSpec == TRUE, versionSpec := extractVersionNumber(packageFullName)]
+    pkgDT[hasVersionSpec == TRUE, inequality := extractInequality(packageFullName)]
+
+
+    pkgDT[hasVersionSpec == TRUE & grepl("<", inequality), versionSpec := as.character(min(package_version(versionSpec))),
+          by = "Package"]
+
+    setorderv(pkgDT, c("Package", "versionSpec"), order = -1L)
+
+    # any duplicates with different minimum version number to be dealt with here --> only those with > in their inequality
+    setorderv(pkgDT, c("Package", "hasVersionSpec"), order = -1L)
+
+    if ("Version" %in% colnames(pkgDT)) {
+      theNAVersions <- is.na(pkgDT$Version)
+      NOTNAVersions <- !theNAVersions & !pkgDT$hasHEAD
+      whNOTNAVersions <- which(NOTNAVersions)
+      set(pkgDT, NULL, "correctVersion", NA)
+      if (all(theNAVersions)) {
+        set(pkgDT, NULL, "compareVersion", NA)
+      } else {
+        set(pkgDT, whNOTNAVersions, "compareVersion",
+            .compareVersionV(pkgDT$Version[whNOTNAVersions], pkgDT$versionSpec[whNOTNAVersions]))
+        # pkgDT[!is.na(Version), compareVersion := .compareVersionV(Version, versionSpec)]
+        wh <- which(NOTNAVersions & pkgDT$hasVersionSpec == TRUE)
+        set(pkgDT, wh, "correctVersion",
+            .evalV(.parseV(text = paste(pkgDT$compareVersion[wh], pkgDT$inequality[wh], "0"))))
+        # pkgDT[whNOTNAVersions & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
+        if (any(pkgDT$installed %in% TRUE & pkgDT$correctVersion %in% FALSE))
+          pkgDT[installed %in% TRUE & correctVersion %in% FALSE, installed := FALSE]
+      }
+      # set(pkgDT, which(pkgDT$hasVersionSpec %in% FALSE), "correctVersion", NA)
+      # pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
+      # put FALSE at top of each package -- then take the first one, so we will know if all inequalities are satisfied
+      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L, na.last = TRUE)
+    }
+  } else {
+    pkgDT[ , correctVersion := NA]
+  }
+  if (isTRUE(install == "force")) {
+    pkgDT[, correctVersion := FALSE]
+  }
+  pkgDT[]
+}
+
