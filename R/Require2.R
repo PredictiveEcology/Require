@@ -1104,7 +1104,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
   for (i in names(toInstallList)) {
     # First do version number -- this is same for all locations
     whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
-    ap[whUpdate, "Version"] <- toInstallList[[i]]$VersionOnRepos
+    ap <- ap[whUpdate,]
     if (i %in% "Archive") {
       ap[whUpdate, "Repository"] <- toInstallList[[i]]$Repository
     }
