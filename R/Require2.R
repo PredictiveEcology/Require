@@ -1306,9 +1306,13 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
   pkgAndInequality <- c("Package", "inequality")
-  if (!is.null(pkgInstall$versionSpec)) {
-    ord <- order(package_version(pkgInstall$versionSpec), decreasing = TRUE) # can't use setorderv because data.table can't sort on package_version class
-    pkgInstall <- pkgInstall[ord]
+  versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
+  if (any(versionSpecNotNA)) {
+    set(pkgInstall, which(versionSpecNotNA), "ord",
+        order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+              decreasing = TRUE, na.last = TRUE)) # can't use setorderv because data.table can't sort on package_version class
+    setorderv(pkgInstall, "ord", order = 1L, na.last = TRUE)
+    set(pkgInstall, NULL, "ord", NULL)
   }
   setorderv(pkgInstall, pkgAndInequality, order = c(1L, -1L))
   setorderv(pkgInstall, c("repoLocation"), order = 1L) # "CRAN" comes before "GitHub" ... so CRAN is selected if both fulfill min requirement
