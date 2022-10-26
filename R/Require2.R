@@ -1106,17 +1106,17 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
     ap <- ap[whUpdate,]
     if (i %in% "Archive") {
-      ap[whUpdate, "Repository"] <- toInstallList[[i]]$Repository
+      ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
     if (i %in% "Local") {
-      ap[whUpdate, "Repository"] <- paste0("file:///", getOptionRPackageCache())
+      ap[, "Repository"] <- paste0("file:///", getOptionRPackageCache())
     }
     if (i %in% "GitHub") {
-      ap[whUpdate, "Repository"] <-
+      ap[, "Repository"] <-
         paste0("file:///", normPath(dirname(toInstall[whUpdate]$localFile)))
     }
     if (i %in% c("Local", "GitHub")) {
-      ap[whUpdate, "File"] <- basename(toInstall[whUpdate]$localFile)
+      ap[, "File"] <- basename(toInstall[whUpdate]$localFile)
     }
   }
 
