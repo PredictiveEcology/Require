@@ -745,11 +745,6 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
       beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
       insertHere <- min(beforeTheseLines)
       sha <- SHAonGH
-      # sha <- if (grepl("[[:alnum:]]{40,40}", Branch)) { # it is already a sha -- no need to find from head
-      #
-      # } else {
-      #   getSHAfromGitHub(acct, repo, br)
-      # }
       newTxt <-
         paste0("RemoteType: github
 RemoteHost: api.github.com

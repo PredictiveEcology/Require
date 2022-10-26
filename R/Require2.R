@@ -380,6 +380,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
+  # if (any(grepl("fpCompare", ipa$pkgs))) browser()
   aa <- try(
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
@@ -423,7 +424,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
     copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
-    postInstallDESCRIPTIONMods(pkgInstall, libPaths)
+    try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE) # CRAN is read only after pkgs installed
   }, add = TRUE)
 
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths,
@@ -719,6 +720,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
   numToDownload <- NROW(pkgInstallList[["noLocal"]])
+  # if (any(grepl("fpCompare", pkgNeedInternet$Package))) browser()
   if (NROW(pkgNeedInternet)) {
     pkgNeedInternet <- split(pkgNeedInternet, by = "repoLocation")
 
@@ -733,6 +735,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     # GitHub
     pkgNeedInternet <- downloadGitHub(pkgNeedInternet, libPaths, verbose, install.packagesArgs,
                                       numToDownload)
+
     pkgInstallList[["noLocal"]] <- pkgNeedInternet # pointer
   }
 
@@ -847,11 +850,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         td <- tempdir2(.rndstr(1))
         prevDir <- setwd(td)
         on.exit({
-          files <- dir()
-          unlink(files[!endsWith(files, "tar.gz")]) # There was a random .zip file; couldn't tell why; remove it
-          unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
-          moveLocalFileToCache(pkgGHtoDL)
-          setwd(prevDir)})
+          cleanUpNewBuilds(pkgGHtoDL, prevDir) # no need to assign this because it is on.exit fail
+          })
         pkgGHtoDL[, localFile := {
           toDL <- .SD[!SHAonGH %in% FALSE]
           gitRepo <- paste0(toDL$Account, "/", toDL$Repo, "@", toDL$Branch)
@@ -864,7 +864,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
         pkgGHtoDL[, installFrom := "GitHub"]
         pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
-        pkgGHtoDL <- moveLocalFileToCache(pkgGHtoDL)
+        pkgGHtoDL <- cleanUpNewBuilds(pkgGHtoDL, prevDir)
+        on.exit() # don't run on.exit above if this was successful
       }
       pkgGitHub <- rbindlistRecursive(pkgGHList)
     }
@@ -872,6 +873,16 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
   pkgNoLocal[["GitHub"]] <- pkgGitHub
   pkgNoLocal
 }
+
+cleanUpNewBuilds <- function(pkgDT, prevDir) {
+  files <- dir()
+  unlink(files[!endsWith(files, "tar.gz")]) # There was a random .zip file; couldn't tell why; remove it
+  unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
+  moveFileToCacheOrTmp(pkgDT)
+  setwd(prevDir)
+  pkgDT
+}
+
 
 types <- function(length = 1L) {
   isOldMac <- isMacOSX() && compareVersion(as.character(getRversion()), "4.0.0") < 0
@@ -1101,7 +1112,8 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap[whUpdate, "Repository"] <- paste0("file:///", getOptionRPackageCache())
     }
     if (i %in% "GitHub") {
-      ap[whUpdate, "Repository"] <- paste0("file:///", dirname(toInstall[whUpdate]$localFile))
+      ap[whUpdate, "Repository"] <-
+        paste0("file:///", normPath(dirname(toInstall[whUpdate]$localFile)))
     }
     if (i %in% c("Local", "GitHub")) {
       ap[whUpdate, "File"] <- basename(toInstall[whUpdate]$localFile)
@@ -1135,14 +1147,17 @@ keepOnlyBinary <- function(fn) {
 }
 
 
-moveLocalFileToCache <- function(pkgInstall) {
-  if (!is.null(getOptionRPackageCache())) {
-    fns <- pkgInstall$localFile
-    movedFilename <- file.path(getOptionRPackageCache(), basename(fns))
-    if (!identical(fns, movedFilename)) {
-      file.rename(fns, movedFilename)
-      set(pkgInstall, NULL, "localFile", movedFilename)
-    }
+moveFileToCacheOrTmp <- function(pkgInstall) {
+  localFileDir <- if (!is.null(getOptionRPackageCache())) {
+    getOptionRPackageCache()
+  } else {
+    tempdir2(.rndstr(1))
+  }
+  fns <- pkgInstall$localFile
+  movedFilename <- file.path(localFileDir, basename(fns))
+  if (!identical(fns, movedFilename)) {
+    file.rename(fns, movedFilename)
+    set(pkgInstall, NULL, "localFile", movedFilename)
   }
   pkgInstall
 }
