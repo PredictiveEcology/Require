@@ -372,7 +372,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
-  # if (any(grepl("fontawesome|spatstat.geom", toInstall$Package))) browser()
   ap <- availablePackagesOverride(toInstall, repos, purge)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
@@ -382,12 +381,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
-  # if (any(grepl("spatstat.geom", ipa$pkgs))) browser()
   aa <- try(
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
-      # browser()
       pkgName <- gsub(".*\u2018(.+)\u2019.*", "\\1", w$message)
       gsub(".+\u2018(.+)\u2019.+", "\\1", pkgName)         # package XXX is in use and will not be installed
 
@@ -426,6 +423,7 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
     copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
+    postInstallDESCRIPTIONMods(pkgInstall, libPaths)
   }, add = TRUE)
 
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
@@ -1169,7 +1167,6 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 
 
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
-  # if (any(grepl("fontawesome|spatstat.geom", Package))) browser()
   PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", VersionOnRepos)
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
@@ -1224,7 +1221,6 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths) {
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
-    # if (any(grepl("fontawesome|spatstat.geom", pkgInstall$Package))) browser()
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths)
     # pkgInstall[nchar(localFile) > 0, localFile := useRepository]
     pkgInstall[, haveLocal :=

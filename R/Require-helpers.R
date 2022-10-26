@@ -886,35 +886,42 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 }
 
 
-    postInstallDESCRIPTIONMods(pkg = pack, repo = gr$repo[[pack]],
-                               acct = gr$acct[[pack]], br = gr$br[[pack]],
-                               lib = normalizePath(libPath, winslash = "/", mustWork = FALSE))
 
-postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
-  file <- file.path(lib, pkg, "DESCRIPTION")
-  txt <- readLines(file)
-  beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
-  insertHere <- min(beforeTheseLines)
-  sha <- if (grepl("[[:alnum:]]{40,40}", br)) { # it is already a sha -- no need to find from head
-    br
-  } else {
-    getSHAfromGitHub(acct, repo, br)
+postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
+
+  whGitHub <- which(pkgInstall$repoLocation %in% "GitHub")
+  if (length(whGitHub)) {
+    pkgGitHub <- pkgInstall[whGitHub]
+    pkgGitHub[, {
+      file <- file.path(libPaths[1], Package, "DESCRIPTION")
+      txt <- readLines(file)
+      beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
+      insertHere <- min(beforeTheseLines)
+      sha <- SHAonGH
+      # sha <- if (grepl("[[:alnum:]]{40,40}", Branch)) { # it is already a sha -- no need to find from head
+      #
+      # } else {
+      #   getSHAfromGitHub(acct, repo, br)
+      # }
+      newTxt <-
+        paste0("RemoteType: github
+RemoteHost: api.github.com
+RemoteRepo: ", Package, "
+RemoteUsername: ", Account,"
+RemoteRef: ", Branch, "
+RemoteSha: ", sha, "
+GithubRepo: ", Package, "
+GithubUsername: ", Account, "
+GithubRef: ", Branch, "
+GithubSHA1: ", sha, "")
+      newTxt <- strsplit(newTxt, split = "\n")[[1]]
+      newTxt <- gsub("^ +", "", newTxt)
+      txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
+      cat(txtOut, file = file, sep = "\n")
+
+    }]
   }
-  newTxt <-
-    paste0("RemoteType: github
-    RemoteHost: api.github.com
-    RemoteRepo: ", pkg, "
-    RemoteUsername: ", acct,"
-    RemoteRef: ", br, "
-    RemoteSha: ", sha, "
-    GithubRepo: ", pkg, "
-    GithubUsername: ", acct, "
-    GithubRef: ", br, "
-    GithubSHA1: ", sha, "")
-  newTxt <- strsplit(newTxt, split = "\n")[[1]]
-  newTxt <- gsub("^ +", "", newTxt)
-  txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
-  cat(txtOut, file = file, sep = "\n")
+
   return(invisible())
 }
 
