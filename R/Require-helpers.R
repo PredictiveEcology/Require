@@ -1182,40 +1182,40 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       c("binary", "source")
     }
 
-    for (type in types) {
-      reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
-      objNam <- paste0("availablePackages", "_", reposShort)
-      for (repo in repos) {
-        if (!exists(objNam, envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
-          fn <- availablePackagesCachedPath(repos, type)
-          if (isTRUE(purge))
-            unlink(fn)
-          if (file.exists(fn)) {
-            cap[[type]] <- readRDS(fn)
-          } else {
-            cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
-                                    error = function(x)
-                                      available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
-            cap[[type]] <-  cap[[type]]
-
-            cap[[type]] <- as.data.table(cap[[type]])
-
-            if (!is.null(getOptionRPackageCache())) {
-              checkPath(dirname(fn), create = TRUE)
-              saveRDS(cap[[type]], file = fn)
-            }
-          }
-
-
-          cap <- do.call(rbind, cap)
-
-          assign(objNam, cap, envir = .pkgEnv[["pkgDep"]])
-          out <- cap
+    reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
+    typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
+    objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
+    if (!exists(objNam, envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
+      for (type in types) {
+        fn <- availablePackagesCachedPath(repos, type)
+        if (isTRUE(purge))
+          unlink(fn)
+        if (file.exists(fn)) {
+          cap[[type]] <- readRDS(fn)
         } else {
-          out <- get(objNam, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
+          cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
+                                  error = function(x)
+                                    available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
+          # cap[[type]] <-  cap[[type]]
+
+          cap[[type]] <- as.data.table(cap[[type]])
+
+          if (!is.null(getOptionRPackageCache())) {
+            checkPath(dirname(fn), create = TRUE)
+            saveRDS(cap[[type]], file = fn)
+          }
         }
+
+
       }
+      cap <- do.call(rbind, cap)
+
+      assign(objNam, cap, envir = .pkgEnv[["pkgDep"]])
+      out <- cap
+    } else {
+      out <- get(objNam, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
     }
+
     if (isFALSE(returnDataTable)) {
       # as.matrix is not rich enough ... do it manually
       bb <- as.matrix(out)
