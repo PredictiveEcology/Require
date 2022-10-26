@@ -348,7 +348,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
     isWindows <- isWindows()
 
-    if (missing(type)) {
+    if (identical(type, "both")) {
       types <- if (isOldMac) {
         c("mac.binary.el-capitan", "source")
       } else if (!isWindows && !isMac) {
@@ -371,7 +371,6 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         if (file.exists(fn)) {
           cap[[type]] <- readRDS(fn)
         } else {
-          browser()
           cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
                                   error = function(x)
                                     available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
