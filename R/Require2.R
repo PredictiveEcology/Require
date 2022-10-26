@@ -953,14 +953,20 @@ availableVersionOK <- function(pkgDT) {
   # First set all to availableVersionOK if there is a version available
   pkgDT[, availableVersionOK := !is.na(VersionOnRepos)]
 
+  availableOKcols <- c("availableVersionOK", "availableVersionOKthisOne")
+  if (any(!is.na(pkgDT$inequality))) {
+    out <- try(pkgDT[!is.na(inequality), (availableOKcols) := {
+      out <- Map(vor = VersionOnRepos, function(vor) all(compareVersion2(vor, versionSpec, inequality)))
+      avok <- unlist(out)
+      avokto <- compareVersion2(VersionOnRepos, versionSpec, inequality)
+      list(availableVersionOK = avok, availableVersionOKthisOne = avokto)
+    }, by = "Package"])
+    if (is(out, "try-error")) browser()
+  } else {
+    set(pkgDT, NULL, availableOKcols, TRUE)
+  }
   # Then update this for the subset that have an actual inequality
-  out <- try(pkgDT[!is.na(inequality), c("availableVersionOK", "availableVersionOKthisOne") := {
-    out <- Map(vor = VersionOnRepos, function(vor) all(compareVersion2(vor, versionSpec, inequality)))
-    avok <- unlist(out)
-    avokto <- compareVersion2(VersionOnRepos, versionSpec, inequality)
-    list(availableVersionOK = avok, availableVersionOKthisOne = avokto)
-  }, by = "Package"])
-  if (is(out, "try-error")) browser()
+
   pkgDT
 }
 
