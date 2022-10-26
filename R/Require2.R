@@ -296,12 +296,12 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- dealWithStandAlone(pkgDT, standAlone)
     pkgDT <- whichToInstall(pkgDT, install)
     if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
-      tryCatch(
+      #tryCatch(
       pkgDT <- doInstalls2(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
-                           install.packagesArgs = install.packagesArgs),
-        error = function(x) browser(),
-      warnings()
-      )
+                           install.packagesArgs = install.packagesArgs)#,
+#        error = function(x) browser(),
+ #     warnings()
+      #)
     }
     out <- doLoads(require, pkgDT)
 
@@ -372,7 +372,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
-      browser()
+      # browser()
       pkgName <- gsub(".*\u2018(.+)\u2019.*", "\\1", w$message)
       gsub(".+\u2018(.+)\u2019.+", "\\1", pkgName)         # package XXX is in use and will not be installed
       "installation of one or more packages failed,\n  probably ‘spatstat.geom’"
@@ -963,7 +963,9 @@ availableVersionOK <- function(pkgDT) {
     }, by = "Package"])
     if (is(out, "try-error")) browser()
   } else {
-    set(pkgDT, NULL, availableOKcols, TRUE)
+
+    pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
+    pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
   }
   # Then update this for the subset that have an actual inequality
 
@@ -1283,6 +1285,7 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose")) {
   setorderv(pkgInstall, c("Package", "inequality"), order = c(1L, -1L))
+  setorderv(pkgInstall, c("repoLocation"), order = 1L) # "CRAN" comes before "GitHub" ... so CRAN is selected if both fulfill min requirement
   pkgInstall[, keepBasedOnRedundantInequalities :=
                unlist(lapply(.I, function(ind) {
                  ifelse (is.na(inequality), ind,
@@ -1416,42 +1419,28 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 
 copyBuiltToCache <- function(tmpdirs, pkgInstall) {
   cacheFiles <- dir(getOptionRPackageCache())
-  Map(td = tmpdirs, function(td) {
-    tdPkgs <- dir(td, full.names = TRUE)
-    if (length(tdPkgs)) {
-      pkgs <- Map(td = tdPkgs, function(td) strsplit(basename(td), split = "_")[[1]][1])
-      pkgsInstalled <- pkgInstall[match(pkgs, Package)]
-      isGitHub <- pkgsInstalled$repoLocation %in% "GitHub"
-      if (any(isGitHub)) {
-        SHA <- pkgsInstalled$SHAonGH[isGitHub]
-        tdPkgs[isGitHub] <- renameLocalGitTarWSHA(tdPkgs[isGitHub], SHA)
+
+  if (!is.null(pkgInstall)) {
+    out <- try(Map(td = tmpdirs, function(td) {
+      tdPkgs <- dir(td, full.names = TRUE)
+      if (length(tdPkgs)) {
+        pkgs <- Map(td = tdPkgs, function(td) strsplit(basename(td), split = "_")[[1]][1])
+        pkgsInstalled <- pkgInstall[match(pkgs, Package)]
+        isGitHub <- pkgsInstalled$repoLocation %in% "GitHub"
+        if (any(isGitHub)) {
+          SHA <- pkgsInstalled$SHAonGH[isGitHub]
+          tdPkgs[isGitHub] <- renameLocalGitTarWSHA(tdPkgs[isGitHub], SHA)
+        }
+
+        filesNeedingCopying <- tdPkgs[-na.omit(match(cacheFiles,
+                                                     basename(tdPkgs)))]
+        if (length(filesNeedingCopying)) {
+          newFiles <- file.path(getOptionRPackageCache(), basename(filesNeedingCopying))
+          suppressWarnings(file.rename(filesNeedingCopying, newFiles))
+        }
       }
 
-      filesNeedingCopying <- tdPkgs[-na.omit(match(cacheFiles,
-                                                   basename(tdPkgs)))]
-      if (length(filesNeedingCopying)) {
-        newFiles <- file.path(getOptionRPackageCache(), basename(filesNeedingCopying))
-        suppressWarnings(file.rename(filesNeedingCopying, newFiles))
-      }
-    }
-
-  })
-  # tdPkgs <- dir(tdPkgs, full.names = TRUE)
-  # tmpdirFiles <- dir(tmpdir, full.names = TRUE)
-  # if (length(tdPkgs)) {
-  #   filesNeedingCopying <- tdPkgs[-na.omit(match(cacheFiles,
-  #                                                    basename(tdPkgs)))]
-  #   newFiles <- file.path(getOptionRPackageCache(), filesNeedingCopying)
-  #
-  #   suppressWarnings(file.rename(filesNeedingCopying, newFiles))
-  # }
-  #
-  #   if (length(tmpdirFiles)) {
-  #
-  #     filesNeedingCopying <- tmpdirFiles[-na.omit(match(cacheFiles,
-  #                                                       basename(tmpdirFiles)))]
-  #     newFiles <- file.path(getOptionRPackageCache(), filesNeedingCopying)
-  #
-  #     suppressWarnings(file.rename(filesNeedingCopying, newFiles))
-  #   }
+    }))
+    if (is(out, "try-error")) browser()
+  }
 }
