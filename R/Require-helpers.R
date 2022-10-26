@@ -254,76 +254,6 @@ archiveVersionsAvailable <- function(package, repos) {
   return(info)
 }
 
-#' GitHub specific helpers
-#'
-#' `installGitHub` is a vectorized `installGithubPackages`.
-#' This will attempt to identify all dependencies of all supplied packages first,
-#' then load the packages in the correct order so that each of their dependencies
-#' are met before each is installed.
-#'
-#' @param pkgDT A character string with full package names or a `data.table`
-#'   with at least 2 columns `"Package"` and `"packageFullName"`.
-#' @param toInstall DESCRIPTION NEEDED
-#' @param install_githubArgs Any arguments passed to `install_github`
-#' @param dots A list of ..., e.g., list(...). Only for internal use.
-#'
-#' @return
-#' `installGitHub` returns a named character vector indicating packages
-#'   successfully installed, unless the word "Failed" is returned, indicating
-#'   installation failure. The names will be the full GitHub package name,
-#'   as provided to `gitPkgNames` in the function call.
-#'
-#' @export
-#' @rdname GitHubTools
-#'
-#' @examples
-#' \dontrun{
-#'   installGitHub(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
-#' }
-#'
-installGitHub <- function(pkgDT, toInstall, install_githubArgs = list(), dots = dots,
-                          verbose = getOption("Require.verbose")) {
-
-  pkgDT <- toPkgDT(pkgDT)
-  toInstall <- toInstall[installFrom == "GitHub"]
-
-  # Require doesn't actually install a previous version of a Git package at this point,
-  #    it just takes the HEAD
-  if (is.null(dots$dependencies) && is.null(install_githubArgs$dependencies))
-    dots$dependencies <- NA # This is NA, which under normal circumstances should be irrelevant
-  #  but there are weird cases where the internals of Require don't get correct
-  #  version of dependencies e.g., achubaty/amc@development says "reproducible" on CRAN
-  #  which has R.oo
-  installPkgNames <- toInstall$packageFullName
-  names(installPkgNames) <- toInstall$Package
-  ord <- match(extractPkgName(installPkgNames), toInstall$Package)
-  toInstall <- toInstall[ord]
-  installPkgNames <- installPkgNames[ord]
-
-  gitPkgs <- trimVersionNumber(toInstall$packageFullName)
-  names(gitPkgs) <- toInstall$Package
-  isTryError <- unlist(lapply(gitPkgs, is, "try-error"))
-  attempts <- rep(0, length(gitPkgs))
-  names(attempts) <- gitPkgs
-  if (length(gitPkgs)) {
-    gitPkgsToInstall <- gitPkgs[unlist(lapply(seq_along(gitPkgs), function(ind) {
-      all(!extractPkgName(names(gitPkgs))[-ind] %in% extractPkgName(gitPkgs[[ind]]))
-    }))]
-    gitPkgDepOrig <- gitPkgsToInstall
-    gitPkgNamesSimple <- extractPkgName(gitPkgsToInstall)
-    ipa <- modifyList2(install_githubArgs, dots, keep.null = TRUE)
-    ipa <- modifyList2(ipa, list(verbose = verbose), keep.null = TRUE)
-    warns <- messes <- errors <- list()
-
-    if (NROW(gitPkgsToInstall)) {
-      ipa <- append(list(gitPkgsToInstall), ipa)
-      do.call(installGithubPackage, ipa)
-    }
-
-    pkgDT
-  }
-  pkgDT
-}
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
   pkgs <- trimVersionNumber(packages)
@@ -1170,9 +1100,6 @@ postInstallDESCRIPTIONMods <- function(pkg, repo, acct, br, lib) {
   return(invisible())
 }
 
-#' @rdname installGithubPackage
-#' @export
-installGitHubPackage <- installGithubPackage
 
 #' @importFrom utils unzip
 #' @inheritParams Require
@@ -1446,23 +1373,6 @@ installPackagesSystem <- function(pkg, args, libPath) {
   return(out)
 }
 
-installByPak <- function(pkgDT, libPaths, doDeps, ...) {
-  if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
-  fas <- formals(pak::pkg_install)
-  pakFormalsPassedHere <- names(list(...)) %in% names(fas)
-  if (any(pakFormalsPassedHere)) {
-    fas <- modifyList2(fas, list(...)[pakFormalsPassedHere], keep.null = TRUE)
-  }
-  if (!"ask" %in% pakFormalsPassedHere) {
-    fas[["ask"]] <- FALSE
-  }
-  pkgsForPak <- pkgDT[pkgDT$needInstall %in% TRUE]
-  out <- pak::pkg_install(trimVersionNumber(pkgsForPak$packageFullName),
-                          lib = libPaths[1],
-                          dependencies = FALSE,
-                          ask = eval(fas[["ask"]]),
-                          upgrade = fas[["upgrade"]])
-}
 
 #' Get the option for `Require.RPackageCache`
 #'
