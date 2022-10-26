@@ -388,15 +388,22 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
       # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
       isCacheErr <- extractPkgNameFromFileName(w$message)
-      if (startsWith(isCacheErr, getOptionRPackageCache())) {
-        messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(isCacheErr), " was corrupt; deleting; retrying")
-        unlink(dir(getOptionRPackageCache(), pattern = basename(isCacheErr), full.names = TRUE)) # delete the erroneous Cache item
-        retrying <- try(Require(toInstall[Package %in% basename(isCacheErr)]$packageFullName, require = FALSE))
-        if (is(retrying, "try-error"))
-          warning(w)
+      needWarning <- FALSE
+      if (!is.null(getOptionRPackageCache())) {
+        if (startsWith(isCacheErr, getOptionRPackageCache())) {
+          messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(isCacheErr), " was corrupt; deleting; retrying")
+          unlink(dir(getOptionRPackageCache(), pattern = basename(isCacheErr), full.names = TRUE)) # delete the erroneous Cache item
+          retrying <- try(Require(toInstall[Package %in% basename(isCacheErr)]$packageFullName, require = FALSE))
+          if (is(retrying, "try-error"))
+            needWarning <- TRUE
+        } else {
+          needWarning <- TRUE
+        }
       } else {
-        warning(w)
+        needWarning <- TRUE
       }
+      if (isTRUE(needWarning))
+        warning(w)
       invokeRestart("muffleWarning")
     }))
 }
