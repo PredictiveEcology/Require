@@ -151,20 +151,21 @@ out <- Require(reallyOldPkg, require = FALSE)
 ip <- data.table::as.data.table(installed.packages())
 testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
-out <- getPkgVersions("Require")
-testit::assert({data.table::is.data.table(out)})
-testit::assert({is.na(out$correctVersion)})
-out2 <- getAvailable(out)
-testit::assert({is.na(out2$correctVersion)})
-out3 <- tryCatch({
-  out2 <- installFrom(out2)
-}, error = function(condition) condition)
-testit::assert({is(out3, "simpleError")})
-out2[, installed := TRUE]
-out3 <- installFrom(out2)
-testit::assert({is.na(out3$correctVersion)})
-testit::assert({is.na(out3$installFrom)})
-testit::assert({is.na(out3$needInstall)})
+# THESE ARE DEFUNCT
+# out <- getPkgVersions("Require")
+# testit::assert({data.table::is.data.table(out)})
+# testit::assert({is.na(out$correctVersion)})
+# out2 <- getAvailable(out)
+# testit::assert({is.na(out2$correctVersion)})
+# out3 <- tryCatch({
+#   out2 <- installFrom(out2)
+# }, error = function(condition) condition)
+# testit::assert({is(out3, "simpleError")})
+# out2[, installed := TRUE]
+# out3 <- installFrom(out2)
+# testit::assert({is.na(out3$correctVersion)})
+# testit::assert({is.na(out3$installFrom)})
+# testit::assert({is.na(out3$needInstall)})
 
 out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "rforge/mumin/pkg"))
 testit::assert({data.table::is.data.table(out)})
