@@ -219,7 +219,12 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
 
 
 
-#' @rdname Require-internals
+#' Available and archived versions
+#'
+#' These are wrappers around available.packages and also get the archived versions
+#' available on CRAN.
+#'
+#' @rdname availableVersions
 #' @export
 #' @param package A single package name (without version or github specifications)
 #' @details
@@ -330,9 +335,11 @@ installedVers <- function(pkgDT) {
 }
 
 #' @importFrom utils available.packages
+#' @rdname availableVersions
 #' @inheritParams Require
+#' @inheritParams utils::install.packages
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
-                                     returnDataTable = TRUE) {
+                                     returnDataTable = TRUE, type) {
   if (internetExists("cannot get available packages", verbose = verbose)) {
     repos <- getCRANrepos(repos)
     purge <- dealWithCache(purge = purge)

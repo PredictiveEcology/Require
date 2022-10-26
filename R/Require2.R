@@ -257,10 +257,11 @@ Require <- function(packages, packageVersionFile,
                      standAlone = getOption("Require.standAlone", FALSE),
                      install = getOption("Require.install", TRUE),
                      require = getOption("Require.require", TRUE),
-                     repos = getOption("repos"),
-                     purge = getOption("Require.purge", FALSE),
-                     verbose = getOption("Require.verbose", FALSE),
-                     ...) {
+                    repos = getOption("repos"),
+                    purge = getOption("Require.purge", FALSE),
+                    verbose = getOption("Require.verbose", FALSE),
+                    type = getOption("pkgType"),
+                    ...) {
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
   on.exit({
@@ -288,7 +289,7 @@ Require <- function(packages, packageVersionFile,
       messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
 
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, verbose, purge, libPaths,
-                         install_githubArgs, install.packagesArgs, standAlone)
+                         install_githubArgs, install.packagesArgs, standAlone, type = type)
     return(pkgSnapshotOut)
   }
   if (missing(packages)) {
@@ -311,12 +312,9 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- dealWithStandAlone(pkgDT, standAlone)
     pkgDT <- whichToInstall(pkgDT, install)
     if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
-      #tryCatch(
-      pkgDT <- doInstalls2(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
-                           install.packagesArgs = install.packagesArgs)#,
-#        error = function(x) browser(),
- #     warnings()
-      #)
+      pkgDT <- doInstalls(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
+                          install.packagesArgs = install.packagesArgs,
+                          type = type)#,
     }
     out <- doLoads(require, pkgDT)
 
@@ -410,7 +408,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     }))
 }
 
-doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs) {
+doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs,
+                        type = getOption("pkgType")) {
 
   tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
   origDir <- setwd(tmpdir)
@@ -426,7 +425,8 @@ doInstalls2 <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.
     postInstallDESCRIPTIONMods(pkgInstall, libPaths)
   }, add = TRUE)
 
-  pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths)
+  pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths,
+                            type = type)
   pkgDTList[["install"]] <- pkgInstall
   pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
   pkgInstall <- pkgInstallList[["install"]]
@@ -624,18 +624,7 @@ whichToInstall <- function(pkgDT, install) {
   if (any(pkgDT$hasVersionsToCompare %in% TRUE))
     pkgDT[hasVersionsToCompare %in% TRUE, installedVersionOK :=
             compareVersion2(Version, versionSpec, inequality)
-            # do.call(inequality, list(package_version(Version), versionSpec))
           , by = seq(sum(hasVersionsToCompare))]
-
-  # # We only want to keep 1 source for each package
-  # #   We will take the first one of 1) Package, 2) repoLocation (CRAN before)
-  # setorderv(pkgDT, c("Package", "versionSpec", "installedVersionOK", "repoLocation"),
-  #           order = c(1L, -1L, -1L, 1L),
-  #           na.last = TRUE)
-  #
-  # pkgDT[, keep := if (any(!is.na(versionSpec))) .I[1] else .I, by = "Package"]
-  # pkgDT <- pkgDT[unique(pkgDT$keep)]
-  # set(pkgDT, NULL, "keep", NULL)
   if (identical(install, "force"))
     set(pkgDT, NULL, "needInstall", "install")
   else
@@ -708,7 +697,8 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
 }
 
 
-doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,  libPaths) {
+doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
+                        libPaths, type = getOption("pkgType")) {
 
   topoSorted <- pkgDepTopoSort(pkgInstall[["packageFullName"]])
   installSafeGroups <- attr(topoSorted, "installSafeGroups")
@@ -721,7 +711,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   set(pkgInstall, NULL, "haveLocal", "noLocal")
 
   # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
-  pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose)
+  pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose,
+                                 type = type)
   pkgInstall <- updateInstallSafeGroups(pkgInstall)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -749,8 +740,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstall
 }
 
-getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths) {
-  ap <- available.packagesCached(repos = repos, purge = purge)[, ..apCachedCols]
+getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOption("pkgType")) {
+  ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
   setnames(ap, old = "Version", new = "VersionOnRepos")
   pkgInstall <- ap[pkgInstall, on = "Package"]
   pkgInstallList <- split(pkgInstall, by = "repoLocation")
@@ -895,13 +886,15 @@ types <- function(length = 1L) {
 
 
 doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
-                          install_githubArgs, install.packagesArgs, standAlone = TRUE) {
+                          install_githubArgs, install.packagesArgs, standAlone = TRUE,
+                          type = getOption("pkgType")) {
   if (!isFALSE(packageVersionFile)) {
     if (isTRUE(packageVersionFile)) {
       packageVersionFile <- getOption("Require.packageVersionFile")
     }
     packages <- data.table::fread(packageVersionFile)
-    packages <- dealWithViolations(packages, verbose = verbose, purge = purge, libPaths = libPaths) # i.e., packages that can't coexist
+    packages <- dealWithViolations(packages, verbose = verbose, purge = purge,
+                                   libPaths = libPaths, type = type) # i.e., packages that can't coexist
     packages <- packages[!packages$Package %in% .basePkgs]
     out <- Require(packages$packageFullName, verbose = verbose, purge = purge, libPaths = libPaths,
                    install_githubArgs = install_githubArgs, install.packagesArgs = install.packagesArgs,
@@ -913,7 +906,8 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
 }
 
 dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
-                               purge = getOption("Require.purge", FALSE), libPaths = .libPaths(), repos = getOption("repos")) {
+                               purge = getOption("Require.purge", FALSE), libPaths = .libPaths(),
+                               repos = getOption("repos"), type = getOption("pkgType")) {
   dd <- pkgSnapshotObj
   ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
                paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
@@ -922,7 +916,8 @@ dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verb
   pkgDT <- toPkgDT(hh, deepCopy = TRUE)
   pkgDT <- parsePackageFullname(pkgDT)
   pkgDT <- parseGitHub(pkgDT)
-  pkgDT <- trimRedundancies(pkgDT, purge = purge, repos = repos, libPaths = libPaths)
+  pkgDT <- trimRedundancies(pkgDT, purge = purge, repos = repos, libPaths = libPaths,
+                            type = type)
   pkgDT[, c("Package", "packageFullName")]
 }
 
@@ -1318,7 +1313,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
-  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths)
+  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   # pkgInstall <- availableVersionOK(pkgInstall)
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths)
