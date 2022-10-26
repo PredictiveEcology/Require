@@ -1463,11 +1463,13 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
           tdPkgs[isGitHub] <- renameLocalGitTarWSHA(tdPkgs[isGitHub], SHA)
         }
 
-        filesNeedingCopying <- tdPkgs[-na.omit(match(cacheFiles,
-                                                     basename(tdPkgs)))]
-        if (length(filesNeedingCopying)) {
-          newFiles <- file.path(getOptionRPackageCache(), basename(filesNeedingCopying))
-          suppressWarnings(file.rename(filesNeedingCopying, newFiles))
+        whAlreadyInCache <- na.omit(match(cacheFiles,
+                                          basename(tdPkgs)))
+        if (length(whAlreadyInCache))
+          tdPkgs <- tdPkgs[-whAlreadyInCache]
+        if (length(tdPkgs)) {
+          newFiles <- file.path(getOptionRPackageCache(), basename(tdPkgs))
+          suppressWarnings(file.rename(tdPkgs, newFiles))
         }
       }
 
@@ -1475,3 +1477,5 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
     if (is(out, "try-error")) stop("Error 253; please contact developer")
   }}
 }
+
+
