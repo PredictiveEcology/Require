@@ -677,8 +677,6 @@ installCRAN <- function(pkgDT, toInstall, dots, install.packagesArgs, install_gi
       installPkgNamesList$Src <- installPkgNamesList$Src[!successSrc]
     }
 
-    # if (any(grepl("--build", c(dots, install.packagesArgs))))#, unlist(buildList)))))
-    #   copyTarballsToCache(installPkgNames, TRUE)
 
     # Don't need to copy to cache as cache was the destdir
     permDen <- grepl("Permission denied", names(warns))
@@ -825,7 +823,6 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
                      "; trying src versions",
                      verbose = verbose, verboseLevel = 2)
     }
-    # pkgDT <- updateInstalled(pkgDT, names(thoseThatSucceeded)[thoseThatSucceeded], out)
     onMRAN <- urlsOuter != "Fail" # thoseThatSucceeded
 
   }
@@ -861,8 +858,6 @@ installArchive <- function(pkgDT, toInstall, dots, install.packagesArgs, install
       pkgDT[Package %in% toInstall$Package, installResult := unlist(warn)]
     }
   }
-  # if (any(grepl("--build", c(dots, install.packagesArgs))))
-  #   copyTarballsToCache(installPkgNames, TRUE)
 
   pkgDT
 }
@@ -892,34 +887,6 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
   isBin
 }
 
-copyTarballsToCache <- function(pkg, builtBinary, unlink = FALSE,
-                                verbose = getOption("Require.verbose")) {
-  # if (builtBinary) {
-    theDir <- dir(full.names = TRUE)
-    origFiles <- lapply(pkg, function(pat) grep(pattern = paste0("[/\\._]", pat, "_"), x = theDir, value = TRUE))
-    if (length(unlist(origFiles))) {
-      origFiles <- unlist(origFiles)
-      newNames <- file.path(rpackageFolder(getOptionRPackageCache()), unique(basename(origFiles)))
-      filesAlreadyExist <- file.exists(newNames)
-      if (any(!filesAlreadyExist)) {
-        messageVerbose(verbose = verbose, verboseLevel = 1,
-                       green("Putting packages into RequirePkgCacheDir()"))
-        try(linkOrCopy(origFiles[!filesAlreadyExist], newNames[!filesAlreadyExist]))
-      }
-      if (isTRUE(unlink))
-        unlink(origFiles)
-
-      fs <- file.size(newNames)
-      fileSizeEq0 <- is.na(fs) | fs == 0
-      if (any(fileSizeEq0)) {
-        unlink(newNames[fileSizeEq0])
-        warning("Copying file(s) to RequirePkgCacheDir() failed; please inspect or rerun")
-      }
-
-      return(invisible(newNames))
-    }
-  #}
-}
 
 installRequire <- function(requireHome = getOption("Require.Home"),
                            verbose = getOption("Require.verbose")) {
@@ -1310,13 +1277,6 @@ installGithubPackage <- function(gitRepo, libPath = .libPaths()[1], verbose = ge
       packageName <- DESCRIPTIONFileOtherV(theDESCRIPTIONfile, other = "Package")
       messageVerbose("  ... Built!",
                      verbose = verbose, verboseLevel = 1)
-      # shaOnGitHub2 <- shaOnGitHub[packageName]
-      # Map(pack = packageName, sha = shaOnGitHub2, function(pack, sha) {
-      #   fns <- copyTarballsToCache(pack, builtBinary = TRUE)
-      #   newFP <- file.path(dirname(fns), paste0(sha, ".", basename(fns)))
-      #   out <- file.rename(fns, newFP)
-      #   return(out)
-      # })
 
 
     } else {
@@ -1717,7 +1677,6 @@ installByPak <- function(pkgDT, libPaths, doDeps, ...) {
                           dependencies = FALSE,
                           ask = eval(fas[["ask"]]),
                           upgrade = fas[["upgrade"]])
-  # pkgDT <- updateInstalled(pkgDT, pkgsForPak$Package, out)
 }
 
 #' Get the option for `Require.RPackageCache`
