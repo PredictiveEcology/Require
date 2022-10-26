@@ -306,6 +306,11 @@ modifyList2 <- function(..., keep.null = FALSE) {
   dots
 }
 
+#' @note `modifyList3` retains the original behaviour of `modifyList2` (prior to Oct 2022);
+#' however, it cannot retain `NULL` values in lists.
+#'
+#' @export
+#' @rdname modifyList2
 modifyList3 <- function(..., keep.null = TRUE) {
   dots <- list(...)
   dots <- dots[!unlist(lapply(dots, is.null))]
