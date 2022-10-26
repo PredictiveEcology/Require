@@ -8,8 +8,6 @@ testit::assert(any(grepl("could not be installed", out)))#{out, "simpleWarning")
 pkgDTEmpty <- Require:::toPkgDT(character())
 out <- Require:::installedVers(pkgDTEmpty) #
 
-# test warn missing
-out <- Require:::updateInstalled(pkgDTEmpty, installPkgNames = "package")
 
 pkgDep("data.table", purge = FALSE)
 pkgDep("data.table", purge = TRUE)
