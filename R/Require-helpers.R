@@ -804,7 +804,17 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
     } else {
       stop(repoFull, " directory already exists. Use overwrite = TRUE if you want to overwrite it")
     }
-  badDirname <- try(lapply(out, function(d) unique(dirname(d))[1]))
+  # Finds the common component i.e., the base directory. This will have the SHA as part fo the filename; needs remving
+  badDirname <- try(lapply(out, function(d) {
+    unlist(lapply(out, function(x) {
+      for (n in seq(nchar(x[1]))) {
+        has <- all(startsWith(x, substr(x[1], 1, n)))
+        if (any(isFALSE(has)))
+          break
+      }
+      normPath(substr(x[1], 1, n - 1))
+    }))# unique(dirname(d))[1])
+    }))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
   if (isTRUE(is.na(subFolder)) || isTRUE(is.null(subFolder))) {
