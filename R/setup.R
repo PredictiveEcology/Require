@@ -21,6 +21,18 @@ RequireCacheDir <- function(create) {
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
+    if (dir.exists(defaultCacheDirOld)) {
+      message("Require has changed default package cache folder from\n",
+              defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+              "in the old Cache, moving them now...")
+      checkPath(defaultCacheDir, create = TRUE)
+      oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
+      dirs <- unique(dirname(oldLocs))
+      newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+      lapply(newdirs, checkPath, create = TRUE)
+      file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+      unlink(defaultCacheDirOld, recursive = TRUE)
+    }
     defaultCacheDir
   }
 
@@ -321,7 +333,9 @@ putFile <- function(from, to, overwrite) {
 
 appName <- "R-Require"
 
-defaultCacheDir <- switch(
+#' @importFrom tools R_user_dir
+defaultCacheDir <- tools::R_user_dir("Require", which = "cache")
+defaultCacheDirOld <- switch(
   Sys.info()[["sysname"]],
   Darwin = normPath(file.path("~", "Library", "Caches", appName)),
   Linux = normPath(file.path("~", ".cache", appName)),
