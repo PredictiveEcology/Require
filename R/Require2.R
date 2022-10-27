@@ -1338,7 +1338,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
     ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
               decreasing = TRUE, na.last = TRUE) # can't use setorderv because data.table can't sort on package_version class
   } else {
-    set(pkgInstall, NULL, "ord", seq(NROW(pkgInstall)))
+    ord <- seq(NROW(pkgInstall))
   }
 
   pkgInstall1 <- pkgInstall[versionSpecNotNA][ord] # use the order to reorder them. It is not sort key.
