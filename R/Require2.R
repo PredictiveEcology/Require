@@ -867,7 +867,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           names(gitRepo) <- toDL$Package
           out <- downloadRepo(gitRepo, subFolder = toDL$GitSubFolder, overwrite = TRUE, destDir = ".", verbose = verbose)
           out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
-          fn <- dir(pattern = paste0(Package, ".+tar.gz"))
+          fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
           normPath(fn)
         }, by = "Package"]# seq(NROW(pkgGHtoDL))]
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
