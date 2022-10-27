@@ -415,52 +415,6 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
 
 
-#' @importFrom utils download.file
-#' @inheritParams Require
-currentCRANPkgDates <- function(pkgs, verbose = getOption("Require.verbose")) {
-  if (!exists("currentCranDates", envir = .pkgEnv[["pkgDep"]])) {
-    messageVerbose("Getting dates of current CRAN packages",
-                   verbose = verbose, verboseLevel = 1)
-    tf <- tempfile();
-    cranRepoHttp <- getOption("repos")["CRAN"]
-    for (i in 1:2) {
-      out <- suppressWarnings(try(download.file(file.path(cranRepoHttp, "src/contrib/"), tf, quiet = TRUE), silent = TRUE))
-      if (is(out, "try-error"))
-        if (i == 1) {
-          cranRepoHttp <- paste0("https", "://", paste(c("cloud", "r-project", "org"), collapse = "."), "/")
-        } else {
-          stop(out, "Download from CRAN failed momentarily. Please try again shortly")
-        }
-    }
-
-    currentCranDates <- readLines(tf)
-    assign("currentCranDates", currentCranDates, envir = .pkgEnv[["pkgDep"]])
-  } else {
-    currentCranDates <- get("currentCranDates", envir = .pkgEnv[["pkgDep"]])
-  }
-  if (is.null(names(pkgs))) names(pkgs) <- pkgs
-
-  aa <- gsub(" *<a href=\"", "", currentCranDates)
-  bb <- unlist(lapply(paste0(pkgs, "_"), function(p) which(startsWith(aa, p))))
-  currentCranDates2 <- aa[bb]
-
-  # There are at least 2 formats that come from CRAN; this covers 2 of them
-  dd2 <- gsub(paste0(".+([0-3][0-9]-[[:alpha:]]{3,3}-20[0-2][0-9]).+"), "\\1", currentCranDates2)
-  dd <- as.POSIXct(dd2, format = "%d-%b-%y")
-  if (any(is.na(dd))) {
-    dd2 <- gsub(paste0(".*(20[0-2][0-9]-[0-1][0-9]-[0-3][0-9]).*"), "\\1", currentCranDates2)
-    dd <- as.POSIXct(dd2)
-  }
-  ee <- gsub(paste0("^.+>[[:alnum:]\\.]+\\_(.*)\\.tar\\.gz<.*"), "\\1", currentCranDates2)
-  ff <- gsub(paste0("^.+>([[:alnum:]\\.]+)\\_.*\\.tar\\.gz<.*"), "\\1", currentCranDates2)
-  pkgsDateAvail <- data.table(Package = ff, date = dd, CRANVersion = ee)
-
-  currentCranDates <- pkgsDateAvail[, mtime := date]
-  set(currentCranDates, NULL, "date", NULL)
-
-  currentCranDates
-}
-
 
 
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
