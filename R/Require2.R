@@ -1181,15 +1181,9 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
-  if (is.null(pkgGitHub$VersionOnRepos))
-    dontHaveVOR <- TRUE
-  else
-    dontHaveVOR <- is.na(pkgGitHub$VersionOnRepos)
-  if (any(dontHaveVOR)) {
-    pkgGitHub <- getGitHubFile(pkgGitHub)
-    pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
-    pkgGitHub
-  }
+  pkgGitHub <- getGitHubFile(pkgGitHub)
+  pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+  pkgGitHub
   pkgGitHub
 }
 
@@ -1335,19 +1329,24 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 }
 
 
+#' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
   pkgAndInequality <- c("Package", "inequality")
   versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
   if (any(versionSpecNotNA)) {
-    set(pkgInstall, which(versionSpecNotNA), "ord",
-        order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
-              decreasing = TRUE, na.last = TRUE)) # can't use setorderv because data.table can't sort on package_version class
-    setorderv(pkgInstall, "ord", order = 1L, na.last = TRUE)
-    set(pkgInstall, NULL, "ord", NULL)
+    ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+              decreasing = TRUE, na.last = TRUE) # can't use setorderv because data.table can't sort on package_version class
+  } else {
+    set(pkgInstall, NULL, "ord", seq(NROW(pkgInstall)))
   }
-  setorderv(pkgInstall, pkgAndInequality, order = c(1L, -1L))
-  setorderv(pkgInstall, c("repoLocation"), order = 1L) # "CRAN" comes before "GitHub" ... so CRAN is selected if both fulfill min requirement
+
+  pkgInstall1 <- pkgInstall[versionSpecNotNA][ord] # use the order to reorder them. It is not sort key.
+  pkgInstall2 <- pkgInstall[versionSpecNotNA %in% FALSE]
+  pkgInstall <- rbindlist(list(pkgInstall1, pkgInstall2))
+  set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+  setorderv(pkgInstall, c("Package", "versionSpecGroup", "inequality", "repoLocation"), order = c(1L, 1L, -1L, 1L), na.last = TRUE)
+
   pkgInstall[, keepBasedOnRedundantInequalities :=
                unlist(lapply(.I, function(ind) {
                  ifelse (is.na(inequality), ind,
