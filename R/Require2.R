@@ -359,7 +359,8 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
       system(paste(Rpath, "CMD build ", pack, paste(extras, collapse = " ")),
              intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
     })
-    if (any(unlist(out1) == 1L)) stop("Error 456; contact developer")
+    if (any(unlist(out1) == 1L))
+      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 456; contact developer")
     messageVerbose("  ... Built!",
                    verbose = verbose, verboseLevel = 1)
   } else {
@@ -1532,7 +1533,8 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
       }
 
     }))
-    if (is(out, "try-error")) stop("Error 253; please contact developer")
+    if (is(out, "try-error"))
+      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 253; please contact developer")
   }}
 }
 
