@@ -761,7 +761,7 @@ GithubSHA1: ", sha, "")
       txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
       cat(txtOut, file = file, sep = "\n")
 
-    }]
+    }, by = seq(NROW(pkgGitHub))]
   }
 
   return(invisible())
