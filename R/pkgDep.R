@@ -495,7 +495,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
       pkgs <- unique(c(pkgs, a))
     } else {
       messageVerbose("deps is provided; useAllInSearch will be set to FALSE",
-              verbose = verbose, verboseLevel = 1)
+              verbose = verbose, verboseLevel = 2)
     }
   }
 

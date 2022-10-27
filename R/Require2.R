@@ -711,7 +711,7 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
 doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, type = getOption("pkgType")) {
 
-  topoSorted <- pkgDepTopoSort(pkgInstall[["packageFullName"]])
+  topoSorted <- pkgDepTopoSort(pkgInstall[["packageFullName"]], verbose = verbose - 1)
   installSafeGroups <- attr(topoSorted, "installSafeGroups")
   correctOrder <- match(names(topoSorted), pkgInstall[["packageFullName"]])
   pkgInstall <- pkgInstall[correctOrder, ]
