@@ -688,11 +688,20 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
     # Remove any packages that are not in .libPaths()[1], i.e., the main R library
     notInLibPaths1 <- (!pkgDT$Package %in% .basePkgs) &
       (!normPath(pkgDT$LibPath) %in% normPath(.libPaths()[1])) & !is.na(pkgDT$LibPath)
-    if (any(notInLibPaths1))
+    if (any(notInLibPaths1)) {
+      notInLP1 <- "notInLibPaths1"
+      set(pkgDT, which(notInLibPaths1), notInLP1, TRUE)
+
+      # This will set the Version in that libPaths to NA, meaning it will be considered uninstalled,
+      #   so the machinery will install it in libPaths[1]
       pkgDT[notInLibPaths1, `:=`(
         installed = FALSE,
         LibPath = NA_character_,
         Version = NA_character_)]
+      pkgDT <- pkgDT[!(duplicated(pkgDT, by = "packageFullName") &
+                         notInLibPaths1 %in% TRUE)] # this will remove any that are identical packageFullName, which will be because they are in different libPaths
+      set(pkgDT, NULL, notInLP1, NULL)
+    }
     setorderv(pkgDT, c("Package", "LibPath"), na.last = TRUE)
   }
   pkgDT
