@@ -25,12 +25,20 @@ utils::globalVariables(c(
 #' (`packages` supplied), and their optional version numbers are satisfied,
 #' then the "install" component will be skipped.
 #'
+#' @return
+#' `Require` is intended to replace `base::require`, thus it returns a logical, named vector
+#' indicating whether the named packages have been loaded.  Because `Require` also has
+#' the ability to install packages, a return value of `FALSE` does not mean that it
+#' didn't install correctly; rather, it means it didn't attach with `require`, which
+#' could be because it didn't install correctly, or also because e.g., `require = FALSE`.
+#'
 #' `standAlone` will either put the `Require`d packages and their
 #' dependencies *all* within the `libPaths` (if `TRUE`) or if
 #' `FALSE` will only install packages and their dependencies that are
 #' otherwise not installed in `.libPaths()[1]`, i.e., the current active
 #' R package directory. Any packages or dependencies that are not yet installed will
 #' be installed in `libPaths`.
+#'
 #'
 #' @section GitHub Package:
 #' Follows `remotes::install_github` standard.
@@ -324,7 +332,7 @@ Require <- function(packages, packageVersionFile,
   } else {
     out <- logical()
   }
-  out
+  return(invisible(out))
 }
 
 rbindlistRecursive <- function(ll) {

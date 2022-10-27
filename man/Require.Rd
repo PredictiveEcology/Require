@@ -96,6 +96,20 @@ Good candidates are e.g., \code{type} or \code{dependencies}. This can be
 used with \code{install_githubArgs} or \code{install.packageArgs} which
 give individual options for those 2 internal function calls.}
 }
+\value{
+\code{Require} is intended to replace \code{base::require}, thus it returns a logical, named vector
+indicating whether the named packages have been loaded.  Because \code{Require} also has
+the ability to install packages, a return value of \code{FALSE} does not mean that it
+didn't install correctly; rather, it means it didn't attach with \code{require}, which
+could be because it didn't install correctly, or also because e.g., \code{require = FALSE}.
+
+\code{standAlone} will either put the \code{Require}d packages and their
+dependencies \emph{all} within the \code{libPaths} (if \code{TRUE}) or if
+\code{FALSE} will only install packages and their dependencies that are
+otherwise not installed in \code{.libPaths()[1]}, i.e., the current active
+R package directory. Any packages or dependencies that are not yet installed will
+be installed in \code{libPaths}.
+}
 \description{
 A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and `require` for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and GitHub packages. This approach is developed to create reproducible workflows that are flexible and fast enough to use while in development stages, while able to build snapshots once a stable package collection is found. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the user or developer.
 
@@ -108,14 +122,6 @@ If \code{require = TRUE}, the default, the function will then run \code{require}
 named packages that satisfy their version requirements. If packages are already installed
 (\code{packages} supplied), and their optional version numbers are satisfied,
 then the "install" component will be skipped.
-}
-\details{
-\code{standAlone} will either put the \code{Require}d packages and their
-dependencies \emph{all} within the \code{libPaths} (if \code{TRUE}) or if
-\code{FALSE} will only install packages and their dependencies that are
-otherwise not installed in \code{.libPaths()[1]}, i.e., the current active
-R package directory. Any packages or dependencies that are not yet installed will
-be installed in \code{libPaths}.
 }
 \note{
 For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
