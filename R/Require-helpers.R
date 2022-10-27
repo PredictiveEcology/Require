@@ -316,14 +316,16 @@ installedVers <- function(pkgDT) {
         set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
         installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
-        if (is(ip, "try-error")) stop("Error number 234; please contact developers")
+        if (is(ip, "try-error"))
+          if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
       }
     }
     ip <- ip[, c("Package", "LibPath", "Version")]
     ip <- unique(ip, on = c("Package", "LibPath"))
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
-    if (is(pkgDT, "try-error")) stop("Error number 123; please contact developers")
+    if (is(pkgDT, "try-error"))
+      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
 
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
