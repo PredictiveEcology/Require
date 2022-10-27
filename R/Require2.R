@@ -307,6 +307,7 @@ Require <- function(packages, packageVersionFile,
   }
 
   if (NROW(packages)) {
+    packages <- anyHaveHEAD(packages)
     deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which, type = type)
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     allPackages <- unname(unlist(deps))
@@ -629,6 +630,10 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
 whichToInstall <- function(pkgDT, install) {
   set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT$Version))
   set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT$Version)) # default: if it is installed,  say "OK"
+  if (!is.null(pkgDT[["hasHEAD"]])) {
+    whHasHead <- which(pkgDT[["hasHEAD"]] %in% TRUE)
+    set(pkgDT, whHasHead, c("installedVersionOK", "isPkgInstalled"), list(FALSE, FALSE))
+  }
   set(pkgDT, NULL, "hasVersionsToCompare",
       (nchar(pkgDT$inequality) > 0) %in% TRUE & !is.na(pkgDT$Version))
   if (any(pkgDT$hasVersionsToCompare %in% TRUE))
@@ -1036,9 +1041,19 @@ noneAvailable <- "noneAvailable"
 
 updatePackagesWithNames <- function(pkgDT, packages) {
   origPackagesHaveNames <- nchar(names(packages)) > 0
-  if (any(origPackagesHaveNames))
-    pkgDT[match(packages[origPackagesHaveNames], packageFullName),
-          Package := names(packages[origPackagesHaveNames])]
+  if (any(origPackagesHaveNames, na.rm = TRUE)) {
+    whHasHEAD <- grep(HEADgrep, names(packages))
+    packageFullNameWithHEAD <- packages[whHasHEAD]
+    if (length(whHasHEAD)) {
+      pkgDT[match(packages[origPackagesHaveNames], packageFullName),
+            hasHEAD := packageFullName %in% packageFullNameWithHEAD]
+      names(packages)[whHasHEAD] <- NA
+      if (all(is.na(names(packages)))) names(packages) <- NULL
+    }
+    if (!is.null(names(packages)))
+      pkgDT[match(packages[origPackagesHaveNames], packageFullName),
+            Package := names(packages[origPackagesHaveNames])]
+  }
   pkgDT
 }
 
@@ -1523,3 +1538,15 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
 
 
 NoPkgsSupplied <- "No packages supplied"
+
+anyHaveHEAD <- function(packages) {
+  haveHead <- grepl(HEADgrep, packages)
+  if (any(haveHead)) {
+    origPackages <- packages
+    packages[haveHead] <- trimVersionNumber(packages[haveHead])
+    names(packages)[haveHead] <- origPackages[haveHead]
+  }
+  packages
+}
+
+HEADgrep <- " *\\(HEAD\\)"
