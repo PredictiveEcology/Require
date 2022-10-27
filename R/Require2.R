@@ -299,7 +299,7 @@ Require <- function(packages, packageVersionFile,
   }
 
   if (NROW(packages)) {
-    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which)
+    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which, type = type)
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     allPackages <- unname(unlist(deps))
     pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
@@ -360,7 +360,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
 
 
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
-                       numPackages, numGroups, startTime, verbose) {
+                       numPackages, numGroups, startTime, verbose, type = type) {
 
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
@@ -371,7 +371,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
-  ap <- availablePackagesOverride(toInstall, repos, purge)
+  ap <- availablePackagesOverride(toInstall, repos, purge, type = type)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -457,7 +457,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
 
     by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
        installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
-       numGroups = maxGroup, startTime, verbose)
+       numGroups = maxGroup, startTime, verbose, type = type)
 
     pkgInstall[, `:=`(installResult = "OK", installed = TRUE)]
   }
@@ -867,7 +867,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           names(gitRepo) <- toDL$Package
           out <- downloadRepo(gitRepo, subFolder = toDL$GitSubFolder, overwrite = TRUE, destDir = ".", verbose = verbose)
           out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
-          fn <- dir(pattern = paste0(Package, ".+tar.gz"))
+          fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
           normPath(fn)
         }, by = "Package"]# seq(NROW(pkgGHtoDL))]
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
@@ -1181,15 +1181,9 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
-  if (is.null(pkgGitHub$VersionOnRepos))
-    dontHaveVOR <- TRUE
-  else
-    dontHaveVOR <- is.na(pkgGitHub$VersionOnRepos)
-  if (any(dontHaveVOR)) {
-    pkgGitHub <- getGitHubFile(pkgGitHub)
-    pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
-    pkgGitHub
-  }
+  pkgGitHub <- getGitHubFile(pkgGitHub)
+  pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+  pkgGitHub
   pkgGitHub
 }
 
@@ -1335,19 +1329,27 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 }
 
 
+#' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
   pkgAndInequality <- c("Package", "inequality")
   versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
   if (any(versionSpecNotNA)) {
-    set(pkgInstall, which(versionSpecNotNA), "ord",
-        order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
-              decreasing = TRUE, na.last = TRUE)) # can't use setorderv because data.table can't sort on package_version class
-    setorderv(pkgInstall, "ord", order = 1L, na.last = TRUE)
-    set(pkgInstall, NULL, "ord", NULL)
+    ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+              decreasing = TRUE, na.last = TRUE) # can't use setorderv because data.table can't sort on package_version class
+  } else {
+    ord <- seq(NROW(pkgInstall))
   }
-  setorderv(pkgInstall, pkgAndInequality, order = c(1L, -1L))
-  setorderv(pkgInstall, c("repoLocation"), order = 1L) # "CRAN" comes before "GitHub" ... so CRAN is selected if both fulfill min requirement
+
+  pkgInstallTmp <- list()
+  if (any(versionSpecNotNA))
+    pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord] # use the order to reorder them. It is not sort key.
+  if (any(!versionSpecNotNA))
+    pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
+  pkgInstall <- rbindlist(pkgInstallTmp)
+  set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+  setorderv(pkgInstall, c("Package", "versionSpecGroup", "inequality", "repoLocation"), order = c(1L, 1L, -1L, 1L), na.last = TRUE)
+
   pkgInstall[, keepBasedOnRedundantInequalities :=
                unlist(lapply(.I, function(ind) {
                  ifelse (is.na(inequality), ind,
@@ -1375,7 +1377,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
 updateInstallSafeGroups <- function(pkgInstall) {
   set(pkgInstall, NULL, "installSafeGroups",
       as.integer(factor(paste0(paddedFloatToChar(pkgInstall$installSafeGroups,
-                                                 padL = max(nchar(pkgInstall$installSafeGroups))), "_",
+                                                 padL = max(nchar(pkgInstall$installSafeGroups), na.rm = TRUE)), "_",
                                # !pkgInstall[["isBinaryInstall"]],
                                !pkgInstall[["localFile"]] %in% useRepository))))
   data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
