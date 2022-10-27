@@ -1341,9 +1341,12 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
     ord <- seq(NROW(pkgInstall))
   }
 
-  pkgInstall1 <- pkgInstall[versionSpecNotNA][ord] # use the order to reorder them. It is not sort key.
-  pkgInstall2 <- pkgInstall[versionSpecNotNA %in% FALSE]
-  pkgInstall <- rbindlist(list(pkgInstall1, pkgInstall2))
+  pkgInstallTmp <- list()
+  if (any(versionSpecNotNA))
+    pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord] # use the order to reorder them. It is not sort key.
+  if (any(!versionSpecNotNA))
+    pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
+  pkgInstall <- rbindlist(pkgInstallTmp)
   set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
   setorderv(pkgInstall, c("Package", "versionSpecGroup", "inequality", "repoLocation"), order = c(1L, 1L, -1L, 1L), na.last = TRUE)
 
@@ -1374,7 +1377,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
 updateInstallSafeGroups <- function(pkgInstall) {
   set(pkgInstall, NULL, "installSafeGroups",
       as.integer(factor(paste0(paddedFloatToChar(pkgInstall$installSafeGroups,
-                                                 padL = max(nchar(pkgInstall$installSafeGroups))), "_",
+                                                 padL = max(nchar(pkgInstall$installSafeGroups), na.rm = TRUE)), "_",
                                # !pkgInstall[["isBinaryInstall"]],
                                !pkgInstall[["localFile"]] %in% useRepository))))
   data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
