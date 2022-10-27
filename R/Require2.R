@@ -867,7 +867,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
 
       pkgGHList <- split(pkgGitHub, pkgGitHub$availableVersionOK)
       pkgGHtoDL <- pkgGHList[["TRUE"]]
-      if (any(!pkgGHtoDL$isPkgInstalled)) {
+      if (any(!pkgGHtoDL[["installedVersionOK"]])) {
         # download and build in a separate dir; gets difficult to separate this addition from existing files otherwise
         td <- tempdir2(.rndstr(1))
         prevDir <- setwd(td)
@@ -928,7 +928,7 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
       packageVersionFile <- getOption("Require.packageVersionFile")
     }
     packages <- data.table::fread(packageVersionFile)
-    packages <- dealWithViolations(packages, verbose = verbose, purge = purge,
+    packages <- dealWithSnapshotViolations(packages, verbose = verbose, purge = purge,
                                    libPaths = libPaths, type = type) # i.e., packages that can't coexist
     packages <- packages[!packages$Package %in% .basePkgs]
     out <- Require(packages$packageFullName, verbose = verbose, purge = purge, libPaths = libPaths,
@@ -940,7 +940,7 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
   out
 }
 
-dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
+dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
                                purge = getOption("Require.purge", FALSE), libPaths = .libPaths(),
                                repos = getOption("repos"), type = getOption("pkgType")) {
   dd <- pkgSnapshotObj
