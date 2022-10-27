@@ -424,7 +424,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
     copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
-    try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE) # CRAN is read only after pkgs installed
+    suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
   }, add = TRUE)
 
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths,
