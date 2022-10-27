@@ -299,7 +299,7 @@ Require <- function(packages, packageVersionFile,
   }
 
   if (NROW(packages)) {
-    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which)
+    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which, type = type)
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     allPackages <- unname(unlist(deps))
     pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
@@ -360,7 +360,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
 
 
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
-                       numPackages, numGroups, startTime, verbose) {
+                       numPackages, numGroups, startTime, verbose, type = type) {
 
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
@@ -371,7 +371,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
-  ap <- availablePackagesOverride(toInstall, repos, purge)
+  ap <- availablePackagesOverride(toInstall, repos, purge, type = type)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -457,7 +457,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
 
     by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
        installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
-       numGroups = maxGroup, startTime, verbose)
+       numGroups = maxGroup, startTime, verbose, type = type)
 
     pkgInstall[, `:=`(installResult = "OK", installed = TRUE)]
   }
