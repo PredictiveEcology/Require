@@ -13,3 +13,4 @@ tmp*
 .checks.RDS
 packages/*
 .secret
+R/SpaDES/*

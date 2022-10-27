@@ -424,7 +424,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
     copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
-    try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE) # CRAN is read only after pkgs installed
+    suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
   }, add = TRUE)
 
   pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths,
@@ -946,7 +946,7 @@ dealWithViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verb
 apCachedCols <- c("Package", "Repository", "Version", "Archs", "Depends", "Imports", "Suggests", "LinkingTo")
 
 
-localFilename <- function(pkgInstall, localFiles, libPaths) {
+localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
 
   pkgWhere <- split(pkgInstall, pkgInstall[["repoLocation"]])
   pkgGitHub <- pkgWhere[["GitHub"]] # pointer
@@ -1113,20 +1113,28 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
   for (i in names(toInstallList)) {
     # First do version number -- this is same for all locations
     whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
-    ap[whUpdate, "Version"] <- toInstallList[[i]]$VersionOnRepos
+    ap <- ap[whUpdate,, drop = FALSE]
+    ap[, "Version"] <- toInstallList[[i]]$VersionOnRepos
     if (i %in% "Archive") {
-      ap[whUpdate, "Repository"] <- toInstallList[[i]]$Repository
-    }
-    if (i %in% "Local") {
-      ap[whUpdate, "Repository"] <- paste0("file:///", getOptionRPackageCache())
-    }
-    if (i %in% "GitHub") {
-      ap[whUpdate, "Repository"] <-
-        paste0("file:///", normPath(dirname(toInstall[whUpdate]$localFile)))
+      ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
     if (i %in% c("Local", "GitHub")) {
-      ap[whUpdate, "File"] <- basename(toInstall[whUpdate]$localFile)
+      localFile2 <- toInstall[]$localFile
+      fnBase <- basename(localFile2)
+      file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
+      newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
+      file.rename(fnBase, newNameWithoutSHA)
+      ap[, "File"] <- newNameWithoutSHA
+      ap[, "Repository"] <-
+        paste0("file:///", normPath("."))
     }
+    # if (i %in% "Local") {
+    #   ap[whUpdate, "Repository"] <- paste0("file:///", ".")
+    # }
+    # if (i %in% "GitHub") {
+    #   ap[whUpdate, "Repository"] <-
+    #     paste0("file:///", normPath("."))
+    # }
   }
 
   ap
@@ -1239,10 +1247,10 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 }
 
 
-identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths) {
+identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
-    pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths)
+    pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
     # pkgInstall[nchar(localFile) > 0, localFile := useRepository]
     pkgInstall[, haveLocal :=
                  unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
@@ -1352,7 +1360,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   # pkgInstall <- availableVersionOK(pkgInstall)
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
-  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths)
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
 
   pkgInstall[, keep := if (any(availableVersionOKthisOne %in% TRUE))
