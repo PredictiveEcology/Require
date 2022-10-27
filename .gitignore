@@ -12,5 +12,11 @@ tmp*
 .RData
 .checks.RDS
 packages/*
+packages1/*
+packages2/*
+packages3/*
+packages4/*
+packages5/*
+packages6/*
 .secret
 R/SpaDES/*
