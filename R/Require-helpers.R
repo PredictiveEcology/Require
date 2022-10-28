@@ -347,72 +347,72 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
   if (internetExists("cannot get available packages", verbose = verbose)) {
     repos <- getCRANrepos(repos)
     purge <- dealWithCache(purge = purge)
+  } else {
+    purge <- FALSE
+  }
+  cap <- list()
+  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
+  isWindows <- isWindows()
 
-    cap <- list()
-    isMac <- tolower(Sys.info()["sysname"]) == "darwin"
-    isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
-    isWindows <- isWindows()
-
-    if (identical(type, "both")) {
-      types <- if (isOldMac) {
-        c("mac.binary.el-capitan", "source")
-      } else if (!isWindows && !isMac) {
-        c("source")
-      } else {
-        c("binary", "source")
-      }
+  if (identical(type, "both")) {
+    types <- if (isOldMac) {
+      c("mac.binary.el-capitan", "source")
+    } else if (!isWindows && !isMac) {
+      c("source")
     } else {
-      types <- type
+      c("binary", "source")
     }
+  } else {
+    types <- type
+  }
 
-    reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
-    typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
-    objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
-    if (!exists(objNam, envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
-      for (type in types) {
-        fn <- availablePackagesCachedPath(repos, type)
-        if (isTRUE(purge))
-          unlink(fn)
+  reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
+  typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
+  objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
+  if (!exists(objNam, envir = .pkgEnv[["pkgDep"]]) || isTRUE(purge)) {
+    for (type in types) {
+      fn <- availablePackagesCachedPath(repos, type)
+      if (isTRUE(purge))
+        unlink(fn)
         if (file.exists(fn)) {
           cap[[type]] <- readRDS(fn)
         } else {
           cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
                                   error = function(x)
                                     available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
-          # cap[[type]] <-  cap[[type]]
+        # cap[[type]] <-  cap[[type]]
 
-          cap[[type]] <- as.data.table(cap[[type]])
+        cap[[type]] <- as.data.table(cap[[type]])
 
-          if (!is.null(getOptionRPackageCache())) {
-            checkPath(dirname(fn), create = TRUE)
-            saveRDS(cap[[type]], file = fn)
-          }
+        if (!is.null(getOptionRPackageCache())) {
+          checkPath(dirname(fn), create = TRUE)
+          saveRDS(cap[[type]], file = fn)
         }
-
-
       }
-      cap <- do.call(rbind, cap)
-      # cap <- cap[!duplicated(cap, by = "Package")] # This will keep only one copy if type = "both"
 
-      assign(objNam, cap, envir = .pkgEnv[["pkgDep"]])
-      out <- cap
-    } else {
-      out <- get(objNam, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
+
     }
+    cap <- do.call(rbind, cap)
+    # cap <- cap[!duplicated(cap, by = "Package")] # This will keep only one copy if type = "both"
 
-    if (isFALSE(returnDataTable)) {
-      # as.matrix is not rich enough ... do it manually
-      bb <- as.matrix(out)
-      rownames(bb) <- out[["Package"]]
-      dimnames(bb)[[1]] <- unname(bb[, "Package"])
-      out <- bb
-    }
-
-
+    assign(objNam, cap, envir = .pkgEnv[["pkgDep"]])
+    out <- cap
   } else {
-    out <- NULL
+    out <- get(objNam, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)
   }
-  return(out)
+
+  if (isFALSE(returnDataTable)) {
+    # as.matrix is not rich enough ... do it manually
+    bb <- as.matrix(out)
+    rownames(bb) <- out[["Package"]]
+    dimnames(bb)[[1]] <- unname(bb[, "Package"])
+    out <- bb
+  }
+
+
+
+return(out)
 }
 
 
@@ -916,27 +916,32 @@ urlExists <- function(url) {
 
 #' @inheritParams Require
 internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
-  if (getOption("Require.checkInternet", FALSE)) {
-    internetMightExist <- TRUE
-    if (!is.null(.pkgEnv$internetExistsTime)) {
-      if ((Sys.time() - getOption('Require.internetExistsTimeout', 30)) < .pkgEnv$internetExistsTime) {
-        internetMightExist <- FALSE
+  if (!getOption("Require.offlineMode")) {
+    if (getOption("Require.checkInternet", FALSE)) {
+      internetMightExist <- TRUE
+      if (!is.null(.pkgEnv$internetExistsTime)) {
+        if ((Sys.time() - getOption('Require.internetExistsTimeout', 30)) < .pkgEnv$internetExistsTime) {
+          internetMightExist <- FALSE
+        }
       }
-    }
-    if (internetMightExist) {
-      opts2 <- options(timeout = 2)
-      on.exit(options(opts2))
-      ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
-      if (isFALSE(ue)) {
-        internetMightExist <- FALSE
+      if (internetMightExist) {
+        opts2 <- options(timeout = 2)
+        on.exit(options(opts2))
+        ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
+        if (isFALSE(ue)) {
+          internetMightExist <- FALSE
 
-        messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
-                       verbose = verbose, verboseLevel = 2)
+          messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
+                         verbose = verbose, verboseLevel = 2)
+        }
+        .pkgEnv$internetExistsTime <- Sys.time()
       }
-      .pkgEnv$internetExistsTime <- Sys.time()
     }
+    out <- TRUE
+  } else {
+    out <- FALSE
   }
-  TRUE
+  out
 }
 
 

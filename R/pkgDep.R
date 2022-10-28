@@ -341,6 +341,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                     tf <- tempfile()
                     messageVerbose("available.packages() does not have correct information on package dependencies for ", pkg,
                                    "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
+                    if (internetExists("No Internet; can't check CRAN archives for available version"))
                     haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
                       tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
                     if (file.exists(tf)) {
@@ -1001,6 +1002,11 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
 
 
 dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
+  offlineMode <- getOption("Require.offlineMode", FALSE)
+  if (isTRUE(offlineMode)) {
+    purge <- FALSE
+    checkAge <- FALSE
+  }
   if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
@@ -1015,6 +1021,8 @@ dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
   if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
     .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
     .pkgEnv[["startTime"]] <- Sys.time()
+  }
+  if (isTRUE(purge)) {
     fn <- availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
     fExists <- file.exists(fn)
     if (any(fExists))

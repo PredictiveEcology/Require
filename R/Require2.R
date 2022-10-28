@@ -278,6 +278,9 @@ Require <- function(packages, packageVersionFile,
     , add = TRUE)
 
   dots <- list(...)
+  dealWithCache(purge)
+  purge <- FALSE
+
   install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
                                       dots, keep.null = TRUE)
   install_githubArgs <-  modifyList2(list(quiet = !(verbose >= 0)), install_githubArgs,
@@ -775,6 +778,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
   if (!is.null(pkgInstallList[["GitHub"]]))
     pkgInstallList[["GitHub"]] <- getGitHubVersionOnRepos(pkgInstallList[["GitHub"]])
   pkgInstall <- rbindlistRecursive(pkgInstallList)
+  pkgInstall <- getVersionOnReposLocal(pkgInstall)
   pkgInstall
 }
 
@@ -945,8 +949,9 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Requ
                                purge = getOption("Require.purge", FALSE), libPaths = .libPaths(),
                                repos = getOption("repos"), type = getOption("pkgType")) {
   dd <- pkgSnapshotObj
-  ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
-               paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
+  ff <- packageFullNameFromSnapshot(dd)
+  # ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
+  #              paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
   gg <- pkgDep(ff, recursive = TRUE, purge = purge)
   hh <- sort(unique(gsub(" ", "", gsub("\n", "", unname(unlist(gg))))))
   pkgDT <- toPkgDT(hh, deepCopy = TRUE)
@@ -1201,8 +1206,10 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
-  pkgGitHub <- getGitHubFile(pkgGitHub)
-  pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+  if (internetExists()) {
+    pkgGitHub <- getGitHubFile(pkgGitHub)
+    pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+  }
   pkgGitHub
   pkgGitHub
 }
@@ -1265,7 +1272,6 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
-    # pkgInstall[nchar(localFile) > 0, localFile := useRepository]
     pkgInstall[, haveLocal :=
                  unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
     pkgInstall[haveLocal %in% "Local", `:=`(installFrom = haveLocal,
@@ -1557,3 +1563,53 @@ anyHaveHEAD <- function(packages) {
 }
 
 HEADgrep <- " *\\(HEAD\\)"
+
+packageFullNameFromSnapshot <- function(snapshot) {
+  ifelse(!is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo),
+               paste0(snapshot$GithubUsername, "/", snapshot$Package, "@",
+                      snapshot$GithubSHA1), paste0(snapshot$Package,
+                                                   " (==", snapshot$Version, ")"))
+
+}
+
+getVersionOnReposLocal <- function(pkgDT) {
+  if (!is.null(getOptionRPackageCache())) {
+    set(pkgDT, NULL, "tmpOrder", seq(NROW(pkgDT)))
+    if (any(is.na(pkgDT$VersionOnRepos))) {
+      pkgDTList <- split(pkgDT, !is.na(pkgDT$VersionOnRepos))
+      if (!is.null(pkgDTList$`FALSE`)) {
+        localFiles <- dir(getOptionRPackageCache())
+        pkgNoVoR <- pkgDTList$`FALSE`
+        wh <- pkgNoVoR[["repoLocation"]] %in% "GitHub"
+        if (any(wh)) {
+          pkgNoVoR[which(wh %in% TRUE), localFile := {
+            PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", Branch)
+            localFiles <- grep(PackagePattern, localFiles, value = TRUE) # can be length 0, 1, or >1 e.g., tar.gz, zip
+            if (length(localFiles) == 0) {
+              localFiles <- ""
+            } else {
+              isBinaryFile <- isBinary(localFiles)
+              if (any(isBinaryFile %in% TRUE) )
+                localFiles <- localFiles[isBinaryFile]
+              if (length(localFiles) > 1) localFiles <- localFiles[1]
+            }
+            localFiles
+          },
+          by = seq(sum(wh))]
+          hasLocalNow <- nchar(pkgNoVoR$localFile) > 0
+          if (any(hasLocalNow)) {
+            pkgNoVoR[hasLocalNow, VersionOnRepos := extractVersionNumber(filenames = pkgNoVoR$localFile)]
+            pkgNoVoR[hasLocalNow, haveLocal := "Local"]
+          }
+          pkgDT <- rbindlistRecursive(pkgDTList) # the pkgNoVoR was just a pointer
+          setorderv(pkgDT, "tmpOrder")
+          set(pkgDT, NULL, "tmpOrder", NULL)
+        }
+      }
+    }
+
+  }
+
+  pkgDT
+}
+

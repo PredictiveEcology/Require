@@ -43,11 +43,7 @@ extractVersionNumber <- function(pkgs, filenames) {
   } else {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
-      # out <- rep(NA, length(filenames))
       out <- unlist(lapply(fnsSplit, function(x) gsub(".zip|.tar.gz", "", x[[2]])))
-
-      #hasVersionNum <- grepl(grepExtractPkgsFilename, basename(filenames))
-      #out[hasVersionNum] <- gsub(grepExtractPkgsFilename, "\\1", filenames[hasVersionNum], perl = FALSE)
     } else {
       out <- character()
     }
