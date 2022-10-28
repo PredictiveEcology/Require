@@ -800,9 +800,9 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     # Not on CRAN; so likely Archive
     notOK <- !pkgCRAN$availableVersionOK %in% TRUE # FALSE means it is on CRAN, but not that version; NA means it is not on CRAN currently
     if (any(notOK)) {
-      messageVerbose(blue("  -- couldn't find correct versions of ",
+      messageVerbose(blue("  -- these versions of ",
                      paste(pkgCRAN$packageFullName[notOK],
-                           collapse = ", "), "; trying Archives"),
+                           collapse = ", "), " are not the latest on CRAN; trying Archives"),
                      verbose = verbose, verboseLevel = 1)
       pkgCRAN[notOK, `:=`(repoLocation = "Archive",
                                                   installFrom = "Archive")]
