@@ -1134,10 +1134,12 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     ap <- rbind(ap, ap3)
 
   toInstallList <- split(toInstall, by = "installFrom")
+  apList <- list()
+  apOrig <- ap
   for (i in names(toInstallList)) {
     # First do version number -- this is same for all locations
-    whUpdate <- match(toInstallList[[i]]$Package, ap[, "Package"])
-    ap <- ap[whUpdate,, drop = FALSE]
+    whUpdate <- match(toInstallList[[i]]$Package, apOrig[, "Package"])
+    ap <- apOrig[whUpdate,, drop = FALSE]
     ap[, "Version"] <- toInstallList[[i]]$VersionOnRepos
     if (i %in% "Archive") {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
@@ -1152,16 +1154,10 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap[, "Repository"] <-
         paste0("file:///", normPath("."))
     }
-    # if (i %in% "Local") {
-    #   ap[whUpdate, "Repository"] <- paste0("file:///", ".")
-    # }
-    # if (i %in% "GitHub") {
-    #   ap[whUpdate, "Repository"] <-
-    #     paste0("file:///", normPath("."))
-    # }
+    apList[[i]] <- ap
   }
 
-  ap
+  do.call(rbind, apList)
 }
 
 useRepository <- "useRepository"
