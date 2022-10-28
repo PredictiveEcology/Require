@@ -1448,6 +1448,9 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
         set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
       }
       setnames(ret, "mtime", "dayAfterPutOnCRAN")
+      set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
+      set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
+
       set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
       if (!is.na(correctVersions)[1])
         set(ret, NULL, "availableVersionOK", TRUE)
