@@ -437,6 +437,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
                        verbose = getOption("Require.verbose"),
                        type = getOption("pkgType"),
                        ap) {
+  if (missing(ap))
+    ap <- available.packagesCached(repos = repos, purge = purge, verbose = verbose, type = type)
+
   deps <- pkgDepCRANInner(ap, which = which, pkgs = pkg, pkgsNoVersion = pkgsNoVersion,
                           keepVersionNumber = keepVersionNumber, verbose = verbose)
   deps
