@@ -1380,16 +1380,22 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
   pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
-  # pkgInstall <- availableVersionOK(pkgInstall)
+  # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
+  pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
+  #pkgInstall <- availableVersionOK(pkgInstall)
+  # pkgInstall <- unique(pkgInstall[availableVersionOKthisOne %in% TRUE], by = "packageFullName")
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
-  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
+  setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "Repository"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
 
-  pkgInstall[, keep := if (any(availableVersionOKthisOne %in% TRUE))
-    .I[availableVersionOKthisOne %in% TRUE][1] else .I, by = "Package"]
-
+  pkgInstall[, keep := {
+    # This will pick the one that is OK, or if they are all NA (meaning no version spec), then also pick first one that OK
+    ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne))
+    if (ok) .I[ok][1] else .I
+    }, by = "Package"]
   pkgInstall <- pkgInstall[unique(keep)]
   set(pkgInstall, NULL, "keep", NULL)
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall
 }
 

@@ -392,7 +392,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
       }
       cap <- do.call(rbind, cap)
-      cap <- cap[!duplicated(cap, by = "Package")] # This will keep only one copy if type = "both"
+      # cap <- cap[!duplicated(cap, by = "Package")] # This will keep only one copy if type = "both"
 
       assign(objNam, cap, envir = .pkgEnv[["pkgDep"]])
       out <- cap
