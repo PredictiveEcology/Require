@@ -130,10 +130,15 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        if (NpackagesCRAN > 0) paste0(NpackagesCRAN, " packages on CRAN"),
                        if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
                        verbose = verbose, verboseLevel = 0)
+      isCRAN <- parseGitHub(packages[needGet])[["repoLocation"]] %in% "CRAN"
+      if (any(isCRAN %in% TRUE))
+        ap <- available.packagesCached(repos = repos, purge = purge, verbose = verbose, type = type)
+      else
+        ap <- NULL
       neededFull <- pkgDepInnerMemoise(packages = packages[needGet], libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
                                        purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase,
-                                       type = type)
+                                       type = type, ap = ap)
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
@@ -162,7 +167,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                    unique(unlist(pkgDepInnerMemoise(packages = needed, libPath = libPath,
                                                                     which = which, keepVersionNumber = keepVersionNumber,
                                                                     purge = FALSE, repos = repos, verbose = verbose,
-                                                                    includeBase = includeBase)))
+                                                                    includeBase = includeBase, ap = ap)))
                                  })
                                  prevIndices <- 1:(i - 1)
                                  curPkgs <- unlist(pkgsNew[[i]])
@@ -269,7 +274,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
 pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                         purge = getOption("Require.purge", FALSE),
                         repos = repos, includeBase = FALSE, verbose = getOption("Require.verbose"),
-                        type = getOption("pkgType")) {
+                        type = getOption("pkgType"), ap) {
   names(packages) <- packages
   pkgsNoVersion <- extractPkgName(packages)
   purge <- dealWithCache(purge, checkAge = TRUE)
@@ -284,7 +289,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
     pkgsNoVersionToCheck <- pkgsNoVersion
   }
 
-  # desc_paths <- getDescPath(packagesToCheck, libPath)
   needed <- Map(# desc_path = desc_paths,
     pkg = packagesToCheck,
     pkgNoVersion = pkgsNoVersionToCheck,
@@ -306,7 +310,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                                            purge = FALSE,
                                                            repos = repos,
                                                            verbose = verbose,
-                                                           type = type))))
+                                                           type = type, ap = ap))))
 
           if (is.null(needed)) { # essesntially, failed
             pkgName <- extractPkgName(pkg)
@@ -431,9 +435,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
                        keepVersionNumber = TRUE, repos = getOption("repos"),
                        purge = getOption("Require.purge", FALSE),
                        verbose = getOption("Require.verbose"),
-                       type = getOption("pkgType")) {
-  capFull <- available.packagesCached(repos = repos, purge = purge, verbose = verbose, type = type)
-  deps <- pkgDepCRANInner(capFull, which = which, pkgs = pkg, pkgsNoVersion = pkgsNoVersion,
+                       type = getOption("pkgType"),
+                       ap) {
+  deps <- pkgDepCRANInner(ap, which = which, pkgs = pkg, pkgsNoVersion = pkgsNoVersion,
                           keepVersionNumber = keepVersionNumber, verbose = verbose)
   deps
 }
@@ -613,7 +617,12 @@ pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
   }
   depsOut <- list()
   if (pkgsNoVersion %in% ap$Package) { # is it on CRAN
-    ap <- ap[match( pkgsNoVersion, Package)]
+
+    if (length(pkgsNoVersion) > 1) # the next %in% used to be a `match`, which didn't work when there were 2 matches; which Windows now has with bin and src package options
+      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 555; please contact developers")
+
+    ap <- ap[ap$Package %in% pkgsNoVersion] # gets only this package, but not necessarily in correct order
+    # ap <- ap[match( pkgsNoVersion, ap$Package)]
     ap[, versionSpec := extractVersionNumber(pkgs)]
     ap[!is.na(versionSpec), ineq := extractInequality(pkgs)]
     ap[is.na(versionSpec), availableVersionOK := TRUE]
@@ -648,9 +657,6 @@ pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
       depsFALSE <- Map(x = pkgs, function(x) NULL, USE.NAMES = TRUE)
       depsOut <- modifyList2(depsOut, depsFALSE, keep.null = TRUE)
     }
-  # } else {
-  #   stop("It doesn't look like ", paste(pkgs, collapse = ", "), " ", isAre(pkgs)," on CRAN. ",
-  #        "Did you mis-spell the package?")
   }
 
   depsOut

@@ -1122,8 +1122,8 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     if (!is.null(toInstall$Repository))
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     ap3[, "Depends"] <- NA
-    ap3[, "Imports"] <- NA # pkgDep("ggplot", which = "Imports", includeSelf = FALSE)
-    ap3[, "Suggests"] <- NA # pkgDep("ggplot", which = "Imports", includeSelf = FALSE)
+    ap3[, "Imports"] <- NA
+    ap3[, "Suggests"] <- NA
     rownames(ap3) <- pkgsNotInAP
   } else {
     ap3 <- ap[0,, drop = FALSE]
