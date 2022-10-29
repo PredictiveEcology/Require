@@ -240,7 +240,12 @@ archiveVersionsAvailable <- function(package, repos) {
         con <- gzcon(url(archiveFile, "rb"))
         on.exit(close(con))
         readRDS(con)
-      }, warning = function(e) list(), error = function(e) list())
+      },
+      warning = function(e) {
+        setOfflineModeTRUE()
+        list()
+        },
+      error = function(e) list())
       .pkgEnv[["pkgDep"]][[archiveFile]] <- archive
     } else {
       archive <- get(archiveFile, envir = .pkgEnv[["pkgDep"]])
@@ -899,6 +904,7 @@ rCurrentVersion <- function(testVers) {
   out
 }
 
+# Used inside internetExists
 urlExists <- function(url) {
   con <- url(url)
   on.exit(try(close(con), silent = TRUE), add = TRUE)
@@ -1118,12 +1124,7 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
     }),
 
     warning = function(w) {
-      if (!getOption("Require.offlineMode", FALSE)) {
-        if (!internetExists()) {
-          options("Require.offlineMode" = TRUE)
-          message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
-        }
-      }
+      setOfflineModeTRUE()
       # strip the ghp from the warning message
       w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
       invokeRestart("muffleWarning")
@@ -1131,8 +1132,25 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
     })
   if (!is.null(urls[["TRUE"]])) # should be sequential because they are master OR main
     for (wh in seq(urls[["TRUE"]])) {
-      outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE),
+      if (!getOption("Require.offlineMode", FALSE))
+        outMasterMain <-
+          withCallingHandlers({
+            try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE),
                            silent = TRUE)
+          },
+
+          warning = function(w) {
+            if (!getOption("Require.offlineMode", FALSE)) {
+              if (!internetExists()) {
+                options("Require.offlineMode" = TRUE)
+                message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
+              }
+            }
+            # strip the ghp from the warning message
+            w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
+            invokeRestart("muffleWarning")
+          })
+
       if (!is(outMasterMain, "try-error")) {
         names(outMasterMain) <- urls[["TRUE"]][wh]
         break
@@ -1277,3 +1295,13 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
   pkgDT[]
 }
 
+
+setOfflineModeTRUE <- function() {
+  if (!getOption("Require.offlineMode", FALSE)) {
+    if (!internetExists()) {
+      options("Require.offlineMode" = TRUE)
+      message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
+    }
+  }
+
+}

@@ -397,9 +397,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
-      pkgName <- gsub(".*\u2018(.+)\u2019.*", "\\1", w$message)
-      gsub(".+\u2018(.+)\u2019.+", "\\1", pkgName)         # package XXX is in use and will not be installed
-
       # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
       isCacheErr <- extractPkgNameFromFileName(w$message)
       needWarning <- FALSE
@@ -736,7 +733,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 
   # on.exit()
   # this is a placeholder; set noLocal by default
-  set(pkgInstall, NULL, "haveLocal", "noLocal")
+  set(pkgInstall, NULL, "haveLocal", "maybeLocal")
 
   # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
   pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose,
@@ -828,24 +825,26 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
 downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, numToDownload) {
   pkgArchive <- pkgNonLocal[["Archive"]]
   if (NROW(pkgArchive)) {
-    # messageVerbose(messageDownload(pkgArchive, NROW(pkgArchive), "Archives"), verbose = verbose, verboseLevel = 2)
     ava <- lapply(archiveVersionsAvailable(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"],
                                            repos = repos), function(d) {
                                              aa <- as.data.table(d, keep.rownames = "PackageUrl")
                                              if (!is.null(aa[["mtime"]])) setorderv(aa, "mtime")
                                              aa
                                            })
-    pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
-    # Check MRAN
-    pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
+    if (!getOption("Require.offlineMode", FALSE)) {
+        pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
+      # Check MRAN
+      pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
 
     if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
       pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
       pkgArchOnly <- pkgArchive[["Archive"]]
       pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
       pkgArchOnly[, localFile := useRepository]
+      }
+      pkgArchive <- rbindlistRecursive(pkgArchive)
     }
-    pkgArchive <- rbindlistRecursive(pkgArchive)
+
   }
   pkgNonLocal[["Archive"]] <- pkgArchive
   pkgNonLocal
@@ -1147,7 +1146,12 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     # First do version number -- this is same for all locations
     whUpdate <- match(toInstallList[[i]]$Package, apOrig[, "Package"])
     ap <- apOrig[whUpdate,, drop = FALSE]
-    ap[, "Version"] <- toInstallList[[i]]$VersionOnRepos
+    isNA <- is.na(toInstallList[[i]]$VersionOnRepos)
+    if (any(isNA)) {
+      ap[isNA, "Version"] <- toInstallList[[i]][isNA, extractVersionNumber(filenames = basename(localFile))]
+    }
+    if (any(!isNA))
+      ap[!isNA, "Version"] <- toInstallList[[i]]$VersionOnRepos
     if (i %in% "Archive") {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
@@ -1219,7 +1223,12 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 
 #' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
-  PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", VersionOnRepos)
+  # Not vectorized
+  if (is.na(VersionOnRepos)) {
+    PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
+  } else {
+    PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*", VersionOnRepos)
+  }
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
 
