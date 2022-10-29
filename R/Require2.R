@@ -691,7 +691,8 @@ recordLoadOrder <- function(packages, pkgDT) {
   packagesWObase <- setdiff(packages, .basePkgs)
   out <- try(
   pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
-  if (is(out, "try-error")) browser()
+  if (is(out, "try-error"))
+    if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 1253; please contact developer")
   pkgDT
 }
 
@@ -1016,7 +1017,8 @@ availableVersionOK <- function(pkgDT) {
       avokto <- compareVersion2(VersionOnRepos, versionSpec, inequality)
       list(availableVersionOK = avok, availableVersionOKthisOne = avokto)
     }, by = "Package"])
-    if (is(out, "try-error")) browser()
+    if (is(out, "try-error"))
+      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 553; please contact developer")
   } else {
 
     pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
@@ -1237,7 +1239,8 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
         fn <- tail(fn, 1)[keepLoc]
       } else {
         keepLoc <- try(unlist(compareVersion2(localVer, versionSpec, inequality)))
-        if (is(keepLoc, "try-error")) browser()
+        if (is(keepLoc, "try-error"))
+          if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 978; please contact developer")
         if (!identical(inequality, "==") && !is.na(VersionOnRepos)) {
           keepRep <- compareVersion2(VersionOnRepos, versionSpec, inequality)
           if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good
@@ -1292,7 +1295,8 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT, ifViolation = c(
     if (length(wh)) {
       out[wh] <- try(unlist(Map(verSpec = versionSpec[wh],  function(verSpec) {
         all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))})))
-      if (is(out, "try-error")) browser()
+      if (is(out, "try-error"))
+        if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 844; please contact developer")
       out
     }
     out
@@ -1430,7 +1434,8 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
           correctVersions <- NA
         else {
           latestCorrect <- try(tail(which(correctVersions), 1))
-          if (is(latestCorrect, "try-error")) browser()
+          if (is(latestCorrect, "try-error"))
+            if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 111; please contact developer")
           correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
         }
 
