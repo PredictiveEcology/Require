@@ -84,10 +84,12 @@ pkgDep <- function(packages, libPath = .libPaths(),
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   if (length(packages)) {
-    saveNames <- saveNamesForCache(packages, which, recursive)
-    # saveNames <- paste(packages, paste(whichCat, "recursive", recursive, sep = "_")[1], sep = "_")
-    # saveNames <- gsub("[[:punct:]]| ", "_", saveNames)
-    # names(saveNames) <- packages
+    # ghPackages <- extractPkgGitHub(packages))
+    hasNoEquality <- grep("^(==)", extractInequality(packages), invert = TRUE)
+    packagesSaveNames <- packages
+    if (length(hasNoEquality))
+      packagesSaveNames[hasNoEquality] <- trimVersionNumber(packages[hasNoEquality])
+    saveNames <- saveNamesForCache(packagesSaveNames, which, recursive)
     if (isTRUE(purge)) {
       whExist <- unlist(lapply(saveNames, exists, envir = .pkgEnv))
       if (any(whExist))
@@ -301,8 +303,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                        purge = FALSE, includeBase = includeBase)
 
       } else {
-        if (internetExists(paste0("cannot check for package dependencies because ", pkg, " is not installed locally"),
-                           verbose = verbose)) {
+        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
           needed <- unique(unname(unlist(pkgDepCRANMemoise(pkg = pkg,
                                                            pkgsNoVersion = pkgNoVersion,
                                                            which = which,
@@ -341,7 +342,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                     tf <- tempfile()
                     messageVerbose("available.packages() does not have correct information on package dependencies for ", pkg,
                                    "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
-                    if (internetExists("No Internet; can't check CRAN archives for available version"))
+                    if (isFALSE(getOption("Require.offlineMode", FALSE)))
                     haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
                       tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
                     if (file.exists(tf)) {

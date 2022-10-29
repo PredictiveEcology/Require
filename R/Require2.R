@@ -393,7 +393,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
-  # if (any(grepl("fpCompare", ipa$pkgs))) browser()
   aa <- try(
     withCallingHandlers(
     installPackagesWithQuiet(ipa),
@@ -746,7 +745,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
   numToDownload <- NROW(pkgInstallList[["noLocal"]])
-  # if (any(grepl("fpCompare", pkgNeedInternet$Package))) browser()
   if (NROW(pkgNeedInternet)) {
     pkgNeedInternet <- split(pkgNeedInternet, by = "repoLocation")
 
@@ -1206,7 +1204,7 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
-  if (internetExists()) {
+  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     pkgGitHub <- getGitHubFile(pkgGitHub)
     pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
   }
@@ -1578,13 +1576,14 @@ getVersionOnReposLocal <- function(pkgDT) {
     if (any(is.na(pkgDT$VersionOnRepos))) {
       pkgDTList <- split(pkgDT, !is.na(pkgDT$VersionOnRepos))
       if (!is.null(pkgDTList$`FALSE`)) {
-        localFiles <- dir(getOptionRPackageCache())
+        localFilesOuter <- dir(getOptionRPackageCache())
         pkgNoVoR <- pkgDTList$`FALSE`
         wh <- pkgNoVoR[["repoLocation"]] %in% "GitHub"
         if (any(wh)) {
+
           pkgNoVoR[which(wh %in% TRUE), localFile := {
             PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", Branch)
-            localFiles <- grep(PackagePattern, localFiles, value = TRUE) # can be length 0, 1, or >1 e.g., tar.gz, zip
+            localFiles <- grep(PackagePattern, localFilesOuter, value = TRUE) # can be length 0, 1, or >1 e.g., tar.gz, zip
             if (length(localFiles) == 0) {
               localFiles <- ""
             } else {
@@ -1596,8 +1595,8 @@ getVersionOnReposLocal <- function(pkgDT) {
             localFiles
           },
           by = seq(sum(wh))]
-          hasLocalNow <- nchar(pkgNoVoR$localFile) > 0
-          if (any(hasLocalNow)) {
+          hasLocalNow <- (nchar(pkgNoVoR$localFile) > 0) %in% TRUE
+          if (any(hasLocalNow %in% TRUE)) {
             pkgNoVoR[hasLocalNow, VersionOnRepos := extractVersionNumber(filenames = pkgNoVoR$localFile)]
             pkgNoVoR[hasLocalNow, haveLocal := "Local"]
           }

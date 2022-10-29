@@ -190,7 +190,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
     checkPath(dirname(tempfile()), create = TRUE)
     set(pkgDT, NULL, "destFile",
         file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Branch, "_", filename)))
-    if (internetExists("cannot download GitHub package", verbose = verbose)) {
+    if (isFALSE(getOption("Require.offlineMode", FALSE))) {
       pkgDT[repoLocation == "GitHub",
             filepath := {
               ret <- NA
@@ -344,7 +344,7 @@ installedVers <- function(pkgDT) {
 #' @inheritParams utils::install.packages
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
                                      returnDataTable = TRUE, type) {
-  if (internetExists("cannot get available packages", verbose = verbose)) {
+  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     repos <- getCRANrepos(repos)
     purge <- dealWithCache(purge = purge)
   } else {
@@ -916,7 +916,7 @@ urlExists <- function(url) {
 
 #' @inheritParams Require
 internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
-  if (!getOption("Require.offlineMode")) {
+  if (!getOption("Require.offlineMode", FALSE)) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       if (!is.null(.pkgEnv$internetExistsTime)) {
@@ -936,8 +936,11 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
         }
         .pkgEnv$internetExistsTime <- Sys.time()
       }
+      out <- internetMightExist
+    } else {
+      out <- TRUE
+
     }
-    out <- TRUE
   } else {
     out <- FALSE
   }
@@ -1110,10 +1113,17 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   if (!is.null(urls[["FALSE"]]))
     outNotMasterMain <-
     withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
-      try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
+      if (!getOption("Require.offlineMode", FALSE))
+        try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
     }),
 
     warning = function(w) {
+      if (!getOption("Require.offlineMode", FALSE)) {
+        if (!internetExists()) {
+          options("Require.offlineMode" = TRUE)
+          message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
+        }
+      }
       # strip the ghp from the warning message
       w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
       invokeRestart("muffleWarning")
