@@ -363,7 +363,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
              intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
     })
     if (any(unlist(out1) == 1L))
-      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 456; contact developer")
+      browserDeveloper("Error 456; contact developer")
     messageVerbose("  ... Built!",
                    verbose = verbose, verboseLevel = 1)
   } else {
@@ -689,7 +689,7 @@ recordLoadOrder <- function(packages, pkgDT) {
   out <- try(
   pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
   if (is(out, "try-error"))
-    if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 1253; please contact developer")
+    browserDeveloper("Error 1253; please contact developer")
   pkgDT
 }
 
@@ -836,11 +836,11 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
       # Check MRAN
       pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
 
-    if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
-      pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
-      pkgArchOnly <- pkgArchive[["Archive"]]
-      pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
-      pkgArchOnly[, localFile := useRepository]
+      if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
+        pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
+        pkgArchOnly <- pkgArchive[["Archive"]]
+        pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
+        pkgArchOnly[, localFile := useRepository]
       }
       pkgArchive <- rbindlistRecursive(pkgArchive)
     }
@@ -1019,7 +1019,7 @@ availableVersionOK <- function(pkgDT) {
       list(availableVersionOK = avok, availableVersionOKthisOne = avokto)
     }, by = "Package"])
     if (is(out, "try-error"))
-      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 553; please contact developer")
+      browserDeveloper("Error 553; please contact developer")
   } else {
 
     pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
@@ -1251,7 +1251,7 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
       } else {
         keepLoc <- try(unlist(compareVersion2(localVer, versionSpec, inequality)))
         if (is(keepLoc, "try-error"))
-          if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 978; please contact developer")
+          browserDeveloper("Error 978; please contact developer")
         if (!identical(inequality, "==") && !is.na(VersionOnRepos)) {
           keepRep <- compareVersion2(VersionOnRepos, versionSpec, inequality)
           if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good
@@ -1307,7 +1307,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT, ifViolation = c(
       out[wh] <- try(unlist(Map(verSpec = versionSpec[wh],  function(verSpec) {
         all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))})))
       if (is(out, "try-error"))
-        if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 844; please contact developer")
+        browserDeveloper("Error 844; please contact developer")
       out
     }
     out
@@ -1446,7 +1446,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
         else {
           latestCorrect <- try(tail(which(correctVersions), 1))
           if (is(latestCorrect, "try-error"))
-            if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 111; please contact developer")
+            browserDeveloper("Error 111; please contact developer")
           correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
         }
 
@@ -1559,7 +1559,7 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
 
     }))
     if (is(out, "try-error"))
-      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error 253; please contact developer")
+      browserDeveloper("Error 253; please contact developer")
   }}
 }
 
@@ -1628,3 +1628,10 @@ getVersionOnReposLocal <- function(pkgDT) {
   pkgDT
 }
 
+browserDeveloper <- function(mess) {
+  if (identical(Sys.info()[["user"]], "emcintir")) {
+    print(mess)
+    attach(parent.frame())
+    browser()
+    } else stop(mess)
+}
