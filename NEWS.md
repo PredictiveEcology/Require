@@ -4,6 +4,8 @@ version 0.1.7
 =============
 
 ## enhancements
+* new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and `pkgDep` from checking the internet. This will fail, unless the cached packages are available locally. If they are, then they will be installed without needing the internet. This option will also be set automatically on the first attempt to get a file from the internet, which fails, triggering a test of the internet. If that fails, then the option will be set to `FALSE` until next call to `Require` or `pkgDep` when it will be reset.
+* many more edge cases found and dealt with
 * experimental use of `(HEAD)` to keep a package "up to date" with the HEAD of a GitHub branch. The behaviour still uses version numbering, so will not update based on SHA, but if the HEAD is ahead of the locally installed package and the `(HEAD)` is specified, then it will update. Specifically, use this instead of a version number, e.g., `"PredictiveEcology/Require@development (HEAD)"`
 * `modifyList2` now follows `modifyList` by adding the `keep.null` argument.
 * `setdiffNamed` will compare 2 named lists or vectors and keep on those elements that are in the first list (or vector), keeping in mind the name as well as the element.

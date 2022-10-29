@@ -273,6 +273,7 @@ Require <- function(packages, packageVersionFile,
                     ...) {
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
+  checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
   on.exit({
     options(opts)}
     , add = TRUE)
@@ -687,7 +688,7 @@ recordLoadOrder <- function(packages, pkgDT) {
     packages <- packages[!dups]
   packagesWObase <- setdiff(packages, .basePkgs)
   out <- try(
-  pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
+    pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
   if (is(out, "try-error"))
     browserDeveloper("Error 1253; please contact developer")
   pkgDT
@@ -831,7 +832,7 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
                                              if (!is.null(aa[["mtime"]])) setorderv(aa, "mtime")
                                              aa
                                            })
-    if (!getOption("Require.offlineMode", FALSE)) {
+    if (isFALSE(getOption("Require.offlineMode", FALSE))) {
         pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
       # Check MRAN
       pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
@@ -1632,6 +1633,7 @@ browserDeveloper <- function(mess) {
   if (identical(Sys.info()[["user"]], "emcintir")) {
     print(mess)
     attach(parent.frame())
+    on.exit(detach())
     browser()
     } else stop(mess)
 }

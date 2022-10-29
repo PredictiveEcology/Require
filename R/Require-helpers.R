@@ -922,7 +922,7 @@ urlExists <- function(url) {
 
 #' @inheritParams Require
 internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
-  if (!getOption("Require.offlineMode", FALSE)) {
+  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       if (!is.null(.pkgEnv$internetExistsTime)) {
@@ -1119,7 +1119,7 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   if (!is.null(urls[["FALSE"]]))
     outNotMasterMain <-
     withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
-      if (!getOption("Require.offlineMode", FALSE))
+      if (isFALSE(getOption("Require.offlineMode", FALSE)))
         try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
     }),
 
@@ -1132,7 +1132,7 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
     })
   if (!is.null(urls[["TRUE"]])) # should be sequential because they are master OR main
     for (wh in seq(urls[["TRUE"]])) {
-      if (!getOption("Require.offlineMode", FALSE))
+      if (isFALSE(getOption("Require.offlineMode", FALSE)))
         outMasterMain <-
           withCallingHandlers({
             try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE),
@@ -1140,12 +1140,7 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
           },
 
           warning = function(w) {
-            if (!getOption("Require.offlineMode", FALSE)) {
-              if (!internetExists()) {
-                options("Require.offlineMode" = TRUE)
-                message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
-              }
-            }
+            setOfflineModeTRUE()
             # strip the ghp from the warning message
             w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
             invokeRestart("muffleWarning")
@@ -1297,11 +1292,19 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
 
 
 setOfflineModeTRUE <- function() {
-  if (!getOption("Require.offlineMode", FALSE)) {
+  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     if (!internetExists()) {
-      options("Require.offlineMode" = TRUE)
+      options("Require.offlineMode" = TRUE,
+              "Require.offlineModeSetAutomatically" = TRUE)
       message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
     }
   }
 
+}
+
+checkAutomaticOfflineMode <- function() {
+  if (getOption("Require.offlineModeSetAutomatically", FALSE)) {
+    options("Require.offlineModeSetAutomatically" = NULL,
+            Require.offlineMode = FALSE)
+  }
 }

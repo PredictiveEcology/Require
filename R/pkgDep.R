@@ -71,6 +71,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                    includeSelf = TRUE, type = getOption("pkgType")) {
 
   purge <- dealWithCache(purge)
+  checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
 
   if (!includeBase) packages <- packages[!packages %in% .basePkgs]
   #if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
@@ -87,15 +88,19 @@ pkgDep <- function(packages, libPath = .libPaths(),
     # ghPackages <- extractPkgGitHub(packages))
     hasNoEquality <- grep("^(==)", extractInequality(packages), invert = TRUE)
     packagesSaveNames <- packages
-    if (length(hasNoEquality))
+    if (length(hasNoEquality)) {
       packagesSaveNames[hasNoEquality] <- trimVersionNumber(packages[hasNoEquality])
+      packagesSaveNames <- unique(packagesSaveNames)
+    }
     saveNames <- saveNamesForCache(packagesSaveNames, which, recursive)
     if (isTRUE(purge)) {
       whExist <- unlist(lapply(saveNames, exists, envir = .pkgEnv))
       if (any(whExist))
         suppressWarnings(rm(list = saveNames[whExist], envir = .pkgEnv))
     }
+    # this will be short because saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv)
+    # Expand it back out to full length
 
     needGet <- unlist(lapply(neededFull1, is.null))
     if (any(needGet)) {
@@ -137,7 +142,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
         ap <- available.packagesCached(repos = repos, purge = purge, verbose = verbose, type = type)
       else
         ap <- NULL
-      neededFull <- pkgDepInnerMemoise(packages = packages[needGet], libPath = libPath,
+      neededFull <- pkgDepInnerMemoise(packages = names(needGet)[needGet], libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
                                        purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase,
                                        type = type, ap = ap)
@@ -238,6 +243,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     if (isTRUE(sort))
       neededFull1 <- lapply(neededFull1, function(x) sort(x))
 
+    # Put the package *without* its inequality (because they aren't there) in the first slot
     neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
       unique(rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p))))
 
@@ -265,6 +271,16 @@ pkgDep <- function(packages, libPath = .libPaths(),
     }
     if (messageIfGTN)
       messageVerbose("\b Done!", verbose = verbose, verboseLevel = 0)
+
+    aa <- neededFull1[match(trimVersionNumber(packages), names(neededFull1))]
+    names(aa) <- packages
+    neededFull1 <- aa
+
+    # Put the package *with* its inequality in the first slot
+    neededFull1 <- Map(p = neededFull1, n = names(neededFull1), function(p, n)
+      unique(rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p[-1]))))
+
+
   } else {
     neededFull1 <- list()
   }
@@ -1003,11 +1019,13 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
 
 
 dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
-  offlineMode <- getOption("Require.offlineMode", FALSE)
-  if (isTRUE(offlineMode)) {
+
+  if (isTRUE(getOption("Require.offlineMode", FALSE))) {
     purge <- FALSE
     checkAge <- FALSE
   }
+
+
   if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
@@ -1028,6 +1046,11 @@ dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
     fExists <- file.exists(fn)
     if (any(fExists))
       unlink(fn[fExists])
+
+    # This is for pkgDep
+    fn <- pkgDepDBFilename()
+    unlink(fn)
+
   }
   # if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
   #   if (identical(normPath(getOptionRPackageCache()), normPath(getwd()))) {
