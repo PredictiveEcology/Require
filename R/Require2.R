@@ -773,6 +773,8 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
   ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
   setnames(ap, old = "Version", new = "VersionOnRepos")
   pkgInstall <- ap[pkgInstall, on = "Package"]
+  # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
+  pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := NA]
   pkgInstallList <- split(pkgInstall, by = "repoLocation")
   if (!is.null(pkgInstallList[["GitHub"]]))
     pkgInstallList[["GitHub"]] <- getGitHubVersionOnRepos(pkgInstallList[["GitHub"]])
