@@ -845,6 +845,57 @@ getSHAfromGitHub <- function(acct, repo, br) {
   sha
 }
 
+getSHAfromGitHubMemoise <- function(...) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    dots <- list(...)
+    if (!exists("getSHAfromGitHub", envir = .pkgEnv, inherits = FALSE))
+      .pkgEnv$getSHAfromGitHub <- new.env()
+    ret <- NULL
+    ss <- match.call(definition = getSHAfromGitHub)
+    uniqueID <- paste(lapply(ss[-1], eval, envir = parent.frame()), collapse = "_")
+    if (!exists(uniqueID, envir = .pkgEnv$getSHAfromGitHub, inherits = FALSE)) {
+      .pkgEnv$getSHAfromGitHub[[uniqueID]] <- list()
+    } else {
+      whIdent <- unlist(lapply(.pkgEnv$getSHAfromGitHub[[uniqueID]], function(x) identical(x$input, dots)))
+      if (any(whIdent))
+        ret <- .pkgEnv$getSHAfromGitHub[[uniqueID]][[which(whIdent)]]$output
+    }
+    if (is.null(ret)) {
+      inputs <- data.table::copy(dots)
+      ret <- getSHAfromGitHub(...)
+      .pkgEnv$getSHAfromGitHub[[uniqueID]] <-
+        list(.pkgEnv$getSHAfromGitHub[[uniqueID]], list(input = inputs, output = ret))
+    }
+
+  } else {
+    ret <- getSHAfromGitHub(...)
+  }
+
+  return(ret)
+
+}
+
+# getSHAfromGitHubMemoise <- function(d) {
+#   if (getOption("Require.useMemoise", TRUE)) {
+#     fnName <- "getSHAfromGitHub"
+#     if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
+#       .pkgEnv[[fnName]] <- new.env()
+#     ret <- Map(di = d, function(di) {
+#       if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
+#         .pkgEnv[[fnName]][[di]] <- getSHAfromGitHub(di)
+#       }
+#       .pkgEnv[[fnName]][[di]]
+#     })
+#     ret <- unlist(ret)
+#
+#
+#   } else {
+#     ret <- getSHAfromGitHub(d)
+#   }
+#
+#   return(ret)
+# }
+
 .earliestMRANDate <- "2015-06-06"
 .latestMRANDate <- Sys.Date() - 45
 

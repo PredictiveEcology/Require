@@ -867,7 +867,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         colsToUpdate <- c("SHAonGH")
         set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
         pkgGitHub[avOK, (colsToUpdate) := {
-          SHAonGH <- getSHAfromGitHub(repo = Repo, acct = Account, br = Branch)
+          SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
         }, by = "Package"]
       }
 
@@ -979,7 +979,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {
         alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
-        SHAonGH <- getSHAfromGitHub(repo = Repo, acct = Account, br = Branch)
+        SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
         if (file.exists(alreadyExistingDESCRIPTIONFile)) {
           SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
           SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH

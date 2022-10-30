@@ -71,8 +71,6 @@ normPathMemoise <- function(d) {
   }
 
   return(ret)
-
-
 }
 
 #' @export
