@@ -314,7 +314,7 @@ Require <- function(packages, packageVersionFile,
     packages <- anyHaveHEAD(packages)
     deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which, type = type)
     basePkgsToLoad <- packages[packages %in% .basePkgs]
-    allPackages <- unname(unlist(deps))
+    allPackages <- unique(unname(unlist(deps)))
     pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
     pkgDT <- updatePackagesWithNames(pkgDT, packages)
     pkgDT <- parsePackageFullname(pkgDT)
@@ -326,9 +326,10 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- dealWithStandAlone(pkgDT, standAlone)
     pkgDT <- whichToInstall(pkgDT, install)
     if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
-      pkgDT <- doInstalls(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
+      pkgDT <-
+        doInstalls(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
                           install.packagesArgs = install.packagesArgs,
-                          type = type)#,
+                          type = type)
     }
     out <- doLoads(require, pkgDT)
 
@@ -394,18 +395,23 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
-  aa <- try(
-    withCallingHandlers(
+  # aa <- try(
+  toInstallOut <- withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
       # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
-      isCacheErr <- extractPkgNameFromFileName(w$message)
+      pkgName <- extractPkgNameFromFileName(w$message)
       needWarning <- FALSE
+      rowsInPkgDT <- grep(pkgName, toInstall$Package)
+      if (length(rowsInPkgDT)) {
+        toInstall[rowsInPkgDT, installResult := w$message]
+        needWarning <- TRUE
+      }
       if (!is.null(getOptionRPackageCache())) {
-        if (startsWith(isCacheErr, getOptionRPackageCache())) {
-          messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(isCacheErr), " was corrupt; deleting; retrying")
-          unlink(dir(getOptionRPackageCache(), pattern = basename(isCacheErr), full.names = TRUE)) # delete the erroneous Cache item
-          retrying <- try(Require(toInstall[Package %in% basename(isCacheErr)]$packageFullName, require = FALSE))
+        if (startsWith(pkgName, getOptionRPackageCache())) {
+          messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
+          unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
+          retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
           if (is(retrying, "try-error"))
             needWarning <- TRUE
         } else {
@@ -417,7 +423,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       if (isTRUE(needWarning))
         warning(w)
       invokeRestart("muffleWarning")
-    }))
+    })
+  toInstall
 }
 
 doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs,
@@ -465,11 +472,24 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     setorderv(pkgInstall, c("installSafeGroups", "Package"))
     pkgInstall[, installOrder := seq(.N)]
 
-    by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
-       installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
-       numGroups = maxGroup, startTime, verbose, type = type)
-
-    pkgInstall[, `:=`(installResult = "OK", installed = TRUE)]
+    toInstallList <- split(pkgInstall, by = "installSafeGroups")
+    toInstallList <-
+      Map(toInstall = toInstallList,
+          MoreArgs = list(repos = repos, purge = purge,
+                          install.packagesArgs = install.packagesArgs, numPackages = numPackages,
+                          numGroups = maxGroup, startTime = startTime, verbose = verbose, type = type),
+          installAll)
+    pkgInstall <- rbindlistRecursive(toInstallList)
+    # afterInstallAll <- by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
+    #    installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
+    #    numGroups = maxGroup, startTime, verbose, type = type)
+    addOK <- if (!is.null(pkgInstall[["installResult"]])) {
+      which(is.na(pkgInstall[["installResult"]]))
+    } else {
+        NULL
+    }
+    set(pkgInstall, addOK, c("installResult", "installed"), list("OK", "TRUE"))
+    pkgInstallList[["install"]] <- pkgInstall
   }
   if (!is.null(pkgInstallList[[noneAvailable]]))
     pkgInstallList[[noneAvailable]][, `:=`(installResult = needInstall, installed = FALSE)]
