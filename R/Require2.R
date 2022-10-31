@@ -1431,12 +1431,13 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   #pkgInstall <- availableVersionOK(pkgInstall)
   # pkgInstall <- unique(pkgInstall[availableVersionOKthisOne %in% TRUE], by = "packageFullName")
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
-  pkgInstall <- availableVersionOK(pkgInstall) # the CRAN pkgs won't have this yet; GitHub yes
+  pkgInstall <- availableVersionOK(pkgInstall)
   setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "Repository"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
 
   pkgInstall[, keep := {
-    # This will pick the one that is OK, or if they are all NA (meaning no version spec), then also pick first one that OK
-    ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne))
+    # This will pick the one that is OK, or if they are all NA (meaning no version spec), or all FALSE (meaning need to try Archive)
+    #    then also pick first one that OK
+    ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne)) || all(availableVersionOKthisOne %in% FALSE)
     if (ok) .I[ok][1] else .I
     }, by = "Package"]
   pkgInstall <- pkgInstall[unique(keep)]
