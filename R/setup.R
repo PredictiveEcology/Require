@@ -332,10 +332,11 @@ putFile <- function(from, to, overwrite) {
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
-defaultCacheDir <- tools::R_user_dir("Require", which = "cache")
+defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+
 defaultCacheDirOld <- switch(
   Sys.info()[["sysname"]],
-  Darwin = normPath(file.path("~", "Library", "Caches", appName)),
-  Linux = normPath(file.path("~", ".cache", appName)),
-  Windows = normPath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName))
+  Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
+  Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
+  Windows = normalizePath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
 )
