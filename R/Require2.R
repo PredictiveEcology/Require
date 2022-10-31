@@ -490,7 +490,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     } else {
         NULL
     }
-    set(pkgInstall, addOK, c("installResult", "installed"), list("OK", "TRUE"))
+    set(pkgInstall, addOK, c("installResult", "installed"), list("OK", TRUE))
     pkgInstallList[["install"]] <- pkgInstall
   }
   if (!is.null(pkgInstallList[[noneAvailable]]))
@@ -881,7 +881,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
     # If there was a local cache check, then this was already done; internally this will be fast/skip check
     pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
     pkgGitHub <- availableVersionOK(pkgGitHub)
-    avOK <- which(pkgGitHub$availableVersionOK %in% "TRUE")
+    avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
 
     if (length(avOK)) {
 
@@ -995,7 +995,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
   if (NROW(pkgWhere[["GitHub"]])) {
     pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
     pkgGitHub <- availableVersionOK(pkgGitHub)
-    avOK <- which(pkgGitHub$availableVersionOK %in% "TRUE")
+    avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
     colsToUpdate <- c("SHAonLocal", "SHAonGH")
     set(pkgGitHub, NULL, colsToUpdate, list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
     if (length(avOK)) {
@@ -1035,11 +1035,12 @@ availableVersionOK <- function(pkgDT) {
 
   availableOKcols <- c("availableVersionOK", "availableVersionOKthisOne")
   if (any(!is.na(pkgDT$inequality))) {
-    out <- try(pkgDT[!is.na(inequality), (availableOKcols) := {
-      out <- Map(vor = VersionOnRepos, function(vor) all(compareVersion2(vor, versionSpec, inequality)))
+    pkgDT[, hasAtLeastOneNonNA := any(!is.na(inequality)), by = "Package"]
+    out <- try(pkgDT[hasAtLeastOneNonNA %in% TRUE, (availableOKcols) := {
+      out <- Map(vor = VersionOnRepos, function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
+      avokto <- Map(vor = VersionOnRepos, function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
       avok <- unlist(out)
-      avokto <- compareVersion2(VersionOnRepos, versionSpec, inequality)
-      list(availableVersionOK = avok, availableVersionOKthisOne = avokto)
+      list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
     }, by = "Package"])
     if (is(out, "try-error"))
       browserDeveloper("Error 553; please contact developer")

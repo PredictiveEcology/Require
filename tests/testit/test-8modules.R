@@ -38,8 +38,6 @@ if (isDevAndInteractive) {
   allNeeded <- unique(extractPkgName(unname(unlist(deps))))
   allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
   persLibPathOld <- ip$LibPath[which(ip$Package == "amc")]
-  # pkgDT <- attr(out, "Require")
-  # pkgsInOut <- extractPkgName(pkgDT$Package[pkgDT$installed])
   installedInFistLib <- ip[LibPath == persLibPathOld]
   # testit::assert(all(installed))
   ip <- ip[!Package %in% .basePkgs][, c("Package", "Version")]
