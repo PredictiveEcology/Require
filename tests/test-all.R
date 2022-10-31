@@ -42,6 +42,10 @@ source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 ## having a sub-release, eg 0.9.15.5 is one whereas 0.9.16 is not
 ee <- new.env()
 
+optsBioC <- options(BIOCONDUCTOR_USE_CONTAINER_REPOSITORY = FALSE,
+                BiocManager.check_repositories = FALSE)
+
+
 startTimeAll <- startTime <- Sys.time()
 tdOuter <- Require::tempdir2("tests")
 try(saveRDS(startTimeAll, file = file.path(tdOuter, "startTimeAll")), silent = TRUE)
