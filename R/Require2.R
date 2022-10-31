@@ -3,7 +3,7 @@ utils::globalVariables(c(
   "Account", "archiveSource", "availableVersionOKthisOne", "bothDepAndOrig",
   "Branch", "contrib.url", "correctVersionAvail", "depOrOrig",
   "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
-  "grenn", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
+  "hasAtLeastOneNonNA", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
   "haveLocal", "ineq", "installed", "installedVersionOK", "isBinaryInstall",
   "isEquals", "keepBasedOnRedundantInequalities", "libPaths",
   "loaded", "loadOrder", "localFile", "needInstall", "NoPkgsSupplied",
@@ -1658,10 +1658,12 @@ getVersionOnReposLocal <- function(pkgDT) {
 
 browserDeveloper <- function(mess = "") {
   if (identical(Sys.info()[["user"]], "emcintir")) {
-    print(mess)
-    pf <- parent.frame()
-    attach(pf)
-    on.exit(detach(pf))
+    # print(mess)
+    # pf <- parent.frame()
+    # attach(pf)
+    # on.exit(detach(pf))
     browser()
-    } else stop(mess)
+  } else {
+    stop(mess)
+  }
 }
