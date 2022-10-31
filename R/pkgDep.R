@@ -85,13 +85,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   if (length(packages)) {
-    # ghPackages <- extractPkgGitHub(packages))
-    # hasNoEquality <- grep("^(==)", extractInequality(packages), invert = TRUE)
-    # packagesSaveNames <- packages
-    # if (length(hasNoEquality)) {
-    #   packagesSaveNames[hasNoEquality] <- trimVersionNumber(packages[hasNoEquality])
-    #   packagesSaveNames <- unique(packagesSaveNames)
-    # }
     saveNames <- saveNamesForCache(packages, which, recursive = recursive)
     packagesNoVersion <- trimVersionNumber(packages)
     saveNamesDT <- data.table(saveNames, packages, packagesNoVersion)
@@ -103,7 +96,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
     # this will be short because saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
     neededFull1 <- lapply(saveNames, get0, envir = .pkgEnv$pkgDep$deps)
     saveNamesOrig <- names(neededFull1)
-    set(saveNamesDT, NULL, "saveNamesOrig", saveNamesOrig)
+    out111 <- try(set(saveNamesDT, NULL, "saveNamesOrig", saveNamesOrig))
+    if (is(out111, "try-error")) browserDeveloper("Error 918; please contact developer")
     # Expand it back out to full length
 
     needGet <- unlist(lapply(neededFull1, is.null))
@@ -1168,7 +1162,7 @@ saveNamesForCache <- function(packages, which, recursive) {
 
   if (length(hasNoEquality)) {
     packagesSaveNames[hasNoEquality] <- trimVersionNumber(packagesSaveNames[hasNoEquality])
-    packagesSaveNames <- unique(packagesSaveNames)
+    # packagesSaveNames <- unique(packagesSaveNames)
   }
 
 
