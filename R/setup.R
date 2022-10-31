@@ -21,18 +21,20 @@ RequireCacheDir <- function(create) {
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
-    if (dir.exists(defaultCacheDirOld)) {
-      oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
-      if (length(oldLocs) > 1) {
-        message("Require has changed default package cache folder from\n",
-                defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
-                "in the old Cache, moving them now...")
-        checkPath(defaultCacheDir, create = TRUE)
-        dirs <- unique(dirname(oldLocs))
-        newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
-        lapply(newdirs, checkPath, create = TRUE)
-        file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
-        unlink(defaultCacheDirOld, recursive = TRUE)
+    if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
+      if (dir.exists(defaultCacheDirOld)) {
+        oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
+        if (length(oldLocs) > 1) {
+          message("Require has changed default package cache folder from\n",
+                  defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+                  "in the old Cache, moving them now...")
+          checkPath(defaultCacheDir, create = TRUE)
+          dirs <- unique(dirname(oldLocs))
+          newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+          lapply(newdirs, checkPath, create = TRUE)
+          file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+          unlink(defaultCacheDirOld, recursive = TRUE)
+        }
       }
     }
     defaultCacheDir
