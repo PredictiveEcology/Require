@@ -754,7 +754,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 
   # on.exit()
   # this is a placeholder; set noLocal by default
-  set(pkgInstall, NULL, "haveLocal", "maybeLocal")
+  set(pkgInstall, NULL, "haveLocal", "noLocal")
 
   # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
   pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose,

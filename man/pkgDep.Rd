@@ -44,10 +44,13 @@ pkgDepTopoSort(
   deps,
   reverse = FALSE,
   topoSort = TRUE,
+  libPath = .libPaths(),
   useAllInSearch = FALSE,
   returnFull = TRUE,
   recursive = TRUE,
   purge = getOption("Require.purge", FALSE),
+  which = c("Depends", "Imports", "LinkingTo"),
+  type = getOption("pkgType"),
   verbose = getOption("Require.verbose")
 )
 }
