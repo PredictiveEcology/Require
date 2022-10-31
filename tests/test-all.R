@@ -1,5 +1,6 @@
 # Sys.setenv("Require.checkAsCRAN" = "true") # set this to test as if it is CRAN (short and silent)
 # Sys.setenv("Require.testAsInteractive" = "false") # set this to test as if GitHub Actions (short and loud)
+# THIS IS USING THE MECHANISM FOR CRAN THAT IF THE VERSION NUMBER IS NOT A DEV VERSION (E.G., .9000) THEN IT IS RUN AS CRAN
 # source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
 checks <- list()
 checks$start <- list()
@@ -43,8 +44,7 @@ source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 ee <- new.env()
 
 optsBioC <- options(BIOCONDUCTOR_USE_CONTAINER_REPOSITORY = FALSE,
-                BiocManager.check_repositories = FALSE)
-
+                    BiocManager.check_repositories = FALSE)
 
 startTimeAll <- startTime <- Sys.time()
 tdOuter <- Require::tempdir2("tests")
@@ -69,10 +69,11 @@ origWd <- getwd()
 
 
 # The test
-test_pkg("Require")
+try(test_pkg("Require")) # not sure if this works with try
 
 #}
-
+if (!isDevAndInteractive) # i.e., CRAN
+  unlink(tools::R_user_dir("Require", "cache"), recursive = TRUE)
 #runTests(checks)
 
 currOptions <- options()
