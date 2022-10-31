@@ -5,7 +5,8 @@ if (isDevAndInteractive) {
   ## Long pkgSnapshot -- issue 41
   pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
   checkPath(pkgPath, create = TRUE)
-  download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt", destfile = file.path(pkgPath, "pkgSnapshot.txt"))
+  download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt",
+                destfile = file.path(pkgPath, "pkgSnapshot.txt"))
   origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
   fn <- file.path(pkgPath, "pkgSnapshot.txt")
   pkgs <- data.table::fread(fn)
@@ -28,6 +29,7 @@ if (isDevAndInteractive) {
   installedInFistLib <- pkgs[LibPath == persLibPathOld]
   # testit::assert(all(installed))
   ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+  ip <- ip[!Package %in% .basePkgs]
   allInIPareInpkgDT <- all(ip$Package %in% allNeeded )
   installedNotInIP <- setdiff(allNeeded, ip$Package)
 
@@ -47,21 +49,22 @@ if (isDevAndInteractive) {
   lala <- capture.output(type = "message",
                          Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
                                  require = FALSE, verbose = 2))
-  missings <- grep(Require:::messagePkgSnapshotMissing, lala, value = TRUE)
-  missings <- gsub(".+: (.+); adding .+", "\\1", missings)
-  missings <- strsplit(missings, ", ")[[1]]
-
-  if (any(grepl(Require:::messageFollowingPackagesIncorrect, lala))) {
-    lastLineOfMessageDF <- tail(grep(":", lala), 1)
-    NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
-  } else {
-    NnotInstalled <- 0
-  }
-  theTest <- NROW(installedPkgs) + NnotInstalled == NROW(allNeeded)
+  # missings <- grep("The following shows packages", lala, value = TRUE)
+  # missings <- gsub(".+: (.+); adding .+", "\\1", missings)
+  # missings <- strsplit(missings, ", ")[[1]]
+  #
+  # if (any(grepl(Require:::messageFollowingPackagesIncorrect, lala))) {
+  #   lastLineOfMessageDF <- tail(grep(":", lala), 1)
+  #   NnotInstalled <- as.integer(strsplit(lala[lastLineOfMessageDF], split = ":")[[1]][1])
+  # } else {
+  #   NnotInstalled <- 0
+  # }
+  theTest <- NROW(installedPkgs) == NROW(allNeeded)
   if (isDevAndInteractive) if (!isTRUE(theTest)) browser()
   testit::assert(isTRUE(theTest))
 
-  testit::assert(NROW(ip) == NROW(installedInFistLib) + length(missings) - NnotInstalled)
+  theTest2 <- NROW(ip[Package %in% allNeeded]) == NROW(allNeeded)
+  testit::assert(isTRUE(theTest2))
 
   setLibPaths(origLibPaths)
 }

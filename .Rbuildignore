@@ -21,3 +21,5 @@ vignettes/.*\.log$
 ^codecov\.yml$
 ^\.secrets$
 ^\.secret$
+R/SpaDES
+^\.git

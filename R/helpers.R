@@ -442,3 +442,17 @@ setdiffNamed <- function(l1, l2, missingFill) {
   dif <- do.call(modifyList2, dif)
   dif
 }
+
+whereInStack <- function(obj) {
+  for (i in 1:sys.nframe()) {
+    fn <- get0(obj, sys.frame(-i), inherits = FALSE)
+    if (!is.null(fn)) break
+  }
+  return(sys.frame(-i))
+}
+
+getInStack <- function(obj) {
+  env <- whereInStack(obj)
+  return(get(obj, envir = env, inherits = FALSE))
+}
+

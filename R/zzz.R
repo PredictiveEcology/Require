@@ -37,11 +37,7 @@ utils::globalVariables(c(
 }
 
 .onUnload <- function(libpath) {
-  # if (getOption("Require.persistentPkgEnv")) {
-  #   browser()
-  #   pkgEnvLast <- as.list(.pkgEnv);
-  #   saveRDS(pkgEnvLast, file = .thePersistentFile())
-  # }
+
 }
 
 # .thePersistentFile <- function() {

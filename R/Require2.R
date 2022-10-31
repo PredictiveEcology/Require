@@ -1,0 +1,1667 @@
+utils::globalVariables(c(
+  "..apCachedCols", "..cols", "..cols3", ".GRP",
+  "Account", "archiveSource", "availableVersionOKthisOne", "bothDepAndOrig",
+  "Branch", "contrib.url", "correctVersionAvail", "depOrOrig",
+  "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
+  "grenn", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
+  "haveLocal", "ineq", "installed", "installedVersionOK", "isBinaryInstall",
+  "isEquals", "keepBasedOnRedundantInequalities", "libPaths",
+  "loaded", "loadOrder", "localFile", "needInstall", "NoPkgsSupplied",
+  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
+  "repo", "Repo", "Repository", "SHAonGH", "verbose", "Version",
+  "VersionOnRepos", "versionSpec", "versionToKeep", "violation"
+  ))
+
+
+#' Repeatability-safe install and load packages, optionally with specific versions
+#'
+#' This is an "all in one" function that will run `install.packages` for CRAN and
+#' GitHub <https://github.com/> packages and will install
+#' specific versions of each package if versions are specified either via an (in)equality
+#' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
+#' `packageVersionFile`.
+#' If `require = TRUE`, the default, the function will then run `require` on all
+#' named packages that satisfy their version requirements. If packages are already installed
+#' (`packages` supplied), and their optional version numbers are satisfied,
+#' then the "install" component will be skipped.
+#'
+#' @return
+#' `Require` is intended to replace `base::require`, thus it returns a logical, named vector
+#' indicating whether the named packages have been loaded.  Because `Require` also has
+#' the ability to install packages, a return value of `FALSE` does not mean that it
+#' didn't install correctly; rather, it means it didn't attach with `require`, which
+#' could be because it didn't install correctly, or also because e.g., `require = FALSE`.
+#'
+#' `standAlone` will either put the `Require`d packages and their
+#' dependencies *all* within the `libPaths` (if `TRUE`) or if
+#' `FALSE` will only install packages and their dependencies that are
+#' otherwise not installed in `.libPaths()[1]`, i.e., the current active
+#' R package directory. Any packages or dependencies that are not yet installed will
+#' be installed in `libPaths`.
+#'
+#'
+#' @section GitHub Package:
+#' Follows `remotes::install_github` standard.
+#' As with `remotes::install_github`, it is not possible to specify a past
+#' version of a GitHub package unless that version is a tag or the user passes
+#' the SHA that had that package version. Similarly, if a developer does a
+#' local install e.g., via `pkgload::install`, of an active project, this package
+#' will not be able know of the GitHub state, and thus `pkgSnapshot` will not be able to
+#' recover this state as there is no SHA associated with a local
+#' installation. Use `Require` (or `remotes::install_github`) to create
+#' a record of the GitHub state.
+#'
+#' @section Package Snapshots:
+#' To build a snapshot of the desired packages and their versions,
+#' first run `Require` with all packages, then `pkgSnapshot`.
+#' If a `libPaths` is used, it must be used in both functions.
+#'
+#' @section Mutual Dependencies:
+#' This function works best if all required packages are called within one
+#' `Require` call, as all dependencies can be identified together, and all
+#' package versions will be addressed (if there are no conflicts),
+#' allowing a call to [pkgSnapshot()] to take a snapshot or "record" of
+#' the current collection of packages and versions.
+#'
+#' @section Local Cache of Packages:
+#' When installing new packages, `Require` will put all source and binary files
+#' in an R-version specific subfolder of
+#' `getOption("Require.RPackageCache")` whose default is `RPackageCache()`, meaning
+#' *cache packages locally in a project-independent location*,
+#' and will reuse them if needed. To turn
+#' off this feature, set `options("Require.RPackageCache" = FALSE)`.
+#'
+#' @note
+#' For advanced use and diagnosis, the user can set `verbose = TRUE` or
+#' `1` or `2` (or via `options("Require.verbose")`). This will
+#' attach an attribute `attr(obj, "Require")` to the output of this
+#' function.
+#'
+#' @param install Logical or "force". If `FALSE`, this will not try to install anything.
+#'   If `"force"`, then it will force installation of requested packages,
+#'   mimicking a call to e.g., `install.packages`.
+#'   If `TRUE`, the default, then this function will try to install any missing
+#'   packages or dependencies.
+#' @param require Logical or character string. If `TRUE`, the default, then the function will
+#'   attempt to call `require` on all requested `packages`, possibly
+#'   after they are installed. If a character string, then it will only call `require`
+#'   on those specific packages (i.e., it will install the ones listed in `packages`, but
+#'   load the packages listed in `require`)
+#' @param packages Character vector of packages to install via
+#'   `install.packages`, then load (i.e., with `library`). If it is
+#'   one package, it can be unquoted (as in `require`). In the case of a
+#'   GitHub package, it will be assumed that the name of the repository is the
+#'   name of the package. If this is not the case, then pass a named character
+#'   vector here, where the names are the package names that could be different
+#'   than the GitHub repository name.
+#' @param packageVersionFile  Character string of a file name or logical. If `TRUE`,
+#'   then this function will load the default file, `getOption("Require.packageVersionFile").
+#'   If this argument is provided, then this will override all any packages passed to `packages`.
+#' @param libPaths The library path (or libraries) where all packages should be
+#'   installed, and looked for to load (i.e., call `library`). This can be
+#'   used to create isolated, stand alone package installations, if used with
+#'   `standAlone = TRUE`. Currently, the path supplied here will be
+#'   prepended to `.libPaths()` (temporarily during this call) to
+#'   `Require` if `standAlone = FALSE` or will set (temporarily)
+#'        `.libPaths()` to `c(libPaths, tail(libPaths(), 1)` to keep base packages.
+#' @param repos The remote repository (e.g., a CRAN mirror), passed to either
+#'              `install.packages`, `install_github` or `installVersions`.
+#' @param install_githubArgs Deprecated. Values passed here are merged with `install.packagesArgs`,
+#'   with the `install.packagesArgs` taking precedence if conflicting.
+#' @param install.packagesArgs List of optional named arguments, passed to `install.packages`.
+#' @param standAlone Logical. If `TRUE`, all packages will be installed to and loaded from
+#'   the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE USER'S `.libPaths()`, similar
+#'   to e.g., the `checkpoint` package.
+#'   If `FALSE`, then `libPath` will be prepended to `.libPaths()` during the `Require` call,
+#'   resulting in shared packages, i.e., it will include the user's default package folder(s).
+#'   This can be create dramatically faster installs if the user has a substantial number of
+#'   the packages already in their personal library.
+#'   Default `FALSE` to minimize package installing.
+#' @param purge Logical. Should all caches be purged?
+#'   Default is `getOption("Require.purge", FALSE)`.
+#'   There is a lot of internal caching of results throughout the `Require` package.
+#'   These help with speed and reduce calls to internet sources.
+#'   However, sometimes these caches must be purged.
+#'   The cached values are renewed when found to be too old, with the age limit.
+#'   This maximum age can be set in seconds with the environment variable
+#'   `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE`, or if unset,
+#'   defaults to 3600  (one hour -- see [`utils::available.packages`]).
+#'
+#'   Internally, there are calls to `available.packages`.
+#' @param verbose Numeric or logical indicating how verbose should the function be.
+#'   If -1 or less, then as little verbosity as possible.
+#'   If 0 or FALSE, then minimal outputs; if `1` or TRUE, more outputs; `2` even more.
+#'   NOTE: in `Require` function, when `verbose >= 2`, the return object will have an attribute:
+#'   `attr(.., "Require")` which has lots of information about the processes of the installs.
+#' @param type See `utils::install.packages``
+#' @param ... Passed to `install.packages`.
+#'   Good candidates are e.g., `type` or `dependencies`. This can be
+#'   used with `install_githubArgs` or `install.packageArgs` which
+#'   give individual options for those 2 internal function calls.
+#'
+#' @export
+#' @importFrom data.table data.table as.data.table setDT set is.data.table
+#'   rbindlist
+#' @importFrom data.table  :=  .I .SD setnames setorderv
+#' @importFrom utils available.packages capture.output compareVersion
+#' @importFrom utils install.packages packageVersion
+#'
+#' @examples
+#' \dontrun{
+#' # simple usage, like conditional install.packages then library
+#' library(Require)
+#' Require("stats") # analogous to require(stats), but it checks for
+#' #   pkg dependencies, and installs them, if missing
+#' tempPkgFolder <- file.path(tempdir(), "Packages")
+#'
+#' # use standAlone, means it will put it in libPaths, even if it already exists
+#' #   in another local library (e.g., personal library)
+#' Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
+#'
+#' # make a package version snapshot of installed packages
+#' packageVersionFile <- "_.packageVersionTest.txt"
+#' (pkgSnapshot(libPath = tempPkgFolder, packageVersionFile, standAlone = TRUE))
+#'
+#' # Restart R -- to remove the old temp folder (it disappears with restarting R)
+#' library(Require)
+#' tempPkgFolder <- file.path(tempdir(), "Packages")
+#' packageVersionFile <- "_.packageVersionTest.txt"
+#' # Reinstall and reload the exact version from previous
+#' Require(packageVersionFile = packageVersionFile, libPaths = tempPkgFolder, standAlone = TRUE)
+#'
+#' # Create mismatching versions -- desired version is older than current installed
+#' # This will try to install the older version, overwriting the newer version
+#' desiredVersion <- data.frame(instPkgs = "crayon", instVers = "1.3.2", stringsAsFactors = FALSE)
+#' write.table(file = packageVersionFile, desiredVersion, row.names = FALSE)
+#' newTempPkgFolder <- file.path(tempdir(), "Packages2")
+#'
+#' # Note this will install the 1.3.2 version (older that current on CRAN), but
+#' #   because crayon is still loaded in memory, it will return TRUE, using the current version
+#' #   of crayon. To start using the older 1.3.2, need to unload or restart R
+#' Require("crayon",
+#'   packageVersionFile = packageVersionFile,
+#'   libPaths = newTempPkgFolder, standAlone = TRUE
+#' )
+#'
+#' # restart R again to get access to older version
+#' # run again, this time, correct "older" version installs in place of newer one
+#' library(Require)
+#' packageVersionFile <- "_.packageVersionTest.txt"
+#' newTempPkgFolder <- file.path(tempdir(), "Packages3")
+#' Require("crayon",
+#'   packageVersionFile = packageVersionFile,
+#'   libPaths = newTempPkgFolder, standAlone = TRUE
+#' )
+#'
+#' # Mutual dependencies, only installs once -- e.g., httr
+#' tempPkgFolder <- file.path(tempdir(), "Packages")
+#' Require(c("cranlogs", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'
+#' ##########################################################################################
+#' # Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
+#' ##########################################################################################
+#' # GitHub packages -- restart R because crayon is needed
+#' library(Require)
+#' ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+#' #  THIS ONE IS LARGE -- > 100 dependencies -- use standAlone = FALSE to
+#' #    reuse already installed packages --> this won't allow as much control
+#' #    of package versioning
+#' Require("PredictiveEcology/SpaDES@development",
+#'   libPaths = ProjectPackageFolder, standAlone = FALSE
+#' )
+#'
+#' # To keep totally isolated: use standAlone = TRUE
+#' #   --> setting .libPaths() directly means standAlone is not necessary; it will only
+#' #   use .libPaths()
+#' library(Require)
+#' ProjectPackageFolder <- file.path("~", "ProjectA")
+#' setLibPaths(ProjectPackageFolder)
+#' Require("PredictiveEcology/SpaDES@development") # the latest version on GitHub
+#' Require("PredictiveEcology/SpaDES@23002b2a92a92df4ccba7f51cdd82798800b2fa7")
+#' # a specific commit (by using the SHA)
+#'
+#'
+#' ############################################################################
+#' # Mixing and matching GitHub, CRAN, with and without version numbering
+#' ############################################################################
+#' # Restart R -- when installing/loading packages, start fresh
+#' pkgs <- c(
+#'   "glue (<=1.0.4)", "digest (<= 0.6.28)", "glmm (<=1.3.0)",
+#'   "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+#'   "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
+#' )
+#' Require::Require(pkgs)
+#'
+#' ############################################################################
+#' # Using libPaths -- This will only be used inside this function;
+#' # To change .libPaths() for the whole session use a manually call to
+#' # setLibPaths(newPath) first
+#' ############################################################################
+#' Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
+#'
+#' ############################################################################
+#' # Persistent separate packages
+#' ############################################################################
+#' setLibPaths("~/TempLib2", standAlone = TRUE)
+#' Require::Require("SpaDES") # not necessary to specify standAlone here because .libPaths are set
+#'
+#' ############################################################################
+#' # Installing on many machines that are connected by a shared drive
+#' ############################################################################
+#' options("Require.RPackageCache" = TRUE) # will binaries on the fly.
+#' # Put thes in a shared location.
+#' # May need to install Require in main user library before setting library paths for project
+#' if (!require("Require")) install.packages("Require")
+#' setLibPaths("./packages") # not shared location for library path; no longer using main user lib
+#' Require::Require(
+#'   packageVersionFile = "./packageVersions.txt",
+#'   standAlone = TRUE
+#' )
+#' }
+#'
+Require <- function(packages, packageVersionFile,
+                    libPaths, # nolint
+                    install_githubArgs = list(),
+                    install.packagesArgs = list(),
+                    standAlone = getOption("Require.standAlone", FALSE),
+                    install = getOption("Require.install", TRUE),
+                    require = getOption("Require.require", TRUE),
+                    repos = getOption("repos"),
+                    purge = getOption("Require.purge", FALSE),
+                    verbose = getOption("Require.verbose", FALSE),
+                    type = getOption("pkgType"),
+                    ...) {
+  .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
+  opts <- setNcpus()
+  checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
+  on.exit({
+    options(opts)}
+    , add = TRUE)
+
+  dots <- list(...)
+  dealWithCache(purge)
+  purge <- FALSE
+
+  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
+                                      dots, keep.null = TRUE)
+  install_githubArgs <-  modifyList2(list(quiet = !(verbose >= 0)), install_githubArgs,
+                                     dots, keep.null = TRUE)
+  install.packagesArgs <- modifyList2(install.packagesArgs,
+                                      list(destdir = ".", repos = repos, type = types()))
+
+  if (missing(libPaths))
+    libPaths <- .libPaths()
+  libPaths <- checkLibPaths(libPaths = libPaths)
+  suppressMessages({origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)})
+
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
+  which <- whichToDILES(doDeps)
+
+  if (!missing(packageVersionFile) ) {
+    if (isFALSE(packageVersionFile))
+      messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
+
+    pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, verbose, purge, libPaths,
+                         install_githubArgs, install.packagesArgs, standAlone, type = type)
+    return(pkgSnapshotOut)
+  }
+  if (missing(packages)) {
+    messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
+    return(invisible(NULL))
+  }
+
+  if (NROW(packages)) {
+    packages <- anyHaveHEAD(packages)
+    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which, type = type)
+    basePkgsToLoad <- packages[packages %in% .basePkgs]
+    allPackages <- unique(unname(unlist(deps)))
+    pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+    pkgDT <- updatePackagesWithNames(pkgDT, packages)
+    pkgDT <- parsePackageFullname(pkgDT)
+    pkgDT <- parseGitHub(pkgDT)
+    pkgDT <- removeDups(pkgDT)
+    pkgDT <- removeBasePkgs(pkgDT)
+    pkgDT <- recordLoadOrder(packages, pkgDT)
+    pkgDT <- installedVers(pkgDT)
+    pkgDT <- dealWithStandAlone(pkgDT, standAlone)
+    pkgDT <- whichToInstall(pkgDT, install)
+    if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
+      pkgDT <-
+        doInstalls(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
+                          install.packagesArgs = install.packagesArgs,
+                          type = type)
+    }
+    out <- doLoads(require, pkgDT)
+
+    if (verbose >= 2)
+      attr(out, "Require") <- pkgDT[]
+  } else {
+    out <- logical()
+  }
+  return(invisible(out))
+}
+
+rbindlistRecursive <- function(ll) {
+  if (is(ll, "list")) {
+    ll <- lapply(ll, rbindlistRecursive)
+    ll <- rbindlist(ll, fill = TRUE, use.names = TRUE, idcol = FALSE)
+  }
+  ll
+}
+
+
+build <- function(Package, VersionOnRepos, verbose, quiet, out) {
+  if (nchar(Sys.which("R")) > 0) {
+    messageVerbose("building package (R CMD build)",
+                   verbose = verbose, verboseLevel = 1)
+    internal <- !interactive()
+    extras <- c("--no-resave-data", "--no-manual",
+                "--no-build-vignettes")
+    Rpath1 <- Sys.getenv("R_HOME")
+    Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
+    filePat <- paste0(Package, "_", VersionOnRepos, ".tar.gz")
+    out1 <- Map(pack = Package, function(pack) {
+      system(paste(Rpath, "CMD build ", pack, paste(extras, collapse = " ")),
+             intern = internal, ignore.stdout = quiet, ignore.stderr = quiet)
+    })
+    if (any(unlist(out1) == 1L))
+      browserDeveloper("Error 456; contact developer")
+    messageVerbose("  ... Built!",
+                   verbose = verbose, verboseLevel = 1)
+  } else {
+    stop("Can't install packages this way because R is not on the search path")
+  }
+}
+
+
+installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
+                       numPackages, numGroups, startTime, verbose, type = type) {
+
+  messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
+  type <- if (isWindows() || isMacOSX()) {
+    unique(c("source", "binary")[toInstall$isBinaryInstall + 1])
+  } else {
+    "source"
+  }
+
+  install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
+
+  ap <- try(availablePackagesOverride(toInstall, repos, purge, type = type))
+  if (is(ap, "try-error"))
+    browserDeveloper("Error 9566")
+
+  # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
+  #  This means that we can't get parallel installs for GitHub or Cache
+  install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
+  ipa <- modifyList2(install.packagesArgs,
+                     list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
+                     keep.null = TRUE)
+
+  # aa <- try(
+  toInstallOut <- withCallingHandlers(
+    installPackagesWithQuiet(ipa),
+    warning = function(w) {
+      # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
+      pkgName <- extractPkgNameFromFileName(w$message)
+      needWarning <- FALSE
+      rowsInPkgDT <- grep(pkgName, toInstall$Package)
+      if (length(rowsInPkgDT)) {
+        toInstall[rowsInPkgDT, installResult := w$message]
+        needWarning <- TRUE
+      }
+      if (!is.null(getOptionRPackageCache())) {
+        if (startsWith(pkgName, getOptionRPackageCache())) {
+          messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
+          unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
+          retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
+          if (is(retrying, "try-error"))
+            needWarning <- TRUE
+        } else {
+          needWarning <- TRUE
+        }
+      } else {
+        needWarning <- TRUE
+      }
+      if (isTRUE(needWarning))
+        warning(w)
+      invokeRestart("muffleWarning")
+    })
+  toInstall
+}
+
+doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs,
+                        type = getOption("pkgType")) {
+
+  tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
+  origDir <- setwd(tmpdir)
+  on.exit(setwd(origDir))
+
+  pkgDTList <- split(pkgDT, by = c("needInstall"))
+  pkgInstall <- pkgDTList[["install"]] # pointer
+
+  on.exit({
+    # this copies any tar.gz files to the package cache; works even if partial install.packages
+    tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
+    copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
+    suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
+  }, add = TRUE)
+
+  pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths,
+                            type = type)
+  pkgDTList[["install"]] <- pkgInstall
+  pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
+  pkgInstall <- pkgInstallList[["install"]]
+  if (!is.null(pkgInstallList[[noneAvailable]]))
+    messageVerbose(turquoise(paste(unique(pkgInstallList[[noneAvailable]]$packageFullName), collapse = ", "),
+                   " could not be installed; the version specification cannot be met"),
+                   verbose = verbose, verboseLevel = 1)
+  if (!is.null(pkgInstall)) {
+    pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
+    pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
+
+    startTime <- Sys.time()
+
+    # The install
+    data.table::setorderv(pkgInstall, c("installSafeGroups", "Package", "isBinaryInstall", "localFile"),
+                          order = c(1L, 1L, -1L, 1L)) # alphabetical order
+
+    set(pkgInstall, which(pkgInstall$isBinaryInstall), "installSafeGroups", -1L)
+    setorderv(pkgInstall, "installSafeGroups")
+
+    pkgInstall <- updateInstallSafeGroups(pkgInstall)
+    maxGroup <- max(pkgInstall[["installSafeGroups"]])
+    numPackages <- NROW(pkgInstall)
+    setorderv(pkgInstall, c("installSafeGroups", "Package"))
+    pkgInstall[, installOrder := seq(.N)]
+
+    toInstallList <- split(pkgInstall, by = "installSafeGroups")
+    toInstallList <-
+      Map(toInstall = toInstallList,
+          MoreArgs = list(repos = repos, purge = purge,
+                          install.packagesArgs = install.packagesArgs, numPackages = numPackages,
+                          numGroups = maxGroup, startTime = startTime, verbose = verbose, type = type),
+          installAll)
+    pkgInstall <- rbindlistRecursive(toInstallList)
+    # afterInstallAll <- by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
+    #    installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
+    #    numGroups = maxGroup, startTime, verbose, type = type)
+    addOK <- if (!is.null(pkgInstall[["installResult"]])) {
+      which(is.na(pkgInstall[["installResult"]]))
+    } else {
+        NULL
+    }
+    set(pkgInstall, addOK, c("installResult", "installed"), list("OK", TRUE))
+    pkgInstallList[["install"]] <- pkgInstall
+  }
+  if (!is.null(pkgInstallList[[noneAvailable]]))
+    pkgInstallList[[noneAvailable]][, `:=`(installResult = needInstall, installed = FALSE)]
+  pkgDTList[["install"]] <- rbindlistRecursive(pkgInstallList)
+  pkgDT <- rbindlistRecursive(pkgDTList)
+}
+
+
+
+
+downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
+  if (isWindows() || isMacOSX()) {
+    installPkgNames <- toInstall$Package
+    names(installPkgNames) <- installPkgNames
+    toIn <- toInstall
+
+    earliestDateOnMRAN <- as.Date(gsub(" .*", "", toIn$dayAfterPutOnCRAN))
+    latestDateOnMRAN <- pmin(.latestMRANDate, as.Date(gsub(" .*", "", toIn$dayBeforeTakenOffCRAN)))
+    onMRANvec <- earliestDateOnMRAN > .earliestMRANDate
+    earliestDateOnMRAN[!onMRANvec] <- as.Date(.earliestMRANDate) + 10
+    onMRAN <- earliestDateOnMRAN > .earliestMRANDate & unname( isWindows() | isMacOSX() )
+    onMRAN[is.na(onMRAN)] <- FALSE
+
+    if (any(onMRAN)) {
+      origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
+      install.packagesArgs["ignore_repo_cache"] <- TRUE
+      installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onMRAN])
+      dirsAlreadyExist <- dir.exists(installedPkgs)
+      if (any(dirsAlreadyExist)) {
+        try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
+      }
+      warnings1 <- list()
+
+      urlsOuter <- c()
+      extension <- if (isWindows()) ".zip" else ".tgz"
+      osNameOnMRAN <- if (isWindows()) "windows" else "macosx"
+      messageVerbose("-- Determining dates on MRAN to get correct versions ... ",
+                     verbose = verbose, verboseLevel = 1)
+      total <- length(unname(installPkgNames)[onMRAN])
+      installVersions <- toInstall[["VersionOnRepos"]]
+      out <- Map(p = unname(installPkgNames)[onMRAN], earliestDateMRAN = earliestDateOnMRAN[onMRAN],
+                 latestDateMRAN = latestDateOnMRAN[onMRAN], tot = total, counter = seq(total),
+                 v = installVersions[onMRAN], function(p, earliestDateMRAN, latestDateMRAN, v, tot, counter, ...) {
+                   if (tot > 1)
+                     messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
+
+                   for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
+                     rver <- rversion()
+                     evenOrOdd <- attempt %% 2 == 0
+                     date <- if (evenOrOdd) latestDateMRAN else  earliestDateMRAN
+                     dif <- floor(attempt/2)
+                     date <- if (evenOrOdd) date + dif else date - dif
+
+                     urls <- file.path("https://MRAN.revolutionanalytics.com/snapshot", date, "bin", osNameOnMRAN,
+                                       "contrib", rver,
+                                       paste0(p, "_", v, extension))
+                     con <- url(urls)
+                     on.exit(try(close(con), silent = TRUE), add = TRUE)
+                     a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
+                     close(con)
+                     if (is(a, "try-error")) {
+                       earliestDateOnMRAN <- earliestDateOnMRAN + 1
+                       urls <- "Fail"
+                     } else
+                       break
+
+                   }
+                   names(urls) <- p
+                   urlsOuter <<- c(urlsOuter, urls)
+                 })
+
+      urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
+      urlsFail <- urlsOuter[urlsOuter == "Fail"]
+
+      toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
+                                                         Repository = dirname(urlsSuccess),
+                                                         repoLocation = "MRAN",
+                                                         localFile = useRepository)]#  basename(urlsSuccess))]
+      if (length(urlsFail)) {
+        cantGet <- toInstall$packageFullName[toInstall$Package %in% names(urlsFail)]
+        messageVerbose("Could not find a binary version of ", paste(cantGet, collapse = ", "), " on MRAN; ",
+                       "trying source archives", verbose = verbose, verboseLevel = 1)
+      }
+      # if (sum(toInstall$repoLocation %in% "MRAN"))
+      #   toInstall[repoLocation %in% "MRAN", {
+      #     ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
+      #     do.call(download.file, ipa)
+      #   }]
+    }
+  }
+
+  toInstall
+}
+
+secondsInADay <- 3600 * 24
+
+
+
+archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
+                       srcPackageURLOnCRAN, repo, srcContrib) {
+  Map(pk = possiblyArchivedPkg, counter = counter, USE.NAMES = TRUE,
+      function(pk, counter) {
+        messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
+                       verboseLevel = 2)
+        uu <- url(paste0("https://cran.r-project.org/package=", pk))
+        on.exit(try(close(uu), silent = TRUE))
+        rl <- suppressWarnings(try(readLines(uu), silent = TRUE))
+        close(uu)
+        wasRemoved <- any(grepl("was removed from the CRAN repository", rl))
+
+        archivedOn <- ""
+        if (wasRemoved) {
+          # some CRAN repos e.g., RStudioPackage Manager is not a full CRAN mirror; try all repos
+          if (all(isBinaryCRANRepo(repos))) {
+            repos <- c(repos, CRAN = srcPackageURLOnCRAN)
+          }
+          for (repo in repos) {
+            yy <- url(file.path(repo, srcContrib, "Archive", pk))
+            on.exit(try(close(yy), silent = TRUE))
+            rl2 <- suppressWarnings(try(readLines(yy), silent = TRUE))
+            close(yy)
+            if (!is(rl2, "try-error")) {
+              break
+            }
+            messageVerbose("Could not get ", pk, " at ", repo, verbose = verbose, verboseLevel = 2)
+            if (length(repos) > 1)
+              messageVerbose("; trying next CRAN repo", verbose = verbose, verboseLevel = 2)
+
+          }
+
+          archivedOn <- grep("Archived on", rl, value = TRUE)
+          lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
+          pkgFilename <- gsub(paste0(".+(",pk,"_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
+          PackageUrl <- file.path(pk, pkgFilename)
+
+          if (length(archivedOn)) {
+            archivedOn <- as.POSIXct(gsub("Archived on (.+) as.+", "\\1", archivedOn))
+          } else {
+            archivedOn <- gsub(".+([[:digit:]]{4,4}-[[:digit:]]{2,2}-[[:digit:]]{2,2}).+", "\\1", lineWDateAndPkgFilename)
+            archivedOn <- as.POSIXct(archivedOn) + 5 * 3600 * 24
+          }
+
+        } else {
+          publishedDate <- grep("Published", rl)
+          if (length(publishedDate)) {
+            theDateGrep <- "[[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}"
+            theDate <- grep(theDateGrep, rl[seq(publishedDate, publishedDate + 2)], value = TRUE)
+            publishedDate <- gsub(paste0(".+(",theDateGrep,").+"), "\\1", theDate)
+          }
+
+          archivedOn <- publishedDate
+          PackageUrl <- ""#file.path(repos, srcContrib, )
+        }
+        archivedOn <- as.character(as.POSIXct(archivedOn) - 3600 * 24)
+        list(PackageUrl = PackageUrl, archivedOn = archivedOn)
+      })
+}
+
+whichToInstall <- function(pkgDT, install) {
+  set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT$Version))
+  set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT$Version)) # default: if it is installed,  say "OK"
+  if (!is.null(pkgDT[["hasHEAD"]])) {
+    whHasHead <- which(pkgDT[["hasHEAD"]] %in% TRUE)
+    set(pkgDT, whHasHead, c("installedVersionOK", "isPkgInstalled"), list(FALSE, FALSE))
+  }
+  set(pkgDT, NULL, "hasVersionsToCompare",
+      (nchar(pkgDT$inequality) > 0) %in% TRUE & !is.na(pkgDT$Version))
+  if (any(pkgDT$hasVersionsToCompare %in% TRUE))
+    pkgDT[hasVersionsToCompare %in% TRUE, installedVersionOK :=
+            compareVersion2(Version, versionSpec, inequality)
+          , by = seq(sum(hasVersionsToCompare))]
+  if (identical(install, "force"))
+    set(pkgDT, NULL, "needInstall", "install")
+  else
+    set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
+  pkgDT
+}
+
+
+doLoads <- function(require, pkgDT) {
+  needRequire <- require
+  if (is.character(require)) {
+    pkgDT[Package %in% require, require := TRUE]
+  } else if (isTRUE(require)) {
+    pkgDT[!is.na(loadOrder), require := TRUE]
+  } else if (isFALSE(require)) {
+    pkgDT[!is.na(loadOrder), require := FALSE]
+  }
+
+  # override if version was not OK
+  if (any(pkgDT$require %in% TRUE)) {
+    missingCols <- setdiff(c("installedVersionOK", "availableVersionOK", "installResult"), colnames(pkgDT))
+    if (length(missingCols)) set(pkgDT, NULL, missingCols, NA)
+    pkgDT[require %in% TRUE, require := (installedVersionOK %in% TRUE | installResult %in% "OK")]
+  }
+
+  out <- list()
+  if (any(pkgDT$require %in% TRUE)) {
+    setorderv(pkgDT, "loadOrder", na.last = TRUE)
+    # rstudio intercepts `require` and doesn't work internally
+    out[[1]] <- mapply(x = pkgDT$Package[pkgDT$require %in% TRUE], function(x)
+      base::require(x, character.only = TRUE), USE.NAMES = TRUE)
+  }
+
+  if (any(pkgDT$require %in% FALSE)) {
+    out[[2]] <- mapply(x = pkgDT$Package[pkgDT$require %in% FALSE], function(x) FALSE, USE.NAMES = TRUE)
+  }
+  out <- do.call(c, out)
+  out[na.omit(pkgDT$Package[!is.na(pkgDT$loadOrder)])] # put in order, based on loadOrder
+
+}
+
+recordLoadOrder <- function(packages, pkgDT) {
+  dups <- duplicated(packages)
+  if (any(dups))
+    packages <- packages[!dups]
+  packagesWObase <- setdiff(packages, .basePkgs)
+  out <- try(
+    pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
+  if (is(out, "try-error"))
+    browserDeveloper("Error 1253; please contact developer")
+  pkgDT
+}
+
+removeDups <- function(pkgDT) {
+  pkgDT[!duplicated(pkgDT[["packageFullName"]])]
+}
+
+dealWithStandAlone <- function(pkgDT, standAlone) {
+  if (isTRUE(standAlone)) {
+    # Remove any packages that are not in .libPaths()[1], i.e., the main R library
+    notInLibPaths1 <- (!pkgDT$Package %in% .basePkgs) &
+      (!normPath(pkgDT$LibPath) %in% normPath(.libPaths()[1])) & !is.na(pkgDT$LibPath)
+    if (any(notInLibPaths1)) {
+      notInLP1 <- "notInLibPaths1"
+      set(pkgDT, which(notInLibPaths1), notInLP1, TRUE)
+
+      # This will set the Version in that libPaths to NA, meaning it will be considered uninstalled,
+      #   so the machinery will install it in libPaths[1]
+      pkgDT[notInLibPaths1, `:=`(
+        installed = FALSE,
+        LibPath = NA_character_,
+        Version = NA_character_)]
+      pkgDT <- pkgDT[!(duplicated(pkgDT, by = "packageFullName") &
+                         notInLibPaths1 %in% TRUE)] # this will remove any that are identical packageFullName, which will be because they are in different libPaths
+      set(pkgDT, NULL, notInLP1, NULL)
+    }
+    setorderv(pkgDT, c("Package", "LibPath"), na.last = TRUE)
+  }
+  pkgDT
+}
+
+
+doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
+                        libPaths, type = getOption("pkgType")) {
+
+  topoSorted <- pkgDepTopoSort(pkgInstall[["packageFullName"]], verbose = verbose - 1)
+  installSafeGroups <- attr(topoSorted, "installSafeGroups")
+  correctOrder <- match(names(topoSorted), pkgInstall[["packageFullName"]])
+  pkgInstall <- pkgInstall[correctOrder, ]
+  set(pkgInstall, NULL, "installSafeGroups", unname(unlist(installSafeGroups)))
+
+  # on.exit()
+  # this is a placeholder; set noLocal by default
+  set(pkgInstall, NULL, "haveLocal", "noLocal")
+
+  # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
+  pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose,
+                                 type = type)
+  pkgInstall <- updateInstallSafeGroups(pkgInstall)
+
+  pkgInstallList <- split(pkgInstall, by = "haveLocal")
+  pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
+  numToDownload <- NROW(pkgInstallList[["noLocal"]])
+  if (NROW(pkgNeedInternet)) {
+    pkgNeedInternet <- split(pkgNeedInternet, by = "repoLocation")
+
+    # CRAN
+    pkgNeedInternet <- downloadCRAN(pkgNeedInternet, repos, purge, install.packagesArgs,
+                                    verbose, numToDownload, type = type)
+
+    # Archive
+    pkgNeedInternet <- downloadArchive(pkgNeedInternet, repos, verbose, install.packagesArgs,
+                                       numToDownload)
+
+    # GitHub
+    pkgNeedInternet <- downloadGitHub(pkgNeedInternet, libPaths, verbose, install.packagesArgs,
+                                      numToDownload)
+
+    pkgInstallList[["noLocal"]] <- pkgNeedInternet # pointer
+  }
+
+  pkgInstall <- rbindlistRecursive(pkgInstallList)
+  pkgInstall[nchar(localFile) == 0, needInstall := noneAvailable]
+  pkgInstall
+}
+
+getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOption("pkgType")) {
+  ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
+  setnames(ap, old = "Version", new = "VersionOnRepos")
+  pkgInstall <- ap[pkgInstall, on = "Package"]
+  # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
+  pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := NA]
+  pkgInstallList <- split(pkgInstall, by = "repoLocation")
+  if (!is.null(pkgInstallList[["GitHub"]]))
+    pkgInstallList[["GitHub"]] <- getGitHubVersionOnRepos(pkgInstallList[["GitHub"]])
+  pkgInstall <- rbindlistRecursive(pkgInstallList)
+  pkgInstall <- getVersionOnReposLocal(pkgInstall)
+  pkgInstall
+}
+
+
+# CRAN
+downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose, numToDownload,
+                         type = getOption("pkgType")) {
+  pkgCRAN <- pkgNoLocal[["CRAN"]]
+  if (NROW(pkgCRAN)) { # CRAN, Archive, MRAN
+    # messageVerbose(messageDownload(pkgCRAN, NROW(pkgCRAN), "CRAN"), verbose = verbose, verboseLevel = 2)
+    if (!all(apCachedCols %in% colnames(pkgCRAN))) {
+      ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
+      setnames(ap, old = "Version", new = "VersionOnRepos")
+      pkgNoLocal[["CRAN"]] <- ap[pkgCRAN, on = "Package"]
+      pkgCRAN <- pkgNoLocal[["CRAN"]] # pointer
+    }
+    # N <- pkgCRAN[, .N, by = Package]
+    # if (any(N$N > 1)) {
+    #   pkgCRAN <- pkgCRAN[, .SD[1], by = "Package"]
+    # }
+    # pkgCRAN <- availableVersionOK(pkgCRAN)
+
+    # Not on CRAN; so likely Archive
+    notOK <- !pkgCRAN$availableVersionOK %in% TRUE # FALSE means it is on CRAN, but not that version; NA means it is not on CRAN currently
+    if (any(notOK)) {
+      messageVerbose(blue("  -- these versions of ",
+                     paste(pkgCRAN$packageFullName[notOK],
+                           collapse = ", "), " are not the latest on CRAN; trying Archives"),
+                     verbose = verbose, verboseLevel = 1)
+      pkgCRAN[notOK, `:=`(repoLocation = "Archive",
+                                                  installFrom = "Archive")]
+      pkgNoLocal[["CRAN"]] <- pkgCRAN
+      pkgNoLocal <- rbindlistRecursive(pkgNoLocal)
+      pkgNoLocal <- split(pkgNoLocal, by = "repoLocation")
+      pkgCRAN <- pkgNoLocal[["CRAN"]]
+    }
+    if (NROW(pkgCRAN)) {
+      pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
+      pkgCRAN[, localFile := useRepository]
+    }
+  }
+  pkgNoLocal # pkgCRAN is already in this because it was a pointer
+}
+
+#' @importFrom utils contrib.url
+downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, numToDownload) {
+  pkgArchive <- pkgNonLocal[["Archive"]]
+  if (NROW(pkgArchive)) {
+    ava <- lapply(archiveVersionsAvailable(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"],
+                                           repos = repos), function(d) {
+                                             aa <- as.data.table(d, keep.rownames = "PackageUrl")
+                                             if (!is.null(aa[["mtime"]])) setorderv(aa, "mtime")
+                                             aa
+                                           })
+    if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+        pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
+      # Check MRAN
+      pkgArchive <- downloadMRAN(pkgArchive, install.packagesArgs, verbose)
+
+      if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
+        pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
+        pkgArchOnly <- pkgArchive[["Archive"]]
+        pkgArchOnly[, Repository := file.path(contrib.url(repos[1], type = "source"), "Archive", Package)]
+        pkgArchOnly[, localFile := useRepository]
+      }
+      pkgArchive <- rbindlistRecursive(pkgArchive)
+    }
+
+  }
+  pkgNonLocal[["Archive"]] <- pkgArchive
+  pkgNonLocal
+}
+
+downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, numToDownload) {
+  pkgGitHub <- pkgNoLocal[["GitHub"]]
+  if (NROW(pkgGitHub)) { # GitHub
+    messageVerbose(messageDownload(pkgGitHub, NROW(pkgGitHub), "GitHub"), verbose = verbose, verboseLevel = 2)
+
+    # If there was a local cache check, then this was already done; internally this will be fast/skip check
+    pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
+    pkgGitHub <- availableVersionOK(pkgGitHub)
+    avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
+
+    if (length(avOK)) {
+
+      if (is.null(pkgGitHub[["SHAonGH"]])) {
+        colsToUpdate <- c("SHAonGH")
+        set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
+        pkgGitHub[avOK, (colsToUpdate) := {
+          SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
+        }, by = "Package"]
+      }
+
+      pkgGHList <- split(pkgGitHub, pkgGitHub$availableVersionOK)
+      pkgGHtoDL <- pkgGHList[["TRUE"]]
+      if (any(!pkgGHtoDL[["installedVersionOK"]])) {
+        # download and build in a separate dir; gets difficult to separate this addition from existing files otherwise
+        td <- tempdir2(.rndstr(1))
+        prevDir <- setwd(td)
+        on.exit({
+          cleanUpNewBuilds(pkgGHtoDL, prevDir) # no need to assign this because it is on.exit fail
+          })
+        pkgGHtoDL[, localFile := {
+          toDL <- .SD[!SHAonGH %in% FALSE]
+          gitRepo <- paste0(toDL$Account, "/", toDL$Repo, "@", toDL$Branch)
+          names(gitRepo) <- toDL$Package
+          out <- downloadRepo(gitRepo, subFolder = toDL$GitSubFolder, overwrite = TRUE, destDir = ".", verbose = verbose)
+          out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
+          fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
+          normPath(fn)
+        }, by = "Package"]# seq(NROW(pkgGHtoDL))]
+        # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
+        pkgGHtoDL[, installFrom := "GitHub"]
+        pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
+        pkgGHtoDL <- cleanUpNewBuilds(pkgGHtoDL, prevDir)
+        on.exit() # don't run on.exit above if this was successful
+      }
+      pkgGitHub <- rbindlistRecursive(pkgGHList)
+    }
+  }
+  pkgNoLocal[["GitHub"]] <- pkgGitHub
+  pkgNoLocal
+}
+
+cleanUpNewBuilds <- function(pkgDT, prevDir) {
+  files <- dir()
+  unlink(files[!endsWith(files, "tar.gz")]) # There was a random .zip file; couldn't tell why; remove it
+  unlink(files[dir.exists(files)], recursive = TRUE) # remove directories
+  moveFileToCacheOrTmp(pkgDT)
+  setwd(prevDir)
+  pkgDT
+}
+
+
+types <- function(length = 1L) {
+  isOldMac <- isMacOSX() && compareVersion(as.character(getRversion()), "4.0.0") < 0
+  types <- if (isOldMac) {
+    c("mac.binary.el-capitan", "source")
+  } else if (!isWindows() && !isMacOSX()) {
+    c("source")
+  } else {
+    c("binary", "source")
+  }
+  if (identical(length, 1L))
+    types <- types[1]
+}
+
+
+doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
+                          install_githubArgs, install.packagesArgs, standAlone = TRUE,
+                          type = getOption("pkgType")) {
+  if (!isFALSE(packageVersionFile)) {
+    if (isTRUE(packageVersionFile)) {
+      packageVersionFile <- getOption("Require.packageVersionFile")
+    }
+    packages <- data.table::fread(packageVersionFile)
+    packages <- dealWithSnapshotViolations(packages, verbose = verbose, purge = purge,
+                                   libPaths = libPaths, type = type) # i.e., packages that can't coexist
+    packages <- packages[!packages$Package %in% .basePkgs]
+    out <- Require(packages$packageFullName, verbose = verbose, purge = purge, libPaths = libPaths,
+                   install_githubArgs = install_githubArgs, install.packagesArgs = install.packagesArgs,
+                   standAlone = standAlone, require = FALSE, install = TRUE)
+  } else {
+    out <- FALSE
+  }
+  out
+}
+
+dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
+                               purge = getOption("Require.purge", FALSE), libPaths = .libPaths(),
+                               repos = getOption("repos"), type = getOption("pkgType")) {
+  dd <- pkgSnapshotObj
+  ff <- packageFullNameFromSnapshot(dd)
+  # ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
+  #              paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
+  gg <- pkgDep(ff, recursive = TRUE, purge = purge)
+  hh <- sort(unique(gsub(" ", "", gsub("\n", "", unname(unlist(gg))))))
+  pkgDT <- toPkgDT(hh, deepCopy = TRUE)
+  pkgDT <- parsePackageFullname(pkgDT)
+  pkgDT <- parseGitHub(pkgDT)
+  pkgDT <- trimRedundancies(pkgDT, purge = purge, repos = repos, libPaths = libPaths,
+                            type = type)
+  pkgDT[, c("Package", "packageFullName")]
+}
+
+apCachedCols <- c("Package", "Repository", "Version", "Archs", "Depends", "Imports", "Suggests", "LinkingTo")
+
+
+localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
+
+  pkgWhere <- split(pkgInstall, pkgInstall[["repoLocation"]])
+  pkgGitHub <- pkgWhere[["GitHub"]] # pointer
+  if (NROW(pkgWhere[["GitHub"]])) {
+    pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
+    pkgGitHub <- availableVersionOK(pkgGitHub)
+    avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
+    colsToUpdate <- c("SHAonLocal", "SHAonGH")
+    set(pkgGitHub, NULL, colsToUpdate, list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
+    if (length(avOK)) {
+      pkgGitHub[avOK, (colsToUpdate) := {
+        alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
+        SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
+        if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+          SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+          SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
+          if (isFALSE(SHAonGH))
+            messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
+                           ", the SHA1 has not changed from last install",
+                           verbose = verbose, verboseLevel = 1)
+
+        } else {
+          SHAonLocal <- ""
+        }
+        list(SHAonLocal, SHAonGH)
+      }, by = "packageFullName"]
+    }
+    pkgWhere[["GitHub"]] <- pkgGitHub
+    pkgInstall <- rbindlistRecursive(pkgWhere)
+  }
+  pkgInstall[, localFile := localFileID(Package, localFiles, repoLocation, SHAonGH,
+                                        inequality, VersionOnRepos, versionSpec) , by = seq(NROW(pkgInstall))]
+
+  pkgInstall
+}
+
+
+
+#' Needs VersionOnRepos, versionSpec and inequality columns
+#' @param pkgDT A `pkgDT` object
+availableVersionOK <- function(pkgDT) {
+  # First set all to availableVersionOK if there is a version available
+  pkgDT[, availableVersionOK := !is.na(VersionOnRepos)]
+
+  availableOKcols <- c("availableVersionOK", "availableVersionOKthisOne")
+  if (any(!is.na(pkgDT$inequality))) {
+    pkgDT[, hasAtLeastOneNonNA := any(!is.na(inequality)), by = "Package"]
+    out <- try(pkgDT[hasAtLeastOneNonNA %in% TRUE, (availableOKcols) := {
+      out <- Map(vor = VersionOnRepos, function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
+      avokto <- Map(vor = VersionOnRepos, function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
+      avok <- unlist(out)
+      list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
+    }, by = "Package"])
+    if (is(out, "try-error"))
+      browserDeveloper("Error 553; please contact developer")
+  } else {
+
+    pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
+    pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
+  }
+  # Then update this for the subset that have an actual inequality
+
+  pkgDT
+}
+
+compareVersion2 <- function(version, versionSpec, inequality) {
+  out <- Map(vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
+             function(ineq, vers, verSpec) {
+               if (!is.na(ineq) && !is.na(vers) && !is.na(verSpec))
+                 out <- do.call(ineq, list(package_version(vers), verSpec))
+               else
+                 NA
+             }
+
+  )
+  out <- unlist(out)
+  out
+}
+
+noneAvailable <- "noneAvailable"
+
+updatePackagesWithNames <- function(pkgDT, packages) {
+  origPackagesHaveNames <- nchar(names(packages)) > 0
+  if (any(origPackagesHaveNames, na.rm = TRUE)) {
+    whHasHEAD <- grep(HEADgrep, names(packages))
+    packageFullNameWithHEAD <- packages[whHasHEAD]
+    if (length(whHasHEAD)) {
+      pkgDT[match(packages[origPackagesHaveNames], packageFullName),
+            hasHEAD := packageFullName %in% packageFullNameWithHEAD]
+      names(packages)[whHasHEAD] <- NA
+      if (all(is.na(names(packages)))) names(packages) <- NULL
+    }
+    if (!is.null(names(packages)))
+      pkgDT[match(packages[origPackagesHaveNames], packageFullName),
+            Package := names(packages[origPackagesHaveNames])]
+  }
+  pkgDT
+}
+
+messageDownload <- function(pkgDT, numToDownload, fromWhere) {
+  paste0(blue(" -- downloading ", numToDownload, " packages from ", fromWhere,
+  ": ", paste(pkgDT$Package, collapse = ", "), " --"))
+}
+
+colr <- function(..., digit = 32) paste0("\033[",digit,"m", paste0(...), "\033[39m")
+green <- function(...) colr(..., digit = 32)
+yellow <- function(...) colr(..., digit = 33)
+blue <- function(...) colr(..., digit = 34)
+turquoise <- function(...) colr(..., digit = 36)
+
+messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGroups) {
+  currentTime <- Sys.time()
+  dft <- difftime(currentTime, startTime, units = "secs")
+  installRange <- unique(c(toInstall$installOrder[1], tail(toInstall$installOrder, 1) ))
+  timeLeft <- dft/installRange[1] * (numPackages - installRange[1] + 1)
+
+  lotsOfTimeLeft <- dft > 10
+  timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
+  estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
+  pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
+  pkgToReportBySource <- split(toInstall$Package, toInstall$installFrom)
+  pkgFullNameToReportBySource <- split(toInstall$packageFullName, toInstall$installFrom)
+  installRangeCh <- paste(installRange, collapse = ":")
+
+  srces <- names(pkgToReportBySource)
+  messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
+  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = "GitHub")
+  Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
+    pp <- pkgToReportBySource[[type]]
+    if (type %in% srces) {
+      if (type %in% "GitHub") {
+        pp <- pkgFullNameToReportBySource[[type]]
+      }
+      messageVerbose(get(colr)("  -- ", type,": ", paste(pp, collapse = ", "))
+                     , verbose = verbose, verboseLevel = 0)
+    }
+  })
+  messageVerbose(blue("-- ", installRangeCh, " of ", numPackages,
+                      if (numGroups > 1)
+                        paste0(" (grp ",unique(toInstall$installSafeGroups)," of ", numGroups,")")
+                      else  "",
+                      ". Estimated time left: ",
+                      timeLeftAlt, "; est. finish: ", estTimeFinish),
+                 verbose = verbose, verboseLevel = 0)
+}
+
+#' Create a custom "available.packages" object
+#'
+#' This is the mechanism by which `install.packages` determines which packages
+#' should be installed from where. With this override, we can indicate arbitrary
+#' `repos`, `Package`, `File` for each individual package.
+#' @param toInstall A `pkgDT` object
+#' @inheritParams Require
+availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType")) {
+  ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
+  pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
+  if (length(pkgsNotInAP)) { # basically no version is there
+    ap3 <- ap[seq(length(pkgsNotInAP)),, drop = FALSE]
+    ap3[, "Package"] <- pkgsNotInAP
+    ap3[, "Version"] <- toInstall[Package %in% pkgsNotInAP]$VersionOnRepos
+    if (!is.null(toInstall$Repository))
+      ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
+    ap3[, "Depends"] <- NA
+    ap3[, "Imports"] <- NA
+    ap3[, "Suggests"] <- NA
+    rownames(ap3) <- pkgsNotInAP
+  } else {
+    ap3 <- ap[0,, drop = FALSE]
+  }
+
+  ap <- ap[ap[, "Package"] %in% toInstall$Package, , drop = FALSE]
+  if (NROW(ap3))
+    ap <- rbind(ap, ap3)
+
+  toInstallList <- split(toInstall, by = "installFrom")
+  apList <- list()
+  apOrig <- ap
+  for (i in names(toInstallList)) {
+    # First do version number -- this is same for all locations
+    whUpdate <- match(toInstallList[[i]]$Package, apOrig[, "Package"])
+    ap <- apOrig[whUpdate,, drop = FALSE]
+    isNA <- is.na(toInstallList[[i]]$VersionOnRepos)
+    if (any(isNA)) {
+      whUseRepository <- !toInstallList[[i]][isNA]$localFile %in% useRepository
+      if (any(whUseRepository))
+        ap[isNA, "Version"] <- extractVersionNumber(filenames = toInstallList[[i]][isNA][whUseRepository]$localFile)
+
+    }
+    if (any(!isNA))
+      ap[!isNA, "Version"] <- toInstallList[[i]]$VersionOnRepos[!isNA]
+    if (i %in% "Archive") {
+      ap[, "Repository"] <- toInstallList[[i]]$Repository
+    }
+    if (i %in% c("Local", "GitHub")) {
+      localFile2 <- toInstall[]$localFile
+      fnBase <- basename(localFile2)
+      file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
+      newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
+      file.rename(fnBase, newNameWithoutSHA)
+      ap[, "File"] <- newNameWithoutSHA
+      ap[, "Repository"] <-
+        paste0("file:///", normPath("."))
+    }
+    apList[[i]] <- ap
+  }
+
+  do.call(rbind, apList)
+}
+
+useRepository <- "useRepository"
+
+setNcpus <- function() {
+  Ncpus <- getOption("Ncpus")
+  if (is.null(Ncpus)) {
+    newVal <- if (requireNamespace("parallel", quietly = TRUE))
+      min(8, parallel::detectCores()) else 4
+
+    opts <- options(Ncpus = newVal)
+  } else {
+    opts <- NULL
+  }
+  opts
+}
+
+keepOnlyBinary <- function(fn) {
+  if (length(fn) > 1)
+    if (any(isBinary(fn, needRepoCheck = FALSE))) { # pick binary if it exists; faster to install
+      fn <- fn[isBinary(fn, needRepoCheck = FALSE)]
+    }
+  fn
+}
+
+
+moveFileToCacheOrTmp <- function(pkgInstall) {
+  localFileDir <- if (!is.null(getOptionRPackageCache())) {
+    getOptionRPackageCache()
+  } else {
+    tempdir2(.rndstr(1))
+  }
+  fns <- pkgInstall$localFile
+  movedFilename <- file.path(localFileDir, basename(fns))
+  if (!identical(fns, movedFilename)) {
+    file.rename(fns, movedFilename)
+    set(pkgInstall, NULL, "localFile", movedFilename)
+  }
+  pkgInstall
+}
+
+
+getGitHubVersionOnRepos <- function(pkgGitHub) {
+  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+    pkgGitHub <- getGitHubFile(pkgGitHub)
+    pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+  }
+  pkgGitHub
+  pkgGitHub
+}
+
+
+#' @importFrom utils tail
+localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
+  # Not vectorized
+  if (is.na(VersionOnRepos)) {
+    PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
+  } else {
+    PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*", VersionOnRepos)
+  }
+  whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
+  fn <- localFiles[whLocalFile]
+
+  if (repoLocation %in% "GitHub") {
+    fn <- if (is.na(SHAonGH)) "" else grep(SHAonGH, fn, value = TRUE)
+    fn <- keepOnlyBinary(fn)
+  } else {
+    if (length(fn)) {
+      fn <- keepOnlyBinary(fn)
+      localVer <- extractVersionNumber(filenames = fn) # there may be >1 file for a given package; take
+      if (is.na(inequality)) { # need max --> which will be the versionSpec; so see if localVer is same as versionSpec
+        if (!is.na(VersionOnRepos)) {
+          ord <- try(order(c(package_version(tail(localVer, 1)), package_version(VersionOnRepos)),
+                           decreasing = TRUE)) # local first
+        } else {
+          ord <- 1
+        }
+        keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
+        fn <- tail(fn, 1)[keepLoc]
+      } else {
+        keepLoc <- try(unlist(compareVersion2(localVer, versionSpec, inequality)))
+        if (is(keepLoc, "try-error"))
+          browserDeveloper("Error 978; please contact developer")
+        if (!identical(inequality, "==") && !is.na(VersionOnRepos)) {
+          keepRep <- compareVersion2(VersionOnRepos, versionSpec, inequality)
+          if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good
+            if (any(keepRep %in% TRUE)) { # remote has as at least 1 that is good
+              ord <- order(c(package_version(tail(localVer[keepLoc], 1)), package_version(VersionOnRepos)), decreasing = TRUE) # local first
+              keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
+              fn <- tail(fn, 1)[keepLoc] # keepLoc is guaranteed to be length 1
+            } else {
+              fn <- tail(fn[keepLoc], 1) # keepLoc is possibly length > 1
+            }
+          } else {
+            fn <- ""
+          }
+
+        } else {
+          fn <- tail(fn[keepLoc], 1) # keepLoc is possibly length > 1
+        }
+
+      }
+    } else {
+      fn <- ""
+    }
+  }
+  if (length(fn) == 0) fn <- ""
+  fn
+}
+
+
+identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
+  if (!is.null(getOptionRPackageCache())) {
+    localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+    pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
+    pkgInstall[, haveLocal :=
+                 unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
+    pkgInstall[haveLocal %in% "Local", `:=`(installFrom = haveLocal,
+                                            availableVersionOK = TRUE,
+                                            Repository = paste0("file:///", getOptionRPackageCache()))]
+  } else {
+    set(pkgInstall, NULL, c("localFile"), "")
+  }
+}
+
+
+confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT, ifViolation = c("removeEquals", "stop"),
+                                                         verbose = getOption("Require.verbose")) {
+  set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
+  pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
+  pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
+    out <- rep(NA, length = .N)
+    wh <- which(isEquals)
+    whNot <- which(!isEquals)
+    if (length(wh)) {
+      out[wh] <- try(unlist(Map(verSpec = versionSpec[wh],  function(verSpec) {
+        all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))})))
+      if (is(out, "try-error"))
+        browserDeveloper("Error 844; please contact developer")
+      out
+    }
+    out
+  }
+  , by = "Package"]
+  set(pkgDT, which(pkgDT$isEquals %in% TRUE & pkgDT$hasEqualsAndInequals %in% FALSE), "EqualsDoesntViolate", TRUE)
+
+  pkgDT[, violation := if (any(isEquals %in% TRUE) && all(!EqualsDoesntViolate %in% TRUE))
+    TRUE
+    else
+      FALSE,
+    by = "Package"]
+  if (any(pkgDT$violation %in% TRUE)) {
+    messageVerbose(green("The following shows packages whose version requirements can not be met; ",
+                         "keeping the newer version: "), verbose = verbose, verboseLevel = 1)
+    cols <- c("Package", "packageFullName", "versionSpec")
+    cols2 <- setdiff(cols, "packageFullName")
+    cols3 <- c(cols, "versionToKeep")
+    violationsDF <- pkgDT[violation %in% TRUE & !is.na(versionSpec), ..cols]
+    setorderv(violationsDF, cols2, order = c(1L, -1L))
+    violationsDF <- violationsDF[, versionToKeep := {
+      ver <- rep("", length = .N)
+      ver[1] <- versionSpec[1]
+      ver}, by = "Package"][, ..cols3]
+    messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
+    if (grepl("remove|rm", ifViolation[1])) {
+      pkgDT <- pkgDT[violation %in% TRUE & !inequality %in% "==" | violation %in% FALSE]
+    }
+  }
+
+  pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE))
+    .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
+    else
+      .I,
+                      by = "Package"]
+  pkgDT <- pkgDT[unique(keep)]
+  set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
+  pkgDT
+}
+
+keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose")) {
+  gitRepos <- pkgDT$repoLocation %in% "GitHub"
+  if (any(gitRepos)) {
+    pkgDT[gitRepos %in% TRUE, c("versionSpec", "inequality") := {
+      vs <- versionSpec
+      ineq <- inequality
+      whHasSHAasBranch <- nchar(Branch) == 40
+    if (any(whHasSHAasBranch, na.rm = TRUE)) {
+      wh <- which(whHasSHAasBranch %in% TRUE)
+      vs[wh] = VersionOnRepos[wh]
+      ineq[wh] = "=="
+    }
+      list(vs, ineq)
+    }, by = "Package"]
+    pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT, verbose = verbose)
+  }
+  pkgDT
+}
+
+
+#' @importFrom data.table rleid
+trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
+                             type = getOption("pkgType")) {
+  pkgAndInequality <- c("Package", "inequality")
+  versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
+  if (any(versionSpecNotNA)) {
+    ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+              decreasing = TRUE, na.last = TRUE) # can't use setorderv because data.table can't sort on package_version class
+  } else {
+    ord <- seq(NROW(pkgInstall))
+  }
+
+  pkgInstallTmp <- list()
+  if (any(versionSpecNotNA))
+    pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord] # use the order to reorder them. It is not sort key.
+  if (any(!versionSpecNotNA))
+    pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
+  pkgInstall <- rbindlist(pkgInstallTmp)
+  set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+  setorderv(pkgInstall, c("Package", "versionSpecGroup", "inequality", "repoLocation"), order = c(1L, 1L, -1L, 1L), na.last = TRUE)
+
+  pkgInstall[, keepBasedOnRedundantInequalities :=
+               unlist(lapply(.I, function(ind) {
+                 ifelse (is.na(inequality), ind,
+                         ifelse (inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I)))}))
+             ,
+             by = pkgAndInequality]
+  pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+  set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+  pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
+  # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
+  pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
+  #pkgInstall <- availableVersionOK(pkgInstall)
+  # pkgInstall <- unique(pkgInstall[availableVersionOKthisOne %in% TRUE], by = "packageFullName")
+  pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
+  pkgInstall <- availableVersionOK(pkgInstall)
+  setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "Repository"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
+
+  pkgInstall[, keep := {
+    # This will pick the one that is OK, or if they are all NA (meaning no version spec), or all FALSE (meaning need to try Archive)
+    #    then also pick first one that OK
+    ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne)) || all(availableVersionOKthisOne %in% FALSE)
+    if (ok) .I[ok][1] else .I
+    }, by = "Package"]
+  pkgInstall <- pkgInstall[unique(keep)]
+  set(pkgInstall, NULL, "keep", NULL)
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
+  pkgInstall
+}
+
+
+updateInstallSafeGroups <- function(pkgInstall) {
+  set(pkgInstall, NULL, "installSafeGroups",
+      as.integer(factor(paste0(paddedFloatToChar(pkgInstall$installSafeGroups,
+                                                 padL = max(nchar(pkgInstall$installSafeGroups), na.rm = TRUE)), "_",
+                               # !pkgInstall[["isBinaryInstall"]],
+                               !pkgInstall[["localFile"]] %in% useRepository))))
+  data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
+}
+
+
+getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
+  cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
+  numGroups <- NROW(pkgArchive)
+
+  pkgArchive[, (cols) := {
+    Version2 <-  gsub(".*_(.*)\\.tar\\.gz", "\\1", ava[[Package]]$PackageUrl)
+    if (length(Version2) > 0) {
+      if (is.na(versionSpec) ) { # Version2 is length 0 when the package has nothing available
+        correctVersions <- NROW(ava[[Package]])
+      } else {
+        correctVersions <- compareVersion2(Version2, versionSpec, inequality)
+
+        if (all(correctVersions %in% FALSE))
+          correctVersions <- NA
+        else {
+          latestCorrect <- try(tail(which(correctVersions), 1))
+          if (is(latestCorrect, "try-error"))
+            browserDeveloper("Error 111; please contact developer")
+          correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
+        }
+
+      }
+    } else {
+      correctVersions <- NA
+    }
+    if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
+      if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
+      earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
+      ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
+
+      if (isWindows() || isMacOSX()) { # relevant for MRAN
+        if (is.na(correctVersions[2])) {
+          dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos, numGroups = numGroups,
+                                              counter = .GRP,
+                                              srcPackageURLOnCRAN, repo, srcContrib)
+          dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
+        } else {
+          dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
+        }
+
+        set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
+      } else {
+        set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
+      }
+      setnames(ret, "mtime", "dayAfterPutOnCRAN")
+      set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
+      set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
+
+      set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
+      if (!is.na(correctVersions)[1])
+        set(ret, NULL, "availableVersionOK", TRUE)
+    } else {
+      ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
+      ret <- as.data.table(ret)
+      ret[, repo := ava[[Package]][1][, c("repo")]]
+      set(ret, NULL, "availableVersionOK", FALSE)
+    }
+    data.table::setcolorder(ret, cols)
+    ret
+  }, by = "Package"]
+
+  pkgArchive
+}
+
+parsePackageFullname <- function(pkgDT) {
+  pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
+  pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
+  setorderv(pkgDT, c("Package", "versionSpec"), order = c(1L, -1L), na.last = TRUE)
+}
+
+removeBasePkgs <- function(pkgDT) {
+  pkgDT[!Package %in% .basePkgs]
+}
+
+
+renameLocalGitPkgDT <- function(pkgInstall) {
+  whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
+  fns <- pkgInstall$localFile
+  if (any(whGitHub2)) {
+    pkgInstall[whGitHub2 %in% TRUE, localFile := {
+      out <- basename(renameLocalGitTarWSHA(localFile, SHAonGH))
+      keepOnlyBinary(out)
+    }, by = seq(sum(whGitHub2))]
+  }
+}
+
+renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
+  if (length(localFile)) {
+    splitted <- lapply(basename(localFile), function(lf) strsplit(lf, "_")[[1]])
+    newSHAname <- Map(spli = splitted, SHA = SHAonGH, function(spli, SHA) {
+      paste0(spli[1], "-", SHA, "_", paste(spli[-1], collapse = "_"))
+    })
+    newSHAname <- unlist(file.path(dirname(localFile), newSHAname))
+    file.rename(localFile, newSHAname)
+    out <- newSHAname
+  } else {
+    out <- ""
+  }
+  out
+}
+
+#' @importFrom stats na.omit
+copyBuiltToCache <- function(tmpdirs, pkgInstall) {
+
+  if (!is.null(pkgInstall)) {
+    if (!is.null(getOptionRPackageCache())) {
+    cacheFiles <- dir(getOptionRPackageCache())
+    out <- try(Map(td = tmpdirs, function(td) {
+      tdPkgs <- dir(td, full.names = TRUE)
+      if (length(tdPkgs)) {
+        pkgs <- Map(td = tdPkgs, function(td) strsplit(basename(td), split = "_")[[1]][1])
+        pkgsInstalled <- pkgInstall[match(pkgs, Package)]
+        isGitHub <- pkgsInstalled$repoLocation %in% "GitHub"
+        if (any(isGitHub)) {
+          SHA <- pkgsInstalled$SHAonGH[isGitHub]
+          tdPkgs[isGitHub] <- renameLocalGitTarWSHA(tdPkgs[isGitHub], SHA)
+        }
+
+        whAlreadyInCache <- na.omit(match(cacheFiles,
+                                          basename(tdPkgs)))
+        if (length(whAlreadyInCache))
+          tdPkgs <- tdPkgs[-whAlreadyInCache]
+        if (length(tdPkgs)) {
+          newFiles <- file.path(getOptionRPackageCache(), basename(tdPkgs))
+          suppressWarnings(file.rename(tdPkgs, newFiles))
+        }
+      }
+
+    }))
+    if (is(out, "try-error"))
+      browserDeveloper("Error 253; please contact developer")
+  }}
+}
+
+
+NoPkgsSupplied <- "No packages supplied"
+
+anyHaveHEAD <- function(packages) {
+  haveHead <- grepl(HEADgrep, packages)
+  if (any(haveHead)) {
+    origPackages <- packages
+    packages[haveHead] <- trimVersionNumber(packages[haveHead])
+    names(packages)[haveHead] <- origPackages[haveHead]
+  }
+  packages
+}
+
+HEADgrep <- " *\\(HEAD\\)"
+
+packageFullNameFromSnapshot <- function(snapshot) {
+  ifelse(!is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo),
+               paste0(snapshot$GithubUsername, "/", snapshot$Package, "@",
+                      snapshot$GithubSHA1), paste0(snapshot$Package,
+                                                   " (==", snapshot$Version, ")"))
+
+}
+
+getVersionOnReposLocal <- function(pkgDT) {
+  if (!is.null(getOptionRPackageCache())) {
+    set(pkgDT, NULL, "tmpOrder", seq(NROW(pkgDT)))
+    if (any(is.na(pkgDT$VersionOnRepos))) {
+      pkgDTList <- split(pkgDT, !is.na(pkgDT$VersionOnRepos))
+      if (!is.null(pkgDTList$`FALSE`)) {
+        localFilesOuter <- dir(getOptionRPackageCache())
+        pkgNoVoR <- pkgDTList$`FALSE`
+        wh <- pkgNoVoR[["repoLocation"]] %in% "GitHub"
+        if (any(wh)) {
+
+          pkgNoVoR[which(wh %in% TRUE), localFile := {
+            PackagePattern <- paste0("^", Package, ".*(\\_|\\-)+.*", Branch)
+            localFiles <- grep(PackagePattern, localFilesOuter, value = TRUE) # can be length 0, 1, or >1 e.g., tar.gz, zip
+            if (length(localFiles) == 0) {
+              localFiles <- ""
+            } else {
+              isBinaryFile <- isBinary(localFiles)
+              if (any(isBinaryFile %in% TRUE) )
+                localFiles <- localFiles[isBinaryFile]
+              if (length(localFiles) > 1) localFiles <- localFiles[1]
+            }
+            localFiles
+          },
+          by = seq(sum(wh))]
+          hasLocalNow <- (nchar(pkgNoVoR$localFile) > 0) %in% TRUE
+          if (any(hasLocalNow %in% TRUE)) {
+            pkgNoVoR[hasLocalNow, VersionOnRepos := extractVersionNumber(filenames = pkgNoVoR$localFile)]
+            pkgNoVoR[hasLocalNow, haveLocal := "Local"]
+          }
+          pkgDT <- rbindlistRecursive(pkgDTList) # the pkgNoVoR was just a pointer
+          setorderv(pkgDT, "tmpOrder")
+          set(pkgDT, NULL, "tmpOrder", NULL)
+        }
+      }
+    }
+
+  }
+
+  pkgDT
+}
+
+browserDeveloper <- function(mess = "") {
+  if (identical(Sys.info()[["user"]], "emcintir")) {
+    print(mess)
+    pf <- parent.frame()
+    attach(pf)
+    on.exit(detach(pf))
+    browser()
+    } else stop(mess)
+}

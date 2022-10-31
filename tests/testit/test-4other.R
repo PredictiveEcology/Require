@@ -8,8 +8,6 @@ testit::assert(any(grepl("could not be installed", out)))#{out, "simpleWarning")
 pkgDTEmpty <- Require:::toPkgDT(character())
 out <- Require:::installedVers(pkgDTEmpty) #
 
-# test warn missing
-out <- Require:::updateInstalled(pkgDTEmpty, installPkgNames = "package")
 
 pkgDep("data.table", purge = FALSE)
 pkgDep("data.table", purge = TRUE)
@@ -39,10 +37,8 @@ pkgDT <- Require:::toPkgDT(pkg)
 data.table::set(pkgDT, NULL, "installFrom", "CRAN")
 data.table::set(pkgDT, NULL, "installed", FALSE)
 data.table::set(pkgDT, NULL, "installResult", TRUE)
-Require:::rmDuplicatePkgs(pkgDT)
 
 data.table::set(pkgDT, NULL, "versionSpec", NA)
-Require:::rmDuplicatePkgs(pkgDT)
 
 out <- detachAll("data.table", dontTry = "testit")
 testit::assert({isTRUE(out['data.table'] == 1)})
@@ -59,7 +55,6 @@ origDir <- setwd(tempdir2("other"))
 setLibPaths("newProjectLib", updateRprofile = TRUE) # set a new R package library locally
 setLibPaths() # reset it to original
 setwd(origDir)
-
 
 ## setup
 setupTestDir <- normPath(tempdir2("setupTests"))
@@ -102,5 +97,6 @@ if (identical(RPackageCacheSysEnv, "FALSE")) {
 }
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
+options(ooo)
 
 endTest(setupInitial)

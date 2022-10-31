@@ -53,7 +53,7 @@ verbosity <- if (isDevAndInteractive) 2 else if (isDev) 2 else -2
 if (!startsWith(getOption("repos")[[1]], "http")) # deal with @CRAN@
   origRepos <- options(repos = c(CRAN = Require:::srcPackageURLOnCRAN))
 
-optsListPrevLinux <- if (isDevAndInteractive) Require::setLinuxBinaryRepo() else NULL
+ optsListPrevLinux <- if (isDevAndInteractive) Require::setLinuxBinaryRepo() else NULL
 
 optsListNew <- Require::modifyList2(optsListNew, list(Require.verbose = verbosity),
                                     keep.null = TRUE)

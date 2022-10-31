@@ -9,7 +9,7 @@
 \usage{
 extractPkgName(pkgs)
 
-extractVersionNumber(pkgs)
+extractVersionNumber(pkgs, filenames)
 
 extractInequality(pkgs)
 
@@ -17,6 +17,9 @@ extractPkgGitHub(pkgs)
 }
 \arguments{
 \item{pkgs}{A character string vector of packages with or without GitHub path or versions}
+
+\item{filenames}{Can be supplied instead of \code{pkgs} if it is a filename e.g., a
+.tar.gz or .zip that was downloaded from CRAN.}
 }
 \value{
 Just the package names without extraneous info.

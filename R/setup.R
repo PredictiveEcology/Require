@@ -15,23 +15,28 @@ RequireCacheDir <- function(create) {
   if (missing(create))
     create <- !is.null(getOptionRPackageCache())
 
-  appName <- "R-Require"
-
   ## use cache dir following OS conventions used by rappdirs package:
   ## rappdirs::user_cache_dir(appName)
 
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
-    switch(
-      Sys.info()[["sysname"]],
-      Darwin = file.path("~", "Library", "Caches", appName),
-      Linux = file.path("~", ".cache", appName),
-      Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
-    )
+    if (dir.exists(defaultCacheDirOld)) {
+      message("Require has changed default package cache folder from\n",
+              defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+              "in the old Cache, moving them now...")
+      checkPath(defaultCacheDir, create = TRUE)
+      oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
+      dirs <- unique(dirname(oldLocs))
+      newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+      lapply(newdirs, checkPath, create = TRUE)
+      file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+      unlink(defaultCacheDirOld, recursive = TRUE)
+    }
+    defaultCacheDir
   }
 
-  cacheDir <- normPath(cacheDir)
+  cacheDir <- normPathMemoise(cacheDir)
 
   if (isTRUE(create)) {
     cacheDir <- checkPath(cacheDir, create = create)
@@ -47,12 +52,34 @@ RequireCacheDir <- function(create) {
   return(cacheDir)
 }
 
+normPathMemoise <- function(d) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    fnName <- "normPath"
+    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
+      .pkgEnv[[fnName]] <- new.env()
+    ret <- Map(di = d, function(di) {
+      if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
+        .pkgEnv[[fnName]][[di]] <- normPath(di)
+      }
+      .pkgEnv[[fnName]][[di]]
+    })
+    ret <- unlist(ret)
+
+
+  } else {
+    ret <- normPath(d)
+  }
+
+  return(ret)
+}
+
 #' @export
 #' @rdname RequireCacheDir
 RequirePkgCacheDir <- function(create) {
-  if (missing(create))
+  if (missing(create)) {
     create <- !is.null(getOptionRPackageCache())
-  pkgCacheDir <- normPath(file.path(RequireCacheDir(create), "packages", rversion()))
+  }
+  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
   if (isTRUE(create))
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
 
@@ -300,3 +327,15 @@ putFile <- function(from, to, overwrite) {
     res1 <- file.copy(from, to)
   }
 }
+
+
+appName <- "R-Require"
+
+#' @importFrom tools R_user_dir
+defaultCacheDir <- tools::R_user_dir("Require", which = "cache")
+defaultCacheDirOld <- switch(
+  Sys.info()[["sysname"]],
+  Darwin = normPath(file.path("~", "Library", "Caches", appName)),
+  Linux = normPath(file.path("~", ".cache", appName)),
+  Windows = normPath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName))
+)

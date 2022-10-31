@@ -30,19 +30,28 @@ extractPkgName <- function(pkgs) {
 }
 
 #' @rdname extractPkgName
+#' @param filenames Can be supplied instead of `pkgs` if it is a filename e.g., a
+#'   .tar.gz or .zip that was downloaded from CRAN.
 #' @export
 #' @examples
 #' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))
-extractVersionNumber <- function(pkgs) {
+extractVersionNumber <- function(pkgs, filenames) {
   if (!missing(pkgs)) {
     hasVersionNum <- grepl(grepExtractPkgs, pkgs, perl = FALSE)
     out <- rep(NA, length(pkgs))
     out[hasVersionNum] <- gsub(grepExtractPkgs, "\\2", pkgs[hasVersionNum], perl = FALSE)
   } else {
-    out <- character()
+    if (!missing(filenames)) {
+      fnsSplit <- strsplit(filenames, "_")
+      out <- unlist(lapply(fnsSplit, function(x) gsub(".zip|.tar.gz", "", x[[2]])))
+    } else {
+      out <- character()
+    }
   }
   out
 }
+
+
 
 #' @rdname extractPkgName
 #' @export
@@ -104,5 +113,7 @@ rmExtraSpaces <- function(string) {
 .grepVersionNumber <- " *\\(.*"
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
+grepExtractPkgsFilename <-
+  "^[[:alpha:]].*_([0-9]+[.\\-][0-9]+[.\\-][0-9]+[.\\-]*[0-9]*)(_.*)(\\.zip|\\.tar.gz)"
 
 .grepR <- "^ *R( |\\(|$)"

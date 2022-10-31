@@ -53,13 +53,11 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
                            libPaths = dir2, dependencies = FALSE, quiet = TRUE, require = FALSE)
   pv <- packageVersion("fpCompare", lib.loc = dir2)
   testit::assert({pv == pvWant})
-
   # Test snapshot file
   orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
   pkgSnapFile <- tempfile()
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
-
   dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
   Require::checkPath(dir6, create = TRUE)
   out <- Require::Require(packageVersionFile = pkgSnapFile, libPaths = dir6,
@@ -89,9 +87,10 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
 
   # Check for packageVersionFile = FALSE
   mess11 <- capture.output(type = "message",
-                           outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE))
+                           outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE)
+                           )
   testit::assert(any(grepl(NoPkgsSupplied, mess11)))
-  testit::assert(is.null(outInner))
+  testit::assert(isFALSE(outInner))
 
 
   # Skip on CRAN
@@ -127,19 +126,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   unlink(dirname(dir4), recursive = TRUE)
 }
 
-# Code coverage -- run 2x so it won't reinstall
-# This line fails on CRAN testing for some reason; not on GA x9, E x3, A x1, WinBuilder x3, IE etc.
-prevDir <- setwd(Require::tempdir2("test11"))
-try(mess1 <- capture.output(type = "message",
-                            out1 <- installGitHubPackage("PredictiveEcology/peutils@master", #verbose = 2,
-                                                         quiet = TRUE)),
-    silent = TRUE)
-
-try(mess2 <- capture.output(type = "message",
-                            out2 <- installGitHubPackage("PredictiveEcology/peutils@master", #verbose = 2,
-                                                         quiet = TRUE)),
-    silent = TRUE)
-setwd(prevDir)
 
 # Code coverage
 pkg <- c("rforge/mumin/pkg", "Require")
@@ -153,20 +139,21 @@ out <- Require(reallyOldPkg, require = FALSE)
 ip <- data.table::as.data.table(installed.packages())
 testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
-out <- getPkgVersions("Require")
-testit::assert({data.table::is.data.table(out)})
-testit::assert({is.na(out$correctVersion)})
-out2 <- getAvailable(out)
-testit::assert({is.na(out2$correctVersion)})
-out3 <- tryCatch({
-  out2 <- installFrom(out2)
-}, error = function(condition) condition)
-testit::assert({is(out3, "simpleError")})
-out2[, installed := TRUE]
-out3 <- installFrom(out2)
-testit::assert({is.na(out3$correctVersion)})
-testit::assert({is.na(out3$installFrom)})
-testit::assert({is.na(out3$needInstall)})
+# THESE ARE DEFUNCT
+# out <- getPkgVersions("Require")
+# testit::assert({data.table::is.data.table(out)})
+# testit::assert({is.na(out$correctVersion)})
+# out2 <- getAvailable(out)
+# testit::assert({is.na(out2$correctVersion)})
+# out3 <- tryCatch({
+#   out2 <- installFrom(out2)
+# }, error = function(condition) condition)
+# testit::assert({is(out3, "simpleError")})
+# out2[, installed := TRUE]
+# out3 <- installFrom(out2)
+# testit::assert({is.na(out3$correctVersion)})
+# testit::assert({is.na(out3$installFrom)})
+# testit::assert({is.na(out3$needInstall)})
 
 out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "rforge/mumin/pkg"))
 testit::assert({data.table::is.data.table(out)})
