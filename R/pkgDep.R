@@ -136,10 +136,11 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
                        verbose = verbose, verboseLevel = 0)
       ap <- getAvailablePackagesIfNeeded(packages[needGet], repos, purge, verbose, type)
-      neededFull <- pkgDepInnerMemoise(packages = names(needGet)[needGet], libPath = libPath,
+      neededFull <- try(pkgDepInnerMemoise(packages = names(needGet)[needGet], libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
                                        purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase,
-                                       type = type, ap = ap)
+                                       type = type, ap = ap))
+      if (is(neededFull, 'try-error')) browserDeveloper("Error 2343")
       purge <- FALSE # whatever it was, it was done in line above
       theNulls <- unlist(lapply(neededFull, function(x) is.null(x) || length(x) == 0))
       neededFull2 <- neededFull[!theNulls]
@@ -170,6 +171,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
                                                                     which = which, keepVersionNumber = keepVersionNumber,
                                                                     purge = FALSE, repos = repos, verbose = verbose,
                                                                     includeBase = includeBase, ap = ap)
+                                     if (is(a, 'try-error')) browserDeveloper("Error 23")
+
                                      a
                                      }))
                                  })
@@ -317,8 +320,9 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       # if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
-        needed <- getGitHubDepsMemoise(pkg = pkg, pkgDT = pkgDT, which = which,
-                                       purge = FALSE, includeBase = includeBase)
+        needed <- try(getGitHubDepsMemoise(pkg = pkg, pkgDT = pkgDT, which = which,
+                                       purge = FALSE, includeBase = includeBase))
+        if (is(needed, "try-error")) browserDeveloper("Error 357; please contact developer")
 
       } else {
         if (isFALSE(getOption("Require.offlineMode", FALSE))) {
@@ -1154,6 +1158,12 @@ saveNamesForCache <- function(packages, which, recursive) {
   packagesSaveNames <- packages
 
   if (any(isGH)) {
+
+    hasAt <- grepl("@", packagesSaveNames[isGH])
+    if (any(hasAt %in% FALSE)) {
+      packagesSaveNames[isGH][hasAt %in% FALSE] <-
+        gsub("(.+/.+)\\s( |\\()", "\\1@HEAD \\2", packagesSaveNames[isGH][hasAt %in% FALSE])
+    }
     psnSplits <- strsplit(packagesSaveNames[isGH], "@")
     packagesSaveNamesGH <- mapply(psnSplit = psnSplits, sha = shas, function(psnSplit, sha)
       paste0(psnSplit[1], "@", sha), SIMPLIFY = TRUE)
