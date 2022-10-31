@@ -941,7 +941,9 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
 
   if (any(!pkgDT$availableVersionOK %in% FALSE)) {
 
-    needed <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge)
+    needed <- try(DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge))
+    if (is(needed, "try-error"))
+      browserDeveloper()
     neededRemotes <- DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
     neededRemotesName <- extractPkgName(neededRemotes)
     neededName <- extractPkgName(needed)
@@ -1162,7 +1164,7 @@ saveNamesForCache <- function(packages, which, recursive) {
     hasAt <- grepl("@", packagesSaveNames[isGH])
     if (any(hasAt %in% FALSE)) {
       packagesSaveNames[isGH][hasAt %in% FALSE] <-
-        gsub("(.+/.+)\\s( |\\()", "\\1@HEAD \\2", packagesSaveNames[isGH][hasAt %in% FALSE])
+        gsub("(.+/.+)( \\()|(\\()(.+\\))", "\\1@HEAD (\\4", packagesSaveNames[isGH][hasAt %in% FALSE])
     }
     psnSplits <- strsplit(packagesSaveNames[isGH], "@")
     packagesSaveNamesGH <- mapply(psnSplit = psnSplits, sha = shas, function(psnSplit, sha)
