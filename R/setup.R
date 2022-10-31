@@ -22,16 +22,18 @@ RequireCacheDir <- function(create) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
     if (dir.exists(defaultCacheDirOld)) {
-      message("Require has changed default package cache folder from\n",
-              defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
-              "in the old Cache, moving them now...")
-      checkPath(defaultCacheDir, create = TRUE)
       oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
-      dirs <- unique(dirname(oldLocs))
-      newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
-      lapply(newdirs, checkPath, create = TRUE)
-      file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
-      unlink(defaultCacheDirOld, recursive = TRUE)
+      if (length(oldLocs) > 1) {
+        message("Require has changed default package cache folder from\n",
+                defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+                "in the old Cache, moving them now...")
+        checkPath(defaultCacheDir, create = TRUE)
+        dirs <- unique(dirname(oldLocs))
+        newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+        lapply(newdirs, checkPath, create = TRUE)
+        file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+        unlink(defaultCacheDirOld, recursive = TRUE)
+      }
     }
     defaultCacheDir
   }
