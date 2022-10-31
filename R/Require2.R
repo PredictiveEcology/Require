@@ -386,7 +386,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
-  ap <- availablePackagesOverride(toInstall, repos, purge, type = type)
+  ap <- try(availablePackagesOverride(toInstall, repos, purge, type = type))
+  if (is(ap, "try-error"))
+    browserDeveloper("Error 9566")
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -1169,10 +1171,13 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     ap <- apOrig[whUpdate,, drop = FALSE]
     isNA <- is.na(toInstallList[[i]]$VersionOnRepos)
     if (any(isNA)) {
-      ap[isNA, "Version"] <- toInstallList[[i]][isNA, extractVersionNumber(filenames = basename(localFile))]
+      whUseRepository <- !toInstallList[[i]][isNA]$localFile %in% useRepository
+      if (any(whUseRepository))
+        ap[isNA, "Version"] <- extractVersionNumber(filenames = toInstallList[[i]][isNA][whUseRepository]$localFile)
+
     }
     if (any(!isNA))
-      ap[!isNA, "Version"] <- toInstallList[[i]]$VersionOnRepos
+      ap[!isNA, "Version"] <- toInstallList[[i]]$VersionOnRepos[!isNA]
     if (i %in% "Archive") {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
