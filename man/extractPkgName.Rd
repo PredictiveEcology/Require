@@ -7,7 +7,7 @@
 \alias{extractPkgGitHub}
 \title{Extract info from package character strings}
 \usage{
-extractPkgName(pkgs)
+extractPkgName(pkgs, filenames)
 
 extractVersionNumber(pkgs, filenames)
 

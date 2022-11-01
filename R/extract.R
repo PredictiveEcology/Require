@@ -9,21 +9,34 @@
 #' @rdname extractPkgName
 #' @examples
 #' extractPkgName("Require (>=0.0.1)")
-extractPkgName <- function(pkgs) {
-  hasNamesAny <- !is.null(names(pkgs))
-  if (hasNamesAny) {
-    browser(expr = exists("aaaaa"))
-    hasNames <- nchar(names(pkgs)) > 0
-    pkgs[hasNames] <- names(pkgs)[hasNames]
-    pkgs <- unname(pkgs)
-  }
+extractPkgName <- function(pkgs, filenames) {
+  if (!missing(pkgs)) {
+    hasNamesAny <- !is.null(names(pkgs))
+    if (hasNamesAny) {
+      browser(expr = exists("aaaaa"))
+      hasNames <- nchar(names(pkgs)) > 0
+      pkgs[hasNames] <- names(pkgs)[hasNames]
+      pkgs <- unname(pkgs)
+    }
 
-  pkgNames <- trimVersionNumber(pkgs)
-  gitPkgs <- extractPkgGitHub(pkgNames)
-  whGitPkgs <- is.na(gitPkgs)
+    pkgNames <- trimVersionNumber(pkgs)
+    gitPkgs <- extractPkgGitHub(pkgNames)
+    whGitPkgs <- is.na(gitPkgs)
 
-  if (any(!whGitPkgs)) {
-    pkgNames[!whGitPkgs] <- gitPkgs[!whGitPkgs]
+    if (any(!whGitPkgs)) {
+      pkgNames[!whGitPkgs] <- gitPkgs[!whGitPkgs]
+    }
+  } else {
+    if (!missing(filenames)) {
+      fnsSplit <- strsplit(filenames, "_")
+      out <- unlist(lapply(fnsSplit, function(x) x[[1]]))
+      out2 <- strsplit(out, split = "-")
+      pkgNames <- unlist(Map(len = pmax(1, lengths(out2) - 1), pkg = out2, function(len, pkg) pkg[len]))
+
+    } else {
+      pkgNames <- character()
+    }
+
   }
 
   pkgNames
