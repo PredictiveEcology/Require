@@ -21,7 +21,7 @@ if (isDevAndInteractive) {
                               "CeresBarros/Biomass_validationKNN@master",
                               "PredictiveEcology/Biomass_speciesParameters@development"))
 
-  outs <- SpaDES.project::packagesInModules(modulePath = modulePath)
+  outs <- getFromNamespace("packagesInModules", "SpaDES.project")(modulePath = modulePath)
   pkgs <- c(unname(unlist(outs)),
             "PredictiveEcology/SpaDES.experiment@development",
             "PredictiveEcology/SpaDES.project@transition",
