@@ -71,7 +71,7 @@ origWd <- getwd()
 # The test
 try(test_pkg("Require")) # not sure if this works with try
 
-#}
+
 if (!isDevAndInteractive) # i.e., CRAN
   unlink(tools::R_user_dir("Require", "cache"), recursive = TRUE)
 #runTests(checks)

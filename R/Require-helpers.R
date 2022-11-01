@@ -1171,7 +1171,7 @@ masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
 masterGrep <- paste0("/", "master", "(/|\\.)")
 mainGrep <- paste0("/", "main", "(/|\\.)")
 
-extractPkgNameFromFileName <- function(x) {
+extractPkgNameFromWarning <- function(x) {
   out <- gsub(".+\u2018(.+)_.+\u2019.+", "\\1", x) # those two escape characters are the inverted commas
   gsub(".+\u2018(.+)\u2019.+", "\\1", out)         # package XXX is in use and will not be installed
 }

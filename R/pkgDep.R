@@ -1335,3 +1335,55 @@ getAvailablePackagesIfNeeded <- function(packages, repos, purge, verbose, type) 
   }
   ap
 }
+
+#' Clear Require Cache elemenets
+#'
+#' @param packages Either missing or a character vector of package names (currently cannot
+#' specify version number) to remove from the local Require Cache.
+#' @param ask Logical. If `TRUE`, then it will ask user to confirm
+#' @param Rversion An R version (major dot minor, e.g., "4.2"). Defaults to current
+#'   R version.
+#' @export
+#' @inheritParams Require
+#' @rdname clearRequire
+clearRequirePackageCache <- function(packages, ask = interactive(), Rversion = rversion(),
+                                     verbose = getOption("Require.verbose")) {
+  out <- RequirePkgCacheDir(create = FALSE)
+  if (!identical(Rversion, rversion())) {
+    out <- file.path(dirname(out), Rversion)
+  }
+  proceed <- TRUE
+  indivFiles <- dir(out, full.names = TRUE)
+  isFile <- !dir.exists(indivFiles)
+  indivFiles <- indivFiles[isFile]
+  if (missing(packages)) {
+    toDelete <- out
+    forMess <- paste0("all ", length(indivFiles)," cached packages in ", toDelete)
+  } else {
+    if (length(indivFiles)) {
+      pkgNamesInFiles <- extractPkgName(filenames = basename(indivFiles))
+      toDelete <- indivFiles[pkgNamesInFiles %in% packages]
+      forMess <- paste(sort(basename(toDelete)), collapse = ",\n")
+    } else {
+      toDelete <- character()
+    }
+  }
+  if (length(toDelete)) {
+    if (isTRUE(ask)) {
+      message("Are you sure you would like to remove\n", forMess, "\n?")
+      askResult <- readline("(n or anything else for yes) ")
+      if (startsWith(tolower(askResult), "n")) proceed <- FALSE
+    }
+
+    if (isTRUE(proceed)) {
+      messageVerbose("Clearing: \n", forMess, verbose = verbose, verboseLevel = 1)
+      unlink(toDelete)
+    } else {
+      message("Aborting")
+    }
+  } else {
+    messageVerbose("Nothing to clear in Cache")
+  }
+
+
+}

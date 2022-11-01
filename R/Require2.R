@@ -402,7 +402,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     installPackagesWithQuiet(ipa),
     warning = function(w) {
       # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
-      pkgName <- extractPkgNameFromFileName(w$message)
+      pkgName <- extractPkgNameFromWarning(w$message)
       needWarning <- FALSE
       rowsInPkgDT <- grep(pkgName, toInstall$Package)
       if (length(rowsInPkgDT)) {
