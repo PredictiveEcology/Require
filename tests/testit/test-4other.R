@@ -99,14 +99,4 @@ ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
 options(ooo)
 
-Require:::setOfflineModeTRUE(TRUE)
-testit::assert(identical(getOption("Require.offlineMode"), TRUE))
-
-Require:::checkAutomaticOfflineMode()
-testit::assert(identical(getOption("Require.offlineMode"), FALSE))
-
-a <- list(a = list(d = 1, e = 2:3, f = 4:6), b = list(d = 5, e = 55))
-b <- invertList(a) # creates 2-deep, now 3 levels outer --> 2 levels inner
-testit::assert(identical(b$e$a, a$a$e))
-
 endTest(setupInitial)
