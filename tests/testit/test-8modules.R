@@ -14,7 +14,7 @@ if (isDevAndInteractive) {
                    upgrade = FALSE, require = FALSE)
 
   # Install modules
-  SpaDES.project::getModule(modulePath = modulePath,
+  getFromNamespace("getModule", "SpaDES.project")(modulePath = modulePath,
                             c("PredictiveEcology/Biomass_speciesData@master",
                               "PredictiveEcology/Biomass_borealDataPrep@master",
                               "PredictiveEcology/Biomass_core@master",
