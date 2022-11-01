@@ -85,7 +85,8 @@ pkgDep <- function(packages, libPath = .libPaths(),
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   if (length(packages)) {
-    saveNames <- saveNamesForCache(packages, which, recursive = recursive)
+    ap <- getAvailablePackagesIfNeeded(packages, repos, purge, verbose, type)
+    saveNames <- saveNamesForCache(packages, which, recursive = recursive, ap = ap)
     packagesNoVersion <- trimVersionNumber(packages)
     saveNamesDT <- data.table(saveNames, packages, packagesNoVersion)
     if (isTRUE(purge)) {
@@ -399,7 +400,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
       # } else {
       #  needed <- DESCRIPTIONFileDeps(desc_path, which = which, keepVersionNumber = keepVersionNumber)
       # }
-      sn <- saveNamesForCache(pkg, which = list(which), recursive = FALSE)
+      sn <- saveNamesForCache(pkg, which = list(which), recursive = FALSE, ap = ap)
       .pkgEnv[["pkgDep"]][["deps"]][[sn]] <- needed
       needed
     })
@@ -1032,7 +1033,6 @@ dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
     checkAge <- FALSE
   }
 
-
   if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeDiff <- as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
     if (is.null(.pkgEnv[["startTime"]])) {
@@ -1059,14 +1059,6 @@ dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
     unlink(fn)
 
   }
-  # if (isTRUE(purge) && (!is.null(getOptionRPackageCache()))) {
-  #   if (identical(normPath(getOptionRPackageCache()), normPath(getwd()))) {
-  #     on.exit(setwd(getOptionRPackageCache()))
-  #   }
-  #   unlink(RequireCacheDir(FALSE), recursive = TRUE)
-  #   recreate <- RequireCacheDir()
-  #   recreate <- getOptionRPackageCache()
-  # }
 
   if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purge) .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
   if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge)
@@ -1138,7 +1130,7 @@ paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = 
 srcContrib <- "src/contrib"
 
 
-saveNamesForCache <- function(packages, which, recursive) {
+saveNamesForCache <- function(packages, which, recursive, ap) {
 
   isGH <- extractPkgGitHub(packages)
   isGH <- !is.na(isGH)
@@ -1149,11 +1141,10 @@ saveNamesForCache <- function(packages, which, recursive) {
     names(shas) <- packages[isGH]
   }
 
-  hasNoEquality <- grep("^(==)", extractInequality(packages), invert = TRUE)
+  hasNoEquality <- grep("^(==)", extractInequality(packages[!isGH]), invert = TRUE)
   packagesSaveNames <- packages
 
   if (any(isGH)) {
-
     hasAt <- grepl("@", packagesSaveNames[isGH])
     if (any(hasAt %in% FALSE)) {
       packagesSaveNames[isGH][hasAt %in% FALSE] <-
@@ -1166,11 +1157,12 @@ saveNamesForCache <- function(packages, which, recursive) {
   }
 
   if (length(hasNoEquality)) {
-    packagesSaveNames[hasNoEquality] <- trimVersionNumber(packagesSaveNames[hasNoEquality])
-    # packagesSaveNames <- unique(packagesSaveNames)
+    packagesSaveNames[!isGH][hasNoEquality] <- trimVersionNumber(packagesSaveNames[!isGH][hasNoEquality])
+    packagesSaveNames[!isGH][hasNoEquality] <-
+      paste0(packagesSaveNames[!isGH][hasNoEquality], " (==",
+             ap$Version[match(packagesSaveNames[!isGH][hasNoEquality], ap$Package)],
+             ")")
   }
-
-
 
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   saveNames <- paste(packagesSaveNames, paste(whichCat, "recursive", recursive, sep = "_")[1], sep = "_")
