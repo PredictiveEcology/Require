@@ -265,32 +265,6 @@ archiveVersionsAvailable <- function(package, repos) {
 }
 
 
-getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
-  pkgs <- trimVersionNumber(packages)
-  out1 <- pkgDep(packages, recursive = TRUE, which = which, purge = purge,
-                 includeSelf = FALSE)
-  out1 <- unique(unname(unlist(out1)))
-  out2 <- c(out1, pkgs)
-  out3 <- c(out1, packages)
-  dt <- data.table(github = extractPkgGitHub(out2), Package = extractPkgName(out2),
-                   depOrOrig = c(rep("dep", length(out1)), rep("orig", length(packages))),
-                   packageFullName = out3)
-  set(dt, NULL, "origOrder", seq_along(dt$github))
-  dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
-  dt[bothDepAndOrig == TRUE, depOrOrig := "both"]
-
-
-  if ("github" %in% colnames(dt))
-    setorderv(dt, na.last = TRUE, "github") # keep github packages up at top -- they take precedence
-  setorderv(dt, "origOrder")
-  ret <- dt$packageFullName
-  if (!is.null(names(packages))) {
-    dt[depOrOrig == "orig", Names := names(packages)[match(packageFullName, packages)]]
-    dt[is.na(Names), Names := ""]
-    names(ret) <- dt$Names
-  }
-  ret
-}
 
 #' @importFrom utils packageVersion installed.packages
 installedVers <- function(pkgDT) {
@@ -927,33 +901,6 @@ rversion <- function() {
   paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
 }
 
-#' Get or compare current R version to a known version
-#'
-#' Compares R version to a known version
-#' @param testVers A character string using format "== 4.1"
-#'   or ">= 4.1"
-#' @return
-#' If no `testVers` is supplied, then it will just return the current R version.
-#' If `testVers` is supplied, then it will return a `TRUE` or `FALSE`.
-#'
-#' @export
-#' @examples
-#' rCurrentVersion(">= 4.1")
-rCurrentVersion <- function(testVers) {
-  curVer <- rversion()
-  if (!missing(testVers)) {
-    curVerNum <- as.character(numeric_version(curVer))
-    testVers <- gsub("\\(|\\)", "", testVers) # remove parentheses, if any
-    testVers <- paste0("(", testVers, ")")    # put them back
-    testVersNum <- as.character(numeric_version(extractVersionNumber(testVers)))
-    inequ <- extractInequality(testVers)
-    comp <- compareVersion(curVerNum, testVersNum)
-    out <- eval(parse(text = paste(comp, inequ, "0")))
-  } else {
-    out <- curVer
-  }
-  out
-}
 
 # Used inside internetExists
 urlExists <- function(url) {
@@ -1050,26 +997,26 @@ stripHTTPAddress <- function(addr) {
 # }
 
 
-installPackagesSystem <- function(pkg, args, libPath) {
-  opts2 <- append(args, list(lib = normalizePath(libPath, winslash = "/")))
-  opts2 <- modifyList2(list(Ncpus = getOption("Ncpus")), opts2, keep.null = TRUE)
-  opts2 <- append(list(pkg), opts2)
-  opts2 <- append(opts2, list(repos = NULL))
-  theCharacters <- unlist(lapply(opts2, is.character))
-  theCharactersAsVector <- lengths(opts2[theCharacters]) > 1
-  inner <- unlist(lapply(opts2[theCharacters][theCharactersAsVector], function(x) paste(x, collapse = "', '")))
-  aa <- paste0("c('", inner, "')")
-  opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
-  opts2[theCharacters][theCharactersAsVector] <- aa
-  hasName <- names(opts2) != ""
-  Rpath <- Sys.which("Rscript")
-  out2 <- paste(Rpath, "-e \"do.call(install.packages, list(",
-                paste(opts2[!hasName], ", ",
-                      paste(names(opts2)[hasName], sep = " = ", opts2[hasName],
-                            collapse = ", "),"))\""))
-  out <- system(out2, intern = TRUE)
-  return(out)
-}
+# installPackagesSystem <- function(pkg, args, libPath) {
+#   opts2 <- append(args, list(lib = normalizePath(libPath, winslash = "/")))
+#   opts2 <- modifyList2(list(Ncpus = getOption("Ncpus")), opts2, keep.null = TRUE)
+#   opts2 <- append(list(pkg), opts2)
+#   opts2 <- append(opts2, list(repos = NULL))
+#   theCharacters <- unlist(lapply(opts2, is.character))
+#   theCharactersAsVector <- lengths(opts2[theCharacters]) > 1
+#   inner <- unlist(lapply(opts2[theCharacters][theCharactersAsVector], function(x) paste(x, collapse = "', '")))
+#   aa <- paste0("c('", inner, "')")
+#   opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
+#   opts2[theCharacters][theCharactersAsVector] <- aa
+#   hasName <- names(opts2) != ""
+#   Rpath <- Sys.which("Rscript")
+#   out2 <- paste(Rpath, "-e \"do.call(install.packages, list(",
+#                 paste(opts2[!hasName], ", ",
+#                       paste(names(opts2)[hasName], sep = " = ", opts2[hasName],
+#                             collapse = ", "),"))\""))
+#   out <- system(out2, intern = TRUE)
+#   return(out)
+# }
 
 
 #' Get the option for `Require.RPackageCache`
@@ -1277,74 +1224,9 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
 }
 
 
-
-#' Internals used by `Require`
-#'
-#' While these are not intended to be called manually by users, they may be
-#' of some use for advanced users.
-#'
-#' @return
-#' In general, these functions return a `data.table` with various package
-#' information, installation status, version, available version etc.
-#'
-#' @importFrom data.table setorderv
-#' @inheritParams Require
-#' @inheritParams parseGitHub
-#' @rdname Require-internals
-#' @export
-getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.verbose")) {
-  pkgDT <- toPkgDT(pkgDT)
-  pkgDT[, hasVersionSpec := grepl(.grepVersionNumber, packageFullName)]
-
-  if (any(pkgDT$hasVersionSpec)) {
-    pkgDT <- pkgDT[hasVersionSpec == TRUE, versionSpec := extractVersionNumber(packageFullName)]
-    pkgDT[hasVersionSpec == TRUE, inequality := extractInequality(packageFullName)]
-
-
-    pkgDT[hasVersionSpec == TRUE & grepl("<", inequality), versionSpec := as.character(min(package_version(versionSpec))),
-          by = "Package"]
-
-    setorderv(pkgDT, c("Package", "versionSpec"), order = -1L)
-
-    # any duplicates with different minimum version number to be dealt with here --> only those with > in their inequality
-    setorderv(pkgDT, c("Package", "hasVersionSpec"), order = -1L)
-
-    if ("Version" %in% colnames(pkgDT)) {
-      theNAVersions <- is.na(pkgDT$Version)
-      NOTNAVersions <- !theNAVersions & !pkgDT$hasHEAD
-      whNOTNAVersions <- which(NOTNAVersions)
-      set(pkgDT, NULL, "correctVersion", NA)
-      if (all(theNAVersions)) {
-        set(pkgDT, NULL, "compareVersion", NA)
-      } else {
-        set(pkgDT, whNOTNAVersions, "compareVersion",
-            .compareVersionV(pkgDT$Version[whNOTNAVersions], pkgDT$versionSpec[whNOTNAVersions]))
-        # pkgDT[!is.na(Version), compareVersion := .compareVersionV(Version, versionSpec)]
-        wh <- which(NOTNAVersions & pkgDT$hasVersionSpec == TRUE)
-        set(pkgDT, wh, "correctVersion",
-            .evalV(.parseV(text = paste(pkgDT$compareVersion[wh], pkgDT$inequality[wh], "0"))))
-        # pkgDT[whNOTNAVersions & hasVersionSpec == TRUE, correctVersion := .evalV(.parseV(text = paste(compareVersion, inequality, "0")))]
-        if (any(pkgDT$installed %in% TRUE & pkgDT$correctVersion %in% FALSE))
-          pkgDT[installed %in% TRUE & correctVersion %in% FALSE, installed := FALSE]
-      }
-      # set(pkgDT, which(pkgDT$hasVersionSpec %in% FALSE), "correctVersion", NA)
-      # pkgDT[hasVersionSpec == FALSE, correctVersion := NA]
-      # put FALSE at top of each package -- then take the first one, so we will know if all inequalities are satisfied
-      setorderv(pkgDT, c("Package", "correctVersion"), order = 1L, na.last = TRUE)
-    }
-  } else {
-    pkgDT[ , correctVersion := NA]
-  }
-  if (isTRUE(install == "force")) {
-    pkgDT[, correctVersion := FALSE]
-  }
-  pkgDT[]
-}
-
-
-setOfflineModeTRUE <- function() {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-    if (!internetExists()) {
+setOfflineModeTRUE <- function(force = FALSE) {
+  if (isFALSE(getOption("Require.offlineMode", FALSE)) || is.null(getOption("Require.offlineMode", FALSE))) {
+    if (!internetExists() || identical(force, TRUE)) {
       options("Require.offlineMode" = TRUE,
               "Require.offlineModeSetAutomatically" = TRUE)
       message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")

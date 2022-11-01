@@ -411,13 +411,6 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
   needed
 }
 
-getDescPath <- function(packages, libPath) {
-  lapply(packages, function(pkg) {
-    dp <- sprintf("%s/%s/DESCRIPTION", libPath, pkg) # nolint
-    fe <- file.exists(dp)
-    dp[fe][1] # take first file that exists
-  })
-}
 
 #' @description
 #' `pkgDep2` is a convenience wrapper of `pkgDep` that "goes one level in",
