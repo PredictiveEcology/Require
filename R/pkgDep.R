@@ -1357,8 +1357,8 @@ clearRequirePackageCache <- function(packages, ask = interactive(), Rversion = r
   isFile <- !dir.exists(indivFiles)
   indivFiles <- indivFiles[isFile]
   if (missing(packages)) {
-    toDelete <- out
-    forMess <- paste0("all ", length(indivFiles)," cached packages in ", toDelete)
+    toDelete <- indivFiles # don't delete whole dir because has available.packages too; not to delete
+    forMess <- paste0("all ", length(indivFiles)," cached packages in ", out)
   } else {
     if (length(indivFiles)) {
       pkgNamesInFiles <- extractPkgName(filenames = basename(indivFiles))
