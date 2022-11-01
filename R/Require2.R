@@ -397,34 +397,11 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
-  # aa <- try(
   toInstallOut <- withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
-      # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
-      pkgName <- extractPkgNameFromWarning(w$message)
-      needWarning <- FALSE
-      rowsInPkgDT <- grep(pkgName, toInstall$Package)
-      if (length(rowsInPkgDT)) {
-        toInstall[rowsInPkgDT, installResult := w$message]
-        needWarning <- TRUE
-      }
-      if (!is.null(getOptionRPackageCache())) {
-        if (startsWith(pkgName, getOptionRPackageCache())) {
-          messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
-          unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
-          retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
-          if (is(retrying, "try-error"))
-            needWarning <- TRUE
-        } else {
-          needWarning <- TRUE
-        }
-      } else {
-        needWarning <- TRUE
-      }
-      if (isTRUE(needWarning))
-        warning(w)
-      invokeRestart("muffleWarning")
+      messagesAboutWarnings(w, toInstall) # changes to toInstall are by reference; so they are in the return below
+      invokeRestart("muffleWarning")      # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
     })
   toInstall
 }
@@ -1694,4 +1671,38 @@ updateReposForSrcPkgs <- function(pkgInstall) {
 
   }
   pkgInstall
+}
+
+messagesAboutWarnings <- function(w, toInstall) {
+  # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
+  pkgName <- extractPkgNameFromWarning(w$message)
+  if (identical(pkgName, w$message)) { # didn't work
+    pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
+  }
+  needWarning <- FALSE
+  rowsInPkgDT <- grep(pkgName, toInstall$Package)
+  if (length(rowsInPkgDT)) {
+    toInstall[rowsInPkgDT, installResult := w$message]
+    if (any(grepl("cannot remove prior installation of package", w$message))) {
+      warning("Is ", pkgName, " loaded in another R session? Please close all sessions before installing packages")
+      needWarning <- FALSE
+    } else {
+      needWarning <- TRUE
+    }
+  }
+  if (!is.null(getOptionRPackageCache())) {
+    if (startsWith(pkgName, getOptionRPackageCache())) {
+      messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
+      unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
+      retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
+      if (is(retrying, "try-error"))
+        needWarning <- TRUE
+    } else {
+      needWarning <- TRUE
+    }
+  } else {
+    needWarning <- TRUE
+  }
+  if (isTRUE(needWarning))
+    warning(w)
 }
