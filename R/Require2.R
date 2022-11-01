@@ -458,8 +458,23 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
   if (!is.null(pkgInstall)) {
     pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
     pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
-    if (!isWindows() && !isMacOSX())
-      pkgInstall[localFile %in% useRepository & Package %in% sourcePkgs(), isBinaryInstall := isWindows() | isMacOSX()] # repository-based
+    if (!isWindows() && !isMacOSX() && any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {
+      mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & pkgInstall$Package %in% sourcePkgs()
+      pkgInstall[which(mayNeedSwitchToSrc),
+                 isBinaryInstall := isWindows() | isMacOSX()]
+      needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+      if (all(isBinaryCRANRepo(getOption("repos")))) {
+        warning(paste(pkgInstall[needSwitchToSrc]$Package, collapse = ", "), " is identified in `sourcePkgs()`, ",
+                "indicating it should normally be installed from source; however, there is no source CRAN repository.",
+                "Please add one to the `options(repos)`, e.g., with ",
+                "options(repos = c(getOption('repos'), CRAN = 'https://cloud.r-project.org')).",
+                "Proceeding with the binary repository, which may not work")
+      } else {
+        nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
+        pkgInstall[which(needSwitchToSrc), Repository := contrib.url(nonBinaryRepos)]
+      }
+
+    }
 
     startTime <- Sys.time()
 
@@ -1145,6 +1160,10 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 #' @param toInstall A `pkgDT` object
 #' @inheritParams Require
 availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType")) {
+  whLocal <- startsWith(unique(dirname(dirname(toInstall$Repository))), "file")
+  if (any(whLocal %in% FALSE)) {
+    repos <- unique(dirname(dirname(toInstall$Repository)))
+  }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
   if (length(pkgsNotInAP)) { # basically no version is there
