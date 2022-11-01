@@ -458,6 +458,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
   if (!is.null(pkgInstall)) {
     pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
     pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
+    if (!isWindows() && !isMacOSX())
+      pkgInstall[localFile %in% useRepository & Package %in% sourcePkgs(), isBinaryInstall := isWindows() | isMacOSX()] # repository-based
 
     startTime <- Sys.time()
 
