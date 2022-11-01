@@ -1145,7 +1145,8 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 #' @inheritParams Require
 availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType")) {
   whLocal <- startsWith(unique(dirname(dirname(toInstall$Repository))), "file")
-  if (any(whLocal %in% FALSE) && any(toInstall$repoLocation %in% "CRAN")) {
+  if (any(whLocal %in% FALSE) && any(toInstall$repoLocation %in% "CRAN") &&
+      !any(grepl("contrib", toInstall$Repository))) {
     repos <- unique(dirname(dirname(toInstall$Repository)))
   }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
