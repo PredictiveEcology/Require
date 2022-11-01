@@ -1377,7 +1377,7 @@ clearRequirePackageCache <- function(packages, ask = interactive(), Rversion = r
 
     if (isTRUE(proceed)) {
       messageVerbose("Clearing: \n", forMess, verbose = verbose, verboseLevel = 1)
-      unlink(toDelete)
+      unlink(toDelete, recursive = TRUE)
     } else {
       message("Aborting")
     }
