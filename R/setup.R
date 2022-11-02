@@ -280,6 +280,20 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
 }
 
 
+putFile <- function(from, to, overwrite) {
+  if (file.exists(to)) {
+    if (isTRUE(overwrite)) {
+      res0 <- file.copy(to, paste0(to, ".bak.", timestamp()))
+      res1 <- file.copy(from, to)
+    } else {
+      message("file ", to, " exists but overwrite not TRUE. Not overwriting.")
+    }
+  } else {
+    res1 <- file.copy(from, to)
+  }
+}
+
+
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
