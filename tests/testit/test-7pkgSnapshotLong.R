@@ -60,6 +60,8 @@ if (isDevAndInteractive) {
   #   NnotInstalled <- 0
   # }
   allNeeded <- setdiff(allNeeded, "Require")
+  installedPkgs <- setdiff(installedPkgs, "Require")
+
   theTest <- NROW(installedPkgs) == NROW(allNeeded)
   if (isDevAndInteractive) if (!isTRUE(theTest)) browser()
   testit::assert(isTRUE(theTest))
