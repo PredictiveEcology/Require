@@ -465,7 +465,6 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
   deps
 }
 
-
 #' Reverse package depends
 #'
 #' This is a wrapper around `tools::dependsOnPkgs`,
@@ -542,7 +541,7 @@ pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
         revDeps <- lapply(revDeps, function(p) {
           if (!is.null(p)) {
             used <- p
-            repeat({
+            repeat ({
               r <- unique(unlist(lapply(p, function(p1)  names(unlist(lapply(deps, function(d) if (isTRUE(any(p1 %in% d))) TRUE else NULL))))))
               used <- unique(c(r, used))
               if (length(r) == 0)
@@ -666,7 +665,7 @@ pkgDepCRANInner <- function(ap, which, pkgs, pkgsNoVersion, keepVersionNumber,
       ap <- ap[order(pkgsNoVersion1)]
 
       names(which) <- which
-      deps <- lapply (which, function(i) {
+      deps <- lapply(which, function(i) {
         lapply(ap[[i]], function(x) {
           out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
           out <- out[!is.na(out)]
@@ -702,8 +701,12 @@ DESCRIPTIONFileDeps <- function(desc_path, which = c("Depends", "Imports", "Link
   else {
     grepPackage <- "Package *: *"
     grepVersion <- "Version *: *"
-    suppressWarnings(pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE)))
-    suppressWarnings(vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE)))
+    suppressWarnings({
+      pkg <- gsub(grepPackage, "", grep(grepPackage, desc_path, value = TRUE))
+    })
+    suppressWarnings({
+      vers <- gsub(grepVersion, "", grep(grepVersion, desc_path, value = TRUE))
+    })
     paste(pkg, vers, sep = "_", paste0(which, "_", keepVersionNumber, collapse = "_"))
   }
   if (isTRUE(length(objName) > 1) ||
@@ -786,7 +789,6 @@ whichToDILES <- function(which) {
 
 .installed.pkgs <- function(lib.loc = .libPaths(), which = c("Depends", "Imports", "LinkingTo"), other = NULL,
                             purge = getOption("Require.purge", FALSE)) {
-
   purge <- dealWithCache(purge)
   if (!is.null(other))
     if (any(grepl("github", tolower(other)))) {
@@ -1025,9 +1027,7 @@ getGitHubDeps <- function(pkg, pkgDT, which, purge, verbose = getOption("Require
   needed
 }
 
-
 dealWithCache <- function(purge, checkAge = TRUE, repos = getOption("repos")) {
-
   if (isTRUE(getOption("Require.offlineMode", FALSE))) {
     purge <- FALSE
     checkAge <- FALSE
@@ -1112,7 +1112,7 @@ masterMainToHead <- function(gitRepo) {
 #' paddedFloatToChar(1.25)
 #' paddedFloatToChar(1.25, padL = 3, padR = 5)
 #' paddedFloatToChar(1.25, padL = 3, padR = 1) # no rounding, so keeps 2 right of decimal
-paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = "0") {
+paddedFloatToChar <- function(x, padL = ceiling(log10(x + 1)), padR = 3, pad = "0") {
   if (!pad %in% c("0", " ")) {
     stop("pad must be either '0' or ' '")
   }
@@ -1121,17 +1121,14 @@ paddedFloatToChar <- function (x, padL = ceiling(log10(x + 1)), padR = 3, pad = 
 
   # this == used to be fpCompare -- but this function is more or less deprecated
   newPadR <- ifelse(abs(xf - 0) < sqrt(.Machine$double.eps), 0, pmax(numDecimals, padR))
-  string <- paste0(paste0("%", pad), padL+newPadR+1*(newPadR > 0),".", newPadR, "f")
+  string <- paste0(paste0("%", pad), padL + newPadR + 1*(newPadR > 0), ".", newPadR, "f")
   xFCEnd <- sprintf(string, x)
   return(xFCEnd)
 }
 
-
 srcContrib <- "src/contrib"
 
-
 saveNamesForCache <- function(packages, which, recursive, ap) {
-
   isGH <- extractPkgGitHub(packages)
   isGH <- !is.na(isGH)
   if (any(isGH)) {
@@ -1193,10 +1190,8 @@ pkgDepCRANMemoise <- function(...) {
     ret <- pkgDepCRAN(...)
   }
 
-
   return(ret)
 }
-
 
 pkgDepInnerMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
@@ -1229,16 +1224,12 @@ pkgDepInnerMemoise <- function(...) {
           list(.pkgEnv$pkgDepInner[[packages]], list(input = dots, output = ret))
       }
     }
-
   } else {
     ret <- pkgDepInner(...)
   }
 
-
   return(ret)
 }
-
-
 
 getGitHubDepsMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
@@ -1268,7 +1259,6 @@ getGitHubDepsMemoise <- function(...) {
 
   return(ret)
 }
-
 
 pkgDepTopoSortMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
@@ -1323,8 +1313,6 @@ prependSelf <- function(deps, includeSelf, removeSelf = FALSE) {
     c(if (isTRUE(includeSelf)) n else character(), pak)
     })
 }
-
-
 
 getAvailablePackagesIfNeeded <- function(packages, repos, purge, verbose, type) {
   isCRAN <- parseGitHub(packages)[["repoLocation"]] %in% "CRAN"
