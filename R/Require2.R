@@ -1025,8 +1025,9 @@ availableVersionOK <- function(pkgDT) {
       browserDeveloper("Error 553; please contact developer")
   } else {
     pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
-    pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
   }
+  pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
+
   # Then update this for the subset that have an actual inequality
 
   pkgDT
