@@ -363,7 +363,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                     url <- file.path(repo, srcContrib, "/Archive", packageURL)
                     url2 <- file.path(repo, srcContrib, basename(packageURL))
                     tf <- tempfile()
-                    messageVerbose("available.packages() does not have correct information on package dependencies for ", pkg,
+                    pkgPrint <- if (any(grepl("==NA", pkg))) extractPkgName(pkg) else pkg
+                    messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgPrint,
                                    "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
                     if (isFALSE(getOption("Require.offlineMode", FALSE)))
                     haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
