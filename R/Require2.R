@@ -739,6 +739,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
   pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose,
                                  type = type)
+  # if (any(pkgInstall$Package %in% "RColorBrewer")) browser()
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall <- updateInstallSafeGroups(pkgInstall)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -1197,11 +1199,26 @@ setNcpus <- function() {
   opts
 }
 
-keepOnlyBinary <- function(fn) {
-  if (length(fn) > 1)
-    if (any(isBinary(fn, needRepoCheck = FALSE))) { # pick binary if it exists; faster to install
-      fn <- fn[isBinary(fn, needRepoCheck = FALSE)]
+keepOnlyBinary <- function(fn, keepSourceIfOnlyOne = TRUE) {
+  if (length(fn) > 1) {
+    isBin <- isBinary(fn, needRepoCheck = FALSE)
+    if (any(isBin)) { # pick binary if it exists; faster to install
+      versions <- extractVersionNumber(filenames = fn)
+      pkgs <- extractPkgName(filenames = basename(fn))
+      pkgVer <- paste0(pkgs, "_", versions)
+      N <- table(pkgVer)
+      pkgVerKeep <- names(N)[N == 1]
+      pkgVerDups <- names(N)[N > 1]
+      if ((length(pkgVerDups) == 0) || keepSourceIfOnlyOne %in% FALSE ) {
+        fn <- fn[isBin]
+      } else {
+        fnKeepSingles <- fn[match(pkgVerKeep, pkgVer)]
+        fnMoreThanOne <- fn[pkgVer %in% pkgVerDups]
+        fnMoreThanOne <- fnMoreThanOne[isBinary(fnMoreThanOne, needRepoCheck = FALSE)]
+        fn <- c(fnMoreThanOne, fnKeepSingles)
+      }
     }
+  }
   fn
 }
 
@@ -1234,12 +1251,8 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 
 #' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
-  # Not vectorized
-  if (is.na(VersionOnRepos)) {
-    PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
-  } else {
-    PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*", VersionOnRepos)
-  }
+  ##### Not vectorized ######
+  PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
 
@@ -1252,26 +1265,32 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
       localVer <- extractVersionNumber(filenames = fn) # there may be >1 file for a given package; take
       if (is.na(inequality)) { # need max --> which will be the versionSpec; so see if localVer is same as versionSpec
         if (!is.na(VersionOnRepos)) {
-          ord <- try(order(c(package_version(tail(localVer, 1)), package_version(VersionOnRepos)),
-                           decreasing = TRUE)) # local first
+          ord <- order(c(package_version(localVer), package_version(VersionOnRepos)), decreasing = TRUE) # local first
         } else {
           ord <- 1
         }
-        keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
-        fn <- tail(fn, 1)[keepLoc]
+
+        if (ord[1] %in% seq_along(localVer))# if it is first, then it is bigger or equal, so keep
+          fn <- fn[ord[1]]
+        else
+          fn <- ""
       } else {
         keepLoc <- try(unlist(compareVersion2(localVer, versionSpec, inequality)))
         if (is(keepLoc, "try-error"))
           browserDeveloper("Error 978; please contact developer")
         if (!identical(inequality, "==") && !is.na(VersionOnRepos)) {
           keepRep <- compareVersion2(VersionOnRepos, versionSpec, inequality)
-          if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good
-            if (any(keepRep %in% TRUE)) { # remote has as at least 1 that is good
-              ord <- order(c(package_version(tail(localVer[keepLoc], 1)), package_version(VersionOnRepos)), decreasing = TRUE) # local first
-              keepLoc <- (ord[1] == 1) # if it is first, then it is bigger or equal, so keep
-              fn <- tail(fn, 1)[keepLoc] # keepLoc is guaranteed to be length 1
+          if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good -- could be many versions of the package locally
+            locPacVer <- package_version(localVer[keepLoc]) # keep all that pass version check
+            keepLoc <- which(keepLoc)[which(max(locPacVer) == locPacVer)] # take the one that passes version check that is max version
+            if (any(keepRep %in% TRUE)) { # remote has as at least 1 that is good # next, take local if local is same or newer than remote
+              ord <- order(c(package_version(localVer[keepLoc]), package_version(VersionOnRepos)), decreasing = TRUE) # local first
+              if (ord[1] %in% seq_along(localVer[keepLoc]))# if it is first, then it is bigger or equal, so keep
+                fn <- fn[ord[1]]
+              else
+                fn <- ""
             } else {
-              fn <- tail(fn[keepLoc], 1) # keepLoc is possibly length > 1
+              fn <- fn[keepLoc]
             }
           } else {
             fn <- ""
@@ -1285,6 +1304,13 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
     } else {
       fn <- ""
     }
+  }
+  if (length(fn) > 1) {
+    isGH <- isGitHub(filenames = fn)
+    if (any(!isGH))
+      fn <- fn[!isGH]
+    else
+      fn <- fn[1]
   }
   if (length(fn) == 0) fn <- ""
   fn
@@ -1426,7 +1452,6 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
     }, by = "Package"]
   pkgInstall <- pkgInstall[unique(keep)]
   set(pkgInstall, NULL, "keep", NULL)
-  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall
 }
 
@@ -1717,4 +1742,14 @@ messagesAboutWarnings <- function(w, toInstall) {
 
 getArchiveURL <- function(repo, pkg) {
   file.path(repo, srcContrib, "Archive", pkg)
+}
+
+isGitHub <- function(pkg, filenames) {
+  if (!missing(filenames)) {
+    isGH <- unlist(lapply(strsplit(basename(filenames), split = "-|_"), length)) == 3
+  } else {
+    isGH <- extractPkgGitHub(pkg)
+    isGH <- !is.na(isGH)
+  }
+  isGH
 }

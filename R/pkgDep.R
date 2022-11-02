@@ -1136,8 +1136,9 @@ paddedFloatToChar <- function(x, padL = ceiling(log10(x + 1)), padR = 3, pad = "
 srcContrib <- "src/contrib"
 
 saveNamesForCache <- function(packages, which, recursive, ap) {
-  isGH <- extractPkgGitHub(packages)
-  isGH <- !is.na(isGH)
+  isGH <- isGitHub(packages)
+  # isGH <- extractPkgGitHub(packages)
+  # isGH <- !is.na(isGH)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
     shas <- Map(repo = pkgDT$Repo, acct = pkgDT$Account, br = pkgDT$Branch,
