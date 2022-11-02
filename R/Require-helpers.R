@@ -927,33 +927,6 @@ rversion <- function() {
   paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
 }
 
-#' Get or compare current R version to a known version
-#'
-#' Compares R version to a known version
-#' @param testVers A character string using format "== 4.1"
-#'   or ">= 4.1"
-#' @return
-#' If no `testVers` is supplied, then it will just return the current R version.
-#' If `testVers` is supplied, then it will return a `TRUE` or `FALSE`.
-#'
-#' @export
-#' @examples
-#' rCurrentVersion(">= 4.1")
-rCurrentVersion <- function(testVers) {
-  curVer <- rversion()
-  if (!missing(testVers)) {
-    curVerNum <- as.character(numeric_version(curVer))
-    testVers <- gsub("\\(|\\)", "", testVers) # remove parentheses, if any
-    testVers <- paste0("(", testVers, ")")    # put them back
-    testVersNum <- as.character(numeric_version(extractVersionNumber(testVers)))
-    inequ <- extractInequality(testVers)
-    comp <- compareVersion(curVerNum, testVersNum)
-    out <- eval(parse(text = paste(comp, inequ, "0")))
-  } else {
-    out <- curVer
-  }
-  out
-}
 
 # Used inside internetExists
 urlExists <- function(url) {
