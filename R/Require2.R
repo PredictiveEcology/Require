@@ -587,7 +587,7 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
             repos <- c(repos, CRAN = srcPackageURLOnCRAN)
           }
           for (repo in repos) {
-            yy <- url(file.path(repo, srcContrib, "Archive", pk))
+            yy <- url(getArchiveURL(repo, pk))
             on.exit(try(close(yy), silent = TRUE))
             rl2 <- suppressWarnings(try(readLines(yy), silent = TRUE))
             close(yy)
@@ -1658,15 +1658,20 @@ updateReposForSrcPkgs <- function(pkgInstall) {
     pkgInstall[which(mayNeedSwitchToSrc),
                isBinaryInstall := isWindows() | isMacOSX()]
     needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
-    if (all(isBinaryCRANRepo(getOption("repos")))) {
-      warning(paste(pkgInstall[needSwitchToSrc]$Package, collapse = ", "), " is identified in `sourcePkgs()`, ",
-              "indicating it should normally be installed from source; however, there is no source CRAN repository.",
-              "Please add one to the `options(repos)`, e.g., with ",
-              "options(repos = c(getOption('repos'), CRAN = 'https://cloud.r-project.org')).",
-              "Proceeding with the binary repository, which may not work")
-    } else {
-      nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
-      pkgInstall[which(needSwitchToSrc), Repository := contrib.url(nonBinaryRepos)]
+    if (any(needSwitchToSrc %in% TRUE)) {
+      if (all(isBinaryCRANRepo(getOption("repos")))) {
+        warning(paste(pkgInstall[needSwitchToSrc]$Package, collapse = ", "), " is identified in `sourcePkgs()`, ",
+                "indicating it should normally be installed from source; however, there is no source CRAN repository.",
+                "Please add one to the `options(repos)`, e.g., with ",
+                "options(repos = c(getOption('repos'), CRAN = 'https://cloud.r-project.org')).",
+                "Proceeding with the binary repository, which may not work")
+      } else {
+        nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
+        whArchive <- pkgInstall$installFrom %in% "Archive"
+        pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
+        pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
+
+      }
     }
 
   }
@@ -1705,4 +1710,8 @@ messagesAboutWarnings <- function(w, toInstall) {
   }
   if (isTRUE(needWarning))
     warning(w)
+}
+
+getArchiveURL <- function(repo, pkg) {
+  file.path(repo, srcContrib, "Archive", pkg)
 }
