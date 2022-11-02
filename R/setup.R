@@ -32,7 +32,7 @@ RequireCacheDir <- function(create) {
           dirs <- unique(dirname(oldLocs))
           newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
           lapply(newdirs, checkPath, create = TRUE)
-          file.rename(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
           unlink(defaultCacheDirOld, recursive = TRUE)
         }
       }
