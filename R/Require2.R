@@ -1687,7 +1687,9 @@ messagesAboutWarnings <- function(w, toInstall) {
   needWarning <- FALSE
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
   if (length(rowsInPkgDT)) {
+    toInstall[rowsInPkgDT, installed := FALSE]
     toInstall[rowsInPkgDT, installResult := w$message]
+
     if (any(grepl("cannot remove prior installation of package", w$message))) {
       warning("Is ", pkgName, " loaded in another R session? Please close all sessions before installing packages")
       needWarning <- FALSE
