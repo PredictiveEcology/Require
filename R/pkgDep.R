@@ -338,11 +338,12 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
 
           if (is.null(needed)) { # essesntially, failed
             pkgName <- extractPkgName(pkg)
+            pkgPrint <- if (any(grepl("==NA", pkg))) pkgName else pkg
             td <- tempdir2(pkgName)
             packageTD <- file.path(td, pkgName)
             if (!dir.exists(packageTD)) {
               verNum <- extractVersionNumber(pkg)
-              if (is.na(verNum)) {
+              if (is.na(verNum) || identical(verNum, "NA") ) {
                 ava <- archiveVersionsAvailable(pkgName, repos = repos)
                 dt <- if (is(ava, "list"))
                   rbindlist(lapply(ava, as.data.table, keep.rownames = "packageURL"))
@@ -359,13 +360,12 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
               }
               if (!is.null(packageURL)) {
                 if (endsWith(packageURL, "tar.gz")) {
+                  messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgPrint,
+                                 "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
                   for (repo in repos) {
                     url <- file.path(repo, srcContrib, "/Archive", packageURL)
                     url2 <- file.path(repo, srcContrib, basename(packageURL))
                     tf <- tempfile()
-                    pkgPrint <- if (any(grepl("==NA", pkg))) extractPkgName(pkg) else pkg
-                    messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgPrint,
-                                   "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
                     if (isFALSE(getOption("Require.offlineMode", FALSE)))
                     haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
                       tryCatch(download.file(url2, tf, quiet = TRUE), error = function(y) FALSE)))
@@ -385,7 +385,7 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                   which = which, keepVersionNumber = keepVersionNumber,
                                   purge = FALSE)
             else {
-              messageVerbose(pkg,
+              messageVerbose(pkgPrint,
                              " dependencies not found on CRAN; perhaps incomplete description? On GitHub?",
                              verbose = verbose, verboseLevel = 1)
               character()
