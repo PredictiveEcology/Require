@@ -397,14 +397,12 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
-  toInstallOut <- try(withCallingHandlers(
+  toInstallOut <- withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
       messagesAboutWarnings(w, toInstall) # changes to toInstall are by reference; so they are in the return below
       invokeRestart("muffleWarning")      # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
-    }))
-  if (is(toInstallOut, "try-error"))
-    browserDeveloper("Error 8855; please contact developer")
+    })
   toInstall
 }
 
