@@ -274,7 +274,7 @@ if (isDevAndInteractive) {
   # Use a mixture of different types of "off CRAN"
   pkgs <- c("ggplot", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
   pkgsClean <- extractPkgName(pkgs)
-  lala <- capture.output(suppressMessages(remove.packages(pkgsClean)))
+  lala <- suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean))))
   Require(pkgs, require = FALSE)
   ip <- installed.packages()
   testit::assert(sum(pkgsClean %in% ip[, "Package"]) == length(pkgsClean) - 1) # silly1 won't be installed
