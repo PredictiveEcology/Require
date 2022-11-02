@@ -47,7 +47,7 @@ if (isDevAndInteractive) {
   testit::assert(isTRUE(theTest))
 
   lala <- capture.output(type = "message",
-                         Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
+                         out <- Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
                                  require = FALSE, verbose = 2))
   # missings <- grep("The following shows packages", lala, value = TRUE)
   # missings <- gsub(".+: (.+); adding .+", "\\1", missings)

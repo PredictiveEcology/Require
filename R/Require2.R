@@ -424,7 +424,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
   }, add = TRUE)
 
-  pkgInstall <- doDownloads(pkgInstall, repos, purge, verbose, install.packagesArgs, libPaths,
+  pkgInstall <- doDownloads(pkgInstall, repos = repos, purge = purge, verbose = verbose,
+                            install.packagesArgs = install.packagesArgs, libPaths = libPaths,
                             type = type)
   pkgDTList[["install"]] <- pkgInstall
   pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
