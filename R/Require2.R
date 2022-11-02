@@ -397,12 +397,14 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      list(pkgs = toInstall$Package, available = ap, type = type, dependencies = FALSE),
                      keep.null = TRUE)
 
-  toInstallOut <- withCallingHandlers(
+  toInstallOut <- try(withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
       messagesAboutWarnings(w, toInstall) # changes to toInstall are by reference; so they are in the return below
       invokeRestart("muffleWarning")      # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
-    })
+    }))
+  if (is(toInstallOut, "try-error"))
+    browserDeveloper("Error 8855; please contact developer")
   toInstall
 }
 
@@ -1012,8 +1014,9 @@ availableVersionOK <- function(pkgDT) {
   pkgDT[, availableVersionOK := !is.na(VersionOnRepos)]
 
   availableOKcols <- c("availableVersionOK", "availableVersionOKthisOne")
-  if (any(!is.na(pkgDT$inequality))) {
-    pkgDT[, hasAtLeastOneNonNA := any(!is.na(inequality)), by = "Package"]
+  hasAtLeastOneNonNA <- !is.na(pkgDT$inequality) & !is.na(pkgDT$VersionOnRepos)
+  if (any(hasAtLeastOneNonNA)) {
+    pkgDT[, hasAtLeastOneNonNA := any(hasAtLeastOneNonNA), by = "Package"]
     out <- try(pkgDT[hasAtLeastOneNonNA %in% TRUE, (availableOKcols) := {
       out <- Map(vor = VersionOnRepos, function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
       avokto <- Map(vor = VersionOnRepos, function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
@@ -1023,7 +1026,6 @@ availableVersionOK <- function(pkgDT) {
     if (is(out, "try-error"))
       browserDeveloper("Error 553; please contact developer")
   } else {
-
     pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
     pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
   }
