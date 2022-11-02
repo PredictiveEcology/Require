@@ -312,7 +312,8 @@ Require <- function(packages, packageVersionFile,
 
   if (NROW(packages)) {
     packages <- anyHaveHEAD(packages)
-    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE, which = which, type = type)
+    deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE,
+                   which = which, type = type, verbose = verbose)
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     allPackages <- unique(unname(unlist(deps)))
     pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
@@ -419,7 +420,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
   on.exit({
     # this copies any tar.gz files to the package cache; works even if partial install.packages
     tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
-    copyBuiltToCache(tmpdirs = c(tmpdir, tmpdirPkgs), pkgInstall)
+    copyBuiltToCache(pkgInstall, tmpdirs = c(tmpdir, tmpdirPkgs))
     suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
   }, add = TRUE)
 
@@ -739,7 +740,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
   pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths, verbose = verbose,
                                  type = type)
-  # if (any(pkgInstall$Package %in% "RColorBrewer")) browser()
+  # if (any(pkgInstall$Package %in% c("usethis", "ggplot2", "remotes"))) browser()
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstall <- updateInstallSafeGroups(pkgInstall)
 
@@ -1245,13 +1246,13 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
     pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
   }
   pkgGitHub
-  pkgGitHub
 }
 
 
 #' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
   ##### Not vectorized ######
+  # if (Package %in% c("usethis", "ggplot2", "remotes")) browser()
   PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
@@ -1282,11 +1283,11 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
           keepRep <- compareVersion2(VersionOnRepos, versionSpec, inequality)
           if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good -- could be many versions of the package locally
             locPacVer <- package_version(localVer[keepLoc]) # keep all that pass version check
-            keepLoc <- which(keepLoc)[which(max(locPacVer) == locPacVer)] # take the one that passes version check that is max version
+            keepLoc <- which(keepLoc)[which(max(locPacVer) == locPacVer)][1] # take the one that passes version check that is max version
             if (any(keepRep %in% TRUE)) { # remote has as at least 1 that is good # next, take local if local is same or newer than remote
               ord <- order(c(package_version(localVer[keepLoc]), package_version(VersionOnRepos)), decreasing = TRUE) # local first
               if (ord[1] %in% seq_along(localVer[keepLoc]))# if it is first, then it is bigger or equal, so keep
-                fn <- fn[ord[1]]
+                fn <- fn[keepLoc][ord[1]]
               else
                 fn <- ""
             } else {
@@ -1318,6 +1319,7 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 
 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
+  #### Uses pkgInstall #####
   if (!is.null(getOptionRPackageCache())) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
@@ -1553,6 +1555,7 @@ renameLocalGitPkgDT <- function(pkgInstall) {
 }
 
 renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
+  ##### Vectorized on localFile #####
   if (length(localFile)) {
     splitted <- lapply(basename(localFile), function(lf) strsplit(lf, "_")[[1]])
     newSHAname <- Map(spli = splitted, SHA = SHAonGH, function(spli, SHA) {
@@ -1568,7 +1571,7 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 }
 
 #' @importFrom stats na.omit
-copyBuiltToCache <- function(tmpdirs, pkgInstall) {
+copyBuiltToCache <- function(pkgInstall, tmpdirs) {
 
   if (!is.null(pkgInstall)) {
     if (!is.null(getOptionRPackageCache())) {
@@ -1604,6 +1607,7 @@ copyBuiltToCache <- function(tmpdirs, pkgInstall) {
 NoPkgsSupplied <- "No packages supplied"
 
 anyHaveHEAD <- function(packages) {
+  # Vectorize
   haveHead <- grepl(HEADgrep, packages)
   if (any(haveHead)) {
     origPackages <- packages
