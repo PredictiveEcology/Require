@@ -341,6 +341,19 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
   return(invisible(res))
 }
 
+#' @rdname linkOrCopy
+#' `fieRenameOrMove` is like `file.rename`, but will work across disks.
+#'
+fileRenameOrMove <- function(from, to) {
+  res <- suppressWarnings(file.rename(from, to)) ## try hardlink
+  if (any(!res)) {
+    res[!res] <- suppressWarnings(
+      file.copy(from[!res], to[!res])) ## finally, copy the file
+    unlink(from[!res])
+  }
+  return(invisible(res))
+}
+
 timestamp <- function() {
   format(Sys.time(), "%Y%m%d%H%M%S")
 }

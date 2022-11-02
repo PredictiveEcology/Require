@@ -801,7 +801,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
       basename(bad)
     }
     newName <- gsub(badToChange, pkgName, bad)
-    file.rename(bad, newName) # it was downloaded with a branch suffix
+    fileRenameOrMove(bad, newName) # it was downloaded with a branch suffix
     newName
   })
   )
