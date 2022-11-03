@@ -508,7 +508,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
       urlsOuter <- c()
       extension <- if (isWindows()) ".zip" else ".tgz"
       osNameOnMRAN <- if (isWindows()) "windows" else "macosx"
-      messageVerbose("-- Determining dates on MRAN to get correct versions ... ",
+      messageVerbose("-- Determining dates on MRAN to get binaries with correct versions ... ",
                      verbose = verbose, verboseLevel = 1)
       total <- length(unname(installPkgNames)[onMRAN])
       installVersions <- toInstall[["VersionOnRepos"]]
@@ -572,6 +572,9 @@ secondsInADay <- 3600 * 24
 
 archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
                        srcPackageURLOnCRAN, repo, srcContrib) {
+  messageVerbose("Identifying date range when package versions appear in Archive for ",
+                 length(possiblyArchivedPkg), " packages:", verbose = verbose,
+                 verboseLevel = 2)
   Map(pk = possiblyArchivedPkg, counter = counter, USE.NAMES = TRUE,
       function(pk, counter) {
         messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
