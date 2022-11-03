@@ -1171,7 +1171,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     }
     if (any(!isNA))
       ap[!isNA, "Version"] <- toInstallList[[i]]$VersionOnRepos[!isNA]
-    if (i %in% "Archive") {
+    if (i %in% c("Archive", "CRAN")) {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
     if (i %in% c("Local", "GitHub")) {
