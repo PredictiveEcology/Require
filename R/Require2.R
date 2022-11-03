@@ -1176,7 +1176,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       fnBase <- basename(localFile2)
       file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
       newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
-      file.rename(fnBase, newNameWithoutSHA)
+      fileRenameOrMove(fnBase, newNameWithoutSHA)
       ap[, "File"] <- newNameWithoutSHA
       ap[, "Repository"] <-
         paste0("file:///", normPath("."))
@@ -1235,7 +1235,7 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
   fns <- pkgInstall$localFile
   movedFilename <- file.path(localFileDir, basename(fns))
   if (!identical(fns, movedFilename)) {
-    file.rename(fns, movedFilename)
+    fileRenameOrMove(fns, movedFilename)
     set(pkgInstall, NULL, "localFile", movedFilename)
   }
   pkgInstall
@@ -1564,7 +1564,7 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
       paste0(spli[1], "-", SHA, "_", paste(spli[-1], collapse = "_"))
     })
     newSHAname <- unlist(file.path(dirname(localFile), newSHAname))
-    file.rename(localFile, newSHAname)
+    fileRenameOrMove(localFile, newSHAname)
     out <- newSHAname
   } else {
     out <- ""
@@ -1595,7 +1595,7 @@ copyBuiltToCache <- function(pkgInstall, tmpdirs) {
           tdPkgs <- tdPkgs[-whAlreadyInCache]
         if (length(tdPkgs)) {
           newFiles <- file.path(getOptionRPackageCache(), basename(tdPkgs))
-          suppressWarnings(file.rename(tdPkgs, newFiles))
+          suppressWarnings(fileRenameOrMove(tdPkgs, newFiles))
         }
       }
 
