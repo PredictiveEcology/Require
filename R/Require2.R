@@ -1752,7 +1752,7 @@ getArchiveURL <- function(repo, pkg) {
 
 isGitHub <- function(pkg, filenames) {
   if (!missing(filenames)) {
-    isGH <- unlist(lapply(strsplit(basename(filenames), split = "-|_"), length)) == 3
+    isGH <- grepl("-[[:alnum:]]{40}_", basename(filenames))
   } else {
     isGH <- extractPkgGitHub(pkg)
     isGH <- !is.na(isGH)
