@@ -1175,7 +1175,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
     if (i %in% c("Local", "GitHub")) {
-      localFile2 <- toInstall[]$localFile
+      localFile2 <- toInstallList[[i]]$localFile
       fnBase <- basename(localFile2)
       file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
       newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
