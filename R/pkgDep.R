@@ -363,8 +363,8 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                   messageVerbose("available.packages() does not have correct information on package dependencies for ", pkgPrint,
                                  "; checking CRAN archives", verbose = verbose, verboseLevel = 1)
                   for (repo in repos) {
-                    url <- file.path(repo, srcContrib, "/Archive", packageURL)
-                    url2 <- file.path(repo, srcContrib, basename(packageURL))
+                    url <- getArchiveURL(repo, packageURL)
+                    url2 <- file.path(contrib.url(repo), basename(packageURL))
                     tf <- tempfile()
                     if (isFALSE(getOption("Require.offlineMode", FALSE)))
                     haveFile <- suppressWarnings(tryCatch(download.file(url, tf, quiet = TRUE), error = function(x)
@@ -1134,12 +1134,9 @@ paddedFloatToChar <- function(x, padL = ceiling(log10(x + 1)), padR = 3, pad = "
   return(xFCEnd)
 }
 
-srcContrib <- "src/contrib"
 
 saveNamesForCache <- function(packages, which, recursive, ap) {
   isGH <- isGitHub(packages)
-  # isGH <- extractPkgGitHub(packages)
-  # isGH <- !is.na(isGH)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
     shas <- Map(repo = pkgDT$Repo, acct = pkgDT$Account, br = pkgDT$Branch,

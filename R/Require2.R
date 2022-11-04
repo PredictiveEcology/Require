@@ -578,7 +578,7 @@ secondsInADay <- 3600 * 24
 
 
 archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
-                       srcPackageURLOnCRAN, repo, srcContrib) {
+                       srcPackageURLOnCRAN, repo) {
   Map(pk = possiblyArchivedPkg, counter = counter, USE.NAMES = TRUE,
       function(pk, counter) {
         # messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
@@ -630,7 +630,7 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
           }
 
           archivedOn <- publishedDate
-          PackageUrl <- ""#file.path(repos, srcContrib, )
+          PackageUrl <- ""
         }
         archivedOn <- as.character(as.POSIXct(archivedOn) - 3600 * 24)
         list(PackageUrl = PackageUrl, archivedOn = archivedOn)
@@ -1534,7 +1534,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
         if (is.na(correctVersions[2])) {
           dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos, numGroups = numGroups,
                                               counter = .GRP,
-                                              srcPackageURLOnCRAN, repo, srcContrib)
+                                              srcPackageURLOnCRAN, repo)
           dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
         } else {
           dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
@@ -1777,7 +1777,7 @@ messagesAboutWarnings <- function(w, toInstall) {
 }
 
 getArchiveURL <- function(repo, pkg) {
-  file.path(repo, srcContrib, "Archive", pkg)
+  file.path(contrib.url(repo), "Archive", pkg)
 }
 
 isGitHub <- function(pkg, filenames) {
