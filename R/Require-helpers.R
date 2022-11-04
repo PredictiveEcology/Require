@@ -1152,7 +1152,6 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   urls <- split(urls, hasMasterMain)
   outNotMasterMain <- outMasterMain <- character()
 
-  browser()
   for (i in 1:5) {
     tried <- try(
       {

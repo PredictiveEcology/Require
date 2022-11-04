@@ -1267,8 +1267,11 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
   if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-    pkgGitHub <- getGitHubFile(pkgGitHub)
-    pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+    notYet <- is.na(pkgGitHub$VersionOnRepos)
+    if (any(notYet)) {
+      pkgGitHub <- getGitHubFile(pkgGitHub)
+      pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+    }
   }
   pkgGitHub
 }
