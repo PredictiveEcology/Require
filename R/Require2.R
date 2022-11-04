@@ -1501,7 +1501,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   numGroups <- NROW(pkgArchive)
 
   messageVerbose("Identifying date range when package versions appear in Archive for ",
-                 NROW(pkgArchive), " packages:", verbose = verbose,
+                 NROW(pkgArchive), " packages", verbose = verbose,
                  verboseLevel = 2)
 
   pkgArchive[, (cols) := {
