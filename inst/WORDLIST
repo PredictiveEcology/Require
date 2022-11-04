@@ -1,8 +1,7 @@
 3x
-CMD
 Chubaty
-Eddelbuettel
 GitHub
+GitSubFolder
 LinkingTo
 MRAN
 MacOSX
@@ -11,8 +10,10 @@ ORCID
 PredictiveEcology
 README
 RStudio
+Repo
 SHA
 SHAs
+VersionOnRepos
 Workflows
 bugfix
 bugfixes
@@ -22,12 +23,15 @@ filepath
 filesystem
 github
 gitter
+gz
 hardlink
 https
 ie
 im
 iteratively
 pak
+pkgDT
+pkgDep
 ps
 reinstallation
 repo
@@ -39,5 +43,6 @@ symlink
 usepak
 vectorized
 versa
+versionSpec
 workflow
 workflows

@@ -2,7 +2,7 @@
 % Please edit documentation in R/pkgDep.R
 \name{clearRequirePackageCache}
 \alias{clearRequirePackageCache}
-\title{Clear Require Cache elemenets}
+\title{Clear Require Cache elements}
 \usage{
 clearRequirePackageCache(
   packages,
@@ -27,5 +27,5 @@ NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object wi
 \code{attr(.., "Require")} which has lots of information about the processes of the installs.}
 }
 \description{
-Clear Require Cache elemenets
+Clear Require Cache elements
 }

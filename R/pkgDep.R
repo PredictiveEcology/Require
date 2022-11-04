@@ -1331,7 +1331,7 @@ getAvailablePackagesIfNeeded <- function(packages, repos, purge, verbose, type) 
   ap
 }
 
-#' Clear Require Cache elemenets
+#' Clear Require Cache elements
 #'
 #' @param packages Either missing or a character vector of package names (currently cannot
 #' specify version number) to remove from the local Require Cache.

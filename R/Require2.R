@@ -29,8 +29,8 @@ utils::globalVariables(c(
 #' `Require` is intended to replace `base::require`, thus it returns a logical, named vector
 #' indicating whether the named packages have been loaded.  Because `Require` also has
 #' the ability to install packages, a return value of `FALSE` does not mean that it
-#' didn't install correctly; rather, it means it didn't attach with `require`, which
-#' could be because it didn't install correctly, or also because e.g., `require = FALSE`.
+#' did not install correctly; rather, it means it did not attach with `require`, which
+#' could be because it did not install correctly, or also because e.g., `require = FALSE`.
 #'
 #' `standAlone` will either put the `Require`d packages and their
 #' dependencies *all* within the `libPaths` (if `TRUE`) or if

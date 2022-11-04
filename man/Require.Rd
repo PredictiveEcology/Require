@@ -100,8 +100,8 @@ give individual options for those 2 internal function calls.}
 \code{Require} is intended to replace \code{base::require}, thus it returns a logical, named vector
 indicating whether the named packages have been loaded.  Because \code{Require} also has
 the ability to install packages, a return value of \code{FALSE} does not mean that it
-didn't install correctly; rather, it means it didn't attach with \code{require}, which
-could be because it didn't install correctly, or also because e.g., \code{require = FALSE}.
+did not install correctly; rather, it means it did not attach with \code{require}, which
+could be because it did not install correctly, or also because e.g., \code{require = FALSE}.
 
 \code{standAlone} will either put the \code{Require}d packages and their
 dependencies \emph{all} within the \code{libPaths} (if \code{TRUE}) or if
@@ -111,7 +111,7 @@ R package directory. Any packages or dependencies that are not yet installed wil
 be installed in \code{libPaths}.
 }
 \description{
-A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and `require` for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and GitHub packages. This approach is developed to create reproducible workflows that are flexible and fast enough to use while in development stages, while able to build snapshots once a stable package collection is found. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the user or developer.
+A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and `require` for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and Github packages. This approach is developed to create reproducible workflows that are flexible and fast enough to use while in development stages, while able to build snapshots once a stable package collection is found. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the user or developer.
 
 This is an "all in one" function that will run \code{install.packages} for CRAN and
 GitHub \url{https://github.com/} packages and will install
