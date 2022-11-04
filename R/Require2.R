@@ -380,7 +380,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
-    "binary"
+    # "binary"
     unique(c("source", "binary")[toInstall$isBinaryInstall + 1])
   } else {
     "source"
@@ -700,8 +700,8 @@ recordLoadOrder <- function(packages, pkgDT) {
   if (any(dups))
     packages <- packages[!dups]
   packagesWObase <- setdiff(packages, .basePkgs)
-  out <- try(
-    pkgDT[packageFullName %in% packagesWObase, loadOrder := seq_along(packagesWObase)])
+  wh <- pkgDT$packageFullName %in% packagesWObase
+  out <- try(pkgDT[wh, loadOrder := seq(sum(wh))])
   pkgDT[, loadOrder := na.omit(unique(loadOrder))[1], by = "Package"] # all but one will be removed in trimRedundancies
 
   if (is(out, "try-error"))
@@ -1152,14 +1152,19 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
   }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
+
   if (length(pkgsNotInAP)) { # basically no version is there
     ap3 <- ap[seq(length(pkgsNotInAP)),, drop = FALSE]
     ap3[, "Package"] <- pkgsNotInAP
+    rownames(ap3) <- ap3[, "Package"]
     ap3[, "Version"] <- toInstall[Package %in% pkgsNotInAP]$VersionOnRepos
     if (!is.null(toInstall$Repository))
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     ap3[, "Depends"] <- NA
-    ap3[, "Imports"] <- NA
+    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP]$packageFullName, recursive = T)
+    deps2 <- unlist(Map(dep = deps, nam = names(deps), function(dep, nam)
+      paste(setdiff(extractPkgName(dep), extractPkgName(nam)), collapse = ", "))) # -1 is "drop self"
+    ap3[match(extractPkgName(names(deps2)), ap3[, "Package"]), "Imports"] <- deps2
     ap3[, "Suggests"] <- NA
     rownames(ap3) <- pkgsNotInAP
   } else {
@@ -1738,24 +1743,24 @@ messagesAboutWarnings <- function(w, toInstall) {
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
   if (length(rowsInPkgDT)) {
     toInstall[rowsInPkgDT, installed := FALSE]
-    toInstall[rowsInPkgDT, installResult := w$message]
+      toInstall[rowsInPkgDT, installResult := w$message]
 
-    if (any(grepl("cannot remove prior installation of package", w$message))) {
-      warning("Is ", pkgName, " loaded in another R session? Please close all sessions before installing packages")
-      needWarning <- FALSE
-    } else {
-      needWarning <- TRUE
-    }
-  }
-  if (!is.null(getOptionRPackageCache())) {
-    if (startsWith(pkgName, getOptionRPackageCache())) {
-      messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
-      unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
-      retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
-      if (is(retrying, "try-error"))
+      if (any(grepl("cannot remove prior installation of package", w$message))) {
+        warning("Is ", pkgName, " loaded in another R session? Please close all sessions before installing packages")
+        needWarning <- FALSE
+      } else {
         needWarning <- TRUE
-    } else {
-      needWarning <- TRUE
+      }
+    }
+    if (!is.null(getOptionRPackageCache())) {
+      if (startsWith(pkgName, getOptionRPackageCache())) {
+        messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
+        unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
+        retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
+        if (is(retrying, "try-error"))
+          needWarning <- TRUE
+      } else {
+        needWarning <- TRUE
     }
   } else {
     needWarning <- TRUE
