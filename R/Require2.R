@@ -4,7 +4,7 @@ utils::globalVariables(c(
   "Branch", "contrib.url", "correctVersionAvail", "depOrOrig",
   "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
   "hasAtLeastOneNonNA", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
-  "haveLocal", "ineq", "installed", "installedVersionOK", "isBinaryInstall",
+  "haveLocal", "ineq", "installed", "installedVersionOK", "installSafeGroups", "isBinaryInstall",
   "isEquals", "keepBasedOnRedundantInequalities", "libPaths",
   "loaded", "loadOrder", "localFile", "needInstall", "NoPkgsSupplied",
   "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
