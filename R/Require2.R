@@ -579,9 +579,6 @@ secondsInADay <- 3600 * 24
 
 archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
                        srcPackageURLOnCRAN, repo, srcContrib) {
-  # messageVerbose("Identifying date range when package versions appear in Archive for ",
-  #                length(possiblyArchivedPkg), " packages:", verbose = verbose,
-  #                verboseLevel = 2)
   Map(pk = possiblyArchivedPkg, counter = counter, USE.NAMES = TRUE,
       function(pk, counter) {
         # messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
@@ -1500,9 +1497,10 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
   numGroups <- NROW(pkgArchive)
 
-  messageVerbose("Identifying date range when package versions appear in Archive for ",
-                 NROW(pkgArchive), " packages", verbose = verbose,
-                 verboseLevel = 2)
+  if (isWindows() || isMacOSX())
+    messageVerbose("Identifying date range when package versions appear in Archive for ",
+                   NROW(pkgArchive), " packages", verbose = verbose,
+                   verboseLevel = 2)
 
   pkgArchive[, (cols) := {
     Version2 <-  gsub(".*_(.*)\\.tar\\.gz", "\\1", ava[[Package]]$PackageUrl)
