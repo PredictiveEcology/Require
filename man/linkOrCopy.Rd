@@ -2,9 +2,12 @@
 % Please edit documentation in R/helpers.R
 \name{linkOrCopy}
 \alias{linkOrCopy}
+\alias{fileRenameOrMove}
 \title{Create link to file, falling back to making a copy if linking fails.}
 \usage{
 linkOrCopy(from, to, allowSymlink = FALSE)
+
+fileRenameOrMove(from, to)
 }
 \arguments{
 \item{from, to}{character vectors, containing file names or paths.}

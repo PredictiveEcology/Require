@@ -323,6 +323,7 @@ modifyList3 <- function(..., keep.null = TRUE) {
 #' If that fails, try a symbolic link (symlink) before falling back to copying the file.
 #' "File" here can mean a file or a directory.
 #'
+#' @rdname linkOrCopy
 #' @param from,to character vectors, containing file names or paths.
 #' @param allowSymlink Logical. If `FALSE`, the default, then it will try `file.link` first, then
 #'   `file.copy`, omitting the `file.symlink` step
@@ -341,9 +342,8 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
   return(invisible(res))
 }
 
+#' `fileRenameOrMove` is like `file.rename`, but will work across disks.
 #' @rdname linkOrCopy
-#' `fieRenameOrMove` is like `file.rename`, but will work across disks.
-#'
 fileRenameOrMove <- function(from, to) {
   res <- suppressWarnings(file.rename(from, to)) ## try hardlink
   if (any(!res)) {
