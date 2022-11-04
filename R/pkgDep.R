@@ -102,6 +102,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     # Expand it back out to full length
 
     needGet <- unlist(lapply(neededFull1, is.null))
+    packageFullNamesToGet <- names(needGet)[needGet]
     if (any(needGet)) {
       fn <- pkgDepDBFilename()
       if (length(fn)) { # user may not be using Cache
@@ -113,7 +114,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
             ord <- match(saveNames, names(savedNeededFull1))
             have <- savedNeededFull1[ord]
             names(have) <- names(saveNames)
-            toGet <- names(needGet)[needGet]
+            toGet <- packageFullNamesToGet
             toGet <- toGet[toGet %in% names(have)]
             neededFull1[toGet] <- have[toGet]
             needGet <- unlist(lapply(neededFull1, is.null))
@@ -138,6 +139,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        verbose = verbose, verboseLevel = 0)
       ap <- getAvailablePackagesIfNeeded(packages[needGet], repos, purge, verbose, type)
       neededFull <- try(pkgDepInnerMemoise(packages = names(needGet)[needGet], libPath = libPath,
+      neededFull <- try(pkgDepInnerMemoise(packages = packageFullNamesToGet, libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
                                        purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase,
                                        type = type, ap = ap))
