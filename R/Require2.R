@@ -579,13 +579,13 @@ secondsInADay <- 3600 * 24
 
 archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
                        srcPackageURLOnCRAN, repo, srcContrib) {
-  messageVerbose("Identifying date range when package versions appear in Archive for ",
-                 length(possiblyArchivedPkg), " packages:", verbose = verbose,
-                 verboseLevel = 2)
+  # messageVerbose("Identifying date range when package versions appear in Archive for ",
+  #                length(possiblyArchivedPkg), " packages:", verbose = verbose,
+  #                verboseLevel = 2)
   Map(pk = possiblyArchivedPkg, counter = counter, USE.NAMES = TRUE,
       function(pk, counter) {
-        messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
-                       verboseLevel = 2)
+        # messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
+        #                verboseLevel = 2)
         uu <- url(paste0("https://cran.r-project.org/package=", pk))
         on.exit(try(close(uu), silent = TRUE))
         rl <- suppressWarnings(try(readLines(uu), silent = TRUE))
@@ -1500,6 +1500,10 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
   numGroups <- NROW(pkgArchive)
 
+  messageVerbose("Identifying date range when package versions appear in Archive for ",
+                 NROW(pkgArchive), " packages:", verbose = verbose,
+                 verboseLevel = 2)
+
   pkgArchive[, (cols) := {
     Version2 <-  gsub(".*_(.*)\\.tar\\.gz", "\\1", ava[[Package]]$PackageUrl)
     if (length(Version2) > 0) {
@@ -1527,6 +1531,8 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
       ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
 
       if (isWindows() || isMacOSX()) { # relevant for MRAN
+        messageVerbose(.GRP, " of ", numGroups, ": ", Package, verbose = verbose,
+                       verboseLevel = 2)
         if (is.na(correctVersions[2])) {
           dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos, numGroups = numGroups,
                                               counter = .GRP,
