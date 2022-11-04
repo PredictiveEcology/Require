@@ -138,7 +138,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
                        if (NpackagesGitHub > 0) paste0("; ", NpackagesGitHub, " packages on GitHub"),
                        verbose = verbose, verboseLevel = 0)
       ap <- getAvailablePackagesIfNeeded(packages[needGet], repos, purge, verbose, type)
-      neededFull <- try(pkgDepInnerMemoise(packages = names(needGet)[needGet], libPath = libPath,
       neededFull <- try(pkgDepInnerMemoise(packages = packageFullNamesToGet, libPath = libPath,
                                        which = which[[1]], keepVersionNumber = keepVersionNumber,
                                        purge = FALSE, repos = repos, verbose = verbose, includeBase = includeBase,
