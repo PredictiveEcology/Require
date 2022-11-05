@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
       </span>
     </div>
 
@@ -48,6 +48,30 @@
     </div>
 
     <div class="section level2">
+<h2 class="page-header" data-toc-text="0.1.7" id="version-017">version 0.1.7<a class="anchor" aria-label="anchor" href="#version-017"></a></h2>
+<div class="section level3">
+<h3 id="enhancements-0-1-7">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-7"></a></h3>
+<ul><li>new <code>options("Require.offlineMode")</code> can be set to <code>FALSE</code> to stop <code>Require</code> and <code>pkgDep</code> from checking the internet. This will fail, unless the cached packages are available locally (i.e., it was run once with all packages installed previously). If they are, then they will be installed without needing the internet. This option will also be set automatically on the first attempt to get a file from the internet, which fails, triggering a test of the internet. If that fails, then the option will be set to <code>FALSE</code> until next call to <code>Require</code> or <code>pkgDep</code> when it will be reset. This is experimental still.</li>
+<li>many more edge cases found and dealt with</li>
+<li>experimental use of <code>(HEAD)</code> to keep a package “up to date” with the HEAD of a GitHub branch. The behaviour still uses version numbering, so will not update based on SHA, but if the HEAD is ahead of the locally installed package and the <code>(HEAD)</code> is specified, then it will update. Specifically, use this instead of a version number, e.g., <code>"PredictiveEcology/Require@development (HEAD)"</code>
+</li>
+<li>
+<code>modifyList2</code> now follows <code>modifyList</code> by adding the <code>keep.null</code> argument.</li>
+<li>
+<code>setdiffNamed</code> will compare 2 named lists or vectors and keep on those elements that are in the first list (or vector), keeping in mind the name as well as the element.</li>
+<li>package messaging is not sorted alphabetically during installation</li>
+<li>all <code>message</code> calls now <code>messageVerbose</code>, so verbosity can be fully controlled with the argument <code>verbose</code> or <code>options("Require.verbose")</code>. See <code><a href="../reference/RequireOptions.html">?RequireOptions</a></code>.</li>
+<li>tests clean up more completely after themselves</li>
+<li>if <code>options(Require.RPackageCache = FALSE)</code> (or environment variable of the same name), then no cache folder will be created; previously a nearly empty folder was created by default. See <code><a href="../reference/RequireOptions.html">?RequireOptions</a></code>
+</li>
+<li>Remove option <code>Require.persistentPkgEnv</code> as it was deemed superfluous.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bugfix-0-1-7">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-1-7"></a></h3>
+<ul><li>pkgDep was using local <code>DESCRIPTION</code> file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer’s case), then this is desirable. But, when the local installed version is behind CRAN (a common user’s case), then this is not desirable. <code>pkgDep</code> now uses CRAN’s version as developers can handle this situation on their own.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.6" id="version-016">version 0.1.6<a class="anchor" aria-label="anchor" href="#version-016"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-6">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-6"></a></h3>
@@ -60,17 +84,20 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bugfix-0-1-6">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-1-6"></a></h3>
-<ul><li>minor bugfix only detected on submission to CRAN</li></ul></div>
+<ul><li>minor bugfix only detected on submission to CRAN</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.5" id="version-015">version 0.1.5<a class="anchor" aria-label="anchor" href="#version-015"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-5">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-5"></a></h3>
-<ul><li>package caching for packages that need sources installs (i.e., identified with <code><a href="../reference/sourcePkgs.html">sourcePkgs()</a></code>, which tend to occur when R packages require idiosyncratic system dependencies) cache the binary version and reuse that on the same system with subsequent re-installs.</li></ul></div>
+<ul><li>package caching for packages that need sources installs (i.e., identified with <code><a href="../reference/sourcePkgs.html">sourcePkgs()</a></code>, which tend to occur when R packages require idiosyncratic system dependencies) cache the binary version and reuse that on the same system with subsequent re-installs.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="bugfix-0-1-5">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-1-5"></a></h3>
 <ul><li>
-<code>pkgDep</code> was misidentifying the correct package dependencies. This would manifest when a user had a version of package “A” installed as well as all its dependencies, e.g., “B”. When the user updated “A” to a new version that required a new version of “B”, it would not correctly identify the new dependency requirement, and not update “B”, causing “A” update to fail. This is fixed.</li></ul></div>
+<code>pkgDep</code> was misidentifying the correct package dependencies. This would manifest when a user had a version of package “A” installed as well as all its dependencies, e.g., “B”. When the user updated “A” to a new version that required a new version of “B”, it would not correctly identify the new dependency requirement, and not update “B”, causing “A” update to fail. This is fixed.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.4" id="version-014">version 0.1.4<small>2022-10-07</small><a class="anchor" aria-label="anchor" href="#version-014"></a></h2>
@@ -85,13 +112,15 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bugfixes-0-1-4">bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-0-1-4"></a></h3>
-<ul><li>more edge cases found and dealt with</li></ul></div>
+<ul><li>more edge cases found and dealt with</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.2" id="version-012">version 0.1.2<small>2022-09-23</small><a class="anchor" aria-label="anchor" href="#version-012"></a></h2>
 <div class="section level3">
 <h3 id="dependencies-0-1-2">dependencies<a class="anchor" aria-label="anchor" href="#dependencies-0-1-2"></a></h3>
-<ul><li>drop support for R 3.6 (R &gt;= 4.0 are supported)</li></ul></div>
+<ul><li>drop support for R 3.6 (R &gt;= 4.0 are supported)</li>
+</ul></div>
 <div class="section level3">
 <h3 id="enhancements-0-1-2">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-2"></a></h3>
 <ul><li><p>The <code>Require</code> argument, <code>require</code>, can now be a character string, indicating which packages should be attached via <code>require</code></p></li>
@@ -125,10 +154,12 @@
 <h2 class="page-header" data-toc-text="0.1.1" id="version-011">version 0.1.1<a class="anchor" aria-label="anchor" href="#version-011"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-1">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-1"></a></h3>
-<ul><li>can now use <code>pak</code> if <code>options("Require.usepak" = TRUE)</code> and there are no version specifications (i.e., if a user specifies e.g., <code>Require("reproducible (&lt;= 1.2.9))</code>, then the non-<code>pak</code> approach will be used)</li></ul></div>
+<ul><li>can now use <code>pak</code> if <code>options("Require.usepak" = TRUE)</code> and there are no version specifications (i.e., if a user specifies e.g., <code>Require("reproducible (&lt;= 1.2.9))</code>, then the non-<code>pak</code> approach will be used)</li>
+</ul></div>
 <div class="section level3">
 <h3 id="bugfixes-0-1-1">bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-0-1-1"></a></h3>
-<ul><li>fixed an error installing certain GitHub packages</li></ul></div>
+<ul><li>fixed an error installing certain GitHub packages</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.0" id="version-010">version 0.1.0<a class="anchor" aria-label="anchor" href="#version-010"></a></h2>
@@ -158,12 +189,14 @@
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.0.13" id="version-0013">version 0.0.13<small>2021-05-31</small><a class="anchor" aria-label="anchor" href="#version-0013"></a></h2>
-<ul><li>fix CRAN policy violation – dealt with extraneous folder created during testing</li></ul></div>
+<ul><li>fix CRAN policy violation – dealt with extraneous folder created during testing</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.0.12" id="version-0012">version 0.0.12<small>2021-05-26</small><a class="anchor" aria-label="anchor" href="#version-0012"></a></h2>
 <div class="section level3">
 <h3 id="dependency-changes-0-0-12">Dependency changes<a class="anchor" aria-label="anchor" href="#dependency-changes-0-0-12"></a></h3>
-<ul><li>with the release of R 4.1, we dropped support for R 3.5. R 3.6 (<code>oldrel</code>) and newer are supported.</li></ul></div>
+<ul><li>with the release of R 4.1, we dropped support for R 3.5. R 3.6 (<code>oldrel</code>) and newer are supported.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="new-features-0-0-12">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-12"></a></h3>
 <ul><li>
@@ -244,16 +277,19 @@
 <div class="section level3">
 <h3 id="new-features-0-0-7">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-7"></a></h3>
 <ul><li>no longer sets CRAN repository to cloud.r-project.org even if non-interactive with no CRAN repository set. Now uses <code>chooseCRANmirror(ind = 1)</code>
-</li></ul></div>
+</li>
+</ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-7">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-7"></a></h3>
-<ul><li>fixes CRAN check issues on Fedora.</li></ul></div>
+<ul><li>fixes CRAN check issues on Fedora.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.0.6" id="version-006">version 0.0.6<small>2020-08-11</small><a class="anchor" aria-label="anchor" href="#version-006"></a></h2>
 <div class="section level3">
 <h3 id="new-features-0-0-6">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-6"></a></h3>
-<ul><li>none</li></ul></div>
+<ul><li>none</li>
+</ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-6">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-6"></a></h3>
 <ul><li>fixed CRAN check issues.</li>
@@ -264,7 +300,8 @@
 <h2 class="page-header" data-toc-text="0.0.5" id="version-005">version 0.0.5<small>2020-07-17</small><a class="anchor" aria-label="anchor" href="#version-005"></a></h2>
 <div class="section level3">
 <h3 id="new-features-0-0-5">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-5"></a></h3>
-<ul><li>moved several functions that have to do with package loading and installing from <code>reproducible</code> to <code>Require</code>, including <code>pkgDep</code>, <code>pkgDepTopoSort</code>.</li></ul></div>
+<ul><li>moved several functions that have to do with package loading and installing from <code>reproducible</code> to <code>Require</code>, including <code>pkgDep</code>, <code>pkgDepTopoSort</code>.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-5">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-5"></a></h3>
 <ul><li>recursive <code>pkgDep</code> did not correctly resolve multiple instances of the same package, each with different minimum version numbering. Now it reports minimum version required for all package dependencies.</li>
@@ -276,14 +313,17 @@
 <h2 class="page-header" data-toc-text="0.0.4" id="version-004">version 0.0.4<small>2020-06-05</small><a class="anchor" aria-label="anchor" href="#version-004"></a></h2>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-4">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-4"></a></h3>
-<ul><li>remove <code>installed.packages</code> from test code, as per CRAN request</li></ul></div>
+<ul><li>remove <code>installed.packages</code> from test code, as per CRAN request</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.0.3" id="version-003">version 0.0.3<a class="anchor" aria-label="anchor" href="#version-003"></a></h2>
-<ul><li>Change title to Title Case in DESCRIPTION</li></ul></div>
+<ul><li>Change title to Title Case in DESCRIPTION</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.0.2" id="version-002">version 0.0.2<a class="anchor" aria-label="anchor" href="#version-002"></a></h2>
-<ul><li>Change backticks to single quotes in DESCRIPTION</li></ul></div>
+<ul><li>Change backticks to single quotes in DESCRIPTION</li>
+</ul></div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.0.1" id="version-001">version 0.0.1<a class="anchor" aria-label="anchor" href="#version-001"></a></h2>
 <div class="section level3">

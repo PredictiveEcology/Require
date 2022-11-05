@@ -18,7 +18,7 @@ of some use for advanced users."><!-- mathjax --><script src="https://cdnjs.clou
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
       </span>
     </div>
 
@@ -55,42 +55,13 @@ of some use for advanced users.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">getPkgVersions</span><span class="op">(</span><span class="va">pkgDT</span>, install <span class="op">=</span> <span class="cn">TRUE</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">getAvailable</span><span class="op">(</span></span>
-<span>  <span class="va">pkgDT</span>,</span>
-<span>  purge <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">installFrom</span><span class="op">(</span></span>
-<span>  <span class="va">pkgDT</span>,</span>
-<span>  purge <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">doInstalls</span><span class="op">(</span></span>
-<span>  <span class="va">pkgDT</span>,</span>
-<span>  <span class="va">install_githubArgs</span>,</span>
-<span>  <span class="va">install.packagesArgs</span>,</span>
-<span>  install <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>,</span>
-<span>  <span class="va">...</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">doLoading</span><span class="op">(</span><span class="va">pkgDT</span>, require <span class="op">=</span> <span class="cn">TRUE</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">archiveVersionsAvailable</span><span class="op">(</span><span class="va">package</span>, <span class="va">repos</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">getPkgVersions</span><span class="op">(</span><span class="va">pkgDT</span>, install <span class="op">=</span> <span class="cn">TRUE</span>, verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>pkgDT</dt>
-<dd><p>A character string with full package names or a <code>data.table</code>
-with at least 2 columns <code>"Package"</code> and <code>"packageFullName"</code>.</p></dd>
+<dd><p>A pkgDT data.table.</p></dd>
 
 
 <dt>install</dt>
@@ -108,52 +79,6 @@ If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <c
 NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an attribute:
 <code>attr(.., "Require")</code> which has lots of information about the processes of the installs.</p></dd>
 
-
-<dt>purge</dt>
-<dd><p>Logical. Should all caches be purged?
-Default is <code>getOption("Require.purge", FALSE)</code>.
-There is a lot of internal caching of results throughout the <code>Require</code> package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
-The cached values are renewed when found to be too old, with the age limit.
-This maximum age can be set in seconds with the environment variable
-<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset,
-defaults to 3600  (one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
-<p>Internally, there are calls to <code>available.packages</code>.</p></dd>
-
-
-<dt>repos</dt>
-<dd><p>The remote repository (e.g., a CRAN mirror), passed to either
-<code>install.packages</code>, <code>install_github</code> or <code>installVersions</code>.</p></dd>
-
-
-<dt>install_githubArgs</dt>
-<dd><p>List of optional named arguments, passed to <code>install.packages</code>
-inside <code>installGitHubPackage</code>.</p></dd>
-
-
-<dt>install.packagesArgs</dt>
-<dd><p>List of optional named arguments, passed to <code>install.packages</code>.</p></dd>
-
-
-<dt>...</dt>
-<dd><p>Passed to <code>install.packages</code>.
-Good candidates are e.g., <code>type</code> or <code>dependencies</code>. This can be
-used with <code>install_githubArgs</code> or <code>install.packageArgs</code> which
-give individual options for those 2 internal function calls.</p></dd>
-
-
-<dt>require</dt>
-<dd><p>Logical or character string. If <code>TRUE</code>, the default, then the function will
-attempt to call <code>require</code> on all requested <code>packages</code>, possibly
-after they are installed. If a character string, then it will only call <code>require</code>
-on those specific packages (i.e., it will install the ones listed in <code>packages</code>, but
-load the packages listed in <code>require</code>)</p></dd>
-
-
-<dt>package</dt>
-<dd><p>A single package name (without version or github specifications)</p></dd>
-
 </dl></div>
     <div id="value">
     <h2>Value</h2>
@@ -161,15 +86,6 @@ load the packages listed in <code>require</code>)</p></dd>
 
 <p>In general, these functions return a <code>data.table</code> with various package
 information, installation status, version, available version etc.</p>
-    </div>
-    <div id="details">
-    <h2>Details</h2>
-    <p><code>doInstall</code> is a wrapper around <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">utils::install.packages</a></code>,
-<code>installGithub</code>, and <code>installCRAN</code>, and <code>installArchive</code></p>
-<p><code>doLoading</code> is a wrapper around <code>require</code>.</p>
-<p><code>archiveVersionsAvailable</code> searches CRAN Archives for available versions.
-It has been borrowed from a sub-set of the code in a non-exported function:
-<code>remotes:::download_version_url</code></p>
     </div>
 
   </div>

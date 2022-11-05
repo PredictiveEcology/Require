@@ -34,10 +34,22 @@
     <loc>/reference/RequireOptions.html</loc>
   </url>
   <url>
+    <loc>/reference/availablePackagesOverride.html</loc>
+  </url>
+  <url>
+    <loc>/reference/availableVersionOK.html</loc>
+  </url>
+  <url>
+    <loc>/reference/availableVersions.html</loc>
+  </url>
+  <url>
     <loc>/reference/checkPath.html</loc>
   </url>
   <url>
     <loc>/reference/chooseCRANmirror2.html</loc>
+  </url>
+  <url>
+    <loc>/reference/clearRequire.html</loc>
   </url>
   <url>
     <loc>/reference/detachAll.html</loc>
@@ -50,9 +62,6 @@
   </url>
   <url>
     <loc>/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/installGithubPackage.html</loc>
   </url>
   <url>
     <loc>/reference/invertList.html</loc>
@@ -82,9 +91,6 @@
     <loc>/reference/pkgSnapshot.html</loc>
   </url>
   <url>
-    <loc>/reference/rCurrentVersion.html</loc>
-  </url>
-  <url>
     <loc>/reference/rversions.html</loc>
   </url>
   <url>
@@ -92,6 +98,9 @@
   </url>
   <url>
     <loc>/reference/setLinuxBinaryRepo.html</loc>
+  </url>
+  <url>
+    <loc>/reference/setdiffNamed.html</loc>
   </url>
   <url>
     <loc>/reference/setup.html</loc>
@@ -107,8 +116,5 @@
   </url>
   <url>
     <loc>/reference/trimVersionNumber.html</loc>
-  </url>
-  <url>
-    <loc>/reference/useLinuxSourceCache.html</loc>
   </url>
 </urlset>
