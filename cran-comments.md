@@ -14,9 +14,9 @@ This update is a re-implementation of the underlying functions, with large speed
 - os: ubuntu-20.04,   r: 'oldrel'
 
 ### Winbuilder
-* Windows                 (win-builder), R Under development (unstable) (2022-11-04)
+* Windows                 (win-builder), R Under development (unstable) (2022-10-11 r83083 ucrt)
 * Windows                 (win-builder), 4.1.3 (2022-03-10)
-* Windows                 (win-builder), 4.2.2 (2022-06-23)
+* Windows                 (win-builder), 4.2.2 (2022-10-31 ucrt)
 
 ### R-hub
 * Linux (Debian, Fedora, MacOS, Windows) 
