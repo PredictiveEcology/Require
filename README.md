@@ -169,15 +169,17 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 Require can make install to and use from a single directory, so a project can be fully isolated (unlike `.libPaths()`, which will always see packages in the R_HOME directory)
 
 ```r
-.libPaths("projectPackages")
-Require("data.table (>=1.12.8)", standAlone = TRUE)
+library(Require)
+projectPackages = "projectPackages"
+dir.create(projectPackages)
+.libPaths(projectPackages)
+Require("remotes (>=2.4.0)", standAlone = TRUE)
 ```
 
 Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
 
 ```r
-.libPaths("projectPackages")
-Require("fpCompare (>=0.2.0)")
+Require("fpCompare (>=0.2.0)", require = FALSE) # don't load it, just install
 ```
 ### Installing old package versions
 
