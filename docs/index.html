@@ -243,12 +243,14 @@
 </h3>
 <p>Require can make install to and use from a single directory, so a project can be fully isolated (unlike <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, which will always see packages in the R_HOME directory)</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths</a></span><span class="op">(</span><span class="st">"projectPackages"</span><span class="op">)</span>
-<span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"data.table (&gt;=1.12.8)"</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://Require.predictiveecology.org" class="external-link">Require</a></span><span class="op">)</span>
+<span class="va">projectPackages</span> <span class="op">=</span> <span class="st">"projectPackages"</span>
+<span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">projectPackages</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths</a></span><span class="op">(</span><span class="va">projectPackages</span><span class="op">)</span>
+<span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"remotes (&gt;=2.4.0)"</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
 <p>Or we can use a hybrid of our main, “personal” library and a project specific one for “extra” packages:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths</a></span><span class="op">(</span><span class="st">"projectPackages"</span><span class="op">)</span>
-<span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&gt;=0.2.0)"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&gt;=0.2.0)"</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># don't load it, just install</span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="installing-old-package-versions">Installing old package versions<a class="anchor" aria-label="anchor" href="#installing-old-package-versions"></a>
