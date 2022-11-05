@@ -38,7 +38,7 @@ of their dependencies are detached or unloaded first.'><!-- mathjax --><script s
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.0</span>
       </span>
     </div>
 
@@ -110,7 +110,8 @@ of their dependencies are detached or unloaded first.</p>
   sort <span class="op">=</span> <span class="cn">TRUE</span>,
   purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,
   verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>,
-  includeSelf <span class="op">=</span> <span class="cn">TRUE</span>
+  includeSelf <span class="op">=</span> <span class="cn">TRUE</span>,
+  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"pkgType"</span><span class="op">)</span>
 <span class="op">)</span>
 
 <span class="fu">pkgDep2</span><span class="op">(</span>
@@ -132,10 +133,13 @@ of their dependencies are detached or unloaded first.</p>
   <span class="va">deps</span>,
   reverse <span class="op">=</span> <span class="cn">FALSE</span>,
   topoSort <span class="op">=</span> <span class="cn">TRUE</span>,
+  libPath <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths</a></span><span class="op">(</span><span class="op">)</span>,
   useAllInSearch <span class="op">=</span> <span class="cn">FALSE</span>,
   returnFull <span class="op">=</span> <span class="cn">TRUE</span>,
   recursive <span class="op">=</span> <span class="cn">TRUE</span>,
   purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,
+  which <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Depends"</span>, <span class="st">"Imports"</span>, <span class="st">"LinkingTo"</span><span class="op">)</span>,
+  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"pkgType"</span><span class="op">)</span>,
   verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span><span class="op">)</span>
 <span class="op">)</span></code></pre></div>
     </div>
@@ -229,6 +233,10 @@ NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the r
 <dt>includeSelf</dt>
 <dd><p>Logical. If <code>TRUE</code>, the default, then the dependencies will include
 the package itself in the returned list elements, otherwise, only the "dependencies"</p></dd>
+
+
+<dt>type</dt>
+<dd><p>See `utils::install.packages``</p></dd>
 
 
 <dt>sorted</dt>

@@ -4,10 +4,10 @@
     <loc>/404.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>/CONTRIBUTING.html</loc>
   </url>
   <url>
-    <loc>/CONTRIBUTING.html</loc>
+    <loc>/authors.html</loc>
   </url>
   <url>
     <loc>/index.html</loc>
@@ -16,13 +16,40 @@
     <loc>/news/index.html</loc>
   </url>
   <url>
+    <loc>/reference/DESCRIPTION-helpers.html</loc>
+  </url>
+  <url>
+    <loc>/reference/GitHubTools.html</loc>
+  </url>
+  <url>
+    <loc>/reference/Require-internals.html</loc>
+  </url>
+  <url>
+    <loc>/reference/Require.html</loc>
+  </url>
+  <url>
+    <loc>/reference/RequireCacheDir.html</loc>
+  </url>
+  <url>
+    <loc>/reference/RequireOptions.html</loc>
+  </url>
+  <url>
+    <loc>/reference/availablePackagesOverride.html</loc>
+  </url>
+  <url>
+    <loc>/reference/availableVersionOK.html</loc>
+  </url>
+  <url>
+    <loc>/reference/availableVersions.html</loc>
+  </url>
+  <url>
     <loc>/reference/checkPath.html</loc>
   </url>
   <url>
     <loc>/reference/chooseCRANmirror2.html</loc>
   </url>
   <url>
-    <loc>/reference/DESCRIPTION-helpers.html</loc>
+    <loc>/reference/clearRequire.html</loc>
   </url>
   <url>
     <loc>/reference/detachAll.html</loc>
@@ -32,9 +59,6 @@
   </url>
   <url>
     <loc>/reference/getOptionRPackageCache.html</loc>
-  </url>
-  <url>
-    <loc>/reference/GitHubTools.html</loc>
   </url>
   <url>
     <loc>/reference/index.html</loc>
@@ -73,18 +97,6 @@
     <loc>/reference/rCurrentVersion.html</loc>
   </url>
   <url>
-    <loc>/reference/Require-internals.html</loc>
-  </url>
-  <url>
-    <loc>/reference/Require.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RequireCacheDir.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RequireOptions.html</loc>
-  </url>
-  <url>
     <loc>/reference/rversions.html</loc>
   </url>
   <url>
@@ -92,6 +104,9 @@
   </url>
   <url>
     <loc>/reference/setLinuxBinaryRepo.html</loc>
+  </url>
+  <url>
+    <loc>/reference/setdiffNamed.html</loc>
   </url>
   <url>
     <loc>/reference/setup.html</loc>
