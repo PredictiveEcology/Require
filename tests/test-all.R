@@ -26,7 +26,7 @@ library(testit)
 # These are only defined sufficiently to be undone *after* loading the package
 checks$start[["options"]] <- options()
 origOptions <- checks$start[["options"]]
-checks$start[["cacheDir"]] <- dir(Require::RequireCacheDir(), recursive = TRUE)
+checks$start[["cacheDir"]] <- dir(Require::RequireCacheDir(FALSE), recursive = TRUE)
 checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 
 # helper files for this test
@@ -87,7 +87,7 @@ checks$prior <- list()
 checks$prior[["getwd"]] <- getwd()
 checks$prior[["options"]] <- options()
 checks$prior[["libPaths"]] <- .libPaths()
-checks$prior[["cacheDir"]] <- dir(Require::RequireCacheDir(), recursive = TRUE)
+checks$prior[["cacheDir"]] <- dir(Require::RequireCacheDir(create = FALSE), recursive = TRUE)
 checks$prior[["envVars"]] <- Sys.getenv()
 checks$prior[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 
