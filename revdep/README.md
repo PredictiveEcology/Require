@@ -10,16 +10,16 @@
 |collate  |en_CA.UTF-8                              |
 |ctype    |en_CA.UTF-8                              |
 |tz       |America/Vancouver                        |
-|date     |2022-10-06                               |
+|date     |2022-11-04                               |
 |rstudio  |2022.07.1+554 Spotted Wakerobin (server) |
 |pandoc   |2.5 @ /bin/pandoc                        |
 
 # Dependencies
 
-|package    |old    |new    |Δ  |
-|:----------|:------|:------|:--|
-|Require    |0.1.2  |0.1.4  |*  |
-|data.table |1.14.2 |1.14.2 |   |
+|package    |old    |new        |Δ  |
+|:----------|:------|:----------|:--|
+|Require    |0.1.4  |0.1.6.9036 |*  |
+|data.table |1.14.4 |1.14.4     |   |
 
 # Revdeps
 
