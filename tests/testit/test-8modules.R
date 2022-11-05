@@ -1,19 +1,8 @@
-thisFilename <- "test-8Modules.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-Require:::messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-origLibPathsAllTests <- .libPaths()
+setupInitial <- setupTest()
 
-if (interactive()) {
-  library(testit)
-  library(Require)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                     "install.packages.check.source" = "never",
-                     "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = FALSE)
+if (isDevAndInteractive) {
   projectDir <- Require:::tempdir2(Require:::.rndstr(1))
+  setLinuxBinaryRepo()
   pkgDir <- file.path(projectDir, "R")
   setLibPaths(pkgDir, standAlone = TRUE)
   dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
@@ -23,28 +12,51 @@ if (interactive()) {
   # Install 3 packages that are needed for subsequent module and package installations
   Require("PredictiveEcology/SpaDES.project@transition",
                    upgrade = FALSE, require = FALSE)
-  # setLinuxBinaryRepo() # OK to run on any system
 
   # Install modules
-  SpaDES.project::getModule(modulePath = modulePath,
+  getFromNamespace("getModule", "SpaDES.project")(modulePath = modulePath,
                             c("PredictiveEcology/Biomass_speciesData@master",
                               "PredictiveEcology/Biomass_borealDataPrep@master",
                               "PredictiveEcology/Biomass_core@master",
                               "CeresBarros/Biomass_validationKNN@master",
                               "PredictiveEcology/Biomass_speciesParameters@development"))
 
-  outs <- SpaDES.project::packagesInModules(modulePath = modulePath)
+  outs <- getFromNamespace("packagesInModules", "SpaDES.project")(modulePath = modulePath)
+  pkgs <- c(unname(unlist(outs)),
+            "PredictiveEcology/SpaDES.experiment@development",
+            "PredictiveEcology/SpaDES.project@transition",
+            "devtools", "ggspatial", "ggpubr", "cowplot")
+  pkgsShort <- unique(sort(pkgs))
+  deps <- pkgDep(pkgsShort, recursive = TRUE)
 
-  Require::Require(c(unname(unlist(outs)),
-                     "PredictiveEcology/SpaDES.experiment@development",
-                     "devtools", "ggspatial", "ggpubr", "cowplot"),
-                   require = FALSE, standAlone = TRUE)
-  setLibPaths(origLibPathsAllTests)
-  setwd(origDir)
+  # THE INSTALL
+  outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
+
+  # THE POST INSTALL COMPARISON
+  ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+
+  allNeeded <- unique(extractPkgName(unname(unlist(deps))))
+  allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
+  persLibPathOld <- ip$LibPath[which(ip$Package == "amc")]
+  installedInFistLib <- ip[LibPath == persLibPathOld]
+  # testit::assert(all(installed))
+  ip <- ip[!Package %in% .basePkgs][, c("Package", "Version")]
+  allInIPareInpkgDT <- all(ip$Package %in% allNeeded )
+  installedNotInIP <- setdiff(allNeeded, ip$Package)
+  installedPkgs <- setdiff(allNeeded, installedNotInIP)
+  allInpkgDTareInIP <- all(installedPkgs %in% ip$Package  )
+  testit::assert(isTRUE(allInpkgDTareInIP))
+  testit::assert(isTRUE(allInIPareInpkgDT))
+
+  pkgDT <- toPkgDT(unique(sort(unname(unlist(deps)))))
+  pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
+  pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
+
+  pkgDT <- ip[pkgDT, on = "Package"]
+  pkgDT[!is.na(inequality) & !is.na(Version),
+        good := compareVersion2(package_version(Version), versionSpec, inequality)]
+  anyBad <- any(pkgDT$good %in% FALSE)
+  testit::assert(isFALSE(anyBad))
 }
 
-try(startTimeAll <- readRDS(file = file.path(tdOuter, "startTimeAll")), silent = TRUE) # doesn't seem to keep globals from other scripts; recreate here
-# unlink(tempdir2(), recursive = TRUE)
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
-try(message("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m"), silent = TRUE)
+endTest(setupInitial)

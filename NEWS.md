@@ -1,5 +1,23 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.1.7
+=============
+
+## enhancements
+* new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and `pkgDep` from checking the internet. This will fail, unless the cached packages are available locally (i.e., it was run once with all packages installed previously). If they are, then they will be installed without needing the internet. This option will also be set automatically on the first attempt to get a file from the internet, which fails, triggering a test of the internet. If that fails, then the option will be set to `FALSE` until next call to `Require` or `pkgDep` when it will be reset. This is experimental still.
+* many more edge cases found and dealt with
+* experimental use of `(HEAD)` to keep a package "up to date" with the HEAD of a GitHub branch. The behaviour still uses version numbering, so will not update based on SHA, but if the HEAD is ahead of the locally installed package and the `(HEAD)` is specified, then it will update. Specifically, use this instead of a version number, e.g., `"PredictiveEcology/Require@development (HEAD)"`
+* `modifyList2` now follows `modifyList` by adding the `keep.null` argument.
+* `setdiffNamed` will compare 2 named lists or vectors and keep on those elements that are in the first list (or vector), keeping in mind the name as well as the element.
+* package messaging is not sorted alphabetically during installation
+* all `message` calls now `messageVerbose`, so verbosity can be fully controlled with the argument `verbose` or `options("Require.verbose")`. See `?RequireOptions`.
+* tests clean up more completely after themselves
+* if `options(Require.RPackageCache = FALSE)` (or environment variable of the same name), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
+* Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
+
+## bugfix
+* pkgDep was using local `DESCRIPTION` file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer's case), then this is desirable. But, when the local installed version is behind CRAN (a common user's case), then this is not desirable. `pkgDep` now uses CRAN's version as developers can handle this situation on their own.
+
 version 0.1.6
 =============
 

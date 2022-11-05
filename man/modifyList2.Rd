@@ -2,26 +2,39 @@
 % Please edit documentation in R/helpers.R
 \name{modifyList2}
 \alias{modifyList2}
+\alias{modifyList3}
 \title{\code{modifyList} for multiple lists}
 \usage{
-modifyList2(...)
+modifyList2(..., keep.null = FALSE)
+
+modifyList3(..., keep.null = TRUE)
 }
 \arguments{
 \item{...}{One or more named lists.}
+
+\item{keep.null}{ If \code{TRUE}, \code{NULL} elements in \code{val}
+    become \code{NULL} elements in \code{x}.  Otherwise, the
+    corresponding element, if present, is deleted from \code{x}. }
 }
 \description{
 This calls \code{\link[utils:modifyList]{utils::modifyList}} iteratively using
 \code{\link[base:funprog]{base::Reduce}}, so it can handle >2 lists.
 The subsequent list elements that share a name will override
 previous list elements with that same name.
-It also will handle the case where any list is a \code{NULL}
+It also will handle the case where any list is a \code{NULL}. Note:
+default \code{keep.null = TRUE}, which is different than \code{modifyList}
 }
 \details{
-Simply a convenience around
-\code{Reduce(modifyList, list(...))}, with some checks.
+More or less a convenience around
+\code{Reduce(modifyList, list(...))}, with some checks, and the addition of
+\code{keep.null = TRUE} by default.
+}
+\note{
+\code{modifyList3} retains the original behaviour of \code{modifyList2} (prior to Oct 2022);
+however, it cannot retain \code{NULL} values in lists.
 }
 \examples{
 modifyList2(list(a = 1), list(a = 2, b = 2))
 modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
-modifyList2(list(a = 1), NULL, list(a = 2, b = 2), list(a = 3, c = list(1:10)))
+modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2), list(a = 3, c = list(1:10)))
 }

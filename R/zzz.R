@@ -10,14 +10,15 @@ utils::globalVariables(c(
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
 
-  if (getOption("Require.persistentPkgEnv")) {
-    if (file.exists(.thePersistentFile())) {
-      pkgEnvLast <- readRDS(.thePersistentFile())
-      list2env(pkgEnvLast, .pkgEnv)
-    }
-  }
-  if (!is.null(getOptionRPackageCache()))
+  # if (getOption("Require.persistentPkgEnv")) {
+  #   if (file.exists(.thePersistentFile())) {
+  #     pkgEnvLast <- readRDS(.thePersistentFile())
+  #     list2env(pkgEnvLast, .pkgEnv)
+  #   }
+  # }
+  if (!is.null(getOptionRPackageCache())) {
     dir.create(getOptionRPackageCache(), showWarnings = FALSE, recursive = TRUE)
+  }
 
   invisible()
 }
@@ -36,12 +37,9 @@ utils::globalVariables(c(
 }
 
 .onUnload <- function(libpath) {
-  if (getOption("Require.persistentPkgEnv")) {
-    pkgEnvLast <- as.list(.pkgEnv);
-    saveRDS(pkgEnvLast, file = .thePersistentFile())
-  }
+
 }
 
-.thePersistentFile <- function() {
-  file.path(RequireCacheDir(), "pkgEnv.Rdata")
-}
+# .thePersistentFile <- function() {
+#   file.path(RequireCacheDir(FALSE), "pkgEnv.Rdata")
+# }

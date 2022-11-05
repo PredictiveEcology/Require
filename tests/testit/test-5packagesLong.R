@@ -1,26 +1,10 @@
-thisFilename <- "test-5packagesLong.R"
-startTime <- Sys.time()
-message("\033[32m --------------------------------- Starting ",thisFilename,"  at: ",format(startTime),"---------------------------\033[39m")
-messageVerbose("\033[34m getOption('Require.verbose'): ", getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
-origLibPathsAllTests <- .libPaths()
+setupInitial <- setupTest()
 
-if (interactive()) {
-  library(testit)
-  library(Require)
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  Sys.setenv('CRANCACHE_DISABLE' = TRUE)
-  outOpts <- options("Require.persistentPkgEnv" = TRUE,
-                     "install.packages.check.source" = "never",
-                     "install.packages.compile.from.source" = "never",
-                     "Require.unloadNamespaces" = FALSE)
-  if (Sys.info()["user"] == "achubaty") {
-    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-  } else {
-    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-  }
-  tmpdir <- file.path(tempdir2("other"), paste0("RequireTmp", sample(1e5, 1)))
 
-  suppressWarnings(dir.create(tmpdir))
+if (isDevAndInteractive) {
+  tmpdir <- file.path(tempdir2(basename(setupInitial$thisFilename)), paste0("RequireTmp", sample(1e5, 1)))
+
+  dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
   # repo <- chooseCRANmirror(ind = 1)
 
 
@@ -111,7 +95,7 @@ if (interactive()) {
     if (!isTRUE(theTest)) browser()
     testit::assert(isTRUE(theTest))
     if ("installResult" %in% colnames(have)) {
-      theTest <- NROW(have[is.na(installResult)]) == sum(have$installed)
+      theTest <- NROW(have[is.na(installResult) | installResult %in% "OK"]) == sum(have$installed)
       if (!isTRUE(theTest)) browser()
       testit::assert(isTRUE(theTest))
     }
@@ -135,83 +119,7 @@ if (interactive()) {
     # browser(expr = !theTest)
     # testit::assert({isTRUE(theTest)})
   }
-  # unloadNSRecursive <- function(packages, n = 0) {
-  #   if (!missing(packages)) {
-  #     out <- packages
-  #     browser(expr = "bitops" %in% packages)
-  #   } else {
-  #     out <- data.table::as.data.table(.installed.pkgs(which = character()))[[1]]
-  #     names(out) <- out
-  #     out <- lapply(out, isNamespaceLoaded)
-  #     out <- unlist(out)
-  #     out <- out[out]
-  #     keepLoaded1 <- c("Require", "testit", "base64enc", "RCurl", "dismo", "units",
-  #                      "fastmatch", "raster", "Rcpp", "rstudioapi", "crayon", "data.table",
-  #                      "tools", "utils", "versions", "fastdigest",
-  #                      "grDevices", "methods", "stats", "graphics", "dplyr", "stringi")
-  #     keepLoaded = unique(c(keepLoaded1, dir(tail(.libPaths(),1))))
-  #     out <- names(out)
-  #     names(out) <- out
-  #     out <- unique(setdiff(out, keepLoaded))
-  #   }
-  #   if (length(out) > 0) {
-  #
-  #     names(out) <- out
-  #     out1 <- lapply(out, function(pInner) {
-  #       names(pInner) <- pInner
-  #       if (isNamespaceLoaded(pInner)) {
-  #         out <- tryCatch(unloadNamespace(pInner), error = function(x) FALSE)
-  #         if (is.null(out)) out <- TRUE
-  #         out
-  #       }
-  #     })
-  #
-  #     out2 <- unlist(out1)
-  #     if (sum(out2) > 0) {
-  #       out3 <- out2[out2]
-  #       sam <- sample(names(out3), size = n)
-  #       if (n > 0) {
-  #         message("removing ", paste(sam, collapse = ", "))
-  #
-  #         files <- dir(.libPaths()[1], recursive = TRUE, full.names = TRUE)
-  #         origDir <- Require::normPath(file.path(.libPaths()[1]))
-  #         origDirWithPkg <- file.path(origDir, sam)
-  #         files <- grep(Require::normPath(origDirWithPkg), files, value = TRUE)
-  #         td <- Require::normPath(file.path(tempdir2("other"), .rndstr(1, 6)))
-  #         newFiles <- gsub(origDir, td, files)
-  #         dirs <- unique(dirname(files))
-  #         newDirs <- gsub(origDir, td, dirs)
-  #         Require::checkPath(td, create = TRUE)
-  #         #dir.create(dirname(td))
-  #         #dir.create(td)
-  #         out <- lapply(newDirs, dir.create)
-  #
-  #         outFC <- file.copy(files, newFiles)
-  #         if (any(outFC == FALSE)) {
-  #           file.copy(newFiles, files)
-  #         }
-  #         unlink1 <- unlink(file.path(origDir, sam), recursive = TRUE)
-  #         if (isTRUE(any(file.exists(files)))) {
-  #           suppressWarnings({
-  #             out <- lapply(dirs, dir.create, recursive = TRUE)
-  #           })
-  #           out <- file.copy(newFiles, files)
-  #           message("Actually, not deleting ", sam)
-  #         } else {
-  #           browser(expr = sam %in% dir(.libPaths()[1]))
-  #           out11 <- utils::capture.output({
-  #             out <- utils::capture.output({
-  #               utils::remove.packages(sam)
-  #             }, type = "message")
-  #           }, type = "output")
-  #         }
-  #       }
-  #     }
-  #   } else {
-  #     out2 <- out
-  #   }
-  #   return(out2)
-  # }
+
 
   pkgs <- list(c("LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
                  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
@@ -282,44 +190,15 @@ if (interactive()) {
     names(pkgsToTest) <- pkgsToTest
     runTests(have, pkg)
     endTime <- Sys.time()
-    message("\033[32m --- ",i," --------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+    message("\033[32m --- ",i," --------------------------",
+            basename(setupInitial$thisFilename), ": ", format(endTime - setupInitial$startTime)," \033[39m")
 
-    # suppressWarnings(normalRequire <- unlist(lapply(pkgsToTest,
-    #                                function(p) tryCatch(require(p, character.only = TRUE),
-    #                                                     error = function(x) FALSE))))
-    # out2 <- out
-    # out2 <- out2[names(out2) %in% names(normalRequire)]
-    # whMatch <- match(names(normalRequire), names(out2))
-    # whMatch <- whMatch[!is.na(whMatch)]
-    # out2 <- out2[whMatch]
-    # have2 <- have[loadOrder > 0]
-    # normalRequire2 <- if (NROW(have2))
-    #   normalRequire[have2$Package]
-    # else
-    #   normalRequire
-
-    # browser(expr = all(unique(Require:::extractPkgName(pkg)) %in% "fastdigest"))
-    # if (length(out2)) {
-    #   out2 <- out2[out2]
-    #   normalRequire2 <- normalRequire2[!is.na(normalRequire2)][normalRequire2]
-    #   browser(expr = !all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))]))
-    #   testit::assert({all(out2[order(names(out2))] == normalRequire2[order(names(normalRequire2))])})
-    #   runTests(have, pkg)
-    # } else {
-    #   # TODO: what goes here?
-    # }
-    # suppressWarnings(rm(outFromRequire, out, have, normalRequire))
-    # if (any("tinytest" %in% Require::extractPkgName(pkg))) {
-    #   try(unloadNamespace("LearnBayes"))
-    #   try(unloadNamespace("tinytest"))
-    #   try(remove.packages(c("tinytest", "LearnBayes")))
-    # }
   }
 
   # Use a mixture of different types of "off CRAN"
   pkgs <- c("ggplot", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
   pkgsClean <- extractPkgName(pkgs)
-  lala <- capture.output(suppressMessages(remove.packages(pkgsClean)))
+  lala <- suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean))))
   Require(pkgs, require = FALSE)
   ip <- installed.packages()
   testit::assert(sum(pkgsClean %in% ip[, "Package"]) == length(pkgsClean) - 1) # silly1 won't be installed
@@ -335,15 +214,6 @@ if (interactive()) {
   testit::assert(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
   testit::assert(out2[Package == "SpaDES.core"]$installed)
 
-
-
-
-  unlink(tmpdir, recursive = TRUE)
-  options(outOpts)
-  if (exists("outOpts2")) options(outOpts2)
-  if (!identical(origLibPathsAllTests, .libPaths()))
-    Require::setLibPaths(origLibPathsAllTests, standAlone = TRUE, exact = TRUE)
 }
 
-endTime <- Sys.time()
-message("\033[32m ----------------------------------",thisFilename, ": ", format(endTime - startTime)," \033[39m")
+endTest(setupInitial)

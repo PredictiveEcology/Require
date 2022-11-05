@@ -2,56 +2,27 @@
 % Please edit documentation in R/Require-helpers.R
 \name{parseGitHub}
 \alias{parseGitHub}
-\alias{installGitHub}
-\title{GitHub specific helpers}
+\title{Parse a github package specification}
 \usage{
 parseGitHub(pkgDT, verbose = getOption("Require.verbose"))
-
-installGitHub(
-  pkgDT,
-  toInstall,
-  install_githubArgs = list(),
-  dots = dots,
-  verbose = getOption("Require.verbose")
-)
 }
 \arguments{
-\item{pkgDT}{A character string with full package names or a \code{data.table}
-with at least 2 columns \code{"Package"} and \code{"packageFullName"}.}
+\item{pkgDT}{A pkgDT data.table.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
 If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
 NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
 \code{attr(.., "Require")} which has lots of information about the processes of the installs.}
-
-\item{toInstall}{DESCRIPTION NEEDED}
-
-\item{install_githubArgs}{Any arguments passed to \code{install_github}}
-
-\item{dots}{A list of ..., e.g., list(...). Only for internal use.}
 }
 \value{
 \code{parseGitHub} returns a \code{data.table} with added columns.
-
-\code{installGitHub} returns a named character vector indicating packages
-successfully installed, unless the word "Failed" is returned, indicating
-installation failure. The names will be the full GitHub package name,
-as provided to \code{gitPkgNames} in the function call.
 }
 \description{
-\code{installGitHub} is a vectorized \code{installGithubPackages}.
-This will attempt to identify all dependencies of all supplied packages first,
-then load the packages in the correct order so that each of their dependencies
-are met before each is installed.
+This converts a specification like \code{PredictiveEcology/Require@development}
+into separate columns, "Account", "Repo", "Branch", "GitSubFolder" (if there is one)
 }
 \details{
 \code{parseGitHub} turns the single character string representation into 3 or 4:
 \code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
-}
-\examples{
-\dontrun{
-  installGitHub(c("PredictiveEcology/Require", "PredictiveEcology/quickPlot"))
-}
-
 }

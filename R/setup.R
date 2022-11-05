@@ -1,10 +1,19 @@
 
 #' Path to (package) cache directory
 #'
+#' Sets or gets the cache directory associated with the `Require` package.
+#' @return
+#' If `!is.null(getOptionRPackageCache())`, i.e., a cache path exists,
+#' the cache directory will be created,
+#'   with a README placed in the folder. Otherwise, this function will just
+#'   return the path of what the cache directory would be.
+#' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
-RequireCacheDir <- function() {
-  appName <- "R-Require"
+RequireCacheDir <- function(create) {
+
+  if (missing(create))
+    create <- !is.null(getOptionRPackageCache())
 
   ## use cache dir following OS conventions used by rappdirs package:
   ## rappdirs::user_cache_dir(appName)
@@ -12,27 +21,71 @@ RequireCacheDir <- function() {
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
-    switch(
-      Sys.info()[["sysname"]],
-      Darwin = file.path("~", "Library", "Caches", appName),
-      Linux = file.path("~", ".cache", appName),
-      Windows = file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName)
-    )
+    if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
+      if (dir.exists(defaultCacheDirOld)) {
+        oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
+        if (length(oldLocs) > 1) {
+          message("Require has changed default package cache folder from\n",
+                  defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+                  "in the old Cache, moving them now...")
+          checkPath(defaultCacheDir, create = TRUE)
+          dirs <- unique(dirname(oldLocs))
+          newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+          lapply(newdirs, checkPath, create = TRUE)
+          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+          unlink(defaultCacheDirOld, recursive = TRUE)
+        }
+      }
+    }
+    defaultCacheDir
   }
-  cacheDir <- checkPath(cacheDir, create = TRUE)
 
-  readme <- file.path(cacheDir, "README")
-  if (!file.exists(readme)) {
-    file.copy(system.file("cache-README", package = "Require"), readme)
+  cacheDir <- normPathMemoise(cacheDir)
+
+  if (isTRUE(create)) {
+    cacheDir <- checkPath(cacheDir, create = create)
+    readme <- file.path(cacheDir, "README")
+    if (!file.exists(readme)) {
+      if (isTRUE(create)) {
+        file.copy(system.file("cache-README", package = "Require"), readme)
+      }
+    }
   }
+
 
   return(cacheDir)
 }
 
+normPathMemoise <- function(d) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    fnName <- "normPath"
+    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
+      .pkgEnv[[fnName]] <- new.env()
+    ret <- Map(di = d, function(di) {
+      if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
+        .pkgEnv[[fnName]][[di]] <- normPath(di)
+      }
+      .pkgEnv[[fnName]][[di]]
+    })
+    ret <- unlist(ret)
+
+
+  } else {
+    ret <- normPath(d)
+  }
+
+  return(ret)
+}
+
 #' @export
 #' @rdname RequireCacheDir
-RequirePkgCacheDir <- function() {
-  pkgCacheDir <- checkPath(file.path(RequireCacheDir(), "packages", rversion()), create = TRUE)
+RequirePkgCacheDir <- function(create) {
+  if (missing(create)) {
+    create <- !is.null(getOptionRPackageCache())
+  }
+  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
+  if (isTRUE(create))
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
 
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
@@ -155,7 +208,8 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
         unlink(lps[1], recursive = TRUE)
     }
   } else {
-    message("Project is not setup yet; nothing to do")
+    messageVerbose("Project is not setup yet; nothing to do",
+                   verbose = verbose, verboseLevel = 0)
   }
 }
 
@@ -186,7 +240,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
           oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
           comp <- compareVersion(newPathVersion, oldPathVersion)
           if (comp > -1) break
-          message("Updating version of ", pkg, " in ", RPackageFolders,
+          messageVerbose("Updating version of ", pkg, " in ", RPackageFolders,
                   verbose = verbose, verboseLevel = 1)
           unlink(toFiles)
         }
@@ -225,43 +279,6 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
-#' Use cache for R package compilation
-#'
-#' Simple [`ccache`](https://ccache.dev/) configuration for compiling R packages on Linux,
-#' based on <http://dirk.eddelbuettel.com/blog/2017/11/27/#011_faster_package_installation_one>.
-#'
-#' @note This is typically run once per user, per machine to configure the cache.
-#'
-#' @param overwrite Logical. Should the existing configuration be overwritten?
-#'                  For safety, a backup copy of the old configuration is created.
-#'
-#' @return Invoked for the side effect of copying files needed to configure `ccache` for R packages.
-#'
-#' @author Dirk Eddelbuettel and Alex Chubaty
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#'  useLinuxSourceCache()
-#' }
-useLinuxSourceCache <- function(overwrite = FALSE) {
-  if (identical(Sys.info()[["sysname"]], "Linux")) {
-    hasccache <- nzchar(Sys.which("ccache"))
-    if (isTRUE(hasccache)) {
-      confFile <- file.path("~", ".ccache", "ccache.conf")
-      putFile(system.file("dotccache/ccache.conf", package = "Require"), confFile, overwrite)
-
-      makevarsFile <- file.path("~", ".R", "Makevars")
-      putFile(system.file("dotR/Makevars", package = "Require"), makevarsFile, overwrite)
-    } else {
-      warning("'ccache' not found. Is it installed? Try e.g., 'sudo apt install ccache'.")
-    }
-  } else {
-    message("Setting up ccache for R package compilation is currently only supported on Linux.")
-  }
-
-  invisible()
-}
 
 putFile <- function(from, to, overwrite) {
   if (file.exists(to)) {
@@ -275,3 +292,16 @@ putFile <- function(from, to, overwrite) {
     res1 <- file.copy(from, to)
   }
 }
+
+
+appName <- "R-Require"
+
+#' @importFrom tools R_user_dir
+defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+
+defaultCacheDirOld <- switch(
+  Sys.info()[["sysname"]],
+  Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
+  Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
+  Windows = normalizePath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
+)
