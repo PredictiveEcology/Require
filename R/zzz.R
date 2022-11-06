@@ -26,7 +26,7 @@ utils::globalVariables(c(
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
     mess <- c(
-      "Require version: ", as.character(utils::packageVersion("Require")), ".\n",
+      "Require version: ", as.character(utils::packageVersion("Require")), "\n",
       if (!is.null(getOptionRPackageCache()))
         paste0("  Using cache directory: ", getOptionRPackageCache(), ".\n"),
       "  See ?RequireOptions for additional settings."
