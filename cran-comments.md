@@ -1,6 +1,6 @@
 ## Updated release
 
-This update is a re-implementation of the underlying functions, with large speed and edge case improvements.
+This update is a re-implementation of the underlying functions, with large speed and edge case improvements. 
 
 ## Test environments
 

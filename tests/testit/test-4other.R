@@ -10,7 +10,8 @@ out <- Require:::installedVers(pkgDTEmpty) #
 
 
 pkgDep("data.table", purge = FALSE)
-pkgDep("data.table", purge = TRUE)
+if (!isDev)
+  pkgDep("data.table", purge = TRUE)
 pkgDep2("Require")
 
 
