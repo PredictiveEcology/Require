@@ -62,7 +62,7 @@ ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
 out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
 testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 out2222 <- capture.output(setupOff())
-messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
+Require:::messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
                verboseLevel = 0)
 RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
 if (identical(RPackageCacheSysEnv, "FALSE") ) {
