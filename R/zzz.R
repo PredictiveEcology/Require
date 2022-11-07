@@ -16,19 +16,21 @@ utils::globalVariables(c(
   #     list2env(pkgEnvLast, .pkgEnv)
   #   }
   # }
-  if (!is.null(getOptionRPackageCache())) {
-    dir.create(getOptionRPackageCache(), showWarnings = FALSE, recursive = TRUE)
-  }
+  possCacheDir <- getOptionRPackageCache()
+  # if (!is.null(possCacheDir)) {
+  #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
+  # }
 
   invisible()
 }
 
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
+    possCacheDir <- getOptionRPackageCache()
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
-      if (!is.null(getOptionRPackageCache()))
-        paste0("  Using cache directory: ", getOptionRPackageCache(), ".\n"),
+      if (!is.null(possCacheDir))
+        paste0("  Using cache directory: ", possCacheDir, ".\n"),
       "  See ?RequireOptions for additional settings."
     )
 

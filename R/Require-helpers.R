@@ -1056,59 +1056,9 @@ installPackagesSystem <- function(pkg, args, libPath) {
 }
 
 
-#' Get the option for `Require.RPackageCache`
-#'
-#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
-#' If not set, checks whether the `options("Require.RPackageCache")` is set.
-#' If a character string, then it returns that.
-#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
-#'
-#' @export
-getOptionRPackageCache <- function() {
-  curVal <- getOption("Require.RPackageCache")
-  try <- 1
-  while (try < 3) {
-    if (isTRUE(curVal)) {
-      curVal <- RequirePkgCacheDir(FALSE)
-      break
-    } else if (isFALSE(curVal)) {
-      curVal <- NULL
-      break
-    } else {
-      if (identical("default", curVal)) {
-        fromEnvVars <- Sys.getenv("Require.RPackageCache")
-        if (nchar(fromEnvVars) == 0  ) {
-          curVal <- RequirePkgCacheDir(FALSE)
-          break
-        } else {
-          try <- try + 1
-          curVal <- fromEnvVars
-          if (identical("TRUE", curVal)) {
-            curVal <- TRUE
-          } else if (identical("FALSE", curVal)) {
-            curVal <- NULL
-          } else {
-            break
-          }
-        }
-      } else {
-        break
-      }
-    }
-  }
-  if (!is.null(curVal)) {
-    checkPath(curVal, create = TRUE)
-  }
-  curVal
-}
-
 
 
 masterMainHEAD <- function(url, need) {
-  # masterMain <- c("main", "master")
-  # masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
-  # masterGrep <- paste0("/", "master", "(/|\\.)")
-  # mainGrep <- paste0("/", "main", "(/|\\.)")
   hasMasterMain <- grepl(masterMainGrep, url)
   hasMaster <- grepl(masterGrep, url)
   hasMain <- grepl(mainGrep, url)
@@ -1224,22 +1174,20 @@ extractPkgNameFromWarning <- function(x) {
   gsub(".+\u2018(.+)\u2019.+", "\\1", out)         # package XXX is in use and will not be installed
 }
 
-
-
 availablePackagesCachedPath <- function(repos, type) {
   file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, "availablePackages.rds")
 }
 
 installPackagesWithQuiet <- function(ipa) {
   if (isTRUE(ipa$quiet)) {
-    messSupp2 <- capture.output(
-      messSupp <- capture.output(
-        type = "message", do.call(install.packages, ipa))
-    )
+    messSupp2 <- capture.output({
+      messSupp <- capture.output(type = "message", {
+        do.call(install.packages, ipa)
+      })
+    })
   } else {
     do.call(install.packages, ipa)
   }
-
 }
 
 #' @importFrom utils remove.packages
@@ -1270,8 +1218,6 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
   }
   file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
 }
-
-
 
 #' Internals used by `Require`
 #'
@@ -1336,7 +1282,6 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
   pkgDT[]
 }
 
-
 setOfflineModeTRUE <- function() {
   if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     if (!internetExists()) {
@@ -1345,7 +1290,6 @@ setOfflineModeTRUE <- function() {
       message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
     }
   }
-
 }
 
 checkAutomaticOfflineMode <- function() {

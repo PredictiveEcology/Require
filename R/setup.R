@@ -1,4 +1,3 @@
-
 #' Path to (package) cache directory
 #'
 #' Sets or gets the cache directory associated with the `Require` package.
@@ -11,7 +10,6 @@
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
-
   if (missing(create))
     create <- !is.null(getOptionRPackageCache())
 
@@ -24,7 +22,7 @@ RequireCacheDir <- function(create) {
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
-        if (length(oldLocs) > 1) {
+        if (length(oldLocs) > 0) {
           message("Require has changed default package cache folder from\n",
                   defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
                   "in the old Cache, moving them now...")
@@ -52,7 +50,6 @@ RequireCacheDir <- function(create) {
     }
   }
 
-
   return(cacheDir)
 }
 
@@ -68,8 +65,6 @@ normPathMemoise <- function(d) {
       .pkgEnv[[fnName]][[di]]
     })
     ret <- unlist(ret)
-
-
   } else {
     ret <- normPath(d)
   }
@@ -93,6 +88,51 @@ RequirePkgCacheDir <- function(create) {
   return(pkgCacheDir)
 }
 
+#' Get the option for `Require.RPackageCache`
+#'
+#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
+#' If not set, checks whether the `options("Require.RPackageCache")` is set.
+#' If a character string, then it returns that.
+#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
+#'
+#' @export
+getOptionRPackageCache <- function() {
+  curVal <- getOption("Require.RPackageCache")
+  try <- 1
+  while (try < 3) {
+    if (isTRUE(curVal)) {
+      curVal <- RequirePkgCacheDir(FALSE)
+      break
+    } else if (isFALSE(curVal)) {
+      curVal <- NULL
+      break
+    } else {
+      if (identical("default", curVal)) {
+        fromEnvVars <- Sys.getenv("R_REQUIRE_PKGCACHE")
+        if (nchar(fromEnvVars) == 0  ) {
+          curVal <- RequirePkgCacheDir(FALSE)
+          break
+        } else {
+          try <- try + 1
+          curVal <- fromEnvVars
+          if (identical("TRUE", curVal)) {
+            curVal <- TRUE
+          } else if (identical("FALSE", curVal)) {
+            curVal <- NULL
+          } else {
+            break
+          }
+        }
+      } else {
+        break
+      }
+    }
+  }
+  # if (!is.null(curVal)) {
+  #   checkPath(curVal, create = TRUE)
+  # }
+  curVal
+}
 #' Setup a project library, cache, options
 #'
 #' This can be placed as the first line of any/all scripts and it will
@@ -279,7 +319,6 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
-
 putFile <- function(from, to, overwrite) {
   if (file.exists(to)) {
     if (isTRUE(overwrite)) {
@@ -292,7 +331,6 @@ putFile <- function(from, to, overwrite) {
     res1 <- file.copy(from, to)
   }
 }
-
 
 appName <- "R-Require"
 

@@ -18,7 +18,7 @@ isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkA
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("Require.testAsInteractive") != "false"
 
 if (!isDevAndInteractive) # i.e., CRAN
-  Sys.setenv(Require.RPackageCache = "FALSE")
+  Sys.setenv(R_REQUIRE_PKGCACHE = "FALSE")
 
 suppressPackageStartupMessages(library(Require)) # this will trigger data.table options to be set so that we have them part of our "before" snapshot
 library(testit)
@@ -123,7 +123,7 @@ if (!isDev) {
 }
 
 # 5 Sys.env
-envVarsChanged <- c("CRANCACHE_DISABLE", "R_REMOTES_UPGRADE", "Require.RPackageCache",
+envVarsChanged <- c("CRANCACHE_DISABLE", "R_REMOTES_UPGRADE", "R_REQUIRE_PKGCACHE",
                     "RequireRunAllTests", "R_TESTS")
 envVarsChangedNeedUnset <- names(envCur)[names(envCur) %in% envVarsChanged]
 if (length(envVarsChangedNeedUnset))
@@ -151,6 +151,11 @@ checks$post[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 
 Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 
+browser()
+if (!isDev) {
+  unlink(Require::tempdir2(), recursive = TRUE)
+  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
+}
 # Check everything is reset to original
 if (FALSE) {
   if (isDev) {
