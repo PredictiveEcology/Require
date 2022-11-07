@@ -32,8 +32,8 @@ The following options are likely of interest to most users:
 Default: \code{getOptionRPackageCache()}, which must be either a path or a logical.
 To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment
-variable e.g. \code{Sys.setenv(R_REQUIRE_PKGCACHE = "somePath")}, or
-\code{Sys.setenv(R_REQUIRE_PKGCACHE = "TRUE")}; if that is not
+variable e.g. \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or
+\code{Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")}; if that is not
 set, then an either a path or logical option (\code{options(Require.RPackageCache = "somePath")}
 or \code{options(Require.RPackageCache = TRUE)}). If \code{TRUE}, the default
 folder location \code{RequirePkgCacheDir()} will be used.

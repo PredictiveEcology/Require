@@ -11,7 +11,7 @@
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
   if (missing(create))
-    create <- !is.null(getOptionRPackageCache())
+    create <- FALSE # !is.null(getOptionRPackageCache())
 
   ## use cache dir following OS conventions used by rappdirs package:
   ## rappdirs::user_cache_dir(appName)
@@ -76,7 +76,7 @@ normPathMemoise <- function(d) {
 #' @rdname RequireCacheDir
 RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
-    create <- !is.null(getOptionRPackageCache())
+    create <- FALSE # !is.null(getOptionRPackageCache())
   }
   pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
   if (isTRUE(create))
@@ -108,7 +108,7 @@ getOptionRPackageCache <- function() {
       break
     } else {
       if (identical("default", curVal)) {
-        fromEnvVars <- Sys.getenv("R_REQUIRE_PKGCACHE")
+        fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
         if (nchar(fromEnvVars) == 0  ) {
           curVal <- RequirePkgCacheDir(FALSE)
           break
@@ -304,7 +304,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/",
                                backupCRAN = srcPackageURLOnCRAN) {
-  if (Sys.info()["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
+  if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(CRAN =
                   paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest"))
@@ -338,8 +338,8 @@ appName <- "R-Require"
 defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 
 defaultCacheDirOld <- switch(
-  Sys.info()[["sysname"]],
+  SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
   Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
-  Windows = normalizePath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
+  Windows = normalizePath(file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
 )

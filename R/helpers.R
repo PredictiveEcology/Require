@@ -135,7 +135,7 @@ setMethod(
           }
         }
       }
-      if (Sys.info()[["sysname"]] == "Darwin")
+      if (SysInfo[["sysname"]] == "Darwin")
         path <- normPath(path) # ensure path re-normalized after creation
 
       return(path)
@@ -345,10 +345,12 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
 #' `fileRenameOrMove` is like `file.rename`, but will work across disks.
 #' @rdname linkOrCopy
 fileRenameOrMove <- function(from, to) {
+  du <- unique(dirname(to))
+  checkPath(du, create = TRUE) # somewhat slow because `normPath`
   res <- suppressWarnings(file.rename(from, to)) ## try hardlink
   if (any(!res)) {
     res[!res] <- suppressWarnings(
-      file.copy(from[!res], to[!res])) ## finally, copy the file
+      file.copy(from[!res], to[!res], overwrite = TRUE)) ## finally, copy the file
     unlink(from[!res])
   }
   return(invisible(res))
@@ -469,3 +471,4 @@ getInStack <- function(obj) {
   return(get(obj, envir = env, inherits = FALSE))
 }
 
+SysInfo <- Sys.info() # do this on load; nothing can change, so repeated calls are a waste

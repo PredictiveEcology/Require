@@ -333,7 +333,7 @@ installedVers <- function(pkgDT) {
         installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error"))
-          if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
+          if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
       }
     }
@@ -341,7 +341,7 @@ installedVers <- function(pkgDT) {
     ip <- unique(ip, by = c("Package")) # , "LibPath" # basically, only take the first one if 2 installed in LibPath
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
     if (is(pkgDT, "try-error"))
-      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
+      if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
 
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
@@ -367,7 +367,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     purge <- FALSE
   }
   cap <- list()
-  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isMac <- tolower(SysInfo["sysname"]) == "darwin"
   isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
   isWindows <- isWindows()
 
@@ -614,11 +614,11 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
 }
 
 isWindows <- function() {
-  tolower(Sys.info()["sysname"]) == "windows"
+  tolower(SysInfo["sysname"]) == "windows"
 }
 
 isMacOSX <- function()
-  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isMac <- tolower(SysInfo["sysname"]) == "darwin"
 
 warningCantInstall <- function(pkgs) {
   warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
@@ -1103,54 +1103,51 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   outNotMasterMain <- outMasterMain <- character()
 
   for (i in 1:5) {
-    tried <- try(
-      {
+    if (!is.null(urls[["FALSE"]])) {
+      outNotMasterMain <-
+        withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
+          if (isFALSE(getOption("Require.offlineMode", FALSE)))
+            try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
+        }),
 
-        if (!is.null(urls[["FALSE"]])) {
-          outNotMasterMain <-
-            withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
-              if (isFALSE(getOption("Require.offlineMode", FALSE)))
-                try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
-            }),
+        warning = function(w) {
+          setOfflineModeTRUE()
+          # strip the ghp from the warning message
+          w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
+          invokeRestart("muffleWarning")
+
+        })
+    }
+    if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
+      for (wh in seq(urls[["TRUE"]])) {
+        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+          outMasterMain <-
+            withCallingHandlers({
+              try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE))
+            }
+            ,
 
             warning = function(w) {
               setOfflineModeTRUE()
               # strip the ghp from the warning message
               w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
               invokeRestart("muffleWarning")
-
             })
         }
-        if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
-          for (wh in seq(urls[["TRUE"]])) {
-            if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-              outMasterMain <-
-                withCallingHandlers({
-                  download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
-                }
-                ,
 
-                warning = function(w) {
-                  setOfflineModeTRUE()
-                  # strip the ghp from the warning message
-                  w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
-                  invokeRestart("muffleWarning")
-                })
-            }
-
-            if (!is(outMasterMain, "try-error")) {
-              names(outMasterMain) <- urls[["TRUE"]][wh]
-              break
-            }
-          }
+        if (!is(outMasterMain, "try-error")) {
+          names(outMasterMain) <- urls[["TRUE"]][wh]
+          break
         }
-      }, silent = FALSE)
-    if (!is(tried, "try-error"))
+      }
+    }
+    ret <- c(outNotMasterMain, outMasterMain)
+    if (!any(unlist(lapply(ret, is, "try-error"))))
       break
     Sys.sleep(0.5)
   }
 
-  c(outNotMasterMain, outMasterMain)
+  ret
 
 }
 
