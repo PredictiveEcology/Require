@@ -394,12 +394,24 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         if (file.exists(fn)) {
           cap[[type]] <- readRDS(fn)
         } else {
-          cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
-                                  error = function(x)
-                                    available.packages(ignore_repo_cache = TRUE, repos = repos, type = type))
+          caps <- lapply(repos, function(repo) {
+            tryCatch(available.packages(repos = repo, type = type),
+                     error = function(x) {
+                       browser()
+                       available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
+                     })
+          })
+          caps <- lapply(caps, as.data.table)
+          caps <- unique(rbindlist(caps), by = c("Package", "Version"))
+          cap[[type]] <- caps
+          # cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
+          #                         error = function(x) {
+          #                           browser()
+          #                           available.packages(ignore_repo_cache = TRUE, repos = repos, type = type)
+          #                           })
         # cap[[type]] <-  cap[[type]]
 
-        cap[[type]] <- as.data.table(cap[[type]])
+        # cap[[type]] <- as.data.table(cap[[type]])
 
         if (!is.null(getOptionRPackageCache())) {
           checkPath(dirname(fn), create = TRUE)
