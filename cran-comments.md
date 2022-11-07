@@ -6,7 +6,7 @@ This update is a re-implementation of the underlying functions, with large speed
 
 ### GitHub Actions
 - os: macOS-latest,   r: 'release'
-- os: windows-latest, r: 'release'
+- os: windows-latest, r: 'devel'
 - os: windows-latest, r: '4.2'
 - os: windows-latest, r: '4.1'
 - os: ubuntu-20.04,   r: 'devel', 
