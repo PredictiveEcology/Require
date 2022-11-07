@@ -11,7 +11,7 @@
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
   if (missing(create))
-    create <- !is.null(getOptionRPackageCache())
+    create <- FALSE # !is.null(getOptionRPackageCache())
 
   ## use cache dir following OS conventions used by rappdirs package:
   ## rappdirs::user_cache_dir(appName)
@@ -76,7 +76,7 @@ normPathMemoise <- function(d) {
 #' @rdname RequireCacheDir
 RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
-    create <- !is.null(getOptionRPackageCache())
+    create <- FALSE # !is.null(getOptionRPackageCache())
   }
   pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
   if (isTRUE(create))
