@@ -108,7 +108,7 @@ getOptionRPackageCache <- function() {
       break
     } else {
       if (identical("default", curVal)) {
-        fromEnvVars <- Sys.getenv("R_REQUIRE_PKGCACHE")
+        fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
         if (nchar(fromEnvVars) == 0  ) {
           curVal <- RequirePkgCacheDir(FALSE)
           break
