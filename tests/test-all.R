@@ -154,7 +154,7 @@ Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 browser()
 if (!isDev) {
   unlink(Require::tempdir2(), recursive = TRUE)
-  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = T), recursive = T)
+  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
 }
 # Check everything is reset to original
 if (FALSE) {
