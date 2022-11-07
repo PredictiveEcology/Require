@@ -1,4 +1,3 @@
-
 #' Path to (package) cache directory
 #'
 #' Sets or gets the cache directory associated with the `Require` package.
@@ -11,7 +10,6 @@
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
-
   if (missing(create))
     create <- !is.null(getOptionRPackageCache())
 
@@ -52,7 +50,6 @@ RequireCacheDir <- function(create) {
     }
   }
 
-
   return(cacheDir)
 }
 
@@ -68,8 +65,6 @@ normPathMemoise <- function(d) {
       .pkgEnv[[fnName]][[di]]
     })
     ret <- unlist(ret)
-
-
   } else {
     ret <- normPath(d)
   }
@@ -279,7 +274,6 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
-
 putFile <- function(from, to, overwrite) {
   if (file.exists(to)) {
     if (isTRUE(overwrite)) {
@@ -292,7 +286,6 @@ putFile <- function(from, to, overwrite) {
     res1 <- file.copy(from, to)
   }
 }
-
 
 appName <- "R-Require"
 
