@@ -135,7 +135,7 @@ setMethod(
           }
         }
       }
-      if (Sys.info()[["sysname"]] == "Darwin")
+      if (SysInfo[["sysname"]] == "Darwin")
         path <- normPath(path) # ensure path re-normalized after creation
 
       return(path)
@@ -469,3 +469,4 @@ getInStack <- function(obj) {
   return(get(obj, envir = env, inherits = FALSE))
 }
 
+SysInfo <- Sys.info() # do this on load; nothing can change, so repeated calls are a waste

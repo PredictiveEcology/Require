@@ -304,7 +304,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/",
                                backupCRAN = srcPackageURLOnCRAN) {
-  if (Sys.info()["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
+  if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(CRAN =
                   paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest"))
@@ -338,8 +338,8 @@ appName <- "R-Require"
 defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 
 defaultCacheDirOld <- switch(
-  Sys.info()[["sysname"]],
+  SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
   Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
-  Windows = normalizePath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
+  Windows = normalizePath(file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
 )

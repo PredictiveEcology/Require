@@ -333,7 +333,7 @@ installedVers <- function(pkgDT) {
         installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error"))
-          if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
+          if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
       }
     }
@@ -341,7 +341,7 @@ installedVers <- function(pkgDT) {
     ip <- unique(ip, by = c("Package")) # , "LibPath" # basically, only take the first one if 2 installed in LibPath
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
     if (is(pkgDT, "try-error"))
-      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
+      if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
 
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
@@ -367,7 +367,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     purge <- FALSE
   }
   cap <- list()
-  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isMac <- tolower(SysInfo["sysname"]) == "darwin"
   isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
   isWindows <- isWindows()
 
@@ -614,11 +614,11 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
 }
 
 isWindows <- function() {
-  tolower(Sys.info()["sysname"]) == "windows"
+  tolower(SysInfo["sysname"]) == "windows"
 }
 
 isMacOSX <- function()
-  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isMac <- tolower(SysInfo["sysname"]) == "darwin"
 
 warningCantInstall <- function(pkgs) {
   warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
