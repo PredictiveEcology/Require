@@ -1056,59 +1056,11 @@ installPackagesSystem <- function(pkg, args, libPath) {
 }
 
 
-#' Get the option for `Require.RPackageCache`
-#'
-#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
-#' If not set, checks whether the `options("Require.RPackageCache")` is set.
-#' If a character string, then it returns that.
-#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
-#'
-#' @export
-getOptionRPackageCache <- function() {
-  curVal <- getOption("Require.RPackageCache")
-  try <- 1
-  while (try < 3) {
-    if (isTRUE(curVal)) {
-      curVal <- RequirePkgCacheDir(FALSE)
-      break
-    } else if (isFALSE(curVal)) {
-      curVal <- NULL
-      break
-    } else {
-      if (identical("default", curVal)) {
-        fromEnvVars <- Sys.getenv("Require.RPackageCache")
-        if (nchar(fromEnvVars) == 0  ) {
-          curVal <- RequirePkgCacheDir(FALSE)
-          break
-        } else {
-          try <- try + 1
-          curVal <- fromEnvVars
-          if (identical("TRUE", curVal)) {
-            curVal <- TRUE
-          } else if (identical("FALSE", curVal)) {
-            curVal <- NULL
-          } else {
-            break
-          }
-        }
-      } else {
-        break
-      }
-    }
-  }
-  if (!is.null(curVal)) {
-    checkPath(curVal, create = TRUE)
-  }
-  curVal
-}
+
 
 
 
 masterMainHEAD <- function(url, need) {
-  # masterMain <- c("main", "master")
-  # masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
-  # masterGrep <- paste0("/", "master", "(/|\\.)")
-  # mainGrep <- paste0("/", "main", "(/|\\.)")
   hasMasterMain <- grepl(masterMainGrep, url)
   hasMaster <- grepl(masterGrep, url)
   hasMain <- grepl(mainGrep, url)
