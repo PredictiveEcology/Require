@@ -345,10 +345,12 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
 #' `fileRenameOrMove` is like `file.rename`, but will work across disks.
 #' @rdname linkOrCopy
 fileRenameOrMove <- function(from, to) {
+  du <- unique(dirname(to))
+  checkPath(du, create = TRUE) # somewhat slow because `normPath`
   res <- suppressWarnings(file.rename(from, to)) ## try hardlink
   if (any(!res)) {
     res[!res] <- suppressWarnings(
-      file.copy(from[!res], to[!res])) ## finally, copy the file
+      file.copy(from[!res], to[!res], overwrite = TRUE)) ## finally, copy the file
     unlink(from[!res])
   }
   return(invisible(res))
