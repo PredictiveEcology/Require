@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.3</span>
       </span>
     </div>
 
@@ -48,9 +48,9 @@
     </div>
 
     <div class="section level2">
-<h2 class="page-header" data-toc-text="0.1.7" id="version-017">version 0.1.7<a class="anchor" aria-label="anchor" href="#version-017"></a></h2>
+<h2 class="page-header" data-toc-text="0.2.3" id="version-023">version 0.2.3<a class="anchor" aria-label="anchor" href="#version-023"></a></h2>
 <div class="section level3">
-<h3 id="enhancements-0-1-7">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-7"></a></h3>
+<h3 id="enhancements-0-2-3">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-3"></a></h3>
 <ul><li>new <code>options("Require.offlineMode")</code> can be set to <code>FALSE</code> to stop <code>Require</code> and <code>pkgDep</code> from checking the internet. This will fail, unless the cached packages are available locally (i.e., it was run once with all packages installed previously). If they are, then they will be installed without needing the internet. This option will also be set automatically on the first attempt to get a file from the internet, which fails, triggering a test of the internet. If that fails, then the option will be set to <code>FALSE</code> until next call to <code>Require</code> or <code>pkgDep</code> when it will be reset. This is experimental still.</li>
 <li>many more edge cases found and dealt with</li>
 <li>experimental use of <code>(HEAD)</code> to keep a package “up to date” with the HEAD of a GitHub branch. The behaviour still uses version numbering, so will not update based on SHA, but if the HEAD is ahead of the locally installed package and the <code>(HEAD)</code> is specified, then it will update. Specifically, use this instead of a version number, e.g., <code>"PredictiveEcology/Require@development (HEAD)"</code>
@@ -62,13 +62,14 @@
 <li>package messaging is not sorted alphabetically during installation</li>
 <li>all <code>message</code> calls now <code>messageVerbose</code>, so verbosity can be fully controlled with the argument <code>verbose</code> or <code>options("Require.verbose")</code>. See <code><a href="../reference/RequireOptions.html">?RequireOptions</a></code>.</li>
 <li>tests clean up more completely after themselves</li>
-<li>if <code>options(Require.RPackageCache = FALSE)</code> (or environment variable of the same name), then no cache folder will be created; previously a nearly empty folder was created by default. See <code><a href="../reference/RequireOptions.html">?RequireOptions</a></code>
+<li>if <code>options(Require.RPackageCache = FALSE)</code> (or environment variable <code>"R_REQUIRE_PKGCACHE"</code>), then no cache folder will be created; previously a nearly empty folder was created by default. See <code><a href="../reference/RequireOptions.html">?RequireOptions</a></code>
 </li>
 <li>Remove option <code>Require.persistentPkgEnv</code> as it was deemed superfluous.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="bugfix-0-1-7">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-1-7"></a></h3>
-<ul><li>pkgDep was using local <code>DESCRIPTION</code> file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer’s case), then this is desirable. But, when the local installed version is behind CRAN (a common user’s case), then this is not desirable. <code>pkgDep</code> now uses CRAN’s version as developers can handle this situation on their own.</li>
+<h3 id="bugfix-0-2-3">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-2-3"></a></h3>
+<ul><li>
+<code>pkgDep</code> was using local <code>DESCRIPTION</code> file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer’s case), then this is desirable. But, when the local installed version is behind CRAN (a common user’s case), then this is not desirable. <code>pkgDep</code> now uses CRAN’s version as developers can handle this situation on their own.</li>
 </ul></div>
 </div>
     <div class="section level2">

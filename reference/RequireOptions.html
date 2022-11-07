@@ -19,7 +19,7 @@ See Details below."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/aj
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.3</span>
       </span>
     </div>
 
@@ -81,8 +81,8 @@ file so they persist between sessions.</p>
 <dd><p>Default: <code><a href="getOptionRPackageCache.html">getOptionRPackageCache()</a></code>, which must be either a path or a logical.
 To turn off package caching, set this to <code>FALSE</code>.
 This can be set using an environment
-variable e.g. <code>Sys.setenv(Require.RPackageCache = "somePath")</code>, or
-<code>Sys.setenv(Require.RPackageCache = "TRUE")</code>; if that is not
+variable e.g. <code>Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")</code>, or
+<code>Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")</code>; if that is not
 set, then an either a path or logical option (<code>options(Require.RPackageCache = "somePath")</code>
 or <code>options(Require.RPackageCache = TRUE)</code>). If <code>TRUE</code>, the default
 folder location <code><a href="RequireCacheDir.html">RequirePkgCacheDir()</a></code> will be used.
