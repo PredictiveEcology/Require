@@ -391,35 +391,25 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       fn <- availablePackagesCachedPath(repos, type)
       if (isTRUE(purge))
         unlink(fn)
-        if (file.exists(fn)) {
-          cap[[type]] <- readRDS(fn)
-        } else {
-          caps <- lapply(repos, function(repo) {
-            tryCatch(available.packages(repos = repo, type = type),
-                     error = function(x) {
-                       browser()
-                       available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
-                     })
-          })
-          caps <- lapply(caps, as.data.table)
-          caps <- unique(rbindlist(caps), by = c("Package", "Version"))
-          cap[[type]] <- caps
-          # cap[[type]] <- tryCatch(available.packages(repos = repos, type = type),
-          #                         error = function(x) {
-          #                           browser()
-          #                           available.packages(ignore_repo_cache = TRUE, repos = repos, type = type)
-          #                           })
-        # cap[[type]] <-  cap[[type]]
-
-        # cap[[type]] <- as.data.table(cap[[type]])
+      if (file.exists(fn)) {
+        cap[[type]] <- readRDS(fn)
+      } else {
+        caps <- lapply(repos, function(repo) {
+          tryCatch(available.packages(repos = repo, type = type),
+                   error = function(x) {
+                     browser()
+                     available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
+                   })
+        })
+        caps <- lapply(caps, as.data.table)
+        caps <- unique(rbindlist(caps), by = c("Package", "Version"))
+        cap[[type]] <- caps
 
         if (!is.null(getOptionRPackageCache())) {
           checkPath(dirname(fn), create = TRUE)
           saveRDS(cap[[type]], file = fn)
         }
       }
-
-
     }
     cap <- do.call(rbind, cap)
     # cap <- cap[!duplicated(cap, by = "Package")] # This will keep only one copy if type = "both"
