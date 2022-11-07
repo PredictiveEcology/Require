@@ -1,5 +1,5 @@
-# Sys.setenv("Require.checkAsCRAN" = "true") # set this to test as if it is CRAN (short and silent)
-# Sys.setenv("Require.testAsInteractive" = "false") # set this to test as if GitHub Actions (short and loud)
+# Sys.setenv("R_REQUIRE_CHECKASCRAN" = "true") # set this to test as if it is CRAN (short and silent)
+# Sys.setenv("R_REQUIRE_TESTASINTERACTIVE" = "false") # set this to test as if GitHub Actions (short and loud)
 # THIS IS USING THE MECHANISM FOR CRAN THAT IF THE VERSION NUMBER IS NOT A DEV VERSION (E.G., .9000) THEN IT IS RUN AS CRAN
 # source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
 checks <- list()
@@ -10,12 +10,12 @@ checks$start[["envVars"]] <- Sys.getenv()
 envOrig <- checks$start[["envVars"]]
 
 if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
-  Sys.setenv("RequireRunAllTests"="yes")
+  Sys.setenv("R_REQUIRE_RUNALLTESTS"="yes")
 }
 # GitHub Actions, R CMD check locally
-isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true"
+isDev <- Sys.getenv("R_REQUIRE_RUNALLTESTS") == "yes" && Sys.getenv("R_REQUIRE_CHECKASCRAN") != "true"
 # Actually interactive
-isDevAndInteractive <- interactive() && isDev && Sys.getenv("Require.testAsInteractive") != "false"
+isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TESTASINTERACTIVE") != "false"
 
 if (!isDevAndInteractive) # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKGCACHE = "FALSE")
@@ -32,7 +32,7 @@ checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 # helper files for this test
 source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 
-# Can emulate CRAN by setting Sys.setenv("Require.checkAsCRAN" = "true"); source()
+# Can emulate CRAN by setting Sys.setenv("R_REQUIRE_CHECKASCRAN" = "true"); source()
 # if (isFALSE(isDev)) {
 #   try(unlink(RequireCacheDir(), recursive = TRUE))
 # }
@@ -124,7 +124,7 @@ if (!isDev) {
 
 # 5 Sys.env
 envVarsChanged <- c("CRANCACHE_DISABLE", "R_REMOTES_UPGRADE", "R_REQUIRE_PKGCACHE",
-                    "RequireRunAllTests", "R_TESTS")
+                    "R_REQUIRE_RUNALLTESTS", "R_TESTS")
 envVarsChangedNeedUnset <- names(envCur)[names(envCur) %in% envVarsChanged]
 if (length(envVarsChangedNeedUnset))
   Sys.unsetenv(envVarsChangedNeedUnset)
