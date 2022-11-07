@@ -16,7 +16,7 @@ version 0.1.7
 * Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
 
 ## bugfix
-* pkgDep was using local `DESCRIPTION` file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer's case), then this is desirable. But, when the local installed version is behind CRAN (a common user's case), then this is not desirable. `pkgDep` now uses CRAN's version as developers can handle this situation on their own.
+* `pkgDep` was using local `DESCRIPTION` file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer's case), then this is desirable. But, when the local installed version is behind CRAN (a common user's case), then this is not desirable. `pkgDep` now uses CRAN's version as developers can handle this situation on their own.
 
 version 0.1.6
 =============
