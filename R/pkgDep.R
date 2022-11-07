@@ -267,6 +267,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
           saveNeededFull1 <- c(saveNeededFull1, prev)
           saveNeededFull1 <- saveNeededFull1[!duplicated(names(saveNeededFull1))]
         }
+        checkPath(dirname(fn), create = TRUE)
         saveRDS(saveNeededFull1, file = fn)
       }
     }
@@ -1302,7 +1303,7 @@ pkgDepTopoSortMemoise <- function(...) {
 
 pkgDepDBFilename <- function() {
   if (!is.null(getOptionRPackageCache()))
-    file.path(RequireCacheDir(), ".pkgDepDB.rds")
+    file.path(RequireCacheDir(), ".pkgDepDB.rds") # returns NULL if no Cache used
 }
 
 isAre <- function(l, v) {
