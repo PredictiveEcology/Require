@@ -1,6 +1,6 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
-version 0.1.7
+version 0.2.3
 =============
 
 ## enhancements
@@ -12,7 +12,7 @@ version 0.1.7
 * package messaging is not sorted alphabetically during installation
 * all `message` calls now `messageVerbose`, so verbosity can be fully controlled with the argument `verbose` or `options("Require.verbose")`. See `?RequireOptions`.
 * tests clean up more completely after themselves
-* if `options(Require.RPackageCache = FALSE)` (or environment variable of the same name), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
+* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKGCACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
 * Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
 
 ## bugfix
