@@ -1,4 +1,3 @@
-
 #' Path to (package) cache directory
 #'
 #' Sets or gets the cache directory associated with the `Require` package.
@@ -11,9 +10,8 @@
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
-
   if (missing(create))
-    create <- !is.null(getOptionRPackageCache())
+    create <- FALSE # !is.null(getOptionRPackageCache())
 
   ## use cache dir following OS conventions used by rappdirs package:
   ## rappdirs::user_cache_dir(appName)
@@ -24,7 +22,7 @@ RequireCacheDir <- function(create) {
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
-        if (length(oldLocs) > 1) {
+        if (length(oldLocs) > 0) {
           message("Require has changed default package cache folder from\n",
                   defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
                   "in the old Cache, moving them now...")
@@ -52,7 +50,6 @@ RequireCacheDir <- function(create) {
     }
   }
 
-
   return(cacheDir)
 }
 
@@ -68,8 +65,6 @@ normPathMemoise <- function(d) {
       .pkgEnv[[fnName]][[di]]
     })
     ret <- unlist(ret)
-
-
   } else {
     ret <- normPath(d)
   }
@@ -81,7 +76,7 @@ normPathMemoise <- function(d) {
 #' @rdname RequireCacheDir
 RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
-    create <- !is.null(getOptionRPackageCache())
+    create <- FALSE # !is.null(getOptionRPackageCache())
   }
   pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
   if (isTRUE(create))
@@ -93,6 +88,51 @@ RequirePkgCacheDir <- function(create) {
   return(pkgCacheDir)
 }
 
+#' Get the option for `Require.RPackageCache`
+#'
+#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
+#' If not set, checks whether the `options("Require.RPackageCache")` is set.
+#' If a character string, then it returns that.
+#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
+#'
+#' @export
+getOptionRPackageCache <- function() {
+  curVal <- getOption("Require.RPackageCache")
+  try <- 1
+  while (try < 3) {
+    if (isTRUE(curVal)) {
+      curVal <- RequirePkgCacheDir(FALSE)
+      break
+    } else if (isFALSE(curVal)) {
+      curVal <- NULL
+      break
+    } else {
+      if (identical("default", curVal)) {
+        fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+        if (nchar(fromEnvVars) == 0  ) {
+          curVal <- RequirePkgCacheDir(FALSE)
+          break
+        } else {
+          try <- try + 1
+          curVal <- fromEnvVars
+          if (identical("TRUE", curVal)) {
+            curVal <- TRUE
+          } else if (identical("FALSE", curVal)) {
+            curVal <- NULL
+          } else {
+            break
+          }
+        }
+      } else {
+        break
+      }
+    }
+  }
+  # if (!is.null(curVal)) {
+  #   checkPath(curVal, create = TRUE)
+  # }
+  curVal
+}
 #' Setup a project library, cache, options
 #'
 #' This can be placed as the first line of any/all scripts and it will
@@ -264,7 +304,7 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/",
                                backupCRAN = srcPackageURLOnCRAN) {
-  if (Sys.info()["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
+  if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(CRAN =
                   paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest"))
@@ -279,7 +319,6 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
-
 putFile <- function(from, to, overwrite) {
   if (file.exists(to)) {
     if (isTRUE(overwrite)) {
@@ -293,15 +332,14 @@ putFile <- function(from, to, overwrite) {
   }
 }
 
-
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
 defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 
 defaultCacheDirOld <- switch(
-  Sys.info()[["sysname"]],
+  SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
   Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
-  Windows = normalizePath(file.path("C:", "Users", Sys.info()[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
+  Windows = normalizePath(file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
 )

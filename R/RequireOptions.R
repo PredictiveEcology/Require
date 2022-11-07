@@ -24,8 +24,8 @@
 #'     Default: `getOptionRPackageCache()`, which must be either a path or a logical.
 #'     To turn off package caching, set this to `FALSE`.
 #'     This can be set using an environment
-#'     variable e.g. `Sys.setenv(Require.RPackageCache = "somePath")`, or
-#'     `Sys.setenv(Require.RPackageCache = "TRUE")`; if that is not
+#'     variable e.g. `Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")`, or
+#'     `Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")`; if that is not
 #'     set, then an either a path or logical option (`options(Require.RPackageCache = "somePath")`
 #'     or `options(Require.RPackageCache = TRUE)`). If `TRUE`, the default
 #'     folder location `RequirePkgCacheDir()` will be used.

@@ -1,6 +1,6 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
-version 0.1.7
+version 0.2.3
 =============
 
 ## enhancements
@@ -12,11 +12,11 @@ version 0.1.7
 * package messaging is not sorted alphabetically during installation
 * all `message` calls now `messageVerbose`, so verbosity can be fully controlled with the argument `verbose` or `options("Require.verbose")`. See `?RequireOptions`.
 * tests clean up more completely after themselves
-* if `options(Require.RPackageCache = FALSE)` (or environment variable of the same name), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
+* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKGCACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
 * Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
 
 ## bugfix
-* pkgDep was using local `DESCRIPTION` file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer's case), then this is desirable. But, when the local installed version is behind CRAN (a common user's case), then this is not desirable. `pkgDep` now uses CRAN's version as developers can handle this situation on their own.
+* `pkgDep` was using local `DESCRIPTION` file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer's case), then this is desirable. But, when the local installed version is behind CRAN (a common user's case), then this is not desirable. `pkgDep` now uses CRAN's version as developers can handle this situation on their own.
 
 version 0.1.6
 =============

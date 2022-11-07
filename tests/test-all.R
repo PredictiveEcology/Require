@@ -1,5 +1,5 @@
-# Sys.setenv("Require.checkAsCRAN" = "true") # set this to test as if it is CRAN (short and silent)
-# Sys.setenv("Require.testAsInteractive" = "false") # set this to test as if GitHub Actions (short and loud)
+# Sys.setenv("R_REQUIRE_CHECK_AS_CRAN" = "true") # set this to test as if it is CRAN (short and silent)
+# Sys.setenv("R_REQUIRE_TEST_AS_INTERACTIVE" = "false") # set this to test as if GitHub Actions (short and loud)
 # THIS IS USING THE MECHANISM FOR CRAN THAT IF THE VERSION NUMBER IS NOT A DEV VERSION (E.G., .9000) THEN IT IS RUN AS CRAN
 # source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
 checks <- list()
@@ -10,15 +10,15 @@ checks$start[["envVars"]] <- Sys.getenv()
 envOrig <- checks$start[["envVars"]]
 
 if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
-  Sys.setenv("RequireRunAllTests"="yes")
+  Sys.setenv("R_REQUIRE_RUN_ALL_TESTS"="yes")
 }
 # GitHub Actions, R CMD check locally
-isDev <- Sys.getenv("RequireRunAllTests") == "yes" && Sys.getenv("Require.checkAsCRAN") != "true"
+isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "yes" && Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
 # Actually interactive
-isDevAndInteractive <- interactive() && isDev && Sys.getenv("Require.testAsInteractive") != "false"
+isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
 if (!isDevAndInteractive) # i.e., CRAN
-  Sys.setenv(Require.RPackageCache = "FALSE")
+  Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
 
 suppressPackageStartupMessages(library(Require)) # this will trigger data.table options to be set so that we have them part of our "before" snapshot
 library(testit)
@@ -32,7 +32,7 @@ checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 # helper files for this test
 source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 
-# Can emulate CRAN by setting Sys.setenv("Require.checkAsCRAN" = "true"); source()
+# Can emulate CRAN by setting Sys.setenv("R_REQUIRE_CHECK_AS_CRAN" = "true"); source()
 # if (isFALSE(isDev)) {
 #   try(unlink(RequireCacheDir(), recursive = TRUE))
 # }
@@ -123,8 +123,8 @@ if (!isDev) {
 }
 
 # 5 Sys.env
-envVarsChanged <- c("CRANCACHE_DISABLE", "R_REMOTES_UPGRADE", "Require.RPackageCache",
-                    "RequireRunAllTests", "R_TESTS")
+envVarsChanged <- c("CRANCACHE_DISABLE", "R_REMOTES_UPGRADE", "R_REQUIRE_PKG_CACHE",
+                    "R_REQUIRE_RUN_ALL_TESTS", "R_TESTS")
 envVarsChangedNeedUnset <- names(envCur)[names(envCur) %in% envVarsChanged]
 if (length(envVarsChangedNeedUnset))
   Sys.unsetenv(envVarsChangedNeedUnset)
@@ -151,6 +151,10 @@ checks$post[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 
 Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 
+if (!isDev) {
+  unlink(Require::tempdir2(), recursive = TRUE)
+  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
+}
 # Check everything is reset to original
 if (FALSE) {
   if (isDev) {

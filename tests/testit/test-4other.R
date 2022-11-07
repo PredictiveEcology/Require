@@ -65,7 +65,7 @@ testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warn
 out2222 <- capture.output(setupOff())
 Require:::messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
                verboseLevel = 0)
-RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
+RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
 if (identical(RPackageCacheSysEnv, "FALSE") ) {
   testit::assert(identical(NULL, getOptionRPackageCache()))
 } else {
@@ -89,7 +89,7 @@ testit::assert(identical(getOptionRPackageCache(), NULL))
 ooo <- options(Require.RPackageCache = tempdir())
 testit::assert(identical(getOptionRPackageCache(), tempdir()))
 ooo <- options(Require.RPackageCache = "default")
-RPackageCacheSysEnv <- Sys.getenv("Require.RPackageCache")
+RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
 if (identical(RPackageCacheSysEnv, "FALSE")) {
   testit::assert(identical(NULL, getOptionRPackageCache()))
 } else {

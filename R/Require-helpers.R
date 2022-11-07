@@ -333,7 +333,7 @@ installedVers <- function(pkgDT) {
         installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error"))
-          if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
+          if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
       }
     }
@@ -341,7 +341,7 @@ installedVers <- function(pkgDT) {
     ip <- unique(ip, by = c("Package")) # , "LibPath" # basically, only take the first one if 2 installed in LibPath
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
     if (is(pkgDT, "try-error"))
-      if (identical(Sys.info()[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
+      if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
 
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
@@ -367,7 +367,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     purge <- FALSE
   }
   cap <- list()
-  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isMac <- tolower(SysInfo["sysname"]) == "darwin"
   isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
   isWindows <- isWindows()
 
@@ -614,11 +614,11 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
 }
 
 isWindows <- function() {
-  tolower(Sys.info()["sysname"]) == "windows"
+  tolower(SysInfo["sysname"]) == "windows"
 }
 
 isMacOSX <- function()
-  isMac <- tolower(Sys.info()["sysname"]) == "darwin"
+  isMac <- tolower(SysInfo["sysname"]) == "darwin"
 
 warningCantInstall <- function(pkgs) {
   warning("Can't install ", pkgs, "; you will likely need to restart R and run:\n",
@@ -1056,59 +1056,9 @@ installPackagesSystem <- function(pkg, args, libPath) {
 }
 
 
-#' Get the option for `Require.RPackageCache`
-#'
-#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
-#' If not set, checks whether the `options("Require.RPackageCache")` is set.
-#' If a character string, then it returns that.
-#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
-#'
-#' @export
-getOptionRPackageCache <- function() {
-  curVal <- getOption("Require.RPackageCache")
-  try <- 1
-  while (try < 3) {
-    if (isTRUE(curVal)) {
-      curVal <- RequirePkgCacheDir(FALSE)
-      break
-    } else if (isFALSE(curVal)) {
-      curVal <- NULL
-      break
-    } else {
-      if (identical("default", curVal)) {
-        fromEnvVars <- Sys.getenv("Require.RPackageCache")
-        if (nchar(fromEnvVars) == 0  ) {
-          curVal <- RequirePkgCacheDir(FALSE)
-          break
-        } else {
-          try <- try + 1
-          curVal <- fromEnvVars
-          if (identical("TRUE", curVal)) {
-            curVal <- TRUE
-          } else if (identical("FALSE", curVal)) {
-            curVal <- NULL
-          } else {
-            break
-          }
-        }
-      } else {
-        break
-      }
-    }
-  }
-  if (!is.null(curVal)) {
-    checkPath(curVal, create = TRUE)
-  }
-  curVal
-}
-
 
 
 masterMainHEAD <- function(url, need) {
-  # masterMain <- c("main", "master")
-  # masterMainGrep <- paste0("/", paste(masterMain, collapse = "|"), "(/|\\.)")
-  # masterGrep <- paste0("/", "master", "(/|\\.)")
-  # mainGrep <- paste0("/", "main", "(/|\\.)")
   hasMasterMain <- grepl(masterMainGrep, url)
   hasMaster <- grepl(masterGrep, url)
   hasMain <- grepl(mainGrep, url)
@@ -1153,54 +1103,51 @@ downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
   outNotMasterMain <- outMasterMain <- character()
 
   for (i in 1:5) {
-    tried <- try(
-      {
+    if (!is.null(urls[["FALSE"]])) {
+      outNotMasterMain <-
+        withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
+          if (isFALSE(getOption("Require.offlineMode", FALSE)))
+            try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
+        }),
 
-        if (!is.null(urls[["FALSE"]])) {
-          outNotMasterMain <-
-            withCallingHandlers(Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
-              if (isFALSE(getOption("Require.offlineMode", FALSE)))
-                try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
-            }),
+        warning = function(w) {
+          setOfflineModeTRUE()
+          # strip the ghp from the warning message
+          w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
+          invokeRestart("muffleWarning")
+
+        })
+    }
+    if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
+      for (wh in seq(urls[["TRUE"]])) {
+        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+          outMasterMain <-
+            withCallingHandlers({
+              try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE))
+            }
+            ,
 
             warning = function(w) {
               setOfflineModeTRUE()
               # strip the ghp from the warning message
               w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
               invokeRestart("muffleWarning")
-
             })
         }
-        if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
-          for (wh in seq(urls[["TRUE"]])) {
-            if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-              outMasterMain <-
-                withCallingHandlers({
-                  download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
-                }
-                ,
 
-                warning = function(w) {
-                  setOfflineModeTRUE()
-                  # strip the ghp from the warning message
-                  w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
-                  invokeRestart("muffleWarning")
-                })
-            }
-
-            if (!is(outMasterMain, "try-error")) {
-              names(outMasterMain) <- urls[["TRUE"]][wh]
-              break
-            }
-          }
+        if (!is(outMasterMain, "try-error")) {
+          names(outMasterMain) <- urls[["TRUE"]][wh]
+          break
         }
-      }, silent = FALSE)
-    if (!is(tried, "try-error"))
+      }
+    }
+    ret <- c(outNotMasterMain, outMasterMain)
+    if (!any(unlist(lapply(ret, is, "try-error"))))
       break
     Sys.sleep(0.5)
   }
 
-  c(outNotMasterMain, outMasterMain)
+  ret
 
 }
 
@@ -1227,22 +1174,20 @@ extractPkgNameFromWarning <- function(x) {
   gsub(".+\u2018(.+)\u2019.+", "\\1", out)         # package XXX is in use and will not be installed
 }
 
-
-
 availablePackagesCachedPath <- function(repos, type) {
   file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, "availablePackages.rds")
 }
 
 installPackagesWithQuiet <- function(ipa) {
   if (isTRUE(ipa$quiet)) {
-    messSupp2 <- capture.output(
-      messSupp <- capture.output(
-        type = "message", do.call(install.packages, ipa))
-    )
+    messSupp2 <- capture.output({
+      messSupp <- capture.output(type = "message", {
+        do.call(install.packages, ipa)
+      })
+    })
   } else {
     do.call(install.packages, ipa)
   }
-
 }
 
 #' @importFrom utils remove.packages
@@ -1273,8 +1218,6 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
   }
   file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
 }
-
-
 
 #' Internals used by `Require`
 #'
@@ -1339,7 +1282,6 @@ getPkgVersions <- function(pkgDT, install = TRUE, verbose = getOption("Require.v
   pkgDT[]
 }
 
-
 setOfflineModeTRUE <- function() {
   if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     if (!internetExists()) {
@@ -1348,7 +1290,6 @@ setOfflineModeTRUE <- function() {
       message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
     }
   }
-
 }
 
 checkAutomaticOfflineMode <- function() {
