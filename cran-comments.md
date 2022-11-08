@@ -1,6 +1,6 @@
 ## Updated release
 
-This update is a re-implementation of the underlying functions, with large speed and edge case improvements. 
+This update is a re-implementation of the underlying functions, with large speed and edge case improvements. This versions includes several modifications to ensure clean cache directories when a user (including CRAN), does not want to use a cache or wants to ensure the cache is wiped clean after testing.
 
 ## Test environments
 
