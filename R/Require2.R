@@ -974,7 +974,7 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Requ
   # ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
   #              paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
   gg <- pkgDep(ff, recursive = TRUE, purge = purge)
-  hh <- sort(unique(gsub(" ", "", gsub("\n", "", unname(unlist(gg))))))
+  hh <- sort(unique(gsub("(\\(.*)( )+(.*\\))$", "\\1\\3", gsub("\n", "", unname(unlist(gg))))))
   pkgDT <- toPkgDT(hh, deepCopy = TRUE)
   pkgDT <- parsePackageFullname(pkgDT)
   pkgDT <- parseGitHub(pkgDT)
