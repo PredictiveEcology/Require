@@ -315,23 +315,33 @@ Require <- function(packages, packageVersionFile,
     deps <- pkgDep(packages, purge = purge, libPath = libPaths, recursive = TRUE,
                    which = which, type = type, verbose = verbose)
     basePkgsToLoad <- packages[packages %in% .basePkgs]
-    allPackages <- unique(unname(unlist(deps)))
-    pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
-    pkgDT <- updatePackagesWithNames(pkgDT, packages)
-    pkgDT <- parsePackageFullname(pkgDT)
-    pkgDT <- parseGitHub(pkgDT)
-    pkgDT <- removeDups(pkgDT)
-    pkgDT <- removeBasePkgs(pkgDT)
-    pkgDT <- recordLoadOrder(packages, pkgDT)
-    pkgDT <- installedVers(pkgDT)
-    pkgDT <- dealWithStandAlone(pkgDT, standAlone)
-    pkgDT <- whichToInstall(pkgDT, install)
-    if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
-      pkgDT <-
-        doInstalls(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
-                   install.packagesArgs = install.packagesArgs,
-                   type = type)
+    if (NROW(deps)) {
+      allPackages <- unique(unname(unlist(deps)))
+      pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+      pkgDT <- updatePackagesWithNames(pkgDT, packages)
+      pkgDT <- parsePackageFullname(pkgDT)
+      pkgDT <- parseGitHub(pkgDT)
+      pkgDT <- removeDups(pkgDT)
+      pkgDT <- removeBasePkgs(pkgDT)
+      pkgDT <- recordLoadOrder(packages, pkgDT)
+      pkgDT <- installedVers(pkgDT)
+      pkgDT <- dealWithStandAlone(pkgDT, standAlone)
+      pkgDT <- whichToInstall(pkgDT, install)
+      if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
+        pkgDT <-
+          doInstalls(pkgDT, repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
+                     install.packagesArgs = install.packagesArgs,
+                     type = type)
+      }
     }
+    if (length(basePkgsToLoad)) {
+      pkgDTBase <- toPkgDT(basePkgsToLoad)
+      set(pkgDTBase, NULL, c("loadOrder", "installedVersionOK"), list(1L, TRUE))
+      if (exists("pkgDT", inherits = FALSE))
+        pkgDTBase <- rbindlist(list(pkgDT, pkgDTBase), use.names = TRUE, fill = TRUE)
+      pkgDT <- pkgDTBase
+    }
+
     out <- doLoads(require, pkgDT)
 
     if (verbose >= 2)
