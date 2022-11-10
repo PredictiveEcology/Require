@@ -187,36 +187,32 @@ among themselves, \emph{e.g.}, \code{methods} depends on \code{stats} and \code{
 }
 \examples{
 \dontrun{
-opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-if (interactive()) { # This requires a query to GitHub.com
-  pkgDep("Require")
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+
+  pkgDep("tidyverse", recursive = TRUE)
   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
-}
-options(opts) # replace original value for the cache option
 
-## delete all temp files etc. from this example
-Require:::.cleanup()
+  Require:::.cleanup(opts)
+}
 }
 \dontrun{
-opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-if (interactive()) { # This requires a query to GitHub.com
-  pkgDep2("Require")
-  # much bigger one
+if (Require:::.runLongExamples()) {
+  opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
+
   pkgDep2("reproducible")
-}
-options(opts) # replace original value for the cache option
+  # much bigger one
+  pkgDep2("tidyverse")
 
-## delete all temp files etc. from this example
-Require:::.cleanup()
+  Require:::.cleanup(opts)
+}
 }
 \dontrun{
-opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-if (interactive()) { # This requires a query to GitHub.com
-  pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
-}
-options(opts) # replace original value for the cache option
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
 
-## delete all temp files etc. from this example
-Require:::.cleanup()
-}
+  pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+
+  Require:::.cleanup(opts)
+}}
 }

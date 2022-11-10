@@ -486,6 +486,7 @@ SysInfo <- Sys.info() # do this on load; nothing can change, so repeated calls a
   options(opts)
 }
 
+#' @importFrom utils packageDescription
 .isDevelVersion <- function() {
   length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3
 }

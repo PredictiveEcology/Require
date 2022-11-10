@@ -171,14 +171,14 @@ off this feature, set \code{options("Require.RPackageCache" = FALSE)}.
 \examples{
 \dontrun{
 # simple usage, like conditional install.packages then library
-opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
+opts <- Require:::.setupExample()
+
 library(Require)
 getCRANrepos(ind = 1)
-options("repos" = c(CRAN = "https://cran.r-project.org"))
 Require("stats") # analogous to require(stats), but it checks for
-#   pkg dependencies, and installs them, if missing
+                 #   pkg dependencies, and installs them, if missing
 
-if (interactive()) { # somewhat more time consuming
+if (Require:::.runLongExamples()) {
   # Install in a new local library (libPaths)
   tempPkgFolder <- file.path(tempdir(), "Packages")
   # use standAlone, means it will put it in libPaths, even if it already exists
@@ -198,7 +198,7 @@ if (interactive()) { # somewhat more time consuming
   tempPkgFolder <- file.path(tempdir(), "Packages")
   Require(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
 
-# Mutual dependencies, only installs once -- e.g., curl
+  # Mutual dependencies, only installs once -- e.g., curl
   tempPkgFolder <- file.path(tempdir(), "Packages")
   Require(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 
@@ -214,21 +214,18 @@ if (interactive()) { # somewhat more time consuming
   Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
           standAlone = TRUE) # the latest version on GitHub
 
-############################################################################
-# Mixing and matching GitHub, CRAN, with and without version numbering
-############################################################################
+  ############################################################################
+  # Mixing and matching GitHub, CRAN, with and without version numbering
+  ############################################################################
   pkgs <- c(
     "remotes (<=2.4.1)", # old version
     "digest (>= 0.6.28)", # recent version
     "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
   )
   Require::Require(pkgs, libPaths = ProjectPackageFolder)
+  Require:::.cleanup(opts)
 }
 
-options(opts) # replace original value for the cache option
-
-## delete all temp files etc. from this example
-Require:::.cleanup()
 }
 
 }
