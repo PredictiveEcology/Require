@@ -529,7 +529,7 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #'   pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #'
 #'   Require:::.cleanup(opts)
-#' }
+#' }}
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            libPath = .libPaths(),
                            useAllInSearch = FALSE,
@@ -896,7 +896,7 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #'   pkgDepIfDepRemoved("Require", "remotes")
 #'
 #'   Require:::.cleanup(opts)
-#' }
+#' }}
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
                                verbose = getOption()) {
   if (length(pkg)) {

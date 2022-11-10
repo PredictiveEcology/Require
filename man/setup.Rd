@@ -53,15 +53,14 @@ and arguments in \code{setLibPaths} and \code{Require}.
 }
 \examples{
 \dontrun{
-opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-# Place this as the first line of a project
-Require::setup()
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+  # Place this as the first line of a project
+  Require::setup()
 
-# To turn it off and return to normal
-Require::setupOff()
-options(opts) # replace original value for the cache option
+  # To turn it off and return to normal
+  Require::setupOff()
 
-## delete all temp files etc. from this example
-Require:::.cleanup()
-}
+  Require:::.cleanup(opts)
+}}
 }

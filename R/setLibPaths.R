@@ -57,7 +57,7 @@
 #'   Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
 #'
 #'   Require:::.cleanup(opts)
-#' }
+#' }}
 setLibPaths <- function(libPaths, standAlone = TRUE,
                         updateRprofile = getOption("Require.updateRprofile", FALSE),
                         exact = FALSE, verbose = getOption("Require.verbose")) {

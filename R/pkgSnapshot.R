@@ -59,7 +59,7 @@
 #'                                # (likely want require = FALSE and not load them all)
 #'
 #'   Require:::.cleanup(opts)
-#' }
+#' }}
 #'
 #' @rdname pkgSnapshot
 pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),

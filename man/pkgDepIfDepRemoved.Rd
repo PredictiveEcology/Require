@@ -37,11 +37,11 @@ from the immediate dependencies.
 }
 \examples{
 \dontrun{
-opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-pkgDepIfDepRemoved("Require", "remotes")
-options(opts) # replace original value for the cache option
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
 
-## delete all temp files etc. from this example
-Require:::.cleanup()
-}
+  pkgDepIfDepRemoved("Require", "remotes")
+
+  Require:::.cleanup(opts)
+}}
 }

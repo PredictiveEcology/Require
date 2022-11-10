@@ -167,7 +167,7 @@ getOptionRPackageCache <- function() {
 #'   Require::setupOff()
 #'
 #'   Require:::.cleanup(opts)
-#' }
+#' }}
 setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
                   buildBinaries = getOption("Require.buildBinaries", TRUE),
