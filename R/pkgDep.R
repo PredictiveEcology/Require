@@ -62,6 +62,9 @@ utils::globalVariables(c(
 #' pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
 #' pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
 #' options(opts) # replace original value for the cache option
+#'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
 #' }
 pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
@@ -439,6 +442,9 @@ getDescPath <- function(packages, libPath) {
 #'   # much bigger one
 #' pkgDep2("reproducible")
 #' options(opts) # replace original value for the cache option
+#'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
 #' }
 pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
@@ -522,6 +528,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 #' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #' options(opts) # replace original value for the cache option
+#'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
 #' }
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            libPath = .libPaths(),
@@ -886,6 +895,9 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 #' pkgDepIfDepRemoved("Require", "remotes")
 #' options(opts) # replace original value for the cache option
+#'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
 #' }
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
                                verbose = getOption()) {
@@ -1388,6 +1400,4 @@ clearRequirePackageCache <- function(packages, ask = interactive(), Rversion = r
   } else {
     messageVerbose("Nothing to clear in Cache")
   }
-
-
 }

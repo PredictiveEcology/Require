@@ -13,8 +13,10 @@ RequireCacheDir <- function(create) {
   if (missing(create))
     create <- FALSE # !is.null(getOptionRPackageCache())
 
-  ## use cache dir following OS conventions used by rappdirs package:
-  ## rappdirs::user_cache_dir(appName)
+  ## OLD: was using cache dir following OS conventions used by rappdirs package:
+  ##   rappdirs::user_cache_dir(appName)
+  ## CURRENT: using cache dir following conventions used by tools::R_user_dir
+  ##   tools::R_user_dir("appName", "cache")
 
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
@@ -163,8 +165,10 @@ getOptionRPackageCache <- function() {
 #' # To turn it off and return to normal
 #' Require::setupOff()
 #' options(opts) # replace original value for the cache option
-#' }
 #'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
+#' }
 setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
                   buildBinaries = getOption("Require.buildBinaries", TRUE),

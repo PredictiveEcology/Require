@@ -198,6 +198,9 @@ utils::globalVariables(c(
 #' Require::Require(pkgs, libPaths = ProjectPackageFolder)
 #'
 #' options(opts) # replace original value for the cache option
+#'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
 #' }
 #'
 Require <- function(packages, packageVersionFile,
@@ -882,7 +885,6 @@ cleanUpNewBuilds <- function(pkgDT, prevDir) {
   pkgDT
 }
 
-
 types <- function(length = 1L) {
   isOldMac <- isMacOSX() && compareVersion(as.character(getRversion()), "4.0.0") < 0
   types <- if (isOldMac) {
@@ -895,7 +897,6 @@ types <- function(length = 1L) {
   if (identical(length, 1L))
     types <- types[1]
 }
-
 
 doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
                           install_githubArgs, install.packagesArgs, standAlone = TRUE,
@@ -918,7 +919,8 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
 }
 
 dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
-                                       purge = getOption("Require.purge", FALSE), libPaths = .libPaths(),
+                                       purge = getOption("Require.purge", FALSE),
+                                       libPaths = .libPaths(),
                                        repos = getOption("repos"), type = getOption("pkgType")) {
   dd <- pkgSnapshotObj
   ff <- packageFullNameFromSnapshot(dd)
@@ -958,7 +960,6 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
             messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
                            ", the SHA1 has not changed from last install",
                            verbose = verbose, verboseLevel = 1)
-
         } else {
           SHAonLocal <- ""
         }
@@ -974,9 +975,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
   pkgInstall
 }
 
-
-
-#' Needs VersionOnRepos, versionSpec and inequality columns
+#' Needs `VersionOnRepos`, `versionSpec` and `inequality` columns
 #' @param pkgDT A `pkgDT` object
 availableVersionOK <- function(pkgDT) {
   # First set all to availableVersionOK if there is a version available
@@ -1012,7 +1011,6 @@ compareVersion2 <- function(version, versionSpec, inequality) {
                else
                  NA
              }
-
   )
   out <- unlist(out)
   out
@@ -1043,7 +1041,7 @@ messageDownload <- function(pkgDT, numToDownload, fromWhere) {
               ": ", paste(pkgDT$Package, collapse = ", "), " --"))
 }
 
-colr <- function(..., digit = 32) paste0("\033[",digit,"m", paste0(...), "\033[39m")
+colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")
 green <- function(...) colr(..., digit = 32)
 yellow <- function(...) colr(..., digit = 33)
 blue <- function(...) colr(..., digit = 34)
@@ -1196,7 +1194,6 @@ keepOnlyBinary <- function(fn, keepSourceIfOnlyOne = TRUE) {
   fn
 }
 
-
 moveFileToCacheOrTmp <- function(pkgInstall) {
   localFileDir <- if (!is.null(getOptionRPackageCache())) {
     getOptionRPackageCache()
@@ -1212,7 +1209,6 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
   pkgInstall
 }
 
-
 getGitHubVersionOnRepos <- function(pkgGitHub) {
   if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     notYet <- is.na(pkgGitHub$VersionOnRepos)
@@ -1223,7 +1219,6 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
   }
   pkgGitHub
 }
-
 
 #' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
@@ -1293,7 +1288,6 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
   fn
 }
 
-
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
   if (!is.null(getOptionRPackageCache())) {
@@ -1310,7 +1304,8 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
 }
 
 
-confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT, ifViolation = c("removeEquals", "stop"),
+confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
+                                                         ifViolation = c("removeEquals", "stop"),
                                                          verbose = getOption("Require.verbose")) {
   set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
   pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
@@ -1382,7 +1377,6 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
   pkgDT
 }
 
-
 #' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
@@ -1406,8 +1400,8 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
 
   pkgInstall[, keepBasedOnRedundantInequalities :=
                unlist(lapply(.I, function(ind) {
-                 ifelse (is.na(inequality), ind,
-                         ifelse (inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I)))}))
+                 ifelse(is.na(inequality), ind,
+                        ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I)))}))
              ,
              by = pkgAndInequality]
   pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
@@ -1433,7 +1427,6 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   pkgInstall
 }
 
-
 updateInstallSafeGroups <- function(pkgInstall) {
   set(pkgInstall, NULL, "installSafeGroups",
       as.integer(factor(paste0(paddedFloatToChar(pkgInstall$installSafeGroups,
@@ -1442,7 +1435,6 @@ updateInstallSafeGroups <- function(pkgInstall) {
                                !pkgInstall[["localFile"]] %in% useRepository))))
   data.table::setorderv(pkgInstall, c("installSafeGroups", "Package")) # alphabetical order
 }
-
 
 getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
@@ -1525,7 +1517,6 @@ removeBasePkgs <- function(pkgDT) {
   pkgDT[!Package %in% .basePkgs]
 }
 
-
 renameLocalGitPkgDT <- function(pkgInstall) {
   whGitHub2 <- pkgInstall$repoLocation %in% "GitHub"
   fns <- pkgInstall$localFile
@@ -1555,7 +1546,6 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 
 #' @importFrom stats na.omit
 copyBuiltToCache <- function(pkgInstall, tmpdirs) {
-
   if (!is.null(pkgInstall)) {
     if (!is.null(getOptionRPackageCache())) {
       cacheFiles <- dir(getOptionRPackageCache())
@@ -1585,7 +1575,6 @@ copyBuiltToCache <- function(pkgInstall, tmpdirs) {
         browserDeveloper("Error 253; please contact developer")
     }}
 }
-
 
 NoPkgsSupplied <- "No packages supplied"
 
@@ -1663,7 +1652,6 @@ browserDeveloper <- function(mess = "") {
     stop(mess)
   }
 }
-
 
 updateReposForSrcPkgs <- function(pkgInstall) {
   if (!isWindows() && !isMacOSX() && any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {

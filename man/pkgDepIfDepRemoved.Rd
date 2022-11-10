@@ -40,5 +40,8 @@ from the immediate dependencies.
 opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 pkgDepIfDepRemoved("Require", "remotes")
 options(opts) # replace original value for the cache option
+
+## delete all temp files etc. from this example
+Require:::.cleanup()
 }
 }

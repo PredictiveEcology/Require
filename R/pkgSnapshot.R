@@ -56,6 +56,9 @@
 #' Require(pkgs, require = FALSE) # will install packages from previous line
 #'                                # (likely want require = FALSE and not load them all)
 #' options(opts) # replace original value for the cache option
+#'
+#' ## delete all temp files etc. from this example
+#' Require:::.cleanup()
 #' }
 #'
 #' @rdname pkgSnapshot
