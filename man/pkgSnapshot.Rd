@@ -7,7 +7,7 @@
 \usage{
 pkgSnapshot(
   packageVersionFile = getOption("Require.packageVersionFile"),
-  libPaths,
+  libPaths = .libPaths(),
   standAlone = FALSE,
   purge = getOption("Require.purge", FALSE),
   exact = TRUE,

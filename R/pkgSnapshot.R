@@ -55,10 +55,11 @@
 #'
 #' @rdname pkgSnapshot
 pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),
-                        libPaths, standAlone = FALSE,
+                        libPaths = .libPaths(), standAlone = FALSE,
                         purge = getOption("Require.purge", FALSE), exact = TRUE,
                         includeBase = FALSE,
                         verbose = getOption("Require.verbose")) {
+  libPaths <- checkLibPaths(libPaths = libPaths)
   libPaths <- doLibPaths(libPaths, standAlone)
 
   ip <- doInstalledPackages(libPaths, purge, includeBase)

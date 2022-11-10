@@ -172,6 +172,8 @@ off this feature, set \code{options("Require.RPackageCache" = FALSE)}.
 \dontrun{
 # simple usage, like conditional install.packages then library
 library(Require)
+Require:::getCRANrepos(ind = 1)
+options("repos" = c(CRAN = "https://cran.r-project.org"))
 Require("stats") # analogous to require(stats), but it checks for
 #   pkg dependencies, and installs them, if missing
 tempPkgFolder <- file.path(tempdir(), "Packages")
@@ -181,26 +183,25 @@ tempPkgFolder <- file.path(tempdir(), "Packages")
 Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 
 # make a package version snapshot of installed packages
-packageVersionFile <- "_.packageVersionTest.txt"
-(pkgSnapshot(libPath = tempPkgFolder, packageVersionFile, standAlone = TRUE))
+(pkgSnapshot(standAlone = TRUE))
 
-# Restart R -- to remove the old temp folder (it disappears with restarting R)
-library(Require)
-tempPkgFolder <- file.path(tempdir(), "Packages")
-packageVersionFile <- "_.packageVersionTest.txt"
+# Change the libPaths to emulate a new computer or project
+tempPkgFolder <- file.path(tempdir(), "Packages2")
 # Reinstall and reload the exact version from previous
-Require(packageVersionFile = packageVersionFile, libPaths = tempPkgFolder, standAlone = TRUE)
+Require(packageVersionFile = TRUE, libPaths = tempPkgFolder, standAlone = TRUE)
 
 # Create mismatching versions -- desired version is older than current installed
 # This will try to install the older version, overwriting the newer version
-desiredVersion <- data.frame(instPkgs = "crayon", instVers = "1.3.2", stringsAsFactors = FALSE)
-write.table(file = packageVersionFile, desiredVersion, row.names = FALSE)
-newTempPkgFolder <- file.path(tempdir(), "Packages2")
+desiredVersion <- data.frame(Package = "crayon", LibPath = .libPaths(), Version = "1.3.2", stringsAsFactors = FALSE)
+packageVersionFile <- getOption("Require.packageVersionFile")
+write.table(file = packageVersionFile,
+            desiredVersion, row.names = FALSE)
+newTempPkgFolder <- file.path(tempdir(), "Packages3")
 
 # Note this will install the 1.3.2 version (older that current on CRAN), but
 #   because crayon is still loaded in memory, it will return TRUE, using the current version
 #   of crayon. To start using the older 1.3.2, need to unload or restart R
-Require("crayon",
+Require(# "crayon",
   packageVersionFile = packageVersionFile,
   libPaths = newTempPkgFolder, standAlone = TRUE
 )
