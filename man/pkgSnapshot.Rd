@@ -94,6 +94,8 @@ examples.
 \examples{
 \dontrun{
 opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+# install one archivecd version so that below does something interesting
+Require("crayon (==1.5.1)", libPaths = tempdir(), require = FALSE)
 # Normal use -- using the tempdir() for example; normally libPaths would be omitted to get all
 #    packages in user or project library
 pkgs <- pkgSnapshot(libPaths = tempdir()) # writes a file, getOption("Require.packageVersionFile"),

@@ -162,12 +162,13 @@ utils::globalVariables(c(
 #' Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #' # make a package version snapshot of installed packages
-#' (pkgSnapshot(standAlone = TRUE))
+#' tf <- tempfile()
+#' (pkgSnapshot(tf, standAlone = TRUE))
 #'
 #' # Change the libPaths to emulate a new computer or project
 #' tempPkgFolder <- file.path(tempdir(), "Packages2")
 #' # Reinstall and reload the exact version from previous
-#' Require(packageVersionFile = TRUE, libPaths = tempPkgFolder, standAlone = TRUE)
+#' Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #' # Mutual dependencies, only installs once -- e.g., curl
 #' tempPkgFolder <- file.path(tempdir(), "Packages")
