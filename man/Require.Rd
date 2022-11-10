@@ -219,6 +219,9 @@ pkgs <- c(
 Require::Require(pkgs, libPaths = ProjectPackageFolder)
 
 options(opts) # replace original value for the cache option
+
+## delete all temp files etc. from this example
+Require:::.cleanup()
 }
 
 }

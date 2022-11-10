@@ -471,3 +471,9 @@ getInStack <- function(obj) {
 }
 
 SysInfo <- Sys.info() # do this on load; nothing can change, so repeated calls are a waste
+
+.cleanup <- function() {
+  unlink(Require::tempdir2(), recursive = TRUE)
+  clearRequirePackageCache(ask = FALSE, Rversion = rversion(), verbose = FALSE)
+  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
+}

@@ -72,7 +72,7 @@ origWd <- getwd()
 try(test_pkg("Require")) # not sure if this works with try
 
 if (!isDevAndInteractive) # i.e., CRAN
-  .cleanup()
+  Require:::.cleanup()
 #runTests(checks)
 
 currOptions <- options()
@@ -153,9 +153,9 @@ checks$post[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
 Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 
 if (!isDev) {
-  unlink(Require::tempdir2(), recursive = TRUE)
-  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
+  Require:::.cleanup()
 }
+
 # Check everything is reset to original
 if (FALSE) {
   if (isDev) {
