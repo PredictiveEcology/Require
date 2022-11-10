@@ -40,6 +40,7 @@
 #' @inheritParams Require
 #' @examples
 #' \dontrun{
+#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 #' origDir <- setwd(tempdir())
 #' td <- tempdir()
 #' setLibPaths(td) # set a new R package library locally
@@ -53,6 +54,7 @@
 #'
 #' # remove the custom .libPaths()
 #' Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
+#' options(opts) # replace original value for the cache option
 #' }
 setLibPaths <- function(libPaths, standAlone = TRUE,
                         updateRprofile = getOption("Require.updateRprofile", FALSE),

@@ -37,6 +37,8 @@ from the immediate dependencies.
 }
 \examples{
 \dontrun{
+opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 pkgDepIfDepRemoved("Require", "remotes")
+options(opts) # replace original value for the cache option
 }
 }

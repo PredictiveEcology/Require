@@ -93,6 +93,7 @@ examples.
 }
 \examples{
 \dontrun{
+opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 # Normal use
 pkgs <- pkgSnapshot() # writes a file, getOption("Require.packageVersionFile"),
                       # within project; also returns a vector of packages with version
@@ -105,6 +106,7 @@ Require(packageVersionFile = TRUE)
 pkgs <- pkgSnapshot2()
 Require(pkgs, require = FALSE) # will install packages from previous line
                                # (likely want require = FALSE and not load them all)
+options(opts) # replace original value for the cache option
 }
 
 }

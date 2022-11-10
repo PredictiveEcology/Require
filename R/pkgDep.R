@@ -54,14 +54,14 @@ utils::globalVariables(c(
 #'
 #' @examples
 #' \dontrun{
-#'   opts <- options("Require.RequirePkgCache" = FALSE)
-#'   pkgDep("Require")
-#'   pkgDep("Require", keepVersionNumber = FALSE) # just names
-#'   pkgDep("PredictiveEcology/reproducible") # GitHub
-#'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
-#'   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
-#'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
-#'   options(opts) # replace original value for the cache option
+#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' pkgDep("Require")
+#' pkgDep("Require", keepVersionNumber = FALSE) # just names
+#' pkgDep("PredictiveEcology/reproducible") # GitHub
+#' pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
+#' pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
+#' pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+#' options(opts) # replace original value for the cache option
 #' }
 pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
@@ -434,9 +434,11 @@ getDescPath <- function(packages, libPath) {
 #'   the returned list from most number of dependencies to least.
 #' @examples
 #' \dontrun{
-#'   pkgDep2("Require")
+#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' pkgDep2("Require")
 #'   # much bigger one
-#'   pkgDep2("reproducible")
+#' pkgDep2("reproducible")
+#' options(opts) # replace original value for the cache option
 #' }
 pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
@@ -517,7 +519,9 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #'
 #' @examples
 #' \dontrun{
+#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 #' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+#' options(opts) # replace original value for the cache option
 #' }
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            libPath = .libPaths(),
@@ -879,7 +883,9 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' @inheritParams Require
 #' @examples
 #' \dontrun{
+#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
 #' pkgDepIfDepRemoved("Require", "remotes")
+#' options(opts) # replace original value for the cache option
 #' }
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
                                verbose = getOption()) {
