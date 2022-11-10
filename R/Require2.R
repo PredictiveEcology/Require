@@ -149,7 +149,7 @@ utils::globalVariables(c(
 #' @examples
 #' \dontrun{
 #' # simple usage, like conditional install.packages then library
-#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #' library(Require)
 #' getCRANrepos(ind = 1)
 #' options("repos" = c(CRAN = "https://cran.r-project.org"))

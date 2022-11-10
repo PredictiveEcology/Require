@@ -9,10 +9,11 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
   Sys.setenv("CRANCACHE_DISABLE" = TRUE)
   outOpts <- options(
     # "Require.persistentPkgEnv" = TRUE,
-    "install.packages.check.source" = "never",
-    "install.packages.compile.from.source" = "never",
-    "Require.unloadNamespaces" = TRUE)
-
+    install.packages.check.source = "never",
+    install.packages.compile.from.source = "never",
+    Ncpus = 2L,
+    Require.unloadNamespaces = TRUE
+  )
 
   if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")

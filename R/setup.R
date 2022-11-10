@@ -158,7 +158,7 @@ getOptionRPackageCache <- function() {
 #'
 #' @examples
 #' \dontrun{
-#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #' # Place this as the first line of a project
 #' Require::setup()
 #'

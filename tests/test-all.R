@@ -3,6 +3,9 @@
 # Sys.setenv(R_REQUIRE_TEST_AS_INTERACTIVE = "false") # set this to test as if GitHub Actions (short and loud)
 # THIS IS USING THE MECHANISM FOR CRAN THAT IF THE VERSION NUMBER IS NOT A DEV VERSION (E.G., .9000) THEN IT IS RUN AS CRAN
 # source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
+
+optNcpus <- options(Ncpus = 2L)
+
 checks <- list()
 checks$start <- list()
 checks$start[["getwd"]] <- getwd()
@@ -114,6 +117,7 @@ setwd(origWd)
 
 # 3 options
 options(toRevert)
+options(optNcpus)
 
 # 4 Cache -- remove everything that was added in this test
 if (!isDev) {
