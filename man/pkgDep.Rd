@@ -188,12 +188,10 @@ among themselves, \emph{e.g.}, \code{methods} depends on \code{stats} and \code{
 \examples{
 \dontrun{
 opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-pkgDep("Require")
-pkgDep("Require", keepVersionNumber = FALSE) # just names
-pkgDep("PredictiveEcology/reproducible") # GitHub
-pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
-pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
-pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+if (interactive()) { # This requires a query to GitHub.com
+  pkgDep("Require")
+  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+}
 options(opts) # replace original value for the cache option
 
 ## delete all temp files etc. from this example
@@ -201,9 +199,11 @@ Require:::.cleanup()
 }
 \dontrun{
 opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-pkgDep2("Require")
+if (interactive()) { # This requires a query to GitHub.com
+  pkgDep2("Require")
   # much bigger one
-pkgDep2("reproducible")
+  pkgDep2("reproducible")
+}
 options(opts) # replace original value for the cache option
 
 ## delete all temp files etc. from this example
@@ -211,7 +211,9 @@ Require:::.cleanup()
 }
 \dontrun{
 opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+if (interactive()) { # This requires a query to GitHub.com
+  pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+}
 options(opts) # replace original value for the cache option
 
 ## delete all temp files etc. from this example

@@ -13,11 +13,11 @@ checks$start[["libPaths"]] <- .libPaths()
 checks$start[["envVars"]] <- Sys.getenv()
 envOrig <- checks$start[["envVars"]]
 
-if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
-  Sys.setenv(R_REQUIRE_RUN_ALL_TESTS = "yes")
+if (Require:::.isDevelVersion()) {
+  Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
 # GitHub Actions, R CMD check locally
-isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "yes" &&
+isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
 # Actually interactive
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"

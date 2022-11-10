@@ -149,58 +149,61 @@ utils::globalVariables(c(
 #' @examples
 #' \dontrun{
 #' # simple usage, like conditional install.packages then library
-#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
+#' opts <- Require:::.setupExample()
+#'
 #' library(Require)
 #' getCRANrepos(ind = 1)
-#' options("repos" = c(CRAN = "https://cran.r-project.org"))
 #' Require("stats") # analogous to require(stats), but it checks for
-#' #   pkg dependencies, and installs them, if missing
-#' tempPkgFolder <- file.path(tempdir(), "Packages")
+#'                  #   pkg dependencies, and installs them, if missing
 #'
-#' # use standAlone, means it will put it in libPaths, even if it already exists
-#' #   in another local library (e.g., personal library)
-#' Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
+#' if (Require:::.runLongExamples()) {
+#'   # Install in a new local library (libPaths)
+#'   tempPkgFolder <- file.path(tempdir(), "Packages")
+#'   # use standAlone, means it will put it in libPaths, even if it already exists
+#'   #   in another local library (e.g., personal library)
+#'   Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#' # make a package version snapshot of installed packages
-#' tf <- tempfile()
-#' (pkgSnapshot(tf, standAlone = TRUE))
+#'   # make a package version snapshot of installed packages
+#'   tf <- tempfile()
+#'   (pkgSnapshot(tf, standAlone = TRUE))
 #'
-#' # Change the libPaths to emulate a new computer or project
-#' tempPkgFolder <- file.path(tempdir(), "Packages2")
-#' # Reinstall and reload the exact version from previous
-#' Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
+#'   # Change the libPaths to emulate a new computer or project
+#'   tempPkgFolder <- file.path(tempdir(), "Packages2")
+#'   # Reinstall and reload the exact version from previous
+#'   Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#' # Mutual dependencies, only installs once -- e.g., curl
-#' tempPkgFolder <- file.path(tempdir(), "Packages")
-#' Require(c("httr", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   # Mutual dependencies, only installs once -- e.g., curl
+#'   tempPkgFolder <- file.path(tempdir(), "Packages")
+#'   Require(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#' ##########################################################################################
-#' # Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
-#' ##########################################################################################
-#' # GitHub packages -- restart R because crayon is needed
-#' library(Require)
-#' ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
-#' Require("PredictiveEcology/fpCompare@development",
-#'   libPaths = ProjectPackageFolder, standAlone = FALSE
-#' )
+#'   # Mutual dependencies, only installs once -- e.g., curl
+#'   tempPkgFolder <- file.path(tempdir(), "Packages")
+#'   Require(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#' Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
-#'         standAlone = TRUE) # the latest version on GitHub
+#'   ##########################################################################################
+#'   # Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
+#'   ##########################################################################################
+#'   # GitHub packages
+#'   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+#'   Require("PredictiveEcology/fpCompare@development",
+#'           libPaths = ProjectPackageFolder, standAlone = FALSE
+#'   )
 #'
-#' ############################################################################
-#' # Mixing and matching GitHub, CRAN, with and without version numbering
-#' ############################################################################
-#' pkgs <- c(
-#'   "remotes (<=2.4.1)", # old version
-#'   "digest (>= 0.6.28)", # recent version
-#'   "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
-#' )
-#' Require::Require(pkgs, libPaths = ProjectPackageFolder)
+#'   Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
+#'           standAlone = TRUE) # the latest version on GitHub
 #'
-#' options(opts) # replace original value for the cache option
+#'   ############################################################################
+#'   # Mixing and matching GitHub, CRAN, with and without version numbering
+#'   ############################################################################
+#'   pkgs <- c(
+#'     "remotes (<=2.4.1)", # old version
+#'     "digest (>= 0.6.28)", # recent version
+#'     "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+#'   )
+#'   Require::Require(pkgs, libPaths = ProjectPackageFolder)
+#'   Require:::.cleanup(opts)
+#' }
 #'
-#' ## delete all temp files etc. from this example
-#' Require:::.cleanup()
 #' }
 #'
 Require <- function(packages, packageVersionFile,
