@@ -207,46 +207,18 @@ Require("PredictiveEcology/fpCompare@development",
 
 Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
         standAlone = TRUE) # the latest version on GitHub
-# a specific commit (by using the SHA)
-
 
 ############################################################################
 # Mixing and matching GitHub, CRAN, with and without version numbering
 ############################################################################
-# Restart R -- when installing/loading packages, start fresh
 pkgs <- c(
-  "glue (<=1.0.4)", "digest (<= 0.6.28)", "glmm (<=1.3.0)",
-  "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
-  "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
+  "remotes (<=2.4.1)", # old version
+  "digest (>= 0.6.28)", # recent version
+  "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
 )
-Require::Require(pkgs)
+Require::Require(pkgs, libPaths = ProjectPackageFolder)
 
-############################################################################
-# Using libPaths -- This will only be used inside this function;
-# To change .libPaths() for the whole session use a manually call to
-# setLibPaths(newPath) first
-############################################################################
-Require::Require("SpaDES", libPaths = "~/TempLib2", standAlone = FALSE)
-
-############################################################################
-# Persistent separate packages
-############################################################################
-setLibPaths("~/TempLib2", standAlone = TRUE)
-Require::Require("SpaDES") # not necessary to specify standAlone here because .libPaths are set
-
-############################################################################
-# Installing on many machines that are connected by a shared drive
-############################################################################
-options("Require.RPackageCache" = TRUE) # will binaries on the fly.
-# Put thes in a shared location.
-# May need to install Require in main user library before setting library paths for project
-if (!require("Require")) install.packages("Require")
-setLibPaths("./packages") # not shared location for library path; no longer using main user lib
-Require::Require(
-  packageVersionFile = "./packageVersions.txt",
-  standAlone = TRUE
-)
-  options(opts) # replace original value for the cache option
+options(opts) # replace original value for the cache option
 }
 
 }
