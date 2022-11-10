@@ -54,12 +54,14 @@ utils::globalVariables(c(
 #'
 #' @examples
 #' \dontrun{
+#'   opts <- options("Require.RequirePkgCache" = FALSE)
 #'   pkgDep("Require")
 #'   pkgDep("Require", keepVersionNumber = FALSE) # just names
 #'   pkgDep("PredictiveEcology/reproducible") # GitHub
 #'   pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
 #'   pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
 #'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+#'   options(opts) # replace original value for the cache option
 #' }
 pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
