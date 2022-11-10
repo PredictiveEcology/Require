@@ -13,7 +13,7 @@ new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and
 * package messaging is not sorted alphabetically during installation
 * all `message` calls now `messageVerbose`, so verbosity can be fully controlled with the argument `verbose` or `options("Require.verbose")`. See `?RequireOptions`.
 * tests clean up more completely after themselves
-* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKGCACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
+* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKG_CACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
 * Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
 * numerous enhancements for speed
 
