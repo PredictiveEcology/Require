@@ -477,3 +477,16 @@ SysInfo <- Sys.info() # do this on load; nothing can change, so repeated calls a
   clearRequirePackageCache(ask = FALSE, Rversion = rversion(), verbose = FALSE)
   unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
 }
+
+.isDevelVersion <- function() {
+  length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3
+}
+
+.runLongTests <- function() {
+  .isDevelVersion() || Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true"
+}
+
+.runLongExamples <- function() {
+  .isDevelVersion() || Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
+}
+

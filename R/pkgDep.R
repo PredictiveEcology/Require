@@ -54,17 +54,14 @@ utils::globalVariables(c(
 #'
 #' @examples
 #' \dontrun{
-#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-#' pkgDep("Require")
-#' pkgDep("Require", keepVersionNumber = FALSE) # just names
-#' pkgDep("PredictiveEcology/reproducible") # GitHub
-#' pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
-#' pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
-#' pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
-#' options(opts) # replace original value for the cache option
+#' if (Require:::.runLongExamples()) {
+#'   opts <- Require:::.setupExample()
 #'
-#' ## delete all temp files etc. from this example
-#' Require:::.cleanup()
+#'   pkgDep("tidyverse", recursive = TRUE)
+#'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+#'
+#'   Require:::.cleanup(opts)
+#' }
 #' }
 pkgDep <- function(packages, libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"), recursive = FALSE,
@@ -437,14 +434,15 @@ getDescPath <- function(packages, libPath) {
 #'   the returned list from most number of dependencies to least.
 #' @examples
 #' \dontrun{
-#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-#' pkgDep2("Require")
-#'   # much bigger one
-#' pkgDep2("reproducible")
-#' options(opts) # replace original value for the cache option
+#' if (Require:::.runLongExamples()) {
+#'   opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #'
-#' ## delete all temp files etc. from this example
-#' Require:::.cleanup()
+#'   pkgDep2("reproducible")
+#'   # much bigger one
+#'   pkgDep2("tidyverse")
+#'
+#'   Require:::.cleanup(opts)
+#' }
 #' }
 pkgDep2 <- function(packages, recursive = TRUE,
                     which = c("Depends", "Imports", "LinkingTo"),
@@ -525,12 +523,12 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #'
 #' @examples
 #' \dontrun{
-#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-#' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
-#' options(opts) # replace original value for the cache option
+#' if (Require:::.runLongExamples()) {
+#'   opts <- Require:::.setupExample()
 #'
-#' ## delete all temp files etc. from this example
-#' Require:::.cleanup()
+#'   pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+#'
+#'   Require:::.cleanup(opts)
 #' }
 pkgDepTopoSort <- function(pkgs, deps, reverse = FALSE, topoSort = TRUE,
                            libPath = .libPaths(),
@@ -892,12 +890,12 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' @inheritParams Require
 #' @examples
 #' \dontrun{
-#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
-#' pkgDepIfDepRemoved("Require", "remotes")
-#' options(opts) # replace original value for the cache option
+#' if (Require:::.runLongExamples()) {
+#'   opts <- Require:::.setupExample()
 #'
-#' ## delete all temp files etc. from this example
-#' Require:::.cleanup()
+#'   pkgDepIfDepRemoved("Require", "remotes")
+#'
+#'   Require:::.cleanup(opts)
 #' }
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
                                verbose = getOption()) {
