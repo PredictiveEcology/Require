@@ -64,8 +64,6 @@ extractVersionNumber <- function(pkgs, filenames) {
   out
 }
 
-
-
 #' @rdname extractPkgName
 #' @export
 #' @examples

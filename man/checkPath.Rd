@@ -59,7 +59,6 @@ checkPath(tmpdir, create = TRUE)
 dir.exists(tmpdir) ## TRUE
 
 unlink(tmpdir, recursive = TRUE) # clean up
-
 }
 \seealso{
 \code{\link[=file.exists]{file.exists()}}, \code{\link[=dir.create]{dir.create()}}.

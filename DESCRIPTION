@@ -19,17 +19,18 @@ Date: 2022-11-09
 Version: 0.2.3.9001
 Authors@R: c(
     person(given = "Eliot J B",
-             family = "McIntire",
-             role = c("aut", "cre"),
-             email = "eliot.mcintire@canada.ca",
-             comment = c(ORCID = "0000-0002-6914-8316")),
+           family = "McIntire",
+           role = c("aut", "cre"),
+           email = "eliot.mcintire@canada.ca",
+           comment = c(ORCID = "0000-0002-6914-8316")),
       person(given = "Alex M",
              family = "Chubaty",
              role = "ctb",
              email = "achubaty@for-cast.ca",
              comment = c(ORCID = "0000-0001-7146-8135")),
-    person("Her Majesty the Queen in Right of Canada, as represented by the Minister of Natural Resources Canada",
-    role = "cph")
+    person(paste("Her Majesty the Queen in Right of Canada,",
+                 "as represented by the Minister of Natural Resources Canada"),
+           role = "cph")
     )
 Depends:
     R (>= 4.0)

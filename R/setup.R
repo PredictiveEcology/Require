@@ -13,8 +13,10 @@ RequireCacheDir <- function(create) {
   if (missing(create))
     create <- FALSE # !is.null(getOptionRPackageCache())
 
-  ## use cache dir following OS conventions used by rappdirs package:
-  ## rappdirs::user_cache_dir(appName)
+  ## OLD: was using cache dir following OS conventions used by rappdirs package:
+  ##   rappdirs::user_cache_dir(appName)
+  ## CURRENT: using cache dir following conventions used by tools::R_user_dir
+  ##   tools::R_user_dir("appName", "cache")
 
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")

@@ -1,4 +1,3 @@
-################################################################################
 #' Normalize filepath
 #'
 #' Checks the specified filepath for formatting consistencies:
@@ -80,7 +79,6 @@ setMethod("normPath",
             return(NA_character_)
 })
 
-################################################################################
 #' Check directory path
 #'
 #' Checks the specified path to a directory for formatting consistencies,
@@ -360,7 +358,6 @@ timestamp <- function() {
   format(Sys.time(), "%Y%m%d%H%M%S")
 }
 
-
 #' Similar to base::message, but with an verbosity threshold
 #'
 #' This will only show a message if the value of `verbose` is greater than
@@ -376,7 +373,6 @@ messageVerbose <- function(..., verbose = getOption("Require.verbose"),
   if (verbose >= verboseLevel)
     message(...)
 }
-
 
 #' @rdname messageVerbose
 #' @inheritParams Require
@@ -401,18 +397,21 @@ messageVerboseCounter <- function(pre = "", post = "", verbose = getOption("Requ
                  verbose = verbose, verboseLevel = verboseLevel)
 }
 
-# This environment variable "R_TESTS" is set during testing, and it points to a file
-#   called Startup.Rs that is placed in the .libPaths(). If the .libPaths() is changed
-#   during the testing, then that file will not be found, and install.packages will
-#   fail to install a package with an error of source file not found. See:
-#   https://github.com/HenrikBengtsson/startup/issues/19
-#   The env variable is set here:
-# https://github.com/wch/r-source/blob/8b6429feb661b02e2b2b6df1757b31cf1250a33e/
-#   src/library/tools/R/testing.R#L472-Lundefined
+#' This environment variable "R_TESTS" is set during testing, and it points to a file
+#' called `Startup.Rs` that is placed in the `.libPaths()`.
+#' If the `.libPaths()` is changed during the testing,
+#' then that file will not be found, and install.packages will
+#' fail to install a package with an error of source file not found.
+#' See: <https://github.com/HenrikBengtsson/startup/issues/19>.
+#'
+#' The env variable is set here:
+#' <https://github.com/wch/r-source/blob/8b6429feb661b02e2b2b6df1757b31cf1250a33e/src/library/tools/R/testing.R#L472-Lundefined>
+#'
+#' @keywords internal
 R_TESTSomit <- function() {
   origR_TESTS <- Sys.getenv("R_TESTS")
   if (!identical(origR_TESTS, "")) {
-    Sys.setenv("R_TESTS" = "")
+    Sys.setenv(R_TESTS = "")
   }
   return(origR_TESTS)
 }
