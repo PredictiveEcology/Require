@@ -54,7 +54,7 @@ utils::globalVariables(c(
 #'
 #' @examples
 #' \dontrun{
-#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #' pkgDep("Require")
 #' pkgDep("Require", keepVersionNumber = FALSE) # just names
 #' pkgDep("PredictiveEcology/reproducible") # GitHub
@@ -437,7 +437,7 @@ getDescPath <- function(packages, libPath) {
 #'   the returned list from most number of dependencies to least.
 #' @examples
 #' \dontrun{
-#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #' pkgDep2("Require")
 #'   # much bigger one
 #' pkgDep2("reproducible")
@@ -525,7 +525,7 @@ pkgDepCRAN <- function(pkg, which = c("Depends", "Imports", "LinkingTo"),
 #'
 #' @examples
 #' \dontrun{
-#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #' options(opts) # replace original value for the cache option
 #'
@@ -892,7 +892,7 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' @inheritParams Require
 #' @examples
 #' \dontrun{
-#' opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
+#' opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
 #' pkgDepIfDepRemoved("Require", "remotes")
 #' options(opts) # replace original value for the cache option
 #'
