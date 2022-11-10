@@ -54,6 +54,7 @@ jobs:
             any::rcmdcheck
 
       - uses: r-lib/actions/check-r-package@v2
+          args: 'c("--as-cran", "--run-dontrun")'
 
       - name: Show testthat output
         if: always()
