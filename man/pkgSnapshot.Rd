@@ -94,16 +94,17 @@ examples.
 \examples{
 \dontrun{
 opts <- options("Require.RequirePkgCache" = FALSE) # don't use cache for examples
-# Normal use
-pkgs <- pkgSnapshot() # writes a file, getOption("Require.packageVersionFile"),
+# Normal use -- using the tempdir() for example; normally libPaths would be omitted to get all
+#    packages in user or project library
+pkgs <- pkgSnapshot(libPaths = tempdir()) # writes a file, getOption("Require.packageVersionFile"),
                       # within project; also returns a vector of packages with version
 
 # Now move this file to another computer e.g. by committing in git, emailing, googledrive
 # on next computer/project
-Require(packageVersionFile = TRUE)
+Require(packageVersionFile = TRUE, libPaths = tempdir())
 
 # Using pkgSnapshot2 to get the vector of packages and versions
-pkgs <- pkgSnapshot2()
+pkgs <- pkgSnapshot2(libPaths = tempdir())
 Require(pkgs, require = FALSE) # will install packages from previous line
                                # (likely want require = FALSE and not load them all)
 options(opts) # replace original value for the cache option
