@@ -248,7 +248,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     # Put the package *without* its inequality (because they aren't there) in the first slot
     nam1 <- saveNamesDT$packages[match(names(neededFull1), saveNamesDT$saveNamesOrig)]
     names(neededFull1) <- nam1
-    neededFull1 <- prependSelf(neededFull1, includeSelf)
+    neededFull1 <- prependSelf(neededFull1, includeSelf, removeSelf = includeSelf)
     nam1 <- saveNamesDT$saveNamesOrig[match(names(neededFull1), saveNamesDT$packages)]
     names(neededFull1) <- nam1
 
