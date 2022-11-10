@@ -172,7 +172,7 @@ off this feature, set \code{options("Require.RPackageCache" = FALSE)}.
 \dontrun{
 # simple usage, like conditional install.packages then library
 library(Require)
-Require:::getCRANrepos(ind = 1)
+getCRANrepos(ind = 1)
 options("repos" = c(CRAN = "https://cran.r-project.org"))
 Require("stats") # analogous to require(stats), but it checks for
 #   pkg dependencies, and installs them, if missing
@@ -190,35 +190,9 @@ tempPkgFolder <- file.path(tempdir(), "Packages2")
 # Reinstall and reload the exact version from previous
 Require(packageVersionFile = TRUE, libPaths = tempPkgFolder, standAlone = TRUE)
 
-# Create mismatching versions -- desired version is older than current installed
-# This will try to install the older version, overwriting the newer version
-desiredVersion <- data.frame(Package = "crayon", LibPath = .libPaths(), Version = "1.3.2", stringsAsFactors = FALSE)
-packageVersionFile <- getOption("Require.packageVersionFile")
-write.table(file = packageVersionFile,
-            desiredVersion, row.names = FALSE)
-newTempPkgFolder <- file.path(tempdir(), "Packages3")
-
-# Note this will install the 1.3.2 version (older that current on CRAN), but
-#   because crayon is still loaded in memory, it will return TRUE, using the current version
-#   of crayon. To start using the older 1.3.2, need to unload or restart R
-Require(# "crayon",
-  packageVersionFile = packageVersionFile,
-  libPaths = newTempPkgFolder, standAlone = TRUE
-)
-
-# restart R again to get access to older version
-# run again, this time, correct "older" version installs in place of newer one
-library(Require)
-packageVersionFile <- "_.packageVersionTest.txt"
-newTempPkgFolder <- file.path(tempdir(), "Packages3")
-Require("crayon",
-  packageVersionFile = packageVersionFile,
-  libPaths = newTempPkgFolder, standAlone = TRUE
-)
-
-# Mutual dependencies, only installs once -- e.g., httr
+# Mutual dependencies, only installs once -- e.g., curl
 tempPkgFolder <- file.path(tempdir(), "Packages")
-Require(c("cranlogs", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
+Require(c("httr", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
 
 ##########################################################################################
 # Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
@@ -226,21 +200,12 @@ Require(c("cranlogs", "covr"), libPaths = tempPkgFolder, standAlone = TRUE)
 # GitHub packages -- restart R because crayon is needed
 library(Require)
 ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
-#  THIS ONE IS LARGE -- > 100 dependencies -- use standAlone = FALSE to
-#    reuse already installed packages --> this won't allow as much control
-#    of package versioning
-Require("PredictiveEcology/SpaDES@development",
+Require("PredictiveEcology/fpCompare@development",
   libPaths = ProjectPackageFolder, standAlone = FALSE
 )
 
-# To keep totally isolated: use standAlone = TRUE
-#   --> setting .libPaths() directly means standAlone is not necessary; it will only
-#   use .libPaths()
-library(Require)
-ProjectPackageFolder <- file.path("~", "ProjectA")
-setLibPaths(ProjectPackageFolder)
-Require("PredictiveEcology/SpaDES@development") # the latest version on GitHub
-Require("PredictiveEcology/SpaDES@23002b2a92a92df4ccba7f51cdd82798800b2fa7")
+Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
+        standAlone = TRUE) # the latest version on GitHub
 # a specific commit (by using the SHA)
 
 
