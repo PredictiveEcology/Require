@@ -54,9 +54,7 @@ jobs:
             any::rcmdcheck
 
       - uses: r-lib/actions/check-r-package@v2
-        with:
-          args: 'c("--as-cran", "--run-dontrun")'
-
+        
       - name: Show testthat output
         if: always()
         run: find check -name 'testthat.Rout*' -exec cat '{}' \; || true
