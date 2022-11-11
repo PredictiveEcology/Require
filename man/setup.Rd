@@ -56,7 +56,7 @@ and arguments in \code{setLibPaths} and \code{Require}.
 \dontrun{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
-  # Place this as the first line of a project
+  # Place these as the first line of a project
   td <- tempdir2("setupEx")
   Require::setup(td, FALSE)
 
