@@ -337,11 +337,10 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                                            repos = repos,
                                                            verbose = verbose,
                                                            type = type, ap = ap))))
-
           if (is.null(needed)) { # essesntially, failed
             pkgName <- extractPkgName(pkg)
             pkgPrint <- if (any(grepl("==NA", pkg))) pkgName else pkg
-            td <- tempdir2(pkgName)
+            td <- tempdir2(pkg) #  use the version number for td
             packageTD <- file.path(td, pkgName)
             if (!dir.exists(packageTD)) {
               verNum <- extractVersionNumber(pkg)
