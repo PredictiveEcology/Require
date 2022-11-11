@@ -58,7 +58,9 @@ utils::globalVariables(c(
 #'   opts <- Require:::.setupExample()
 #'
 #'   pkgDep("tidyverse", recursive = TRUE)
-#'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+#'
+#'   # GitHub, local, and CRAN packages
+#'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
 #'
 #'   Require:::.cleanup(opts)
 #' }
@@ -432,7 +434,7 @@ getDescPath <- function(packages, libPath) {
 #' @examples
 #' \dontrun{
 #' if (Require:::.runLongExamples()) {
-#'   opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
+#'   opts <- Require:::.setupExample()
 #'
 #'   pkgDep2("reproducible")
 #'   # much bigger one

@@ -90,7 +90,7 @@ utils::globalVariables(c(
 #'   repository name.
 #' @param packageVersionFile  Character string of a file name or logical. If
 #'   `TRUE`, then this function will load the default file,
-#'   `getOption("Require.packageVersionFile"). If this argument is provided,
+#'   `getOption("Require.packageVersionFile")`. If this argument is provided,
 #'   then this will override all any packages passed to `packages`.
 #' @param libPaths The library path (or libraries) where all packages should be
 #'   installed, and looked for to load (i.e., call `library`). This can be used

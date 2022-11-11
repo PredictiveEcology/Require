@@ -984,7 +984,8 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
 #' The list of R packages that `Require` installs from source on Linux, even if
 #' the `getOptions("repos")` is a binary repository. This list can be updated by
 #' the user by modifying the options `Require.spatialPkgs` or
-#' `Require.otherPkgs`. Default "force source only packages" are visible with `RequireOptions()`.
+#' `Require.otherPkgs`. Default "force source only packages" are visible with
+#' `RequireOptions()`.
 #' @param spatialPkgs A character vector of package names that focus on spatial analyses.
 #' @param otherPkgs A character vector of package names that often
 #'   require system specific compilation.

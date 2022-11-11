@@ -100,14 +100,8 @@ results throughout the \code{Require} package. These help with speed and reduce
 calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-<<<<<<< HEAD
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour --
-see \code{utils::available.packages}).
-=======
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
 (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
->>>>>>> development
 
 Internally, there are calls to \code{available.packages}.}
 
@@ -197,14 +191,16 @@ if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
   pkgDep("tidyverse", recursive = TRUE)
-  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+
+  # GitHub, local, and CRAN packages
+  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
 
   Require:::.cleanup(opts)
 }
 }
 \dontrun{
 if (Require:::.runLongExamples()) {
-  opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) # don't use cache for examples
+  opts <- Require:::.setupExample()
 
   pkgDep2("reproducible")
   # much bigger one
