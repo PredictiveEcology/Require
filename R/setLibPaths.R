@@ -1,39 +1,38 @@
 #' Set `.libPaths`
 #'
-#' This will set the `.libPaths()` by either adding a new path to
-#' it if `standAlone = FALSE`, or will concatenate
-#' `c(libPath, tail(.libPaths(), 1))` if `standAlone = TRUE`.
-#' Currently, the default is to make this new `.libPaths()` "sticky", meaning it becomes
-#' associated with the current directory even through a restart of R.
-#' It does this by adding and/updating the \file{.Rprofile} file in the current directory.
-#' If this current directory is a project, then the project will have the new `.libPaths()`
-#' associated with it, even through an R restart.
+#' This will set the `.libPaths()` by either adding a new path to it if
+#' `standAlone = FALSE`, or will concatenate `c(libPath, tail(.libPaths(), 1))`
+#' if `standAlone = TRUE`. Currently, the default is to make this new
+#' `.libPaths()` "sticky", meaning it becomes associated with the current
+#' directory even through a restart of R. It does this by adding and/updating
+#' the \file{.Rprofile} file in the current directory. If this current directory
+#' is a project, then the project will have the new `.libPaths()` associated
+#' with it, even through an R restart.
 #'
-#' @details
-#' This details of this code were modified from <https://github.com/milesmcbain>.
-#' A different, likely non-approved by CRAN approach that also works is here:
+#' @details This details of this code were modified from
+#' <https://github.com/milesmcbain>. A different, likely non-approved by CRAN
+#' approach that also works is here:
 #' <https://stackoverflow.com/a/36873741/3890027>.
 #'
 #' @param libPaths A new path to append to, or replace all existing user
 #'   components of `.libPath()`
-#' @param updateRprofile Logical or Character string. If `TRUE`, then
-#'   this function will put several lines of code in the current directory's `.Rprofile`
-#'   file setting up the package libraries for this and future sessions. If
-#'   a character string, then this should be the path to an `.Rprofile` file.
-#'   To reset back to normal, run `setLibPaths()` without a `libPath`. Default:
-#'   `getOption("Require.updateRprofile", FALSE)`, meaning `FALSE`, but it
-#'   can be set with an option or within a single call.
-#' @param exact Logical. This function will automatically append the R version number to the
-#'   `libPaths` to maintain separate R package libraries for each R version
-#'   on the system. There are some cases where this behaviour is not desirable.
-#'   Set `exact` to `TRUE` to override this automatic appending and use
-#'   the exact, unaltered `libPaths`. Default is `FALSE`
+#' @param updateRprofile Logical or Character string. If `TRUE`, then this
+#'   function will put several lines of code in the current directory's
+#'   `.Rprofile` file setting up the package libraries for this and future
+#'   sessions. If a character string, then this should be the path to an
+#'   `.Rprofile` file. To reset back to normal, run `setLibPaths()` without a
+#'   `libPath`. Default: `getOption("Require.updateRprofile", FALSE)`, meaning
+#'   `FALSE`, but it can be set with an option or within a single call.
+#' @param exact Logical. This function will automatically append the R version
+#'   number to the `libPaths` to maintain separate R package libraries for each
+#'   R version on the system. There are some cases where this behaviour is not
+#'   desirable. Set `exact` to `TRUE` to override this automatic appending and
+#'   use the exact, unaltered `libPaths`. Default is `FALSE`
 #' @inheritParams Require
-#' @return
-#' The main point of this function is to set `.libPaths()`, which
-#' will be changed as a side effect of this function.
-#' As when setting `options`, this will return the previous state of
-#' `.libPaths()` allowing the user to reset easily.
+#' @return The main point of this function is to set `.libPaths()`, which will
+#' be changed as a side effect of this function. As when setting `options`, this
+#' will return the previous state of `.libPaths()` allowing the user to reset
+#' easily.
 #'
 #' @export
 #' @importFrom utils compareVersion
@@ -54,7 +53,8 @@
 #'   # Can restart R, and changes will stay
 #'
 #'   # remove the custom .libPaths()
-#'   Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
+#'   Require::setLibPaths() # reset to previous; remove from .Rprofile
+#'                          # because libPath arg is empty
 #'
 #'   Require:::.cleanup(opts)
 #'   unlink("~/newProjectLib", recursive = TRUE)

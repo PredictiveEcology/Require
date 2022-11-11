@@ -85,8 +85,8 @@ setMethod("normPath",
 #' such as trailing slashes, etc.
 #'
 #' @note This will not work for paths to files.
-#' To check for existence of files, use [file.exists()].
-#' To normalize a path to a file, use [normPath()] or [normalizePath()].
+#' To check for existence of files, use `file.exists()`.
+#' To normalize a path to a file, use `normPath()` or `normalizePath()`.
 #'
 #' @param path A character string corresponding to a directory path.
 #'
@@ -405,7 +405,7 @@ messageVerboseCounter <- function(pre = "", post = "", verbose = getOption("Requ
 #' See: <https://github.com/HenrikBengtsson/startup/issues/19>.
 #'
 #' The env variable is set here:
-#' <https://github.com/wch/r-source/blob/8b6429feb661b02e2b2b6df1757b31cf1250a33e/src/library/tools/R/testing.R#L472-Lundefined>
+#' `https://github.com/wch/r-source/blob/8b6429feb661b02e2b2b6df1757b31cf1250a33e/src/library/tools/R/testing.R#L472-Lundefined``
 #'
 #' @keywords internal
 R_TESTSomit <- function() {

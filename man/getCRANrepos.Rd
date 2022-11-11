@@ -12,6 +12,9 @@ getCRANrepos(repos = NULL, ind)
 \item{ind}{an integer of which mirror to use in \code{chooseCRANmirror()}}
 }
 \description{
-This will get the current option in \verb{getOption('repos'), and if that is not set to a url, then it will prompt the user to select a mirror, unless }ind\verb{is set, in which case, it will use that mirror (in}chooseCRANmirror()`)
+This will get the current option in \code{getOption('repos')}, and if that is not
+set to a url, then it will prompt the user to select a mirror, unless
+\code{ind} is set, in which case, it will use that mirror (in
+\code{chooseCRANmirror()})
 }
 \keyword{internal}

@@ -13,6 +13,6 @@ R_TESTSomit()
 }
 \description{
 The env variable is set here:
-\url{https://github.com/wch/r-source/blob/8b6429feb661b02e2b2b6df1757b31cf1250a33e/src/library/tools/R/testing.R#L472-Lundefined}
+`https://github.com/wch/r-source/blob/8b6429feb661b02e2b2b6df1757b31cf1250a33e/src/library/tools/R/testing.R#L472-Lundefined``
 }
 \keyword{internal}

@@ -95,7 +95,7 @@ utils::globalVariables(c(
 #'   vector here, where the names are the package names that could be different
 #'   than the GitHub repository name.
 #' @param packageVersionFile  Character string of a file name or logical. If `TRUE`,
-#'   then this function will load the default file, `getOption("Require.packageVersionFile").
+#'   then this function will load the default file, `getOption("Require.packageVersionFile")`.
 #'   If this argument is provided, then this will override all any packages passed to `packages`.
 #' @param libPaths The library path (or libraries) where all packages should be
 #'   installed, and looked for to load (i.e., call `library`). This can be
@@ -125,7 +125,8 @@ utils::globalVariables(c(
 #'   The cached values are renewed when found to be too old, with the age limit.
 #'   This maximum age can be set in seconds with the environment variable
 #'   `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE`, or if unset,
-#'   defaults to 3600  (one hour -- see [`utils::available.packages`]).
+#'   defaults to 3600  (one hour --
+#'   see `utils::available.packages`).
 #'
 #'   Internally, there are calls to `available.packages`.
 #' @param verbose Numeric or logical indicating how verbose should the function be.

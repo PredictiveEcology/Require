@@ -25,19 +25,19 @@ This can be create dramatically faster installs if the user has a substantial nu
 the packages already in their personal library.
 Default \code{FALSE} to minimize package installing.}
 
-\item{updateRprofile}{Logical or Character string. If \code{TRUE}, then
-this function will put several lines of code in the current directory's \code{.Rprofile}
-file setting up the package libraries for this and future sessions. If
-a character string, then this should be the path to an \code{.Rprofile} file.
-To reset back to normal, run \code{setLibPaths()} without a \code{libPath}. Default:
-\code{getOption("Require.updateRprofile", FALSE)}, meaning \code{FALSE}, but it
-can be set with an option or within a single call.}
+\item{updateRprofile}{Logical or Character string. If \code{TRUE}, then this
+function will put several lines of code in the current directory's
+\code{.Rprofile} file setting up the package libraries for this and future
+sessions. If a character string, then this should be the path to an
+\code{.Rprofile} file. To reset back to normal, run \code{setLibPaths()} without a
+\code{libPath}. Default: \code{getOption("Require.updateRprofile", FALSE)}, meaning
+\code{FALSE}, but it can be set with an option or within a single call.}
 
-\item{exact}{Logical. This function will automatically append the R version number to the
-\code{libPaths} to maintain separate R package libraries for each R version
-on the system. There are some cases where this behaviour is not desirable.
-Set \code{exact} to \code{TRUE} to override this automatic appending and use
-the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
+\item{exact}{Logical. This function will automatically append the R version
+number to the \code{libPaths} to maintain separate R package libraries for each
+R version on the system. There are some cases where this behaviour is not
+desirable. Set \code{exact} to \code{TRUE} to override this automatic appending and
+use the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function be.
 If -1 or less, then as little verbosity as possible.
@@ -46,24 +46,25 @@ NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object wi
 \code{attr(.., "Require")} which has lots of information about the processes of the installs.}
 }
 \value{
-The main point of this function is to set \code{.libPaths()}, which
-will be changed as a side effect of this function.
-As when setting \code{options}, this will return the previous state of
-\code{.libPaths()} allowing the user to reset easily.
+The main point of this function is to set \code{.libPaths()}, which will
+be changed as a side effect of this function. As when setting \code{options}, this
+will return the previous state of \code{.libPaths()} allowing the user to reset
+easily.
 }
 \description{
-This will set the \code{.libPaths()} by either adding a new path to
-it if \code{standAlone = FALSE}, or will concatenate
-\code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
-Currently, the default is to make this new \code{.libPaths()} "sticky", meaning it becomes
-associated with the current directory even through a restart of R.
-It does this by adding and/updating the \file{.Rprofile} file in the current directory.
-If this current directory is a project, then the project will have the new \code{.libPaths()}
-associated with it, even through an R restart.
+This will set the \code{.libPaths()} by either adding a new path to it if
+\code{standAlone = FALSE}, or will concatenate \code{c(libPath, tail(.libPaths(), 1))}
+if \code{standAlone = TRUE}. Currently, the default is to make this new
+\code{.libPaths()} "sticky", meaning it becomes associated with the current
+directory even through a restart of R. It does this by adding and/updating
+the \file{.Rprofile} file in the current directory. If this current directory
+is a project, then the project will have the new \code{.libPaths()} associated
+with it, even through an R restart.
 }
 \details{
-This details of this code were modified from \url{https://github.com/milesmcbain}.
-A different, likely non-approved by CRAN approach that also works is here:
+This details of this code were modified from
+\url{https://github.com/milesmcbain}. A different, likely non-approved by CRAN
+approach that also works is here:
 \url{https://stackoverflow.com/a/36873741/3890027}.
 }
 \examples{
@@ -82,7 +83,8 @@ if (Require:::.runLongExamples()) {
   # Can restart R, and changes will stay
 
   # remove the custom .libPaths()
-  Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
+  Require::setLibPaths() # reset to previous; remove from .Rprofile
+                         # because libPath arg is empty
 
   Require:::.cleanup(opts)
   unlink("~/newProjectLib", recursive = TRUE)
