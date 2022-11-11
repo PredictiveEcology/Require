@@ -56,12 +56,12 @@ pkgDepTopoSort(
 }
 \arguments{
 \item{packages}{Character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require}). In the case of a
-GitHub package, it will be assumed that the name of the repository is the
-name of the package. If this is not the case, then pass a named character
-vector here, where the names are the package names that could be different
-than the GitHub repository name.}
+\code{install.packages}, then load (i.e., with \code{library}). If it is one package,
+it can be unquoted (as in \code{require}). In the case of a GitHub package, it
+will be assumed that the name of the repository is the name of the package.
+If this is not the case, then pass a named character vector here, where the
+names are the package names that could be different than the GitHub
+repository name.}
 
 \item{libPath}{A path to search for installed packages. Defaults to \code{.libPaths()}}
 
@@ -94,24 +94,29 @@ will include version number. Default is \code{FALSE}}
 If \code{FALSE}, the packages will not have a discernible order as they will be a
 concatenation of the possibly recursive package dependencies.}
 
-\item{purge}{Logical. Should all caches be purged?
-Default is \code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout the \code{Require} package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+\item{purge}{Logical. Should all caches be purged? Default is
+\code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
+results throughout the \code{Require} package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
+<<<<<<< HEAD
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
 defaults to 3600  (one hour --
 see \code{utils::available.packages}).
+=======
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
+(one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
+>>>>>>> development
 
 Internally, there are calls to \code{available.packages}.}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 
 \item{includeSelf}{Logical. If \code{TRUE}, the default, then the dependencies will include
 the package itself in the returned list elements, otherwise, only the "dependencies"}

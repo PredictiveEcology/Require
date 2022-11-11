@@ -16,14 +16,14 @@ setLibPaths(
 \item{libPaths}{A new path to append to, or replace all existing user
 components of \code{.libPath()}}
 
-\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
-to e.g., the \code{checkpoint} package.
-If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e., it will include the user's default package folder(s).
-This can be create dramatically faster installs if the user has a substantial number of
-the packages already in their personal library.
-Default \code{FALSE} to minimize package installing.}
+\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and
+loaded from the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE
+USER'S \code{.libPaths()}, similar to e.g., the \code{checkpoint} package. If
+\code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the
+\code{Require} call, resulting in shared packages, i.e., it will include the
+user's default package folder(s). This can be create dramatically faster
+installs if the user has a substantial number of the packages already in
+their personal library. Default \code{FALSE} to minimize package installing.}
 
 \item{updateRprofile}{Logical or Character string. If \code{TRUE}, then this
 function will put several lines of code in the current directory's
@@ -39,11 +39,12 @@ R version on the system. There are some cases where this behaviour is not
 desirable. Set \code{exact} to \code{TRUE} to override this automatic appending and
 use the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which will

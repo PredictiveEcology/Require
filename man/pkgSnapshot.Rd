@@ -36,25 +36,29 @@ a script.}
 \item{libPaths}{The path to the local library where packages are installed.
 Defaults to the \code{.libPaths()[1]}.}
 
-\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
-to e.g., the \code{checkpoint} package.
-If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e., it will include the user's default package folder(s).
-This can be create dramatically faster installs if the user has a substantial number of
-the packages already in their personal library.
-Default \code{FALSE} to minimize package installing.}
+\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and
+loaded from the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE
+USER'S \code{.libPaths()}, similar to e.g., the \code{checkpoint} package. If
+\code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the
+\code{Require} call, resulting in shared packages, i.e., it will include the
+user's default package folder(s). This can be create dramatically faster
+installs if the user has a substantial number of the packages already in
+their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{purge}{Logical. Should all caches be purged?
-Default is \code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout the \code{Require} package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+\item{purge}{Logical. Should all caches be purged? Default is
+\code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
+results throughout the \code{Require} package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
+<<<<<<< HEAD
 \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
 defaults to 3600  (one hour --
 see \code{utils::available.packages}).
+=======
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
+(one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
+>>>>>>> development
 
 Internally, there are calls to \code{available.packages}.}
 
@@ -71,11 +75,12 @@ to install with a minimum version number, as opposed to an exact version number.
 \item{includeBase}{Logical. Should R base packages be included, specifically, those in
 \code{tail(.libPath(), 1)}}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 }
 \value{
 Will both write a file, and (invisibly) return a vector of packages with the
