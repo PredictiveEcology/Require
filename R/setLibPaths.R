@@ -90,7 +90,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
 
   environment(shim_fun) <- shim_env
   shim_fun(unique(libPaths))
-  messageVerbose(".libPaths() is now: ", paste(.libPaths(), collapse = ", "),
+  Require::messageVerbose(".libPaths() is now: ", paste(.libPaths(), collapse = ", "),
                  verbose = verbose, verboseLevel = 1)
   return(invisible(oldLibPaths))
 }
