@@ -240,8 +240,6 @@ pkgDep <- function(packages, libPath = .libPaths(),
         assign(sn, neededFull2[[n]], envir = .pkgEnv)
       })
       neededFull1 <- append(neededFull1[!needGet], neededFull2)
-
-
     }
 
 
@@ -250,7 +248,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     # Put the package *without* its inequality (because they aren't there) in the first slot
     nam1 <- saveNamesDT$packages[match(names(neededFull1), saveNamesDT$saveNamesOrig)]
     names(neededFull1) <- nam1
-    neededFull1 <- prependSelf(neededFull1, includeSelf, removeSelf = includeSelf)
+    neededFull1 <- prependSelf(neededFull1, includeSelf)
     nam1 <- saveNamesDT$saveNamesOrig[match(names(neededFull1), saveNamesDT$packages)]
     names(neededFull1) <- nam1
 
@@ -289,7 +287,7 @@ pkgDep <- function(packages, libPath = .libPaths(),
     neededFull1 <- aa
 
     # Put the package *with* its inequality in the first slot
-    neededFull1 <- prependSelf(neededFull1, includeSelf, removeSelf = includeSelf)
+    neededFull1 <- prependSelf(neededFull1, includeSelf)
 
   } else {
     neededFull1 <- list()
@@ -339,11 +337,10 @@ pkgDepInner <- function(packages, libPath, which, keepVersionNumber,
                                                            repos = repos,
                                                            verbose = verbose,
                                                            type = type, ap = ap))))
-
           if (is.null(needed)) { # essesntially, failed
             pkgName <- extractPkgName(pkg)
             pkgPrint <- if (any(grepl("==NA", pkg))) pkgName else pkg
-            td <- tempdir2(pkgName)
+            td <- tempdir2(pkg) #  use the version number for td
             packageTD <- file.path(td, pkgName)
             if (!dir.exists(packageTD)) {
               verNum <- extractVersionNumber(pkg)
@@ -1333,8 +1330,9 @@ isAre <- function(l, v) {
   out
 }
 
-prependSelf <- function(deps, includeSelf, removeSelf = FALSE) {
+prependSelf <- function(deps, includeSelf) {
   deps <- Map(p = deps, n = names(deps), function(p, n) {
+    removeSelf <- startsWith(p[1], n)
     pak <- if (isTRUE(removeSelf)) p[-1] else p
     c(if (isTRUE(includeSelf)) n else character(), pak)
     })
