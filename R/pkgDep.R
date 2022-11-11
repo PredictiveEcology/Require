@@ -890,14 +890,15 @@ DESCRIPTIONFileDepsV <- Vectorize(DESCRIPTIONFileDeps, vectorize.args = "desc_pa
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'
-#'   pkgDepIfDepRemoved("Require", "remotes")
+#'   pkgDepIfDepRemoved("reproducible", "data.table")
 #'
 #'   Require:::.cleanup(opts)
 #' }}
 pkgDepIfDepRemoved <- function(pkg = character(), depsRemoved = character(),
                                verbose = getOption()) {
   if (length(pkg)) {
-    p2 <- pkgDep2(pkg, recursive = TRUE)
+    p2 <- pkgDep2(pkg, recursive = TRUE)[-1] # remove self
+    p2 <- Map(p = p2, nam = names(p2), function(p, nam) setdiff(p, nam))
     names(p2) <- extractPkgName(names(p2))
     p1 <- names(p2) # just the immediate
     p3 <- p2

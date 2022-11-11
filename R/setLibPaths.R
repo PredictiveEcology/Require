@@ -166,7 +166,7 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
           wasNew <- as.logical(newFile)
           prevLines <- grepl(prevLibPathsText, ll)
           prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
-          setLibPaths(prevLibPaths, updateRprofile = FALSE, exact = TRUE)
+          .libPaths(prevLibPaths)
           if (isTRUE(wasNew) && which(newFileLine) == 2) { # needs to be NEW and starts on 2nd line
             file.remove(updateRprofile)
           } else {

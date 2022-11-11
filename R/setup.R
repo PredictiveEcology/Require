@@ -137,6 +137,9 @@ getOptionRPackageCache <- function() {
 }
 #' Setup a project library, cache, options
 #'
+#' This is somewhat experimental, and may be deprecated in the near future.
+#' In its current form, it is unlikely to work reliably.
+#'
 #' This can be placed as the first line of any/all scripts and it will
 #' be create a reproducible, self-contained project with R packages.
 #' Some of these have direct relationships with `RequireOptions`
@@ -148,8 +151,6 @@ getOptionRPackageCache <- function() {
 #'
 #' @param RPackageCache See `?RequireOptions`.
 #'
-#' @param buildBinaries See `?RequireOptions`.
-#'
 #' @inheritParams setLibPaths
 #' @inheritParams Require
 #'
@@ -160,8 +161,9 @@ getOptionRPackageCache <- function() {
 #' \dontrun{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
-#'   # Place this as the first line of a project
-#'   Require::setup()
+#'   # Place these as the first line of a project
+#'   td <- tempdir2("setupEx")
+#'   Require::setup(td, FALSE)
 #'
 #'   # To turn it off and return to normal
 #'   Require::setupOff()
@@ -170,15 +172,15 @@ getOptionRPackageCache <- function() {
 #' }}
 setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
-                  buildBinaries = getOption("Require.buildBinaries", TRUE),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
-  RPackageCache <- checkPath(RPackageCache, create = TRUE)
+  if (!isFALSE(RPackageCache))
+    RPackageCache <- checkPath(RPackageCache, create = TRUE)
   copyRequireAndDeps(RPackageFolders, verbose = verbose)
 
-  newOpts <- list("Require.RPackageCache" = RPackageCache,
-                  "Require.buildBinaries" = buildBinaries)#,
+  newOpts <- list("Require.RPackageCache" = RPackageCache)#,
+                  #"Require.buildBinaries" = buildBinaries)#,
                   #"Require.useCranCache" = usingCranCache)
   opts <- options(newOpts)
   co <- capture.output(type = "message",

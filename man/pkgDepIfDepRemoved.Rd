@@ -40,7 +40,7 @@ from the immediate dependencies.
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
-  pkgDepIfDepRemoved("Require", "remotes")
+  pkgDepIfDepRemoved("reproducible", "data.table")
 
   Require:::.cleanup(opts)
 }}

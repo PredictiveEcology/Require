@@ -8,7 +8,6 @@
 setup(
   RPackageFolders = getOption("Require.RPackageFolders", "R"),
   RPackageCache = getOptionRPackageCache(),
-  buildBinaries = getOption("Require.buildBinaries", TRUE),
   standAlone = getOption("Require.standAlone", TRUE),
   verbose = getOption("Require.verbose")
 )
@@ -21,8 +20,6 @@ installed to and loaded from. In the case of more than one
 folder provided, installation will only happen in the first one.}
 
 \item{RPackageCache}{See \code{?RequireOptions}.}
-
-\item{buildBinaries}{See \code{?RequireOptions}.}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
 the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
@@ -46,6 +43,10 @@ and it is an interactive session, the user will be prompted to confirm
 deletions.}
 }
 \description{
+This is somewhat experimental, and may be deprecated in the near future.
+In its current form, it is unlikely to work reliably.
+}
+\details{
 This can be placed as the first line of any/all scripts and it will
 be create a reproducible, self-contained project with R packages.
 Some of these have direct relationships with \code{RequireOptions}
@@ -56,7 +57,8 @@ and arguments in \code{setLibPaths} and \code{Require}.
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
   # Place this as the first line of a project
-  Require::setup()
+  td <- tempdir2("setupEx")
+  Require::setup(td, FALSE)
 
   # To turn it off and return to normal
   Require::setupOff()

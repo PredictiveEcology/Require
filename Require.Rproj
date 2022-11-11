@@ -18,7 +18,7 @@ StripTrailingWhitespace: Yes
 BuildType: Package
 PackageUseDevtools: Yes
 PackageInstallArgs: --no-multiarch --with-keep.source
-PackageCheckArgs: --as-cran --run-dontrun
+PackageCheckArgs: --as-cran --run-dontrun --no-clean-on-error
 PackageRoxygenize: rd,collate,namespace
 DisableExecuteRprofile: Yes
 

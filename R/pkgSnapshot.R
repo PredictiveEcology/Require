@@ -42,19 +42,26 @@
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'   # install one archived version so that below does something interesting
-#'   Require("crayon (==1.5.1)", libPaths = tempdir(), require = FALSE)
-#'   # Normal use -- using the tempdir() for example; normally libPaths would be omitted to get all
+#'
+#'   libForThisEx <- tempdir2("Example")
+#'   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
+#'   # Normal use -- using the libForThisEx for example; normally libPaths would be omitted to get all
 #'   #    packages in user or project library
-#'   pkgs <- pkgSnapshot(libPaths = tempdir()) # writes to getOption("Require.packageVersionFile")
+#'   tf <- tempfile()
+#'   pkgs <- pkgSnapshot(packageVersionFile = tf,
+#'                       libPaths = libForThisEx) # writes to getOption("Require.packageVersionFile")
 #'                                             # within project; also returns a vector
 #'                                             # of packages with version
 #'
 #'   # Now move this file to another computer e.g. by committing in git, emailing, googledrive
 #'   # on next computer/project
-#'   Require(packageVersionFile = TRUE, libPaths = tempdir())
+#'   Require(packageVersionFile = tf, libPaths = libForThisEx)
 #'
 #'   # Using pkgSnapshot2 to get the vector of packages and versions
-#'   pkgs <- pkgSnapshot2(libPaths = tempdir())
+#'
+#'   tf <- tempfile()
+#'   pkgs <- pkgSnapshot2(packageVersionFile = tf,
+#'                        libPaths = libForThisEx)
 #'   Require(pkgs, require = FALSE) # will install packages from previous line
 #'                                # (likely want require = FALSE and not load them all)
 #'
