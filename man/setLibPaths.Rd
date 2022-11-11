@@ -85,5 +85,6 @@ if (Require:::.runLongExamples()) {
   Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
 
   Require:::.cleanup(opts)
+  unlink("~/newProjectLib", recursive = TRUE)
 }}
 }

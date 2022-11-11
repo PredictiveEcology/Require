@@ -120,6 +120,7 @@ if (Require:::.runLongExamples()) {
                                # (likely want require = FALSE and not load them all)
 
   Require:::.cleanup(opts)
+  unlink(getOption("Require.packageVersionFile"))
 }}
 
 }
