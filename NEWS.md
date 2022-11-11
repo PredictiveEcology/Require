@@ -1,9 +1,10 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
-version 0.2.3
+version 0.2.4
 =============
 
 ## enhancements
+* several modifications to enable CRAN-policy violations all addressed
 * This is a major overhaul of the inner workings of `Require`. It now downloads and builds `Archive` and `GitHub` packages prior to installation, then installs all packages (`CRAN`, `Archive`, `GitHub`, `MRAN` on Windows) with one `install.packages` call (Linux-alikes) or up to two `install.packages` calls (binary and source), allowing efficient parallel installs. This results in very fast installs for all combinations of packages.
 new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and `pkgDep` from checking the internet. This will fail, unless the cached packages are available locally (i.e., it was run once with all packages installed previously). If they are, then they will be installed without needing the internet. This option will also be set automatically on the first attempt to get a file from the internet, which fails, triggering a test of the internet. If that fails, then the option will be set to `FALSE` until next call to `Require` or `pkgDep` when it will be reset. This is experimental still.
 * many more edge cases found and dealt with
@@ -13,7 +14,7 @@ new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and
 * package messaging is not sorted alphabetically during installation
 * all `message` calls now `messageVerbose`, so verbosity can be fully controlled with the argument `verbose` or `options("Require.verbose")`. See `?RequireOptions`.
 * tests clean up more completely after themselves
-* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKG_CACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
+* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKGCACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
 * Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
 * numerous enhancements for speed
 
