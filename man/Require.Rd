@@ -24,148 +24,144 @@ Require(
 }
 \arguments{
 \item{packages}{Character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require}). In the case of a
-GitHub package, it will be assumed that the name of the repository is the
-name of the package. If this is not the case, then pass a named character
-vector here, where the names are the package names that could be different
-than the GitHub repository name.}
+\code{install.packages}, then load (i.e., with \code{library}). If it is one package,
+it can be unquoted (as in \code{require}). In the case of a GitHub package, it
+will be assumed that the name of the repository is the name of the package.
+If this is not the case, then pass a named character vector here, where the
+names are the package names that could be different than the GitHub
+repository name.}
 
-\item{packageVersionFile}{Character string of a file name or logical. If \code{TRUE},
-then this function will load the default file, \verb{getOption("Require.packageVersionFile"). If this argument is provided, then this will override all any packages passed to }packages`.}
+\item{packageVersionFile}{Character string of a file name or logical. If
+\code{TRUE}, then this function will load the default file,
+\verb{getOption("Require.packageVersionFile"). If this argument is provided, then this will override all any packages passed to }packages`.}
 
 \item{libPaths}{The library path (or libraries) where all packages should be
-installed, and looked for to load (i.e., call \code{library}). This can be
-used to create isolated, stand alone package installations, if used with
-\code{standAlone = TRUE}. Currently, the path supplied here will be
-prepended to \code{.libPaths()} (temporarily during this call) to
-\code{Require} if \code{standAlone = FALSE} or will set (temporarily)
-\code{.libPaths()} to \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
+installed, and looked for to load (i.e., call \code{library}). This can be used
+to create isolated, stand alone package installations, if used with
+\code{standAlone = TRUE}. Currently, the path supplied here will be prepended to
+\code{.libPaths()} (temporarily during this call) to \code{Require} if \code{standAlone = FALSE} or will set (temporarily) \code{.libPaths()} to \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
-\item{install_githubArgs}{Deprecated. Values passed here are merged with \code{install.packagesArgs},
-with the \code{install.packagesArgs} taking precedence if conflicting.}
+\item{install_githubArgs}{Deprecated. Values passed here are merged with
+\code{install.packagesArgs}, with the \code{install.packagesArgs} taking precedence
+if conflicting.}
 
-\item{install.packagesArgs}{List of optional named arguments, passed to \code{install.packages}.}
+\item{install.packagesArgs}{List of optional named arguments, passed to
+\code{install.packages}.}
 
-\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
-to e.g., the \code{checkpoint} package.
-If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e., it will include the user's default package folder(s).
-This can be create dramatically faster installs if the user has a substantial number of
-the packages already in their personal library.
-Default \code{FALSE} to minimize package installing.}
+\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and
+loaded from the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE
+USER'S \code{.libPaths()}, similar to e.g., the \code{checkpoint} package. If
+\code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the
+\code{Require} call, resulting in shared packages, i.e., it will include the
+user's default package folder(s). This can be create dramatically faster
+installs if the user has a substantial number of the packages already in
+their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{install}{Logical or "force". If \code{FALSE}, this will not try to install anything.
-If \code{"force"}, then it will force installation of requested packages,
-mimicking a call to e.g., \code{install.packages}.
-If \code{TRUE}, the default, then this function will try to install any missing
-packages or dependencies.}
+\item{install}{Logical or "force". If \code{FALSE}, this will not try to install
+anything. If \code{"force"}, then it will force installation of requested
+packages, mimicking a call to e.g., \code{install.packages}. If \code{TRUE}, the
+default, then this function will try to install any missing packages or
+dependencies.}
 
-\item{require}{Logical or character string. If \code{TRUE}, the default, then the function will
-attempt to call \code{require} on all requested \code{packages}, possibly
-after they are installed. If a character string, then it will only call \code{require}
-on those specific packages (i.e., it will install the ones listed in \code{packages}, but
-load the packages listed in \code{require})}
+\item{require}{Logical or character string. If \code{TRUE}, the default, then the
+function will attempt to call \code{require} on all requested \code{packages},
+possibly after they are installed. If a character string, then it will only
+call \code{require} on those specific packages (i.e., it will install the ones
+listed in \code{packages}, but load the packages listed in \code{require})}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
-\item{purge}{Logical. Should all caches be purged?
-Default is \code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout the \code{Require} package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+\item{purge}{Logical. Should all caches be purged? Default is
+\code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
+results throughout the \code{Require} package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
+(one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 
 \item{type}{See `utils::install.packages``}
 
-\item{...}{Passed to \code{install.packages}.
-Good candidates are e.g., \code{type} or \code{dependencies}. This can be
-used with \code{install_githubArgs} or \code{install.packageArgs} which
-give individual options for those 2 internal function calls.}
+\item{...}{Passed to \code{install.packages}. Good candidates are e.g., \code{type} or
+\code{dependencies}. This can be used with \code{install_githubArgs} or
+\code{install.packageArgs} which give individual options for those 2 internal
+function calls.}
 }
 \value{
-\code{Require} is intended to replace \code{base::require}, thus it returns a logical, named vector
-indicating whether the named packages have been loaded.  Because \code{Require} also has
-the ability to install packages, a return value of \code{FALSE} does not mean that it
-did not install correctly; rather, it means it did not attach with \code{require}, which
-could be because it did not install correctly, or also because e.g., \code{require = FALSE}.
+\code{Require} is intended to replace \code{base::require}, thus it returns a
+logical, named vector indicating whether the named packages have been loaded.
+Because \code{Require} also has the ability to install packages, a return value of
+\code{FALSE} does not mean that it did not install correctly; rather, it means it
+did not attach with \code{require}, which could be because it did not install
+correctly, or also because e.g., \code{require = FALSE}.
 
-\code{standAlone} will either put the \code{Require}d packages and their
-dependencies \emph{all} within the \code{libPaths} (if \code{TRUE}) or if
-\code{FALSE} will only install packages and their dependencies that are
-otherwise not installed in \code{.libPaths()[1]}, i.e., the current active
-R package directory. Any packages or dependencies that are not yet installed will
-be installed in \code{libPaths}.
+\code{standAlone} will either put the \code{Require}d packages and their dependencies
+\emph{all} within the \code{libPaths} (if \code{TRUE}) or if \code{FALSE} will only install
+packages and their dependencies that are otherwise not installed in
+\code{.libPaths()[1]}, i.e., the current active R package directory. Any packages
+or dependencies that are not yet installed will be installed in \code{libPaths}.
 }
 \description{
 A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and `require` for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and GitHub packages. This approach is developed to create reproducible workflows that are flexible and fast enough to use while in development stages, while able to build snapshots once a stable package collection is found. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the user or developer.
 
-This is an "all in one" function that will run \code{install.packages} for CRAN and
-GitHub \url{https://github.com/} packages and will install
-specific versions of each package if versions are specified either via an (in)equality
-(e.g., \code{"glue (>=1.6.2)"} or \code{"glue (==1.6.2)"} for an exact version) or with a
-\code{packageVersionFile}.
-If \code{require = TRUE}, the default, the function will then run \code{require} on all
-named packages that satisfy their version requirements. If packages are already installed
-(\code{packages} supplied), and their optional version numbers are satisfied,
-then the "install" component will be skipped.
+This is an "all in one" function that will run \code{install.packages} for CRAN
+and GitHub \url{https://github.com/} packages and will install specific versions
+of each package if versions are specified either via an (in)equality (e.g.,
+\code{"glue (>=1.6.2)"} or \code{"glue (==1.6.2)"} for an exact version) or with a
+\code{packageVersionFile}. If \code{require = TRUE}, the default, the function will
+then run \code{require} on all named packages that satisfy their version
+requirements. If packages are already installed (\code{packages} supplied), and
+their optional version numbers are satisfied, then the "install" component
+will be skipped.
 }
 \note{
 For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
-\code{1} or \code{2} (or via \code{options("Require.verbose")}). This will
-attach an attribute \code{attr(obj, "Require")} to the output of this
-function.
+\code{1} or \code{2} (or via \code{options("Require.verbose")}). This will attach an
+attribute \code{attr(obj, "Require")} to the output of this function.
 }
 \section{GitHub Package}{
-
-Follows \code{remotes::install_github} standard.
-As with \code{remotes::install_github}, it is not possible to specify a past
-version of a GitHub package unless that version is a tag or the user passes
-the SHA that had that package version. Similarly, if a developer does a
-local install e.g., via \code{pkgload::install}, of an active project, this package
-will not be able know of the GitHub state, and thus \code{pkgSnapshot} will not be able to
-recover this state as there is no SHA associated with a local
-installation. Use \code{Require} (or \code{remotes::install_github}) to create
-a record of the GitHub state.
+ Follows \code{remotes::install_github} standard. As with
+\code{remotes::install_github}, it is not possible to specify a past version of
+a GitHub package unless that version is a tag or the user passes the SHA
+that had that package version. Similarly, if a developer does a local
+install e.g., via \code{pkgload::install}, of an active project, this package
+will not be able know of the GitHub state, and thus \code{pkgSnapshot} will not
+be able to recover this state as there is no SHA associated with a local
+installation. Use \code{Require} (or \code{remotes::install_github}) to create a
+record of the GitHub state.
 }
 
 \section{Package Snapshots}{
-
-To build a snapshot of the desired packages and their versions,
-first run \code{Require} with all packages, then \code{pkgSnapshot}.
+ To build a snapshot of the desired packages and
+their versions, first run \code{Require} with all packages, then \code{pkgSnapshot}.
 If a \code{libPaths} is used, it must be used in both functions.
 }
 
 \section{Mutual Dependencies}{
-
-This function works best if all required packages are called within one
-\code{Require} call, as all dependencies can be identified together, and all
-package versions will be addressed (if there are no conflicts),
-allowing a call to \code{\link[=pkgSnapshot]{pkgSnapshot()}} to take a snapshot or "record" of
-the current collection of packages and versions.
+ This function works best if all required
+packages are called within one \code{Require} call, as all dependencies can be
+identified together, and all package versions will be addressed (if there
+are no conflicts), allowing a call to \code{\link[=pkgSnapshot]{pkgSnapshot()}} to take a snapshot or
+"record" of the current collection of packages and versions.
 }
 
 \section{Local Cache of Packages}{
-
-When installing new packages, \code{Require} will put all source and binary files
-in an R-version specific subfolder of
-\code{getOption("Require.RPackageCache")} whose default is \code{RPackageCache()}, meaning
-\emph{cache packages locally in a project-independent location},
-and will reuse them if needed. To turn
-off this feature, set \code{options("Require.RPackageCache" = FALSE)}.
+ When installing new packages, \code{Require}
+will put all source and binary files in an R-version specific subfolder of
+\code{getOption("Require.RPackageCache")} whose default is \code{RPackageCache()},
+meaning \emph{cache packages locally in a project-independent location}, and
+will reuse them if needed. To turn off this feature, set
+\code{options("Require.RPackageCache" = FALSE)}.
 }
 
 \examples{
@@ -202,9 +198,9 @@ if (Require:::.runLongExamples()) {
   tempPkgFolder <- file.path(tempdir(), "Packages")
   Require(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 
-  ##########################################################################################
-  # Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
-  ##########################################################################################
+  #####################################################################################
+  # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
+  #####################################################################################
   # GitHub packages
   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
   Require("PredictiveEcology/fpCompare@development",

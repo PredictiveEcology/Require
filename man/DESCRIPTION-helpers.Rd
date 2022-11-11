@@ -19,15 +19,14 @@ getGitHubDESCRIPTION(
 \arguments{
 \item{file}{A file path to a \code{DESCRIPTION} file}
 
-\item{purge}{Logical. Should all caches be purged?
-Default is \code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout the \code{Require} package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+\item{purge}{Logical. Should all caches be purged? Default is
+\code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
+results throughout the \code{Require} package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
+(one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
 
@@ -36,11 +35,12 @@ The rest of the line will be retrieved.}
 
 \item{pkg}{A character string with a GitHub package specification (c.f. remotes)}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 }
 \description{
 A series of helpers to access and deal with GitHub packages

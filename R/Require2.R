@@ -13,131 +13,128 @@ utils::globalVariables(c(
 ))
 
 
-#' Repeatability-safe install and load packages, optionally with specific versions
+#' Repeatability-safe install and load packages, optionally with specific
+#' versions
 #'
-#' This is an "all in one" function that will run `install.packages` for CRAN and
-#' GitHub <https://github.com/> packages and will install
-#' specific versions of each package if versions are specified either via an (in)equality
-#' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
-#' `packageVersionFile`.
-#' If `require = TRUE`, the default, the function will then run `require` on all
-#' named packages that satisfy their version requirements. If packages are already installed
-#' (`packages` supplied), and their optional version numbers are satisfied,
-#' then the "install" component will be skipped.
+#' This is an "all in one" function that will run `install.packages` for CRAN
+#' and GitHub <https://github.com/> packages and will install specific versions
+#' of each package if versions are specified either via an (in)equality (e.g.,
+#' `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
+#' `packageVersionFile`. If `require = TRUE`, the default, the function will
+#' then run `require` on all named packages that satisfy their version
+#' requirements. If packages are already installed (`packages` supplied), and
+#' their optional version numbers are satisfied, then the "install" component
+#' will be skipped.
 #'
-#' @return
-#' `Require` is intended to replace `base::require`, thus it returns a logical, named vector
-#' indicating whether the named packages have been loaded.  Because `Require` also has
-#' the ability to install packages, a return value of `FALSE` does not mean that it
-#' did not install correctly; rather, it means it did not attach with `require`, which
-#' could be because it did not install correctly, or also because e.g., `require = FALSE`.
+#' @return `Require` is intended to replace `base::require`, thus it returns a
+#' logical, named vector indicating whether the named packages have been loaded.
+#' Because `Require` also has the ability to install packages, a return value of
+#' `FALSE` does not mean that it did not install correctly; rather, it means it
+#' did not attach with `require`, which could be because it did not install
+#' correctly, or also because e.g., `require = FALSE`.
 #'
-#' `standAlone` will either put the `Require`d packages and their
-#' dependencies *all* within the `libPaths` (if `TRUE`) or if
-#' `FALSE` will only install packages and their dependencies that are
-#' otherwise not installed in `.libPaths()[1]`, i.e., the current active
-#' R package directory. Any packages or dependencies that are not yet installed will
-#' be installed in `libPaths`.
+#' `standAlone` will either put the `Require`d packages and their dependencies
+#' *all* within the `libPaths` (if `TRUE`) or if `FALSE` will only install
+#' packages and their dependencies that are otherwise not installed in
+#' `.libPaths()[1]`, i.e., the current active R package directory. Any packages
+#' or dependencies that are not yet installed will be installed in `libPaths`.
 #'
 #'
-#' @section GitHub Package:
-#' Follows `remotes::install_github` standard.
-#' As with `remotes::install_github`, it is not possible to specify a past
-#' version of a GitHub package unless that version is a tag or the user passes
-#' the SHA that had that package version. Similarly, if a developer does a
-#' local install e.g., via `pkgload::install`, of an active project, this package
-#' will not be able know of the GitHub state, and thus `pkgSnapshot` will not be able to
-#' recover this state as there is no SHA associated with a local
-#' installation. Use `Require` (or `remotes::install_github`) to create
-#' a record of the GitHub state.
+#' @section GitHub Package: Follows `remotes::install_github` standard. As with
+#'   `remotes::install_github`, it is not possible to specify a past version of
+#'   a GitHub package unless that version is a tag or the user passes the SHA
+#'   that had that package version. Similarly, if a developer does a local
+#'   install e.g., via `pkgload::install`, of an active project, this package
+#'   will not be able know of the GitHub state, and thus `pkgSnapshot` will not
+#'   be able to recover this state as there is no SHA associated with a local
+#'   installation. Use `Require` (or `remotes::install_github`) to create a
+#'   record of the GitHub state.
 #'
-#' @section Package Snapshots:
-#' To build a snapshot of the desired packages and their versions,
-#' first run `Require` with all packages, then `pkgSnapshot`.
-#' If a `libPaths` is used, it must be used in both functions.
+#' @section Package Snapshots: To build a snapshot of the desired packages and
+#'   their versions, first run `Require` with all packages, then `pkgSnapshot`.
+#'   If a `libPaths` is used, it must be used in both functions.
 #'
-#' @section Mutual Dependencies:
-#' This function works best if all required packages are called within one
-#' `Require` call, as all dependencies can be identified together, and all
-#' package versions will be addressed (if there are no conflicts),
-#' allowing a call to [pkgSnapshot()] to take a snapshot or "record" of
-#' the current collection of packages and versions.
+#' @section Mutual Dependencies: This function works best if all required
+#'   packages are called within one `Require` call, as all dependencies can be
+#'   identified together, and all package versions will be addressed (if there
+#'   are no conflicts), allowing a call to [pkgSnapshot()] to take a snapshot or
+#'   "record" of the current collection of packages and versions.
 #'
-#' @section Local Cache of Packages:
-#' When installing new packages, `Require` will put all source and binary files
-#' in an R-version specific subfolder of
-#' `getOption("Require.RPackageCache")` whose default is `RPackageCache()`, meaning
-#' *cache packages locally in a project-independent location*,
-#' and will reuse them if needed. To turn
-#' off this feature, set `options("Require.RPackageCache" = FALSE)`.
+#' @section Local Cache of Packages: When installing new packages, `Require`
+#'   will put all source and binary files in an R-version specific subfolder of
+#'   `getOption("Require.RPackageCache")` whose default is `RPackageCache()`,
+#'   meaning *cache packages locally in a project-independent location*, and
+#'   will reuse them if needed. To turn off this feature, set
+#'   `options("Require.RPackageCache" = FALSE)`.
 #'
-#' @note
-#' For advanced use and diagnosis, the user can set `verbose = TRUE` or
-#' `1` or `2` (or via `options("Require.verbose")`). This will
-#' attach an attribute `attr(obj, "Require")` to the output of this
-#' function.
+#' @note For advanced use and diagnosis, the user can set `verbose = TRUE` or
+#' `1` or `2` (or via `options("Require.verbose")`). This will attach an
+#' attribute `attr(obj, "Require")` to the output of this function.
 #'
-#' @param install Logical or "force". If `FALSE`, this will not try to install anything.
-#'   If `"force"`, then it will force installation of requested packages,
-#'   mimicking a call to e.g., `install.packages`.
-#'   If `TRUE`, the default, then this function will try to install any missing
-#'   packages or dependencies.
-#' @param require Logical or character string. If `TRUE`, the default, then the function will
-#'   attempt to call `require` on all requested `packages`, possibly
-#'   after they are installed. If a character string, then it will only call `require`
-#'   on those specific packages (i.e., it will install the ones listed in `packages`, but
-#'   load the packages listed in `require`)
+#' @param install Logical or "force". If `FALSE`, this will not try to install
+#'   anything. If `"force"`, then it will force installation of requested
+#'   packages, mimicking a call to e.g., `install.packages`. If `TRUE`, the
+#'   default, then this function will try to install any missing packages or
+#'   dependencies.
+#' @param require Logical or character string. If `TRUE`, the default, then the
+#'   function will attempt to call `require` on all requested `packages`,
+#'   possibly after they are installed. If a character string, then it will only
+#'   call `require` on those specific packages (i.e., it will install the ones
+#'   listed in `packages`, but load the packages listed in `require`)
 #' @param packages Character vector of packages to install via
-#'   `install.packages`, then load (i.e., with `library`). If it is
-#'   one package, it can be unquoted (as in `require`). In the case of a
-#'   GitHub package, it will be assumed that the name of the repository is the
-#'   name of the package. If this is not the case, then pass a named character
-#'   vector here, where the names are the package names that could be different
-#'   than the GitHub repository name.
-#' @param packageVersionFile  Character string of a file name or logical. If `TRUE`,
-#'   then this function will load the default file, `getOption("Require.packageVersionFile").
-#'   If this argument is provided, then this will override all any packages passed to `packages`.
+#'   `install.packages`, then load (i.e., with `library`). If it is one package,
+#'   it can be unquoted (as in `require`). In the case of a GitHub package, it
+#'   will be assumed that the name of the repository is the name of the package.
+#'   If this is not the case, then pass a named character vector here, where the
+#'   names are the package names that could be different than the GitHub
+#'   repository name.
+#' @param packageVersionFile  Character string of a file name or logical. If
+#'   `TRUE`, then this function will load the default file,
+#'   `getOption("Require.packageVersionFile"). If this argument is provided,
+#'   then this will override all any packages passed to `packages`.
 #' @param libPaths The library path (or libraries) where all packages should be
-#'   installed, and looked for to load (i.e., call `library`). This can be
-#'   used to create isolated, stand alone package installations, if used with
-#'   `standAlone = TRUE`. Currently, the path supplied here will be
-#'   prepended to `.libPaths()` (temporarily during this call) to
-#'   `Require` if `standAlone = FALSE` or will set (temporarily)
-#'        `.libPaths()` to `c(libPaths, tail(libPaths(), 1)` to keep base packages.
+#'   installed, and looked for to load (i.e., call `library`). This can be used
+#'   to create isolated, stand alone package installations, if used with
+#'   `standAlone = TRUE`. Currently, the path supplied here will be prepended to
+#'   `.libPaths()` (temporarily during this call) to `Require` if `standAlone =
+#'   FALSE` or will set (temporarily) `.libPaths()` to `c(libPaths,
+#'   tail(libPaths(), 1)` to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
-#'              `install.packages`, `install_github` or `installVersions`.
-#' @param install_githubArgs Deprecated. Values passed here are merged with `install.packagesArgs`,
-#'   with the `install.packagesArgs` taking precedence if conflicting.
-#' @param install.packagesArgs List of optional named arguments, passed to `install.packages`.
-#' @param standAlone Logical. If `TRUE`, all packages will be installed to and loaded from
-#'   the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE USER'S `.libPaths()`, similar
-#'   to e.g., the `checkpoint` package.
-#'   If `FALSE`, then `libPath` will be prepended to `.libPaths()` during the `Require` call,
-#'   resulting in shared packages, i.e., it will include the user's default package folder(s).
-#'   This can be create dramatically faster installs if the user has a substantial number of
-#'   the packages already in their personal library.
-#'   Default `FALSE` to minimize package installing.
-#' @param purge Logical. Should all caches be purged?
-#'   Default is `getOption("Require.purge", FALSE)`.
-#'   There is a lot of internal caching of results throughout the `Require` package.
-#'   These help with speed and reduce calls to internet sources.
-#'   However, sometimes these caches must be purged.
+#'   `install.packages`, `install_github` or `installVersions`.
+#' @param install_githubArgs Deprecated. Values passed here are merged with
+#'   `install.packagesArgs`, with the `install.packagesArgs` taking precedence
+#'   if conflicting.
+#' @param install.packagesArgs List of optional named arguments, passed to
+#'   `install.packages`.
+#' @param standAlone Logical. If `TRUE`, all packages will be installed to and
+#'   loaded from the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE
+#'   USER'S `.libPaths()`, similar to e.g., the `checkpoint` package. If
+#'   `FALSE`, then `libPath` will be prepended to `.libPaths()` during the
+#'   `Require` call, resulting in shared packages, i.e., it will include the
+#'   user's default package folder(s). This can be create dramatically faster
+#'   installs if the user has a substantial number of the packages already in
+#'   their personal library. Default `FALSE` to minimize package installing.
+#' @param purge Logical. Should all caches be purged? Default is
+#'   `getOption("Require.purge", FALSE)`. There is a lot of internal caching of
+#'   results throughout the `Require` package. These help with speed and reduce
+#'   calls to internet sources. However, sometimes these caches must be purged.
 #'   The cached values are renewed when found to be too old, with the age limit.
 #'   This maximum age can be set in seconds with the environment variable
-#'   `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE`, or if unset,
-#'   defaults to 3600  (one hour -- see [`utils::available.packages`]).
+#'   `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE`, or if unset, defaults to 3600
+#'   (one hour -- see [`utils::available.packages`]).
 #'
 #'   Internally, there are calls to `available.packages`.
-#' @param verbose Numeric or logical indicating how verbose should the function be.
-#'   If -1 or less, then as little verbosity as possible.
-#'   If 0 or FALSE, then minimal outputs; if `1` or TRUE, more outputs; `2` even more.
-#'   NOTE: in `Require` function, when `verbose >= 2`, the return object will have an attribute:
-#'   `attr(.., "Require")` which has lots of information about the processes of the installs.
+#' @param verbose Numeric or logical indicating how verbose should the function
+#'   be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+#'   then minimal outputs; if `1` or TRUE, more outputs; `2` even more. NOTE: in
+#'   `Require` function, when `verbose >= 2`, the return object will have an
+#'   attribute: `attr(.., "Require")` which has lots of information about the
+#'   processes of the installs.
 #' @param type See `utils::install.packages``
-#' @param ... Passed to `install.packages`.
-#'   Good candidates are e.g., `type` or `dependencies`. This can be
-#'   used with `install_githubArgs` or `install.packageArgs` which
-#'   give individual options for those 2 internal function calls.
+#' @param ... Passed to `install.packages`. Good candidates are e.g., `type` or
+#'   `dependencies`. This can be used with `install_githubArgs` or
+#'   `install.packageArgs` which give individual options for those 2 internal
+#'   function calls.
 #'
 #' @export
 #' @importFrom data.table data.table as.data.table setDT set is.data.table
@@ -180,9 +177,9 @@ utils::globalVariables(c(
 #'   tempPkgFolder <- file.path(tempdir(), "Packages")
 #'   Require(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#'   ##########################################################################################
-#'   # Isolated projects -- Just use a project folder and pass to libPaths or set .libPaths() #
-#'   ##########################################################################################
+#'   #####################################################################################
+#'   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
+#'   #####################################################################################
 #'   # GitHub packages
 #'   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
 #'   Require("PredictiveEcology/fpCompare@development",
