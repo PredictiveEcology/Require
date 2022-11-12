@@ -32,8 +32,8 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 attribute: \code{attr(.., "Require")} which has lots of information about the
 processes of the installs.}
 
-\item{verboseLevel}{A numeric indicating what verbose threshold (level) above which
-this message will show.}
+\item{verboseLevel}{A numeric indicating what verbose threshold (level) above
+which this message will show.}
 
 \item{...}{Passed to \code{install.packages}. Good candidates are e.g., \code{type} or
 \code{dependencies}. This can be used with \code{install_githubArgs} or
@@ -54,6 +54,6 @@ function calls.}
 Sends to \code{message}, but in a structured way so that a data.frame-like can
 be cleanly sent to messaging.
 
-This will only show a message if the value of \code{verbose} is greater than
-the \code{verboseLevel}.
+This will only show a message if the value of \code{verbose} is greater than the
+\code{verboseLevel}.
 }

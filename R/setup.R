@@ -23,6 +23,7 @@ RequireCacheDir <- function(create) {
   } else {
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
+        browser()
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
           message("Require has changed default package cache folder from\n",
@@ -92,10 +93,12 @@ RequirePkgCacheDir <- function(create) {
 
 #' Get the option for `Require.RPackageCache`
 #'
-#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
+#' First checks if an environment variable `Require.RPackageCache`
+#' is set and defines a path.
 #' If not set, checks whether the `options("Require.RPackageCache")` is set.
 #' If a character string, then it returns that.
-#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
+#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE`
+#' then returns `NULL`.
 #'
 #' @export
 getOptionRPackageCache <- function() {
@@ -300,10 +303,10 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 
 #' Setup for binary Linux repositories
 #'
-#' Enable use of binary package builds for Linux from the RStudio Package Manager repo.
-#' This will set the `repos` option, affecting the current R session. It will put this
-#' `binaryLinux` in the first position. If the `getOption("repos")` is `NULL`, it will
-#' put `backupCRAN` in second position.
+#' Enable use of binary package builds for Linux from the RStudio Package
+#' Manager repo. This will set the `repos` option, affecting the current R
+#' session. It will put this `binaryLinux` in the first position. If the
+#' `getOption("repos")` is `NULL`, it will put `backupCRAN` in second position.
 #'
 #' @param binaryLinux A CRAN repository serving binary Linux packages.
 #' @param backupCRAN If there is no CRAN repository set

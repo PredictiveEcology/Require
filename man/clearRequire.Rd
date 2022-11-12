@@ -12,13 +12,14 @@ clearRequirePackageCache(
 )
 }
 \arguments{
-\item{packages}{Either missing or a character vector of package names (currently cannot
-specify version number) to remove from the local Require Cache.}
+\item{packages}{Either missing or a character vector of package names
+(currently cannot specify version number) to remove from the local Require
+Cache.}
 
 \item{ask}{Logical. If \code{TRUE}, then it will ask user to confirm}
 
-\item{Rversion}{An R version (major dot minor, e.g., "4.2"). Defaults to current
-R version.}
+\item{Rversion}{An R version (major dot minor, e.g., "4.2"). Defaults to
+current R version.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,

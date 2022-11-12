@@ -39,7 +39,8 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 attribute: \code{attr(.., "Require")} which has lots of information about the
 processes of the installs.}
 
-\item{returnDataTable}{Logical. If \code{TRUE}, the default, then the return is a data.table.
+\item{returnDataTable}{Logical. If \code{TRUE}, the default, then the return
+is a data.table.
 Otherwise, it is a \code{matrix}, as per \code{available.packages}}
 
 \item{type}{See `utils::install.packages``}

@@ -48,9 +48,9 @@ processes of the installs.}
 }
 \value{
 The main point of this function is to set \code{.libPaths()}, which will
-be changed as a side effect of this function. As when setting \code{options}, this
-will return the previous state of \code{.libPaths()} allowing the user to reset
-easily.
+be changed as a side effect of this function. As when setting \code{options},
+this will return the previous state of \code{.libPaths()} allowing the user to
+reset easily.
 }
 \description{
 This will set the \code{.libPaths()} by either adding a new path to it if
@@ -77,10 +77,13 @@ if (Require:::.runLongExamples()) {
   setLibPaths(td) # set a new R package library locally
   setLibPaths() # reset it to original
   setwd(origDir)
-  # Using standAlone = FALSE means that newly installed packages will be installed
-  #   in the new package library, but loading packages can come from any of the ones
-  #   listed in .libPaths()
-  setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
+  # Using standAlone = FALSE means that newly installed packages
+  #   will be installed
+  #   in the new package library, but loading packages can come
+  #   from any of the ones listed in .libPaths()
+
+  # will have 2 or more paths
+  setLibPaths("~/newProjectLib", standAlone = FALSE)
   # Can restart R, and changes will stay
 
   # remove the custom .libPaths()

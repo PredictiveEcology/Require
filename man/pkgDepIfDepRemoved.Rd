@@ -13,8 +13,8 @@ pkgDepIfDepRemoved(
 \arguments{
 \item{pkg}{A package name to be testing the dependencies}
 
-\item{depsRemoved}{A vector of package names who are to be "removed"
-from the \code{pkg} immediate dependencies}
+\item{depsRemoved}{A vector of package names who are to be "removed" from the
+\code{pkg} immediate dependencies}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
@@ -25,16 +25,17 @@ processes of the installs.}
 }
 \value{
 A list with 3 named lists \code{Direct}, \code{Recursive} and \code{IfRemoved}.
-\code{Direct} will show the top level direct dependencies, either \code{Remaining} or \code{Removed}.
-\code{Recursive} will show the full recursive dependencies, either \code{Remaining} or \code{Removed}.
-\code{IfRemoved} returns all package dependencies that are removed for each top level dependency.
-If a top level dependency is not listed in this final list, then it means that it is also a
-recursive dependency elsewhere, so its removal has no effect.
+\code{Direct} will show the top level direct dependencies, either \code{Remaining} or
+\code{Removed}. \code{Recursive} will show the full recursive dependencies, either
+\code{Remaining} or \code{Removed}. \code{IfRemoved} returns all package dependencies that
+are removed for each top level dependency. If a top level dependency is not
+listed in this final list, then it means that it is also a recursive
+dependency elsewhere, so its removal has no effect.
 }
 \description{
-This is primarily for package developers. It allows the testing
-of what the recursive dependencies would be if a package was removed
-from the immediate dependencies.
+This is primarily for package developers. It allows the testing of what the
+recursive dependencies would be if a package was removed from the immediate
+dependencies.
 }
 \examples{
 \dontrun{

@@ -15,8 +15,8 @@ setLinuxBinaryRepo(
 \item{backupCRAN}{If there is no CRAN repository set}
 }
 \description{
-Enable use of binary package builds for Linux from the RStudio Package Manager repo.
-This will set the \code{repos} option, affecting the current R session. It will put this
-\code{binaryLinux} in the first position. If the \code{getOption("repos")} is \code{NULL}, it will
-put \code{backupCRAN} in second position.
+Enable use of binary package builds for Linux from the RStudio Package
+Manager repo. This will set the \code{repos} option, affecting the current R
+session. It will put this \code{binaryLinux} in the first position. If the
+\code{getOption("repos")} is \code{NULL}, it will put \code{backupCRAN} in second position.
 }

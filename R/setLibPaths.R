@@ -10,9 +10,9 @@
 #' with it, even through an R restart.
 #'
 #' @details This details of this code were modified from
-#' <https://github.com/milesmcbain>. A different, likely non-approved by CRAN
-#' approach that also works is here:
-#' <https://stackoverflow.com/a/36873741/3890027>.
+#'   <https://github.com/milesmcbain>. A different, likely non-approved by CRAN
+#'   approach that also works is here:
+#'   <https://stackoverflow.com/a/36873741/3890027>.
 #'
 #' @param libPaths A new path to append to, or replace all existing user
 #'   components of `.libPath()`
@@ -30,9 +30,9 @@
 #'   use the exact, unaltered `libPaths`. Default is `FALSE`
 #' @inheritParams Require
 #' @return The main point of this function is to set `.libPaths()`, which will
-#' be changed as a side effect of this function. As when setting `options`, this
-#' will return the previous state of `.libPaths()` allowing the user to reset
-#' easily.
+#'   be changed as a side effect of this function. As when setting `options`,
+#'   this will return the previous state of `.libPaths()` allowing the user to
+#'   reset easily.
 #'
 #' @export
 #' @importFrom utils compareVersion
@@ -46,10 +46,13 @@
 #'   setLibPaths(td) # set a new R package library locally
 #'   setLibPaths() # reset it to original
 #'   setwd(origDir)
-#'   # Using standAlone = FALSE means that newly installed packages will be installed
-#'   #   in the new package library, but loading packages can come from any of the ones
-#'   #   listed in .libPaths()
-#'   setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
+#'   # Using standAlone = FALSE means that newly installed packages
+#'   #   will be installed
+#'   #   in the new package library, but loading packages can come
+#'   #   from any of the ones listed in .libPaths()
+#'
+#'   # will have 2 or more paths
+#'   setLibPaths("~/newProjectLib", standAlone = FALSE)
 #'   # Can restart R, and changes will stay
 #'
 #'   # remove the custom .libPaths()
@@ -73,8 +76,9 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   }
   gte4.1 <- isTRUE(getRversion() >= "4.1")
   if (gte4.1) { # now correct behaviour; remaining parts unnecessary
+    ## to avoid triggering warning on R < 4.1
     do.call(.libPaths, list(new = libPaths[1],
-                 if (gte4.1) include.site = !standAlone)) ## to avoid triggering warning on R < 4.1
+                 if (gte4.1) include.site = !standAlone))
     return(oldLibPaths)
   }
 
@@ -167,7 +171,9 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
           prevLines <- grepl(prevLibPathsText, ll)
           prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
           .libPaths(prevLibPaths)
-          if (isTRUE(wasNew) && which(newFileLine) == 2) { # needs to be NEW and starts on 2nd line
+
+          # needs to be NEW and starts on 2nd line
+          if (isTRUE(wasNew) && which(newFileLine) == 2) {
             file.remove(updateRprofile)
           } else {
             ll <- ll[-(bounds[1]:bounds[2])]

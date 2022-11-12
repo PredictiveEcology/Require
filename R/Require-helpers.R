@@ -347,7 +347,8 @@ installedVers <- function(pkgDT) {
 
 #' @importFrom utils available.packages
 #' @rdname availableVersions
-#' @param returnDataTable Logical. If `TRUE`, the default, then the return is a data.table.
+#' @param returnDataTable Logical. If `TRUE`, the default, then the return
+#'   is a data.table.
 #'   Otherwise, it is a `matrix`, as per `available.packages`
 #' @inheritParams Require
 #' @inheritParams utils::install.packages
@@ -909,7 +910,8 @@ getSHAfromGitHubMemoise <- function(...) {
 #' \verb{
 #' # install.packages("rversions")
 #' v = rversions::r_versions()
-#' keep = which(as.Date(v$date, format = "%Y-%m-%d") >= as.Date("2018-01-01", format = "%Y-%m-%d"))
+#' keep = which(as.Date(v$date, format = "%Y-%m-%d") >=
+#'              as.Date("2018-01-01", format = "%Y-%m-%d"))
 #' dput(v[keep, c("version", "date")])
 #' }
 rversions <- structure(list(

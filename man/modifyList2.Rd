@@ -30,11 +30,12 @@ More or less a convenience around
 \code{keep.null = TRUE} by default.
 }
 \note{
-\code{modifyList3} retains the original behaviour of \code{modifyList2} (prior to Oct 2022);
-however, it cannot retain \code{NULL} values in lists.
+\code{modifyList3} retains the original behaviour of \code{modifyList2} (prior to
+Oct 2022); however, it cannot retain \code{NULL} values in lists.
 }
 \examples{
 modifyList2(list(a = 1), list(a = 2, b = 2))
 modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
-modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2), list(a = 3, c = list(1:10)))
+modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2),
+            list(a = 3, c = list(1:10)))
 }

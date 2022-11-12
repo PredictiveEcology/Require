@@ -40,7 +40,9 @@ then this will override all any packages passed to \code{packages}.}
 installed, and looked for to load (i.e., call \code{library}). This can be used
 to create isolated, stand alone package installations, if used with
 \code{standAlone = TRUE}. Currently, the path supplied here will be prepended to
-\code{.libPaths()} (temporarily during this call) to \code{Require} if \code{standAlone = FALSE} or will set (temporarily) \code{.libPaths()} to \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
+\code{.libPaths()} (temporarily during this call) to \code{Require} if
+\code{standAlone = FALSE} or will set (temporarily) \code{.libPaths()} to
+\verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
 \item{install_githubArgs}{Deprecated. Values passed here are merged with
 \code{install.packagesArgs}, with the \code{install.packagesArgs} taking precedence
@@ -152,7 +154,7 @@ If a \code{libPaths} is used, it must be used in both functions.
  This function works best if all required
 packages are called within one \code{Require} call, as all dependencies can be
 identified together, and all package versions will be addressed (if there
-are no conflicts), allowing a call to \code{\link[=pkgSnapshot]{pkgSnapshot()}} to take a snapshot or
+are no conflicts), allowing a call to \code{pkgSnapshot()} to take a snapshot or
 "record" of the current collection of packages and versions.
 }
 

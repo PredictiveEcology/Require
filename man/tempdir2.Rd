@@ -11,7 +11,8 @@ tempdir2(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath()))
 \code{file.path("smth", "smth2")} for nested temporary sub
 directories.}
 
-\item{tempdir}{Optional character string where the temporary dir should be placed.
+\item{tempdir}{Optional character string where the
+temporary dir should be placed.
 Defaults to \code{.RequireTempPath()}}
 }
 \description{

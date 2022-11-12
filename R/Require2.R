@@ -57,7 +57,7 @@ utils::globalVariables(c(
 #' @section Mutual Dependencies: This function works best if all required
 #'   packages are called within one `Require` call, as all dependencies can be
 #'   identified together, and all package versions will be addressed (if there
-#'   are no conflicts), allowing a call to [pkgSnapshot()] to take a snapshot or
+#'   are no conflicts), allowing a call to `pkgSnapshot()` to take a snapshot or
 #'   "record" of the current collection of packages and versions.
 #'
 #' @section Local Cache of Packages: When installing new packages, `Require`
@@ -96,9 +96,9 @@ utils::globalVariables(c(
 #'   installed, and looked for to load (i.e., call `library`). This can be used
 #'   to create isolated, stand alone package installations, if used with
 #'   `standAlone = TRUE`. Currently, the path supplied here will be prepended to
-#'   `.libPaths()` (temporarily during this call) to `Require` if `standAlone =
-#'   FALSE` or will set (temporarily) `.libPaths()` to `c(libPaths,
-#'   tail(libPaths(), 1)` to keep base packages.
+#'   `.libPaths()` (temporarily during this call) to `Require` if
+#'   `standAlone = FALSE` or will set (temporarily) `.libPaths()` to
+#'   `c(libPaths, tail(libPaths(), 1)` to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'   `install.packages`, `install_github` or `installVersions`.
 #' @param install_githubArgs Deprecated. Values passed here are merged with

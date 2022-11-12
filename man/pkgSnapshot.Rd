@@ -66,8 +66,8 @@ Similarly, CRAN packages will report their version and specify with a \code{>=},
 allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
 
-\item{includeBase}{Logical. Should R base packages be included, specifically, those in
-\code{tail(.libPath(), 1)}}
+\item{includeBase}{Logical. Should R base packages be included, specifically,
+those in \code{tail(.libPath(), 1)}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
@@ -99,16 +99,20 @@ if (Require:::.runLongExamples()) {
 
   libForThisEx <- tempdir2("Example")
   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
-  # Normal use -- using the libForThisEx for example; normally libPaths would be omitted to get all
+  # Normal use -- using the libForThisEx for example;
+  #    normally libPaths would be omitted to get all
   #    packages in user or project library
   tf <- tempfile()
-  pkgs <- pkgSnapshot(packageVersionFile = tf,
-                      libPaths = libForThisEx) # writes to getOption("Require.packageVersionFile")
-                                            # within project; also returns a vector
-                                            # of packages with version
 
-  # Now move this file to another computer e.g. by committing in git, emailing, googledrive
-  # on next computer/project
+  # writes to getOption("Require.packageVersionFile")
+     # within project; also returns a vector
+     # of packages with version
+  pkgs <- pkgSnapshot(packageVersionFile = tf,
+                      libPaths = libForThisEx)
+
+  # Now move this file to another computer e.g. by committing in git,
+  #   emailing, googledrive
+  #   on next computer/project
   Require(packageVersionFile = tf, libPaths = libForThisEx)
 
   # Using pkgSnapshot2 to get the vector of packages and versions
@@ -117,7 +121,8 @@ if (Require:::.runLongExamples()) {
   pkgs <- pkgSnapshot2(packageVersionFile = tf,
                        libPaths = libForThisEx)
   Require(pkgs, require = FALSE) # will install packages from previous line
-                               # (likely want require = FALSE and not load them all)
+                               # (likely want require = FALSE
+                               #  and not load them all)
 
   Require:::.cleanup(opts)
   unlink(getOption("Require.packageVersionFile"))
