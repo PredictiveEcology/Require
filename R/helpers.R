@@ -547,7 +547,7 @@ SysInfo <-
           Require.RequirePkgCache = FALSE) ## TODO: use e.g., `tempdir2("examples")`
 }
 
-.cleanup <- function(opts) {
+.cleanup <- function(opts = list()) {
   unlink(Require::tempdir2(), recursive = TRUE)
   clearRequirePackageCache(ask = FALSE,
                            Rversion = rversion(),

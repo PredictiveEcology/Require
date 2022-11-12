@@ -75,7 +75,7 @@ origWd <- getwd()
 # The test
 try(test_pkg("Require")) # not sure if this works with try
 
-if (!isDevAndInteractive) # i.e., CRAN
+if (!isDevAndInteractive || !isDev) # i.e., CRAN
   Require:::.cleanup(list())
 #runTests(checks)
 
