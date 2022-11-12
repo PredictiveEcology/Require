@@ -4,7 +4,11 @@
 \alias{tempdir2}
 \title{Make a temporary (sub-)directory}
 \usage{
-tempdir2(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath()))
+tempdir2(
+  sub = "",
+  tempdir = getOption("Require.tempPath", .RequireTempPath()),
+  create = TRUE
+)
 }
 \arguments{
 \item{sub}{Character string, length 1. Can be a result of
@@ -12,8 +16,9 @@ tempdir2(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath()))
 directories.}
 
 \item{tempdir}{Optional character string where the
-temporary dir should be placed.
-Defaults to \code{.RequireTempPath()}}
+temporary dir should be placed. Defaults to \code{.RequireTempPath()}}
+
+\item{create}{Logical. Should the directory be created. Default \code{TRUE}}
 }
 \description{
 Create a temporary subdirectory in \code{.RequireTempPath()}, or a

@@ -16,8 +16,7 @@ tempfile2(
 directories.}
 
 \item{tempdir}{Optional character string where the
-temporary dir should be placed.
-Defaults to \code{.RequireTempPath()}}
+temporary dir should be placed. Defaults to \code{.RequireTempPath()}}
 
 \item{...}{passed to \code{tempfile}, e.g., \code{fileext}}
 }

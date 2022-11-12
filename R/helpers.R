@@ -252,14 +252,17 @@ messageDF <-
 #'   `file.path("smth", "smth2")` for nested temporary sub
 #'   directories.
 #' @param tempdir Optional character string where the
-#'   temporary dir should be placed.
-#'   Defaults to `.RequireTempPath()`
+#'   temporary dir should be placed. Defaults to `.RequireTempPath()`
+#' @param create Logical. Should the directory be created. Default `TRUE`
 #' @seealso [tempfile2()]
 #' @export
-tempdir2 <-
-  function(sub = "",
-           tempdir = getOption("Require.tempPath", .RequireTempPath())) {
-    checkPath(normPath(file.path(tempdir, sub)), create = TRUE)
+tempdir2 <- function(sub = "",
+                     tempdir = getOption("Require.tempPath", .RequireTempPath()),
+                     create = TRUE) {
+    np <- normPath(file.path(tempdir, sub))
+    if (isTRUE(create))
+      checkPath(np, create = TRUE)
+    np
   }
 
 #' Make a temporary subfile in a temporary (sub-)directory
@@ -548,7 +551,7 @@ SysInfo <-
 }
 
 .cleanup <- function(opts = list()) {
-  unlink(Require::tempdir2(), recursive = TRUE)
+  unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
   clearRequirePackageCache(ask = FALSE,
                            Rversion = rversion(),
                            verbose = FALSE)
