@@ -665,20 +665,25 @@ pkgDep2 <- function(packages,
                     repos = getOption("repos"),
                     sorted = TRUE,
                     purge = getOption("Require.purge", FALSE),
-                    includeSelf = TRUE) {
+                    includeSelf = TRUE,
+                    verbose = getOption("Require.verbose")) {
+  if (length(packages) > 1) stop("packages should be length 1")
+  deps <- pkgDep(
+    packages,
+    recursive = FALSE,
+    which = which,
+    depends = depends,
+    imports = imports,
+    suggests = suggests,
+    linkingTo = linkingTo,
+    repos = repos,
+    includeSelf = includeSelf
+  )
+  deps <- lapply(deps, function(d) setdiff(d, packages))[[1]]
+
   a <-
     lapply(
-      pkgDep(
-        packages,
-        recursive = FALSE,
-        which = which,
-        depends = depends,
-        imports = imports,
-        suggests = suggests,
-        linkingTo = linkingTo,
-        repos = repos,
-        includeSelf = includeSelf
-      )[[1]],
+      deps,
       pkgDep,
       depends = depends,
       imports = imports,
@@ -686,7 +691,8 @@ pkgDep2 <- function(packages,
       linkingTo = linkingTo,
       repos = repos,
       recursive = recursive,
-      includeSelf = includeSelf
+      includeSelf = includeSelf,
+      verbose = verbose - 1
     )
   a <- unlist(a, recursive = FALSE)
   if (sorted) {
@@ -1297,7 +1303,7 @@ pkgDepIfDepRemoved <-
            depsRemoved = character(),
            verbose = getOption()) {
     if (length(pkg)) {
-      p2 <- pkgDep2(pkg, recursive = TRUE)[-1] # remove self
+      p2 <- pkgDep2(pkg, recursive = TRUE)
       p2 <-
         Map(p = p2, nam = names(p2), function(p, nam)
           setdiff(p, nam))
