@@ -84,7 +84,7 @@ if (isDevAndInteractive) {
 }
 
 repr <- pkgDep2("reproducible", recursive = TRUE)
-reprWRSQLIte <- extractPkgName(c(names(repr), unname(unlist(repr))))
+reprWRSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
 reprSimple <- pkgDepIfDepRemoved("reproducible", "RSQLite")
 repr[["RSQLite"]] <- NULL
 reprWORSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
