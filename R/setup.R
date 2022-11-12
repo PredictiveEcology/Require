@@ -23,7 +23,6 @@ RequireCacheDir <- function(create) {
   } else {
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
-        browser()
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
           message("Require has changed default package cache folder from\n",
