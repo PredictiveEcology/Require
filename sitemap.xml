@@ -22,6 +22,9 @@
     <loc>/reference/GitHubTools.html</loc>
   </url>
   <url>
+    <loc>/reference/R_TESTSomit.html</loc>
+  </url>
+  <url>
     <loc>/reference/Require-internals.html</loc>
   </url>
   <url>
@@ -56,6 +59,9 @@
   </url>
   <url>
     <loc>/reference/extractPkgName.html</loc>
+  </url>
+  <url>
+    <loc>/reference/getCRANrepos.html</loc>
   </url>
   <url>
     <loc>/reference/getOptionRPackageCache.html</loc>

@@ -18,7 +18,7 @@ temporary file in that temporary subdirectory."><!-- mathjax --><script src="htt
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
       </span>
     </div>
 
@@ -55,7 +55,11 @@ temporary file in that temporary subdirectory.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tempdir2</span><span class="op">(</span>sub <span class="op">=</span> <span class="st">""</span>, tempdir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.tempPath"</span>, <span class="fu">.RequireTempPath</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tempdir2</span><span class="op">(</span></span>
+<span>  sub <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  tempdir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.tempPath"</span>, <span class="fu">.RequireTempPath</span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  create <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -67,8 +71,12 @@ directories.</p></dd>
 
 
 <dt>tempdir</dt>
-<dd><p>Optional character string where the temporary dir should be placed.
-Defaults to <code>.RequireTempPath()</code></p></dd>
+<dd><p>Optional character string where the
+temporary dir should be placed. Defaults to <code>.RequireTempPath()</code></p></dd>
+
+
+<dt>create</dt>
+<dd><p>Logical. Should the directory be created. Default <code>TRUE</code></p></dd>
 
 </dl></div>
     <div id="see-also">
