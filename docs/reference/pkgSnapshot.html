@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
       </span>
     </div>
 
@@ -55,7 +55,7 @@
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">pkgSnapshot</span><span class="op">(</span>
   packageVersionFile <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.packageVersionFile"</span><span class="op">)</span>,
-  <span class="va">libPaths</span>,
+  libPaths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths</a></span><span class="op">(</span><span class="op">)</span>,
   standAlone <span class="op">=</span> <span class="cn">FALSE</span>,
   purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,
   exact <span class="op">=</span> <span class="cn">TRUE</span>,
@@ -91,26 +91,25 @@ Defaults to the <code>.libPaths()[1]</code>.</p></dd>
 
 
 <dt>standAlone</dt>
-<dd><p>Logical. If <code>TRUE</code>, all packages will be installed to and loaded from
-the <code>libPaths</code> only. NOTE: If <code>TRUE</code>, THIS WILL CHANGE THE USER'S <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, similar
-to e.g., the <code>checkpoint</code> package.
-If <code>FALSE</code>, then <code>libPath</code> will be prepended to <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> during the <code>Require</code> call,
-resulting in shared packages, i.e., it will include the user's default package folder(s).
-This can be create dramatically faster installs if the user has a substantial number of
-the packages already in their personal library.
-Default <code>FALSE</code> to minimize package installing.</p></dd>
+<dd><p>Logical. If <code>TRUE</code>, all packages will be installed to and
+loaded from the <code>libPaths</code> only. NOTE: If <code>TRUE</code>, THIS WILL CHANGE THE
+USER'S <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, similar to e.g., the <code>checkpoint</code> package. If
+<code>FALSE</code>, then <code>libPath</code> will be prepended to <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> during the
+<code>Require</code> call, resulting in shared packages, i.e., it will include the
+user's default package folder(s). This can be create dramatically faster
+installs if the user has a substantial number of the packages already in
+their personal library. Default <code>FALSE</code> to minimize package installing.</p></dd>
 
 
 <dt>purge</dt>
-<dd><p>Logical. Should all caches be purged?
-Default is <code>getOption("Require.purge", FALSE)</code>.
-There is a lot of internal caching of results throughout the <code>Require</code> package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+<dd><p>Logical. Should all caches be purged? Default is
+<code>getOption("Require.purge", FALSE)</code>. There is a lot of internal caching of
+results throughout the <code>Require</code> package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset,
-defaults to 3600  (one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, defaults to 3600
+(one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
 <p>Internally, there are calls to <code>available.packages</code>.</p></dd>
 
 
@@ -127,16 +126,17 @@ to install with a minimum version number, as opposed to an exact version number.
 
 
 <dt>includeBase</dt>
-<dd><p>Logical. Should R base packages be included, specifically, those in
-<code>tail(.libPath(), 1)</code></p></dd>
+<dd><p>Logical. Should R base packages be included, specifically,
+those in <code>tail(.libPath(), 1)</code></p></dd>
 
 
 <dt>verbose</dt>
-<dd><p>Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.
-NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an attribute:
-<code>attr(.., "Require")</code> which has lots of information about the processes of the installs.</p></dd>
+<dd><p>Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more. NOTE: in
+<code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an
+attribute: <code>attr(.., "Require")</code> which has lots of information about the
+processes of the installs.</p></dd>
 
 </dl></div>
     <div id="value">
@@ -158,19 +158,40 @@ examples.</p>
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span>
-<span class="r-in"><span class="co"># Normal use</span></span>
-<span class="r-in"><span class="va">pkgs</span> <span class="op">&lt;-</span> <span class="fu">pkgSnapshot</span><span class="op">(</span><span class="op">)</span> <span class="co"># writes a file, getOption("Require.packageVersionFile"),</span></span>
-<span class="r-in">                      <span class="co"># within project; also returns a vector of packages with version</span></span>
+<span class="r-in"><span class="kw">if</span> <span class="op">(</span><span class="fu">Require</span><span class="fu">:::</span><span class="fu">.runLongExamples</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span class="r-in">  <span class="va">opts</span> <span class="op">&lt;-</span> <span class="fu">Require</span><span class="fu">:::</span><span class="fu">.setupExample</span><span class="op">(</span><span class="op">)</span></span>
+<span class="r-in">  <span class="co"># install one archived version so that below does something interesting</span></span>
 <span class="r-in"></span>
-<span class="r-in"><span class="co"># Now move this file to another computer e.g. by committing in git, emailing, googledrive</span></span>
-<span class="r-in"><span class="co"># on next computer/project</span></span>
-<span class="r-in"><span class="fu"><a href="Require.html">Require</a></span><span class="op">(</span>packageVersionFile <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span class="r-in">  <span class="va">libForThisEx</span> <span class="op">&lt;-</span> <span class="fu"><a href="tempdir2.html">tempdir2</a></span><span class="op">(</span><span class="st">"Example"</span><span class="op">)</span></span>
+<span class="r-in">  <span class="fu"><a href="Require.html">Require</a></span><span class="op">(</span><span class="st">"crayon (==1.5.1)"</span>, libPaths <span class="op">=</span> <span class="va">libForThisEx</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span class="r-in">  <span class="co"># Normal use -- using the libForThisEx for example;</span></span>
+<span class="r-in">  <span class="co">#    normally libPaths would be omitted to get all</span></span>
+<span class="r-in">  <span class="co">#    packages in user or project library</span></span>
+<span class="r-in">  <span class="va">tf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span>
 <span class="r-in"></span>
-<span class="r-in"><span class="co"># Using pkgSnapshot2 to get the vector of packages and versions</span></span>
-<span class="r-in"><span class="va">pkgs</span> <span class="op">&lt;-</span> <span class="fu">pkgSnapshot2</span><span class="op">(</span><span class="op">)</span></span>
-<span class="r-in"><span class="fu"><a href="Require.html">Require</a></span><span class="op">(</span><span class="va">pkgs</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># will install packages from previous line</span></span>
-<span class="r-in">                               <span class="co"># (likely want require = FALSE and not load them all)</span></span>
-<span class="r-in"><span class="op">}</span></span>
+<span class="r-in">  <span class="co"># writes to getOption("Require.packageVersionFile")</span></span>
+<span class="r-in">     <span class="co"># within project; also returns a vector</span></span>
+<span class="r-in">     <span class="co"># of packages with version</span></span>
+<span class="r-in">  <span class="va">pkgs</span> <span class="op">&lt;-</span> <span class="fu">pkgSnapshot</span><span class="op">(</span>packageVersionFile <span class="op">=</span> <span class="va">tf</span>,</span>
+<span class="r-in">                      libPaths <span class="op">=</span> <span class="va">libForThisEx</span><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in">  <span class="co"># Now move this file to another computer e.g. by committing in git,</span></span>
+<span class="r-in">  <span class="co">#   emailing, googledrive</span></span>
+<span class="r-in">  <span class="co">#   on next computer/project</span></span>
+<span class="r-in">  <span class="fu"><a href="Require.html">Require</a></span><span class="op">(</span>packageVersionFile <span class="op">=</span> <span class="va">tf</span>, libPaths <span class="op">=</span> <span class="va">libForThisEx</span><span class="op">)</span></span>
+<span class="r-in"></span>
+<span class="r-in">  <span class="co"># Using pkgSnapshot2 to get the vector of packages and versions</span></span>
+<span class="r-in"></span>
+<span class="r-in">  <span class="va">tf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span>
+<span class="r-in">  <span class="va">pkgs</span> <span class="op">&lt;-</span> <span class="fu">pkgSnapshot2</span><span class="op">(</span>packageVersionFile <span class="op">=</span> <span class="va">tf</span>,</span>
+<span class="r-in">                       libPaths <span class="op">=</span> <span class="va">libForThisEx</span><span class="op">)</span></span>
+<span class="r-in">  <span class="fu"><a href="Require.html">Require</a></span><span class="op">(</span><span class="va">pkgs</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># will install packages from previous line</span></span>
+<span class="r-in">                               <span class="co"># (likely want require = FALSE</span></span>
+<span class="r-in">                               <span class="co">#  and not load them all)</span></span>
+<span class="r-in"></span>
+<span class="r-in">  <span class="fu">Require</span><span class="fu">:::</span><span class="fu">.cleanup</span><span class="op">(</span><span class="va">opts</span><span class="op">)</span></span>
+<span class="r-in">  <span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.packageVersionFile"</span><span class="op">)</span><span class="op">)</span></span>
+<span class="r-in"><span class="op">}</span><span class="op">}</span></span>
 <span class="r-in"></span>
 </code></pre></div>
     </div>

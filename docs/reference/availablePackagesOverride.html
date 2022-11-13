@@ -19,7 +19,7 @@ repos, Package, File for each individual package."><!-- mathjax --><script src="
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
       </span>
     </div>
 
@@ -72,15 +72,14 @@ should be installed from where. With this override, we can indicate arbitrary
 
 
 <dt>purge</dt>
-<dd><p>Logical. Should all caches be purged?
-Default is <code>getOption("Require.purge", FALSE)</code>.
-There is a lot of internal caching of results throughout the <code>Require</code> package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+<dd><p>Logical. Should all caches be purged? Default is
+<code>getOption("Require.purge", FALSE)</code>. There is a lot of internal caching of
+results throughout the <code>Require</code> package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset,
-defaults to 3600  (one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, defaults to 3600
+(one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
 <p>Internally, there are calls to <code>available.packages</code>.</p></dd>
 
 

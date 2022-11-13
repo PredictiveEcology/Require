@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
       </span>
     </div>
 
@@ -71,15 +71,14 @@
 
 
 <dt>purge</dt>
-<dd><p>Logical. Should all caches be purged?
-Default is <code>getOption("Require.purge", FALSE)</code>.
-There is a lot of internal caching of results throughout the <code>Require</code> package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+<dd><p>Logical. Should all caches be purged? Default is
+<code>getOption("Require.purge", FALSE)</code>. There is a lot of internal caching of
+results throughout the <code>Require</code> package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset,
-defaults to 3600  (one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
+<code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code>, or if unset, defaults to 3600
+(one hour -- see <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">utils::available.packages</a></code>).</p>
 <p>Internally, there are calls to <code>available.packages</code>.</p></dd>
 
 
@@ -93,11 +92,12 @@ The rest of the line will be retrieved.</p></dd>
 
 
 <dt>verbose</dt>
-<dd><p>Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more.
-NOTE: in <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an attribute:
-<code>attr(.., "Require")</code> which has lots of information about the processes of the installs.</p></dd>
+<dd><p>Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more. NOTE: in
+<code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an
+attribute: <code>attr(.., "Require")</code> which has lots of information about the
+processes of the installs.</p></dd>
 
 </dl></div>
     <div id="details">
