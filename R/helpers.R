@@ -555,9 +555,15 @@ SysInfo <-
   clearRequirePackageCache(ask = FALSE,
                            Rversion = rversion(),
                            verbose = FALSE)
-  unlink(dir(dirname(tools::R_user_dir(
+  filesOuter <- dir(dirname(dirname(tools::R_user_dir(
     "Require", "cache"
-  )), full.names = TRUE), recursive = TRUE)
+  ))), full.names = TRUE, pattern = "^R$")
+  filesOneIn <- dir(dirname(tools::R_user_dir(
+    "Require", "cache"
+  )), full.names = TRUE)
+  unlink(filesOneIn, recursive = TRUE)
+  if (length(filesOuter) == 1 && length(filesOneIn) == 1)
+    unlink(filesOuter, recursive = TRUE)
   options(opts)
 }
 
