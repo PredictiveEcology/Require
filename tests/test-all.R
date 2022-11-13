@@ -33,7 +33,7 @@ library(testit)
 checks$start[["options"]] <- options()
 origOptions <- checks$start[["options"]]
 checks$start[["cacheDir"]] <- dir(Require::RequireCacheDir(FALSE), recursive = TRUE)
-checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
+checks$start[["tempdir2"]] <- dir(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 # helper files for this test
 source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
@@ -93,7 +93,7 @@ checks$prior[["options"]] <- options()
 checks$prior[["libPaths"]] <- .libPaths()
 checks$prior[["cacheDir"]] <- dir(Require::RequireCacheDir(create = FALSE), recursive = TRUE)
 checks$prior[["envVars"]] <- Sys.getenv()
-checks$prior[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
+checks$prior[["tempdir2"]] <- dir(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 endTime <- Sys.time()
 try(Require:::messageVerbose("\033[32m ----------------------------------All Tests: ",
@@ -146,7 +146,7 @@ if (FALSE) {
 }
 
 # 6 tempdir2
-unlink(Require::tempdir2(), recursive = TRUE)
+unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 checks$post <- list()
 checks$post[["getwd"]] <- getwd()
@@ -154,14 +154,13 @@ checks$post[["options"]] <- options()
 checks$post[["libPaths"]] <- .libPaths()
 checks$post[["cacheDir"]] <- dir(Require::RequireCacheDir(FALSE), recursive = TRUE)
 checks$post[["envVars"]] <- Sys.getenv()
-checks$post[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
+checks$post[["tempdir2"]] <- dir(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 
 if (!isDev) {
   Require:::.cleanup(list())
 }
-
 # Check everything is reset to original
 if (FALSE) {
   if (isDev) {

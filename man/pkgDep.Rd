@@ -36,7 +36,8 @@ pkgDep2(
   repos = getOption("repos"),
   sorted = TRUE,
   purge = getOption("Require.purge", FALSE),
-  includeSelf = TRUE
+  includeSelf = TRUE,
+  verbose = getOption("Require.verbose")
 )
 
 pkgDepTopoSort(
