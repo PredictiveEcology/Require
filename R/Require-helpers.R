@@ -1,13 +1,14 @@
 utils::globalVariables(c(
-  c("..colsKeep", "..colsToNAfill", ".I", ".N", "Archs", "AvailableVersion",
-    "correctVersion", "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup",
-    "filepath",  "fullGit", "github", "groupCRANtogether", "groupCRANtogetherChange",
-    "groupCRANtogetherDif", "hasHEAD", "hasVersionSpec", "i.neededFiles", "inequality",
-    "installFrom", "installFromFac", "installOrder", "installResult", "isGitPkg",
-    "keep", "keep2", "lastRow", "localFileName", "localType", "maxVers",
-    "mtime", "N", "Names", "neededFiles", "needLaterDate", "nextRow",
-    "Package", "packageFullName", "repoLocation", "RepoWBranch", "tmpOrder", "type",
-    "version", "violations", "VersionFromPV", "..removeCols", "compareVersionAvail")
+  "..colsKeep", "..colsToNAfill", "..removeCols", ".I", ".N",
+  "Archs", "AvailableVersion", "compareVersionAvail", "correctVersion",
+  "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup", "filepath",
+  "fullGit", "github", "groupCRANtogether", "groupCRANtogetherChange",
+  "groupCRANtogetherDif", "hasHEAD", "hasVersionSpec", "i.neededFiles",
+  "inequality", "installFrom", "installFromFac", "installOrder",
+  "installResult", "isGitPkg", "keep", "keep2", "lastRow", "localFileName",
+  "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
+  "needLaterDate", "nextRow", "Package", "packageFullName", "repoLocation",
+  "RepoWBranch", "tmpOrder", "type", "version", "VersionFromPV", "violations"
 ))
 
 #' Parse a github package specification
@@ -75,10 +76,6 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   }
   pkgDT[]
 }
-
-
-
-
 
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
@@ -227,9 +224,6 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
   ret
 }
 
-
-
-
 #' Available and archived versions
 #'
 #' These are wrappers around available.packages and also get the archived versions
@@ -274,7 +268,6 @@ archiveVersionsAvailable <- function(package, repos) {
   }
   return(info)
 }
-
 
 getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
   pkgs <- trimVersionNumber(packages)
@@ -354,7 +347,8 @@ installedVers <- function(pkgDT) {
 
 #' @importFrom utils available.packages
 #' @rdname availableVersions
-#' @param returnDataTable Logical. If `TRUE`, the default, then the return is a data.table.
+#' @param returnDataTable Logical. If `TRUE`, the default, then the return
+#'   is a data.table.
 #'   Otherwise, it is a `matrix`, as per `available.packages`
 #' @inheritParams Require
 #' @inheritParams utils::install.packages
@@ -681,8 +675,6 @@ preparePkgNameToReport <- function(Package, packageFullName) {
   Package
 }
 
-
-
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
   grSplit <- strsplit(gitRepo, "/|@")
   repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
@@ -705,8 +697,6 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 
   list(acct = acct, repo = repo, br = br)
 }
-
-
 
 postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
 
@@ -741,7 +731,6 @@ GithubSHA1: ", sha, "")
   return(invisible())
 }
 
-
 #' @importFrom utils unzip
 #' @inheritParams Require
 downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
@@ -765,7 +754,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
   out <- suppressWarnings(
     try(downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE))
-  if (is(out, "try-error")){
+  if (is(out, "try-error")) {
     return(out)
   }
 
@@ -921,7 +910,8 @@ getSHAfromGitHubMemoise <- function(...) {
 #' \verb{
 #' # install.packages("rversions")
 #' v = rversions::r_versions()
-#' keep = which(as.Date(v$date, format = "%Y-%m-%d") >= as.Date("2018-01-01", format = "%Y-%m-%d"))
+#' keep = which(as.Date(v$date, format = "%Y-%m-%d") >=
+#'              as.Date("2018-01-01", format = "%Y-%m-%d"))
 #' dput(v[keep, c("version", "date")])
 #' }
 rversions <- structure(list(
@@ -996,7 +986,8 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
 #' The list of R packages that `Require` installs from source on Linux, even if
 #' the `getOptions("repos")` is a binary repository. This list can be updated by
 #' the user by modifying the options `Require.spatialPkgs` or
-#' `Require.otherPkgs`. Default "force source only packages" are visible with `RequireOptions()`.
+#' `Require.otherPkgs`. Default "force source only packages" are visible with
+#' `RequireOptions()`.
 #' @param spatialPkgs A character vector of package names that focus on spatial analyses.
 #' @param otherPkgs A character vector of package names that often
 #'   require system specific compilation.

@@ -16,70 +16,81 @@ setLibPaths(
 \item{libPaths}{A new path to append to, or replace all existing user
 components of \code{.libPath()}}
 
-\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and loaded from
-the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE USER'S \code{.libPaths()}, similar
-to e.g., the \code{checkpoint} package.
-If \code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the \code{Require} call,
-resulting in shared packages, i.e., it will include the user's default package folder(s).
-This can be create dramatically faster installs if the user has a substantial number of
-the packages already in their personal library.
-Default \code{FALSE} to minimize package installing.}
+\item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and
+loaded from the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE
+USER'S \code{.libPaths()}, similar to e.g., the \code{checkpoint} package. If
+\code{FALSE}, then \code{libPath} will be prepended to \code{.libPaths()} during the
+\code{Require} call, resulting in shared packages, i.e., it will include the
+user's default package folder(s). This can be create dramatically faster
+installs if the user has a substantial number of the packages already in
+their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{updateRprofile}{Logical or Character string. If \code{TRUE}, then
-this function will put several lines of code in the current directory's \code{.Rprofile}
-file setting up the package libraries for this and future sessions. If
-a character string, then this should be the path to an \code{.Rprofile} file.
-To reset back to normal, run \code{setLibPaths()} without a \code{libPath}. Default:
-\code{getOption("Require.updateRprofile", FALSE)}, meaning \code{FALSE}, but it
-can be set with an option or within a single call.}
+\item{updateRprofile}{Logical or Character string. If \code{TRUE}, then this
+function will put several lines of code in the current directory's
+\code{.Rprofile} file setting up the package libraries for this and future
+sessions. If a character string, then this should be the path to an
+\code{.Rprofile} file. To reset back to normal, run \code{setLibPaths()} without a
+\code{libPath}. Default: \code{getOption("Require.updateRprofile", FALSE)}, meaning
+\code{FALSE}, but it can be set with an option or within a single call.}
 
-\item{exact}{Logical. This function will automatically append the R version number to the
-\code{libPaths} to maintain separate R package libraries for each R version
-on the system. There are some cases where this behaviour is not desirable.
-Set \code{exact} to \code{TRUE} to override this automatic appending and use
-the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
+\item{exact}{Logical. This function will automatically append the R version
+number to the \code{libPaths} to maintain separate R package libraries for each
+R version on the system. There are some cases where this behaviour is not
+desirable. Set \code{exact} to \code{TRUE} to override this automatic appending and
+use the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 }
 \value{
-The main point of this function is to set \code{.libPaths()}, which
-will be changed as a side effect of this function.
-As when setting \code{options}, this will return the previous state of
-\code{.libPaths()} allowing the user to reset easily.
+The main point of this function is to set \code{.libPaths()}, which will
+be changed as a side effect of this function. As when setting \code{options},
+this will return the previous state of \code{.libPaths()} allowing the user to
+reset easily.
 }
 \description{
-This will set the \code{.libPaths()} by either adding a new path to
-it if \code{standAlone = FALSE}, or will concatenate
-\code{c(libPath, tail(.libPaths(), 1))} if \code{standAlone = TRUE}.
-Currently, the default is to make this new \code{.libPaths()} "sticky", meaning it becomes
-associated with the current directory even through a restart of R.
-It does this by adding and/updating the \file{.Rprofile} file in the current directory.
-If this current directory is a project, then the project will have the new \code{.libPaths()}
-associated with it, even through an R restart.
+This will set the \code{.libPaths()} by either adding a new path to it if
+\code{standAlone = FALSE}, or will concatenate \code{c(libPath, tail(.libPaths(), 1))}
+if \code{standAlone = TRUE}. Currently, the default is to make this new
+\code{.libPaths()} "sticky", meaning it becomes associated with the current
+directory even through a restart of R. It does this by adding and/updating
+the \file{.Rprofile} file in the current directory. If this current directory
+is a project, then the project will have the new \code{.libPaths()} associated
+with it, even through an R restart.
 }
 \details{
-This details of this code were modified from \url{https://github.com/milesmcbain}.
-A different, likely non-approved by CRAN approach that also works is here:
+This details of this code were modified from
+\url{https://github.com/milesmcbain}. A different, likely non-approved by CRAN
+approach that also works is here:
 \url{https://stackoverflow.com/a/36873741/3890027}.
 }
 \examples{
 \dontrun{
-origDir <- setwd(tempdir())
-td <- tempdir()
-setLibPaths(td) # set a new R package library locally
-setLibPaths() # reset it to original
-setwd(origDir)
-# Using standAlone = FALSE means that newly installed packages will be installed
-#   in the new package library, but loading packages can come from any of the ones
-#   listed in .libPaths()
-setLibPaths("~/newProjectLib", standAlone = FALSE) # will have 2 or more paths
-# Can restart R, and changes will stay
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+  origDir <- setwd(tempdir())
+  td <- tempdir()
+  setLibPaths(td) # set a new R package library locally
+  setLibPaths() # reset it to original
+  setwd(origDir)
+  # Using standAlone = FALSE means that newly installed packages
+  #   will be installed
+  #   in the new package library, but loading packages can come
+  #   from any of the ones listed in .libPaths()
 
-# remove the custom .libPaths()
-Require::setLibPaths() # reset to previous; remove from .Rprofile because libPath arg is empty
-}
+  # will have 2 or more paths
+  setLibPaths("~/newProjectLib", standAlone = FALSE)
+  # Can restart R, and changes will stay
+
+  # remove the custom .libPaths()
+  Require::setLibPaths() # reset to previous; remove from .Rprofile
+                         # because libPath arg is empty
+
+  Require:::.cleanup(opts)
+  unlink("~/newProjectLib", recursive = TRUE)
+}}
 }

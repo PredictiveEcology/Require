@@ -21,5 +21,6 @@ A sorted concatenation of the 3 input parameters.
 The list of R packages that \code{Require} installs from source on Linux, even if
 the \code{getOptions("repos")} is a binary repository. This list can be updated by
 the user by modifying the options \code{Require.spatialPkgs} or
-\code{Require.otherPkgs}. Default "force source only packages" are visible with \code{RequireOptions()}.
+\code{Require.otherPkgs}. Default "force source only packages" are visible with
+\code{RequireOptions()}.
 }

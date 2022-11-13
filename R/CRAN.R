@@ -1,6 +1,15 @@
+#' A helper function to get or set CRAN repos
+#'
+#' This will get the current option in `getOption('repos')`, and if that is not
+#' set to a url, then it will prompt the user to select a mirror, unless
+#' `ind` is set, in which case, it will use that mirror (in
+#' `chooseCRANmirror()`)
 #' @importFrom utils chooseCRANmirror
+#' @export
+#' @param repos A CRAN-like repository
+#' @param ind an integer of which mirror to use in `chooseCRANmirror()`
 #' @keywords internal
-getCRANrepos <- function(repos = NULL) {
+getCRANrepos <- function(repos = NULL, ind) {
   if (isNonRepo(repos)) {
     repos <- getOption("repos")["CRAN"]
   }
@@ -17,10 +26,10 @@ getCRANrepos <- function(repos = NULL) {
       options("repos" = c("CRAN" = cranRepo))
       cranRepo
     } else {
-      if (isInteractive()) {
+      if (isInteractive() && missing(ind)) {
         chooseCRANmirror2() ## sets repo option
       } else {
-        chooseCRANmirror(ind = 1)
+        chooseCRANmirror(ind = ind)
       }
       getOption("repos")["CRAN"]
     }

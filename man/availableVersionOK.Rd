@@ -2,7 +2,7 @@
 % Please edit documentation in R/Require2.R
 \name{availableVersionOK}
 \alias{availableVersionOK}
-\title{Needs VersionOnRepos, versionSpec and inequality columns}
+\title{Needs \code{VersionOnRepos}, \code{versionSpec} and \code{inequality} columns}
 \usage{
 availableVersionOK(pkgDT)
 }
@@ -10,5 +10,5 @@ availableVersionOK(pkgDT)
 \item{pkgDT}{A \code{pkgDT} object}
 }
 \description{
-Needs VersionOnRepos, versionSpec and inequality columns
+Needs \code{VersionOnRepos}, \code{versionSpec} and \code{inequality} columns
 }

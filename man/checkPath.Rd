@@ -33,8 +33,8 @@ such as trailing slashes, etc.
 }
 \note{
 This will not work for paths to files.
-To check for existence of files, use \code{\link[=file.exists]{file.exists()}}.
-To normalize a path to a file, use \code{\link[=normPath]{normPath()}} or \code{\link[=normalizePath]{normalizePath()}}.
+To check for existence of files, use \code{file.exists()}.
+To normalize a path to a file, use \code{normPath()} or \code{normalizePath()}.
 }
 \examples{
 ## normalize file paths
@@ -59,7 +59,6 @@ checkPath(tmpdir, create = TRUE)
 dir.exists(tmpdir) ## TRUE
 
 unlink(tmpdir, recursive = TRUE) # clean up
-
 }
 \seealso{
 \code{\link[=file.exists]{file.exists()}}, \code{\link[=dir.create]{dir.create()}}.

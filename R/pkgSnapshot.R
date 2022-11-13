@@ -39,61 +39,98 @@
 #' @importFrom data.table fwrite
 #' @examples
 #' \dontrun{
-#' # Normal use
-#' pkgs <- pkgSnapshot() # writes a file, getOption("Require.packageVersionFile"),
-#'                       # within project; also returns a vector of packages with version
+#' if (Require:::.runLongExamples()) {
+#'   opts <- Require:::.setupExample()
+#'   # install one archived version so that below does something interesting
 #'
-#' # Now move this file to another computer e.g. by committing in git, emailing, googledrive
-#' # on next computer/project
-#' Require(packageVersionFile = TRUE)
+#'   libForThisEx <- tempdir2("Example")
+#'   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
+#'   # Normal use -- using the libForThisEx for example;
+#'   #    normally libPaths would be omitted to get all
+#'   #    packages in user or project library
+#'   tf <- tempfile()
 #'
-#' # Using pkgSnapshot2 to get the vector of packages and versions
-#' pkgs <- pkgSnapshot2()
-#' Require(pkgs, require = FALSE) # will install packages from previous line
-#'                                # (likely want require = FALSE and not load them all)
-#' }
+#'   # writes to getOption("Require.packageVersionFile")
+#'      # within project; also returns a vector
+#'      # of packages with version
+#'   pkgs <- pkgSnapshot(packageVersionFile = tf,
+#'                       libPaths = libForThisEx)
+#'
+#'   # Now move this file to another computer e.g. by committing in git,
+#'   #   emailing, googledrive
+#'   #   on next computer/project
+#'   Require(packageVersionFile = tf, libPaths = libForThisEx)
+#'
+#'   # Using pkgSnapshot2 to get the vector of packages and versions
+#'
+#'   tf <- tempfile()
+#'   pkgs <- pkgSnapshot2(packageVersionFile = tf,
+#'                        libPaths = libForThisEx)
+#'   Require(pkgs, require = FALSE) # will install packages from previous line
+#'                                # (likely want require = FALSE
+#'                                #  and not load them all)
+#'
+#'   Require:::.cleanup(opts)
+#'   unlink(getOption("Require.packageVersionFile"))
+#' }}
 #'
 #' @rdname pkgSnapshot
-pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),
-                        libPaths, standAlone = FALSE,
-                        purge = getOption("Require.purge", FALSE), exact = TRUE,
-                        includeBase = FALSE,
-                        verbose = getOption("Require.verbose")) {
-  libPaths <- doLibPaths(libPaths, standAlone)
+pkgSnapshot <-
+  function(packageVersionFile = getOption("Require.packageVersionFile"),
+           libPaths = .libPaths(),
+           standAlone = FALSE,
+           purge = getOption("Require.purge", FALSE),
+           exact = TRUE,
+           includeBase = FALSE,
+           verbose = getOption("Require.verbose")) {
+    libPaths <- checkLibPaths(libPaths = libPaths)
+    libPaths <- doLibPaths(libPaths, standAlone)
 
-  ip <- doInstalledPackages(libPaths, purge, includeBase)
+    ip <- doInstalledPackages(libPaths, purge, includeBase)
 
-  fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
-  messageVerbose("package version file saved in ", packageVersionFile,
-                 verbose = verbose, verboseLevel = 1)
+    fwrite(ip,
+           file = packageVersionFile,
+           row.names = FALSE,
+           na = NA)
+    messageVerbose(
+      "package version file saved in ",
+      packageVersionFile,
+      verbose = verbose,
+      verboseLevel = 1
+    )
 
-  return(invisible(ip))
-}
+    return(invisible(ip))
+  }
 
 #' @rdname pkgSnapshot
 #' @export
-pkgSnapshot2 <- function(packageVersionFile = getOption("Require.packageVersionFile"),
-                         libPaths, standAlone = FALSE,
-                         purge = getOption("Require.purge", FALSE), exact = TRUE,
-                         includeBase = FALSE,
-                         verbose = getOption("Require.verbose")) {
-  libPaths <- doLibPaths(libPaths, standAlone)
+pkgSnapshot2 <-
+  function(packageVersionFile = getOption("Require.packageVersionFile"),
+           libPaths,
+           standAlone = FALSE,
+           purge = getOption("Require.purge", FALSE),
+           exact = TRUE,
+           includeBase = FALSE,
+           verbose = getOption("Require.verbose")) {
+    libPaths <- doLibPaths(libPaths, standAlone)
 
-  ip <- doInstalledPackages(libPaths, purge, includeBase)
+    ip <- doInstalledPackages(libPaths, purge, includeBase)
 
-  if (isTRUE(exact)) {
-    ref <- ip$GithubSHA1
-    ineq <- "=="
-  } else {
-    ref <- ip$GithubRef
-    ineq <- ">="
+    if (isTRUE(exact)) {
+      ref <- ip$GithubSHA1
+      ineq <- "=="
+    } else {
+      ref <- ip$GithubRef
+      ineq <- ">="
+    }
+    thePkgAndVers <- paste0(ifelse(
+      !is.na(ip$GithubRepo),
+      paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref),
+      # github
+      paste0(ip$Package, " (", ineq, ip$Version, ")") # cran
+    ))
+    thePkgAndVers
   }
-  thePkgAndVers <- paste0(ifelse(!is.na(ip$GithubRepo),
-                                 paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref), # github
-                                 paste0(ip$Package, " (",ineq, ip$Version, ")") # cran
-  ))
-  thePkgAndVers
-}
 
 
 doLibPaths <- function(libPaths, standAlone) {
@@ -107,8 +144,15 @@ doLibPaths <- function(libPaths, standAlone) {
 }
 
 doInstalledPackages <- function(libPaths, purge, includeBase) {
-  ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = character(),
-                                      other = "GitHubSha", purge = purge))
+  ip <-
+    as.data.table(
+      .installed.pkgs(
+        lib.loc = libPaths,
+        which = character(),
+        other = "GitHubSha",
+        purge = purge
+      )
+    )
   if (isFALSE(includeBase))
     ip <- ip[!Package %in% .basePkgs]
 

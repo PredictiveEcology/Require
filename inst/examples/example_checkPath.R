@@ -20,4 +20,3 @@ checkPath(tmpdir, create = TRUE)
 dir.exists(tmpdir) ## TRUE
 
 unlink(tmpdir, recursive = TRUE) # clean up
-

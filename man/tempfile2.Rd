@@ -15,8 +15,8 @@ tempfile2(
 \code{file.path("smth", "smth2")} for nested temporary sub
 directories.}
 
-\item{tempdir}{Optional character string where the temporary dir should be placed.
-Defaults to \code{.RequireTempPath()}}
+\item{tempdir}{Optional character string where the
+temporary dir should be placed. Defaults to \code{.RequireTempPath()}}
 
 \item{...}{passed to \code{tempfile}, e.g., \code{fileext}}
 }

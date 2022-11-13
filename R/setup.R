@@ -13,8 +13,10 @@ RequireCacheDir <- function(create) {
   if (missing(create))
     create <- FALSE # !is.null(getOptionRPackageCache())
 
-  ## use cache dir following OS conventions used by rappdirs package:
-  ## rappdirs::user_cache_dir(appName)
+  ## OLD: was using cache dir following OS conventions used by rappdirs package:
+  ##   rappdirs::user_cache_dir(appName)
+  ## CURRENT: using cache dir following conventions used by tools::R_user_dir
+  ##   tools::R_user_dir("appName", "cache")
 
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
@@ -90,10 +92,12 @@ RequirePkgCacheDir <- function(create) {
 
 #' Get the option for `Require.RPackageCache`
 #'
-#' First checks if an environment variable `Require.RPackageCache` is set and defines a path.
+#' First checks if an environment variable `Require.RPackageCache`
+#' is set and defines a path.
 #' If not set, checks whether the `options("Require.RPackageCache")` is set.
 #' If a character string, then it returns that.
-#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE` then returns `NULL`.
+#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE`
+#' then returns `NULL`.
 #'
 #' @export
 getOptionRPackageCache <- function() {
@@ -135,6 +139,9 @@ getOptionRPackageCache <- function() {
 }
 #' Setup a project library, cache, options
 #'
+#' This is somewhat experimental, and may be deprecated in the near future.
+#' In its current form, it is unlikely to work reliably.
+#'
 #' This can be placed as the first line of any/all scripts and it will
 #' be create a reproducible, self-contained project with R packages.
 #' Some of these have direct relationships with `RequireOptions`
@@ -146,8 +153,6 @@ getOptionRPackageCache <- function() {
 #'
 #' @param RPackageCache See `?RequireOptions`.
 #'
-#' @param buildBinaries See `?RequireOptions`.
-#'
 #' @inheritParams setLibPaths
 #' @inheritParams Require
 #'
@@ -156,24 +161,28 @@ getOptionRPackageCache <- function() {
 #'
 #' @examples
 #' \dontrun{
-#' # Place this as the first line of a project
-#' Require::setup()
+#' if (Require:::.runLongExamples()) {
+#'   opts <- Require:::.setupExample()
+#'   # Place these as the first line of a project
+#'   td <- tempdir2("setupEx")
+#'   Require::setup(td, FALSE)
 #'
-#' # To turn it off and return to normal
-#' Require::setupOff()
-#' }
+#'   # To turn it off and return to normal
+#'   Require::setupOff()
 #'
+#'   Require:::.cleanup(opts)
+#' }}
 setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
-                  buildBinaries = getOption("Require.buildBinaries", TRUE),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
   RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
-  RPackageCache <- checkPath(RPackageCache, create = TRUE)
+  if (!isFALSE(RPackageCache))
+    RPackageCache <- checkPath(RPackageCache, create = TRUE)
   copyRequireAndDeps(RPackageFolders, verbose = verbose)
 
-  newOpts <- list("Require.RPackageCache" = RPackageCache,
-                  "Require.buildBinaries" = buildBinaries)#,
+  newOpts <- list("Require.RPackageCache" = RPackageCache)#,
+                  #"Require.buildBinaries" = buildBinaries)#,
                   #"Require.useCranCache" = usingCranCache)
   opts <- options(newOpts)
   co <- capture.output(type = "message",
@@ -293,10 +302,10 @@ copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.ver
 
 #' Setup for binary Linux repositories
 #'
-#' Enable use of binary package builds for Linux from the RStudio Package Manager repo.
-#' This will set the `repos` option, affecting the current R session. It will put this
-#' `binaryLinux` in the first position. If the `getOption("repos")` is `NULL`, it will
-#' put `backupCRAN` in second position.
+#' Enable use of binary package builds for Linux from the RStudio Package
+#' Manager repo. This will set the `repos` option, affecting the current R
+#' session. It will put this `binaryLinux` in the first position. If the
+#' `getOption("repos")` is `NULL`, it will put `backupCRAN` in second position.
 #'
 #' @param binaryLinux A CRAN repository serving binary Linux packages.
 #' @param backupCRAN If there is no CRAN repository set

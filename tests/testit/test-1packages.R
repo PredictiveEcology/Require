@@ -79,7 +79,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   testit::assert({is.data.frame(out)})
   testit::assert({file.exists(eval(formals("pkgSnapshot")$packageVersionFile))})
   out1 <- data.table::as.data.table(out)
-  testit::assert({isTRUE(all.equal(out1, pkgSnapFileRes))})
+  testit::assert({isTRUE(all.equal(out1[], pkgSnapFileRes[], check.attributes = FALSE))})
 
   out3 <- pkgSnapshot2()
   testit::assert(is(out3, "character"))

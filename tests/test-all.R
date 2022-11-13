@@ -1,7 +1,12 @@
-# Sys.setenv("R_REQUIRE_CHECK_AS_CRAN" = "true") # set this to test as if it is CRAN (short and silent)
-# Sys.setenv("R_REQUIRE_TEST_AS_INTERACTIVE" = "false") # set this to test as if GitHub Actions (short and loud)
+# Sys.setenv("_R_CHECK_THINGS_IN_OTHER_DIRS_" = "TRUE") ## check if things left behind
+# Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true") # use this if Version is a release version, but want to run as Dev
+# Sys.setenv(R_REQUIRE_CHECK_AS_CRAN = "true") # set this to test as if it is CRAN (short and silent)
+# Sys.setenv(R_REQUIRE_TEST_AS_INTERACTIVE = "false") # set this to test as if GitHub Actions (short and loud)
 # THIS IS USING THE MECHANISM FOR CRAN THAT IF THE VERSION NUMBER IS NOT A DEV VERSION (E.G., .9000) THEN IT IS RUN AS CRAN
 # source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
+
+optNcpus <- options(Ncpus = 2L)
+
 checks <- list()
 checks$start <- list()
 checks$start[["getwd"]] <- getwd()
@@ -9,11 +14,12 @@ checks$start[["libPaths"]] <- .libPaths()
 checks$start[["envVars"]] <- Sys.getenv()
 envOrig <- checks$start[["envVars"]]
 
-if (length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3) {
-  Sys.setenv("R_REQUIRE_RUN_ALL_TESTS"="yes")
+if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
+  Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
 # GitHub Actions, R CMD check locally
-isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "yes" && Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
+isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
+  Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
 # Actually interactive
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
@@ -27,12 +33,12 @@ library(testit)
 checks$start[["options"]] <- options()
 origOptions <- checks$start[["options"]]
 checks$start[["cacheDir"]] <- dir(Require::RequireCacheDir(FALSE), recursive = TRUE)
-checks$start[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
+checks$start[["tempdir2"]] <- dir(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 # helper files for this test
 source(dir(pattern = "test-helpers.R", recursive = TRUE, full.names = TRUE))
 
-# Can emulate CRAN by setting Sys.setenv("R_REQUIRE_CHECK_AS_CRAN" = "true"); source()
+# Can emulate CRAN by setting Sys.setenv(R_REQUIRE_CHECK_AS_CRAN = "true"); source()
 # if (isFALSE(isDev)) {
 #   try(unlink(RequireCacheDir(), recursive = TRUE))
 # }
@@ -67,13 +73,11 @@ optsListPrev <- options(optsListNew)
 origLibPaths <- .libPaths()
 origWd <- getwd()
 
-
 # The test
 try(test_pkg("Require")) # not sure if this works with try
 
-
-if (!isDevAndInteractive) # i.e., CRAN
-  unlink(tools::R_user_dir("Require", "cache"), recursive = TRUE)
+if (!isDevAndInteractive || !isDev) # i.e., CRAN
+  Require:::.cleanup(list())
 #runTests(checks)
 
 currOptions <- options()
@@ -89,10 +93,11 @@ checks$prior[["options"]] <- options()
 checks$prior[["libPaths"]] <- .libPaths()
 checks$prior[["cacheDir"]] <- dir(Require::RequireCacheDir(create = FALSE), recursive = TRUE)
 checks$prior[["envVars"]] <- Sys.getenv()
-checks$prior[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
+checks$prior[["tempdir2"]] <- dir(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 endTime <- Sys.time()
-try(Require:::messageVerbose("\033[32m ----------------------------------All Tests: ",format(endTime - startTimeAll)," \033[39m",
+try(Require:::messageVerbose("\033[32m ----------------------------------All Tests: ",
+                             format(endTime - startTimeAll)," \033[39m",
                              verbose = getOption("Require.verbose"), verboseLevel = -1),
     silent = TRUE)
 
@@ -113,6 +118,7 @@ setwd(origWd)
 
 # 3 options
 options(toRevert)
+options(optNcpus)
 
 # 4 Cache -- remove everything that was added in this test
 if (!isDev) {
@@ -129,7 +135,8 @@ envVarsChangedNeedUnset <- names(envCur)[names(envCur) %in% envVarsChanged]
 if (length(envVarsChangedNeedUnset))
   Sys.unsetenv(envVarsChangedNeedUnset)
 
-if (FALSE) { # This will try to unset all env vars; this is too broad as there seem to be many that are set by GA
+##try to unset all env vars; this is too broad as there seem to be many that are set by GitHub Actions
+if (FALSE) {
   ma <- match(names(envOrig), names(envCur) )
   envNeedRevert <- envCur[ma] != envOrig
   if (any(na.omit(envNeedRevert))) {
@@ -139,7 +146,7 @@ if (FALSE) { # This will try to unset all env vars; this is too broad as there s
 }
 
 # 6 tempdir2
-unlink(Require::tempdir2(), recursive = TRUE)
+unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 checks$post <- list()
 checks$post[["getwd"]] <- getwd()
@@ -147,13 +154,12 @@ checks$post[["options"]] <- options()
 checks$post[["libPaths"]] <- .libPaths()
 checks$post[["cacheDir"]] <- dir(Require::RequireCacheDir(FALSE), recursive = TRUE)
 checks$post[["envVars"]] <- Sys.getenv()
-checks$post[["tempdir2"]] <- dir(Require::tempdir2(), recursive = TRUE)
+checks$post[["tempdir2"]] <- dir(Require::tempdir2(create = FALSE), recursive = TRUE)
 
 Require:::messageVerbose("Done tests", verboseLevel = -2, verbose = verbosity)
 
 if (!isDev) {
-  unlink(Require::tempdir2(), recursive = TRUE)
-  unlink(dir(dirname(tools::R_user_dir("Require", "cache")), full.names = TRUE), recursive = TRUE)
+  Require:::.cleanup(list())
 }
 # Check everything is reset to original
 if (FALSE) {

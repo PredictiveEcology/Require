@@ -36,7 +36,8 @@ pkgDep2(
   repos = getOption("repos"),
   sorted = TRUE,
   purge = getOption("Require.purge", FALSE),
-  includeSelf = TRUE
+  includeSelf = TRUE,
+  verbose = getOption("Require.verbose")
 )
 
 pkgDepTopoSort(
@@ -56,64 +57,70 @@ pkgDepTopoSort(
 }
 \arguments{
 \item{packages}{Character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}). If it is
-one package, it can be unquoted (as in \code{require}). In the case of a
-GitHub package, it will be assumed that the name of the repository is the
-name of the package. If this is not the case, then pass a named character
-vector here, where the names are the package names that could be different
-than the GitHub repository name.}
+\code{install.packages}, then load (i.e., with \code{library}). If it is one package,
+it can be unquoted (as in \code{require}). In the case of a GitHub package, it
+will be assumed that the name of the repository is the name of the package.
+If this is not the case, then pass a named character vector here, where the
+names are the package names that could be different than the GitHub
+repository name.}
 
-\item{libPath}{A path to search for installed packages. Defaults to \code{.libPaths()}}
+\item{libPath}{A path to search for installed packages. Defaults to
+\code{.libPaths()}}
 
-\item{which}{a character vector listing the types of dependencies, a subset of
-\code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
-Character string \code{"all"} is shorthand for that vector,
-character string \code{"most"} for the same vector without \code{"Enhances"}.}
+\item{which}{a character vector listing the types of dependencies, a subset
+of \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
+Character string \code{"all"} is shorthand for that vector, character string
+\code{"most"} for the same vector without \code{"Enhances"}.}
 
-\item{recursive}{Logical. Should dependencies of dependencies be searched, recursively.
-NOTE: Dependencies of suggests will not be recursive. Default \code{TRUE}.}
+\item{recursive}{Logical. Should dependencies of dependencies be searched,
+recursively. NOTE: Dependencies of suggests will not be recursive. Default
+\code{TRUE}.}
 
 \item{depends}{Logical. Include packages listed in "Depends". Default \code{TRUE}.}
 
 \item{imports}{Logical. Include packages listed in "Imports". Default \code{TRUE}.}
 
-\item{suggests}{Logical. Include packages listed in "Suggests". Default \code{FALSE}.}
+\item{suggests}{Logical. Include packages listed in "Suggests". Default
+\code{FALSE}.}
 
-\item{linkingTo}{Logical. Include packages listed in "LinkingTo". Default \code{TRUE}.}
+\item{linkingTo}{Logical. Include packages listed in "LinkingTo". Default
+\code{TRUE}.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
-\item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies returned
-will include version number. Default is \code{FALSE}}
+\item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies
+returned will include version number. Default is \code{FALSE}}
 
-\item{includeBase}{Logical. Should R base packages be included, specifically, those in
-\code{tail(.libPath(), 1)}}
+\item{includeBase}{Logical. Should R base packages be included, specifically,
+those in \code{tail(.libPath(), 1)}}
 
-\item{sort}{Logical. If \code{TRUE}, the default, then the packages will be sorted alphabetically.
-If \code{FALSE}, the packages will not have a discernible order as they will be a
-concatenation of the possibly recursive package dependencies.}
+\item{sort}{Logical. If \code{TRUE}, the default, then the packages will be sorted
+alphabetically. If \code{FALSE}, the packages will not have a discernible order
+as they will be a concatenation of the possibly recursive package
+dependencies.}
 
-\item{purge}{Logical. Should all caches be purged?
-Default is \code{getOption("Require.purge", FALSE)}.
-There is a lot of internal caching of results throughout the \code{Require} package.
-These help with speed and reduce calls to internet sources.
-However, sometimes these caches must be purged.
+\item{purge}{Logical. Should all caches be purged? Default is
+\code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
+results throughout the \code{Require} package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
 The cached values are renewed when found to be too old, with the age limit.
 This maximum age can be set in seconds with the environment variable
-\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset,
-defaults to 3600  (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
+(one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
 
-\item{verbose}{Numeric or logical indicating how verbose should the function be.
-If -1 or less, then as little verbosity as possible.
-If 0 or FALSE, then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more.
-NOTE: in \code{Require} function, when \code{verbose >= 2}, the return object will have an attribute:
-\code{attr(.., "Require")} which has lots of information about the processes of the installs.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 
-\item{includeSelf}{Logical. If \code{TRUE}, the default, then the dependencies will include
-the package itself in the returned list elements, otherwise, only the "dependencies"}
+\item{includeSelf}{Logical. If \code{TRUE}, the default, then the dependencies
+will include the package itself in the returned list elements, otherwise,
+only the "dependencies"}
 
 \item{type}{See `utils::install.packages``}
 
@@ -151,18 +158,17 @@ A possibly ordered, named (with packages as names) list where list elements
 are either full reverse depends.
 }
 \description{
-This will first look in local filesystem (in \code{.libPaths()}) and will use
-a local package to find its dependencies. If the package does not exist locally,
-including whether it is the correct version, then it will look in (currently)
-\code{CRAN} and its archives (if the current \code{CRAN} version is not
-the desired version to check). It will also look on \code{GitHub} if the
-package description is of the form of a GitHub package with format
-\code{account/repo@branch} or \code{account/repo@commit}. For this,
-it will attempt to get package dependencies from
-the GitHub \file{DESCRIPTION} file.
-This is intended to replace \code{tools::package_dependencies} or
-\code{pkgDep} in the \pkg{miniCRAN} package, but with modifications to allow
-multiple sources to be searched in the same function call.
+This will first look in local filesystem (in \code{.libPaths()}) and will use a
+local package to find its dependencies. If the package does not exist
+locally, including whether it is the correct version, then it will look in
+(currently) \code{CRAN} and its archives (if the current \code{CRAN} version is not the
+desired version to check). It will also look on \code{GitHub} if the package
+description is of the form of a GitHub package with format
+\code{account/repo@branch} or \code{account/repo@commit}. For this, it will attempt to
+get package dependencies from the GitHub \file{DESCRIPTION} file. This is
+intended to replace \code{tools::package_dependencies} or \code{pkgDep} in the
+\pkg{miniCRAN} package, but with modifications to allow multiple sources to
+be searched in the same function call.
 
 \code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
 i.e., the first order dependencies, and runs the \code{pkgDep} on those.
@@ -177,29 +183,42 @@ heuristically. This can be used to e.g., \code{detach} or
 of their dependencies are detached or unloaded first.
 }
 \note{
-\code{tools::package_dependencies} and \code{pkgDep} will differ under the following
-circumstances:
-\enumerate{
-\item GitHub packages are not detected using \code{tools::package_dependencies};
-\item \code{tools::package_dependencies} does not detect the dependencies of base packages
-among themselves, \emph{e.g.}, \code{methods} depends on \code{stats} and \code{graphics}.
-}
+\code{tools::package_dependencies} and \code{pkgDep} will differ under the
+following circumstances: \enumerate{ \item GitHub packages are not detected
+using \code{tools::package_dependencies}; \item \code{tools::package_dependencies}
+does not detect the dependencies of base packages among themselves, \emph{e.g.},
+\code{methods} depends on \code{stats} and \code{graphics}. }
 }
 \examples{
 \dontrun{
-  pkgDep("Require")
-  pkgDep("Require", keepVersionNumber = FALSE) # just names
-  pkgDep("PredictiveEcology/reproducible") # GitHub
-  pkgDep("PredictiveEcology/reproducible", recursive = TRUE) # GitHub
-  pkgDep(c("PredictiveEcology/reproducible", "Require")) # GitHub package and local packages
-  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr")) # GitHub, local, and CRAN packages
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+
+  pkgDep("tidyverse", recursive = TRUE)
+
+  # GitHub, local, and CRAN packages
+  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
+
+  Require:::.cleanup(opts)
+}
 }
 \dontrun{
-  pkgDep2("Require")
-  # much bigger one
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+
   pkgDep2("reproducible")
+  # much bigger one
+  pkgDep2("tidyverse")
+
+  Require:::.cleanup(opts)
+}
 }
 \dontrun{
-pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
-}
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+
+  pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+
+  Require:::.cleanup(opts)
+}}
 }

@@ -47,7 +47,8 @@ extractPkgName <- function(pkgs, filenames) {
 #'   .tar.gz or .zip that was downloaded from CRAN.
 #' @export
 #' @examples
-#' extractVersionNumber(c("Require (<=0.0.1)", "PredictiveEcology/Require@development (<=0.0.4)"))
+#' extractVersionNumber(c("Require (<=0.0.1)",
+#'                        "PredictiveEcology/Require@development (<=0.0.4)"))
 extractVersionNumber <- function(pkgs, filenames) {
   if (!missing(pkgs)) {
     hasVersionNum <- grepl(grepExtractPkgs, pkgs, perl = FALSE)
@@ -63,8 +64,6 @@ extractVersionNumber <- function(pkgs, filenames) {
   }
   out
 }
-
-
 
 #' @rdname extractPkgName
 #' @export
