@@ -1945,6 +1945,6 @@ clearRequirePackageCache <-
         message("Aborting")
       }
     } else {
-      messageVerbose("Nothing to clear in Cache")
+      messageVerbose("Nothing to clear in Cache", verbose = verbose, verboseLevel = 1)
     }
   }
