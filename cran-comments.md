@@ -1,6 +1,6 @@
 ## Updated release
 
-This update is a re-implementation of the underlying functions, with large speed and edge case improvements. This versions includes several modifications to ensure clean package and personal cache directories when a user (including CRAN), does not want to use a cache or wants to ensure the cache is wiped clean after testing.
+This new submission, following archiving of this package. This submission includes a re-implementation of the underlying functions, with large speed and edge case improvements. After multiple attempts to accommodate the CRAN policies, we have now understood and identified the cause of the failures. This version includes several modifications to ensure clean package and personal cache directories when a user (including CRAN), does not want to use a cache or wants to ensure the cache is wiped clean after testing.
 
 ## Test environments
 
@@ -23,7 +23,7 @@ This update is a re-implementation of the underlying functions, with large speed
 
 ## R CMD check results
 
-There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer, which is unchanged.
+There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer, which is unchanged and that this is a new submission.
 
 ## Downstream dependencies
 
