@@ -555,6 +555,12 @@ SysInfo <-
   clearRequirePackageCache(ask = FALSE,
                            Rversion = rversion(),
                            verbose = FALSE)
+  # It appears that _R_CHECK_THINGS_IN_OTHER_DIRS_ detects both the R and the Require
+  #   dirs, even though the R is not affiliated specifically with Require
+  #   Nevertheless, if there is no other folder than "Require" in the "R" dir
+  #   it will delete both the Require subdir and the R dir in the
+  #   so that _R_CHECK_THINGS_IN_OTHER_DIRS_ shows nothing; but if there is another
+  #   subdir in the R dir, it won't delete the R dir
   filesOuter <- dir(dirname(dirname(tools::R_user_dir(
     "Require", "cache"
   ))), full.names = TRUE, pattern = "^R$")
@@ -562,7 +568,7 @@ SysInfo <-
     "Require", "cache"
   )), full.names = TRUE)
   unlink(filesOneIn, recursive = TRUE)
-  if (length(filesOuter) == 1 && length(filesOneIn) == 1)
+  if (length(filesOuter) == 1 && length(filesOneIn) <= 1)
     unlink(filesOuter, recursive = TRUE)
   options(opts)
 }
