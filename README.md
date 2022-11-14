@@ -40,7 +40,7 @@ Require(c("data.table", "dplyr", "lme4"))
 
 # Other packages that also install packages
 
-The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README.
+The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README. `Require` unifies much of the functionality of these 5 packages, into 1 package, with the bulk of the work done with 1 function.
 
 ## `pak`
 
@@ -65,6 +65,10 @@ This is mostly the predecessor to `renv`. `renv` can do everything `packrat` can
 ## `checkpoint`
 
 This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the MRAN servers hosted by Microsoft.
+
+## `versions`
+
+Can install specific versions of a package. This is useful to install older versions of a package that may have been required for a specific function or dependency.
 
 ## `Require`
 
@@ -139,28 +143,32 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 ## Timings
 
-`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 3x faster.
+`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 3-40x faster.
 ```r
 # First time run, before cache exists
+> library(pak)
 > system.time(pak::pkg_install(c("data.table", "dplyr", "lme4")))
 ✔ Loading metadata database ... done
+                                                                            
 ℹ No downloads are needed
-✔ 3 pkgs + 24 deps: kept 25 [3.5s]
+✔ 3 pkgs + 24 deps: kept 21 [3.4s]
    user  system elapsed 
-  1.083   0.029   3.658 
-> system.time(Require::Require(c("data.table", "dplyr", "lme4"), require = FALSE))
+  0.949   0.036   3.532 
+> library(Require)
+> system.time(Require::Require(c("data.table", "dplyr", "lme4"), require = FALSE, purge = TRUE))
    user  system elapsed 
-  0.832   0.001   1.363 
+  1.250   0.019   1.494
 
 # Second time run, using cache
 > system.time(pak::pkg_install(c("data.table", "dplyr", "lme4")))
+                                                                            
 ℹ No downloads are needed
-✔ 3 pkgs + 24 deps: kept 25 [946ms]
+✔ 3 pkgs + 24 deps: kept 21 [966ms]
    user  system elapsed 
-  0.034   0.001   0.961 
+  0.028   0.001   0.982 
 > system.time(Require::Require(c("data.table", "dplyr", "lme4"), require = FALSE))
    user  system elapsed 
-  0.099   0.000   0.297 
+  0.027   0.001   0.024
 ```
 ## Other features
 
@@ -172,8 +180,7 @@ Require can make install to and use from a single directory, so a project can be
 library(Require)
 projectPackages = "projectPackages"
 dir.create(projectPackages)
-.libPaths(projectPackages)
-Require("remotes (>=2.4.0)", standAlone = TRUE)
+Require("remotes (>=2.4.0)", standAlone = TRUE, libPaths = projectPackages)
 ```
 
 Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
@@ -183,11 +190,10 @@ Require("fpCompare (>=0.2.0)", require = FALSE) # don't load it, just install
 ```
 ### Installing old package versions
 
-In the same way as above, we can specify maximum or exact package versions. 
-`Require` will retrieve these on CRAN archives.
+`Require` has the functionality of `renv` and `versions` in that you can install previous versions. On Windows, it will search for the binary version on MRAN and CRAN Archives. In the same way as above, we can specify maximum or exact package versions.
 
 ```r
-Require("fpCompare (<=0.1.0)")
+Require("fpCompare (<=0.1.0)") # we don't have to know where to get this
 ```
 
 ### Managing a project
@@ -197,6 +203,7 @@ Because it is vectorized, there can be a long list of packages at the top of a p
 ```r
 Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
           "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"), 
+        libPaths = tempdir(),
         standAlone = TRUE)
 ```
 
@@ -212,14 +219,16 @@ pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project speci
 Require(packageVersionFile = "mySnapshot.txt")
 ```
 
+The argument `packageVersionFile` can also be `TRUE` if the default filename is accepted.
+
 ### Using local package cache
 
-When installing on many machines on a network, having a local cache can speed up installations. By default, this is activated, with a message upon package load as to where the cache folder is. Setting `options("Require.RPackageCache" = "somePath")` will move it to that location; or setting  `options("Require.RPackageCache" = NULL)` will turn caching off. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later.
+By default, `Require` stashes (source and the locally-built binary) packages in a cached folder. If the user needs to reinstall them for the same project, a different project, or a different machine on a network, the `Require` will use this local copy. This will skip the download, and will also be a binary on Linux-alike systems, meaning it will install very fast.  Setting `options("Require.RPackageCache" = "somePath")` will move it to that location; or setting  `options("Require.RPackageCache" = FALSE)` will turn caching off. 
 
 # Conclusion
 
-`Require` package offers a simple, lightweight, package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work.
-The package has one dependencies (`data.table`) and so can be used to install packages without interfering with itself.
+`Require` package offers a simple, lightweight (one non-base package dependency), package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work.
+Because it has one dependencies (`data.table`) and so can be used to install packages without interfering with itself.
 
 ## Contributions
 

@@ -84,6 +84,7 @@ will be skipped.</p>
   purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,
   verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span>, <span class="cn">FALSE</span><span class="op">)</span>,
   type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"pkgType"</span><span class="op">)</span>,
+  upgrade <span class="op">=</span> <span class="cn">FALSE</span>,
   <span class="va">...</span>
 <span class="op">)</span></code></pre></div>
     </div>
@@ -182,7 +183,14 @@ processes of the installs.</p></dd>
 
 
 <dt>type</dt>
-<dd><p>See `utils::install.packages``</p></dd>
+<dd><p>See <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">utils::install.packages</a></code></p></dd>
+
+
+<dt>upgrade</dt>
+<dd><p>When <code>FALSE</code>, the default, will only upgrade a package when the
+version on in the local library is not adequate for the version requirements
+of the <code>packages</code>. Note: for convenience, <code>update</code>
+can be used for this argument.</p></dd>
 
 
 <dt>...</dt>

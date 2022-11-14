@@ -106,7 +106,7 @@
 <div class="section level1">
 <h1 id="other-packages-that-also-install-packages">Other packages that also install packages<a class="anchor" aria-label="anchor" href="#other-packages-that-also-install-packages"></a>
 </h1>
-<p>The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README.</p>
+<p>The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README. <code>Require</code> unifies much of the functionality of these 5 packages, into 1 package, with the bulk of the work done with 1 function.</p>
 <div class="section level2">
 <h2 id="pak">
 <code>pak</code><a class="anchor" aria-label="anchor" href="#pak"></a>
@@ -136,6 +136,12 @@
 <code>checkpoint</code><a class="anchor" aria-label="anchor" href="#checkpoint"></a>
 </h2>
 <p>This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the MRAN servers hosted by Microsoft.</p>
+</div>
+<div class="section level2">
+<h2 id="versions">
+<code>versions</code><a class="anchor" aria-label="anchor" href="#versions"></a>
+</h2>
+<p>Can install specific versions of a package. This is useful to install older versions of a package that may have been required for a specific function or dependency.</p>
 </div>
 <div class="section level2">
 <h2 id="require-2">
@@ -213,27 +219,31 @@
 <div class="section level2">
 <h2 id="timings">Timings<a class="anchor" aria-label="anchor" href="#timings"></a>
 </h2>
-<p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is faster. Below, in cases where all packages are already installed, <code>Require</code> is 3x faster.</p>
+<p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is faster. Below, in cases where all packages are already installed, <code>Require</code> is 3-40x faster.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First time run, before cache exists</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>✔ Loading metadata database ... done</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">25</span> [<span class="fl">3.5</span>s]</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fl">1.083</span>   <span class="fl">0.029</span>   <span class="fl">3.658</span> </span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>))</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.832</span>   <span class="fl">0.001</span>   <span class="fl">1.363</span> </span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Second time run, using cache</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">25</span> [946ms]</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.034</span>   <span class="fl">0.001</span>   <span class="fl">0.961</span> </span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>))</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.099</span>   <span class="fl">0.000</span>   <span class="fl">0.297</span> </span></code></pre></div>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(pak)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>✔ Loading metadata database ... done</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>                                                                            </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">21</span> [<span class="fl">3.4</span>s]</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.949</span>   <span class="fl">0.036</span>   <span class="fl">3.532</span> </span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(Require)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>, <span class="at">purge =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fl">1.250</span>   <span class="fl">0.019</span>   <span class="fl">1.494</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Second time run, using cache</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>                                                                            </span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">21</span> [966ms]</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.028</span>   <span class="fl">0.001</span>   <span class="fl">0.982</span> </span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.027</span>   <span class="fl">0.001</span>   <span class="fl">0.024</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="other-features">Other features<a class="anchor" aria-label="anchor" href="#other-features"></a>
@@ -246,8 +256,7 @@
 <code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://Require.predictiveecology.org" class="external-link">Require</a></span><span class="op">)</span>
 <span class="va">projectPackages</span> <span class="op">=</span> <span class="st">"projectPackages"</span>
 <span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">projectPackages</span><span class="op">)</span>
-<span class="fu"><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths</a></span><span class="op">(</span><span class="va">projectPackages</span><span class="op">)</span>
-<span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"remotes (&gt;=2.4.0)"</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
+<span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"remotes (&gt;=2.4.0)"</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span>, libPaths <span class="op">=</span> <span class="va">projectPackages</span><span class="op">)</span></code></pre></div>
 <p>Or we can use a hybrid of our main, “personal” library and a project specific one for “extra” packages:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&gt;=0.2.0)"</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># don't load it, just install</span></code></pre></div>
@@ -255,9 +264,9 @@
 <div class="section level3">
 <h3 id="installing-old-package-versions">Installing old package versions<a class="anchor" aria-label="anchor" href="#installing-old-package-versions"></a>
 </h3>
-<p>In the same way as above, we can specify maximum or exact package versions. <code>Require</code> will retrieve these on CRAN archives.</p>
+<p><code>Require</code> has the functionality of <code>renv</code> and <code>versions</code> in that you can install previous versions. On Windows, it will search for the binary version on MRAN and CRAN Archives. In the same way as above, we can specify maximum or exact package versions.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&lt;=0.1.0)"</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&lt;=0.1.0)"</span><span class="op">)</span> <span class="co"># we don't have to know where to get this</span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="managing-a-project">Managing a project<a class="anchor" aria-label="anchor" href="#managing-a-project"></a>
@@ -266,6 +275,7 @@
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data.table (==1.12.8)"</span>, <span class="st">"dplyr"</span>, <span class="st">"reproducible"</span>, 
           <span class="st">"PredictiveEcology/SpaDES@development"</span>, <span class="st">"raster (&gt;=3.1.5)"</span><span class="op">)</span>, 
+        libPaths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,
         standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></code></pre></div>
 </div>
 <div class="section level3">
@@ -278,18 +288,19 @@
 
 <span class="co">## move to a new machine, say</span>
 <span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span>packageVersionFile <span class="op">=</span> <span class="st">"mySnapshot.txt"</span><span class="op">)</span></code></pre></div>
+<p>The argument <code>packageVersionFile</code> can also be <code>TRUE</code> if the default filename is accepted.</p>
 </div>
 <div class="section level3">
 <h3 id="using-local-package-cache">Using local package cache<a class="anchor" aria-label="anchor" href="#using-local-package-cache"></a>
 </h3>
-<p>When installing on many machines on a network, having a local cache can speed up installations. By default, this is activated, with a message upon package load as to where the cache folder is. Setting <code>options("Require.RPackageCache" = "somePath")</code> will move it to that location; or setting <code>options("Require.RPackageCache" = NULL)</code> will turn caching off. By default, binaries will be saved on Windows. Also by default, binaries will be <em>built</em> on the fly on *nix systems and this binary will be cached for even faster installs later.</p>
+<p>By default, <code>Require</code> stashes (source and the locally-built binary) packages in a cached folder. If the user needs to reinstall them for the same project, a different project, or a different machine on a network, the <code>Require</code> will use this local copy. This will skip the download, and will also be a binary on Linux-alike systems, meaning it will install very fast. Setting <code>options("Require.RPackageCache" = "somePath")</code> will move it to that location; or setting <code>options("Require.RPackageCache" = FALSE)</code> will turn caching off.</p>
 </div>
 </div>
 </div>
 <div class="section level1">
 <h1 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>
 </h1>
-<p><code>Require</code> package offers a simple, lightweight, package focused around a single function that is “rerun-tolerant”, i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work. The package has one dependencies (<code>data.table</code>) and so can be used to install packages without interfering with itself.</p>
+<p><code>Require</code> package offers a simple, lightweight (one non-base package dependency), package focused around a single function that is “rerun-tolerant”, i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work. Because it has one dependencies (<code>data.table</code>) and so can be used to install packages without interfering with itself.</p>
 <div class="section level2">
 <h2 id="contributions">Contributions<a class="anchor" aria-label="anchor" href="#contributions"></a>
 </h2>

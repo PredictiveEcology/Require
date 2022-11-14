@@ -23,7 +23,7 @@ This maximum age can be set in seconds with the environment variable
 
 Internally, there are calls to \code{available.packages}.}
 
-\item{type}{See `utils::install.packages``}
+\item{type}{See \code{utils::install.packages}}
 }
 \description{
 This is the mechanism by which \code{install.packages} determines which packages
