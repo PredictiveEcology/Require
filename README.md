@@ -131,7 +131,7 @@ remotes::install_github("PredictiveEcology/Require@development")
 `Require` is a wrapper around functions `utils::install packages` and one of the main function to load packages, `base::require`. Like `install.packages`, it is vectorized on package names.
 
 ```r
-if (!require("Require")) {install.packages("Require")} # sadly, Require can't install itself, so must comment this line
+if (!require("Require")) {install.packages("Require")} # sadly, Require can't install itself
 Require::Require("data.table")
 
 # With version numbering, this will install data.table, and also check that the installed 
@@ -143,7 +143,7 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
 ## Timings
 
-`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 3-40x faster.
+`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed (i.e., a standard day-to-day work situation), `Require` is 3-40x faster.
 ```r
 # First time run, before cache exists
 > library(pak)

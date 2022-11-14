@@ -206,7 +206,7 @@
 </h2>
 <p><code>Require</code> is a wrapper around functions <code>utils::install packages</code> and one of the main function to load packages, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::require</a></code>. Like <code>install.packages</code>, it is vectorized on package names.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://Require.predictiveecology.org" class="external-link">"Require"</a></span><span class="op">)</span><span class="op">)</span> <span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"Require"</span><span class="op">)</span><span class="op">}</span> <span class="co"># sadly, Require can't install itself, so must comment this line</span>
+<code class="sourceCode R"><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://Require.predictiveecology.org" class="external-link">"Require"</a></span><span class="op">)</span><span class="op">)</span> <span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"Require"</span><span class="op">)</span><span class="op">}</span> <span class="co"># sadly, Require can't install itself</span>
 <span class="fu">Require</span><span class="fu">::</span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"data.table"</span><span class="op">)</span>
 
 <span class="co"># With version numbering, this will install data.table, and also check that the installed </span>
@@ -219,7 +219,7 @@
 <div class="section level2">
 <h2 id="timings">Timings<a class="anchor" aria-label="anchor" href="#timings"></a>
 </h2>
-<p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is faster. Below, in cases where all packages are already installed, <code>Require</code> is 3-40x faster.</p>
+<p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is faster. Below, in cases where all packages are already installed (i.e., a standard day-to-day work situation), <code>Require</code> is 3-40x faster.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First time run, before cache exists</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(pak)</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
