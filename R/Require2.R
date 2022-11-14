@@ -1,7 +1,7 @@
 utils::globalVariables(c(
   "..apCachedCols", "..cols", "..cols3", ".GRP",
   "Account", "archiveSource", "availableVersionOKthisOne", "bothDepAndOrig",
-  "Branch", "contrib.url", "correctVersionAvail", "depOrOrig",
+  "Branch", "comp", "contrib.url", "correctVersionAvail", "depOrOrig",
   "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
   "hasAtLeastOneNonNA", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
   "haveLocal", "ineq", "installed", "installedVersionOK", "installSafeGroups", "isBinaryInstall",
