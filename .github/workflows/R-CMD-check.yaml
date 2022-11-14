@@ -48,6 +48,11 @@ jobs:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
+      - name: Set additional env vars for checks when on Ubuntu
+        if: ${{ matrix.config.os == 'ubuntu-20.04' }}
+        run: |
+          echo "_R_CHECK_THINGS_IN_OTHER_DIRS_=true" >> $GITHUB_ENV
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
