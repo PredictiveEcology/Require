@@ -276,6 +276,14 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
       pkgDT <- installedVers(pkgDT)
+      if (isTRUE(upgrade)) {
+        pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
+        if (any(pkgDT$VersionOnRepos != pkgDT$Version, na.rm = TRUE)) {
+          pkgDT[VersionOnRepos != Version, comp := compareVersion2(VersionOnRepos, Version, ">=")]
+          pkgDT[VersionOnRepos != Version & comp %in% TRUE, `:=`(Version = NA, installed = FALSE)]
+          set(pkgDT, NULL, "comp", NULL)
+        }
+      }
       pkgDT <- dealWithStandAlone(pkgDT, standAlone)
       pkgDT <- whichToInstall(pkgDT, install)
       if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
