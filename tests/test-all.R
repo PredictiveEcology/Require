@@ -1,4 +1,4 @@
-# Sys.setenv("_R_CHECK_THINGS_IN_OTHER_DIRS_" = "TRUE") ## check if things left behind
+# Sys.setenv("_R_CHECK_THINGS_IN_OTHER_DIRS_" = "true") ## check if things left behind
 # Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true") # use this if Version is a release version, but want to run as Dev
 # Sys.setenv(R_REQUIRE_CHECK_AS_CRAN = "true") # set this to test as if it is CRAN (short and silent)
 # Sys.setenv(R_REQUIRE_TEST_AS_INTERACTIVE = "false") # set this to test as if GitHub Actions (short and loud)
@@ -19,6 +19,7 @@ checks$start[["envVars"]] <- Sys.getenv()
 envOrig <- checks$start[["envVars"]]
 
 if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
+  Sys.setenv("_R_CHECK_THINGS_IN_OTHER_DIRS_" = "true")
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
 # GitHub Actions, R CMD check locally
