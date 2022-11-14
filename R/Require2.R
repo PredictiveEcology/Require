@@ -131,6 +131,10 @@ utils::globalVariables(c(
 #'   attribute: `attr(.., "Require")` which has lots of information about the
 #'   processes of the installs.
 #' @param type See `utils::install.packages``
+#' @param upgrade When `FALSE`, the default, will only upgrade a package when the
+#'   version on in the local library is not adequate for the version requirements
+#'   of the `packages`. Note: for convenience, `update`
+#'   can be used for this argument.
 #' @param ... Passed to `install.packages`. Good candidates are e.g., `type` or
 #'   `dependencies`. This can be used with `install_githubArgs` or
 #'   `install.packageArgs` which give individual options for those 2 internal
@@ -214,6 +218,7 @@ Require <- function(packages, packageVersionFile,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     type = getOption("pkgType"),
+                    upgrade = FALSE,
                     ...) {
   .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
@@ -223,6 +228,8 @@ Require <- function(packages, packageVersionFile,
     , add = TRUE)
 
   dots <- list(...)
+  if (!is.null(dots$update))
+    upgrade <- dots$update
   dealWithCache(purge)
   purge <- FALSE
 
