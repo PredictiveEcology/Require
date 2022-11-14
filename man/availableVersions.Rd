@@ -43,7 +43,7 @@ processes of the installs.}
 is a data.table.
 Otherwise, it is a \code{matrix}, as per \code{available.packages}}
 
-\item{type}{See `utils::install.packages``}
+\item{type}{See \code{utils::install.packages}}
 }
 \description{
 These are wrappers around available.packages and also get the archived versions

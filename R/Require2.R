@@ -130,7 +130,7 @@ utils::globalVariables(c(
 #'   `Require` function, when `verbose >= 2`, the return object will have an
 #'   attribute: `attr(.., "Require")` which has lots of information about the
 #'   processes of the installs.
-#' @param type See `utils::install.packages``
+#' @param type See `utils::install.packages`
 #' @param upgrade When `FALSE`, the default, will only upgrade a package when the
 #'   version on in the local library is not adequate for the version requirements
 #'   of the `packages`. Note: for convenience, `update`

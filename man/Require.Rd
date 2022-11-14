@@ -19,6 +19,7 @@ Require(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
+  upgrade = FALSE,
   ...
 )
 }
@@ -93,7 +94,12 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 attribute: \code{attr(.., "Require")} which has lots of information about the
 processes of the installs.}
 
-\item{type}{See `utils::install.packages``}
+\item{type}{See \code{utils::install.packages}}
+
+\item{upgrade}{When \code{FALSE}, the default, will only upgrade a package when the
+version on in the local library is not adequate for the version requirements
+of the \code{packages}. Note: for convenience, \code{update}
+can be used for this argument.}
 
 \item{...}{Passed to \code{install.packages}. Good candidates are e.g., \code{type} or
 \code{dependencies}. This can be used with \code{install_githubArgs} or

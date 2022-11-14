@@ -122,7 +122,7 @@ processes of the installs.}
 will include the package itself in the returned list elements, otherwise,
 only the "dependencies"}
 
-\item{type}{See `utils::install.packages``}
+\item{type}{See \code{utils::install.packages}}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
