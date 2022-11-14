@@ -4,6 +4,10 @@
 # Sys.setenv(R_REQUIRE_TEST_AS_INTERACTIVE = "false") # set this to test as if GitHub Actions (short and loud)
 # THIS IS USING THE MECHANISM FOR CRAN THAT IF THE VERSION NUMBER IS NOT A DEV VERSION (E.G., .9000) THEN IT IS RUN AS CRAN
 # source("tests/test-all.R") # run this for tests; set neither of above 2 for "long" testing
+########## THe next 3 lines are good to test for CRAN
+# Sys.setenv("_R_CHECK_THINGS_IN_OTHER_DIRS_" = "TRUE") ## check if things left behind
+# Sys.setenv(R_REQUIRE_CHECK_AS_CRAN = "true") # set this to test as if it is CRAN (short and silent)
+# devtools::check(args = c('--as-cran','--run-dontrun','--no-clean','--run-donttest'))
 
 optNcpus <- options(Ncpus = 2L)
 
@@ -184,3 +188,18 @@ if (FALSE) {
 }
 # if (!isTRUE(theTest)) browser()
 # testit::assert()
+
+if (FALSE) { # this is good to ensure all folders are empty
+  list(dir(tools::R_user_dir("Require", which = "cache")),
+       dir(dirname(tools::R_user_dir("Require", which = "cache"))),
+       dir(dirname(dirname(tools::R_user_dir("Require", which = "cache"))), pattern = "^R$"),
+       dir(tools::R_user_dir("Require", which = "config")),
+       dir(tools::R_user_dir("Require", which = "data")),
+       dir(tempdir(), pattern = "^Require$", full.names = T),
+       dir(dirname(Require:::defaultCacheDirOld), pattern = "Require", full.names = TRUE),
+       dir(dirname(Require:::defaultCacheDirOld), full.names = TRUE, pattern = "^R$|Require"),
+       # dir(Require::tempdir2(create = FALSE), recursive = TRUE),
+       setdiff(dir(getwd()), c("codecov.yml", "CONTRIBUTING.md", "cran-comments.md", "DESCRIPTION",
+                               "inst", "man", "NAMESPACE", "NEWS.md", "R", "README.md", "Require.Rproj",
+                               "revdep", "tests", "docs", "CRAN-SUBMISSION")))
+}
