@@ -379,7 +379,7 @@ modifyList3 <- function(..., keep.null = TRUE) {
 #'   `file.link` first, then `file.copy`, omitting the `file.symlink` step
 #'
 linkOrCopy <- function(from, to, allowSymlink = FALSE) {
-  res <- suppressWarnings(file.link(from, to)) ## try hardlink
+  res <- file.link(from, to) ## try hardlink
   if (any(!res)) {
     if (allowSymlink) {
       res[!res] <- suppressWarnings(file.symlink(from[!res], to[!res]))
