@@ -16,7 +16,7 @@ URL:
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2022-11-14
-Version: 0.2.4
+Version: 0.2.4.9001
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
