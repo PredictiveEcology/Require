@@ -584,7 +584,7 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
           PackageUrl <- file.path(pk, pkgFilename)
 
           if (length(archivedOn)) {
-            archivedOn <- as.POSIXct(gsub("Archived on (.+) as.+", "\\1", archivedOn))
+            archivedOn <- as.POSIXct(gsub("Archived on (.+) (.)+", "\\1", archivedOn))
           } else {
             archivedOn <- gsub(".+([[:digit:]]{4,4}-[[:digit:]]{2,2}-[[:digit:]]{2,2}).+", "\\1", lineWDateAndPkgFilename)
             archivedOn <- as.POSIXct(archivedOn) + 5 * 3600 * 24
