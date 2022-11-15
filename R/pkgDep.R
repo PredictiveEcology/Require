@@ -1846,7 +1846,7 @@ pkgDepTopoSortMemoise <- function(...) {
 
 pkgDepDBFilename <- function() {
   if (!is.null(getOptionRPackageCache()))
-    file.path(RequireCacheDir(), ".pkgDepDB.rds") # returns NULL if no Cache used
+    file.path(RequirePkgCacheDir(), "pkgDepDB.rds") # returns NULL if no Cache used
 }
 
 isAre <- function(l, v) {

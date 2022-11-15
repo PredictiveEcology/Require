@@ -1,11 +1,17 @@
 #' Path to (package) cache directory
 #'
-#' Sets or gets the cache directory associated with the `Require` package.
+#' Sets (if `create = TRUE`) or gets the cache
+#' directory associated with the `Require` package.
 #' @return
 #' If `!is.null(getOptionRPackageCache())`, i.e., a cache path exists,
 #' the cache directory will be created,
 #'   with a README placed in the folder. Otherwise, this function will just
 #'   return the path of what the cache directory would be.
+#'
+#' @details
+#' To set a different directory than the default, set the system variable:
+#' `R_USER_CACHE_DIR = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
+#' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
 #' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
@@ -21,23 +27,24 @@ RequireCacheDir <- function(create) {
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
+    defaultCacheDirectory <- defaultCacheDir()
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
           message("Require has changed default package cache folder from\n",
-                  defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+                  defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
                   "in the old Cache, moving them now...")
-          checkPath(defaultCacheDir, create = TRUE)
+          checkPath(defaultCacheDirectory, create = TRUE)
           dirs <- unique(dirname(oldLocs))
-          newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+          newdirs <- gsub(defaultCacheDirOld, defaultCacheDirectory, dirs)
           lapply(newdirs, checkPath, create = TRUE)
-          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDirectory, oldLocs))
           unlink(defaultCacheDirOld, recursive = TRUE)
         }
       }
     }
-    defaultCacheDir
+    defaultCacheDirectory
   }
 
   cacheDir <- normPathMemoise(cacheDir)
@@ -76,6 +83,16 @@ normPathMemoise <- function(d) {
 
 #' @export
 #' @rdname RequireCacheDir
+#'
+#' @note
+#' Currently, there are 2 different Cache directories used by Require:
+#' `RequireCacheDir` and `RequirePkgCacheDir`. The `RequirePkgCacheDir`
+#'  is intended to be a sub-directory of the `RequireCacheDir`. If you set
+#'  `Sys.setenv("R_USER_CACHE_DIR" = "somedir")`, then both the package cache
+#'  and cache dirs will be set, with the package cache a sub-directory. You can, however,
+#'  set them independently, if you set `"R_USER_CACHE_DIR"` and `"R_REQUIRE_PKG_CACHE"`
+#'  environment variable. The package cache can also be set with
+#'  `options("Require.RPackageCache" = "somedir")`.
 RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE # !is.null(getOptionRPackageCache())
@@ -344,7 +361,8 @@ putFile <- function(from, to, overwrite) {
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
-defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+defaultCacheDir <- function()
+  normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 
 defaultCacheDirOld <- switch(
   SysInfo[["sysname"]],
