@@ -21,23 +21,24 @@ RequireCacheDir <- function(create) {
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
+    defaultCacheDirectory <- defaultCacheDir()
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
           message("Require has changed default package cache folder from\n",
-                  defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
+                  defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
                   "in the old Cache, moving them now...")
-          checkPath(defaultCacheDir, create = TRUE)
+          checkPath(defaultCacheDirectory, create = TRUE)
           dirs <- unique(dirname(oldLocs))
-          newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+          newdirs <- gsub(defaultCacheDirOld, defaultCacheDirectory, dirs)
           lapply(newdirs, checkPath, create = TRUE)
-          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDirectory, oldLocs))
           unlink(defaultCacheDirOld, recursive = TRUE)
         }
       }
     }
-    defaultCacheDir
+    defaultCacheDirectory
   }
 
   cacheDir <- normPathMemoise(cacheDir)
@@ -344,7 +345,8 @@ putFile <- function(from, to, overwrite) {
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
-defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+defaultCacheDir <- function()
+  normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 
 defaultCacheDirOld <- switch(
   SysInfo[["sysname"]],
