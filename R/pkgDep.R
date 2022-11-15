@@ -517,6 +517,9 @@ pkgDepInner <- function(packages,
                 pkgName
             else
               pkg
+            inequ <- extractInequality(pkg)
+            if (!inequ %in% "==")
+              pkg <- gsub(inequ, "==", pkg)
             td <- tempdir2(pkg) #  use the version number for td
             packageTD <- file.path(td, pkgName)
             if (!dir.exists(packageTD)) {
