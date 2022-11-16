@@ -5,6 +5,8 @@ version 0.2.5
 
 ## enhancements
 * new function `Install`, which is `Require(..., require = FALSE)`
+* `(HEAD)` has now been tested for CRAN repositories and works as expected.
+* Updated README
 
 ## bugfixes
 * several minor
