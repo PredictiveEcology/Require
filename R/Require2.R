@@ -472,7 +472,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
     if (isWinOrMac) {
       # Get rversions that were live at that time
       packageVersionTooOldForThisR <- unlist(lapply(latestDateOnMRAN, function(ldom) {
-        a <- rversionHistory[as.Date(date) <= ldom][.N]
+        a <- rversionHistory[(as.Date(date) - 200) <= ldom][.N] # CRAN builds packages for R-devel which is before release; picked 200 days here.
         package_version(a$version) <= rver
       }))
 
@@ -1085,10 +1085,12 @@ messageDownload <- function(pkgDT, numToDownload, fromWhere) {
 }
 
 colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")
+purple <- function(...) colr(..., digit = 30)
 green <- function(...) colr(..., digit = 32)
 yellow <- function(...) colr(..., digit = 33)
 blue <- function(...) colr(..., digit = 34)
 turquoise <- function(...) colr(..., digit = 36)
+greyLight <- function(...) colr(..., digit = 37)
 
 messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGroups) {
   currentTime <- Sys.time()
@@ -1100,13 +1102,13 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
   timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
   pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
-  pkgToReportBySource <- split(toInstall$Package, toInstall$installFrom)
-  pkgFullNameToReportBySource <- split(toInstall$packageFullName, toInstall$installFrom)
+  pkgToReportBySource <- split(toInstall$Package, toInstall$repoLocation)
+  pkgFullNameToReportBySource <- split(toInstall$packageFullName, toInstall$repoLocation)
   installRangeCh <- paste(installRange, collapse = ":")
 
   srces <- names(pkgToReportBySource)
   messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
-  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = "GitHub")
+  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = "GitHub", purple = "MRAN")
   Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
     pp <- pkgToReportBySource[[type]]
     if (type %in% srces) {
