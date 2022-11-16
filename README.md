@@ -216,6 +216,15 @@ Require(packageVersionFile = "mySnapshot.txt")
 
 When installing on many machines on a network, having a local cache can speed up installations. By default, this is activated, with a message upon package load as to where the cache folder is. Setting `options("Require.RPackageCache" = "somePath")` will move it to that location; or setting  `options("Require.RPackageCache" = NULL)` will turn caching off. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later.
 
+### Keeping up to date
+
+`Require` generally does not try to keep packages up to date; instead if defaults to keeping packages sufficiently up to date that they do not violate version requirements. However, `Require` has 2 mechanisms to keep packages up to date: either as a group using the `update = TRUE` (or `upgrade = TRUE`) argument in `Require` or using the `(HEAD)` specification for each individual package. Using `(HEAD)` allows a user to always have the latest version of individual packages, without wholesale updating.
+
+```
+Require("PredictiveEcology/reproducible@development (HEAD)") # will install reproducible if it has change on GitHub.
+Require("reproducible", update = TRUE) # will update reproducible and all dependencies
+```
+
 # Conclusion
 
 `Require` package offers a simple, lightweight, package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work.
