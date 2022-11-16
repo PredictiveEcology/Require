@@ -1403,7 +1403,7 @@ getGitHubDeps <-
       needed <-
         try(DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge))
       if (is(needed, "try-error"))
-        browserDeveloper()
+        browserDeveloper("Error 949; please contact developers")
       neededRemotes <-
         DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
       neededRemotesName <- extractPkgName(neededRemotes)

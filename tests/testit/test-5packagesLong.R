@@ -204,6 +204,13 @@ if (isDevAndInteractive) {
   testit::assert(sum(pkgsClean %in% ip[, "Package"]) == length(pkgsClean) - 1) # silly1 won't be installed
 
 
+  ## Test Install and also (HEAD)
+  capted1 <- capture.output(type = "message",
+                 Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
+  )
+  capted2 <- capture.output(type = "message",
+                 Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
+  )
 
   # two sources, where both are OK; use CRAN by preference
   out <- capture.output(remove.packages("SpaDES.core"))

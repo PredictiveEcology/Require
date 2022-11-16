@@ -22,11 +22,11 @@ How do we deal with packages that have dependencies that are no longer on CRAN (
 How do we replicate an analysis 6 months from now when some packages have changed, and their dependencies have changed?
 Finally, how do we do all this for many concurrent projects without installing hundreds of packages in a new directory for every project?
 
-# `Require`
+# `Require` & `Install`
 
-`Require` uses a "rerun-tolerant" function, `Require`. "rerun-tolerant" means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. "rerun-tolerant" is a requirement for a robust reproducible workflow; for every "manual" break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware. 
+The `Require` package provides two "rerun-tolerant" functions, `Require` and `Install` (a recent addition). "rerun-tolerant" means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. "rerun-tolerant" is a requirement for a robust reproducible workflow; for every "manual" break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware. 
 
-`Require` also will call `require` (lower case `r`) on all the named packages, if the `require = TRUE`. 
+`Install` and `Require` are identical except that `Require` will also call `require` (lower case `r`) on all the named packages with the default setting of `require = TRUE`. 
 
 ```r
 # These lines
@@ -51,7 +51,7 @@ The below descriptions are necessarily simple; please go see each package for mo
 pak::pkg_install(c("data.table", "dplyr", "lme4"))
 
 # become
-Require::Require(c("data.table", "dplyr", "lme4"), require = FALSE)
+Require::Install(c("data.table", "dplyr", "lme4"))
 ```
 
 ## `renv`
@@ -113,6 +113,14 @@ remotes::install_github("PredictiveEcology/Require")
 
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development)](https://github.com/PredictiveEcology/Require/actions)
 [![codecov](https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg)](https://app.codecov.io/gh/PredictiveEcology/Require)
+
+**Install from r-universe:**
+
+This is a development version of the package:
+
+```r
+install.packages("Require", repose = "https://predictiveecology.r-universe.dev") 
+```
 
 **Install from GitHub:**
 
