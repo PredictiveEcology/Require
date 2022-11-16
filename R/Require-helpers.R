@@ -899,7 +899,7 @@ getSHAfromGitHubMemoise <- function(...) {
 # }
 
 .earliestMRANDate <- "2015-06-06"
-.latestMRANDate <- Sys.Date() - 45
+.latestMRANDate <- Sys.Date() - 5
 
 #' R versions
 #'

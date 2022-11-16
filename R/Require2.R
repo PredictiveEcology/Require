@@ -463,79 +463,105 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
     installPkgNames <- toInstall$Package
     names(installPkgNames) <- installPkgNames
     toIn <- toInstall
+    rver <- rversion()
 
     earliestDateOnMRAN <- as.Date(gsub(" .*", "", toIn$dayAfterPutOnCRAN))
     latestDateOnMRAN <- pmin(.latestMRANDate, as.Date(gsub(" .*", "", toIn$dayBeforeTakenOffCRAN)))
-    onMRANvec <- earliestDateOnMRAN > .earliestMRANDate
-    earliestDateOnMRAN[!onMRANvec] <- as.Date(.earliestMRANDate) + 10
-    onMRAN <- earliestDateOnMRAN > .earliestMRANDate & unname( isWindows() | isMacOSX() )
-    onMRAN[is.na(onMRAN)] <- FALSE
 
-    if (any(onMRAN)) {
-      origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
-      install.packagesArgs["ignore_repo_cache"] <- TRUE
-      installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onMRAN])
-      dirsAlreadyExist <- dir.exists(installedPkgs)
-      if (any(dirsAlreadyExist)) {
-        try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
+    isWinOrMac <- unname( isWindows() | isMacOSX() )
+    if (isWinOrMac) {
+      # Get rversions that were live at that time
+      packageVersionTooOldForThisR <- unlist(lapply(latestDateOnMRAN, function(ldom) {
+        a <- rversionHistory[as.Date(date) <= ldom][.N]
+        package_version(a$version) <= rver
+      }))
+
+      packageVersionOnMRAN <- earliestDateOnMRAN > .earliestMRANDate
+      if (any(packageVersionTooOldForThisR)) {
+        messageVerbose(paste(toInstall$packageFullName[packageVersionTooOldForThisR], collapse = ", "),
+                       " will not have binary versions on MRAN because this version of R",
+                       " was not yet available")
       }
-      warnings1 <- list()
+      earliestDateOnMRAN[!packageVersionOnMRAN] <- as.Date(.earliestMRANDate) + 10
+      onMRAN <- earliestDateOnMRAN > .earliestMRANDate & isWinOrMac
+      onMRAN[is.na(onMRAN)] <- FALSE
+      onMRAN <- onMRAN & !packageVersionTooOldForThisR
 
-      urlsOuter <- c()
-      extension <- if (isWindows()) ".zip" else ".tgz"
-      osNameOnMRAN <- if (isWindows()) "windows" else "macosx"
-      messageVerbose("-- Determining dates on MRAN to get binaries with correct versions ... ",
-                     verbose = verbose, verboseLevel = 1)
-      total <- length(unname(installPkgNames)[onMRAN])
-      installVersions <- toInstall[["VersionOnRepos"]]
-      out <- Map(p = unname(installPkgNames)[onMRAN], earliestDateMRAN = earliestDateOnMRAN[onMRAN],
-                 latestDateMRAN = latestDateOnMRAN[onMRAN], tot = total, counter = seq(total),
-                 v = installVersions[onMRAN], function(p, earliestDateMRAN, latestDateMRAN, v, tot, counter, ...) {
-                   if (tot > 1)
-                     messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
+      if (any(onMRAN)) {
+        origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
+        install.packagesArgs["ignore_repo_cache"] <- TRUE
+        installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onMRAN])
+        dirsAlreadyExist <- dir.exists(installedPkgs)
+        if (any(dirsAlreadyExist)) {
+          try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
+        }
+        warnings1 <- list()
 
-                   for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
-                     rver <- rversion()
-                     evenOrOdd <- attempt %% 2 == 0
-                     date <- if (evenOrOdd) latestDateMRAN else  earliestDateMRAN
-                     dif <- floor(attempt/2)
-                     date <- if (evenOrOdd) date + dif else date - dif
+        urlsOuter <- c()
+        extension <- if (isWindows()) ".zip" else ".tgz"
+        osNameOnMRAN <- if (isWindows()) "windows" else "macosx"
+        messageVerbose("-- Determining dates on MRAN to get binaries with correct versions ... ",
+                       verbose = verbose, verboseLevel = 1)
+        total <- length(unname(installPkgNames)[onMRAN])
+        installVersions <- toInstall[["VersionOnRepos"]]
+        out <- Map(p = unname(installPkgNames)[onMRAN], earliestDateMRAN = earliestDateOnMRAN[onMRAN],
+                   latestDateMRAN = latestDateOnMRAN[onMRAN], tot = total, counter = seq(total),
+                   v = installVersions[onMRAN], function(p, earliestDateMRAN, latestDateMRAN, v, tot, counter, ...) {
+                     if (tot > 1)
+                       messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
 
-                     urls <- file.path("https://MRAN.revolutionanalytics.com/snapshot", date, "bin", osNameOnMRAN,
-                                       "contrib", rver,
-                                       paste0(p, "_", v, extension))
-                     con <- url(urls)
-                     on.exit(try(close(con), silent = TRUE), add = TRUE)
-                     a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
-                     close(con)
-                     if (is(a, "try-error")) {
-                       earliestDateOnMRAN <- earliestDateOnMRAN + 1
-                       urls <- "Fail"
-                     } else
-                       break
+                     for (attempt in 0:15 ) { # Try up to 15 days from known earliestDateMRAN or latestDateMRAN of the package being available on CRAN
+                       evenOrOdd <- attempt %% 2 == 0
+                       date <- if (evenOrOdd) latestDateMRAN else  earliestDateMRAN
+                       dif <- floor(attempt/2)
+                       date <- if (evenOrOdd) date + dif else date - dif
 
-                   }
-                   names(urls) <- p
-                   urlsOuter <<- c(urlsOuter, urls)
-                 })
+                       urls <- file.path("https://MRAN.revolutionanalytics.com/snapshot", date, "bin", osNameOnMRAN,
+                                         "contrib", rver,
+                                         paste0(p, "_", v, extension))
+                       con <- url(urls)
+                       on.exit(try(close(con), silent = TRUE), add = TRUE)
+                       a  <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
+                       close(con)
+                       if (is(a, "try-error")) {
+                         earliestDateOnMRAN <- earliestDateOnMRAN + 1
+                         urls <- "Fail"
+                       } else
+                         break
 
-      urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
-      urlsFail <- urlsOuter[urlsOuter == "Fail"]
+                     }
+                     names(urls) <- p
+                     urlsOuter <<- c(urlsOuter, urls)
+                   })
 
-      toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
-                                                         Repository = dirname(urlsSuccess),
-                                                         repoLocation = "MRAN",
-                                                         localFile = useRepository)]#  basename(urlsSuccess))]
-      if (length(urlsFail)) {
-        cantGet <- toInstall$packageFullName[toInstall$Package %in% names(urlsFail)]
-        messageVerbose("Could not find a binary version of ", paste(cantGet, collapse = ", "), " on MRAN; ",
-                       "trying source archives", verbose = verbose, verboseLevel = 1)
+        urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
+        urlsFail <- urlsOuter[urlsOuter == "Fail"]
+
+        toInstall[match(names(urlsSuccess), Package), `:=`(PackageUrl = urlsSuccess,
+                                                           Repository = dirname(urlsSuccess),
+                                                           repoLocation = "MRAN",
+                                                           localFile = useRepository)]#  basename(urlsSuccess))]
+        if (length(urlsFail)) {
+          cantGet <- toInstall[toInstall$Package %in% names(urlsFail)]
+          hasNoVersion <- cantGet$packageFullName == cantGet$Package
+          toReport <- list()
+          if (any(hasNoVersion)) {
+            toReport[[1]] <- paste("latest of", paste0(cantGet$Package[hasNoVersion], collapse = ", "))
+          }
+          if (any(!hasNoVersion)) {
+            toReport[[2]] <- paste(cantGet, collapse = ", ")
+          }
+          messageVerbose("Could not find a binary of ", # paste(cantGet, collapse = ", "),
+                         unlist(toReport),
+                         "\nfor R ", rver," on MRAN; ",
+                         "trying source archives", verbose = verbose, verboseLevel = 1)
+        }
+        # if (sum(toInstall$repoLocation %in% "MRAN"))
+        #   toInstall[repoLocation %in% "MRAN", {
+        #     ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
+        #     do.call(download.file, ipa)
+        #   }]
       }
-      # if (sum(toInstall$repoLocation %in% "MRAN"))
-      #   toInstall[repoLocation %in% "MRAN", {
-      #     ipa <- modifyList2(list(url = PackageUrl, destfile = localFile), install.packagesArgs)
-      #     do.call(download.file, ipa)
-      #   }]
     }
   }
 
