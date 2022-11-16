@@ -1743,3 +1743,36 @@ isGitHub <- function(pkg, filenames) {
   }
   isGH
 }
+
+#' @rdname Require
+#' @export
+#' @details
+#' `Install` is the same as `Require(..., require = FALSE)`, for convenience.
+Install <- function(packages, packageVersionFile,
+                    libPaths, # nolint
+                    install_githubArgs = list(),
+                    install.packagesArgs = list(),
+                    standAlone = getOption("Require.standAlone", FALSE),
+                    install = getOption("Require.install", TRUE),
+                    require = FALSE,
+                    repos = getOption("repos"),
+                    purge = getOption("Require.purge", FALSE),
+                    verbose = getOption("Require.verbose", FALSE),
+                    type = getOption("pkgType"),
+                    upgrade = FALSE,
+                    ...) {
+  Require(packages,
+          packageVersionFile,
+          libPaths, # nolint
+          install_githubArgs, # = list(),
+          install.packagesArgs, # = list(),
+          standAlone, # = getOption("Require.standAlone", FALSE),
+          install, # = getOption("Require.install", TRUE),
+          require, # = getOption("Require.require", TRUE),
+          repos, # = getOption("repos"),
+          purge, # = getOption("Require.purge", FALSE),
+          verbose, # = getOption("Require.verbose", FALSE),
+          type, # = getOption("pkgType"),
+          upgrade, # = FALSE,
+          ...)
+}

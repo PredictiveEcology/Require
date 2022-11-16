@@ -3,6 +3,9 @@ Known issues: <https://github.com/PredictiveEcology/Require/issues>
 version 0.2.5
 =============
 
+## enhancements
+* new function `Install`, which is `Require(..., require = FALSE)`
+
 ## bugfixes
 * several minor
 * bugfix for `defaultCacheDir`, which would default to `runneradmin` under some conditions and did not allow installing packages due to permissions.
