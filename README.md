@@ -40,7 +40,7 @@ Require(c("data.table", "dplyr", "lme4"))
 
 # Other packages that also install packages
 
-The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README.
+The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README. `Require` offers a different way to achieve the features from all 5 of these packages that are necessary to build a unified, organic, yet reproducible approach to package management in one or many projects.
 
 ## `pak`
 
@@ -56,7 +56,13 @@ Require::Install(c("data.table", "dplyr", "lme4"))
 
 ## `renv`
 
-`renv` is a tool to help with a more static package installation process. While it can handle packages that are updated manually by an individual, the key strength is around keeping track of the versions that exist in a project. `renv` is not intended to expose the code used to install packages. This makes the managing of packages separate from the script that is/are used in the project. 
+`renv` is a tool to help with a more static package installation process. While it can handle packages that are updated manually by an individual, the key strength is around keeping track of the versions that exist in a project. `renv` is not intended to expose the code used to install packages. This makes the managing of packages separate from the script that is/are used in the project, i.e., the package script does not contain the necessary information to recreate the package library.
+
+```
+renv::snapshot()
+# becomes
+Require::pkgSnapshot()
+```
 
 ## `packrat` 
 
@@ -65,6 +71,12 @@ This is mostly the predecessor to `renv`. `renv` can do everything `packrat` can
 ## `checkpoint`
 
 This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the MRAN servers hosted by Microsoft.
+
+```
+checkpoint("2022-11-09")
+# cannot be achieved directly with Require, but
+Require("reproducible (==1.2.10)") # which was the version on that date
+```
 
 ## `Require`
 
