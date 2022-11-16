@@ -32,7 +32,7 @@ utils::globalVariables(c(
       if (!is.null(possCacheDir))
         paste0("  Using cache directory: ", possCacheDir,
                "; clear with clearRequirePackageCache().\n"),
-      "  See ?RequireOptions for additional settings."
+      "  See ?RequireOptions for this and other settings."
     )
 
     packageStartupMessage(mess)
