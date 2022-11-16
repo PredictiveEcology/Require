@@ -970,8 +970,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
         SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
         if (file.exists(alreadyExistingDESCRIPTIONFile)) {
           SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-          SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
-          if (isFALSE(SHAonGH))
+          # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
+          if (identical(SHAonGH, SHAonLocal))
             messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
                            ", the SHA1 has not changed from last install",
                            verbose = verbose, verboseLevel = 1)
@@ -981,9 +981,11 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
         list(SHAonLocal, SHAonGH)
       }, by = "packageFullName"]
     }
+    pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local")]
     pkgWhere[["GitHub"]] <- pkgGitHub
     pkgInstall <- rbindlistRecursive(pkgWhere)
   }
+
   pkgInstall[, localFile := localFileID(Package, localFiles, repoLocation, SHAonGH,
                                         inequality, VersionOnRepos, versionSpec) , by = seq(NROW(pkgInstall))]
 
