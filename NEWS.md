@@ -7,6 +7,8 @@ version 0.2.5
 * several minor
 * bugfix for `defaultCacheDir`, which would default to `runneradmin` under some conditions and did not allow installing packages due to permissions.
 
+## deprecated
+* `setup` and `setupOff` are now deprecated; messaging is supplied for what to do if these were being used
 
 version 0.2.4
 =============

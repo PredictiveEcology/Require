@@ -156,14 +156,15 @@ getOptionRPackageCache <- function() {
 }
 #' Setup a project library, cache, options
 #'
-#' This is somewhat experimental, and may be deprecated in the near future.
-#' In its current form, it is unlikely to work reliably.
+#' `setup` and `setupOff` are currently deprecated.
+#' These may be re-created in a future version.
+#' In its place, a user can simply put `.libPaths(libs, include.site = FALSE)`
+#' in their `.Rprofile` file, where `libs` is the directory where the packages
+#' should be installed and should be a folder with the R version number, e.g.,
+#' derived by using `checkLibPaths(libs)`.
 #'
-#' This can be placed as the first line of any/all scripts and it will
-#' be create a reproducible, self-contained project with R packages.
-#' Some of these have direct relationships with `RequireOptions`
-#' and arguments in `setLibPaths` and `Require`.
-#'
+#' @param newLibPaths Same as `RPackageFolders`. This is for more consistent
+#'   naming with `Require(..., libPaths = ...)`.
 #' @param RPackageFolders One or more folders where R packages are
 #'   installed to and loaded from. In the case of more than one
 #'   folder provided, installation will only happen in the first one.
@@ -176,62 +177,21 @@ getOptionRPackageCache <- function() {
 #' @export
 #' @rdname setup
 #'
-#' @examples
-#' \dontrun{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
-#'   # Place these as the first line of a project
-#'   td <- tempdir2("setupEx")
-#'   Require::setup(td, FALSE)
-#'
-#'   # To turn it off and return to normal
-#'   Require::setupOff()
-#'
-#'   Require:::.cleanup(opts)
-#' }}
-setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
+setup <- function(newLibPaths,
+                  RPackageFolders = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
-  RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
-  if (!isFALSE(RPackageCache))
-    RPackageCache <- checkPath(RPackageCache, create = TRUE)
-  copyRequireAndDeps(RPackageFolders, verbose = verbose)
-
-  newOpts <- list("Require.RPackageCache" = RPackageCache)#,
-                  #"Require.buildBinaries" = buildBinaries)#,
-                  #"Require.useCranCache" = usingCranCache)
-  opts <- options(newOpts)
-  co <- capture.output(type = "message",
-                       setLibPaths(RPackageFolders, standAlone = standAlone,
-                                   updateRprofile = TRUE))
-  if (!any(grepl(alreadyInRprofileMessage, co)))
-    silence <- lapply(co, messageVerbose, verbose = verbose, verboseLevel = 1)
-
-  ro <- RequireOptions()
-  roNames <- names(newOpts)
-  names(roNames) <- roNames
-  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
-  nonStandardOpt[] <- TRUE # OVERRIDE -- MAKE THEM ALL EXPLICIT IN .Rprofile
-  if (any(nonStandardOpt)) {
-    setLibPathsUpdateRprofile(.libPaths()[1])
-    rp <- readLines(".Rprofile")
-    lineWithPrevious <- grepl("### Previous", rp)
-    if (any(lineWithPrevious)) {
-      lineWithPrevious <- which(lineWithPrevious)
-      post <- seq(length(rp) - lineWithPrevious) + lineWithPrevious
-      pre <- seq(lineWithPrevious)
-      nameNonStandards <- names(nonStandardOpt)[nonStandardOpt]
-      optsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
-        paste0("### Previous option: ", nns, " = ", opts[[nns]])
-      }))
-      newOptsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
-        paste0("options('", nns, "' = '", newOpts[[nns]], "')")
-      }))
-      newRP <- c(rp[pre], optsToAdd, newOptsToAdd, rp[post])
-      cat(newRP, file = ".Rprofile", sep = "\n")
-    }
-  }
+  if (missing(newLibPaths))
+    newLibPaths <- RPackageFolders
+  newLibPaths <- normPath(newLibPaths)
+  newLibPaths <- checkLibPaths(newLibPaths)
+  .Deprecated(msg = paste0(
+    "setup is deprecated; to get approximately the same functionality, ",
+    "please put a line like\n",
+    ".libPaths('", newLibPaths, "', include.site = ", !standAlone, ")",
+    "\nin your .Rprofile file"))
+  return(invisible())
 }
 
 #' @rdname setup
@@ -243,79 +203,14 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
-
-  lps <- .libPaths()
-  if (file.exists(".Rprofile")) {
-    rp <- readLines(".Rprofile")
-    lineWithPrevious <- grepl("### Previous option", rp)
-
-    #options(RequireOptions())
-    #options(getOptionRPackageCache()) # This one may have a Sys.getenv that is different
-    if (any(lineWithPrevious)) {
-      lineWithPrevious <- which(lineWithPrevious)
-      silence <- lapply(lineWithPrevious, function(lwp) {
-        opt <- gsub("### Previous option: ", "", rp[lwp])
-        opt <- strsplit(opt, " = ")[[1]]
-        newOpt <- list(opt[2])
-        names(newOpt) <- opt[1]
-        options(newOpt)
-      })
-    }
-    setLibPaths()
-    if (isTRUE(removePackages)) {
-      if (interactive() && (verbose >= 1)) { # don't even ask if verbose is low
-        messageVerbose("You have requested to remove all packages in ", lps[1],
-                       verbose = verbose, verboseLevel = 1)
-        out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
-        if (identical(tolower(out), "n"))
-          removePackages <- FALSE
-      }
-      if (isTRUE(removePackages))
-        unlink(lps[1], recursive = TRUE)
-    }
-  } else {
-    messageVerbose("Project is not setup yet; nothing to do",
-                   verbose = verbose, verboseLevel = 0)
-  }
+  .Deprecated(msg = paste0(
+    "setupOff is deprecated; to get approximately the same functionality, ",
+    "please remove the line in .Rprofile\n",
+    ".libPaths('", RPackageFolders, "', include.site = ", !standAlone, ")",
+    "\nfrom your .Rprofile file"))
+  return(invisible())
 }
 
-copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.verbose")) {
-  lps <- .libPaths()
-  names(lps) <- lps
-  pkgs <- c("Require", "data.table")
-  for (pkg in pkgs) {
-    theNewPath <- file.path(rpackageFolder(RPackageFolders), pkg)
-    newPathExists <- dir.exists(theNewPath)
-    for (lp in lps) {
-      thePath <- file.path(lp, pkg)
-      pkgInstalledAlready <- dir.exists(thePath)
-      if (isTRUE(pkgInstalledAlready)) {
-        fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
-        if (!newPathExists) {
-          messageVerbose("Placing copy of ", pkg, " in ", RPackageFolders,
-                  verbose = verbose, verboseLevel = 2)
-          dirs <- unique(dirname(fromFiles))
-          dirs <- gsub(thePath, theNewPath, dirs)
-          lapply(dirs, checkPath, create = TRUE)
-        }
-
-        toFiles <- gsub(thePath, theNewPath, fromFiles)
-
-        if (newPathExists) {
-          newPathVersion <- DESCRIPTIONFileVersionV(file.path(theNewPath, "DESCRIPTION"))
-          oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
-          comp <- compareVersion(newPathVersion, oldPathVersion)
-          if (comp > -1) break
-          messageVerbose("Updating version of ", pkg, " in ", RPackageFolders,
-                  verbose = verbose, verboseLevel = 1)
-          unlink(toFiles)
-        }
-        linkOrCopy(fromFiles, toFiles)
-        break
-      }
-    }
-  }
-}
 
 #' Setup for binary Linux repositories
 #'
@@ -345,18 +240,6 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
-putFile <- function(from, to, overwrite) {
-  if (file.exists(to)) {
-    if (isTRUE(overwrite)) {
-      res0 <- file.copy(to, paste0(to, ".bak.", timestamp()))
-      res1 <- file.copy(from, to)
-    } else {
-      message("file ", to, " exists but overwrite not TRUE. Not overwriting.")
-    }
-  } else {
-    res1 <- file.copy(from, to)
-  }
-}
 
 appName <- "R-Require"
 

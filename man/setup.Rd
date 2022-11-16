@@ -6,6 +6,7 @@
 \title{Setup a project library, cache, options}
 \usage{
 setup(
+  newLibPaths,
   RPackageFolders = getOption("Require.RPackageFolders", "R"),
   RPackageCache = getOptionRPackageCache(),
   standAlone = getOption("Require.standAlone", TRUE),
@@ -15,6 +16,9 @@ setup(
 setupOff(removePackages = FALSE, verbose = getOption("Require.verbose"))
 }
 \arguments{
+\item{newLibPaths}{Same as \code{RPackageFolders}. This is for more consistent
+naming with \code{Require(..., libPaths = ...)}.}
+
 \item{RPackageFolders}{One or more folders where R packages are
 installed to and loaded from. In the case of more than one
 folder provided, installation will only happen in the first one.}
@@ -44,26 +48,10 @@ and it is an interactive session, the user will be prompted to confirm
 deletions.}
 }
 \description{
-This is somewhat experimental, and may be deprecated in the near future.
-In its current form, it is unlikely to work reliably.
-}
-\details{
-This can be placed as the first line of any/all scripts and it will
-be create a reproducible, self-contained project with R packages.
-Some of these have direct relationships with \code{RequireOptions}
-and arguments in \code{setLibPaths} and \code{Require}.
-}
-\examples{
-\dontrun{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
-  # Place these as the first line of a project
-  td <- tempdir2("setupEx")
-  Require::setup(td, FALSE)
-
-  # To turn it off and return to normal
-  Require::setupOff()
-
-  Require:::.cleanup(opts)
-}}
+\code{setup} and \code{setupOff} are currently deprecated.
+These may be re-created in a future version.
+In its place, a user can simply put \code{.libPaths(libs, include.site = FALSE)}
+in their \code{.Rprofile} file, where \code{libs} is the directory where the packages
+should be installed and should be a folder with the R version number, e.g.,
+derived by using \code{checkLibPaths(libs)}.
 }

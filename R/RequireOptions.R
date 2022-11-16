@@ -3,9 +3,11 @@
 #' These provide top-level, powerful settings for a comprehensive reproducible
 #' workflow. See Details below.
 #'
-#' \describe{ \item{`RequireOptions()`}{prints the default values of package
+#' \describe{
+#' \item{`RequireOptions()`}{prints the default values of package
 #' options set at startup, which may have been changed (e.g., by the user)
-#' during the current session.} \item{`getRequireOptions()`}{prints the current
+#' during the current session.}
+#' \item{`getRequireOptions()`}{prints the current
 #' values of package options.} }
 #'
 #' @export
@@ -28,7 +30,8 @@
 #' `TRUE` or a path is provided, then binary and source packages will be cached
 #' here. Subsequent downloads of same package will use local copy. Default is to
 #' have packages not be cached locally so each install of the same version will
-#' be from the original source, e.g., CRAN, GitHub. } \item{`buildBinaries`}{
+#' be from the original source, e.g., CRAN, GitHub. }
+#' \item{`buildBinaries`}{
 #' Default: `TRUE`. Only relevant on *nix systems and if
 #' `getOption("Require.RPackageCache")` is set to a  path. If `TRUE` or a valid
 #' path, then `Require` will pass `INSTALL_OPTS = "--build"`, meaning the
@@ -45,10 +48,7 @@
 #' by `Require` will be deleted and rebuilt. This should not generally be
 #' necessary as it will automatically be deleted after (by default) 1 hour (set
 #' via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in
-#' seconds) } \item{`setupVerbose`}{ Default: `TRUE`. Logical. Once `setup` is
-#' called, there are several important changes that are made to the user's
-#' experience. For beginners with `Require`, the messages that are written are
-#' important to see. However, these can be turned off setting this to `FALSE` }
+#' seconds) }
 #' \item{`spatialPkgs`}{ Default: A character vector of packages that are
 #' generally more successful if installed from Source on Unix-alikes. Since
 #' there are repositories that offer binary packages builds for Linux (e.g.,
@@ -62,7 +62,8 @@
 #' attempt to do this. `FALSE` will not attempt to do this. User must deal with
 #' inability to install packages due to package already being loaded. }
 #' \item{`usePak`}{ Default: `FALSE`. Should `pak` be used to resolve package
-#' dependencies and installation. } \item{`verbose`}{ Default: `0`. During a
+#' dependencies and installation. }
+#' \item{`verbose`}{ Default: `0`. During a
 #' `Require`, there is a lot of information collected and used. With `verbose`
 #' set to `1` or `2`, more of this information will be reported as an attribute
 #' attached to the return object of `Require`. This may help diagnosing

@@ -58,29 +58,29 @@ setLibPaths() # reset it to original
 setwd(origDir)
 
 ## setup
-setupTestDir <- normPath(tempdir2("setupTests"))
-ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
-testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
-out2222 <- capture.output(setupOff())
-Require:::messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
-               verboseLevel = 0)
-RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-if (identical(RPackageCacheSysEnv, "FALSE") ) {
-  testit::assert(identical(NULL, getOptionRPackageCache()))
-} else {
-  if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
-    testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
-}
+# setupTestDir <- normPath(tempdir2("setupTests"))
+# ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
+# out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
+# testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
+# out2222 <- capture.output(setupOff())
+# Require:::messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
+#                verboseLevel = 0)
+# RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+# if (identical(RPackageCacheSysEnv, "FALSE") ) {
+#   testit::assert(identical(NULL, getOptionRPackageCache()))
+# } else {
+#   if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
+#     testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+# }
 
 # reset options after setupOff()
-secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
-opt22 <- options("Require.RPackageCache" = secondTry)
-ccc <- checkPath(secondTry, create = TRUE)
-out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
-testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
-out2222 <- capture.output(setupOff())
-testit::assert(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
+# secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
+# opt22 <- options("Require.RPackageCache" = secondTry)
+# ccc <- checkPath(secondTry, create = TRUE)
+# out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
+# testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
+# out2222 <- capture.output(setupOff())
+# testit::assert(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
 
 ooo <- options(Require.RPackageCache = TRUE)
 testit::assert(identical(getOptionRPackageCache(), RequirePkgCacheDir()))
