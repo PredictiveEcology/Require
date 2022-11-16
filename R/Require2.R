@@ -125,7 +125,7 @@ utils::globalVariables(c(
 #'
 #'   Internally, there are calls to `available.packages`.
 #' @param verbose Numeric or logical indicating how verbose should the function
-#'   be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+#'   be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 #'   then minimal outputs; if `1` or TRUE, more outputs; `2` even more. NOTE: in
 #'   `Require` function, when `verbose >= 2`, the return object will have an
 #'   attribute: `attr(.., "Require")` which has lots of information about the

@@ -70,7 +70,7 @@ to install with a minimum version number, as opposed to an exact version number.
 those in \code{tail(.libPath(), 1)}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
-be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
 \code{Require} function, when \code{verbose >= 2}, the return object will have an
 attribute: \code{attr(.., "Require")} which has lots of information about the
