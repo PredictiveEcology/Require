@@ -7,7 +7,7 @@
 \usage{
 setup(
   newLibPaths,
-  RPackageFolders = getOption("Require.RPackageFolders", "R"),
+  RPackageFolders,
   RPackageCache = getOptionRPackageCache(),
   standAlone = getOption("Require.standAlone", TRUE),
   verbose = getOption("Require.verbose")

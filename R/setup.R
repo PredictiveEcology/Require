@@ -178,12 +178,16 @@ getOptionRPackageCache <- function() {
 #' @rdname setup
 #'
 setup <- function(newLibPaths,
-                  RPackageFolders = getOption("Require.RPackageFolders", "R"),
+                  RPackageFolders, # = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
   if (missing(newLibPaths))
-    newLibPaths <- RPackageFolders
+    if (missing(RPackageFolders)) {
+      newLibPaths <- "R"
+    } else {
+      newLibPaths <- RPackageFolders
+    }
   newLibPaths <- normPath(newLibPaths)
   newLibPaths <- checkLibPaths(newLibPaths)
   .Deprecated(msg = paste0(
