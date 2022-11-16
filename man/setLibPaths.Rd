@@ -83,14 +83,15 @@ if (Require:::.runLongExamples()) {
   #   from any of the ones listed in .libPaths()
 
   # will have 2 or more paths
-  setLibPaths("~/newProjectLib", standAlone = FALSE)
+  otherLib <- file.path(td, "newProjectLib")
+  setLibPaths(otherLib, standAlone = FALSE)
   # Can restart R, and changes will stay
 
   # remove the custom .libPaths()
-  Require::setLibPaths() # reset to previous; remove from .Rprofile
+  setLibPaths() # reset to previous; remove from .Rprofile
                          # because libPath arg is empty
 
   Require:::.cleanup(opts)
-  unlink("~/newProjectLib", recursive = TRUE)
+  unlink(otherLib, recursive = TRUE)
 }}
 }
