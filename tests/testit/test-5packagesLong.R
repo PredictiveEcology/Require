@@ -211,6 +211,10 @@ if (isDevAndInteractive) {
   capted2 <- capture.output(type = "message",
                  Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
   )
+  theGrep1 <- "Installing from"
+  theGrep2 <- "SHA1 has not"
+  testit::assert(isTRUE(sum(grepl(theGrep1, capted1))== 1))
+  testit::assert(isTRUE(sum(grepl(theGrep2, capted2))== 1))
 
   # two sources, where both are OK; use CRAN by preference
   out <- capture.output(remove.packages("SpaDES.core"))
