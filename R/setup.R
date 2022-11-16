@@ -205,9 +205,8 @@ setup <- function(newLibPaths,
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   .Deprecated(msg = paste0(
     "setupOff is deprecated; to get approximately the same functionality, ",
-    "please remove the line in .Rprofile\n",
-    ".libPaths('", RPackageFolders, "', include.site = ", !standAlone, ")",
-    "\nfrom your .Rprofile file"))
+    "please remove the line that sets the .libPaths\n",
+    "from your .Rprofile file"))
   return(invisible())
 }
 
