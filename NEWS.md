@@ -6,7 +6,8 @@ version 0.2.5
 ## enhancements
 * new function `Install`, which is `Require(..., require = FALSE)`
 * `(HEAD)` has now been tested for CRAN repositories and works as expected.
-* Updated README
+* Updated README to show new functionality
+* will attempt to use local cached packages from `crancache` if the user sets `options(Require.useCranCache = TRUE)`. This is experimental and is still being tested.
 
 ## bugfixes
 * several minor
@@ -14,6 +15,7 @@ version 0.2.5
 
 ## deprecated
 * `setup` and `setupOff` are now deprecated; messaging is supplied for what to do if these were being used
+* several options are deprecated
 
 version 0.2.4
 =============

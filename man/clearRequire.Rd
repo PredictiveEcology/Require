@@ -8,6 +8,7 @@ clearRequirePackageCache(
   packages,
   ask = interactive(),
   Rversion = rversion(),
+  clearCranCache = FALSE,
   verbose = getOption("Require.verbose")
 )
 }
@@ -20,6 +21,11 @@ Cache.}
 
 \item{Rversion}{An R version (major dot minor, e.g., "4.2"). Defaults to
 current R version.}
+
+\item{clearCranCache}{Logical. If \code{TRUE}, then this will also clear the
+local \code{crancache} cache, which is only relevant if
+\code{options(Require.useCranCache = TRUE)}, i.e., if \code{Require} is using the
+\code{crancache} cache also}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,

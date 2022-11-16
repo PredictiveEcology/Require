@@ -1334,7 +1334,10 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
   if (!is.null(getOptionRPackageCache())) {
+
+    # check for crancache copies
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+    localFiles <- doCranCacheCheck(localFiles, verbose)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
     pkgInstall[, haveLocal :=
                  unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
@@ -1802,3 +1805,4 @@ Install <- function(packages, packageVersionFile,
           upgrade,
           ...)
 }
+

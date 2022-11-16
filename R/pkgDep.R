@@ -1900,6 +1900,10 @@ getAvailablePackagesIfNeeded <-
 #' @param ask Logical. If `TRUE`, then it will ask user to confirm
 #' @param Rversion An R version (major dot minor, e.g., "4.2"). Defaults to
 #'   current R version.
+#' @param clearCranCache Logical. If `TRUE`, then this will also clear the
+#'   local `crancache` cache, which is only relevant if
+#'   `options(Require.useCranCache = TRUE)`, i.e., if `Require` is using the
+#'   `crancache` cache also
 #' @export
 #' @inheritParams Require
 #' @rdname clearRequire
@@ -1907,10 +1911,31 @@ clearRequirePackageCache <-
   function(packages,
            ask = interactive(),
            Rversion = rversion(),
+           clearCranCache = FALSE,
            verbose = getOption("Require.verbose")) {
     out <- RequirePkgCacheDir(create = FALSE)
     if (!identical(Rversion, rversion())) {
       out <- file.path(dirname(out), Rversion)
+    }
+    if (getOption("Require.useCranCache")) {
+      crancache <- crancacheFolder()
+      toDelete <- dir(crancache, recursive = TRUE, full.names = TRUE)
+      if (length(toDelete) && isFALSE(clearCranCache)) {
+        messageVerbose(blue("crancache is being used because options(Require.useCranCache = TRUE); ",
+                            "however, clearCranCache is FALSE. This means that packages from ",
+                            "crancache will continue to re-populate the Require Cache. ",
+                            "To remove all local packages, set clearCranCache in this ",
+                            "function to TRUE"))
+      }
+      if (isTRUE(clearCranCache)) {
+        if (!missing(packages)) {
+          pkgNamesInFiles <- extractPkgName(filenames = basename(toDelete))
+          present <- pkgNamesInFiles %in% packages
+          toDelete <- toDelete[present]
+        }
+        if (length(toDelete))
+          unlink(toDelete)
+      }
     }
     proceed <- TRUE
     indivFiles <- dir(out, full.names = TRUE)

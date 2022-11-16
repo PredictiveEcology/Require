@@ -58,6 +58,10 @@ there are repositories that offer binary packages builds for Linux (e.g.,
 RStudio Package Manager), the vector of package names indicated here will
 default to a standard CRAN repository, forcing a source install. See also
 \code{otherPkgs} option, which does the same for non-spatial packages. }
+\item{\code{useCranCache}}{ Default: \code{FALSE}. A user can optionally use the
+locally cached packages that are available due to a user's use of the
+\code{crancache} package.
+}
 \item{\code{verbose}}{ Default: \code{1}. See ?Require.
 }
 

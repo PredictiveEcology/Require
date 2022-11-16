@@ -51,6 +51,10 @@
 #' RStudio Package Manager), the vector of package names indicated here will
 #' default to a standard CRAN repository, forcing a source install. See also
 #' `otherPkgs` option, which does the same for non-spatial packages. }
+#' \item{`useCranCache`}{ Default: `FALSE`. A user can optionally use the
+#' locally cached packages that are available due to a user's use of the
+#' `crancache` package.
+#' }
 #' \item{`verbose`}{ Default: `1`. See ?Require.
 #' }
 #'
@@ -76,6 +80,7 @@ RequireOptions <- function() {
       "units"
     ),
     Require.standAlone = TRUE,
+    Require.useCranCache = FALSE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
   )

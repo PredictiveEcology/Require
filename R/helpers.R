@@ -588,6 +588,33 @@ SysInfo <-
 }
 
 
+
+
+doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
+  if (getOption("Require.useCranCache", FALSE)) {
+    if (is.null(.pkgEnv[["crancacheCheck"]])) {
+      .pkgEnv[["crancacheCheck"]] <- TRUE
+      crancache <- crancacheFolder()
+      if (dir.exists(crancache)) {
+        ccFiles <- dir(crancache, full.names = TRUE, recursive = TRUE)
+        ccFiles <- grep("PACKAGES", ccFiles, invert = TRUE, value = TRUE)
+        alreadyThere <- basename(ccFiles) %in% basename(localFiles)
+        if (any(!alreadyThere)) {
+          ccFiles <- ccFiles[!alreadyThere]
+          toFiles <- file.path(getOptionRPackageCache(), basename(ccFiles))
+          linked <- linkOrCopy(ccFiles, toFiles)
+          messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
+                         verbose = verbose, verboseLevel = 1)
+          localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+
+        }
+      }
+    }
+  }
+  return(localFiles)
+}
+
+
 rversionHistory <- as.data.table(
   structure(list(
     version = c("0.60", "0.61", "0.61.1", "0.61.2",
@@ -656,3 +683,7 @@ rversionHistory <- as.data.table(
                  "Funny-Looking Kid", "Innocent and Trusting")), row.names = c(NA,
                                                                                -129L), class = "data.frame")
 )
+
+crancacheFolder <- function() {
+  crancache <- file.path(dirname(dirname(tools::R_user_dir("Require", "cache"))), "R-crancache")
+}
