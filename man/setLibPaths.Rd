@@ -89,9 +89,11 @@ if (Require:::.runLongExamples()) {
 
   # remove the custom .libPaths()
   setLibPaths() # reset to previous; remove from .Rprofile
-                         # because libPath arg is empty
+  # because libPath arg is empty
 
   Require:::.cleanup(opts)
   unlink(otherLib, recursive = TRUE)
-}}
+}
+}
+
 }

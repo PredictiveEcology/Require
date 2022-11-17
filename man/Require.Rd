@@ -200,7 +200,7 @@ opts <- Require:::.setupExample()
 library(Require)
 getCRANrepos(ind = 1)
 Require("stats") # analogous to require(stats), but it checks for
-                 #   pkg dependencies, and installs them, if missing
+#   pkg dependencies, and installs them, if missing
 
 if (Require:::.runLongExamples()) {
   # Install in a new local library (libPaths)
@@ -232,11 +232,13 @@ if (Require:::.runLongExamples()) {
   # GitHub packages
   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
   Require("PredictiveEcology/fpCompare@development",
-          libPaths = ProjectPackageFolder, standAlone = FALSE
+    libPaths = ProjectPackageFolder, standAlone = FALSE
   )
 
-  Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
-          standAlone = TRUE) # the latest version on GitHub
+  Require("PredictiveEcology/fpCompare@development",
+    libPaths = ProjectPackageFolder,
+    standAlone = TRUE
+  ) # the latest version on GitHub
 
   ############################################################################
   # Mixing and matching GitHub, CRAN, with and without version numbering
@@ -249,7 +251,6 @@ if (Require:::.runLongExamples()) {
   Require::Require(pkgs, libPaths = ProjectPackageFolder)
   Require:::.cleanup(opts)
 }
-
 }
 
 }

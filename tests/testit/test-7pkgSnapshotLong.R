@@ -1,12 +1,12 @@
 setupInitial <- setupTest()
 
 if (isDevAndInteractive) {
-
   ## Long pkgSnapshot -- issue 41
   pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
   checkPath(pkgPath, create = TRUE)
   download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt",
-                destfile = file.path(pkgPath, "pkgSnapshot.txt"))
+    destfile = file.path(pkgPath, "pkgSnapshot.txt")
+  )
   origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
   fn <- file.path(pkgPath, "pkgSnapshot.txt")
   pkgs <- data.table::fread(fn)
@@ -14,7 +14,8 @@ if (isDevAndInteractive) {
   # pkgs <- pkgs[Package %in% pks]
   # data.table::fwrite(pkgs, fn)
   packageFullName <- ifelse(is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
-                            paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1))
+    paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
+  )
   names(packageFullName) <- packageFullName
 
   # remove.packages(pks)
@@ -30,11 +31,11 @@ if (isDevAndInteractive) {
   # testit::assert(all(installed))
   ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
   ip <- ip[!Package %in% .basePkgs]
-  allInIPareInpkgDT <- all(ip$Package %in% allNeeded )
+  allInIPareInpkgDT <- all(ip$Package %in% allNeeded)
   installedNotInIP <- setdiff(allNeeded, ip$Package)
 
   installedPkgs <- setdiff(allNeeded, installedNotInIP)
-  allInpkgDTareInIP <- all(installedPkgs %in% ip$Package  )
+  allInpkgDTareInIP <- all(installedPkgs %in% ip$Package)
   if (!isTRUE(allInpkgDTareInIP)) browser()
   if (!isTRUE(allInIPareInpkgDT)) browser()
 
@@ -46,9 +47,13 @@ if (isDevAndInteractive) {
   theTest <- NROW(ip) >= NROW(pkgsInOut)
   testit::assert(isTRUE(theTest))
 
-  lala <- capture.output(type = "message",
-                         out <- Require(packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
-                                 require = FALSE, verbose = 2))
+  lala <- capture.output(
+    type = "message",
+    out <- Require(
+      packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
+      require = FALSE, verbose = 2
+    )
+  )
   # missings <- grep("The following shows packages", lala, value = TRUE)
   # missings <- gsub(".+: (.+); adding .+", "\\1", missings)
   # missings <- strsplit(missings, ", ")[[1]]

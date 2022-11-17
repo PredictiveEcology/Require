@@ -3,7 +3,7 @@ setupInitial <- setupTest()
 library(Require)
 srch <- search()
 anyNamespaces <- srch[!gsub("package:", "", srch) %in%
-                        c("Require", "data.table", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
+  c("Require", "data.table", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
 if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
 library(testit)
 
@@ -38,7 +38,7 @@ for (lp in unique(aa$LibPath)) {
     lens <- lengths(deps)
     haveFewDeps <- order(lens)
     deps <- deps[haveFewDeps]
-    wh <- min(4, max(which(cumsum(lengths(deps)+1) < 10)))
+    wh <- min(4, max(which(cumsum(lengths(deps) + 1) < 10)))
     deps <- deps[seq(wh)]
     pkgs <- c(names(deps), Require::extractPkgName(unname(unlist(deps))))
     bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
@@ -79,7 +79,7 @@ if (file.exists(pkgVF)) {
     # There might be more than one version
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-    localBinsFull <- na.omit(c(dts))#, rems))
+    localBinsFull <- na.omit(c(dts)) # , rems))
     # dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     # localBinsFull <- dts
   } else {
@@ -89,22 +89,33 @@ if (file.exists(pkgVF)) {
   ## There might be more than one version
   Rpath <- Sys.which("Rscript")
   if (length(localBinsFull) == 1) { # already have the binary in the Cache
-    if (Require:::isWindows())
-      system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1],
-                    "'), quiet = ", quiet,", type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
-    else
-      system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1],
-                    "'), quiet = ", quiet,", lib = '", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
+    if (Require:::isWindows()) {
+      system(paste0(
+        Rpath, " -e \"install.packages(c('", localBinsFull[1],
+        "'), quiet = ", quiet, ", type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""
+      ), wait = TRUE)
+    } else {
+      system(paste0(
+        Rpath, " -e \"install.packages(c('", localBinsFull[1],
+        "'), quiet = ", quiet, ", lib = '", .libPaths()[1], "', repos = NULL)\""
+      ), wait = TRUE)
+    }
   } else {
     # For some reason, when using Rscript, the RStudio Package Manager repository the Rscript install doesn't use binary
     pkg <- "data.table"
-    withCallingHandlers(install.packages(pkg, lib = .libPaths()[1],
-                                         quiet = quiet, repos = getOption('repos')[["CRAN"]]),
-                        warning = function(w) {
-      system(paste0(Rpath, " -e \"install.packages(c('",pkg,"'), lib ='",
-                    .libPaths()[1], "', quiet = ", quiet,", repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
-                          invokeRestart("muffleWarning")
-    })
+    withCallingHandlers(
+      install.packages(pkg,
+        lib = .libPaths()[1],
+        quiet = quiet, repos = getOption("repos")[["CRAN"]]
+      ),
+      warning = function(w) {
+        system(paste0(
+          Rpath, " -e \"install.packages(c('", pkg, "'), lib ='",
+          .libPaths()[1], "', quiet = ", quiet, ", repos = '", getOption("repos")[["CRAN"]], "')\""
+        ), wait = TRUE)
+        invokeRestart("muffleWarning")
+      }
+    )
   }
 
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
@@ -121,10 +132,11 @@ if (file.exists(pkgVF)) {
   anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
   anyMissing <- anyMissing[GithubUsername != "PredictiveEcology"] # even though they have GitHub info,
   # they are likely missing because of the previous line of local installs
-  if (Require:::isWindows())
+  if (Require:::isWindows()) {
     anyMissing <- anyMissing[!Package %in% "littler"]
+  }
   # here[!there, on = "Package"]
-  if (NROW(anyMissing) != 0)  stop("Error 832; please contact developer")
+  if (NROW(anyMissing) != 0) stop("Error 832; please contact developer")
   testit::assert(NROW(anyMissing) == 0)
 }
 endTest(setupInitial)

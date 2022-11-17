@@ -11,7 +11,7 @@ if (isDevAndInteractive) {
   pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE)
   pkgDepTest2 <- Require::pkgDep2("Require", includeSelf = FALSE)
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
-  origDir <- setwd("~/GitHub/");
+  origDir <- setwd("~/GitHub/")
 
   theDir <- Require:::rpackageFolder(getOptionRPackageCache())
   if (!is.null(theDir)) {
@@ -38,27 +38,33 @@ if (isDevAndInteractive) {
     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
     rems <- grep("remotes", localBinsFull, value = TRUE)[1]
     localBinsFull <- c(dts, rems)
-
   } else {
     localBinsFull <- NULL
   }
   # THere might be more than one version
   dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-  #rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-  #localBinsFull <- c(dts, rems)
+  # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+  # localBinsFull <- c(dts, rems)
   localBinsFull <- dts
 
   Rpath <- Sys.which("Rscript")
   if (length(localBinsFull) == 2) {
-    if (Require:::isWindows())
-      system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
-                    "'), quiet = TRUE, type = 'binary', lib ='", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
-    else
-      system(paste0(Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
-                    "'), quiet = TRUE, lib ='", .libPaths()[1], "', repos = NULL)\""), wait = TRUE)
+    if (Require:::isWindows()) {
+      system(paste0(
+        Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+        "'), quiet = TRUE, type = 'binary', lib ='", .libPaths()[1], "', repos = NULL)\""
+      ), wait = TRUE)
+    } else {
+      system(paste0(
+        Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+        "'), quiet = TRUE, lib ='", .libPaths()[1], "', repos = NULL)\""
+      ), wait = TRUE)
+    }
   } else {
-    system(paste0(Rpath, " -e \"install.packages(c('data.table'), lib ='", .libPaths()[1],
-                  "', quiet = TRUE, repos = '", getOption('repos')[["CRAN"]], "')\""), wait = TRUE)
+    system(paste0(
+      Rpath, " -e \"install.packages(c('data.table'), lib ='", .libPaths()[1],
+      "', quiet = TRUE, repos = '", getOption("repos")[["CRAN"]], "')\""
+    ), wait = TRUE)
   }
 
   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
@@ -70,23 +76,35 @@ if (isDevAndInteractive) {
   on.exit({
     message(".libPaths during packagesLong: ", paste(.libPaths(), collapse = "; "))
     Require::setLibPaths(orig, updateRprofile = FALSE)
-    })
+  })
 
-  testit::assert({length(pkgDepTest1) == 1})
-  testit::assert({sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)")})
+  testit::assert({
+    length(pkgDepTest1) == 1
+  })
+  testit::assert({
+    sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)")
+  })
 
-  testit::assert({length(pkgDepTest2) == 1})
-  testit::assert({sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)})
+  testit::assert({
+    length(pkgDepTest2) == 1
+  })
+  testit::assert({
+    sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)
+  })
 
   tmpdirForPkgs <- gsub(".+ ([[:digit:]]\\.[[:digit:]])\\.[[:digit:]].+", "\\1", R.version.string)
   pkgsInstalled <- dir(tmpdirForPkgs, full.names = TRUE)
-  RequireDeps <- c("data.table", "utils", "callr", "cli", "covr",
-                   "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
-                   "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
-                   "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
-                   "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr", "Require")
-  pkgsToRm <- setdiff(sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)),
-                      RequireDeps)
+  RequireDeps <- c(
+    "data.table", "utils", "callr", "cli", "covr",
+    "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
+    "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
+    "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
+    "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr", "Require"
+  )
+  pkgsToRm <- setdiff(
+    sample(basename(pkgsInstalled), min(length(pkgsInstalled), 5)),
+    RequireDeps
+  )
   out <- unlink(pkgsToRm, recursive = TRUE)
 
   runTests <- function(have, pkgs) {
@@ -121,78 +139,93 @@ if (isDevAndInteractive) {
   }
 
 
-  pkgs <- list(c("LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
-                 "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
-                 "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"),
-               c("SpaDES.core (>=0.9)",
-                 "PredictiveEcology/map@development (>= 4.0.9)",
-
-                 "achubaty/amc@development (>=0.1.5)", "data.table (>=100.0)",
-                 "tinytest (>=1.3.1)", "PredictiveEcology/LandR@development (>= 1.0.2)",
-                 "versions (>=0.3)",
-                 "fastdigest (>=0.0.0.9)", "PredictiveEcology/map@development (>= 0.1.0.9)",
-                 "achubaty/amc@development (>=0.0.0.9)", "data.table (>=0.0.0.9)",
-                 "PredictiveEcology/LandR@development(>= 0.0.0.9)", "fastdigest (>=1000.0.0.8)",
-                 "fastdigest", "quickPlot", "testthat",
-                 "PredictiveEcology/map@development (>= 0.0.0.9)",
-                 "PredictiveEcology/map@development (>= 0.0.0.10)",
-                 "PredictiveEcology/map@development (>= 1111.0.9)",
-                 "PredictiveEcology/map@master (>= 0.0.0.9)",
-                 "PredictiveEcology/map@master (>= 0.0.0.10)"
-               ),
-               c("SpaDES.core (>=0.9)",
-                 "PredictiveEcology/map@development (>= 5.0.0.9)",
-                 "achubaty/amc@development (>=0.1.5)",
-                 "data.table (>=100.0)",
-                 paste0("tinytest (>=1.3.1)"),
-                 "PredictiveEcology/LandR@development (>= 1.0.2)"),
-               c("fastdigest (>=0.0.0.9)",
-                 "PredictiveEcology/map@development (>= 0.0.0.9)",
-                 "achubaty/amc@development (>=0.0.0.9)",
-                 "data.table (>=0.0.0.9)",
-                 paste0("tinytest (>=1.3.1)"),
-                 "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
-               # Multiple conflicting version numbers, and with NO version number
-               c("fastdigest (>=0.0.0.8)", "fastdigest (>=0.0.0.9)", "fastdigest"), #"quickPlot", "testthat"),
-               c("fastdigest (>=1000.0.0.8)", "fastdigest (>=0.0.0.9)", "fastdigest"),
-               #          "quickPlot", "testthat"),
-               c("fastdigest (>=0.0.0.9)",
-                 "PredictiveEcology/map@development (>= 0.0.0.9)",
-                 "PredictiveEcology/map@development (>= 0.0.0.10)",
-                 "PredictiveEcology/map@development (>= 110.0.9)",
-                 "achubaty/amc@development (>=0.0.0.9)",
-                 "data.table (>=0.0.0.9)",
-                 paste0("tinytest (>=1.3.1)"),
-                 "PredictiveEcology/LandR@development(>= 0.0.0.9)"),
-               "LearnBayes (>=1000.3.1)",
-               c("LearnBayes (>=1.0.1)", "fpCompare"),
-               "LearnBayes (>=2.15.1)",
-               c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
+  pkgs <- list(
+    c(
+      "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
+      "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
+      "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
+    ),
+    c(
+      "SpaDES.core (>=0.9)",
+      "PredictiveEcology/map@development (>= 4.0.9)",
+      "achubaty/amc@development (>=0.1.5)", "data.table (>=100.0)",
+      "tinytest (>=1.3.1)", "PredictiveEcology/LandR@development (>= 1.0.2)",
+      "versions (>=0.3)",
+      "fastdigest (>=0.0.0.9)", "PredictiveEcology/map@development (>= 0.1.0.9)",
+      "achubaty/amc@development (>=0.0.0.9)", "data.table (>=0.0.0.9)",
+      "PredictiveEcology/LandR@development(>= 0.0.0.9)", "fastdigest (>=1000.0.0.8)",
+      "fastdigest", "quickPlot", "testthat",
+      "PredictiveEcology/map@development (>= 0.0.0.9)",
+      "PredictiveEcology/map@development (>= 0.0.0.10)",
+      "PredictiveEcology/map@development (>= 1111.0.9)",
+      "PredictiveEcology/map@master (>= 0.0.0.9)",
+      "PredictiveEcology/map@master (>= 0.0.0.10)"
+    ),
+    c(
+      "SpaDES.core (>=0.9)",
+      "PredictiveEcology/map@development (>= 5.0.0.9)",
+      "achubaty/amc@development (>=0.1.5)",
+      "data.table (>=100.0)",
+      paste0("tinytest (>=1.3.1)"),
+      "PredictiveEcology/LandR@development (>= 1.0.2)"
+    ),
+    c(
+      "fastdigest (>=0.0.0.9)",
+      "PredictiveEcology/map@development (>= 0.0.0.9)",
+      "achubaty/amc@development (>=0.0.0.9)",
+      "data.table (>=0.0.0.9)",
+      paste0("tinytest (>=1.3.1)"),
+      "PredictiveEcology/LandR@development(>= 0.0.0.9)"
+    ),
+    # Multiple conflicting version numbers, and with NO version number
+    c("fastdigest (>=0.0.0.8)", "fastdigest (>=0.0.0.9)", "fastdigest"), # "quickPlot", "testthat"),
+    c("fastdigest (>=1000.0.0.8)", "fastdigest (>=0.0.0.9)", "fastdigest"),
+    #          "quickPlot", "testthat"),
+    c(
+      "fastdigest (>=0.0.0.9)",
+      "PredictiveEcology/map@development (>= 0.0.0.9)",
+      "PredictiveEcology/map@development (>= 0.0.0.10)",
+      "PredictiveEcology/map@development (>= 110.0.9)",
+      "achubaty/amc@development (>=0.0.0.9)",
+      "data.table (>=0.0.0.9)",
+      paste0("tinytest (>=1.3.1)"),
+      "PredictiveEcology/LandR@development(>= 0.0.0.9)"
+    ),
+    "LearnBayes (>=1000.3.1)",
+    c("LearnBayes (>=1.0.1)", "fpCompare"),
+    "LearnBayes (>=2.15.1)",
+    c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
 
   i <- 0
   pkg <- pkgs[[i + 1]] # redundant, but kept for interactive use
-  #}
+  # }
   for (pkg in pkgs) {
     # out <- unloadNSRecursive(n = 1)
     i <- i + 1
     Require:::messageVerbose(paste0("\033[32m", i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", "), "\033[39m"),
-                   verboseLevel = 0)
-    #if (i == 11) ._Require_0 <<- 1
+      verboseLevel = 0
+    )
+    # if (i == 11) ._Require_0 <<- 1
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
     # Rerun it to get output table, but capture messages for quiet; should be no installs
-    silent <- capture.output(type = "message", out <- Require(pkg, standAlone = FALSE,
-                                                              require = FALSE, verbose = 2))
-    testit::assert({all.equal(outFromRequire, out)})
+    silent <- capture.output(type = "message", out <- Require(pkg,
+      standAlone = FALSE,
+      require = FALSE, verbose = 2
+    ))
+    testit::assert({
+      all.equal(outFromRequire, out)
+    })
     have <- attr(out, "Require")
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     runTests(have, pkg)
     endTime <- Sys.time()
-    message("\033[32m --- ",i," --------------------------",
-            basename(setupInitial$thisFilename), ": ", format(endTime - setupInitial$startTime)," \033[39m")
-
+    message(
+      "\033[32m --- ", i, " --------------------------",
+      basename(setupInitial$thisFilename), ": ", format(endTime - setupInitial$startTime), " \033[39m"
+    )
   }
 
   # Use a mixture of different types of "off CRAN"
@@ -205,26 +238,28 @@ if (isDevAndInteractive) {
 
 
   ## Test Install and also (HEAD)
-  capted1 <- capture.output(type = "message",
-                 Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
+  capted1 <- capture.output(
+    type = "message",
+    Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
   )
-  capted2 <- capture.output(type = "message",
-                 Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
+  capted2 <- capture.output(
+    type = "message",
+    Install("PredictiveEcology/fpCompare@development (HEAD)") # will install
   )
   theGrep1 <- "Installing from"
   theGrep2 <- "SHA1 has not"
-  testit::assert(isTRUE(sum(grepl(theGrep1, capted1))== 1))
-  testit::assert(isTRUE(sum(grepl(theGrep2, capted2))== 1))
+  testit::assert(isTRUE(sum(grepl(theGrep1, capted1)) == 1))
+  testit::assert(isTRUE(sum(grepl(theGrep2, capted2)) == 1))
 
   # two sources, where both are OK; use CRAN by preference
   out <- capture.output(remove.packages("SpaDES.core"))
   out <- Require(c("PredictiveEcology/SpaDES.core (>= 1.0.0)", "SpaDES.core (>=1.0.0)"),
-                 require = FALSE, verbose = 2)
+    require = FALSE, verbose = 2
+  )
   out2 <- attr(out, "Require")
   try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
   testit::assert(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
   testit::assert(out2[Package == "SpaDES.core"]$installed)
-
 }
 
 endTest(setupInitial)

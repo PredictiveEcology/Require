@@ -45,5 +45,7 @@ if (Require:::.runLongExamples()) {
   pkgDepIfDepRemoved("reproducible", "data.table")
 
   Require:::.cleanup(opts)
-}}
+}
+}
+
 }

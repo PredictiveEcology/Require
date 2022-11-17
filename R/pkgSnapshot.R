@@ -51,10 +51,12 @@
 #'   tf <- tempfile()
 #'
 #'   # writes to getOption("Require.packageVersionFile")
-#'      # within project; also returns a vector
-#'      # of packages with version
-#'   pkgs <- pkgSnapshot(packageVersionFile = tf,
-#'                       libPaths = libForThisEx)
+#'   # within project; also returns a vector
+#'   # of packages with version
+#'   pkgs <- pkgSnapshot(
+#'     packageVersionFile = tf,
+#'     libPaths = libForThisEx
+#'   )
 #'
 #'   # Now move this file to another computer e.g. by committing in git,
 #'   #   emailing, googledrive
@@ -64,15 +66,18 @@
 #'   # Using pkgSnapshot2 to get the vector of packages and versions
 #'
 #'   tf <- tempfile()
-#'   pkgs <- pkgSnapshot2(packageVersionFile = tf,
-#'                        libPaths = libForThisEx)
+#'   pkgs <- pkgSnapshot2(
+#'     packageVersionFile = tf,
+#'     libPaths = libForThisEx
+#'   )
 #'   Require(pkgs, require = FALSE) # will install packages from previous line
-#'                                # (likely want require = FALSE
-#'                                #  and not load them all)
+#'   # (likely want require = FALSE
+#'   #  and not load them all)
 #'
 #'   Require:::.cleanup(opts)
 #'   unlink(getOption("Require.packageVersionFile"))
-#' }}
+#' }
+#' }
 #'
 #' @rdname pkgSnapshot
 pkgSnapshot <-
@@ -89,9 +94,10 @@ pkgSnapshot <-
     ip <- doInstalledPackages(libPaths, purge, includeBase)
 
     fwrite(ip,
-           file = packageVersionFile,
-           row.names = FALSE,
-           na = NA)
+      file = packageVersionFile,
+      row.names = FALSE,
+      na = NA
+    )
     messageVerbose(
       "package version file saved in ",
       packageVersionFile,
@@ -153,8 +159,9 @@ doInstalledPackages <- function(libPaths, purge, includeBase) {
         purge = purge
       )
     )
-  if (isFALSE(includeBase))
+  if (isFALSE(includeBase)) {
     ip <- ip[!Package %in% .basePkgs]
+  }
 
   ip
 }

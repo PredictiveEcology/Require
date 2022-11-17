@@ -36,6 +36,8 @@ Oct 2022); however, it cannot retain \code{NULL} values in lists.
 \examples{
 modifyList2(list(a = 1), list(a = 2, b = 2))
 modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
-modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2),
-            list(a = 3, c = list(1:10)))
+modifyList2(
+  list(a = 1), list(x = NULL), list(a = 2, b = 2),
+  list(a = 3, c = list(1:10))
+)
 }
