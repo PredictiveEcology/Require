@@ -384,7 +384,7 @@ pkgDep <- function(packages,
 
       # Add self to vector
       Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
-        assign(sn, neededFull2[[n]], envir = .pkgEnv)
+        assign(sn, neededFull2[[n]], envir = .pkgEnv[["pkgDep"]][["deps"]])
       })
       neededFull1 <- append(neededFull1[!needGet], neededFull2)
     }
