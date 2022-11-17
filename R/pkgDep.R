@@ -161,6 +161,8 @@ pkgDep <- function(packages,
     # Expand it back out to full length
 
     needGet <- unlist(lapply(neededFull1, is.null))
+    dups <- duplicated(names(needGet))
+    needGet <- needGet[!dups]
     packageFullNamesToGet <- names(needGet)[needGet]
     if (any(needGet)) {
       fn <- pkgDepDBFilename()
@@ -190,11 +192,11 @@ pkgDep <- function(packages,
       }
     }
 
-    Npackages <- NROW(unique(packageFullNamesToGet))
+    Npackages <- NROW(packageFullNamesToGet)
     messageIfGTN <- Npackages > 5
 
     if (any(needGet)) {
-      NpackagesGitHub <- sum(!is.na(extractPkgGitHub(unique(packageFullNamesToGet))))
+      NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packageFullNamesToGet)))
       NpackagesCRAN <- Npackages - NpackagesGitHub
       if (messageIfGTN)
         messageVerbose(
