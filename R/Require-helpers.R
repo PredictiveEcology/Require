@@ -839,6 +839,9 @@ getSHAfromGitHub <- function(acct, repo, br) {
       break
     }
   }
+  if (length(whHasBr) == 0) {
+    stop("Can't find ", br, " on GitHub repo ", paste0(acct, "/", repo), "; \n -- does it exist? --")
+  }
 
   sha3 <- sha2[[whHasBr]]
   shaLine <- grep("sha", sha3) + 1
