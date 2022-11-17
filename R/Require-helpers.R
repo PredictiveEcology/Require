@@ -852,6 +852,7 @@ getSHAfromGitHub <- function(acct, repo, br) {
 
 getSHAfromGitHubMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
+    # browser()
     dots <- list(...)
     if (!exists("getSHAfromGitHub", envir = .pkgEnv, inherits = FALSE))
       .pkgEnv$getSHAfromGitHub <- new.env()

@@ -140,17 +140,21 @@ pkgDep <- function(packages,
   if (length(packages)) {
     ap <-
       getAvailablePackagesIfNeeded(packages, repos, purge, verbose, type)
+    browser()
     saveNames <-
       saveNamesForCache(packages, which, recursive = recursive, ap = ap)
     packagesNoVersion <- trimVersionNumber(packages)
     saveNamesDT <-
-      data.table(saveNames, packages, packagesNoVersion)
+      data.table(saveNames, packages, packagesNoVersion, names = names(saveNames))
+    dups <- duplicated(saveNamesDT$saveNames)
+    saveNamesDT <- saveNamesDT[dups %in% FALSE]
+    saveNames <- saveNames[!dups] # keep this object because it has names, which are used for lapply/Map
     if (isTRUE(purge)) {
       whExist <- unlist(lapply(saveNames, exists, envir = .pkgEnv))
       if (any(whExist))
-        suppressWarnings(rm(list = saveNames[whExist], envir = .pkgEnv))
+        suppressWarnings(rm(list = saveNamesDT$saveNames[whExist], envir = .pkgEnv))
     }
-    # this will be short because saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
+    # this will be short because saveNamesDT$saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
     neededFull1 <-
       lapply(saveNames, get0, envir = .pkgEnv$pkgDep$deps)
     saveNamesOrig <- names(neededFull1)
@@ -161,8 +165,6 @@ pkgDep <- function(packages,
     # Expand it back out to full length
 
     needGet <- unlist(lapply(neededFull1, is.null))
-    dups <- duplicated(names(needGet))
-    needGet <- needGet[!dups]
     packageFullNamesToGet <- names(needGet)[needGet]
     if (any(needGet)) {
       fn <- pkgDepDBFilename()
@@ -174,9 +176,9 @@ pkgDep <- function(packages,
             unlink(fn)
           } else {
             savedNeededFull1 <- readRDS(fn)
-            ord <- match(saveNames, names(savedNeededFull1))
+            ord <- match(saveNamesDT$saveNames, names(savedNeededFull1))
             have <- savedNeededFull1[ord]
-            names(have) <- names(saveNames)
+            names(have) <- saveNamesDT$names
             toGet <- packageFullNamesToGet
             toGet <- toGet[toGet %in% names(have)]
             neededFull1[toGet] <- have[toGet]
@@ -374,7 +376,7 @@ pkgDep <- function(packages,
       # Remove "R"
       neededFull2 <- append(neededFull2, neededFull[theNulls])
 
-      newOnes <- names(saveNames) %in% names(neededFull)
+      newOnes <- saveNamesDT$names %in% names(neededFull)
 
       neededFull2 <- lapply(neededFull2, function(n) {
         n <- grep(.grepR, n, value = TRUE, invert = TRUE)
@@ -385,7 +387,7 @@ pkgDep <- function(packages,
       })
 
       # Add self to vector
-      Map(sn = saveNames[newOnes], n = names(saveNames)[newOnes], function(sn, n) {
+      Map(sn = saveNamesDT$saveNames[newOnes], n = saveNamesDT$names[newOnes], function(sn, n) {
         assign(sn, neededFull2[[n]], envir = .pkgEnv[["pkgDep"]][["deps"]])
       })
       neededFull1 <- append(neededFull1[!needGet], neededFull2)
@@ -438,7 +440,8 @@ pkgDep <- function(packages,
     # put original inequalities back
     aa <-
       neededFull1[match(saveNamesDT$saveNamesOrig, names(neededFull1))]
-    names(aa) <- packages
+
+    names(aa) <- saveNamesDT$packages
     neededFull1 <- aa
 
     # Put the package *with* its inequality in the first slot
@@ -1652,6 +1655,7 @@ paddedFloatToChar <-
 
 
 saveNamesForCache <- function(packages, which, recursive, ap) {
+  # browser()
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
