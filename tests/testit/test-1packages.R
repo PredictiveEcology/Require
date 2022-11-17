@@ -1,6 +1,5 @@
 setupInitial <- setupTest()
 
-
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")
 Sys.unsetenv("CRAN_REPO")
@@ -86,12 +85,11 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   setwd(prevDir)
 
   # Check for packageVersionFile = FALSE
-  mess11 <- capture.output(type = "message",
-                           outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE)
-                           )
+  mess11 <- capture.output(type = "message", {
+    outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE)
+  })
   testit::assert(any(grepl(NoPkgsSupplied, mess11)))
   testit::assert(isFALSE(outInner))
-
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
@@ -125,7 +123,6 @@ if (identical(tolower(Sys.getenv("CI")), "true") ||  # travis
   unlink(dirname(dir3), recursive = TRUE)
   unlink(dirname(dir4), recursive = TRUE)
 }
-
 
 # Code coverage
 if (isDev) { # i.e., GA, R CMD check etc.
