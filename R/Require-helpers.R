@@ -903,7 +903,7 @@ getSHAfromGitHub <- function(acct, repo, br) {
 getSHAfromGitHubMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
-    if (!exists("getSHAfromGitHub", envir = .pkgEnv, inherits = FALSE)) {
+    if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
       .pkgEnv$getSHAfromGitHub <- new.env()
     }
     ret <- NULL
@@ -929,6 +929,26 @@ getSHAfromGitHubMemoise <- function(...) {
 
   return(ret)
 }
+
+preloadGitHubSHAsFromDisk <- function() {
+  if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
+    fn <- getSHAFromGitHubDBFilename()
+    if (file.exists(fn)) {
+      out <- readRDS(fn)
+      assign(.pkgEnv[["pkgDep"]][[getSHAfromGitHubObjName]])
+    }
+
+  }
+}
+
+
+getSHAfromGitHubObjName <- "getSHAfromGitHub"
+
+getSHAFromGitHubDBFilename <- function() {
+  if (!is.null(getOptionRPackageCache()))
+    file.path(RequirePkgCacheDir(), paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+}
+
 
 # getSHAfromGitHubMemoise <- function(d) {
 #   if (getOption("Require.useMemoise", TRUE)) {
