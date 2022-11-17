@@ -1864,17 +1864,27 @@ isAre <- function(l, v) {
 }
 
 prependSelf <- function(deps, includeSelf) {
-  deps <- Map(p = deps, n = names(deps), function(p, n) {
-    removeSelf <- startsWith(p[1], n)
-    pak <- if (isTRUE(removeSelf))
-      p[-1]
-    else
-      p
-    c(if (isTRUE(includeSelf))
-      n
-      else
-        character(), pak)
-  })
+  if (isTRUE(includeSelf)) {
+    deps <- Map(pkgs = deps, nam = names(deps), function(pkgs, nam) {
+      depsInner <- pkgs
+      alreadyHasSelf <- startsWith(pkgs[1], trimVersionNumber(nam))
+      if (!isTRUE(alreadyHasSelf)) {
+        depsInner <- c(nam, pkgs)
+      }
+
+      return(depsInner)
+
+      # pak <- if (isTRUE(removeSelf))
+      #   p[-1]
+      # else
+      #   p
+      # c(if (isTRUE(includeSelf))
+      #   n
+      #   else
+      #     character(), pak)
+    })
+  }
+  deps
 }
 
 getAvailablePackagesIfNeeded <-
