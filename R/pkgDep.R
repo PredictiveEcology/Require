@@ -190,11 +190,11 @@ pkgDep <- function(packages,
       }
     }
 
-    Npackages <- NROW(packages[needGet])
+    Npackages <- NROW(unique(packageFullNamesToGet))
     messageIfGTN <- Npackages > 5
 
     if (any(needGet)) {
-      NpackagesGitHub <- sum(!is.na(extractPkgGitHub(packages[needGet])))
+      NpackagesGitHub <- sum(!is.na(extractPkgGitHub(unique(packageFullNamesToGet))))
       NpackagesCRAN <- Npackages - NpackagesGitHub
       if (messageIfGTN)
         messageVerbose(
