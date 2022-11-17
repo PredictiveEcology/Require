@@ -11,21 +11,26 @@ if (isDevAndInteractive) {
 
   # Install 3 packages that are needed for subsequent module and package installations
   Require("PredictiveEcology/SpaDES.project@transition",
-                   upgrade = FALSE, require = FALSE)
+    upgrade = FALSE, require = FALSE
+  )
 
   # Install modules
   getFromNamespace("getModule", "SpaDES.project")(modulePath = modulePath,
-                            c("PredictiveEcology/Biomass_speciesData@master",
-                              "PredictiveEcology/Biomass_borealDataPrep@master",
-                              "PredictiveEcology/Biomass_core@master",
-                              "CeresBarros/Biomass_validationKNN@master",
-                              "PredictiveEcology/Biomass_speciesParameters@development"))
+    c(
+      "PredictiveEcology/Biomass_speciesData@master",
+      "PredictiveEcology/Biomass_borealDataPrep@master",
+      "PredictiveEcology/Biomass_core@master",
+      "CeresBarros/Biomass_validationKNN@master",
+      "PredictiveEcology/Biomass_speciesParameters@development"
+  ))
 
   outs <- getFromNamespace("packagesInModules", "SpaDES.project")(modulePath = modulePath)
-  pkgs <- c(unname(unlist(outs)),
-            "PredictiveEcology/SpaDES.experiment@development",
-            "PredictiveEcology/SpaDES.project@transition",
-            "devtools", "ggspatial", "ggpubr", "cowplot")
+  pkgs <- c(
+    unname(unlist(outs)),
+    "PredictiveEcology/SpaDES.experiment@development",
+    "PredictiveEcology/SpaDES.project@transition",
+    "devtools", "ggspatial", "ggpubr", "cowplot"
+  )
   pkgsShort <- unique(sort(pkgs))
   deps <- pkgDep(pkgsShort, recursive = TRUE)
 
@@ -41,10 +46,10 @@ if (isDevAndInteractive) {
   installedInFistLib <- ip[LibPath == persLibPathOld]
   # testit::assert(all(installed))
   ip <- ip[!Package %in% .basePkgs][, c("Package", "Version")]
-  allInIPareInpkgDT <- all(ip$Package %in% allNeeded )
+  allInIPareInpkgDT <- all(ip$Package %in% allNeeded)
   installedNotInIP <- setdiff(allNeeded, ip$Package)
   installedPkgs <- setdiff(allNeeded, installedNotInIP)
-  allInpkgDTareInIP <- all(installedPkgs %in% ip$Package  )
+  allInpkgDTareInIP <- all(installedPkgs %in% ip$Package)
   testit::assert(isTRUE(allInpkgDTareInIP))
   testit::assert(isTRUE(allInIPareInpkgDT))
 
@@ -53,8 +58,10 @@ if (isDevAndInteractive) {
   pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
 
   pkgDT <- ip[pkgDT, on = "Package"]
-  pkgDT[!is.na(inequality) & !is.na(Version),
-        good := compareVersion2(package_version(Version), versionSpec, inequality)]
+  pkgDT[
+    !is.na(inequality) & !is.na(Version),
+    good := compareVersion2(package_version(Version), versionSpec, inequality)
+  ]
   anyBad <- any(pkgDT$good %in% FALSE)
   testit::assert(isFALSE(anyBad))
 }

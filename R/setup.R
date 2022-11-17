@@ -16,8 +16,9 @@
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
-  if (missing(create))
-    create <- FALSE # !is.null(getOptionRPackageCache())
+  if (missing(create)) {
+    create <- FALSE
+  } # !is.null(getOptionRPackageCache())
 
   ## OLD: was using cache dir following OS conventions used by rappdirs package:
   ##   rappdirs::user_cache_dir(appName)
@@ -32,9 +33,11 @@ RequireCacheDir <- function(create) {
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
-          message("Require has changed default package cache folder from\n",
-                  defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
-                  "in the old Cache, moving them now...")
+          message(
+            "Require has changed default package cache folder from\n",
+            defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
+            "in the old Cache, moving them now..."
+          )
           checkPath(defaultCacheDirectory, create = TRUE)
           dirs <- unique(dirname(oldLocs))
           newdirs <- gsub(defaultCacheDirOld, defaultCacheDirectory, dirs)
@@ -65,8 +68,9 @@ RequireCacheDir <- function(create) {
 normPathMemoise <- function(d) {
   if (getOption("Require.useMemoise", TRUE)) {
     fnName <- "normPath"
-    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
+    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE)) {
       .pkgEnv[[fnName]] <- new.env()
+    }
     ret <- Map(di = d, function(di) {
       if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
         .pkgEnv[[fnName]][[di]] <- normPath(di)
@@ -98,8 +102,9 @@ RequirePkgCacheDir <- function(create) {
     create <- FALSE # !is.null(getOptionRPackageCache())
   }
   pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
-  if (isTRUE(create))
+  if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+  }
 
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
@@ -130,7 +135,7 @@ getOptionRPackageCache <- function() {
     } else {
       if (identical("default", curVal)) {
         fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-        if (nchar(fromEnvVars) == 0  ) {
+        if (nchar(fromEnvVars) == 0) {
           curVal <- RequirePkgCacheDir(FALSE)
           break
         } else {
@@ -182,19 +187,21 @@ setup <- function(newLibPaths,
                   RPackageCache = getOptionRPackageCache(),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
-  if (missing(newLibPaths))
+  if (missing(newLibPaths)) {
     if (missing(RPackageFolders)) {
       newLibPaths <- "R"
     } else {
       newLibPaths <- RPackageFolders
     }
+  }
   newLibPaths <- normPath(newLibPaths)
   newLibPaths <- checkLibPaths(newLibPaths)
   .Deprecated(msg = paste0(
     "setup is deprecated; to get approximately the same functionality, ",
     "please put a line like\n",
     ".libPaths('", newLibPaths, "', include.site = ", !standAlone, ")",
-    "\nin your .Rprofile file"))
+    "\nin your .Rprofile file"
+  ))
   return(invisible())
 }
 
@@ -210,7 +217,8 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
   .Deprecated(msg = paste0(
     "setupOff is deprecated; to get approximately the same functionality, ",
     "please remove the line that sets the .libPaths\n",
-    "from your .Rprofile file"))
+    "from your .Rprofile file"
+  ))
   return(invisible())
 }
 
@@ -230,8 +238,10 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
                                backupCRAN = srcPackageURLOnCRAN) {
   if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
-      repo <- c(CRAN =
-                  paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest"))
+      repo <- c(
+        CRAN =
+          paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest")
+      )
       if (!is.null(getOption("repos"))) {
         backupCRAN <- getOption("repos")
       }
@@ -247,11 +257,11 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
-defaultCacheDir <- function()
+defaultCacheDir <- function() {
   normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+}
 
-defaultCacheDirOld <- switch(
-  SysInfo[["sysname"]],
+defaultCacheDirOld <- switch(SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
   Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
   Windows = normalizePath(file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)

@@ -220,5 +220,7 @@ if (Require:::.runLongExamples()) {
   pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 
   Require:::.cleanup(opts)
-}}
+}
+}
+
 }

@@ -29,8 +29,10 @@ Cleans a character vector of non-package name related information (e.g., version
 }
 \examples{
 extractPkgName("Require (>=0.0.1)")
-extractVersionNumber(c("Require (<=0.0.1)",
-                       "PredictiveEcology/Require@development (<=0.0.4)"))
+extractVersionNumber(c(
+  "Require (<=0.0.1)",
+  "PredictiveEcology/Require@development (<=0.0.4)"
+))
 extractInequality("Require (<=0.0.1)")
 extractPkgGitHub("PredictiveEcology/Require")
 }
