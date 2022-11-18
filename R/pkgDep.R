@@ -1838,18 +1838,20 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
     if (any(hasIneq)) {
       okVers <- compareVersion2(versions, inequality = inequ, verNum)
       #if (all(!is.na(okVers))) {
-      if (any(okVers %in% TRUE))
-        packagesSaveNames[!isGH][hasIneq][okVers] <-
+      if (any(okVers %in% TRUE)) {
+        out <- try(packagesSaveNames[!isGH][hasIneq][okVers %in% TRUE] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][okVers], " (==",
-            versions[okVers],
+            packagesSaveNames[!isGH][hasIneq][okVers %in% TRUE], " (==",
+            versions[okVers %in% TRUE],
             ")"
-          )
+          ))
+        if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
+      }
       if (any(okVers %in% FALSE))
-        packagesSaveNames[!isGH][hasIneq][!okVers] <-
+        packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][!okVers], " (==",
-            verNum[!okVers],
+            packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE], " (==",
+            verNum[okVers %in% FALSE],
             ")"
           )
     }
