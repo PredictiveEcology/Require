@@ -1791,8 +1791,7 @@ paddedFloatToChar <-
   }
 
 
-saveNamesForCache <- function(packages, which, recursive, ap) {
-  if (any(grepl("fpCompare", packages))) browser()
+saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
@@ -1838,22 +1837,23 @@ saveNamesForCache <- function(packages, which, recursive, ap) {
     versions <- ap$Version[match(packagesSaveNames[!isGH][hasIneq], ap$Package)]
     if (any(hasIneq)) {
       okVers <- compareVersion2(versions, inequality = inequ, verNum)
-      if (all(!is.na(okVers))) {
-      if (any(okVers))
+      #if (all(!is.na(okVers))) {
+      if (any(okVers %in% TRUE))
         packagesSaveNames[!isGH][hasIneq][okVers] <-
           paste0(
             packagesSaveNames[!isGH][hasIneq][okVers], " (==",
-            versions,
+            versions[okVers],
             ")"
           )
-      if (any(!okVers))
+      if (any(okVers %in% FALSE))
         packagesSaveNames[!isGH][hasIneq][!okVers] <-
           paste0(
             packagesSaveNames[!isGH][hasIneq][!okVers], " (==",
-            verNum,
+            verNum[!okVers],
             ")"
           )
-    }}
+    }
+    #}
   }
   noIneq <- hasIneq %in% FALSE
   if (any(noIneq)) {
