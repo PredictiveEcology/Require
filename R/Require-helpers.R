@@ -848,7 +848,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   return(normalizePath(repoFull))
 }
 
-getSHAfromGitHub <- function(acct, repo, br) {
+getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbose")) {
   if (nchar(br) == 40) {
     return(br)
   }
@@ -907,7 +907,7 @@ getSHAfromGitHubMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
     if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
-      loadGitHubSHAsFromDisk() # puts it into the Memoise-expected location
+      loadGitHubSHAsFromDisk(verbose = dots$verbose) # puts it into the Memoise-expected location
     if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
         .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
     }
@@ -937,15 +937,24 @@ getSHAfromGitHubMemoise <- function(...) {
   return(ret)
 }
 
-loadGitHubSHAsFromDisk <- function() {
+loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
   ret <- list()
   if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
     fn <- getSHAFromGitHubDBFilename()
     if (file.exists(fn)) {
       out <- readRDS(fn)
       if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
+      if (!removeFile) { # remove if 24 hours old
+        # if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
         .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
-      list2env(out, envir = .pkgEnv[[getSHAfromGitHubObjName]])
+        list2env(out, envir = .pkgEnv[[getSHAfromGitHubObjName]])
+      } else {
+        messageVerbose("Purging disk-backed pkgDep cache for GitHub SHA values; it has ",
+                       "been more than ", defaultCacheAgeForPurge, ". Change this by setting ",
+                       "Sys.getenv('R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE')",
+                       verbose = verbose, verboseLevel = 2)
+        unlink(fn)
+      }
     }
   }
 
@@ -1407,4 +1416,11 @@ checkAutomaticOfflineMode <- function() {
       Require.offlineMode = FALSE
     )
   }
+}
+
+messageCantInstallNoVersion <- function(packagesFullName) {
+  turquoise(
+    paste(unique(packagesFullName), collapse = ", "),
+    " could not be installed; the version specification cannot be met"
+  )
 }

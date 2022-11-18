@@ -304,7 +304,7 @@ Require <- function(packages, packageVersionFile,
         }
       }
       pkgDT <- dealWithStandAlone(pkgDT, standAlone)
-      pkgDT <- whichToInstall(pkgDT, install)
+      pkgDT <- whichToInstall(pkgDT, install, verbose)
       if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
         pkgDT <-
           doInstalls(pkgDT,
@@ -436,13 +436,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
   pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
   pkgInstall <- pkgInstallList[["install"]]
   if (!is.null(pkgInstallList[[noneAvailable]])) {
-    messageVerbose(
-      turquoise(
-        paste(unique(pkgInstallList[[noneAvailable]]$packageFullName), collapse = ", "),
-        " could not be installed; the version specification cannot be met"
-      ),
-      verbose = verbose, verboseLevel = 1
-    )
+    messageVerbose(messageCantInstallNoVersion(pkgInstallList[[noneAvailable]]$packageFullName),
+                   verbose = verbose, verboseLevel = 1)
   }
   if (!is.null(pkgInstall)) {
     pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
@@ -692,7 +687,7 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
   )
 }
 
-whichToInstall <- function(pkgDT, install) {
+whichToInstall <- function(pkgDT, install, verbose) {
   set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT$Version))
   set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT$Version)) # default: if it is installed,  say "OK"
   if (!is.null(pkgDT[["hasHEAD"]])) {
@@ -713,6 +708,11 @@ whichToInstall <- function(pkgDT, install) {
     set(pkgDT, NULL, "needInstall", "install")
   } else {
     set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
+    whDontInstall <- pkgDT[["needInstall"]] %in% "dontInstall"
+    if (any(whDontInstall)) {
+      messageVerbose(messageCantInstallNoVersion(pkgDT$packageFullName[whDontInstall]),
+                     verbose = verbose, verboseLevel = 1)
+    }
   }
   pkgDT
 }
@@ -964,7 +964,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         colsToUpdate <- c("SHAonGH")
         set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
         pkgGitHub[avOK, (colsToUpdate) := {
-          SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
+          SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
         }, by = "Package"]
         saveGitHubSHAsToDisk()
       }
@@ -1082,7 +1082,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {
         alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
-        SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
+        SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
         if (file.exists(alreadyExistingDESCRIPTIONFile)) {
           SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
           # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH

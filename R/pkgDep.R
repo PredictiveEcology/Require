@@ -146,7 +146,7 @@ pkgDep <- function(packages,
     ap <-
       getAvailablePackagesIfNeeded(packages, repos, purge = FALSE, verbose, type)
     saveNames <-
-      saveNamesForCache(packages, which, recursive = recursive, ap = ap)
+      saveNamesForCache(packages, which, recursive = recursive, ap = ap, verbose = verbose)
     packagesNoVersion <- trimVersionNumber(packages)
     saveNamesDT <-
       data.table(saveNames, packages, packagesNoVersion, names = names(saveNames))
@@ -662,6 +662,7 @@ pkgDepInner <- function(packages,
         saveNamesForCache(pkg,
           which = list(which),
           recursive = FALSE,
+          verbose = verbose,
           ap = ap
         )
       .pkgEnv[["pkgDep"]][["deps"]][[sn]] <- needed
@@ -1778,6 +1779,7 @@ saveNamesForCache <- function(packages, which, recursive, ap) {
         repo = pkgDT$Repo,
         acct = pkgDT$Account,
         br = pkgDT$Branch,
+        verbose = verbose,
         getSHAfromGitHubMemoise
       )
     names(shas) <- packages[isGH]
