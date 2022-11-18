@@ -144,8 +144,7 @@ pkgDep <- function(packages,
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   if (length(packages)) {
     ap <-
-      getAvailablePackagesIfNeeded(packages, repos, purge, verbose, type)
-    browser()
+      getAvailablePackagesIfNeeded(packages, repos, purge = FALSE, verbose, type)
     saveNames <-
       saveNamesForCache(packages, which, recursive = recursive, ap = ap)
     packagesNoVersion <- trimVersionNumber(packages)
@@ -220,7 +219,7 @@ pkgDep <- function(packages,
         )
       }
       ap <-
-        getAvailablePackagesIfNeeded(packages[needGet], repos, purge, verbose, type)
+        getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
       neededFull <-
         try(pkgDepInnerMemoise(
           packages = packageFullNamesToGet,
@@ -261,7 +260,7 @@ pkgDep <- function(packages,
           which <-
             setdiff(which, "Suggests") # Suggests is never recursive
           ap <-
-            getAvailablePackagesIfNeeded(unlist(neededFull2), repos, purge, verbose, type)
+            getAvailablePackagesIfNeeded(unlist(neededFull2), repos, purge = FALSE, verbose, type)
           neededFull2 <-
             Map(
               needed = neededFull2, counter = seq_along(neededFull2),
@@ -437,6 +436,7 @@ pkgDep <- function(packages,
     #   unique(rmExtraSpaces(c(if (isTRUE(includeSelf)) n else character(), p))))
 
     # file-backed cache
+
     if (any(needGet)) {
       fn <- pkgDepDBFilename()
       if (length(fn)) {
@@ -1761,7 +1761,6 @@ paddedFloatToChar <-
 
 
 saveNamesForCache <- function(packages, which, recursive, ap) {
-  # browser()
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
