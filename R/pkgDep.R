@@ -1769,6 +1769,7 @@ paddedFloatToChar <-
 
 
 saveNamesForCache <- function(packages, which, recursive, ap) {
+  if (any(grepl("fpCompare", packages))) browser()
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
@@ -1782,8 +1783,9 @@ saveNamesForCache <- function(packages, which, recursive, ap) {
     names(shas) <- packages[isGH]
   }
 
-  hasNoEquality <-
-    grep("^(==)", extractInequality(packages[!isGH]), invert = TRUE)
+  hasIneq <- grepl("==|>|<", packages[!isGH])
+  inequ <- extractInequality(packages[!isGH][hasIneq])
+  hasNoEquality <- grep("^(==)", inequ, invert = TRUE)
   packagesSaveNames <- packages
 
   if (any(isGH)) {
@@ -1804,16 +1806,43 @@ saveNamesForCache <- function(packages, which, recursive, ap) {
     packagesSaveNames[isGH] <- packagesSaveNamesGH
   }
 
-  if (length(hasNoEquality)) {
-    packagesSaveNames[!isGH][hasNoEquality] <-
-      trimVersionNumber(packagesSaveNames[!isGH][hasNoEquality])
-    packagesSaveNames[!isGH][hasNoEquality] <-
+  if (sum(hasIneq)) {
+    verNum <- extractVersionNumber(packagesSaveNames[!isGH][hasIneq])
+    # hasIneq <- !is.na(inequ)
+    psnNoVersion <- trimVersionNumber(packagesSaveNames[!isGH][hasIneq])
+    packagesSaveNames[!isGH][hasIneq] <- psnNoVersion
+    versions <- ap$Version[match(packagesSaveNames[!isGH][hasIneq], ap$Package)]
+    if (any(hasIneq)) {
+      okVers <- compareVersion2(versions, inequality = inequ, verNum)
+      if (all(!is.na(okVers))) {
+      if (any(okVers))
+        packagesSaveNames[!isGH][hasIneq][okVers] <-
+          paste0(
+            packagesSaveNames[!isGH][hasIneq][okVers], " (==",
+            versions,
+            ")"
+          )
+      if (any(!okVers))
+        packagesSaveNames[!isGH][hasIneq][!okVers] <-
+          paste0(
+            packagesSaveNames[!isGH][hasIneq][!okVers], " (==",
+            verNum,
+            ")"
+          )
+    }}
+  }
+  noIneq <- hasIneq %in% FALSE
+  if (any(noIneq)) {
+    versions <- ap$Version[match(packagesSaveNames[!isGH][noIneq], ap$Package)]
+    # if versions has NA then it means it is not on CRAN; maybe other causes as well
+    packagesSaveNames[!isGH][noIneq] <-
       paste0(
-        packagesSaveNames[!isGH][hasNoEquality], " (==",
-        ap$Version[match(packagesSaveNames[!isGH][hasNoEquality], ap$Package)],
+        packagesSaveNames[!isGH][noIneq], " (==",
+        versions,
         ")"
       )
   }
+
 
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   saveNames <-
