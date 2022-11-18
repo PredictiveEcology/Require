@@ -1627,68 +1627,67 @@ getGitHubDeps <-
     needed
   }
 
-dealWithCache <-
-  function(purge,
-           checkAge = TRUE,
-           repos = getOption("repos")) {
-    if (isTRUE(getOption("Require.offlineMode", FALSE))) {
-      purge <- FALSE
-      checkAge <- FALSE
-    }
-
-    if (!isTRUE(purge) && isTRUE(checkAge)) {
-      purgeDiff <-
-        as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
-      if (is.null(.pkgEnv[["startTime"]])) {
-        purge <- FALSE
-      } else {
-        purgeDiff <-
-          if (identical(purgeDiff, "") ||
-            is.na(purgeDiff)) {
-            3600
-          } else {
-            purgeDiff
-          }
-        autoPurge <-
-          purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
-        purge <- purge || autoPurge
-      }
-    }
-
-    if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
-      .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
-      .pkgEnv[["startTime"]] <- Sys.time()
-    }
-    if (isTRUE(purge)) {
-
-      # getSHAFromGItHubMemoise
-      unlink(getSHAFromGitHubDBFilename())
-
-      fn <-
-        availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
-      fExists <- file.exists(fn)
-      if (any(fExists)) {
-        unlink(fn[fExists])
-      }
-
-      # This is for pkgDep
-      fn <- pkgDepDBFilename()
-      unlink(fn)
-    }
-
-    if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE) && purge)
-      rm(list = getSHAfromGitHubObjName, envir = .pkgEnv)
-    if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) ||
-      purge) {
-      .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
-    }
-    if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge) {
-      .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <-
-        new.env(parent = emptyenv())
-    }
-
-    purge
+dealWithCache <- function(purge,
+                          checkAge = TRUE,
+                          repos = getOption("repos")) {
+  if (isTRUE(getOption("Require.offlineMode", FALSE))) {
+    purge <- FALSE
+    checkAge <- FALSE
   }
+
+  if (!isTRUE(purge) && isTRUE(checkAge)) {
+    purgeDiff <-
+      as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
+    if (is.null(.pkgEnv[["startTime"]])) {
+      purge <- FALSE
+    } else {
+      purgeDiff <-
+        if (identical(purgeDiff, "") ||
+            is.na(purgeDiff)) {
+          3600
+        } else {
+          purgeDiff
+        }
+      autoPurge <-
+        purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
+      purge <- purge || autoPurge
+    }
+  }
+
+  if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
+    .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
+    .pkgEnv[["startTime"]] <- Sys.time()
+  }
+  if (isTRUE(purge)) {
+
+    # getSHAFromGItHubMemoise
+    unlink(getSHAFromGitHubDBFilename())
+
+    fn <-
+      availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
+    fExists <- file.exists(fn)
+    if (any(fExists)) {
+      unlink(fn[fExists])
+    }
+
+    # This is for pkgDep
+    fn <- pkgDepDBFilename()
+    unlink(fn)
+  }
+
+  if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE) && purge)
+    rm(list = getSHAfromGitHubObjName, envir = .pkgEnv)
+  if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) ||
+      purge) {
+    .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
+  }
+  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge) {
+    .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <-
+      new.env(parent = emptyenv())
+  }
+
+  purge
+}
 
 .grepTooManySpaces <- " {2,}"
 .grepTabCR <- "\n|\t"
@@ -2013,15 +2012,6 @@ prependSelf <- function(deps, includeSelf) {
       }
 
       return(depsInner)
-
-      # pak <- if (isTRUE(removeSelf))
-      #   p[-1]
-      # else
-      #   p
-      # c(if (isTRUE(includeSelf))
-      #   n
-      #   else
-      #     character(), pak)
     })
   }
   deps
@@ -2059,77 +2049,80 @@ getAvailablePackagesIfNeeded <-
 #' @export
 #' @inheritParams Require
 #' @rdname clearRequire
-clearRequirePackageCache <-
-  function(packages,
-           ask = interactive(),
-           Rversion = rversion(),
-           clearCranCache = FALSE,
-           verbose = getOption("Require.verbose")) {
-    out <- RequirePkgCacheDir(create = FALSE)
-    if (!identical(Rversion, rversion())) {
-      out <- file.path(dirname(out), Rversion)
+clearRequirePackageCache <- function(packages,
+                                     ask = interactive(),
+                                     Rversion = rversion(),
+                                     clearCranCache = FALSE,
+                                     verbose = getOption("Require.verbose")) {
+  out <- RequirePkgCacheDir(create = FALSE)
+  if (!identical(Rversion, rversion())) {
+    out <- file.path(dirname(out), Rversion)
+  }
+  if (getOption("Require.useCranCache")) {
+    crancache <- crancacheFolder()
+    toDelete <- dir(crancache, recursive = TRUE, full.names = TRUE)
+    if (length(toDelete) && isFALSE(clearCranCache)) {
+      messageVerbose(blue(
+        "crancache is being used because options(Require.useCranCache = TRUE); ",
+        "however, clearCranCache is FALSE. This means that packages from ",
+        "crancache will continue to re-populate the Require Cache. ",
+        "To remove all local packages, set clearCranCache in this ",
+        "function to TRUE"
+      ))
     }
-    if (getOption("Require.useCranCache")) {
-      crancache <- crancacheFolder()
-      toDelete <- dir(crancache, recursive = TRUE, full.names = TRUE)
-      if (length(toDelete) && isFALSE(clearCranCache)) {
-        messageVerbose(blue(
-          "crancache is being used because options(Require.useCranCache = TRUE); ",
-          "however, clearCranCache is FALSE. This means that packages from ",
-          "crancache will continue to re-populate the Require Cache. ",
-          "To remove all local packages, set clearCranCache in this ",
-          "function to TRUE"
-        ))
+    if (isTRUE(clearCranCache)) {
+      if (!missing(packages)) {
+        pkgNamesInFiles <- extractPkgName(filenames = basename(toDelete))
+        present <- pkgNamesInFiles %in% packages
+        toDelete <- toDelete[present]
       }
-      if (isTRUE(clearCranCache)) {
-        if (!missing(packages)) {
-          pkgNamesInFiles <- extractPkgName(filenames = basename(toDelete))
-          present <- pkgNamesInFiles %in% packages
-          toDelete <- toDelete[present]
-        }
-        if (length(toDelete)) {
-          unlink(toDelete)
-        }
+      if (length(toDelete)) {
+        unlink(toDelete)
       }
-    }
-    proceed <- TRUE
-    indivFiles <- dir(out, full.names = TRUE)
-    isFile <- !dir.exists(indivFiles)
-    indivFiles <- indivFiles[isFile]
-    if (missing(packages)) {
-      toDelete <-
-        indivFiles # don't delete whole dir because has available.packages too; not to delete
-      forMess <-
-        paste0("all ", length(indivFiles), " cached packages in ", out)
-    } else {
-      if (length(indivFiles)) {
-        pkgNamesInFiles <- extractPkgName(filenames = basename(indivFiles))
-        toDelete <- indivFiles[pkgNamesInFiles %in% packages]
-        forMess <- paste(sort(basename(toDelete)), collapse = ",\n")
-      } else {
-        toDelete <- character()
-      }
-    }
-    if (length(toDelete)) {
-      if (isTRUE(ask)) {
-        message("Are you sure you would like to remove\n", forMess, "\n?")
-        askResult <- readline("(n or anything else for yes) ")
-        if (startsWith(tolower(askResult), "n")) {
-          proceed <- FALSE
-        }
-      }
-
-      if (isTRUE(proceed)) {
-        messageVerbose("Clearing: \n",
-          forMess,
-          verbose = verbose,
-          verboseLevel = 1
-        )
-        unlink(toDelete, recursive = TRUE)
-      } else {
-        message("Aborting")
-      }
-    } else {
-      messageVerbose("Nothing to clear in Cache", verbose = verbose, verboseLevel = 1)
     }
   }
+  proceed <- TRUE
+  indivFiles <- dir(out, full.names = TRUE)
+  isFile <- !dir.exists(indivFiles)
+  indivFiles <- indivFiles[isFile]
+  if (missing(packages)) {
+    toDelete <-
+      indivFiles # don't delete whole dir because has available.packages too; not to delete
+    forMess <-
+      paste0("all ", length(indivFiles), " cached packages in ", out)
+  } else {
+    if (length(indivFiles)) {
+      pkgNamesInFiles <- extractPkgName(filenames = basename(indivFiles))
+      toDelete <- indivFiles[pkgNamesInFiles %in% packages]
+      forMess <- paste(sort(basename(toDelete)), collapse = ",\n")
+    } else {
+      toDelete <- character()
+    }
+  }
+  if (length(toDelete)) {
+    if (isTRUE(ask)) {
+      message("Are you sure you would like to remove\n", forMess, "\n?")
+      askResult <- readline("(n or anything else for yes) ")
+      if (startsWith(tolower(askResult), "n")) {
+        proceed <- FALSE
+      }
+    }
+
+    if (isTRUE(proceed)) {
+      messageVerbose("Clearing: \n",
+                     forMess,
+                     verbose = verbose,
+                     verboseLevel = 1
+      )
+      unlink(toDelete, recursive = TRUE)
+
+      # This purges all the pkgDep stuff
+      unlink(getSHAFromGitHubDBFilename())
+
+    } else {
+      message("Aborting")
+    }
+  } else {
+    messageVerbose("Nothing to clear in Cache", verbose = verbose, verboseLevel = 1)
+  }
+}

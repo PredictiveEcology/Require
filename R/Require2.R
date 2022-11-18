@@ -1386,7 +1386,6 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 #' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
   ##### Not vectorized ######
-  # if (Package %in% c("usethis", "ggplot2", "remotes")) browser()
   PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
