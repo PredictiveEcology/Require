@@ -1205,9 +1205,11 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
   lotsOfTimeLeft <- dft > 10
   timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
   estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
-  pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName), collapse = ", ")
-  pkgToReportBySource <- split(toInstall$Package, toInstall$repoLocation)
-  pkgFullNameToReportBySource <- split(toInstall$packageFullName, toInstall$repoLocation)
+  pkgToReport <- paste(preparePkgNameToReport(toInstall$Package, toInstall$packageFullName),
+                       collapse = ", ")
+  Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
+  pkgToReportBySource <- split(toInstall$Package, Source)
+  pkgFullNameToReportBySource <- split(toInstall$packageFullName, Source)
   installRangeCh <- paste(installRange, collapse = ":")
 
   srces <- names(pkgToReportBySource)
