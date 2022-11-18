@@ -943,7 +943,7 @@ loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
     fn <- getSHAFromGitHubDBFilename()
     if (file.exists(fn)) {
       out <- readRDS(fn)
-      if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
+      removeFile <- purgeBasedOnTimeSinceCached(out[[GitHubSHAonDiskCacheTime]])
       if (!removeFile) { # remove if 24 hours old
         # if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
         .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
@@ -963,6 +963,8 @@ loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
   invisible(ret)
 }
 
+GitHubSHAonDiskCacheTime <- ".GitHubSHAonDiskCacheTime"
+
 saveGitHubSHAsToDisk <- function(preShas) {
   if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
     obj <- getSHAFromPkgEnv()
@@ -973,6 +975,7 @@ saveGitHubSHAsToDisk <- function(preShas) {
       fn <- getSHAFromGitHubDBFilename()
       dd <- dirname(fn)
       if (!dir.exists(dd)) dir.create(dd, recursive = TRUE)
+      obj[[GitHubSHAonDiskCacheTime]] <- format(Sys.time())
       out <- saveRDS(obj, fn)
     }
   }

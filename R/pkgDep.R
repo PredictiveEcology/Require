@@ -1628,6 +1628,27 @@ getGitHubDeps <-
     needed
   }
 
+purgeBasedOnTimeSinceCached <- function(savedTime) {
+  purgeDiff <-
+    as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
+  if (is.null(savedTime)) {
+    purge <- FALSE
+  } else {
+    purgeDiff <-
+      if (identical(purgeDiff, "") ||
+          is.na(purgeDiff)) {
+        defaultCacheAgeForPurge
+      } else {
+        purgeDiff
+      }
+    purge <-
+      purgeDiff < as.numeric(difftime(Sys.time(), savedTime, units = "sec"))
+  }
+  purge
+}
+
+defaultCacheAgeForPurge <- 3600
+
 dealWithCache <- function(purge,
                           checkAge = TRUE,
                           repos = getOption("repos")) {
@@ -1637,22 +1658,24 @@ dealWithCache <- function(purge,
   }
 
   if (!isTRUE(purge) && isTRUE(checkAge)) {
-    purgeDiff <-
-      as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
-    if (is.null(.pkgEnv[["startTime"]])) {
-      purge <- FALSE
-    } else {
-      purgeDiff <-
-        if (identical(purgeDiff, "") ||
-            is.na(purgeDiff)) {
-          3600
-        } else {
-          purgeDiff
-        }
-      autoPurge <-
-        purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
-      purge <- purge || autoPurge
-    }
+    # purgeDiff <-
+    #   as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
+    # if (is.null(.pkgEnv[["startTime"]])) {
+    #   purge <- FALSE
+    # } else {
+    #   purgeDiff <-
+    #     if (identical(purgeDiff, "") ||
+    #         is.na(purgeDiff)) {
+    #       3600
+    #     } else {
+    #       purgeDiff
+    #     }
+    #   autoPurge <-
+    #     purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
+    #   purge <- purge || autoPurge
+    # }
+    purgeBasedOnTime <- purgeBasedOnTimeSinceCached(.pkgEnv[["startTime"]])
+    purge <- purge || purgeBasedOnTime
   }
 
   if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
@@ -1750,7 +1773,6 @@ paddedFloatToChar <-
     xf <- x %% 1
     numDecimals <- nchar(gsub("(.*)(\\.)|([0]*$)", "", xf))
 
-    # this == used to be fpCompare -- but this function is more or less deprecated
     newPadR <-
       ifelse(abs(xf - 0) < sqrt(.Machine$double.eps),
         0,
