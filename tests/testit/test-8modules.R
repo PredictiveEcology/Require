@@ -64,6 +64,65 @@ if (isDevAndInteractive) {
   ]
   anyBad <- any(pkgDT$good %in% FALSE)
   testit::assert(isFALSE(anyBad))
+
+  #########################################
+  # FROM LandR_CBM
+  pkgDir <- tempdir2("test-8_2nd")
+  dir.create(pkgDir, recursive = TRUE, showWarnings = FALSE)
+  .libPaths(pkgDir, include.site = FALSE)
+
+  setLinuxBinaryRepo()
+
+
+  modulePkgs <- c("archive", "assertthat", "compiler", "crayon", "data.table",
+                  "DEoptim", "dplyr", "fastdigest", "fastDummies", "fasterize",
+                  "fpCompare", "future", "gamlss", "gdalUtilities", "ggforce",
+                  "ggplot2", "ggpubr", "ggspatial", "glmm", "grid", "gridExtra",
+                  "ianmseddy/LandR.CS@development", "ianmseddy/LandR.CS@master (>= 0.0.2.0002)",
+                  "ianmseddy/PSPclean@development", "ianmseddy/PSPclean@development (>= 0.1.2.9000)",
+                  "kSamples", "logging", "magrittr", "MASS", "Matrix", "merTools",
+                  "methods", "mgcv", "nlme", "numDeriv", "parallel", "parallelly",
+                  "plyr", "PredictiveEcology/CBMutils", "PredictiveEcology/CBMutils (>= 0.0.6)",
+                  "PredictiveEcology/climateData@development (>= 0.0.0.0.9002)",
+                  "PredictiveEcology/fireSenseUtils@development", "PredictiveEcology/fireSenseUtils@development (>= 0.0.4.9014)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9013)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9026)",
+                  "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9028)",
+                  "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9080)",
+                  "PredictiveEcology/LandR@development", "PredictiveEcology/LandR@development (>= 1.0.0.9001)",
+                  "PredictiveEcology/LandR@development (>= 1.0.5)", "PredictiveEcology/LandR@development (>= 1.0.7.9023)",
+                  "PredictiveEcology/LandR@development (>= 1.0.7.9025)", "PredictiveEcology/LandR@development (>= 1.0.7.9030)",
+                  "PredictiveEcology/LandR@development (>= 1.0.9.9000)", "PredictiveEcology/pemisc@development",
+                  "PredictiveEcology/pemisc@development (>= 0.0.3.9002)", "PredictiveEcology/reproducible@development",
+                  "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
+                  "PredictiveEcology/reproducible@development (>= 1.2.6.9008)",
+                  "PredictiveEcology/reproducible@development (>= 1.2.6.9009)",
+                  "PredictiveEcology/reproducible@development (>=1.2.7.9010)",
+                  "PredictiveEcology/Require@development", "PredictiveEcology/SpaDES.core@development (>= 1.0.10.9005)",
+                  "PredictiveEcology/SpaDES.core@development (>= 1.0.6.9016)",
+                  "PredictiveEcology/SpaDES.core@development (>= 1.0.8.9000)",
+                  "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
+                  "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9008)",
+                  "PredictiveEcology/SpaDES.core@development (>= 1.1.0.9003)",
+                  "PredictiveEcology/SpaDES.core@development (>=1.0.6.9019)", "PredictiveEcology/SpaDES.install (>= 0.0.5.9013)",
+                  "PredictiveEcology/SpaDES.tools@development", "PredictiveEcology/SpaDES.tools@development (>= 0.3.7.9007)",
+                  "pryr", "purrr", "quickPlot", "R.utils", "raster", "rasterVis",
+                  "Rcpp", "reproducible (>= 1.2.6.9005)", "rgeos", "RhpcBLASctl",
+                  "robustbase", "RSQLite", "scales", "sf", "snow", "sp", "SpaDES.core",
+                  "SpaDES.tools", "spatialEco", "stats", "terra", "tidyr", "viridis"
+  )
+  otherPkgs <- c("archive", "details", "DBI", "s-u/fastshp", "logging", "RPostgres", "slackr")
+
+  st1 <- system.time(out1 <- capture.output(type = "message",
+                 Install(unique(c(modulePkgs, otherPkgs)), standAlone = TRUE, upgrade = FALSE)
+                 ))
+  # Do a second time; should be empty (and fast)
+  st2 <- system.time(out2 <- capture.output(type = "message",
+                         Install(unique(c(modulePkgs, otherPkgs)), standAlone = TRUE, upgrade = FALSE)
+  ))
+  testit::assert(length(out2) == 0)
+  testit::assert(st1["elapsed"]/st2["elapsed"] > 100) # WAY faster
+
 }
 
 endTest(setupInitial)
