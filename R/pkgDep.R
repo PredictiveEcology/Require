@@ -2117,7 +2117,9 @@ clearRequirePackageCache <- function(packages,
       unlink(toDelete, recursive = TRUE)
 
       # This purges all the pkgDep stuff
-      unlink(getSHAFromGitHubDBFilename())
+      SHAfile <- getSHAFromGitHubDBFilename()
+      if (file.exists(SHAfile))
+        unlink(SHAfile)
 
     } else {
       message("Aborting")
