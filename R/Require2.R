@@ -278,8 +278,10 @@ Require <- function(packages, packageVersionFile,
     return(invisible(NULL))
   }
 
+  # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
     packages <- anyHaveHEAD(packages)
+
     deps <- pkgDep(packages,
       purge = purge, libPath = libPaths, recursive = TRUE,
       which = which, type = type, verbose = verbose
@@ -758,8 +760,10 @@ recordLoadOrder <- function(packages, pkgDT) {
   if (any(dups)) {
     packages <- packages[!dups]
   }
-  packagesWObase <- setdiff(packages, .basePkgs)
-  wh <- pkgDT$packageFullName %in% packagesWObase
+  packagesWOVersion <- trimVersionNumber(packages)
+  packagesWObase <- setdiff(packagesWOVersion, .basePkgs)
+  pfn <- trimVersionNumber(pkgDT$packageFullName)
+  wh <- pfn %in% packagesWObase
   out <- try(pkgDT[wh, loadOrder := seq(sum(wh))])
   pkgDT[, loadOrder := na.omit(unique(loadOrder))[1], by = "Package"] # all but one will be removed in trimRedundancies
 
