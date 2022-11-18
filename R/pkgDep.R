@@ -454,6 +454,7 @@ pkgDep <- function(packages,
         saveRDS(saveNeededFull1, file = fn)
       }
     }
+    saveGitHubSHAsToDisk()
 
     if (isFALSE(keepVersionNumber)) {
       neededFull1 <- lapply(neededFull1, trimVersionNumber)
@@ -1659,6 +1660,10 @@ dealWithCache <-
       .pkgEnv[["startTime"]] <- Sys.time()
     }
     if (isTRUE(purge)) {
+
+      # getSHAFromGItHubMemoise
+      unlink(getSHAFromGitHubDBFilename())
+
       fn <-
         availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
       fExists <- file.exists(fn)
@@ -1671,6 +1676,8 @@ dealWithCache <-
       unlink(fn)
     }
 
+    if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE) && purge)
+      rm(list = getSHAfromGitHubObjName, envir = .pkgEnv)
     if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) ||
       purge) {
       .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())

@@ -963,10 +963,10 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
       if (is.null(pkgGitHub[["SHAonGH"]])) {
         colsToUpdate <- c("SHAonGH")
         set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
-        preloadGitHubSHAsFromDisk()
         pkgGitHub[avOK, (colsToUpdate) := {
           SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch)
         }, by = "Package"]
+        saveGitHubSHAsToDisk()
       }
 
       pkgGHList <- split(pkgGitHub, pkgGitHub$availableVersionOK)
@@ -1098,6 +1098,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
         list(SHAonLocal, SHAonGH)
       }, by = "packageFullName"]
     }
+    saveGitHubSHAsToDisk()
     pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local")]
     pkgWhere[["GitHub"]] <- pkgGitHub
     pkgInstall <- rbindlistRecursive(pkgWhere)

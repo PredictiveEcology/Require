@@ -905,27 +905,30 @@ getSHAfromGitHub <- function(acct, repo, br) {
 
 getSHAfromGitHubMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
-    # browser()
     dots <- list(...)
+    if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
+      loadGitHubSHAsFromDisk() # puts it into the Memoise-expected location
     if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
-      .pkgEnv$getSHAfromGitHub <- new.env()
+        .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
     }
     ret <- NULL
     ss <- match.call(definition = getSHAfromGitHub)
     uniqueID <- paste(lapply(ss[-1], eval, envir = parent.frame()), collapse = "_")
-    if (!exists(uniqueID, envir = .pkgEnv$getSHAfromGitHub, inherits = FALSE)) {
-      .pkgEnv$getSHAfromGitHub[[uniqueID]] <- list()
+    if (!exists(uniqueID, envir = .pkgEnv[[getSHAfromGitHubObjName]], inherits = FALSE)) {
+      .pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]] <- list()
     } else {
-      whIdent <- unlist(lapply(.pkgEnv$getSHAfromGitHub[[uniqueID]], function(x) identical(x$input, dots)))
+      whIdent <- unlist(lapply(.pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]], function(x) identical(x$input, dots)))
       if (any(whIdent)) {
-        ret <- .pkgEnv$getSHAfromGitHub[[uniqueID]][[which(whIdent)]]$output
+        ret <- .pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]][[which(whIdent)]]$output
       }
     }
-    if (is.null(ret)) {
+    if (is.null(ret)) { # Case where it doesn't exist in .pkgEnv
       inputs <- data.table::copy(dots)
       ret <- getSHAfromGitHub(...)
-      .pkgEnv$getSHAfromGitHub[[uniqueID]] <-
-        list(.pkgEnv$getSHAfromGitHub[[uniqueID]], list(input = inputs, output = ret))
+      # Add it to the .pkgEnv
+      newObj <- list(.pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]], list(input = inputs, output = ret))
+      .pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]] <- newObj
+
     }
   } else {
     ret <- getSHAfromGitHub(...)
@@ -934,17 +937,39 @@ getSHAfromGitHubMemoise <- function(...) {
   return(ret)
 }
 
-preloadGitHubSHAsFromDisk <- function() {
+loadGitHubSHAsFromDisk <- function() {
+  ret <- list()
   if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
     fn <- getSHAFromGitHubDBFilename()
     if (file.exists(fn)) {
       out <- readRDS(fn)
-      assign(.pkgEnv[["pkgDep"]][[getSHAfromGitHubObjName]])
+      if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
+        .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
+      list2env(out, envir = .pkgEnv[[getSHAfromGitHubObjName]])
     }
+  }
 
+  ret <- getSHAFromPkgEnv()
+  ret <- as.list(lapply(ret, function(x) x[[2]]$output))
+  invisible(ret)
+}
+
+saveGitHubSHAsToDisk <- function(preShas) {
+  if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
+    obj <- getSHAFromPkgEnv()
+    needSave <- if (missing(preShas)) { TRUE } else {
+      length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
+    }
+    if  (needSave) {
+      fn <- getSHAFromGitHubDBFilename()
+      out <- saveRDS(obj, fn)
+    }
   }
 }
 
+getSHAFromPkgEnv <- function() {
+  as.list(.pkgEnv[[getSHAfromGitHubObjName]])
+}
 
 getSHAfromGitHubObjName <- "getSHAfromGitHub"
 
