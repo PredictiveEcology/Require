@@ -1661,7 +1661,9 @@ dealWithCache <- function(purge,
   if (isTRUE(purge)) {
 
     # getSHAFromGItHubMemoise
-    unlink(getSHAFromGitHubDBFilename())
+    SHAfile <- getSHAFromGitHubDBFilename()
+    if (file.exists(SHAfile))
+      unlink(SHAfile)
 
     fn <-
       availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
@@ -2117,7 +2119,9 @@ clearRequirePackageCache <- function(packages,
       unlink(toDelete, recursive = TRUE)
 
       # This purges all the pkgDep stuff
-      unlink(getSHAFromGitHubDBFilename())
+      SHAfile <- getSHAFromGitHubDBFilename()
+      if (file.exists(SHAfile))
+        unlink(SHAfile)
 
     } else {
       message("Aborting")

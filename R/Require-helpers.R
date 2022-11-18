@@ -982,26 +982,6 @@ getSHAFromGitHubDBFilename <- function() {
 }
 
 
-# getSHAfromGitHubMemoise <- function(d) {
-#   if (getOption("Require.useMemoise", TRUE)) {
-#     fnName <- "getSHAfromGitHub"
-#     if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
-#       .pkgEnv[[fnName]] <- new.env()
-#     ret <- Map(di = d, function(di) {
-#       if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
-#         .pkgEnv[[fnName]][[di]] <- getSHAfromGitHub(di)
-#       }
-#       .pkgEnv[[fnName]][[di]]
-#     })
-#     ret <- unlist(ret)
-#
-#
-#   } else {
-#     ret <- getSHAfromGitHub(d)
-#   }
-#
-#   return(ret)
-# }
 
 .earliestMRANDate <- "2015-06-06"
 .latestMRANDate <- Sys.Date() - 5
