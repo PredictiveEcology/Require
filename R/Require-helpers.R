@@ -962,6 +962,8 @@ saveGitHubSHAsToDisk <- function(preShas) {
     }
     if  (needSave) {
       fn <- getSHAFromGitHubDBFilename()
+      dd <- dirname(fn)
+      if (!dir.exists(dd)) dir.create(dd, recursive = TRUE)
       out <- saveRDS(obj, fn)
     }
   }
@@ -974,8 +976,9 @@ getSHAFromPkgEnv <- function() {
 getSHAfromGitHubObjName <- "getSHAfromGitHub"
 
 getSHAFromGitHubDBFilename <- function() {
-  if (!is.null(getOptionRPackageCache()))
-    file.path(RequirePkgCacheDir(), paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+  go <- getOptionRPackageCache()
+  if (!is.null(go))
+    file.path(go, paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
 }
 
 
