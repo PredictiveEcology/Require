@@ -24,7 +24,7 @@ testit::assert({
 library(testit)
 
 dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
-Require::checkPath(dir1, create = TRUE)
+dir1 <- Require::checkPath(dir1, create = TRUE)
 out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
   standAlone = TRUE, libPaths = dir1,
   quiet = TRUE, verbose = 2
@@ -65,7 +65,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || # travis
   isDevAndInteractive || # interactive
   identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
-  Require::checkPath(dir2, create = TRUE)
+  dir2 <- Require::checkPath(dir2, create = TRUE)
   pvWant <- "0.2.2"
   inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"),
     standAlone = TRUE,
@@ -81,7 +81,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || # travis
   pkgSnapshot(pkgSnapFile, .libPaths()[-length(.libPaths())])
   pkgSnapFileRes <- data.table::fread(pkgSnapFile)
   dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
-  Require::checkPath(dir6, create = TRUE)
+  dir6 <- Require::checkPath(dir6, create = TRUE)
   out <- Require::Require(
     packageVersionFile = pkgSnapFile, libPaths = dir6,
     quiet = TRUE, install = "force"
@@ -129,7 +129,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || # travis
 
   # Skip on CRAN
   dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
-  Require::checkPath(dir3, create = TRUE)
+  dir3 <- Require::checkPath(dir3, create = TRUE)
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
   # try({
   inst <- suppressMessages(Require::Require("achubaty/fpCompare",
@@ -153,7 +153,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || # travis
 
   # Try github with version
   dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
-  silent <- Require::checkPath(dir4, create = TRUE)
+  dir4 <- Require::checkPath(dir4, create = TRUE)
   inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
     quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
   )
