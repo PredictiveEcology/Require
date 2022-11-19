@@ -1394,6 +1394,14 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
   PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
   fn <- localFiles[whLocalFile]
+  systemSpecificFileTypes <- if (isWindows()) {
+    endsWith(fn, "zip") | endsWith(fn, "tar.gz")
+  } else if (isMacOSX()) {
+    endsWith(fn, "tgz") | endsWith(fn, "tar.gz")
+  } else {
+    endsWith(fn, "tar.gz")
+  }
+  fn <- fn[systemSpecificFileTypes]
 
   if (repoLocation %in% "GitHub") {
     fn <- if (is.na(SHAonGH)) "" else grep(SHAonGH, fn, value = TRUE)
