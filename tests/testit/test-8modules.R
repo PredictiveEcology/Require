@@ -120,8 +120,9 @@ if (isDevAndInteractive) {
   st2 <- system.time(out2 <- capture.output(type = "message",
                          Install(unique(c(modulePkgs, otherPkgs)), standAlone = TRUE, upgrade = FALSE)
   ))
-  testit::assert(length(out2) == 0)
-  testit::assert(st1["elapsed"]/st2["elapsed"] > 100) # WAY faster
+  testit::assert(length(out2) <= 6) # can be "Require is in use
+  testit::assert(length(out1) >= 16) # was at least 37
+  testit::assert(st1["elapsed"]/st2["elapsed"] > 20) # WAY faster -- though st1 is not that slow b/c local binaries
 
 }
 
