@@ -711,7 +711,7 @@ whichToInstall <- function(pkgDT, install, verbose) {
   } else {
     set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
     whDontInstall <- pkgDT[["needInstall"]] %in% "dontInstall"
-    if (any(whDontInstall)) {
+    if (any(whDontInstall & pkgDT$installedVersionOK %in% FALSE)) {
       messageVerbose(messageCantInstallNoVersion(pkgDT$packageFullName[whDontInstall]),
                      verbose = verbose, verboseLevel = 1)
     }
@@ -824,7 +824,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     verbose = verbose,
     type = type
   )
-  # if (any(pkgInstall$Package %in% c("usethis", "ggplot2", "remotes"))) browser()
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   if (FALSE) {
     pkgInstall <- updateInstallSafeGroups(pkgInstall)
