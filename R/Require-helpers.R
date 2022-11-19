@@ -413,7 +413,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         caps <- lapply(repos, function(repo) {
           tryCatch(available.packages(repos = repo, type = type),
             error = function(x) {
-              browser()
+              browserDeveloper("Error 7531; please see developer")
               available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
             }
           )
@@ -455,7 +455,9 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
 
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
-  theTest <- endsWith(fn, "zip") | grepl("R_x86", fn)
+  theTest <- (endsWith(fn, "zip") & isWindows() ) |
+    (grepl("R_x86", fn) & !isWindows() & !isMacOSX()) |
+    (endsWith(fn, "tgz") & isMacOSX() )
   if (isTRUE(needRepoCheck)) {
     if (isWindows() || isMacOSX()) {
       binRepo <- isBinaryCRANRepo(curCRANRepo = repos)
