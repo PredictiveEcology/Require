@@ -1,6 +1,6 @@
 setupInitial <- setupTest()
 
-if (isDevAndInteractive) {
+if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
   ## Long pkgSnapshot -- issue 41
   pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
   checkPath(pkgPath, create = TRUE)
@@ -47,13 +47,12 @@ if (isDevAndInteractive) {
   theTest <- NROW(ip) >= NROW(pkgsInOut)
   testit::assert(isTRUE(theTest))
 
-  lala <- capture.output(
-    type = "message",
+  lala <- capture.output(type = "message", {
     out <- Require(
       packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
       require = FALSE, verbose = 2
     )
-  )
+  })
   # missings <- grep("The following shows packages", lala, value = TRUE)
   # missings <- gsub(".+: (.+); adding .+", "\\1", missings)
   # missings <- strsplit(missings, ", ")[[1]]
