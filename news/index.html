@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
       </span>
     </div>
 
@@ -48,9 +48,9 @@
     </div>
 
     <div class="section level2">
-<h2 class="page-header" data-toc-text="0.2.4" id="version-024">version 0.2.4<a class="anchor" aria-label="anchor" href="#version-024"></a></h2>
+<h2 class="page-header" data-toc-text="0.2.5" id="version-025">version 0.2.5<a class="anchor" aria-label="anchor" href="#version-025"></a></h2>
 <div class="section level3">
-<h3 id="enhancements-0-2-4">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-4"></a></h3>
+<h3 id="enhancements-0-2-5">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-5"></a></h3>
 <ul><li>several modifications to enable CRAN-policy violations all addressed, notably keeping all temporary and (package and personal) cache directories clean after examples and tests</li>
 <li>This is a major overhaul of the inner workings of <code>Require</code>. It now downloads and builds <code>Archive</code> and <code>GitHub</code> packages prior to installation, then installs all packages (<code>CRAN</code>, <code>Archive</code>, <code>GitHub</code>, <code>MRAN</code> on Windows) with one <code>install.packages</code> call (Linux-alikes) or up to two <code>install.packages</code> calls (binary and source), allowing efficient parallel installs. This results in very fast installs for all combinations of packages. new <code>options("Require.offlineMode")</code> can be set to <code>FALSE</code> to stop <code>Require</code> and <code>pkgDep</code> from checking the internet. This will fail, unless the cached packages are available locally (i.e., it was run once with all packages installed previously). If they are, then they will be installed without needing the internet. This option will also be set automatically on the first attempt to get a file from the internet, which fails, triggering a test of the internet. If that fails, then the option will be set to <code>FALSE</code> until next call to <code>Require</code> or <code>pkgDep</code> when it will be reset. This is experimental still.</li>
 <li>many more edge cases found and dealt with</li>
@@ -67,11 +67,30 @@
 </li>
 <li>Remove option <code>Require.persistentPkgEnv</code> as it was deemed superfluous.</li>
 <li>numerous enhancements for speed</li>
+<li>new function <code>Install</code>, which is <code>Require(..., require = FALSE)</code>
+</li>
+<li>
+<code>(HEAD)</code> has now been tested for CRAN repositories and works as expected.</li>
+<li>Updated README to show new functionality</li>
+<li>will attempt to use local cached packages from <code>crancache</code> if the user sets <code>options(Require.useCranCache = TRUE)</code>. This is experimental and is still being tested.</li>
+<li>A new function, <code>clearRequirePackageCache</code>, for clearing the package cache.</li>
+<li>The cache has been developed to be able to be shared across Operating Systems, if there is a shared file system.</li>
+<li>GitHub packages require the SHA to be assessed; now this is Cached to disk as well as RAM, so that it persists even if there is an R restart.</li>
+<li>All non-package cache files (<code>available.packages</code>, <code>pkgDep</code>, <code>GitHubSHA</code>) will be refreshed (purged) every 1 hour.</li>
+<li>Much improved messaging, including identifying <code>MRAN</code> package installs explicitly (instead of just “Archive”)</li>
 </ul></div>
 <div class="section level3">
-<h3 id="bugfix-0-2-4">bugfix<a class="anchor" aria-label="anchor" href="#bugfix-0-2-4"></a></h3>
+<h3 id="bugfixes-0-2-5">bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-0-2-5"></a></h3>
 <ul><li>
 <code>pkgDep</code> was using local <code>DESCRIPTION</code> file to establish package dependencies for a package, if it was available. When the local package is ahead of CRAN (a developer’s case), then this is desirable. But, when the local installed version is behind CRAN (a common user’s case), then this is not desirable. <code>pkgDep</code> now uses CRAN’s version (using <code>available.packages</code>) as developers can handle this situation on their own.</li>
+<li>several minor</li>
+<li>bugfix for <code>defaultCacheDir</code>, which would default to <code>runneradmin</code> under some conditions and did not allow installing packages due to permissions.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="deprecated-0-2-5">deprecated<a class="anchor" aria-label="anchor" href="#deprecated-0-2-5"></a></h3>
+<ul><li>
+<code>setup</code> and <code>setupOff</code> are now deprecated; messaging is supplied for what to do if these were being used</li>
+<li>several options are deprecated</li>
 </ul></div>
 </div>
     <div class="section level2">

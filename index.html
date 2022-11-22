@@ -43,7 +43,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
       </span>
     </div>
 
@@ -89,11 +89,12 @@
 <p>Some packages, including those in our PredictiveEcology repository, have <em>many</em> package dependencies. Some of them are on CRAN, but some are still in development and so are hosted elsewhere. Mixing many package dependencies that are constantly evolving creates challenges with standard R package management. For example, what is the best way to move analyses from one machine to another, or set up a series of High Performance Compute nodes? How should we use functions like <code>install.packages</code> in a reproducible workflow that are clearly intended to be used once or very few times? How do we deal with many packages on GitHub that have many common dependencies? How do we deal with packages that have dependencies that are no longer on CRAN (“they have been archived”)? How do we replicate an analysis 6 months from now when some packages have changed, and their dependencies have changed? Finally, how do we do all this for many concurrent projects without installing hundreds of packages in a new directory for every project?</p>
 </div>
 <div class="section level1">
-<h1 id="require-1">
-<code>Require</code><a class="anchor" aria-label="anchor" href="#require-1"></a>
+<h1 id="require--install">
+<code>Require</code> &amp; <code>Install</code>
+<a class="anchor" aria-label="anchor" href="#require--install"></a>
 </h1>
-<p><code>Require</code> uses a “rerun-tolerant” function, <code>Require</code>. “rerun-tolerant” means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. “rerun-tolerant” is a requirement for a robust reproducible workflow; for every “manual” break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware.</p>
-<p><code>Require</code> also will call <code>require</code> (lower case <code>r</code>) on all the named packages, if the <code>require = TRUE</code>.</p>
+<p>The <code>Require</code> package provides two “rerun-tolerant” functions, <code>Require</code> and <code>Install</code> (a recent addition). “rerun-tolerant” means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. “rerun-tolerant” is a requirement for a robust reproducible workflow; for every “manual” break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware.</p>
+<p><code>Install</code> and <code>Require</code> are identical except that <code>Require</code> will also call <code>require</code> (lower case <code>r</code>) on all the named packages with the default setting of <code>require = TRUE</code>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># These lines</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://r-datatable.com" class="external-link">"data.table"</a></span><span class="op">)</span><span class="op">)</span> <span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"data.table"</span><span class="op">)</span>; <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://r-datatable.com" class="external-link">"data.table"</a></span><span class="op">)</span><span class="op">}</span></span>
@@ -106,7 +107,7 @@
 <div class="section level1">
 <h1 id="other-packages-that-also-install-packages">Other packages that also install packages<a class="anchor" aria-label="anchor" href="#other-packages-that-also-install-packages"></a>
 </h1>
-<p>The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README. <code>Require</code> unifies much of the functionality of these 5 packages, into 1 package, with the bulk of the work done with 1 function.</p>
+<p>The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README. <code>Require</code> offers a different way to achieve the features from all 5 of these packages that are necessary to build a unified, organic, yet reproducible approach to package management in one or many projects.</p>
 <div class="section level2">
 <h2 id="pak">
 <code>pak</code><a class="anchor" aria-label="anchor" href="#pak"></a>
@@ -117,13 +118,16 @@
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="http://pak.r-lib.org/reference/pkg_install.html" class="external-link">pkg_install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># become</span></span>
-<span><span class="fu">Require</span><span class="fu">::</span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span><span class="op">)</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">Require</span><span class="fu">::</span><span class="fu"><a href="reference/Require.html">Install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="renv">
 <code>renv</code><a class="anchor" aria-label="anchor" href="#renv"></a>
 </h2>
-<p><code>renv</code> is a tool to help with a more static package installation process. While it can handle packages that are updated manually by an individual, the key strength is around keeping track of the versions that exist in a project. <code>renv</code> is not intended to expose the code used to install packages. This makes the managing of packages separate from the script that is/are used in the project.</p>
+<p><code>renv</code> is a tool to help with a more static package installation process. While it can handle packages that are updated manually by an individual, the key strength is around keeping track of the versions that exist in a project. <code>renv</code> is not intended to expose the code used to install packages. This makes the managing of packages separate from the script that is/are used in the project, i.e., the package script does not contain the necessary information to recreate the package library.</p>
+<pre><code><span><span class="fu">renv</span><span class="fu">::</span><span class="fu">snapshot</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># becomes</span></span>
+<span><span class="fu">Require</span><span class="fu">::</span><span class="fu"><a href="reference/pkgSnapshot.html">pkgSnapshot</a></span><span class="op">(</span><span class="op">)</span></span></code></pre>
 </div>
 <div class="section level2">
 <h2 id="packrat">
@@ -136,16 +140,13 @@
 <code>checkpoint</code><a class="anchor" aria-label="anchor" href="#checkpoint"></a>
 </h2>
 <p>This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the MRAN servers hosted by Microsoft.</p>
+<pre><code><span><span class="fu">checkpoint</span><span class="op">(</span><span class="st">"2022-11-09"</span><span class="op">)</span></span>
+<span><span class="co"># cannot be achieved directly with Require, but</span></span>
+<span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"reproducible (==1.2.10)"</span><span class="op">)</span> <span class="co"># which was the version on that date</span></span></code></pre>
 </div>
 <div class="section level2">
-<h2 id="versions">
-<code>versions</code><a class="anchor" aria-label="anchor" href="#versions"></a>
-</h2>
-<p>Can install specific versions of a package. This is useful to install older versions of a package that may have been required for a specific function or dependency.</p>
-</div>
-<div class="section level2">
-<h2 id="require-2">
-<code>Require</code><a class="anchor" aria-label="anchor" href="#require-2"></a>
+<h2 id="require-1">
+<code>Require</code><a class="anchor" aria-label="anchor" href="#require-1"></a>
 </h2>
 <div class="section level3">
 <h3 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
@@ -184,10 +185,10 @@
 </h3>
 <p><a href="https://github.com/PredictiveEcology/Require/actions" class="external-link"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=master" alt="R build status"></a> <a href="https://app.codecov.io/gh/PredictiveEcology/Require" class="external-link"><img src="https://codecov.io/gh/PredictiveEcology/Require/branch/master/graph/badge.svg" alt="codecov"></a></p>
 <p><strong>Install from CRAN:</strong></p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"Require"</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Install from GitHub:</strong></p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://remotes.r-lib.org" class="external-link">"remotes"</a></span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"PredictiveEcology/Require"</span><span class="op">)</span> </span></code></pre></div>
 </div>
@@ -195,8 +196,12 @@
 <h3 id="development-version">Development version<a class="anchor" aria-label="anchor" href="#development-version"></a>
 </h3>
 <p><a href="https://github.com/PredictiveEcology/Require/actions" class="external-link"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg?branch=development" alt="R build status"></a> <a href="https://app.codecov.io/gh/PredictiveEcology/Require" class="external-link"><img src="https://codecov.io/gh/PredictiveEcology/Require/branch/development/graph/badge.svg" alt="codecov"></a></p>
+<p><strong>Install from r-universe:</strong></p>
+<p>This is a development version of the package:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"Require"</span>, repose <span class="op">=</span> <span class="st">"https://predictiveecology.r-universe.dev"</span><span class="op">)</span> </span></code></pre></div>
 <p><strong>Install from GitHub:</strong></p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://remotes.r-lib.org" class="external-link">"remotes"</a></span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"PredictiveEcology/Require@development"</span><span class="op">)</span> </span></code></pre></div>
 </div>
@@ -205,7 +210,7 @@
 <h2 id="basic-usage">Basic usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
 </h2>
 <p><code>Require</code> is a wrapper around functions <code>utils::install packages</code> and one of the main function to load packages, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::require</a></code>. Like <code>install.packages</code>, it is vectorized on package names.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://Require.predictiveecology.org" class="external-link">"Require"</a></span><span class="op">)</span><span class="op">)</span> <span class="op">{</span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"Require"</span><span class="op">)</span><span class="op">}</span> <span class="co"># sadly, Require can't install itself</span></span>
 <span><span class="fu">Require</span><span class="fu">::</span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"data.table"</span><span class="op">)</span></span>
 <span></span>
@@ -220,30 +225,30 @@
 <h2 id="timings">Timings<a class="anchor" aria-label="anchor" href="#timings"></a>
 </h2>
 <p><code>Require</code> has been optimized for speed. While <code>pak</code> is fast, in many cases <code>Require</code> is faster. Below, in cases where all packages are already installed (i.e., a standard day-to-day work situation), <code>Require</code> is 3-40x faster.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First time run, before cache exists</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(pak)</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>✔ Loading metadata database ... done</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>                                                                            </span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">21</span> [<span class="fl">3.4</span>s]</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.949</span>   <span class="fl">0.036</span>   <span class="fl">3.532</span> </span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(Require)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>, <span class="at">purge =</span> <span class="cn">TRUE</span>))</span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="fl">1.250</span>   <span class="fl">0.019</span>   <span class="fl">1.494</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Second time run, using cache</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>                                                                            </span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">21</span> [966ms]</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.028</span>   <span class="fl">0.001</span>   <span class="fl">0.982</span> </span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>))</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.027</span>   <span class="fl">0.001</span>   <span class="fl">0.024</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First time run, before cache exists</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(pak)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>✔ Loading metadata database ... done</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                                                                            </span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">21</span> [<span class="fl">3.4</span>s]</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.949</span>   <span class="fl">0.036</span>   <span class="fl">3.532</span> </span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">library</span>(Require)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>, <span class="at">purge =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  <span class="fl">1.250</span>   <span class="fl">0.019</span>   <span class="fl">1.494</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Second time run, using cache</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>)))</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                                                                            </span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>ℹ No downloads are needed</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>✔ <span class="dv">3</span> pkgs <span class="sc">+</span> <span class="dv">24</span> deps<span class="sc">:</span> kept <span class="dv">21</span> [966ms]</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.028</span>   <span class="fl">0.001</span>   <span class="fl">0.982</span> </span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">system.time</span>(Require<span class="sc">::</span><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">"data.table"</span>, <span class="st">"dplyr"</span>, <span class="st">"lme4"</span>), <span class="at">require =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>   user  system elapsed </span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>  <span class="fl">0.027</span>   <span class="fl">0.001</span>   <span class="fl">0.024</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="other-features">Other features<a class="anchor" aria-label="anchor" href="#other-features"></a>
@@ -252,27 +257,27 @@
 <h3 id="keeping-it-all-isolated">Keeping it all isolated<a class="anchor" aria-label="anchor" href="#keeping-it-all-isolated"></a>
 </h3>
 <p>Require can make install to and use from a single directory, so a project can be fully isolated (unlike <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>, which will always see packages in the R_HOME directory)</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://Require.predictiveecology.org" class="external-link">Require</a></span><span class="op">)</span></span>
 <span><span class="va">projectPackages</span> <span class="op">=</span> <span class="st">"projectPackages"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">projectPackages</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"remotes (&gt;=2.4.0)"</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span>, libPaths <span class="op">=</span> <span class="va">projectPackages</span><span class="op">)</span></span></code></pre></div>
 <p>Or we can use a hybrid of our main, “personal” library and a project specific one for “extra” packages:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&gt;=0.2.0)"</span>, require <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># don't load it, just install</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="installing-old-package-versions">Installing old package versions<a class="anchor" aria-label="anchor" href="#installing-old-package-versions"></a>
 </h3>
 <p><code>Require</code> has the functionality of <code>renv</code> and <code>versions</code> in that you can install previous versions. On Windows, it will search for the binary version on MRAN and CRAN Archives. In the same way as above, we can specify maximum or exact package versions.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"fpCompare (&lt;=0.1.0)"</span><span class="op">)</span> <span class="co"># we don't have to know where to get this</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="managing-a-project">Managing a project<a class="anchor" aria-label="anchor" href="#managing-a-project"></a>
 </h3>
 <p>Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data.table (==1.12.8)"</span>, <span class="st">"dplyr"</span>, <span class="st">"reproducible"</span>, </span>
 <span>          <span class="st">"PredictiveEcology/SpaDES@development"</span>, <span class="st">"raster (&gt;=3.1.5)"</span><span class="op">)</span>, </span>
 <span>        libPaths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -282,7 +287,7 @@
 <h3 id="taking-a-snapshot">Taking a snapshot<a class="anchor" aria-label="anchor" href="#taking-a-snapshot"></a>
 </h3>
 <p>When a system is set up with the correct packages and versions, we can take a snapshot and give that file to another person or machine:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://Require.predictiveecology.org" class="external-link">Require</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/pkgSnapshot.html">pkgSnapshot</a></span><span class="op">(</span><span class="st">"mySnapshot.txt"</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># to get only the project specific ones</span></span>
 <span></span>
@@ -294,6 +299,13 @@
 <h3 id="using-local-package-cache">Using local package cache<a class="anchor" aria-label="anchor" href="#using-local-package-cache"></a>
 </h3>
 <p>By default, <code>Require</code> stashes (source and the locally-built binary) packages in a cached folder. If the user needs to reinstall them for the same project, a different project, or a different machine on a network, the <code>Require</code> will use this local copy. This will skip the download, and will also be a binary on Linux-alike systems, meaning it will install very fast. Setting <code>options("Require.RPackageCache" = "somePath")</code> will move it to that location; or setting <code>options("Require.RPackageCache" = FALSE)</code> will turn caching off.</p>
+</div>
+<div class="section level3">
+<h3 id="keeping-up-to-date">Keeping up to date<a class="anchor" aria-label="anchor" href="#keeping-up-to-date"></a>
+</h3>
+<p><code>Require</code> generally does not try to keep packages up to date; instead if defaults to keeping packages sufficiently up to date that they do not violate version requirements. However, <code>Require</code> has 2 mechanisms to keep packages up to date: either as a group using the <code>update = TRUE</code> (or <code>upgrade = TRUE</code>) argument in <code>Require</code> or using the <code>(HEAD)</code> specification for each individual package. Using <code>(HEAD)</code> allows a user to always have the latest version of individual packages, without wholesale updating.</p>
+<pre><code><span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"PredictiveEcology/reproducible@development (HEAD)"</span><span class="op">)</span> <span class="co"># will install reproducible if it has change on GitHub.</span></span>
+<span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="st">"reproducible"</span>, update <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="co"># will update reproducible and all dependencies</span></span></code></pre>
 </div>
 </div>
 </div>

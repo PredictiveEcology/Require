@@ -18,7 +18,7 @@ workflow. See Details below."><!-- mathjax --><script src="https://cdnjs.cloudfl
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
       </span>
     </div>
 
@@ -67,7 +67,8 @@ workflow. See Details below.</p>
 <dd><p>prints the default values of package
 options set at startup, which may have been changed (e.g., by the user)
 during the current session.</p></dd>
- <dt><code>getRequireOptions()</code></dt>
+
+<dt><code>getRequireOptions()</code></dt>
 <dd><p>prints the current
 values of package options.</p></dd>
  
@@ -75,7 +76,12 @@ values of package options.</p></dd>
 where <code>xxx</code> is one of the values below, and <code>newValue</code> is a new value to give
 the option. Sometimes these options can be placed in the user's <code>.Rprofile</code>
 file so they persist between sessions.</p>
-<p>The following options are likely of interest to most users:</p><dl><dt><code>RPackageCache</code></dt>
+<p>The following options are likely of interest to most users:</p><dl><dt><code>install</code></dt>
+<dd><p>Default: <code>TRUE</code>. This is the default argument to <code>Require</code>,
+but does not affect <code>Install</code>. If this is <code>FALSE</code>, then no installations
+will be attempted, and missing packages will result in an error.</p></dd>
+
+<dt><code>RPackageCache</code></dt>
 <dd><p>Default: <code><a href="getOptionRPackageCache.html">getOptionRPackageCache()</a></code>, which must be
 either a path or a logical. To turn off package caching, set this to <code>FALSE</code>.
 This can be set using an environment variable e.g.
@@ -87,13 +93,6 @@ default folder location <code><a href="RequireCacheDir.html">RequirePkgCacheDir(
 here. Subsequent downloads of same package will use local copy. Default is to
 have packages not be cached locally so each install of the same version will
 be from the original source, e.g., CRAN, GitHub.</p></dd>
- <dt><code>buildBinaries</code></dt>
-<dd><p>Default: <code>TRUE</code>. Only relevant on *nix systems and if
-<code>getOption("Require.RPackageCache")</code> is set to a  path. If <code>TRUE</code> or a valid
-path, then <code>Require</code> will pass <code>INSTALL_OPTS = "--build"</code>, meaning the
-package binary will be built and then saved in the
-<code>getOption("Require.RPackageCache")</code>. This means that subsequent installs of
-this package on this or identical system will be faster.</p></dd>
 
 <dt><code>otherPkgs</code></dt>
 <dd><p>Default: A character vector of packages that are
@@ -109,11 +108,6 @@ by <code>Require</code> will be deleted and rebuilt. This should not generally b
 necessary as it will automatically be deleted after (by default) 1 hour (set
 via <code>R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE</code> environment variable in
 seconds)</p></dd>
- <dt><code>setupVerbose</code></dt>
-<dd><p>Default: <code>TRUE</code>. Logical. Once <code>setup</code> is
-called, there are several important changes that are made to the user's
-experience. For beginners with <code>Require</code>, the messages that are written are
-important to see. However, these can be turned off setting this to <code>FALSE</code></p></dd>
 
 <dt><code>spatialPkgs</code></dt>
 <dd><p>Default: A character vector of packages that are
@@ -123,23 +117,13 @@ RStudio Package Manager), the vector of package names indicated here will
 default to a standard CRAN repository, forcing a source install. See also
 <code>otherPkgs</code> option, which does the same for non-spatial packages.</p></dd>
 
-<dt><code>unloadNamespaces</code></dt>
-<dd><p>Default: <code>TRUE</code>. (ADVANCED USE) <code>Require</code> will
-attempt to detach and unload packages that conflict with the requested
-package installing via <code>Require</code>. This can be complicated, resulting in
-broken states that can only be recovered by restarting R. Default is to
-attempt to do this. <code>FALSE</code> will not attempt to do this. User must deal with
-inability to install packages due to package already being loaded.</p></dd>
+<dt><code>useCranCache</code></dt>
+<dd><p>Default: <code>FALSE</code>. A user can optionally use the
+locally cached packages that are available due to a user's use of the
+<code>crancache</code> package.</p></dd>
 
-<dt><code>usePak</code></dt>
-<dd><p>Default: <code>FALSE</code>. Should <code>pak</code> be used to resolve package
-dependencies and installation.</p></dd>
- <dt><code>verbose</code></dt>
-<dd><p>Default: <code>0</code>. During a
-<code>Require</code>, there is a lot of information collected and used. With <code>verbose</code>
-set to <code>1</code> or <code>2</code>, more of this information will be reported as an attribute
-attached to the return object of <code>Require</code>. This may help diagnosing
-problems.</p></dd>
+<dt><code>verbose</code></dt>
+<dd><p>Default: <code>1</code>. See ?Require.</p></dd>
 
 
 

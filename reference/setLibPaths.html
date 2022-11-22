@@ -24,7 +24,7 @@ with it, even through an R restart.'><!-- mathjax --><script src="https://cdnjs.
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
       </span>
     </div>
 
@@ -114,7 +114,7 @@ use the exact, unaltered <code>libPaths</code>. Default is <code>FALSE</code></p
 
 <dt>verbose</dt>
 <dd><p>Numeric or logical indicating how verbose should the function
-be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if <code>1</code> or TRUE, more outputs; <code>2</code> even more. NOTE: in
 <code>Require</code> function, when <code>verbose &gt;= 2</code>, the return object will have an
 attribute: <code>attr(.., "Require")</code> which has lots of information about the
@@ -154,16 +154,19 @@ approach that also works is here:
 <span class="r-in"><span>  <span class="co">#   from any of the ones listed in .libPaths()</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># will have 2 or more paths</span></span></span>
-<span class="r-in"><span>  <span class="fu">setLibPaths</span><span class="op">(</span><span class="st">"~/newProjectLib"</span>, standAlone <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">otherLib</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">td</span>, <span class="st">"newProjectLib"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">setLibPaths</span><span class="op">(</span><span class="va">otherLib</span>, standAlone <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="co"># Can restart R, and changes will stay</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># remove the custom .libPaths()</span></span></span>
-<span class="r-in"><span>  <span class="fu">Require</span><span class="fu">::</span><span class="fu">setLibPaths</span><span class="op">(</span><span class="op">)</span> <span class="co"># reset to previous; remove from .Rprofile</span></span></span>
-<span class="r-in"><span>                         <span class="co"># because libPath arg is empty</span></span></span>
+<span class="r-in"><span>  <span class="fu">setLibPaths</span><span class="op">(</span><span class="op">)</span> <span class="co"># reset to previous; remove from .Rprofile</span></span></span>
+<span class="r-in"><span>  <span class="co"># because libPath arg is empty</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="fu">Require</span><span class="fu">:::</span><span class="fu">.cleanup</span><span class="op">(</span><span class="va">opts</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="st">"~/newProjectLib"</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span><span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">otherLib</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
   </div>
