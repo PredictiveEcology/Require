@@ -32,11 +32,9 @@ extractPkgName <- function(pkgs, filenames) {
       out <- unlist(lapply(fnsSplit, function(x) x[[1]]))
       out2 <- strsplit(out, split = "-")
       pkgNames <- unlist(Map(len = pmax(1, lengths(out2) - 1), pkg = out2, function(len, pkg) pkg[len]))
-
     } else {
       pkgNames <- character()
     }
-
   }
 
   pkgNames
@@ -47,8 +45,10 @@ extractPkgName <- function(pkgs, filenames) {
 #'   .tar.gz or .zip that was downloaded from CRAN.
 #' @export
 #' @examples
-#' extractVersionNumber(c("Require (<=0.0.1)",
-#'                        "PredictiveEcology/Require@development (<=0.0.4)"))
+#' extractVersionNumber(c(
+#'   "Require (<=0.0.1)",
+#'   "PredictiveEcology/Require@development (<=0.0.4)"
+#' ))
 extractVersionNumber <- function(pkgs, filenames) {
   if (!missing(pkgs)) {
     hasVersionNum <- grepl(grepExtractPkgs, pkgs, perl = FALSE)
@@ -57,7 +57,7 @@ extractVersionNumber <- function(pkgs, filenames) {
   } else {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
-      out <- unlist(lapply(fnsSplit, function(x) gsub(".zip|.tar.gz", "", x[[2]])))
+      out <- unlist(lapply(fnsSplit, function(x) gsub("\\.zip|\\.tar\\.gz|\\.tgz", "", x[[2]])))
     } else {
       out <- character()
     }
@@ -86,13 +86,14 @@ extractPkgGitHub <- function(pkgs) {
     a <- strsplit(a, split = "/|@")
     a <- Map(x = a, hasRep = hasRepo, function(x, hasRep) x[1 + hasRep])
     pkgs[isGH] <- unlist(a)
-    if (any(!isGH))
+    if (any(!isGH)) {
       pkgs[!isGH] <- NA
+    }
   } else {
     pkgs <- rep(NA, length(pkgs))
   }
   pkgs
-  #unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
+  # unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
 
 #' Trim version number off a compound package name
@@ -112,7 +113,7 @@ trimVersionNumber <- function(pkgs) {
     if (any(!nas)) {
       ew <- endsWith(pkgs[!nas], ")")
       if (any(ew)) {
-        pkgs[!nas][ew] <- gsub(paste0("\n|\t|",.grepVersionNumber), "", pkgs[!nas][ew])
+        pkgs[!nas][ew] <- gsub(paste0("\n|\t|", .grepVersionNumber), "", pkgs[!nas][ew])
       }
     }
     pkgs

@@ -14,9 +14,11 @@ These provide top-level, powerful settings for a comprehensive reproducible
 workflow. See Details below.
 }
 \details{
-\describe{ \item{\code{RequireOptions()}}{prints the default values of package
+\describe{
+\item{\code{RequireOptions()}}{prints the default values of package
 options set at startup, which may have been changed (e.g., by the user)
-during the current session.} \item{\code{getRequireOptions()}}{prints the current
+during the current session.}
+\item{\code{getRequireOptions()}}{prints the current
 values of package options.} }
 
 Below are options that can be set with \code{options("Require.xxx" = newValue)},
@@ -25,6 +27,9 @@ the option. Sometimes these options can be placed in the user's \code{.Rprofile}
 file so they persist between sessions.
 
 The following options are likely of interest to most users: \describe{
+\item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
+but does not affect \code{Install}. If this is \code{FALSE}, then no installations
+will be attempted, and missing packages will result in an error. }
 \item{\code{RPackageCache}}{ Default: \code{getOptionRPackageCache()}, which must be
 either a path or a logical. To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment variable e.g.
@@ -35,13 +40,7 @@ default folder location \code{RequirePkgCacheDir()} will be used. If this is
 \code{TRUE} or a path is provided, then binary and source packages will be cached
 here. Subsequent downloads of same package will use local copy. Default is to
 have packages not be cached locally so each install of the same version will
-be from the original source, e.g., CRAN, GitHub. } \item{\code{buildBinaries}}{
-Default: \code{TRUE}. Only relevant on *nix systems and if
-\code{getOption("Require.RPackageCache")} is set to a  path. If \code{TRUE} or a valid
-path, then \code{Require} will pass \code{INSTALL_OPTS = "--build"}, meaning the
-package binary will be built and then saved in the
-\code{getOption("Require.RPackageCache")}. This means that subsequent installs of
-this package on this or identical system will be faster. }
+be from the original source, e.g., CRAN, GitHub. }
 \item{\code{otherPkgs}}{ Default: A character vector of packages that are
 generally more successful if installed from Source on Unix-alikes. Since
 there are repositories that offer binary packages builds for Linux (e.g.,
@@ -52,28 +51,19 @@ default to a standard CRAN repository, forcing a source install. See also
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set
 via \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in
-seconds) } \item{\code{setupVerbose}}{ Default: \code{TRUE}. Logical. Once \code{setup} is
-called, there are several important changes that are made to the user's
-experience. For beginners with \code{Require}, the messages that are written are
-important to see. However, these can be turned off setting this to \code{FALSE} }
+seconds) }
 \item{\code{spatialPkgs}}{ Default: A character vector of packages that are
 generally more successful if installed from Source on Unix-alikes. Since
 there are repositories that offer binary packages builds for Linux (e.g.,
 RStudio Package Manager), the vector of package names indicated here will
 default to a standard CRAN repository, forcing a source install. See also
 \code{otherPkgs} option, which does the same for non-spatial packages. }
-\item{\code{unloadNamespaces}}{ Default: \code{TRUE}. (ADVANCED USE) \code{Require} will
-attempt to detach and unload packages that conflict with the requested
-package installing via \code{Require}. This can be complicated, resulting in
-broken states that can only be recovered by restarting R. Default is to
-attempt to do this. \code{FALSE} will not attempt to do this. User must deal with
-inability to install packages due to package already being loaded. }
-\item{\code{usePak}}{ Default: \code{FALSE}. Should \code{pak} be used to resolve package
-dependencies and installation. } \item{\code{verbose}}{ Default: \code{0}. During a
-\code{Require}, there is a lot of information collected and used. With \code{verbose}
-set to \code{1} or \code{2}, more of this information will be reported as an attribute
-attached to the return object of \code{Require}. This may help diagnosing
-problems. }
+\item{\code{useCranCache}}{ Default: \code{FALSE}. A user can optionally use the
+locally cached packages that are available due to a user's use of the
+\code{crancache} package.
+}
+\item{\code{verbose}}{ Default: \code{1}. See ?Require.
+}
 
 }
 }

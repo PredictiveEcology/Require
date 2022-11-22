@@ -1,17 +1,24 @@
 #' Path to (package) cache directory
 #'
-#' Sets or gets the cache directory associated with the `Require` package.
+#' Sets (if `create = TRUE`) or gets the cache
+#' directory associated with the `Require` package.
 #' @return
 #' If `!is.null(getOptionRPackageCache())`, i.e., a cache path exists,
 #' the cache directory will be created,
 #'   with a README placed in the folder. Otherwise, this function will just
 #'   return the path of what the cache directory would be.
+#'
+#' @details
+#' To set a different directory than the default, set the system variable:
+#' `R_USER_CACHE_DIR = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
+#' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
 #' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create) {
-  if (missing(create))
-    create <- FALSE # !is.null(getOptionRPackageCache())
+  if (missing(create)) {
+    create <- FALSE
+  } # !is.null(getOptionRPackageCache())
 
   ## OLD: was using cache dir following OS conventions used by rappdirs package:
   ##   rappdirs::user_cache_dir(appName)
@@ -21,23 +28,26 @@ RequireCacheDir <- function(create) {
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
+    defaultCacheDirectory <- defaultCacheDir()
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
-          message("Require has changed default package cache folder from\n",
-                  defaultCacheDirOld, "\nto \n", defaultCacheDir, ". \nThere are packages ",
-                  "in the old Cache, moving them now...")
-          checkPath(defaultCacheDir, create = TRUE)
+          message(
+            "Require has changed default package cache folder from\n",
+            defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
+            "in the old Cache, moving them now..."
+          )
+          checkPath(defaultCacheDirectory, create = TRUE)
           dirs <- unique(dirname(oldLocs))
-          newdirs <- gsub(defaultCacheDirOld, defaultCacheDir, dirs)
+          newdirs <- gsub(defaultCacheDirOld, defaultCacheDirectory, dirs)
           lapply(newdirs, checkPath, create = TRUE)
-          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDir, oldLocs))
+          fileRenameOrMove(oldLocs, gsub(defaultCacheDirOld, defaultCacheDirectory, oldLocs))
           unlink(defaultCacheDirOld, recursive = TRUE)
         }
       }
     }
-    defaultCacheDir
+    defaultCacheDirectory
   }
 
   cacheDir <- normPathMemoise(cacheDir)
@@ -58,8 +68,9 @@ RequireCacheDir <- function(create) {
 normPathMemoise <- function(d) {
   if (getOption("Require.useMemoise", TRUE)) {
     fnName <- "normPath"
-    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE))
+    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE)) {
       .pkgEnv[[fnName]] <- new.env()
+    }
     ret <- Map(di = d, function(di) {
       if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
         .pkgEnv[[fnName]][[di]] <- normPath(di)
@@ -76,13 +87,24 @@ normPathMemoise <- function(d) {
 
 #' @export
 #' @rdname RequireCacheDir
+#'
+#' @note
+#' Currently, there are 2 different Cache directories used by Require:
+#' `RequireCacheDir` and `RequirePkgCacheDir`. The `RequirePkgCacheDir`
+#'  is intended to be a sub-directory of the `RequireCacheDir`. If you set
+#'  `Sys.setenv("R_USER_CACHE_DIR" = "somedir")`, then both the package cache
+#'  and cache dirs will be set, with the package cache a sub-directory. You can, however,
+#'  set them independently, if you set `"R_USER_CACHE_DIR"` and `"R_REQUIRE_PKG_CACHE"`
+#'  environment variable. The package cache can also be set with
+#'  `options("Require.RPackageCache" = "somedir")`.
 RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE # !is.null(getOptionRPackageCache())
   }
   pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
-  if (isTRUE(create))
+  if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+  }
 
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
@@ -113,7 +135,7 @@ getOptionRPackageCache <- function() {
     } else {
       if (identical("default", curVal)) {
         fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-        if (nchar(fromEnvVars) == 0  ) {
+        if (nchar(fromEnvVars) == 0) {
           curVal <- RequirePkgCacheDir(FALSE)
           break
         } else {
@@ -139,14 +161,15 @@ getOptionRPackageCache <- function() {
 }
 #' Setup a project library, cache, options
 #'
-#' This is somewhat experimental, and may be deprecated in the near future.
-#' In its current form, it is unlikely to work reliably.
+#' `setup` and `setupOff` are currently deprecated.
+#' These may be re-created in a future version.
+#' In its place, a user can simply put `.libPaths(libs, include.site = FALSE)`
+#' in their `.Rprofile` file, where `libs` is the directory where the packages
+#' should be installed and should be a folder with the R version number, e.g.,
+#' derived by using `checkLibPaths(libs)`.
 #'
-#' This can be placed as the first line of any/all scripts and it will
-#' be create a reproducible, self-contained project with R packages.
-#' Some of these have direct relationships with `RequireOptions`
-#' and arguments in `setLibPaths` and `Require`.
-#'
+#' @param newLibPaths Same as `RPackageFolders`. This is for more consistent
+#'   naming with `Require(..., libPaths = ...)`.
 #' @param RPackageFolders One or more folders where R packages are
 #'   installed to and loaded from. In the case of more than one
 #'   folder provided, installation will only happen in the first one.
@@ -159,62 +182,27 @@ getOptionRPackageCache <- function() {
 #' @export
 #' @rdname setup
 #'
-#' @examples
-#' \dontrun{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
-#'   # Place these as the first line of a project
-#'   td <- tempdir2("setupEx")
-#'   Require::setup(td, FALSE)
-#'
-#'   # To turn it off and return to normal
-#'   Require::setupOff()
-#'
-#'   Require:::.cleanup(opts)
-#' }}
-setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
+setup <- function(newLibPaths,
+                  RPackageFolders, # = getOption("Require.RPackageFolders", "R"),
                   RPackageCache = getOptionRPackageCache(),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
-  RPackageFolders <- checkPath(RPackageFolders, create = TRUE)
-  if (!isFALSE(RPackageCache))
-    RPackageCache <- checkPath(RPackageCache, create = TRUE)
-  copyRequireAndDeps(RPackageFolders, verbose = verbose)
-
-  newOpts <- list("Require.RPackageCache" = RPackageCache)#,
-                  #"Require.buildBinaries" = buildBinaries)#,
-                  #"Require.useCranCache" = usingCranCache)
-  opts <- options(newOpts)
-  co <- capture.output(type = "message",
-                       setLibPaths(RPackageFolders, standAlone = standAlone,
-                                   updateRprofile = TRUE))
-  if (!any(grepl(alreadyInRprofileMessage, co)))
-    silence <- lapply(co, messageVerbose, verbose = verbose, verboseLevel = 1)
-
-  ro <- RequireOptions()
-  roNames <- names(newOpts)
-  names(roNames) <- roNames
-  nonStandardOpt <- !unlist(lapply(roNames, function(optNam) identical(ro[[optNam]], opts[[optNam]])))
-  nonStandardOpt[] <- TRUE # OVERRIDE -- MAKE THEM ALL EXPLICIT IN .Rprofile
-  if (any(nonStandardOpt)) {
-    setLibPathsUpdateRprofile(.libPaths()[1])
-    rp <- readLines(".Rprofile")
-    lineWithPrevious <- grepl("### Previous", rp)
-    if (any(lineWithPrevious)) {
-      lineWithPrevious <- which(lineWithPrevious)
-      post <- seq(length(rp) - lineWithPrevious) + lineWithPrevious
-      pre <- seq(lineWithPrevious)
-      nameNonStandards <- names(nonStandardOpt)[nonStandardOpt]
-      optsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
-        paste0("### Previous option: ", nns, " = ", opts[[nns]])
-      }))
-      newOptsToAdd <- unlist(lapply(nameNonStandards, function(nns) {
-        paste0("options('", nns, "' = '", newOpts[[nns]], "')")
-      }))
-      newRP <- c(rp[pre], optsToAdd, newOptsToAdd, rp[post])
-      cat(newRP, file = ".Rprofile", sep = "\n")
+  if (missing(newLibPaths)) {
+    if (missing(RPackageFolders)) {
+      newLibPaths <- "R"
+    } else {
+      newLibPaths <- RPackageFolders
     }
   }
+  newLibPaths <- normPath(newLibPaths)
+  newLibPaths <- checkLibPaths(newLibPaths)
+  .Deprecated(msg = paste0(
+    "setup is deprecated; to get approximately the same functionality, ",
+    "please put a line like\n",
+    ".libPaths('", newLibPaths, "', include.site = ", !standAlone, ")",
+    "\nin your .Rprofile file"
+  ))
+  return(invisible())
 }
 
 #' @rdname setup
@@ -226,79 +214,14 @@ setup <- function(RPackageFolders = getOption("Require.RPackageFolders", "R"),
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
-
-  lps <- .libPaths()
-  if (file.exists(".Rprofile")) {
-    rp <- readLines(".Rprofile")
-    lineWithPrevious <- grepl("### Previous option", rp)
-
-    #options(RequireOptions())
-    #options(getOptionRPackageCache()) # This one may have a Sys.getenv that is different
-    if (any(lineWithPrevious)) {
-      lineWithPrevious <- which(lineWithPrevious)
-      silence <- lapply(lineWithPrevious, function(lwp) {
-        opt <- gsub("### Previous option: ", "", rp[lwp])
-        opt <- strsplit(opt, " = ")[[1]]
-        newOpt <- list(opt[2])
-        names(newOpt) <- opt[1]
-        options(newOpt)
-      })
-    }
-    setLibPaths()
-    if (isTRUE(removePackages)) {
-      if (interactive() && (verbose >= 1)) { # don't even ask if verbose is low
-        messageVerbose("You have requested to remove all packages in ", lps[1],
-                       verbose = verbose, verboseLevel = 1)
-        out <- readline("Is this correct? Y (delete all) or N (do not delete all)")
-        if (identical(tolower(out), "n"))
-          removePackages <- FALSE
-      }
-      if (isTRUE(removePackages))
-        unlink(lps[1], recursive = TRUE)
-    }
-  } else {
-    messageVerbose("Project is not setup yet; nothing to do",
-                   verbose = verbose, verboseLevel = 0)
-  }
+  .Deprecated(msg = paste0(
+    "setupOff is deprecated; to get approximately the same functionality, ",
+    "please remove the line that sets the .libPaths\n",
+    "from your .Rprofile file"
+  ))
+  return(invisible())
 }
 
-copyRequireAndDeps <- function(RPackageFolders, verbose = getOption("Require.verbose")) {
-  lps <- .libPaths()
-  names(lps) <- lps
-  pkgs <- c("Require", "data.table")
-  for (pkg in pkgs) {
-    theNewPath <- file.path(rpackageFolder(RPackageFolders), pkg)
-    newPathExists <- dir.exists(theNewPath)
-    for (lp in lps) {
-      thePath <- file.path(lp, pkg)
-      pkgInstalledAlready <- dir.exists(thePath)
-      if (isTRUE(pkgInstalledAlready)) {
-        fromFiles <- dir(thePath, recursive = TRUE, full.names = TRUE)
-        if (!newPathExists) {
-          messageVerbose("Placing copy of ", pkg, " in ", RPackageFolders,
-                  verbose = verbose, verboseLevel = 2)
-          dirs <- unique(dirname(fromFiles))
-          dirs <- gsub(thePath, theNewPath, dirs)
-          lapply(dirs, checkPath, create = TRUE)
-        }
-
-        toFiles <- gsub(thePath, theNewPath, fromFiles)
-
-        if (newPathExists) {
-          newPathVersion <- DESCRIPTIONFileVersionV(file.path(theNewPath, "DESCRIPTION"))
-          oldPathVersion <- DESCRIPTIONFileVersionV(file.path(thePath, "DESCRIPTION"))
-          comp <- compareVersion(newPathVersion, oldPathVersion)
-          if (comp > -1) break
-          messageVerbose("Updating version of ", pkg, " in ", RPackageFolders,
-                  verbose = verbose, verboseLevel = 1)
-          unlink(toFiles)
-        }
-        linkOrCopy(fromFiles, toFiles)
-        break
-      }
-    }
-  }
-}
 
 #' Setup for binary Linux repositories
 #'
@@ -315,8 +238,10 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
                                backupCRAN = srcPackageURLOnCRAN) {
   if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
-      repo <- c(CRAN =
-                  paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest"))
+      repo <- c(
+        CRAN =
+          paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest")
+      )
       if (!is.null(getOption("repos"))) {
         backupCRAN <- getOption("repos")
       }
@@ -328,26 +253,15 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com
   }
 }
 
-putFile <- function(from, to, overwrite) {
-  if (file.exists(to)) {
-    if (isTRUE(overwrite)) {
-      res0 <- file.copy(to, paste0(to, ".bak.", timestamp()))
-      res1 <- file.copy(from, to)
-    } else {
-      message("file ", to, " exists but overwrite not TRUE. Not overwriting.")
-    }
-  } else {
-    res1 <- file.copy(from, to)
-  }
-}
 
 appName <- "R-Require"
 
 #' @importFrom tools R_user_dir
-defaultCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+defaultCacheDir <- function() {
+  normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+}
 
-defaultCacheDirOld <- switch(
-  SysInfo[["sysname"]],
+defaultCacheDirOld <- switch(SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
   Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
   Windows = normalizePath(file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)

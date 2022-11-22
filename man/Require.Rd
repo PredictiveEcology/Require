@@ -4,6 +4,7 @@
 \name{Require-package}
 \alias{Require}
 \alias{Require-package}
+\alias{Install}
 \title{Require: Installing and Loading R Packages for Reproducible Workflows}
 \usage{
 Require(
@@ -15,6 +16,21 @@ Require(
   standAlone = getOption("Require.standAlone", FALSE),
   install = getOption("Require.install", TRUE),
   require = getOption("Require.require", TRUE),
+  repos = getOption("repos"),
+  purge = getOption("Require.purge", FALSE),
+  verbose = getOption("Require.verbose", FALSE),
+  type = getOption("pkgType"),
+  upgrade = FALSE,
+  ...
+)
+
+Install(
+  packages,
+  packageVersionFile,
+  libPaths,
+  install_githubArgs = list(),
+  install.packagesArgs = list(),
+  standAlone = getOption("Require.standAlone", FALSE),
   repos = getOption("repos"),
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
@@ -88,7 +104,7 @@ This maximum age can be set in seconds with the environment variable
 Internally, there are calls to \code{available.packages}.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
-be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
 \code{Require} function, when \code{verbose >= 2}, the return object will have an
 attribute: \code{attr(.., "Require")} which has lots of information about the
@@ -132,6 +148,9 @@ then run \code{require} on all named packages that satisfy their version
 requirements. If packages are already installed (\code{packages} supplied), and
 their optional version numbers are satisfied, then the "install" component
 will be skipped.
+}
+\details{
+\code{Install} is the same as \code{Require(..., require = FALSE)}, for convenience.
 }
 \note{
 For advanced use and diagnosis, the user can set \code{verbose = TRUE} or
@@ -181,7 +200,7 @@ opts <- Require:::.setupExample()
 library(Require)
 getCRANrepos(ind = 1)
 Require("stats") # analogous to require(stats), but it checks for
-                 #   pkg dependencies, and installs them, if missing
+#   pkg dependencies, and installs them, if missing
 
 if (Require:::.runLongExamples()) {
   # Install in a new local library (libPaths)
@@ -213,11 +232,13 @@ if (Require:::.runLongExamples()) {
   # GitHub packages
   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
   Require("PredictiveEcology/fpCompare@development",
-          libPaths = ProjectPackageFolder, standAlone = FALSE
+    libPaths = ProjectPackageFolder, standAlone = FALSE
   )
 
-  Require("PredictiveEcology/fpCompare@development", libPaths = ProjectPackageFolder,
-          standAlone = TRUE) # the latest version on GitHub
+  Require("PredictiveEcology/fpCompare@development",
+    libPaths = ProjectPackageFolder,
+    standAlone = TRUE
+  ) # the latest version on GitHub
 
   ############################################################################
   # Mixing and matching GitHub, CRAN, with and without version numbering
@@ -230,7 +251,6 @@ if (Require:::.runLongExamples()) {
   Require::Require(pkgs, libPaths = ProjectPackageFolder)
   Require:::.cleanup(opts)
 }
-
 }
 
 }

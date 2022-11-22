@@ -20,5 +20,21 @@ with a README placed in the folder. Otherwise, this function will just
 return the path of what the cache directory would be.
 }
 \description{
-Sets or gets the cache directory associated with the \code{Require} package.
+Sets (if \code{create = TRUE}) or gets the cache
+directory associated with the \code{Require} package.
+}
+\details{
+To set a different directory than the default, set the system variable:
+\code{R_USER_CACHE_DIR = "somePath"} and/or \code{R_REQUIRE_PKG_CACHE = "somePath"}
+e.g., in \code{.Renviron} file or \code{Sys.setenv()}. See Note below.
+}
+\note{
+Currently, there are 2 different Cache directories used by Require:
+\code{RequireCacheDir} and \code{RequirePkgCacheDir}. The \code{RequirePkgCacheDir}
+is intended to be a sub-directory of the \code{RequireCacheDir}. If you set
+\code{Sys.setenv("R_USER_CACHE_DIR" = "somedir")}, then both the package cache
+and cache dirs will be set, with the package cache a sub-directory. You can, however,
+set them independently, if you set \code{"R_USER_CACHE_DIR"} and \code{"R_REQUIRE_PKG_CACHE"}
+environment variable. The package cache can also be set with
+\code{options("Require.RPackageCache" = "somedir")}.
 }

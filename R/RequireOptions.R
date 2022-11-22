@@ -3,9 +3,11 @@
 #' These provide top-level, powerful settings for a comprehensive reproducible
 #' workflow. See Details below.
 #'
-#' \describe{ \item{`RequireOptions()`}{prints the default values of package
+#' \describe{
+#' \item{`RequireOptions()`}{prints the default values of package
 #' options set at startup, which may have been changed (e.g., by the user)
-#' during the current session.} \item{`getRequireOptions()`}{prints the current
+#' during the current session.}
+#' \item{`getRequireOptions()`}{prints the current
 #' values of package options.} }
 #'
 #' @export
@@ -17,6 +19,9 @@
 #' file so they persist between sessions.
 #'
 #' The following options are likely of interest to most users: \describe{
+#' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`,
+#' but does not affect `Install`. If this is `FALSE`, then no installations
+#' will be attempted, and missing packages will result in an error. }
 #' \item{`RPackageCache`}{ Default: `getOptionRPackageCache()`, which must be
 #' either a path or a logical. To turn off package caching, set this to `FALSE`.
 #' This can be set using an environment variable e.g.
@@ -28,13 +33,7 @@
 #' `TRUE` or a path is provided, then binary and source packages will be cached
 #' here. Subsequent downloads of same package will use local copy. Default is to
 #' have packages not be cached locally so each install of the same version will
-#' be from the original source, e.g., CRAN, GitHub. } \item{`buildBinaries`}{
-#' Default: `TRUE`. Only relevant on *nix systems and if
-#' `getOption("Require.RPackageCache")` is set to a  path. If `TRUE` or a valid
-#' path, then `Require` will pass `INSTALL_OPTS = "--build"`, meaning the
-#' package binary will be built and then saved in the
-#' `getOption("Require.RPackageCache")`. This means that subsequent installs of
-#' this package on this or identical system will be faster. }
+#' be from the original source, e.g., CRAN, GitHub. }
 #' \item{`otherPkgs`}{ Default: A character vector of packages that are
 #' generally more successful if installed from Source on Unix-alikes. Since
 #' there are repositories that offer binary packages builds for Linux (e.g.,
@@ -45,41 +44,30 @@
 #' by `Require` will be deleted and rebuilt. This should not generally be
 #' necessary as it will automatically be deleted after (by default) 1 hour (set
 #' via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in
-#' seconds) } \item{`setupVerbose`}{ Default: `TRUE`. Logical. Once `setup` is
-#' called, there are several important changes that are made to the user's
-#' experience. For beginners with `Require`, the messages that are written are
-#' important to see. However, these can be turned off setting this to `FALSE` }
+#' seconds) }
 #' \item{`spatialPkgs`}{ Default: A character vector of packages that are
 #' generally more successful if installed from Source on Unix-alikes. Since
 #' there are repositories that offer binary packages builds for Linux (e.g.,
 #' RStudio Package Manager), the vector of package names indicated here will
 #' default to a standard CRAN repository, forcing a source install. See also
 #' `otherPkgs` option, which does the same for non-spatial packages. }
-#' \item{`unloadNamespaces`}{ Default: `TRUE`. (ADVANCED USE) `Require` will
-#' attempt to detach and unload packages that conflict with the requested
-#' package installing via `Require`. This can be complicated, resulting in
-#' broken states that can only be recovered by restarting R. Default is to
-#' attempt to do this. `FALSE` will not attempt to do this. User must deal with
-#' inability to install packages due to package already being loaded. }
-#' \item{`usePak`}{ Default: `FALSE`. Should `pak` be used to resolve package
-#' dependencies and installation. } \item{`verbose`}{ Default: `0`. During a
-#' `Require`, there is a lot of information collected and used. With `verbose`
-#' set to `1` or `2`, more of this information will be reported as an attribute
-#' attached to the return object of `Require`. This may help diagnosing
-#' problems. }
+#' \item{`useCranCache`}{ Default: `FALSE`. A user can optionally use the
+#' locally cached packages that are available due to a user's use of the
+#' `crancache` package.
+#' }
+#' \item{`verbose`}{ Default: `1`. See ?Require.
+#' }
 #'
 #' }
 #'
 #' @rdname RequireOptions
 RequireOptions <- function() {
   list(
-    Require.buildBinaries = TRUE,
+    Require.install = TRUE,
     Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
     Require.packageVersionFile = "packageVersions.txt",
-    # Require.persistentPkgEnv = FALSE, # TRUE
-    Require.RPackageFolders = NULL,
+    Require.purge = FALSE,
     Require.RPackageCache = "default",
-    # RequirePkgCacheDir(),
     Require.spatialPkgs = c(
       "lwgeom",
       "raster",
@@ -92,10 +80,8 @@ RequireOptions <- function() {
       "units"
     ),
     Require.standAlone = TRUE,
-    Require.unloadNamespaces = FALSE,
+    Require.useCranCache = FALSE,
     Require.updateRprofile = FALSE,
-    # Require.useCranCache = NULL,
-    Require.usePak = FALSE,
     Require.verbose = 1
   )
 }

@@ -1,6 +1,10 @@
 ## Updated release
 
-This is a new submission, following archiving of this package. This submission includes a re-implementation of the underlying functions compared to Require 0.1.4 that was most recently on CRAN. This version comes with large speed improvements and many more edge cases dealth with. After multiple attempts to accommodate the CRAN policies, we have now understood and identified the cause of the failures. This version includes several modifications to ensure clean package and personal cache directories when a user (including CRAN), does not want to use a cache or wants to ensure the cache is wiped clean after testing and examples.
+This is a new submission, following archiving of this package.
+This submission includes a re-implementation of the underlying functions compared to Require 0.1.4 that was most recently on CRAN.
+This version comes with large speed improvements and many more edge cases dealt with.
+After multiple attempts to accommodate the CRAN policies, we have now understood and identified the cause of the failures.
+This version includes several modifications to ensure clean package and personal cache directories when a user (including CRAN), does not want to use a cache or wants to ensure the cache is wiped clean after testing and examples.
 
 ## Test environments
 

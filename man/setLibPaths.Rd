@@ -40,7 +40,7 @@ desirable. Set \code{exact} to \code{TRUE} to override this automatic appending 
 use the exact, unaltered \code{libPaths}. Default is \code{FALSE}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
-be. If -1 or less, then as little verbosity as possible. If 0 or FALSE,
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
 \code{Require} function, when \code{verbose >= 2}, the return object will have an
 attribute: \code{attr(.., "Require")} which has lots of information about the
@@ -83,14 +83,17 @@ if (Require:::.runLongExamples()) {
   #   from any of the ones listed in .libPaths()
 
   # will have 2 or more paths
-  setLibPaths("~/newProjectLib", standAlone = FALSE)
+  otherLib <- file.path(td, "newProjectLib")
+  setLibPaths(otherLib, standAlone = FALSE)
   # Can restart R, and changes will stay
 
   # remove the custom .libPaths()
-  Require::setLibPaths() # reset to previous; remove from .Rprofile
-                         # because libPath arg is empty
+  setLibPaths() # reset to previous; remove from .Rprofile
+  # because libPath arg is empty
 
   Require:::.cleanup(opts)
-  unlink("~/newProjectLib", recursive = TRUE)
-}}
+  unlink(otherLib, recursive = TRUE)
+}
+}
+
 }

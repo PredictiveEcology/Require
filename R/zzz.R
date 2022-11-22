@@ -29,10 +29,13 @@ utils::globalVariables(c(
     possCacheDir <- getOptionRPackageCache()
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
-      if (!is.null(possCacheDir))
-        paste0("  Using cache directory: ", possCacheDir,
-               "; clear with clearRequirePackageCache().\n"),
-      "  See ?RequireOptions for additional settings."
+      if (!is.null(possCacheDir)) {
+        paste0(
+          "  Using cache directory: ", possCacheDir,
+          "; clear with clearRequirePackageCache().\n"
+        )
+      },
+      "  See ?RequireOptions for this and other settings."
     )
 
     packageStartupMessage(mess)

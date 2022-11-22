@@ -27,18 +27,22 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
   env <- Require:::whereInStack("ee")
   startTime <- Sys.time()
   Require:::messageVerbose("\033[32m --------------------------------- Starting ",
-                           thisFilename, "  at: ", format(startTime, digits = 2),
-                           "---------------------------\033[39m",
-                           verbose = verbose, verboseLevel = 0)
+    thisFilename, "  at: ", format(startTime, digits = 2),
+    "---------------------------\033[39m",
+    verbose = verbose, verboseLevel = 0
+  )
   Require:::messageVerbose("\033[34m getOption('Require.verbose'): ",
-                           getOption("Require.verbose"), "\033[39m", verboseLevel = 0)
+    getOption("Require.verbose"), "\033[39m",
+    verboseLevel = 0
+  )
   Require:::messageVerbose("\033[34m getOption('repos'): ",
-                           paste(getOption("repos"), collapse = ", "), "\033[39m", verboseLevel = 0)
+    paste(getOption("repos"), collapse = ", "), "\033[39m",
+    verboseLevel = 0
+  )
   return(list(startTime = startTime, thisFilename = thisFilename, libPath = libPath, origWd = origWd, opts = opts))
 }
 
 endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
-
   currOptions <- options()
   changedOptions <- setdiff(currOptions, setupInitial$opts)
   toRevert <- setupInitial$opts[names(changedOptions)]
@@ -52,9 +56,9 @@ endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
   ee <- Require:::getInStack("ee")
   ee[[thisFilename]] <- format(endTime - setupInitial$startTime, digits = 2)
   Require:::messageVerbose("\033[32m ----------------------------------",
-                           thisFilename, ": ", ee[[thisFilename]], " \033[39m",
-                           verboseLevel = -1, verbose = verbose)
+    thisFilename, ": ", ee[[thisFilename]], " \033[39m",
+    verboseLevel = -1, verbose = verbose
+  )
   .libPaths(setupInitial$libPath)
   setwd(setupInitial$origWd)
 }
-

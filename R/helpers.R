@@ -41,9 +41,10 @@ setMethod(
         path <- gsub("\\\\", "//", path)
         path <- gsub("//", "/", path)
         hasDotStart <- startsWith(path, "./")
-        if (isTRUE(any(hasDotStart)))
+        if (isTRUE(any(hasDotStart))) {
           path[hasDotStart] <-
-          gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
+            gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
+        }
         path <- gsub("/$", "", path) # nolint
       }
     }
@@ -143,8 +144,9 @@ setMethod(
           if (create == TRUE) {
             lapply(path[!dirsThatExist[!isExistingFile]], function(pth) {
               dir.create(file.path(pth),
-                         recursive = TRUE,
-                         showWarnings = FALSE)
+                recursive = TRUE,
+                showWarnings = FALSE
+              )
             })
           } else {
             stop(
@@ -158,9 +160,10 @@ setMethod(
           }
         }
       }
-      if (SysInfo[["sysname"]] == "Darwin")
+      if (SysInfo[["sysname"]] == "Darwin") {
         path <-
-        normPath(path) # ensure path re-normalized after creation
+          normPath(path)
+      } # ensure path re-normalized after creation
 
       return(path)
     }
@@ -226,8 +229,9 @@ messageDF <-
            round,
            verbose = getOption("Require.verbose"),
            verboseLevel = 1) {
-    if (is.matrix(df))
+    if (is.matrix(df)) {
       df <- as.data.frame(df)
+    }
     if (!is.data.table(df)) {
       df <- as.data.table(df)
     }
@@ -259,11 +263,12 @@ messageDF <-
 tempdir2 <- function(sub = "",
                      tempdir = getOption("Require.tempPath", .RequireTempPath()),
                      create = TRUE) {
-    np <- normPath(file.path(tempdir, sub))
-    if (isTRUE(create))
-      checkPath(np, create = TRUE)
-    np
+  np <- normPath(file.path(tempdir, sub))
+  if (isTRUE(create)) {
+    checkPath(np, create = TRUE)
   }
+  np
+}
 
 #' Make a temporary subfile in a temporary (sub-)directory
 #'
@@ -280,8 +285,9 @@ tempfile2 <- function(sub = "",
 }
 
 .RequireTempPath <-
-  function()
+  function() {
     normPath(file.path(tempdir(), "Require"))
+  }
 
 #' Invert a 2-level list
 #'
@@ -301,8 +307,9 @@ invertList <- function(l) {
   names(indices[[1]]) <- indices[[1]]
   names(indices[[2]]) <- indices[[2]]
   lapply(indices[[2]], function(i) {
-    lapply(indices[[1]], function(j)
-      l[[j]][[i]])
+    lapply(indices[[1]], function(j) {
+      l[[j]][[i]]
+    })
   })
 }
 
@@ -328,8 +335,10 @@ invertList <- function(l) {
 #' @examples
 #' modifyList2(list(a = 1), list(a = 2, b = 2))
 #' modifyList2(list(a = 1), NULL, list(a = 2, b = 2))
-#' modifyList2(list(a = 1), list(x = NULL), list(a = 2, b = 2),
-#'             list(a = 3, c = list(1:10)))
+#' modifyList2(
+#'   list(a = 1), list(x = NULL), list(a = 2, b = 2),
+#'   list(a = 3, c = list(1:10))
+#' )
 modifyList2 <- function(..., keep.null = FALSE) {
   dots <- list(...)
   if (length(dots) > 0) {
@@ -426,8 +435,9 @@ messageVerbose <-
   function(...,
            verbose = getOption("Require.verbose"),
            verboseLevel = 1) {
-    if (verbose >= verboseLevel)
+    if (verbose >= verboseLevel) {
       message(...)
+    }
   }
 
 #' @rdname messageVerbose
@@ -448,14 +458,17 @@ messageVerboseCounter <-
     total <- max(counter, total)
     minCounter <- min(minCounter, counter)
     mess <-
-      paste0(paddedFloatToChar(counter, padL = nchar(total), pad = " ")
-             , " of ", total)
+      paste0(
+        paddedFloatToChar(counter, padL = nchar(total), pad = " "),
+        " of ", total
+      )
     numCharsNeeded <- nchar(mess) + 1
     messWithPrePost <- paste0(pre, mess, post)
     if (counter == minCounter) {
       messageVerbose(rep(" ", numCharsNeeded),
-                     verbose = verbose,
-                     verboseLevel = verboseLevel)
+        verbose = verbose,
+        verboseLevel = verboseLevel
+      )
     }
     messageVerbose(
       rep("\b", numCharsNeeded),
@@ -513,14 +526,16 @@ setdiffNamed <- function(l1, l2, missingFill) {
   changed1 <- setdiff(names(l2), names(l1)) # new option
   changed2 <- setdiff(names(l1), names(l2)) # option set to NULL
   changed3 <-
-    vapply(names(l1), FUN.VALUE = logical(1), function(nam)
-      identical(l2[nam], l1[nam]), USE.NAMES = TRUE) # changed values of existing
+    vapply(names(l1), FUN.VALUE = logical(1), function(nam) {
+      identical(l2[nam], l1[nam])
+    }, USE.NAMES = TRUE) # changed values of existing
   changed3 <- l1[names(changed3[!changed3])]
   dif <- list()
   if (!missing(missingFill)) {
     dif[[1]] <-
-      mapply(x = changed1, function(x)
-        missingFill, USE.NAMES = TRUE)
+      mapply(x = changed1, function(x) {
+        missingFill
+      }, USE.NAMES = TRUE)
   }
   dif[[2]] <- l1[changed2]
   dif[[3]] <- l1[names(changed3)]
@@ -531,8 +546,9 @@ setdiffNamed <- function(l1, l2, missingFill) {
 whereInStack <- function(obj) {
   for (i in 1:sys.nframe()) {
     fn <- get0(obj, sys.frame(-i), inherits = FALSE)
-    if (!is.null(fn))
+    if (!is.null(fn)) {
       break
+    }
   }
   return(sys.frame(-i))
 }
@@ -546,15 +562,19 @@ SysInfo <-
   Sys.info() # do this on load; nothing can change, so repeated calls are a waste
 
 .setupExample <- function() {
-  options(Ncpus = 2L,
-          Require.RequirePkgCache = FALSE) ## TODO: use e.g., `tempdir2("examples")`
+  options(
+    Ncpus = 2L,
+    Require.RequirePkgCache = FALSE
+  ) ## TODO: use e.g., `tempdir2("examples")`
 }
 
 .cleanup <- function(opts = list()) {
   unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
-  clearRequirePackageCache(ask = FALSE,
-                           Rversion = rversion(),
-                           verbose = FALSE)
+  clearRequirePackageCache(
+    ask = FALSE,
+    Rversion = rversion(),
+    verbose = FALSE
+  )
   # It appears that _R_CHECK_THINGS_IN_OTHER_DIRS_ detects both the R and the Require
   #   dirs, even though the R is not affiliated specifically with Require
   #   Nevertheless, if there is no other folder than "Require" in the "R" dir
@@ -568,8 +588,9 @@ SysInfo <-
     "Require", "cache"
   )), full.names = TRUE)
   unlink(filesOneIn, recursive = TRUE)
-  if (length(filesOuter) == 1 && length(filesOneIn) <= 1)
+  if (length(filesOuter) == 1 && length(filesOneIn) <= 1) {
     unlink(filesOuter, recursive = TRUE)
+  }
   options(opts)
 }
 
@@ -585,4 +606,116 @@ SysInfo <-
 .runLongExamples <- function() {
   .isDevelVersion() ||
     Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
+}
+
+
+
+
+doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
+  if (getOption("Require.useCranCache", FALSE)) {
+    if (is.null(.pkgEnv[["crancacheCheck"]])) {
+      .pkgEnv[["crancacheCheck"]] <- TRUE
+      crancache <- crancacheFolder()
+      if (dir.exists(crancache)) {
+        ccFiles <- dir(crancache, full.names = TRUE, recursive = TRUE)
+        ccFiles <- grep("PACKAGES", ccFiles, invert = TRUE, value = TRUE)
+        alreadyThere <- basename(ccFiles) %in% basename(localFiles)
+        if (any(!alreadyThere)) {
+          ccFiles <- ccFiles[!alreadyThere]
+          toFiles <- file.path(getOptionRPackageCache(), basename(ccFiles))
+          linked <- linkOrCopy(ccFiles, toFiles)
+          messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
+            verbose = verbose, verboseLevel = 1
+          )
+          localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+        }
+      }
+    }
+  }
+  return(localFiles)
+}
+
+
+rversionHistory <- as.data.table(
+  structure(list(
+    version = c(
+      "0.60", "0.61", "0.61.1", "0.61.2",
+      "0.61.3", "0.62", "0.62.1", "0.62.2", "0.62.3", "0.62.4", "0.63",
+      "0.63.1", "0.63.2", "0.63.3", "0.64", "0.64.1", "0.64.2", "0.65",
+      "0.65.1", "0.90", "0.90.1", "0.99", "1.0", "1.0.1", "1.1", "1.1.1",
+      "1.2", "1.2.1", "1.2.2", "1.2.3", "1.3", "1.3.1", "1.4", "1.4.1",
+      "1.5.0", "1.5.1", "1.6.0", "1.6.1", "1.6.2", "1.7.0", "1.7.1",
+      "1.8.0", "1.8.1", "1.9.0", "1.9.1", "2.0.0", "2.0.1", "2.1.0",
+      "2.1.1", "2.2.0", "2.2.1", "2.3.0", "2.3.1", "2.4.0", "2.4.1",
+      "2.5.0", "2.5.1", "2.6.0", "2.6.1", "2.6.2", "2.7.0", "2.7.1",
+      "2.7.2", "2.8.0", "2.8.1", "2.9.0", "2.9.1", "2.9.2", "2.10.0",
+      "2.10.1", "2.11.0", "2.11.1", "2.12.0", "2.12.1", "2.12.2", "2.13.0",
+      "2.13.1", "2.13.2", "2.14.0", "2.14.1", "2.14.2", "2.15.0", "2.15.1",
+      "2.15.2", "2.15.3", "3.0.0", "3.0.1", "3.0.2", "3.0.3", "3.1.0",
+      "3.1.1", "3.1.2", "3.1.3", "3.2.0", "3.2.1", "3.2.2", "3.2.3",
+      "3.2.4", "3.2.5", "3.3.0", "3.3.1", "3.3.2", "3.3.3", "3.4.0",
+      "3.4.1", "3.4.2", "3.4.3", "3.4.4", "3.5.0", "3.5.1", "3.5.2",
+      "3.5.3", "3.6.0", "3.6.1", "3.6.2", "3.6.3", "4.0.0", "4.0.1",
+      "4.0.2", "4.0.3", "4.0.4", "4.0.5", "4.1.0", "4.1.1", "4.1.2",
+      "4.1.3", "4.2.0", "4.2.1", "4.2.2"
+    ),
+    date = structure(
+      c(
+        881225278,
+        882709762, 884392315, 889903555, 894095897, 897828980, 897862405,
+        900069225, 904294939, 909144521, 910967839, 912776788, 916059350,
+        920644034, 923491181, 926083543, 930918195, 935749769, 939211984,
+        943273514, 945260947, 949922690, 951814523, 955701858, 961058601,
+        966329658, 976875565, 979553881, 983191405, 988284587, 993206462,
+        999261952, 1008756894, 1012391855, 1020074486, 1024312833, 1033466791,
+        1036146797, 1042212874, 1050497887, 1055757279, 1065611639, 1069416021,
+        1081766198, 1087816179, 1096899878, 1100528190, 1113863193, 1119259633,
+        1128594134, 1135074921, 1145875040, 1149150333, 1159870504, 1166435363,
+        1177407703, 1183029426, 1191402173, 1196086444, 1202469005, 1208850329,
+        1214207072, 1219654436, 1224494641, 1229936597, 1239957168, 1246018257,
+        1251102154, 1256547742, 1260786504, 1271923881, 1275293425, 1287132117,
+        1292490724, 1298632039, 1302683487, 1310117828, 1317366356, 1320048549,
+        1324541418, 1330503010, 1333091765, 1340348984, 1351235476, 1362126509,
+        1364973156, 1368688293, 1380093069, 1394093553, 1397113870, 1404976269,
+        1414743092, 1425888740, 1429168413, 1434611704, 1439536398, 1449735188,
+        1457597745, 1460649578, 1462259608, 1466493698, 1477901595, 1488788191,
+        1492758885, 1498806251, 1506582275, 1512029105, 1521101067, 1524467078,
+        1530515071, 1545293080, 1552291489, 1556262303, 1562310303, 1576137903,
+        1582963516, 1587711934, 1591427116, 1592809519, 1602313524, 1613376313,
+        1617174315, 1621321522, 1628579106, 1635753912, 1646899538, 1650611141,
+        1655967933, 1667203554
+      ),
+      class = c("POSIXct", "POSIXt"), tzone = "UTC"
+    ),
+    nickname = c(
+      NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+      NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+      NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+      NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+      NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+      NA, NA, NA, NA, NA, NA, NA, "Great Pumpkin", "December Snowflakes",
+      "Gift-Getting Season", "Easter Beagle", "Roasted Marshmallows",
+      "Trick or Treat", "Security Blanket", "Masked Marvel", "Good Sport",
+      "Frisbee Sailing", "Warm Puppy", "Spring Dance", "Sock it to Me",
+      "Pumpkin Helmet", "Smooth Sidewalk", "Full of Ingredients",
+      "World-Famous Astronaut", "Fire Safety", "Wooden Christmas-Tree",
+      "Very Secure Dishes", "Very, Very Secure Dishes", "Supposedly Educational",
+      "Bug in Your Hair", "Sincere Pumpkin Patch", "Another Canoe",
+      "You Stupid Darkness", "Single Candle", "Short Summer", "Kite-Eating Tree",
+      "Someone to Lean On", "Joy in Playing", "Feather Spray",
+      "Eggshell Igloo", "Great Truth", "Planting of a Tree", "Action of the Toes",
+      "Dark and Stormy Night", "Holding the Windsock", "Arbor Day",
+      "See Things Now", "Taking Off Again", "Bunny-Wunnies Freak Out",
+      "Lost Library Book", "Shake and Throw", "Camp Pontanezen",
+      "Kick Things", "Bird Hippie", "One Push-Up", "Vigorous Calisthenics",
+      "Funny-Looking Kid", "Innocent and Trusting"
+    )
+  ), row.names = c(
+    NA,
+    -129L
+  ), class = "data.frame")
+)
+
+crancacheFolder <- function() {
+  crancache <- file.path(dirname(dirname(tools::R_user_dir("Require", "cache"))), "R-crancache")
 }
