@@ -23,7 +23,7 @@ new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and
 * will attempt to use local cached packages from `crancache` if the user sets `options(Require.useCranCache = TRUE)`. This is experimental and is still being tested.
 * A new function, `clearRequirePackageCache`, for clearing the package cache.
 * The cache has been developed to be able to be shared across Operating Systems, if there is a shared file system.
-* GitHub packages require the SHA to be assessed; now this is Cached to disk as well as RAM, so that it persists even if there is an R Rstart. 
+* GitHub packages require the SHA to be assessed; now this is Cached to disk as well as RAM, so that it persists even if there is an R restart. 
 * All non-package cache files (`available.packages`, `pkgDep`, `GitHubSHA`) will be refreshed (purged) every 1 hour.
 * Much improved messaging, including identifying `MRAN` package installs explicitly (instead of just "Archive")
 
