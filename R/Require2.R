@@ -254,7 +254,7 @@ Require <- function(packages, packageVersionFile,
   if (missing(libPaths)) {
     libPaths <- .libPaths()
   }
-  libPaths <- checkLibPaths(libPaths = libPaths)
+  libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   suppressMessages({
     origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)
   })

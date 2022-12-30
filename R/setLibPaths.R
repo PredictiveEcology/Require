@@ -81,7 +81,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   if (gte4.1) { # now correct behaviour; remaining parts unnecessary
     ## to avoid triggering warning on R < 4.1
     do.call(.libPaths, list(
-      new = libPaths[1],
+      new = libPaths,
       if (gte4.1) include.site <- !standAlone
     ))
     return(oldLibPaths)
