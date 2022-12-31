@@ -1904,6 +1904,20 @@ messagesAboutWarnings <- function(w, toInstall) {
   if (identical(pkgName, w$message)) { # didn't work
     pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
   }
+  if (identical(pkgName, w$message)) { # didn't work again
+    if (any(grepl("cannot open URL", pkgName))) { # means needs purge b/c package is on CRAN, but not that url
+      url <- gsub(".+(https://.+\\.zip).+", "\\1", pkgName)
+      url <- gsub(".+(https://.+\\.tar\\.gz).+", "\\1", url)
+      url <- gsub(".+(https://.+\\.tgz).+", "\\1", url)
+      pkgName <- extractPkgName(filenames = basename(url))
+
+      try(dealWithCache(purge = TRUE, checkAge = FALSE))
+      message("purging availablePackages; trying to download ", pkgName, " again")
+      try(Install(pkgName))
+    }
+
+  }
+
   needWarning <- FALSE
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
   if (length(rowsInPkgDT)) {
