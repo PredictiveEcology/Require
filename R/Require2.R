@@ -1917,7 +1917,8 @@ messagesAboutWarnings <- function(w, toInstall) {
 
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
       message("purging availablePackages; trying to download ", pkgName, " again")
-      try(Install(pkgName))
+      out <- try(Install(pkgName))
+      browser()
     }
 
   }
