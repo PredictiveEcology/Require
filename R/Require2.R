@@ -384,6 +384,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   } else {
     "source"
   }
+  if (type == "binary") {
+    opts <- options("Ncpus" = 1)
+    on.exit(options(opts))
+  }
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
