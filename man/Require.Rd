@@ -207,7 +207,7 @@ if (Require:::.runLongExamples()) {
   tempPkgFolder <- file.path(tempdir(), "Packages")
   # use standAlone, means it will put it in libPaths, even if it already exists
   #   in another local library (e.g., personal library)
-  Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
+  Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 
   # make a package version snapshot of installed packages
   tf <- tempfile()
@@ -220,11 +220,11 @@ if (Require:::.runLongExamples()) {
 
   # Mutual dependencies, only installs once -- e.g., curl
   tempPkgFolder <- file.path(tempdir(), "Packages")
-  Require(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
+  Install(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
 
   # Mutual dependencies, only installs once -- e.g., curl
   tempPkgFolder <- file.path(tempdir(), "Packages")
-  Require(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
+  Install(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 
   #####################################################################################
   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
@@ -235,7 +235,7 @@ if (Require:::.runLongExamples()) {
     libPaths = ProjectPackageFolder, standAlone = FALSE
   )
 
-  Require("PredictiveEcology/fpCompare@development",
+  Install("PredictiveEcology/fpCompare@development",
     libPaths = ProjectPackageFolder,
     standAlone = TRUE
   ) # the latest version on GitHub
