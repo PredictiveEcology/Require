@@ -1905,6 +1905,8 @@ updateReposForSrcPkgs <- function(pkgInstall) {
 messagesAboutWarnings <- function(w, toInstall) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
   pkgName <- extractPkgNameFromWarning(w$message)
+  outcome <- FALSE
+  needWarning <- FALSE
   if (identical(pkgName, w$message)) { # didn't work
     pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
   }
@@ -1917,15 +1919,23 @@ messagesAboutWarnings <- function(w, toInstall) {
 
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
       message("purging availablePackages; trying to download ", pkgName, " again")
-      out <- try(Install(pkgName))
+      outcome <- try(Install(pkgName))
+      outcome2 <- attr(outcome, "Require")
       browser()
+      if (identical("noneAvailable", outcome2$installResult)) {
+        needWarning <- TRUE
+      } else {
+        needWarning <- FALSE
+        rowsInPkgDT <- grep(pkgName, toInstall$Package)
+        toInstall[rowsInPkgDT, installed := outcome2$installed]
+        toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+      }
     }
 
   }
 
-  needWarning <- FALSE
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
-  if (length(rowsInPkgDT)) {
+  if (length(rowsInPkgDT) && any(toInstall[rowsInPkgDT]$installed %in% FALSE)) {
     toInstall[rowsInPkgDT, installed := FALSE]
     toInstall[rowsInPkgDT, installResult := w$message]
 
@@ -1950,6 +1960,7 @@ messagesAboutWarnings <- function(w, toInstall) {
   } else {
     needWarning <- TRUE
   }
+
   if (isTRUE(needWarning)) {
     warning(w)
   }
