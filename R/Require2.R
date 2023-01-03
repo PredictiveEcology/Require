@@ -211,7 +211,7 @@ utils::globalVariables(c(
 Require <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
-                    install.packagesArgs = list(),
+                    install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
                     standAlone = getOption("Require.standAlone", FALSE),
                     install = getOption("Require.install", TRUE),
                     require = getOption("Require.require", TRUE),
@@ -237,6 +237,10 @@ Require <- function(packages, packageVersionFile,
   }
   dealWithCache(purge)
   purge <- FALSE
+
+  if (length(install.packagesArgs))
+    if (is.null(names(install.packagesArgs)))
+      stop("install.packagesArgs must be a list with *named* elements, e.g., INSTALL_opts")
 
   install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
     dots,
@@ -1905,6 +1909,8 @@ updateReposForSrcPkgs <- function(pkgInstall) {
 messagesAboutWarnings <- function(w, toInstall) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
   pkgName <- extractPkgNameFromWarning(w$message)
+  outcome <- FALSE
+  needWarning <- FALSE
   if (identical(pkgName, w$message)) { # didn't work
     pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
   }
@@ -1917,15 +1923,23 @@ messagesAboutWarnings <- function(w, toInstall) {
 
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
       message("purging availablePackages; trying to download ", pkgName, " again")
-      out <- try(Install(pkgName))
+      outcome <- try(Install(pkgName))
+      outcome2 <- attr(outcome, "Require")
       browser()
+      if (identical("noneAvailable", outcome2$installResult)) {
+        needWarning <- TRUE
+      } else {
+        needWarning <- FALSE
+        rowsInPkgDT <- grep(pkgName, toInstall$Package)
+        toInstall[rowsInPkgDT, installed := outcome2$installed]
+        toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+      }
     }
 
   }
 
-  needWarning <- FALSE
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
-  if (length(rowsInPkgDT)) {
+  if (length(rowsInPkgDT) && any(toInstall[rowsInPkgDT]$installed %in% FALSE)) {
     toInstall[rowsInPkgDT, installed := FALSE]
     toInstall[rowsInPkgDT, installResult := w$message]
 
@@ -1950,6 +1964,7 @@ messagesAboutWarnings <- function(w, toInstall) {
   } else {
     needWarning <- TRUE
   }
+
   if (isTRUE(needWarning)) {
     warning(w)
   }
@@ -1976,7 +1991,7 @@ isGitHub <- function(pkg, filenames) {
 Install <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
-                    install.packagesArgs = list(),
+                    install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
                     standAlone = getOption("Require.standAlone", FALSE),
                     install = TRUE,
                     repos = getOption("repos"),
