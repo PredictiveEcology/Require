@@ -388,10 +388,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   } else {
     "source"
   }
-  if (type == "binary") {
-    opts <- options("Ncpus" = 1)
-    on.exit(options(opts))
-  }
+  # if (type == "binary") {
+  #   opts <- options("Ncpus" = NULL)
+  #   on.exit(options(opts))
+  # }
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
@@ -539,6 +539,10 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
       earliestDateOnMRAN[!packageVersionOnMRAN] <- as.Date(.earliestMRANDate) + 10
       onMRAN <- earliestDateOnMRAN > .earliestMRANDate & isWinOrMac
       onMRAN[is.na(onMRAN)] <- FALSE
+      if (length(onMRAN) != length(!packageVersionTooOldForThisR) &&
+          length(onMRAN) != 1 &&
+          length(!packageVersionTooOldForThisR) != 1)
+        browser()
       onMRAN <- onMRAN & !packageVersionTooOldForThisR
 
       if (any(onMRAN)) {
@@ -1872,6 +1876,7 @@ browserDeveloper <- function(mess = "") {
     # pf <- parent.frame()
     # attach(pf)
     # on.exit(detach(pf))
+    print(mess)
     browser()
   } else {
     stop(mess)
@@ -1916,6 +1921,7 @@ messagesAboutWarnings <- function(w, toInstall) {
   }
   if (identical(pkgName, w$message)) { # didn't work again
     if (any(grepl("cannot open URL", pkgName))) { # means needs purge b/c package is on CRAN, but not that url
+      browser()
       url <- gsub(".+(https://.+\\.zip).+", "\\1", pkgName)
       url <- gsub(".+(https://.+\\.tar\\.gz).+", "\\1", url)
       url <- gsub(".+(https://.+\\.tgz).+", "\\1", url)
