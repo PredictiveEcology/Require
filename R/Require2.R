@@ -211,7 +211,7 @@ utils::globalVariables(c(
 Require <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
-                    install.packagesArgs = list(),
+                    install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
                     standAlone = getOption("Require.standAlone", FALSE),
                     install = getOption("Require.install", TRUE),
                     require = getOption("Require.require", TRUE),
@@ -237,6 +237,10 @@ Require <- function(packages, packageVersionFile,
   }
   dealWithCache(purge)
   purge <- FALSE
+
+  if (length(install.packagesArgs))
+    if (is.null(names(install.packagesArgs)))
+      stop("install.packagesArgs must be a list with *named* elements, e.g., INSTALL_opts")
 
   install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
     dots,
@@ -1987,7 +1991,7 @@ isGitHub <- function(pkg, filenames) {
 Install <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
-                    install.packagesArgs = list(),
+                    install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
                     standAlone = getOption("Require.standAlone", FALSE),
                     repos = getOption("repos"),
                     purge = getOption("Require.purge", FALSE),
