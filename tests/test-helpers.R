@@ -71,6 +71,6 @@ omitPkgsTemporarily <- function(pkgs) {
   }
   # while not on CRAN
   pkgs <- grep("^SpaDES.core", pkgs, invert = TRUE, value = TRUE) # not on CRAN
-  pkgs <- grep("SpaDES.experiment", pkgs, invert = TRUE, value = TRUE) # file.move is not exported from reproducible
+#   pkgs <- grep("SpaDES.experiment", pkgs, invert = TRUE, value = TRUE) # file.move is not exported from reproducible
   pkgs
 }

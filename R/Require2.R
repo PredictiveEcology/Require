@@ -105,7 +105,9 @@ utils::globalVariables(c(
 #'   `install.packagesArgs`, with the `install.packagesArgs` taking precedence
 #'   if conflicting.
 #' @param install.packagesArgs List of optional named arguments, passed to
-#'   `install.packages`.
+#'   `install.packages`. Default is only `--no-multi-arch`, meaning that only
+#'   the current architecture will be built and installed (e.g., 64 bit, not 32 bit,
+#'   in many cases).
 #' @param standAlone Logical. If `TRUE`, all packages will be installed to and
 #'   loaded from the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE
 #'   USER'S `.libPaths()`, similar to e.g., the `checkpoint` package. If
@@ -388,10 +390,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   } else {
     "source"
   }
-  # if (type == "binary") {
-  #   opts <- options("Ncpus" = NULL)
-  #   on.exit(options(opts))
-  # }
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
