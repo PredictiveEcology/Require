@@ -31,6 +31,7 @@ Install(
   install_githubArgs = list(),
   install.packagesArgs = list(),
   standAlone = getOption("Require.standAlone", FALSE),
+  install = TRUE,
   repos = getOption("repos"),
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
