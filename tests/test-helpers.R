@@ -62,3 +62,15 @@ endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
   .libPaths(setupInitial$libPath)
   setwd(setupInitial$origWd)
 }
+
+
+omitPkgsTemporarily <- function(pkgs) {
+  if (getRversion() <= "4.2") {
+    pkgs <- grep("LandR", pkgs, invert = TRUE, value = TRUE) # LandR requires R >= 4.2
+    pkgs <- grep("fireSenseUtils", pkgs, invert = TRUE, value = TRUE) # LandR requires R >= 4.2
+  }
+  # while not on CRAN
+  pkgs <- grep("^SpaDES.core", pkgs, invert = TRUE, value = TRUE) # not on CRAN
+  pkgs <- grep("SpaDES.experiment", pkgs, invert = TRUE, value = TRUE) # file.move is not exported from reproducible
+  pkgs
+}
