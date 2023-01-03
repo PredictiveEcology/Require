@@ -523,7 +523,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
       # Get rversions that were live at that time
       packageVersionTooOldForThisR <- unlist(lapply(latestDateOnMRAN, function(ldom) {
         a <- rversionHistory[(as.Date(date) - 200) <= ldom][.N] # CRAN builds packages for R-devel which is before release; picked 200 days here.
-        package_version(a$version) <= rver
+        isTRUE(package_version(a$version) <= rver) # if latestDateOnMRAN is NA because asking for a "future" version of package
       }))
 
       packageVersionOnMRAN <- earliestDateOnMRAN > .earliestMRANDate
@@ -537,11 +537,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
       earliestDateOnMRAN[!packageVersionOnMRAN] <- as.Date(.earliestMRANDate) + 10
       onMRAN <- earliestDateOnMRAN > .earliestMRANDate & isWinOrMac
       onMRAN[is.na(onMRAN)] <- FALSE
-      if (length(onMRAN) != length(!packageVersionTooOldForThisR) &&
-          length(onMRAN) != 1 &&
-          length(!packageVersionTooOldForThisR) != 1)
-        browser()
-      onMRAN <- onMRAN & !packageVersionTooOldForThisR
+      onMRAN <- onMRAN & packageVersionTooOldForThisR %in% FALSE
 
       if (any(onMRAN)) {
         origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
