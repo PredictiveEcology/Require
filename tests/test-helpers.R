@@ -66,6 +66,7 @@ endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
 
 omitPkgsTemporarily <- function(pkgs) {
   if (getRversion() <= "4.2") {
+    pkgs <- grep("mumin", pkgs, invert = TRUE, value = TRUE) # MuMIn requires R >= 4.2
     pkgs <- grep("LandR", pkgs, invert = TRUE, value = TRUE) # LandR requires R >= 4.2
     pkgs <- grep("fireSenseUtils", pkgs, invert = TRUE, value = TRUE) # LandR requires R >= 4.2
   }
