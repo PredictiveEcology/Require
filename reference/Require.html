@@ -142,7 +142,9 @@ if conflicting.</p></dd>
 
 <dt>install.packagesArgs</dt>
 <dd><p>List of optional named arguments, passed to
-<code>install.packages</code>.</p></dd>
+<code>install.packages</code>. Default is only <code>--no-multi-arch</code>, meaning that only
+the current architecture will be built and installed (e.g., 64 bit, not 32 bit,
+in many cases).</p></dd>
 
 
 <dt>standAlone</dt>

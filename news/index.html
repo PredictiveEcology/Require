@@ -51,10 +51,20 @@
 <h2 class="page-header" data-toc-text="0.2.6" id="version-026">version 0.2.6<a class="anchor" aria-label="anchor" href="#version-026"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-2-6">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-6"></a></h3>
-</div>
+<ul><li>attempts to deal with more cases of failed installations</li>
+<li>
+<code>Install</code> did not have an <code>install</code> argument; this has now been introduced, allowing the (most likely) use case of <code>Install(pkg, install = "force")</code>
+</li>
+<li>examples now use <code>Install</code> more often than <code>Require(..., require = FALSE)</code> for simplicity.</li>
+</ul></div>
 <div class="section level3">
 <h3 id="improved-messaging-0-2-6">improved messaging<a class="anchor" aria-label="anchor" href="#improved-messaging-0-2-6"></a></h3>
 <ul><li>If non-interactive and no CRAN mirror is set, user gets more informative error.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bugfixes-0-2-6">bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-0-2-6"></a></h3>
+<ul><li>Cases of multiple user-specified .libPaths() were treated incorrectly; they are now all respected.</li>
+<li>other minor</li>
 </ul></div>
 </div>
     <div class="section level2">
