@@ -988,11 +988,12 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         on.exit({
           cleanUpNewBuilds(pkgGHtoDL, prevDir) # no need to assign this because it is on.exit fail
         })
-        pkgGHtoDL[, localFile := {
-          toDL <- .SD[!SHAonGH %in% FALSE]
-          gitRepo <- paste0(toDL$Account, "/", toDL$Repo, "@", toDL$Branch)
-          names(gitRepo) <- toDL$Package
-          out <- downloadRepo(gitRepo, subFolder = toDL$GitSubFolder, overwrite = TRUE, destDir = ".", verbose = verbose)
+        pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
+        #  toDL <- .SD[!SHAonGH %in% FALSE]
+          gitRepo <- paste0(Account, "/", Repo, "@", Branch)
+          names(gitRepo) <- Package
+          GSF <- if (!exists("GitSubFolder", inherits = FALSE)) NA else GitHubFolder
+          out <- downloadRepo(gitRepo, subFolder = GSF, overwrite = TRUE, destDir = ".", verbose = verbose)
           out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
           fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
           normPath(fn)
@@ -1277,6 +1278,10 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     }
     ap3[, "Depends"] <- NA
     deps <- pkgDep(toInstall[Package %in% pkgsNotInAP]$packageFullName, recursive = T)
+    pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP]$Package
+    if (any(pkgHasNameDiffrntThanRepo)) {
+      names(deps)[pkgHasNameDiffrntThanRepo] <- toInstall[Package %in% pkgsNotInAP]$Package[pkgHasNameDiffrntThanRepo]
+    }
     deps2 <- unlist(Map(dep = deps, nam = names(deps), function(dep, nam) {
       paste(setdiff(extractPkgName(dep), extractPkgName(nam)), collapse = ", ")
     })) # -1 is "drop self"

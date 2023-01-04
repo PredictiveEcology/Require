@@ -826,25 +826,46 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   }))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
-  if (isTRUE(is.na(subFolder)) || isTRUE(is.null(subFolder))) {
-    subFolder <- FALSE
-  }
+  if (!missing(subFolder))
+    if (isTRUE(is.na(subFolder)) || isTRUE(is.null(subFolder))) {
+      subFolder <- FALSE
+    }
 
   newName <- unlist(Map(
     bad = badDirname, subFolder = subFolder, pkgName = pkgName,
     function(bad, subFolder, pkgName) {
-      badToChange <- if (!isFALSE(subFolder)) {
-        file.path(basename(gsub(subFolder, "", bad)), subFolder)
-      } else {
-        basename(bad)
-      }
-      newName <- gsub(badToChange, pkgName, bad)
-      fileRenameOrMove(bad, newName) # it was downloaded with a branch suffix
-      newName
+      actualFolderName <- basename(gsub(subFolder, "", bad))
+      if (!identical(actualFolderName, pkgName)) { # means the folder is not the pkgName e.g., mumin != MuMIn
+        origOut <- normPath(out)
+        outNP <- origOut
+        newFolder <- dirname(bad)
+        newFolder <- file.path(newFolder, pkgName)
+        if (!isFALSE(subFolder)) { # get rid of subfolder for all files
+          subFolderNP <- normPath(file.path(bad, subFolder))
+          origOut <- grep(subFolderNP, origOut, value = TRUE)
+          outNP <- grep(subFolderNP, origOut, value = TRUE)
+          outNP <- gsub(subFolderNP, newFolder, outNP )
+        } else {
+          outNP <- gsub(bad, newFolder, outNP)
+        }
+        fileRenameOrMove(origOut, outNP) # do the rename
+        newFolder
+      } # else {
+      #   badToChange <- if (!isFALSE(subFolder)) {
+      #     file.path(actualFolderName, subFolder)
+      #   } else {
+      #     basename(bad)
+      #   }
+      #   newName <- gsub(badToChange, pkgName, bad)
+      #   fileRenameOrMove(bad, newName) # it was downloaded with a branch suffix
+      #   newName
+      # }
+
     }
   ))
   unlink(zipFileName)
-  messageVerbose(paste0(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"), collapse = "\n"),
+  messageVerbose(paste0(gitRepo, " downloaded and placed in ",
+                        normalizePath(repoFull, winslash = "/"), collapse = "\n"),
     verbose = verbose, verboseLevel = 2
   )
   return(normalizePath(repoFull))
