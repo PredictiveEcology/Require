@@ -4,9 +4,16 @@ version 0.2.6
 =============
 
 ## enhancements
+* attempts to deal with more cases of failed installations
+* `Install` did not have an `install` argument; this has now been introduced, allowing the (most likely) use case of `Install(pkg, install = "force")`
+* examples now use `Install` more often than `Require(..., require = FALSE)` for simplicity.
 
 ## improved messaging
 * If non-interactive and no CRAN mirror is set, user gets more informative error.
+
+## bugfixes
+* Cases of multiple user-specified .libPaths() were treated incorrectly; they are now all respected. 
+* other minor
 
 version 0.2.5
 =============
