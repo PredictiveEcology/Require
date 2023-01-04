@@ -1921,7 +1921,6 @@ messagesAboutWarnings <- function(w, toInstall) {
   }
   if (identical(pkgName, w$message)) { # didn't work again
     if (any(grepl("cannot open URL", pkgName))) { # means needs purge b/c package is on CRAN, but not that url
-      browser()
       url <- gsub(".+(https://.+\\.zip).+", "\\1", pkgName)
       url <- gsub(".+(https://.+\\.tar\\.gz).+", "\\1", url)
       url <- gsub(".+(https://.+\\.tgz).+", "\\1", url)
@@ -1931,7 +1930,6 @@ messagesAboutWarnings <- function(w, toInstall) {
       message("purging availablePackages; trying to download ", pkgName, " again")
       outcome <- try(Install(pkgName))
       outcome2 <- attr(outcome, "Require")
-      browser()
       if (identical("noneAvailable", outcome2$installResult)) {
         needWarning <- TRUE
       } else {
