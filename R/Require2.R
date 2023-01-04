@@ -987,13 +987,20 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         prevDir <- setwd(td)
         on.exit({
           cleanUpNewBuilds(pkgGHtoDL, prevDir) # no need to assign this because it is on.exit fail
+          if (isTRUE(needRmGSF))
+            set(pkgGHtoDL, NULL, "GitSubFolder", NULL)
         })
+        needRmGSF <- FALSE
+        if (!"GitSubFolder" %in% names(pkgGHtoDL)) {
+          set(pkgGHtoDL, NULL, "GitSubFolder", NA_character_)
+          needRmGSF <- TRUE
+        }
         pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
         #  toDL <- .SD[!SHAonGH %in% FALSE]
           gitRepo <- paste0(Account, "/", Repo, "@", Branch)
           names(gitRepo) <- Package
-          GSF <- if (!exists("GitSubFolder", inherits = FALSE)) NA else GitHubFolder
-          out <- downloadRepo(gitRepo, subFolder = GSF, overwrite = TRUE, destDir = ".", verbose = verbose)
+          out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
+                              overwrite = TRUE, destDir = ".", verbose = verbose)
           out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
           fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
           normPath(fn)
@@ -1002,6 +1009,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         pkgGHtoDL[, installFrom := "GitHub"]
         pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
         pkgGHtoDL <- cleanUpNewBuilds(pkgGHtoDL, prevDir)
+        if (isTRUE(needRmGSF))
+          set(pkgGHtoDL, NULL, "GitSubFolder", NULL)
         on.exit() # don't run on.exit above if this was successful
       }
       pkgGitHub <- rbindlistRecursive(pkgGHList)
