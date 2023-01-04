@@ -964,7 +964,7 @@ loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
   ret <- list()
   if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
     fn <- getSHAFromGitHubDBFilename()
-    if (file.exists(fn)) {
+    if (isTRUE(file.exists(fn))) {
       out <- readRDS(fn)
       removeFile <- purgeBasedOnTimeSinceCached(out[[GitHubSHAonDiskCacheTime]])
       if (!removeFile) { # remove if 24 hours old
@@ -995,7 +995,7 @@ saveGitHubSHAsToDisk <- function(preShas) {
       length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
     }
     if  (needSave) {
-      fn <- getSHAFromGitHubDBFilename()
+      fn <- getSHAFromGitHubDBFilename() # can return character() if RPackageCache is NULL; but here that is not possible
       dd <- dirname(fn)
       if (!dir.exists(dd)) dir.create(dd, recursive = TRUE)
       obj[[GitHubSHAonDiskCacheTime]] <- format(Sys.time())
@@ -1013,7 +1013,10 @@ getSHAfromGitHubObjName <- "getSHAfromGitHub"
 getSHAFromGitHubDBFilename <- function() {
   go <- getOptionRPackageCache()
   if (!is.null(go))
-    file.path(go, paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+    out <- file.path(go, paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+  else
+    out <- character()
+  out
 }
 
 
