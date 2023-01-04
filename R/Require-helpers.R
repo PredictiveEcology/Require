@@ -994,8 +994,8 @@ saveGitHubSHAsToDisk <- function(preShas) {
     needSave <- if (missing(preShas)) { TRUE } else {
       length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
     }
-    if  (needSave) {
-      fn <- getSHAFromGitHubDBFilename() # can return character() if RPackageCache is NULL; but here that is not possible
+    fn <- getSHAFromGitHubDBFilename() # can return character() if RPackageCache is NULL; but here that is not possible
+    if  (needSave && isTRUE(file.exists(fn))) {
       dd <- dirname(fn)
       if (!dir.exists(dd)) dir.create(dd, recursive = TRUE)
       obj[[GitHubSHAonDiskCacheTime]] <- format(Sys.time())
