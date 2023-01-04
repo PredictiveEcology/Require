@@ -110,6 +110,15 @@ if (identical(RPackageCacheSysEnv, "FALSE")) {
     testit::assert(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
   }
 }
+
+ro <- RequireOptions()
+gro <- getRequireOptions()
+
+testit::assert(is.list(ro))
+testit::assert(all(startsWith(names(ro), "Require")))
+testit::assert(is.list(gro))
+testit::assert(all(startsWith(names(gro), "Require")))
+
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
 options(ooo)

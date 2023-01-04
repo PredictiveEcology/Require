@@ -1937,12 +1937,13 @@ messagesAboutWarnings <- function(w, toInstall) {
 
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
       message("purging availablePackages; trying to download ", pkgName, " again")
-      outcome <- try(Install(pkgName))
+      res <- try(Install(pkgName))
       outcome2 <- attr(outcome, "Require")
       if (identical("noneAvailable", outcome2$installResult)) {
         needWarning <- TRUE
       } else {
         needWarning <- FALSE
+        outcome <- TRUE
         rowsInPkgDT <- grep(pkgName, toInstall$Package)
         toInstall[rowsInPkgDT, installed := outcome2$installed]
         toInstall[rowsInPkgDT, installResult := outcome2$installResult]
@@ -1953,7 +1954,7 @@ messagesAboutWarnings <- function(w, toInstall) {
 
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
   if (length(rowsInPkgDT) && any(toInstall[rowsInPkgDT]$installed %in% FALSE)) {
-    toInstall[rowsInPkgDT, installed := FALSE]
+    toInstall[rowsInPkgDT, installed := outcome]
     toInstall[rowsInPkgDT, installResult := w$message]
 
     if (any(grepl("cannot remove prior installation of package", w$message))) {

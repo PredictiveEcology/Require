@@ -1,10 +1,6 @@
 ## Updated release
 
-This is a new submission, following archiving of this package.
-This submission includes a re-implementation of the underlying functions compared to Require 0.1.4 that was most recently on CRAN.
-This version comes with large speed improvements and many more edge cases dealt with.
-After multiple attempts to accommodate the CRAN policies, we have now understood and identified the cause of the failures.
-This version includes several modifications to ensure clean package and personal cache directories when a user (including CRAN), does not want to use a cache or wants to ensure the cache is wiped clean after testing and examples.
+This is a minor update submission that addresses an important bug, namely when there were multiple *user-defined* libraries in the .libPaths(), these were not respected; only the first was kept with the 2nd and subsequent user libraries silently dropped. Now all are kept.
 
 ## Test environments
 
@@ -22,6 +18,7 @@ This version includes several modifications to ensure clean package and personal
 * Windows                 (win-builder), 4.2.2 (2022-10-31 ucrt)
 * Windows                 (win-builder), 4.1.3 (2022-03-10)
 
+
 ### R-hub
 * Linux (Debian, Fedora, MacOS, Windows) 
 
@@ -31,6 +28,10 @@ There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer,
 
 ## Downstream dependencies
 
-We checked all reverse dependencies, currently, all reverse dependencies are packages we are also maintainers. 
+> revdepcheck::revdep_report_cran() ## update cran-comments with this output
+## revdepcheck results
 
-There were no issues.
+We checked 0 reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
+
+ * We saw 0 new problems
+ * We failed to check 0 packages

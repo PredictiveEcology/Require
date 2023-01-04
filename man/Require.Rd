@@ -67,7 +67,9 @@ to create isolated, stand alone package installations, if used with
 if conflicting.}
 
 \item{install.packagesArgs}{List of optional named arguments, passed to
-\code{install.packages}.}
+\code{install.packages}. Default is only \code{--no-multi-arch}, meaning that only
+the current architecture will be built and installed (e.g., 64 bit, not 32 bit,
+in many cases).}
 
 \item{standAlone}{Logical. If \code{TRUE}, all packages will be installed to and
 loaded from the \code{libPaths} only. NOTE: If \code{TRUE}, THIS WILL CHANGE THE
