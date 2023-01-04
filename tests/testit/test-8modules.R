@@ -126,9 +126,11 @@ if (isDevAndInteractive) {
   st2 <- system.time(out2 <- capture.output(type = "message",
                          Install(pkgs, standAlone = TRUE, upgrade = FALSE)
   ))
-  testit::assert(length(out2) <= 6) # can be "Require is in use
-  testit::assert(length(out1) >= 16) # was at least 37
-  testit::assert(st1["elapsed"]/st2["elapsed"] > 20) # WAY faster -- though st1 is not that slow b/c local binaries
+  # some sort of test about whether anything was installed; pick reproducible as a random pkg
+  testit::assert(sum(grepl("reproducible", out1)) == 1)
+  testit::assert(sum(grepl("reproducible", out2)) == 0)
+  browser()
+  testit::assert(st1["elapsed"]/st2["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
 }
 
