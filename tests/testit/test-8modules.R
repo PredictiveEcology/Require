@@ -119,17 +119,18 @@ if (isDevAndInteractive) {
 
   pkgs <- omitPkgsTemporarily(pkgs)
 
+  dirForInstall <- tempdir2(.rndstr(1))
+
   st1 <- system.time(out1 <- capture.output(type = "message",
-                 Install(pkgs, standAlone = TRUE, upgrade = FALSE)
+                 Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
                  ))
   # Do a second time; should be empty (and fast)
   st2 <- system.time(out2 <- capture.output(type = "message",
-                         Install(pkgs, standAlone = TRUE, upgrade = FALSE)
+                         Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
   ))
   # some sort of test about whether anything was installed; pick reproducible as a random pkg
   testit::assert(sum(grepl("reproducible", out1)) == 1)
   testit::assert(sum(grepl("reproducible", out2)) == 0)
-  browser()
   testit::assert(st1["elapsed"]/st2["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
 }
