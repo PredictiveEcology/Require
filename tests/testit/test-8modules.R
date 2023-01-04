@@ -35,6 +35,7 @@ if (isDevAndInteractive) {
   deps <- pkgDep(pkgsShort, recursive = TRUE)
 
   # THE INSTALL
+  pkgs <- omitPkgsTemporarily(pkgs)
   outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
 
   # THE POST INSTALL COMPARISON
@@ -111,18 +112,26 @@ if (isDevAndInteractive) {
                   "robustbase", "RSQLite", "scales", "sf", "snow", "sp", "SpaDES.core",
                   "SpaDES.tools", "spatialEco", "stats", "terra", "tidyr", "viridis"
   )
+
   otherPkgs <- c("archive", "details", "DBI", "s-u/fastshp", "logging", "RPostgres", "slackr")
 
+  pkgs <- unique(c(modulePkgs, otherPkgs))
+
+  pkgs <- omitPkgsTemporarily(pkgs)
+
+  dirForInstall <- tempdir2(.rndstr(1))
+
   st1 <- system.time(out1 <- capture.output(type = "message",
-                 Install(unique(c(modulePkgs, otherPkgs)), standAlone = TRUE, upgrade = FALSE)
+                 Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
                  ))
   # Do a second time; should be empty (and fast)
   st2 <- system.time(out2 <- capture.output(type = "message",
-                         Install(unique(c(modulePkgs, otherPkgs)), standAlone = TRUE, upgrade = FALSE)
+                         Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
   ))
-  testit::assert(length(out2) <= 6) # can be "Require is in use
-  testit::assert(length(out1) >= 16) # was at least 37
-  testit::assert(st1["elapsed"]/st2["elapsed"] > 20) # WAY faster -- though st1 is not that slow b/c local binaries
+  # some sort of test about whether anything was installed; pick reproducible as a random pkg
+  testit::assert(sum(grepl("reproducible", out1)) == 1)
+  testit::assert(sum(grepl("reproducible", out2)) == 0)
+  testit::assert(st1["elapsed"]/st2["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
 }
 

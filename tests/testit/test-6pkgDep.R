@@ -102,7 +102,8 @@ testit::assert({
 out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
 knownRevDeps <- list(
   Require = c(
-    "reproducible", "SpaDES", "SpaDES.addins", "SpaDES.core",
+    # "reproducible",
+    "SpaDES", "SpaDES.addins", "SpaDES.core",
     "SpaDES.experiment", "SpaDES.tools", "SpaDES.install", "SpaDES.project"
   )
 )

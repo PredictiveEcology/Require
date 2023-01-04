@@ -1,5 +1,13 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.2.6
+=============
+
+## enhancements
+
+## improved messaging
+* If non-interactive and no CRAN mirror is set, user gets more informative error.
+
 version 0.2.5
 =============
 

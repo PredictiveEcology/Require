@@ -826,25 +826,46 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   }))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
-  if (isTRUE(is.na(subFolder)) || isTRUE(is.null(subFolder))) {
-    subFolder <- FALSE
-  }
+  if (!missing(subFolder))
+    if (isTRUE(is.na(subFolder)) || isTRUE(is.null(subFolder))) {
+      subFolder <- FALSE
+    }
 
   newName <- unlist(Map(
     bad = badDirname, subFolder = subFolder, pkgName = pkgName,
     function(bad, subFolder, pkgName) {
-      badToChange <- if (!isFALSE(subFolder)) {
-        file.path(basename(gsub(subFolder, "", bad)), subFolder)
-      } else {
-        basename(bad)
-      }
-      newName <- gsub(badToChange, pkgName, bad)
-      fileRenameOrMove(bad, newName) # it was downloaded with a branch suffix
-      newName
+      actualFolderName <- basename(gsub(subFolder, "", bad))
+      if (!identical(actualFolderName, pkgName)) { # means the folder is not the pkgName e.g., mumin != MuMIn
+        origOut <- normPath(out)
+        outNP <- origOut
+        newFolder <- dirname(bad)
+        newFolder <- file.path(newFolder, pkgName)
+        if (!isFALSE(subFolder)) { # get rid of subfolder for all files
+          subFolderNP <- normPath(file.path(bad, subFolder))
+          origOut <- grep(subFolderNP, origOut, value = TRUE)
+          outNP <- grep(subFolderNP, origOut, value = TRUE)
+          outNP <- gsub(subFolderNP, newFolder, outNP )
+        } else {
+          outNP <- gsub(bad, newFolder, outNP)
+        }
+        fileRenameOrMove(origOut, outNP) # do the rename
+        newFolder
+      } # else {
+      #   badToChange <- if (!isFALSE(subFolder)) {
+      #     file.path(actualFolderName, subFolder)
+      #   } else {
+      #     basename(bad)
+      #   }
+      #   newName <- gsub(badToChange, pkgName, bad)
+      #   fileRenameOrMove(bad, newName) # it was downloaded with a branch suffix
+      #   newName
+      # }
+
     }
   ))
   unlink(zipFileName)
-  messageVerbose(paste0(gitRepo, " downloaded and placed in ", normalizePath(repoFull, winslash = "/"), collapse = "\n"),
+  messageVerbose(paste0(gitRepo, " downloaded and placed in ",
+                        normalizePath(repoFull, winslash = "/"), collapse = "\n"),
     verbose = verbose, verboseLevel = 2
   )
   return(normalizePath(repoFull))
@@ -943,7 +964,7 @@ loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
   ret <- list()
   if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
     fn <- getSHAFromGitHubDBFilename()
-    if (file.exists(fn)) {
+    if (isTRUE(file.exists(fn))) {
       out <- readRDS(fn)
       removeFile <- purgeBasedOnTimeSinceCached(out[[GitHubSHAonDiskCacheTime]])
       if (!removeFile) { # remove if 24 hours old
@@ -973,8 +994,8 @@ saveGitHubSHAsToDisk <- function(preShas) {
     needSave <- if (missing(preShas)) { TRUE } else {
       length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
     }
-    if  (needSave) {
-      fn <- getSHAFromGitHubDBFilename()
+    fn <- getSHAFromGitHubDBFilename() # can return character() if RPackageCache is NULL; but here that is not possible
+    if  (needSave && isTRUE(file.exists(fn))) {
       dd <- dirname(fn)
       if (!dir.exists(dd)) dir.create(dd, recursive = TRUE)
       obj[[GitHubSHAonDiskCacheTime]] <- format(Sys.time())
@@ -992,7 +1013,10 @@ getSHAfromGitHubObjName <- "getSHAfromGitHub"
 getSHAFromGitHubDBFilename <- function() {
   go <- getOptionRPackageCache()
   if (!is.null(go))
-    file.path(go, paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+    out <- file.path(go, paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+  else
+    out <- character()
+  out
 }
 
 

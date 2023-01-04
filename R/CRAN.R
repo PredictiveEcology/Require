@@ -28,6 +28,8 @@ getCRANrepos <- function(repos = NULL, ind) {
     } else {
       if (isInteractive() && missing(ind)) {
         chooseCRANmirror2() ## sets repo option
+      } else if (missing(ind)) {
+        stop("Please set a CRAN mirror")
       } else {
         chooseCRANmirror(ind = ind)
       }
