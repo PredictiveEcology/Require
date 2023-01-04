@@ -76,7 +76,6 @@ optsListPrevLinux <- if (isDevAndInteractive) Require::setLinuxBinaryRepo() else
 optsListNew <- Require::modifyList2(optsListNew, list(Require.verbose = verbosity),
   keep.null = TRUE
 )
-optsNcpus <- options("Ncpus" = 4)
 optsListPrev <- options(optsListNew)
 # optsListNew <- modifyList2(optsListNew, options("repos"))
 origLibPaths <- .libPaths()
