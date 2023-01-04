@@ -26,7 +26,7 @@ will be skipped."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5.9004</span>
       </span>
     </div>
 
@@ -76,7 +76,7 @@ will be skipped.</p>
 <span>  <span class="va">packageVersionFile</span>,</span>
 <span>  <span class="va">libPaths</span>,</span>
 <span>  install_githubArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  install.packagesArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  install.packagesArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>INSTALL_opts <span class="op">=</span> <span class="st">"--no-multiarch"</span><span class="op">)</span>,</span>
 <span>  standAlone <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.standAlone"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
 <span>  install <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.install"</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>  require <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.require"</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
@@ -93,8 +93,9 @@ will be skipped.</p>
 <span>  <span class="va">packageVersionFile</span>,</span>
 <span>  <span class="va">libPaths</span>,</span>
 <span>  install_githubArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  install.packagesArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  install.packagesArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>INSTALL_opts <span class="op">=</span> <span class="st">"--no-multiarch"</span><span class="op">)</span>,</span>
 <span>  standAlone <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.standAlone"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>  install <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span>,</span>
 <span>  purge <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.purge"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"Require.verbose"</span>, <span class="cn">FALSE</span><span class="op">)</span>,</span>
@@ -308,7 +309,7 @@ will reuse them if needed. To turn off this feature, set
 <span class="r-in"><span>  <span class="va">tempPkgFolder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Packages"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="co"># use standAlone, means it will put it in libPaths, even if it already exists</span></span></span>
 <span class="r-in"><span>  <span class="co">#   in another local library (e.g., personal library)</span></span></span>
-<span class="r-in"><span>  <span class="fu">Require</span><span class="op">(</span><span class="st">"crayon"</span>, libPaths <span class="op">=</span> <span class="va">tempPkgFolder</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">Install</span><span class="op">(</span><span class="st">"crayon"</span>, libPaths <span class="op">=</span> <span class="va">tempPkgFolder</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># make a package version snapshot of installed packages</span></span></span>
 <span class="r-in"><span>  <span class="va">tf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
@@ -321,11 +322,11 @@ will reuse them if needed. To turn off this feature, set
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Mutual dependencies, only installs once -- e.g., curl</span></span></span>
 <span class="r-in"><span>  <span class="va">tempPkgFolder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Packages"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu">Require</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"remotes"</span>, <span class="st">"testit"</span><span class="op">)</span>, libPaths <span class="op">=</span> <span class="va">tempPkgFolder</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">Install</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"remotes"</span>, <span class="st">"testit"</span><span class="op">)</span>, libPaths <span class="op">=</span> <span class="va">tempPkgFolder</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># Mutual dependencies, only installs once -- e.g., curl</span></span></span>
 <span class="r-in"><span>  <span class="va">tempPkgFolder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Packages"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu">Require</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"covr"</span>, <span class="st">"httr"</span><span class="op">)</span>, libPaths <span class="op">=</span> <span class="va">tempPkgFolder</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">Install</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"covr"</span>, <span class="st">"httr"</span><span class="op">)</span>, libPaths <span class="op">=</span> <span class="va">tempPkgFolder</span>, standAlone <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co">#####################################################################################</span></span></span>
 <span class="r-in"><span>  <span class="co"># Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #</span></span></span>
@@ -336,7 +337,7 @@ will reuse them if needed. To turn off this feature, set
 <span class="r-in"><span>    libPaths <span class="op">=</span> <span class="va">ProjectPackageFolder</span>, standAlone <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="fu">Require</span><span class="op">(</span><span class="st">"PredictiveEcology/fpCompare@development"</span>,</span></span>
+<span class="r-in"><span>  <span class="fu">Install</span><span class="op">(</span><span class="st">"PredictiveEcology/fpCompare@development"</span>,</span></span>
 <span class="r-in"><span>    libPaths <span class="op">=</span> <span class="va">ProjectPackageFolder</span>,</span></span>
 <span class="r-in"><span>    standAlone <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span> <span class="co"># the latest version on GitHub</span></span></span>
@@ -368,7 +369,7 @@ will reuse them if needed. To turn off this feature, set
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
 </div>
 
       </footer></div>
