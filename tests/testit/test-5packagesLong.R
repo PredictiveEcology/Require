@@ -207,6 +207,8 @@ if (isDevAndInteractive) {
       verboseLevel = 0
     )
     # if (i == 11) ._Require_0 <<- 1
+    # if (length(grep("LandR", pkg))) browser()
+    pkg <- omitPkgsTemporarily(pkg)
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
     # Rerun it to get output table, but capture messages for quiet; should be no installs
     silent <- capture.output(type = "message", {

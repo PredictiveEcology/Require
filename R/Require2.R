@@ -105,7 +105,9 @@ utils::globalVariables(c(
 #'   `install.packagesArgs`, with the `install.packagesArgs` taking precedence
 #'   if conflicting.
 #' @param install.packagesArgs List of optional named arguments, passed to
-#'   `install.packages`.
+#'   `install.packages`. Default is only `--no-multi-arch`, meaning that only
+#'   the current architecture will be built and installed (e.g., 64 bit, not 32 bit,
+#'   in many cases).
 #' @param standAlone Logical. If `TRUE`, all packages will be installed to and
 #'   loaded from the `libPaths` only. NOTE: If `TRUE`, THIS WILL CHANGE THE
 #'   USER'S `.libPaths()`, similar to e.g., the `checkpoint` package. If
@@ -162,7 +164,7 @@ utils::globalVariables(c(
 #'   tempPkgFolder <- file.path(tempdir(), "Packages")
 #'   # use standAlone, means it will put it in libPaths, even if it already exists
 #'   #   in another local library (e.g., personal library)
-#'   Require("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   # make a package version snapshot of installed packages
 #'   tf <- tempfile()
@@ -175,11 +177,11 @@ utils::globalVariables(c(
 #'
 #'   # Mutual dependencies, only installs once -- e.g., curl
 #'   tempPkgFolder <- file.path(tempdir(), "Packages")
-#'   Require(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   # Mutual dependencies, only installs once -- e.g., curl
 #'   tempPkgFolder <- file.path(tempdir(), "Packages")
-#'   Require(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   #####################################################################################
 #'   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
@@ -190,7 +192,7 @@ utils::globalVariables(c(
 #'     libPaths = ProjectPackageFolder, standAlone = FALSE
 #'   )
 #'
-#'   Require("PredictiveEcology/fpCompare@development",
+#'   Install("PredictiveEcology/fpCompare@development",
 #'     libPaths = ProjectPackageFolder,
 #'     standAlone = TRUE
 #'   ) # the latest version on GitHub
@@ -211,7 +213,7 @@ utils::globalVariables(c(
 Require <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
-                    install.packagesArgs = list(),
+                    install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
                     standAlone = getOption("Require.standAlone", FALSE),
                     install = getOption("Require.install", TRUE),
                     require = getOption("Require.require", TRUE),
@@ -238,6 +240,10 @@ Require <- function(packages, packageVersionFile,
   dealWithCache(purge)
   purge <- FALSE
 
+  if (length(install.packagesArgs))
+    if (is.null(names(install.packagesArgs)))
+      stop("install.packagesArgs must be a list with *named* elements, e.g., INSTALL_opts")
+
   install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
     dots,
     keep.null = TRUE
@@ -254,7 +260,7 @@ Require <- function(packages, packageVersionFile,
   if (missing(libPaths)) {
     libPaths <- .libPaths()
   }
-  libPaths <- checkLibPaths(libPaths = libPaths)
+  libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   suppressMessages({
     origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)
   })
@@ -461,6 +467,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     pkgInstall[, installSafeGroups := 1L]
     if (isWindows() || isMacOSX()) {
       pkgInstall[, installSafeGroups := (isBinaryInstall %in% FALSE) + 1L]
+      pkgInstall <- updateInstallSafeGroups(pkgInstall)
     }
     # pkgInstall <- updateInstallSafeGroups(pkgInstall)
 
@@ -517,7 +524,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
       # Get rversions that were live at that time
       packageVersionTooOldForThisR <- unlist(lapply(latestDateOnMRAN, function(ldom) {
         a <- rversionHistory[(as.Date(date) - 200) <= ldom][.N] # CRAN builds packages for R-devel which is before release; picked 200 days here.
-        package_version(a$version) <= rver
+        isTRUE(package_version(a$version) <= rver) # if latestDateOnMRAN is NA because asking for a "future" version of package
       }))
 
       packageVersionOnMRAN <- earliestDateOnMRAN > .earliestMRANDate
@@ -531,7 +538,7 @@ downloadMRAN <- function(toInstall, install.packagesArgs, verbose) {
       earliestDateOnMRAN[!packageVersionOnMRAN] <- as.Date(.earliestMRANDate) + 10
       onMRAN <- earliestDateOnMRAN > .earliestMRANDate & isWinOrMac
       onMRAN[is.na(onMRAN)] <- FALSE
-      onMRAN <- onMRAN & !packageVersionTooOldForThisR
+      onMRAN <- onMRAN & packageVersionTooOldForThisR %in% FALSE
 
       if (any(onMRAN)) {
         origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
@@ -980,12 +987,20 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         prevDir <- setwd(td)
         on.exit({
           cleanUpNewBuilds(pkgGHtoDL, prevDir) # no need to assign this because it is on.exit fail
+          if (isTRUE(needRmGSF))
+            set(pkgGHtoDL, NULL, "GitSubFolder", NULL)
         })
-        pkgGHtoDL[, localFile := {
-          toDL <- .SD[!SHAonGH %in% FALSE]
-          gitRepo <- paste0(toDL$Account, "/", toDL$Repo, "@", toDL$Branch)
-          names(gitRepo) <- toDL$Package
-          out <- downloadRepo(gitRepo, subFolder = toDL$GitSubFolder, overwrite = TRUE, destDir = ".", verbose = verbose)
+        needRmGSF <- FALSE
+        if (!"GitSubFolder" %in% names(pkgGHtoDL)) {
+          set(pkgGHtoDL, NULL, "GitSubFolder", NA_character_)
+          needRmGSF <- TRUE
+        }
+        pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
+        #  toDL <- .SD[!SHAonGH %in% FALSE]
+          gitRepo <- paste0(Account, "/", Repo, "@", Branch)
+          names(gitRepo) <- Package
+          out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
+                              overwrite = TRUE, destDir = ".", verbose = verbose)
           out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
           fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
           normPath(fn)
@@ -994,6 +1009,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         pkgGHtoDL[, installFrom := "GitHub"]
         pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
         pkgGHtoDL <- cleanUpNewBuilds(pkgGHtoDL, prevDir)
+        if (isTRUE(needRmGSF))
+          set(pkgGHtoDL, NULL, "GitSubFolder", NULL)
         on.exit() # don't run on.exit above if this was successful
       }
       pkgGitHub <- rbindlistRecursive(pkgGHList)
@@ -1270,6 +1287,10 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     }
     ap3[, "Depends"] <- NA
     deps <- pkgDep(toInstall[Package %in% pkgsNotInAP]$packageFullName, recursive = T)
+    pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP]$Package
+    if (any(pkgHasNameDiffrntThanRepo)) {
+      names(deps)[pkgHasNameDiffrntThanRepo] <- toInstall[Package %in% pkgsNotInAP]$Package[pkgHasNameDiffrntThanRepo]
+    }
     deps2 <- unlist(Map(dep = deps, nam = names(deps), function(dep, nam) {
       paste(setdiff(extractPkgName(dep), extractPkgName(nam)), collapse = ", ")
     })) # -1 is "drop self"
@@ -1864,6 +1885,7 @@ browserDeveloper <- function(mess = "") {
     # pf <- parent.frame()
     # attach(pf)
     # on.exit(detach(pf))
+    print(mess)
     browser()
   } else {
     stop(mess)
@@ -1901,12 +1923,36 @@ updateReposForSrcPkgs <- function(pkgInstall) {
 messagesAboutWarnings <- function(w, toInstall) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
   pkgName <- extractPkgNameFromWarning(w$message)
+  outcome <- FALSE
+  needWarning <- FALSE
   if (identical(pkgName, w$message)) { # didn't work
     pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
   }
-  needWarning <- FALSE
+  if (identical(pkgName, w$message)) { # didn't work again
+    if (any(grepl("cannot open URL", pkgName))) { # means needs purge b/c package is on CRAN, but not that url
+      url <- gsub(".+(https://.+\\.zip).+", "\\1", pkgName)
+      url <- gsub(".+(https://.+\\.tar\\.gz).+", "\\1", url)
+      url <- gsub(".+(https://.+\\.tgz).+", "\\1", url)
+      pkgName <- extractPkgName(filenames = basename(url))
+
+      try(dealWithCache(purge = TRUE, checkAge = FALSE))
+      message("purging availablePackages; trying to download ", pkgName, " again")
+      outcome <- try(Install(pkgName))
+      outcome2 <- attr(outcome, "Require")
+      if (identical("noneAvailable", outcome2$installResult)) {
+        needWarning <- TRUE
+      } else {
+        needWarning <- FALSE
+        rowsInPkgDT <- grep(pkgName, toInstall$Package)
+        toInstall[rowsInPkgDT, installed := outcome2$installed]
+        toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+      }
+    }
+
+  }
+
   rowsInPkgDT <- grep(pkgName, toInstall$Package)
-  if (length(rowsInPkgDT)) {
+  if (length(rowsInPkgDT) && any(toInstall[rowsInPkgDT]$installed %in% FALSE)) {
     toInstall[rowsInPkgDT, installed := FALSE]
     toInstall[rowsInPkgDT, installResult := w$message]
 
@@ -1931,6 +1977,7 @@ messagesAboutWarnings <- function(w, toInstall) {
   } else {
     needWarning <- TRUE
   }
+
   if (isTRUE(needWarning)) {
     warning(w)
   }
@@ -1957,8 +2004,9 @@ isGitHub <- function(pkg, filenames) {
 Install <- function(packages, packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
-                    install.packagesArgs = list(),
+                    install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
                     standAlone = getOption("Require.standAlone", FALSE),
+                    install = TRUE,
                     repos = getOption("repos"),
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
@@ -1971,7 +2019,7 @@ Install <- function(packages, packageVersionFile,
     install_githubArgs,
     install.packagesArgs,
     standAlone,
-    install = TRUE,
+    install = install,
     require = FALSE,
     repos,
     purge,
