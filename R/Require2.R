@@ -467,6 +467,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     pkgInstall[, installSafeGroups := 1L]
     if (isWindows() || isMacOSX()) {
       pkgInstall[, installSafeGroups := (isBinaryInstall %in% FALSE) + 1L]
+      pkgInstall <- updateInstallSafeGroups(pkgInstall)
     }
     # pkgInstall <- updateInstallSafeGroups(pkgInstall)
 
