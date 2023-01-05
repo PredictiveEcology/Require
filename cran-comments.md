@@ -31,7 +31,7 @@ There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer,
 > revdepcheck::revdep_report_cran() ## update cran-comments with this output
 ## revdepcheck results
 
-We checked 0 reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
+We checked 1 reverse dependencies (0 from CRAN + 1 from Bioconductor), comparing R CMD check results across CRAN and dev versions of this package.
 
  * We saw 0 new problems
  * We failed to check 0 packages
