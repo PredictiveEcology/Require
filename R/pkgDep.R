@@ -104,8 +104,8 @@ pkgDep <- function(packages,
   if (!missing(depends)) {
     wh <-
       "Depends"
-    if (isTRUE(depends)) {
-      which <- unique(c(which, wh))
+    which <- if (isTRUE(depends)) {
+      unique(c(which, wh))
     } else {
       setdiff(which, wh)
     }
@@ -113,8 +113,8 @@ pkgDep <- function(packages,
   if (!missing(imports)) {
     wh <-
       "Imports"
-    if (isTRUE(imports)) {
-      which <- unique(c(which, wh))
+    which <- if (isTRUE(imports)) {
+      unique(c(which, wh))
     } else {
       setdiff(which, wh)
     }
@@ -122,8 +122,8 @@ pkgDep <- function(packages,
   if (!missing(suggests)) {
     wh <-
       "Suggests"
-    if (isTRUE(suggests)) {
-      which <- unique(c(which, wh))
+    which <- if (isTRUE(suggests)) {
+      unique(c(which, wh))
     } else {
       setdiff(which, wh)
     }
@@ -131,8 +131,8 @@ pkgDep <- function(packages,
   if (!missing(linkingTo)) {
     wh <-
       "LinkingTo"
-    if (isTRUE(linkingTo)) {
-      which <- unique(c(which, wh))
+    which <- if (isTRUE(linkingTo)) {
+      unique(c(which, wh))
     } else {
       setdiff(which, wh)
     }
