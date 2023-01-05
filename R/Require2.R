@@ -455,15 +455,6 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     startTime <- Sys.time()
 
     # The install
-    if (FALSE) {
-      data.table::setorderv(pkgInstall, c("installSafeGroups", "Package", "isBinaryInstall", "localFile"),
-        order = c(1L, 1L, -1L, 1L)
-      ) # alphabetical order
-
-      set(pkgInstall, which(pkgInstall$isBinaryInstall), "installSafeGroups", -1L)
-      setorderv(pkgInstall, "installSafeGroups")
-    }
-
     pkgInstall[, installSafeGroups := 1L]
     if (isWindows() || isMacOSX()) {
       pkgInstall[, installSafeGroups := (isBinaryInstall %in% FALSE) + 1L]
@@ -812,13 +803,6 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
 
 doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, type = getOption("pkgType")) {
-  if (FALSE) {
-    topoSorted <- pkgDepTopoSort(pkgInstall[["packageFullName"]], verbose = verbose - 1)
-    installSafeGroups <- attr(topoSorted, "installSafeGroups")
-    correctOrder <- match(names(topoSorted), pkgInstall[["packageFullName"]])
-    pkgInstall <- pkgInstall[correctOrder, ]
-    set(pkgInstall, NULL, "installSafeGroups", unname(unlist(installSafeGroups)))
-  }
   pkgInstall[, installSafeGroups := 1L]
 
 
@@ -832,9 +816,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     type = type
   )
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
-  if (FALSE) {
-    pkgInstall <- updateInstallSafeGroups(pkgInstall)
-  }
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
@@ -1938,15 +1919,19 @@ messagesAboutWarnings <- function(w, toInstall) {
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
       message("purging availablePackages; trying to download ", pkgName, " again")
       res <- try(Install(pkgName))
-      outcome2 <- attr(outcome, "Require")
-      if (identical("noneAvailable", outcome2$installResult)) {
+      if (is(res, "try-error")) {
         needWarning <- TRUE
       } else {
-        needWarning <- FALSE
-        outcome <- TRUE
-        rowsInPkgDT <- grep(pkgName, toInstall$Package)
-        toInstall[rowsInPkgDT, installed := outcome2$installed]
-        toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+        outcome2 <- attr(res, "Require")
+        if (identical("noneAvailable", outcome2$installResult)) {
+          needWarning <- TRUE
+        } else {
+          needWarning <- FALSE
+          outcome <- TRUE
+          rowsInPkgDT <- grep(pkgName, toInstall$Package)
+          toInstall[rowsInPkgDT, installed := outcome2$installed]
+          toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+        }
       }
     }
 
