@@ -119,6 +119,26 @@ testit::assert(all(startsWith(names(ro), "Require")))
 testit::assert(is.list(gro))
 testit::assert(all(startsWith(names(gro), "Require")))
 
+# Ensure the "which" for pkgDep are working correctly
+wh <- expand.grid(suggests = c(TRUE, FALSE), depends = c(TRUE, FALSE), imports = c(TRUE, FALSE), linkingTo = c(TRUE, FALSE))
+utilsOut <- list()
+for (i in c("Suggests", "Imports", "Depends", "LinkingTo"))
+  utilsOut[[i]] <- strsplit(gsub("\n", "", utils::packageDescription("Require", fields = i)), ",")[[1]]
+
+out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
+  out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
+  o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])
+  if (length(o2)) {
+    pkgs <- unname(unlist(utilsOut[o2]))
+    out <- setdiff(out, grep("R .+", pkgs, value = TRUE, invert = TRUE))
+  }
+  out
+  })
+testArgs <- all("Require" == unlist(as.list(out2)))
+testit::assert(isTRUE(testArgs))
+
+
+
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))
 options(ooo)
