@@ -1919,15 +1919,19 @@ messagesAboutWarnings <- function(w, toInstall) {
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
       message("purging availablePackages; trying to download ", pkgName, " again")
       res <- try(Install(pkgName))
-      outcome2 <- attr(outcome, "Require")
-      if (identical("noneAvailable", outcome2$installResult)) {
+      if (is(res, "try-error")) {
         needWarning <- TRUE
       } else {
-        needWarning <- FALSE
-        outcome <- TRUE
-        rowsInPkgDT <- grep(pkgName, toInstall$Package)
-        toInstall[rowsInPkgDT, installed := outcome2$installed]
-        toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+        outcome2 <- attr(res, "Require")
+        if (identical("noneAvailable", outcome2$installResult)) {
+          needWarning <- TRUE
+        } else {
+          needWarning <- FALSE
+          outcome <- TRUE
+          rowsInPkgDT <- grep(pkgName, toInstall$Package)
+          toInstall[rowsInPkgDT, installed := outcome2$installed]
+          toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+        }
       }
     }
 
