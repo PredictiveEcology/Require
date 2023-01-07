@@ -12,7 +12,7 @@ version 0.2.6
 * If non-interactive and no CRAN mirror is set, user gets more informative error.
 
 ## bugfixes
-* Cases of multiple user-specified .libPaths() were treated incorrectly; they are now all respected. 
+* Cases of multiple user-specified `.libPaths()` were treated incorrectly; they are now all respected. 
 * other minor
 
 version 0.2.5

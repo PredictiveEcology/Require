@@ -284,10 +284,9 @@ tempfile2 <- function(sub = "",
   normPath(file.path(tempdir2(sub = sub, tempdir = tempdir), basename(tempfile(...))))
 }
 
-.RequireTempPath <-
-  function() {
-    normPath(file.path(tempdir(), "Require"))
-  }
+.RequireTempPath <- function() {
+  normPath(file.path(tempdir(), "Require"))
+}
 
 #' Invert a 2-level list
 #'
