@@ -766,11 +766,15 @@ pkgDepCRAN <-
            verbose = getOption("Require.verbose"),
            type = getOption("pkgType"),
            ap) {
-    if (missing(ap)) {
+
+    needAp <- TRUE # covers the missing(ap) case
+    if (!missing(ap)) needAp <- is.null(ap)
+
+    if (needAp) {
       ap <-
         available.packagesCached(
           repos = repos,
-          purge = purge,
+          purge = TRUE,
           verbose = verbose,
           type = type
         )
