@@ -1929,8 +1929,10 @@ messagesAboutWarnings <- function(w, toInstall) {
           needWarning <- FALSE
           outcome <- TRUE
           rowsInPkgDT <- grep(pkgName, toInstall$Package)
-          toInstall[rowsInPkgDT, installed := outcome2$installed]
-          toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+          if (!is.null(outcome2$installed))
+            toInstall[rowsInPkgDT, installed := outcome2$installed]
+          if (!is.null(outcome2$installResult))
+            toInstall[rowsInPkgDT, installResult := outcome2$installResult]
         }
       }
     }
