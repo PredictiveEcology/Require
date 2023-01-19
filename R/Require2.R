@@ -1086,6 +1086,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
         SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
         if (file.exists(alreadyExistingDESCRIPTIONFile)) {
           SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+          SHAonLocal <- unique(SHAonLocal) # seems like it can be >1
           # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
           if (identical(SHAonGH, SHAonLocal)) {
             messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
