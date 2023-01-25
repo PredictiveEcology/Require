@@ -143,6 +143,12 @@ pkgDep <- function(packages,
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
   if (length(packages)) {
+    # trim redundancies
+    pkgDT <- parseGitHub(packages)  #[isGH])
+    pkgDT <- parsePackageFullname(pkgDT)
+    pkgDT <- trimRedundancies(pkgDT, repos = repos, purge = FALSE)
+    packages <- pkgDT$packageFullName
+
     ap <-
       getAvailablePackagesIfNeeded(packages, repos, purge = FALSE, verbose, type)
     saveNames <-
