@@ -322,7 +322,7 @@ installedVers <- function(pkgDT) {
   if (NROW(pkgDT)) {
     ip <- as.data.table(installed.packages())[]
     ip <- ip[, c("Package", "LibPath", "Version")]
-    ip <- ip[Package %in% pkgDT$Package]
+    ip <- ip[ip$Package %in% pkgDT$Package]
 
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -333,16 +333,24 @@ installedVers <- function(pkgDT) {
       pkgs <- pkgs[pkgs %in% ln]
       pkgs <- pkgs[pkgs %in% ip$Package] # can be loadedNamespace, but not installed, if it had been removed in this session
       if (NROW(pkgs)) {
-        installedPkgsCurrent <- lapply(pkgs, function(x) {
-          pv <- try(as.character(numeric_version(packageVersion(x))), silent = TRUE)
-          if (is(pv, "try-error")) {
-            pv <- NA_character_
-          }
-          data.table(VersionFromPV = pv)
-        })
-        installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
-        set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
-        installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
+        pkgs <- pkgs[!duplicated(pkgs)]
+
+        installedPkgsCurrent <- data.table(Package = pkgs, packageFullName = names(pkgs))
+        installedPkgsCurrent[, VersionFromPV := tryCatch(as.character(packageVersion(Package)),
+                                                         error = function(e) NA_character_), by = "Package"]
+
+        # installedPkgsCurrent <- lapply(pkgs, function(x) {
+        #   # pv <- try(as.character(numeric_version(packageVersion(x))), silent = TRUE)
+        #   pv <- try(as.character(packageVersion(x)), silent = TRUE)
+        #   if (is(pv, "try-error")) {
+        #     pv <- NA_character_
+        #   }
+        #   pv
+        # })
+        # installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
+        # set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
+        # installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "V1"))
+        # setnames(installedPkgsCurrent, old = "V1", new = "VersionFromPV")
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error")) {
           if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
