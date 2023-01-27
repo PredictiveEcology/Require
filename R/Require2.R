@@ -815,6 +815,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     verbose = verbose,
     type = type
   )
+  pkgInstall <- checkAvailableVersions(pkgInstall, repos, purge, libPaths, verbose = verbose, type = type)
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -1065,6 +1066,9 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Requ
     purge = purge, repos = repos, libPaths = libPaths,
     type = type
   )
+  pkgDT <- checkAvailableVersions(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
+                                  verbose = verbose, type = type)
+
   pkgDT[, c("Package", "packageFullName")]
 }
 
@@ -1606,6 +1610,13 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+  pkgInstall[]
+}
+
+
+checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
+                             type = getOption("pkgType")) {
+
   pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
   pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
