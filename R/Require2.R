@@ -700,8 +700,8 @@ whichToInstall <- function(pkgDT, install, verbose) {
   )
   if (any(pkgDT$hasVersionsToCompare %in% TRUE)) {
     pkgDT[hasVersionsToCompare %in% TRUE, installedVersionOK :=
-      compareVersion2(Version, versionSpec, inequality),
-    by = seq(sum(hasVersionsToCompare))
+      compareVersion2(Version, versionSpec, inequality)#,
+    #by = seq(sum(hasVersionsToCompare))
     ]
   }
   if (identical(install, "force")) {
@@ -1152,7 +1152,9 @@ compareVersion2 <- function(version, versionSpec, inequality) {
     vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
     function(ineq, vers, verSpec) {
       if (!is.na(ineq) && !is.na(vers) && !is.na(verSpec)) {
-        out <- do.call(ineq, list(package_version(vers), verSpec))
+        a <- compareVersion(verSpec, vers)
+        out <- do.call(ineq, list(0, a))
+        # out <- do.call(ineq, list(package_version(vers), verSpec))
       } else {
         NA
       }
