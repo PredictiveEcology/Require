@@ -1805,14 +1805,31 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
-    shas <-
-      Map(
-        repo = pkgDT$Repo,
-        acct = pkgDT$Account,
-        br = pkgDT$Branch,
-        verbose = verbose,
-        getSHAfromGitHubMemoise
-      )
+    pkgDT <- installedVers(pkgDT)
+    pkgDT <- parsePackageFullname(pkgDT)
+    pkgDT <- whichToInstall(pkgDT, install = TRUE)
+    installedNotOK <- pkgDT$installedVersionOK %in% FALSE
+    installedOK <- !installedNotOK
+    shas <- character(NROW(pkgDT))
+    if (any(installedNotOK)) {
+      shas[installedNotOK] <-
+        Map(
+          repo = pkgDT$Repo[installedNotOK],
+          acct = pkgDT$Account[installedNotOK],
+          br = pkgDT$Branch[installedNotOK],
+          verbose = verbose,
+          getSHAfromGitHubMemoise
+        )
+    }
+
+    if (any(installedOK)) {
+      shas[installedOK] <-
+        DESCRIPTIONFileOtherV(
+          file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
+          other = "GithubSHA1")
+    }
+
+
     names(shas) <- packages[isGH]
   }
 
