@@ -316,14 +316,15 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   ret
 }
 
+
+
 #' @importFrom utils packageVersion installed.packages
 installedVers <- function(pkgDT) {
   pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {
-    ip <- as.data.table(installed.packages())[]
-    ip <- ip[, c("Package", "LibPath", "Version")]
+    ip <- as.data.table(installed.packages(fields = c("Package", "LibPath", "Version")))
+    # ip <- ip[, c("Package", "LibPath", "Version")]
     ip <- ip[ip$Package %in% pkgDT$Package]
-
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
       names(pkgs) <- pkgDT$packageFullName
@@ -336,21 +337,10 @@ installedVers <- function(pkgDT) {
         pkgs <- pkgs[!duplicated(pkgs)]
 
         installedPkgsCurrent <- data.table(Package = pkgs, packageFullName = names(pkgs))
-        installedPkgsCurrent[, VersionFromPV := tryCatch(as.character(packageVersion(Package)),
-                                                         error = function(e) NA_character_), by = "Package"]
-
-        # installedPkgsCurrent <- lapply(pkgs, function(x) {
-        #   # pv <- try(as.character(numeric_version(packageVersion(x))), silent = TRUE)
-        #   pv <- try(as.character(packageVersion(x)), silent = TRUE)
-        #   if (is(pv, "try-error")) {
-        #     pv <- NA_character_
-        #   }
-        #   pv
-        # })
-        # installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
-        # set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
-        # installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "V1"))
-        # setnames(installedPkgsCurrent, old = "V1", new = "VersionFromPV")
+        installedPkgsCurrent[, VersionFromPV := tryCatch({
+          lp <- ip$LibPath[ip$Package %in% Package][1]
+          as.character(packageVersion(Package, lp))
+        }, error = function(e) NA_character_), by = "Package"]
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error")) {
           if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
@@ -367,11 +357,12 @@ installedVers <- function(pkgDT) {
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
   }
+
   installed <- !is.na(pkgDT$Version)
   if (any(installed)) {
     set(pkgDT, NULL, "installed", installed)
   }
-  pkgDT[]
+  pkgDT
 }
 
 #' @importFrom utils available.packages
