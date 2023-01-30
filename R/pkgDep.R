@@ -1511,7 +1511,7 @@ getGitHubDeps <-
            includeBase = FALSE) {
     pkg <- masterMainToHead(pkg)
     localVersionOK <- (installedVers(pkgDT)$installed %in% TRUE)
-    if (localVersionOK) {
+    if (isTRUE(localVersionOK)) {
       pkgDT[, DESCFile := system.file("DESCRIPTION", package = pkgDT$Package)]
     } else {
       pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
@@ -1565,7 +1565,7 @@ getGitHubDeps <-
       }
 
       # Check NAMESPACE too -- because imperfect DESCRIPTION files
-      if (localVersionOK) {
+      if (isTRUE(localVersionOK)) {
         namespaceFile <-
           system.file("NAMESPACE", package = pkgDT$Package)
       } else {

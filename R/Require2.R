@@ -1390,7 +1390,6 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
   if (isFALSE(getOption("Require.offlineMode", FALSE))) {
     notYet <- is.na(pkgGitHub$VersionOnRepos)
     if (any(notYet)) {
-      browser()
       pkgGitHub <- getGitHubFile(pkgGitHub)
       pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
     }
