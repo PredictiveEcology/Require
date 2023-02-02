@@ -1105,7 +1105,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
       }, by = "packageFullName"]
     }
     saveGitHubSHAsToDisk()
-    pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local")]
+    pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local",
+                                          installedVersionOK = TRUE, installResult = "OK")]
     pkgWhere[["GitHub"]] <- pkgGitHub
     pkgInstall <- rbindlistRecursive(pkgWhere)
   }

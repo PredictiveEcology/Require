@@ -13,6 +13,7 @@ version 0.2.6
 
 ## bugfixes
 * Cases of multiple user-specified `.libPaths()` were treated incorrectly; they are now all respected. 
+* when git repo was not installed because it was identical to the SHA already installed, it wouldn't be loaded, thinking it failed to install; fixed
 * other minor
 
 version 0.2.5
