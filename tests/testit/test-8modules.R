@@ -105,7 +105,7 @@ if (isDevAndInteractive) {
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9004)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.0.9.9008)",
                   "PredictiveEcology/SpaDES.core@development (>= 1.1.0.9003)",
-                  "PredictiveEcology/SpaDES.core@development (>=1.0.6.9019)", "PredictiveEcology/SpaDES.install (>= 0.0.5.9013)",
+                  "PredictiveEcology/SpaDES.core@development (>=1.0.6.9019)", # "PredictiveEcology/SpaDES.install (>= 0.0.5.9013)",
                   "PredictiveEcology/SpaDES.tools@development", "PredictiveEcology/SpaDES.tools@development (>= 0.3.7.9007)",
                   "pryr", "purrr", "quickPlot", "R.utils", "raster", "rasterVis",
                   "Rcpp", "reproducible (>= 1.2.6.9005)", "rgeos", "RhpcBLASctl",

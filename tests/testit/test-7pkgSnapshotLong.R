@@ -10,6 +10,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
   origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
   fn <- file.path(pkgPath, "pkgSnapshot.txt")
   pkgs <- data.table::fread(fn)
+  pkgs <- pkgs[!(Package %in% "SpaDES.install")]
   # pks <- c("ymlthis", "SpaDES.tools", "amc")
   # pkgs <- pkgs[Package %in% pks]
   # data.table::fwrite(pkgs, fn)
