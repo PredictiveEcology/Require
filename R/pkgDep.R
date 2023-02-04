@@ -569,7 +569,7 @@ pkgDepInner <- function(packages,
               noSpecNeeded <- is.na(verNum) || identical(verNum, "NA")
               if (noSpecNeeded) {
                 localInstallOK <- installedVers(pkgName)
-                if (localInstallOK$installed %in% TRUE) {
+                if (isTRUE(localInstallOK$installed %in% TRUE)) {
                   packageTD <- system.file(package = pkgName)
                 }
               }
