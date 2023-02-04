@@ -1105,7 +1105,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
       }, by = "packageFullName"]
     }
     saveGitHubSHAsToDisk()
-    pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local")]
+    pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local",
+                                          installedVersionOK = TRUE, installResult = "OK")]
     pkgWhere[["GitHub"]] <- pkgGitHub
     pkgInstall <- rbindlistRecursive(pkgWhere)
   }
@@ -1148,6 +1149,10 @@ availableVersionOK <- function(pkgDT) {
 }
 
 compareVersion2 <- function(version, versionSpec, inequality) {
+  if (isTRUE(any(is(version, "numeric_version"))))
+    version <- as.character(version)
+  if (isTRUE(any(is(versionSpec, "numeric_version"))))
+    versionSpec <- as.character(versionSpec)
   out <- Map(
     vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
     function(ineq, vers, verSpec) {
