@@ -717,7 +717,14 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 }
 
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
+
+  gitRepoOrig <- gitRepo
+  # Can have version number --> most cases (other than SpaDES modules) just strip off
+  gitRepo <- trimVersionNumber(gitRepo)
+  hasVersionSpec <- gitRepo != gitRepoOrig
+
   grSplit <- strsplit(gitRepo, "/|@")
+
   repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
   names(grSplit) <- repo
   names(repo) <- repo
@@ -731,12 +738,21 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   }
   lenGT2 <- lengths(grSplit) > 2
   br <- lapply(grSplit, function(x) list())
+  vs <- br
+
   if (any(lenGT2)) {
     br[lenGT2] <- lapply(grSplit[lenGT2], function(grsplit) grsplit[[3]])
   }
+
   br[!lenGT2] <- "HEAD"
 
-  list(acct = acct, repo = repo, br = br)
+  if (any(hasVersionSpec)) {
+    versionSpecs <- extractVersionNumber(gitRepoOrig[hasVersionSpec])
+    inequs <- extractInequality(gitRepoOrig[hasVersionSpec])
+    vs[hasVersionSpec] <- paste0("(", inequs, " ", versionSpecs, ")")
+  }
+
+  list(acct = acct, repo = repo, br = br, versionSpec = vs)
 }
 
 postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
