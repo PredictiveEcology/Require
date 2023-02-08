@@ -1585,6 +1585,14 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 #' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
+  if (!is.null(pkgInstall[["hasHEAD"]])) {
+    hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
+    whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
+    whToRM <- setdiff(whToRM, hasHeadRows)
+    if (length(whToRM))
+      pkgInstall <- pkgInstall[-whToRM]
+  }
+
   pkgAndInequality <- c("Package", "inequality")
   versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
   if (any(versionSpecNotNA)) {
