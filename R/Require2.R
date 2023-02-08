@@ -1585,6 +1585,14 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 #' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
+  if (!is.null(pkgInstall[["hasHEAD"]])) {
+    hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
+    whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
+    whToRM <- setdiff(whToRM, hasHeadRows)
+    if (length(whToRM))
+      pkgInstall <- pkgInstall[-whToRM]
+  }
+
   pkgAndInequality <- c("Package", "inequality")
   versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
   if (any(versionSpecNotNA)) {
@@ -1738,8 +1746,15 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
 }
 
 parsePackageFullname <- function(pkgDT) {
-  pkgDT[, versionSpec := extractVersionNumber(packageFullName)]
-  pkgDT[!is.na(versionSpec), inequality := extractInequality(packageFullName)]
+  set(pkgDT, NULL, "versionSpec", extractVersionNumber(pkgDT$packageFullName))
+  # pkgDT[, versionSpec := extractVersionNumber(pkgDT$packageFullName)]
+  wh <- which(!is.na(pkgDT$versionSpec))
+  if (length(wh)) {
+    set(pkgDT, wh, "inequality", extractInequality(pkgDT$packageFullName[wh]))
+  } else {
+    set(pkgDT, NULL, "inequality", NA_character_)
+  }
+  # pkgDT[!is.na(pkgDT$versionSpec), inequality := extractInequality(pkgDT$packageFullName)]
   setorderv(pkgDT, c("Package", "versionSpec"), order = c(1L, -1L), na.last = TRUE)
 }
 

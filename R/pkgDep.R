@@ -145,6 +145,7 @@ pkgDep <- function(packages,
   if (length(packages)) {
     # trim redundancies
     pkgDT <- parseGitHub(packages)  #[isGH])
+    pkgDT <- updatePackagesWithNames(pkgDT, packages)
     pkgDT <- parsePackageFullname(pkgDT)
     pkgDT <- trimRedundancies(pkgDT, repos = repos, purge = FALSE)
     packages <- pkgDT$packageFullName
