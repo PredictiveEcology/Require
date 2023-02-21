@@ -234,7 +234,7 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @param backupCRAN If there is no CRAN repository set
 #'
 #' @export
-setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.rstudio.com/",
+setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.posit.co/",
                                backupCRAN = srcPackageURLOnCRAN) {
   if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {

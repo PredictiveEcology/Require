@@ -5,7 +5,7 @@
 \title{Setup for binary Linux repositories}
 \usage{
 setLinuxBinaryRepo(
-  binaryLinux = "https://packagemanager.rstudio.com/",
+  binaryLinux = "https://packagemanager.posit.co/",
   backupCRAN = srcPackageURLOnCRAN
 )
 }
