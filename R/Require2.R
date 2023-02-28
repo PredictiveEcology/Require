@@ -1928,6 +1928,24 @@ updateReposForSrcPkgs <- function(pkgInstall) {
         nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
         whArchive <- pkgInstall$installFrom %in% "Archive"
         pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
+
+        # if there are multiple non-binary repos
+        if (length(nonBinaryRepos) > 1) {
+          packageExists <- FALSE
+          for (ind in seq(nonBinaryRepos)) {
+            nbrContrib <- contrib.url(nonBinaryRepos)
+            pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
+            apTmp <- available.packages(contriburl = nbrContrib[ind])
+            packageExists <- pkgInstallNeededHere$Package %in% apTmp[, "Package"]
+            if (any(packageExists)) {
+              pkgInstall[Package %in% pkgInstallNeededHere$Package[packageExists],
+                         `:=`(Repository, nbrContrib[ind])]
+              needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+            }
+            if (all(packageExists))
+              break
+          }
+        }
         pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
       }
     }
