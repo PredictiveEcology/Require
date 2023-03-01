@@ -1945,8 +1945,10 @@ updateReposForSrcPkgs <- function(pkgInstall) {
             if (all(packageExists))
               break
           }
+        } else {
+          pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
         }
-        pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
+
       }
     }
   }
