@@ -1844,10 +1844,16 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
     }
 
     if (any(installedOK)) {
-      shas[installedOK] <-
-        DESCRIPTIONFileOtherV(
-          file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
-          other = "GithubSHA1")
+      withCallingHandlers(
+        shas[installedOK] <-
+          DESCRIPTIONFileOtherV(
+            file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
+            other = "GithubSHA1"),
+        warning = function(w) {
+          warning(w)
+          browserDeveloper("Error 44322; please contact developer")
+          invokeRestart("muffleWarning")
+        })
     }
 
 
