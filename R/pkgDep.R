@@ -537,19 +537,34 @@ pkgDepInner <- function(packages,
         }
       } else {
         if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-          needed <- unique(unname(unlist(
-            pkgDepCRANMemoise(
-              pkg = pkg,
-              pkgsNoVersion = pkgNoVersion,
-              which = which,
-              keepVersionNumber = keepVersionNumber,
-              purge = FALSE,
-              repos = repos,
-              verbose = verbose,
-              type = type,
-              ap = ap
-            )
-          )))
+          for (attmpt in 1:2) {
+            needed <- unique(unname(unlist(
+              pkgDepCRANMemoise(
+                pkg = pkg,
+                pkgsNoVersion = pkgNoVersion,
+                which = which,
+                keepVersionNumber = keepVersionNumber,
+                purge = FALSE,
+                repos = repos,
+                verbose = verbose,
+                type = type,
+                ap = ap
+              )
+            )))
+            if (is.null(needed) && attmpt < 2) {
+              ap <-
+                available.packagesCached(
+                  repos = repos,
+                  purge = TRUE,
+                  verbose = verbose,
+                  type = type
+                )
+            } else {
+              break
+            }
+          }
+
+
           if (is.null(needed)) {
             # essesntially, failed
             pkgName <- extractPkgName(pkg)

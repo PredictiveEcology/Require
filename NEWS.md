@@ -1,5 +1,15 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.2.7
+=============
+
+## enhancements
+
+## improved messaging
+
+## bugfixes
+* slow assessment of package dependencies on CRAN packages because of stale `available.packagesCached()` object. Now, catches this condition and refreshes `available.packages()`
+
 version 0.2.6
 =============
 
