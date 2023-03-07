@@ -1036,8 +1036,9 @@ getSHAFromGitHubDBFilename <- function() {
 
 
 
-.earliestMRANDate <- "2015-06-06"
-.latestMRANDate <- Sys.Date() - 5
+# .earliestRSPMDate <- "2015-06-06" # THIS WAS MRAN's DATE
+.earliestRSPMDate <- "2017-10-10"
+.latestRSPMDate <- Sys.Date() - 5
 
 #' R versions
 #'
