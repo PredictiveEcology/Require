@@ -1747,7 +1747,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   pkgArchive
 }
 
-parsePackageFullname <- function(pkgDT) {
+parsePackageFullname <- function(pkgDT, sorted = TRUE) {
   set(pkgDT, NULL, "versionSpec", extractVersionNumber(pkgDT$packageFullName))
   # pkgDT[, versionSpec := extractVersionNumber(pkgDT$packageFullName)]
   wh <- which(!is.na(pkgDT$versionSpec))
@@ -1757,7 +1757,9 @@ parsePackageFullname <- function(pkgDT) {
     set(pkgDT, NULL, "inequality", NA_character_)
   }
   # pkgDT[!is.na(pkgDT$versionSpec), inequality := extractInequality(pkgDT$packageFullName)]
-  setorderv(pkgDT, c("Package", "versionSpec"), order = c(1L, -1L), na.last = TRUE)
+  if (isTRUE(sorted))
+    setorderv(pkgDT, c("Package", "versionSpec"), order = c(1L, -1L), na.last = TRUE)
+  pkgDT
 }
 
 removeBasePkgs <- function(pkgDT) {

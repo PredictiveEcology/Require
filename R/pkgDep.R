@@ -1842,7 +1842,7 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
     pkgDT <- installedVers(pkgDT)
-    pkgDT <- parsePackageFullname(pkgDT)
+    pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
     pkgDT <- whichToInstall(pkgDT, install = TRUE)
     installedNotOK <- pkgDT$installedVersionOK %in% FALSE
     installedOK <- !installedNotOK
@@ -1871,8 +1871,7 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
         })
     }
 
-
-    names(shas) <- packages[isGH]
+    names(shas) <- pkgDT$packageFullName # need to keep order correct
   }
 
   hasIneq <- grepl("==|>|<", packages[!isGH])
