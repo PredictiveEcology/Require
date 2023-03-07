@@ -11,9 +11,12 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
   fn <- file.path(pkgPath, "pkgSnapshot.txt")
   pkgs <- data.table::fread(fn)
   pkgs <- pkgs[!(Package %in% "SpaDES.install")]
+  pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
+                                        GithubUsername = "PredictiveEcology", GithubRef = "development",
+                                        GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
   # pks <- c("ymlthis", "SpaDES.tools", "amc")
   # pkgs <- pkgs[Package %in% pks]
-  # data.table::fwrite(pkgs, fn)
+  data.table::fwrite(pkgs, file = fn) # have to get rid of SpaDES.install
   packageFullName <- ifelse(is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
     paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
   )
