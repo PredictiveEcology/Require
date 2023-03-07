@@ -501,7 +501,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
 
 
 downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
-  if (isWindows() || isMacOSX()) {
+  # if (isWindows() || isMacOSX()) {
 
     installPkgNames <- toInstall$Package
     names(installPkgNames) <- installPkgNames
@@ -618,7 +618,7 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
         #   }]
       }
     }
-  }
+  #} # can do Linux now?
 
   toInstall
 }
