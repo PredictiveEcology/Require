@@ -1549,12 +1549,12 @@ getGitHubDeps <-
         unlink(pkgDT$DESCFile)
         unlink(pkgDT$destFile)
         set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
-        browserDeveloper("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
+        browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
              "\nTo confirm whether it exists, try browsing to ",
              file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
              "\nIf it does exist, try rerunning with `purge = TRUE`",
              "\nIf this error is inaccurate, and the problem persists, ",
-             "please contact developers with error code 949")
+             "please contact developers with error code 949"))
       }
       neededRemotes <-
         DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)

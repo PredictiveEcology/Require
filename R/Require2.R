@@ -1542,7 +1542,11 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
     cols2 <- setdiff(cols, "packageFullName")
     cols3 <- c(cols, "versionToKeep")
     violationsDF <- pkgDT[violation %in% TRUE & !is.na(versionSpec), ..cols]
-    setorderv(violationsDF, cols2, order = c(1L, -1L))
+    # can't use setorderv on versions b/c stored as character vector
+    orderVersions <- order(violationsDF[[cols2[1]]],
+                           package_version(violationsDF[[cols2[[2]]]]),
+                           decreasing = TRUE)
+    violationsDF <- violationsDF[orderVersions,]
     violationsDF <- violationsDF[, versionToKeep := {
       ver <- rep("", length = .N)
       ver[1] <- versionSpec[1]
@@ -1638,8 +1642,6 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
   pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
-  # pkgInstall <- availableVersionOK(pkgInstall)
-  # pkgInstall <- unique(pkgInstall[availableVersionOKthisOne %in% TRUE], by = "packageFullName")
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall)
   setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "Repository"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
