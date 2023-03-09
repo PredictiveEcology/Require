@@ -563,6 +563,16 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
               date <- if (evenOrOdd) latestDateRSPM else earliestDateRSPM
               dif <- floor(attempt / 2)
               date <- if (evenOrOdd) date + dif else date - dif
+              dow <- weekdays(date)
+              wee <- c("Saturday", "Sunday")
+              if (dow %in% wee) {
+                tweak <- if (evenOrOdd) (- which(wee %in% dow)) else which(rev(wee) %in% dow)
+                date <- date + tweak
+                if (evenOrOdd)
+                  latestDateRSPM <- latestDateRSPM + tweak
+                else
+                  earliestDateRSPM <- earliestDateRSPM + tweak
+              }
 
               urls <- file.path(
                 urlForArchivedPkgs, date, "bin", osNameOnRSPM,
@@ -574,11 +584,13 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
               a <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
               close(con)
               if (is(a, "try-error")) {
-                earliestDateOnRSPM <- earliestDateOnRSPM + 1
+                earliestDateRSPM <- earliestDateRSPM + 1
+                latestDateRSPM <- latestDateRSPM - 1
                 urls <- "Fail"
               } else {
                 break
               }
+
             }
             names(urls) <- p
             urlsOuter <<- c(urlsOuter, urls)
