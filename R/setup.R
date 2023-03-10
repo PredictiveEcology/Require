@@ -214,11 +214,13 @@ setup <- function(newLibPaths,
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
-  .Deprecated(msg = paste0(
-    "setupOff is deprecated; to get approximately the same functionality, ",
-    "please remove the line that sets the .libPaths\n",
-    "from your .Rprofile file"
-  ))
+  rproflines <- readLines(".Rprofile")
+  start <- grep(setLibPathsStartText, rproflines)
+  end <- grep(setLibPathsEndText, rproflines)
+  browser()
+  rproflines <- rproflines[-(start:end)]
+  cat(rproflines, file = ".Rprofile")
+  messageVerbose("Setting .libPaths() has been removed from the .Rprofile file")
   return(invisible())
 }
 
