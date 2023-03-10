@@ -131,6 +131,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
     })
     out <- gsub(paste0(other, ": "), "", vers_line)
     if (length(out) == 0) out <- NA
+    if (length(out) > 1) out <- tail(out, 1)
     out
   })
   unlist(out)
