@@ -214,13 +214,29 @@ setup <- function(newLibPaths,
 #'   and it is an interactive session, the user will be prompted to confirm
 #'   deletions.
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
-  rproflines <- readLines(".Rprofile")
-  start <- grep(setLibPathsStartText, rproflines)
-  end <- grep(setLibPathsEndText, rproflines)
-  browser()
-  rproflines <- rproflines[-(start:end)]
-  cat(rproflines, file = ".Rprofile")
-  messageVerbose("Setting .libPaths() has been removed from the .Rprofile file")
+  updateRprofile <- checkTRUERprofile(TRUE)
+  if (file.exists(updateRprofile)) {
+    rproflines <- readLines(updateRprofile)
+    start <- grep(setLibPathsStartText, rproflines)
+    end <- grep(setLibPathsEndText, rproflines)
+    newFile <- any(grepl(paste0(setLibPathsStartText, ".+New File:TRUE"), rproflines))
+    if (length(start)) {
+      rproflines <- rproflines[-(start:end)]
+      if (length(rproflines) <= 1 && all(nchar(rproflines) == 0) && isTRUE(newFile)) {
+        unlink(updateRprofile)
+        messageVerbose("removing the .Rprofile file, which had been created with ",
+                       "setLibPaths(updateRprofile = TRUE)")
+      } else {
+        cat(rproflines, file = updateRprofile)
+        messageVerbose("Setting .libPaths() has been removed from the .Rprofile file")
+      }
+
+    } else {
+      messageVerbose("Require::setLibPaths was not run to change the .Rprofile file; nothing to do")
+    }
+  } else {
+    messageVerbose("No .Rprofile file; nothing to do")
+  }
   return(invisible())
 }
 
