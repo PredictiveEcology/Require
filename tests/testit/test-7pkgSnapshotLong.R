@@ -11,6 +11,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
   fn <- file.path(pkgPath, "pkgSnapshot.txt")
   pkgs <- data.table::fread(fn)
   pkgs <- pkgs[!(Package %in% "SpaDES.install")]
+  pkgs[Package %in% "sf", Version := "1.0-9"] # the version 1.0-7 is corrupt on RSPM
   pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
                                         GithubUsername = "PredictiveEcology", GithubRef = "development",
                                         GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
@@ -54,7 +55,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
   lala <- capture.output(type = "message", {
     out <- Require(
       packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
-      require = FALSE, verbose = 2
+      require = FALSE, verbose = 2, purge = TRUE
     )
   })
   # missings <- grep("The following shows packages", lala, value = TRUE)
