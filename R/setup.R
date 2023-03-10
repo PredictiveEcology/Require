@@ -208,11 +208,8 @@ setup <- function(newLibPaths,
 #' @rdname setup
 #' @inheritParams Require
 #' @export
-#' @param removePackages Logical. If `TRUE`, then all packages that
-#'   were installed in the custom library will be deleted when `setupOff`
-#'   is run. The default is `FALSE`, and when `TRUE` is selected,
-#'   and it is an interactive session, the user will be prompted to confirm
-#'   deletions.
+#' @param removePackages Deprecated. Please remove packages manually from
+#'        the .libPaths()
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   updateRprofile <- checkTRUERprofile(TRUE)
   if (file.exists(updateRprofile)) {
