@@ -208,17 +208,32 @@ setup <- function(newLibPaths,
 #' @rdname setup
 #' @inheritParams Require
 #' @export
-#' @param removePackages Logical. If `TRUE`, then all packages that
-#'   were installed in the custom library will be deleted when `setupOff`
-#'   is run. The default is `FALSE`, and when `TRUE` is selected,
-#'   and it is an interactive session, the user will be prompted to confirm
-#'   deletions.
+#' @param removePackages Deprecated. Please remove packages manually from
+#'        the .libPaths()
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
-  .Deprecated(msg = paste0(
-    "setupOff is deprecated; to get approximately the same functionality, ",
-    "please remove the line that sets the .libPaths\n",
-    "from your .Rprofile file"
-  ))
+  updateRprofile <- checkTRUERprofile(TRUE)
+  if (file.exists(updateRprofile)) {
+    rproflines <- readLines(updateRprofile)
+    start <- grep(setLibPathsStartText, rproflines)
+    end <- grep(setLibPathsEndText, rproflines)
+    newFile <- any(grepl(paste0(setLibPathsStartText, ".+New File:TRUE"), rproflines))
+    if (length(start)) {
+      rproflines <- rproflines[-(start:end)]
+      if (length(rproflines) <= 1 && all(nchar(rproflines) == 0) && isTRUE(newFile)) {
+        unlink(updateRprofile)
+        messageVerbose("removing the .Rprofile file, which had been created with ",
+                       "setLibPaths(updateRprofile = TRUE)")
+      } else {
+        cat(rproflines, file = updateRprofile)
+        messageVerbose("Setting .libPaths() has been removed from the .Rprofile file")
+      }
+
+    } else {
+      messageVerbose("Require::setLibPaths was not run to change the .Rprofile file; nothing to do")
+    }
+  } else {
+    messageVerbose("No .Rprofile file; nothing to do")
+  }
   return(invisible())
 }
 

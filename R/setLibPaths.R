@@ -150,13 +150,13 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
         if (verbose >= 1) {
           resetRprofileMessage(updateRprofile)
         },
-        paste0(commentCharsForSetLibPaths, "end ####")
+        paste0(setLibPathsEndText)
       )
-      messageVerbose("Updating ", updateRprofile,
+      messageVerbose("Updating ", normPath(updateRprofile),
         "; this will set new libPaths for R packages even after restarting R",
         verbose = verbose, verboseLevel = 1
       )
-      cat(bodyFn, file = ".Rprofile", append = TRUE, sep = "\n")
+      cat(bodyFn, file = updateRprofile, append = TRUE, sep = "\n")
     }
   }
 }
@@ -224,5 +224,6 @@ checkTRUERprofile <- function(updateRprofile) {
 prevLibPathsText <- "Previous .libPaths: "
 commentCharsForSetLibPaths <- "#### setLibPaths "
 setLibPathsStartText <- paste0(commentCharsForSetLibPaths, "start")
+setLibPathsEndText <- paste0(commentCharsForSetLibPaths, "end")
 newFileTrigger <- "New File:"
 alreadyInRprofileMessage <- "There is already a setLibPaths in the .Rprofile, skipping"
