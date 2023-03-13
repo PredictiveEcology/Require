@@ -1656,7 +1656,8 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall)
-  setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "Repository"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
+  pkgInstall[, binOrSrc := c("src", "bin")[grepl("\\<bin\\>", Repository) + 1]]
+  setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "binOrSrc"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
 
   pkgInstall[, keep := {
     # This will pick the one that is OK, or if they are all NA (meaning no version spec), or all FALSE (meaning need to try Archive)
