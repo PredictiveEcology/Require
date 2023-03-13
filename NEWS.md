@@ -4,11 +4,17 @@ version 0.2.7
 =============
 
 ## enhancements
+* Moved from MRAN archives for binaries to posit.packagemanager.co
+* improved messaging
+* a number of cases that were annoying for users were identified and addressed.
 
-## improved messaging
+## advaned changes
+* several functions now exported, `.downloadFileMasterMainAuth`, `messageVerbose`, `messageDF` as they were deemed useful enough for other packages.
 
 ## bugfixes
 * slow assessment of package dependencies on CRAN packages because of stale `available.packagesCached()` object. Now, catches this condition and refreshes `available.packages()`
+* corrected support for multiple repos that each offer the same packages. Now works like `install.packages`, i.e., first one first.
+* base packages can now be installed as previous issues about installing them were dealt with.
 
 version 0.2.6
 =============
