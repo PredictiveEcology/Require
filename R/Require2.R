@@ -300,7 +300,7 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- parsePackageFullname(pkgDT)
       pkgDT <- parseGitHub(pkgDT)
       pkgDT <- removeDups(pkgDT)
-      pkgDT <- removeBasePkgs(pkgDT)
+      # pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
       pkgDT <- installedVers(pkgDT)
       if (isTRUE(upgrade)) {
