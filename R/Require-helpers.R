@@ -1252,9 +1252,11 @@ masterMainHEAD <- function(url, need) {
 #' Equivalent to `utils::download.file`, but taking the `GITHUB_PAT` environment
 #' variable and using it to access the Github url.
 #'
-#' @importFrom utils download.file
-#' @param need
-#' @importFrom Require
+#' @inheritParams utils::download.file
+#' @param need If specified, user can suggest which `master` or `main` or `HEAD` to
+#'   try first. If unspecified, `HEAD` is used.
+#' @inheritParams Require
+#' @inheritParams messageVerbose
 #' @return
 #' This is called for its side effect, namely, the same as `utils::download.file`, but
 #' using a `GITHUB_PAT`, it if is in the environment, and trying both `master` and

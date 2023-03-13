@@ -12,6 +12,28 @@
   verboseLevel = 2
 )
 }
+\arguments{
+\item{url}{a \code{\link{character}} string (or longer vector e.g.,
+    for the \code{"libcurl"} method) naming the URL of a resource to be
+    downloaded.}
+
+\item{destfile}{a character string (or vector, see the \code{url}
+    argument) with the file path where the downloaded file is to be
+    saved.  Tilde-expansion is performed.}
+
+\item{need}{If specified, user can suggest which \code{master} or \code{main} or \code{HEAD} to
+try first. If unspecified, \code{HEAD} is used.}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
+
+\item{verboseLevel}{A numeric indicating what verbose threshold (level) above
+which this message will show.}
+}
 \value{
 This is called for its side effect, namely, the same as \code{utils::download.file}, but
 using a \code{GITHUB_PAT}, it if is in the environment, and trying both \code{master} and
