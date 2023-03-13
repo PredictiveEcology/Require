@@ -1263,7 +1263,6 @@ masterMainHEAD <- function(url, need) {
 .downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
   hasMasterMain <- grepl(masterMainGrep, url)
-  browser()
   url <- masterMainHEAD(url, need)
 
   # Authentication
