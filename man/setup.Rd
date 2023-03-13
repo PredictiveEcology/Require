@@ -41,11 +41,8 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 attribute: \code{attr(.., "Require")} which has lots of information about the
 processes of the installs.}
 
-\item{removePackages}{Logical. If \code{TRUE}, then all packages that
-were installed in the custom library will be deleted when \code{setupOff}
-is run. The default is \code{FALSE}, and when \code{TRUE} is selected,
-and it is an interactive session, the user will be prompted to confirm
-deletions.}
+\item{removePackages}{Deprecated. Please remove packages manually from
+the .libPaths()}
 }
 \description{
 \code{setup} and \code{setupOff} are currently deprecated.

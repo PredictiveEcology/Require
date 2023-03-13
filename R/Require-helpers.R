@@ -210,7 +210,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT[repoLocation == "GitHub",
         filepath := {
           ret <- NA
-          dl <- downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+          dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
             need = "master",
             verbose = verbose, verboseLevel = 2
           )
@@ -824,7 +824,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
 
   url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
   out <- suppressWarnings(
-    try(downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE)
+    try(.downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE)
   )
   if (is(out, "try-error")) {
     return(out)
@@ -917,7 +917,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
   tf <- tempfile()
-  downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
+  .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
   sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
   if (is(sha, "try-error")) {
     return(sha)
@@ -1247,9 +1247,23 @@ masterMainHEAD <- function(url, need) {
   url
 }
 
-downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
+#' GITHUB_PAT-aware and `main`-`master`-aware download from GitHub
+#'
+#' Equivalent to `utils::download.file`, but taking the `GITHUB_PAT` environment
+#' variable and using it to access the Github url.
+#'
+#' @importFrom utils download.file
+#' @param need
+#' @importFrom Require
+#' @return
+#' This is called for its side effect, namely, the same as `utils::download.file`, but
+#' using a `GITHUB_PAT`, it if is in the environment, and trying both `master` and
+#' `main` if the actual `url` specifies either `master` or `main` and it does not exist.
+#' @export
+.downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
   hasMasterMain <- grepl(masterMainGrep, url)
+  browser()
   url <- masterMainHEAD(url, need)
 
   # Authentication
