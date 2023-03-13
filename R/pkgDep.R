@@ -551,7 +551,9 @@ pkgDepInner <- function(packages,
                 ap = ap
               )
             )))
-            if (is.null(needed) && attmpt < 2) {
+            # null means not in ap; attmpt is only try 1x after purging, but 3rd condition -->
+            #    if the pkg is ap, then it is a version problem, so no purging will help.
+            if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
               ap <-
                 available.packagesCached(
                   repos = repos,
@@ -591,7 +593,6 @@ pkgDepInner <- function(packages,
               }
 
               if (!dir.exists(packageTD)) {
-
                 if (noSpecNeeded) {
                   ava <- archiveVersionsAvailable(pkgName, repos = repos)
                   dt <- if (is(ava, "list")) {
