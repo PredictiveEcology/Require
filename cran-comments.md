@@ -21,11 +21,11 @@ This is an update submission that addresses minor bugs, and several enhancements
 
 
 ### R-hub
-* Linux (Debian, Fedora, MacOS, Windows) 
+* Linux (Debian, Fedora), MacOS, Windows
 
 ## R CMD check results
 
-There were no ERRORs nor WARNINGs. The one NOTE is about the package maintainer, which is unchanged.
+There were no ERRORs nor WARNINGs nor NOTEs.
 
 ## revdepcheck results
 
