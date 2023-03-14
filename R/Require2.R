@@ -393,6 +393,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   install.packagesArgs$INSTALL_opts <- unique(c(install.packagesArgs$INSTALL_opts, "--build"))
 
+  if (isWindows() & getRversion() < "4.2") { # older windows can't update packages before removing them
+    toInstall <- rmPackageFirst(toInstall, verbose)
+  }
+
   ap <- try(availablePackagesOverride(toInstall, repos, purge, type = type))
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -2117,4 +2121,18 @@ Install <- function(packages, packageVersionFile,
     upgrade,
     ...
   )
+}
+
+rmPackageFirst <- function(toInstall, verbose) {
+  cantUpdateDeps <- toInstall$Package %in% c("Require", "data.table")
+  if (any(cantUpdateDeps))
+    toInstall <- toInstall[-which(cantUpdateDeps)]
+  cantUpdateLoaded <- toInstall$Package %in% loadedNamespaces()
+  if (any(cantUpdateLoaded)) {
+    toRm <- toInstall$Package[!cantUpdateLoaded]
+    toInstall <- toInstall[which(!cantUpdateLoaded)]
+    remove.packages(toRm)
+    messageVerbose("removed all the packages that are being installed", verbose = verbose)
+  }
+  toInstall
 }
