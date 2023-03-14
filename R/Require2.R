@@ -1,6 +1,6 @@
 utils::globalVariables(c(
   "..apCachedCols", "..cols", "..cols3", ".GRP",
-  "Account", "archiveSource", "availableVersionOKthisOne", "bothDepAndOrig",
+  "Account", "archiveSource", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig",
   "Branch", "comp", "contrib.url", "correctVersionAvail", "depOrOrig",
   "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
   "hasAtLeastOneNonNA", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
