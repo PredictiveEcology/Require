@@ -5,15 +5,16 @@ version 0.3.0
 
 ## enhancements
 * Moved from MRAN archives for binaries to posit.packagemanager.co
+* because of the move from MRAN to posit package manager, attempts are made to use archived binary packages for Linux also.
 * improved messaging in several places
 * improved error catching in several places
 * a number of cases that were annoying for users were identified and addressed.
-* `setupOff` and `setLibPaths` enchanced to be fully functioning in a wide diversity of cases.
+* `setupOff` and `setLibPaths` enhanced to be fully functioning in a wide diversity of cases.
 * When setting `install = "force"` in `Require`, now only the user-specified packages are forced to be installed; the rest are installed if required, mimicking `install.packages`
 * small efficiency gains in many places
 * `(HEAD)` is now more robust as a way to keep a package up to date.
 
-## advaned changes
+## advanced changes
 * several functions now exported, `.downloadFileMasterMainAuth`, `messageVerbose`, `messageDF` as they were deemed useful enough for other packages.
 
 ## bugfixes
@@ -34,7 +35,7 @@ version 0.2.6
 
 ## bugfixes
 * Cases of multiple user-specified `.libPaths()` were treated incorrectly; they are now all respected. 
-* when git repo was not installed because it was identical to the SHA already installed, it wouldn't be loaded, thinking it failed to install; fixed
+* when git repo was not installed because it was identical to the SHA already installed, it would not be loaded, thinking it failed to install; fixed
 * can now deal with case when `repos` has multiple, non-binary CRAN-like repositories, when there is also at least one binary repository supplied e.g., the rstudio package manager, i.e., there are at least 3 repositories supplied, 1 of which is binary.
 * other minor
 
