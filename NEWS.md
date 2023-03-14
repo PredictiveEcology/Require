@@ -5,8 +5,10 @@ version 0.2.7
 
 ## enhancements
 * Moved from MRAN archives for binaries to posit.packagemanager.co
-* improved messaging
+* improved messaging in several places
+* improved error catching in several places
 * a number of cases that were annoying for users were identified and addressed.
+* `setupOff` and `setLibPaths` enchanced to be fully functioning in a wide diversity of cases.
 
 ## advaned changes
 * several functions now exported, `.downloadFileMasterMainAuth`, `messageVerbose`, `messageDF` as they were deemed useful enough for other packages.
