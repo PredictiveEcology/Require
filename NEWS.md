@@ -5,8 +5,10 @@ version 0.2.7
 
 ## enhancements
 * Moved from MRAN archives for binaries to posit.packagemanager.co
-* improved messaging
+* improved messaging in several places
+* improved error catching in several places
 * a number of cases that were annoying for users were identified and addressed.
+* `setupOff` and `setLibPaths` enchanced to be fully functioning in a wide diversity of cases.
 * When setting `install = "force"` in `Require`, now only the user-specified packages are forced to be installed; the rest are installed if required, mimicking `install.packages`
 
 ## advaned changes
