@@ -132,7 +132,7 @@ out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
     pkgs <- unname(unlist(utilsOut[o2]))
     out <- setdiff(out, grep("R .+", pkgs, value = TRUE, invert = TRUE))
   }
-  out
+  setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020
   })
 testArgs <- all("Require" == unlist(as.list(out2)))
 testit::assert(isTRUE(testArgs))

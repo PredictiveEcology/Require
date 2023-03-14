@@ -42,6 +42,7 @@ Imports:
 Suggests:
     covr,
     parallel,
+    remotes,
     testit
 Encoding: UTF-8
 Language: en-CA
