@@ -7,6 +7,7 @@ version 0.2.7
 * Moved from MRAN archives for binaries to posit.packagemanager.co
 * improved messaging
 * a number of cases that were annoying for users were identified and addressed.
+* When setting `install = "force"` in `Require`, now only the user-specified packages are forced to be installed; the rest are installed if required, mimicking `install.packages`
 
 ## advaned changes
 * several functions now exported, `.downloadFileMasterMainAuth`, `messageVerbose`, `messageDF` as they were deemed useful enough for other packages.
