@@ -255,7 +255,7 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.posit.co/",
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(
         CRAN =
-          paste0(binaryLinux, "all/__linux__/", system("lsb_release -cs", intern = TRUE), "/latest")
+          paste0(binaryLinux, "all/__linux__/", linuxRelease(), "/latest")
       )
       if (!is.null(getOption("repos"))) {
         backupCRAN <- getOption("repos")
@@ -268,6 +268,9 @@ setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.posit.co/",
   }
 }
 
+linuxRelease <- function() {
+  system("lsb_release -cs", intern = TRUE)
+}
 
 appName <- "R-Require"
 

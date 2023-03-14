@@ -16,7 +16,7 @@ URL:
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2023-03-13
-Version: 0.2.6.9021
+Version: 0.2.6.9022
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -42,6 +42,7 @@ Imports:
 Suggests:
     covr,
     parallel,
+    remotes,
     testit
 Encoding: UTF-8
 Language: en-CA

@@ -1,6 +1,6 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
-version 0.2.7
+version 0.3.0
 =============
 
 ## enhancements
@@ -9,6 +9,9 @@ version 0.2.7
 * improved error catching in several places
 * a number of cases that were annoying for users were identified and addressed.
 * `setupOff` and `setLibPaths` enchanced to be fully functioning in a wide diversity of cases.
+* When setting `install = "force"` in `Require`, now only the user-specified packages are forced to be installed; the rest are installed if required, mimicking `install.packages`
+* small efficiency gains in many places
+* `(HEAD)` is now more robust as a way to keep a package up to date.
 
 ## advaned changes
 * several functions now exported, `.downloadFileMasterMainAuth`, `messageVerbose`, `messageDF` as they were deemed useful enough for other packages.
