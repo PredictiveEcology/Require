@@ -4,7 +4,6 @@
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/Require)](https://cran.r-project.org/package=Require)
 [![CRAN Downloads](https://cranlogs.r-pkg.org/badges/grand-total/Require)](https://cran.r-project.org/package=Require)
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg)](https://github.com/PredictiveEcology/Require/actions)
-[![Join the chat at https://gitter.im/PredictiveEcology/Require](https://badges.gitter.im/PredictiveEcology/Require.svg)](https://gitter.im/PredictiveEcology/Require?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 <!-- badges: end -->
 
 A simple package for reproducible package management in R.
@@ -70,7 +69,7 @@ This is mostly the predecessor to `renv`. `renv` can do everything `packrat` can
 
 ## `checkpoint`
 
-This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the MRAN servers hosted by Microsoft.
+This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the posit.packagemanager.co servers hosted by Posit.
 
 ```
 checkpoint("2022-11-09")
@@ -114,9 +113,13 @@ See updates from latest [CRAN](https://cran.r-project.org/package=Require) and [
 install.packages("Require")
 ```
 
-**Install from GitHub:**
+**Install development version:**
     
 ```r
+# Installing the development binary (Windows/MacOS)
+install.packages("Require", repos = "https://predictiveecology.r-universe.dev")
+
+# Or installing from source
 if (!require("remotes")) install.packages("remotes")
 remotes::install_github("PredictiveEcology/Require") 
 ```

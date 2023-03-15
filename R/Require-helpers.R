@@ -131,6 +131,7 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
     })
     out <- gsub(paste0(other, ": "), "", vers_line)
     if (length(out) == 0) out <- NA
+    if (length(out) > 1) out <- tail(out, 1)
     out
   })
   unlist(out)
@@ -209,7 +210,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT[repoLocation == "GitHub",
         filepath := {
           ret <- NA
-          dl <- downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+          dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
             need = "master",
             verbose = verbose, verboseLevel = 2
           )
@@ -316,14 +317,15 @@ getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE
   ret
 }
 
+
+
 #' @importFrom utils packageVersion installed.packages
 installedVers <- function(pkgDT) {
   pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {
-    ip <- as.data.table(installed.packages())[]
-    ip <- ip[, c("Package", "LibPath", "Version")]
-    ip <- ip[Package %in% pkgDT$Package]
-
+    ip <- as.data.table(installed.packages(fields = c("Package", "LibPath", "Version")))
+    # ip <- ip[, c("Package", "LibPath", "Version")]
+    ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
       names(pkgs) <- pkgDT$packageFullName
@@ -333,16 +335,13 @@ installedVers <- function(pkgDT) {
       pkgs <- pkgs[pkgs %in% ln]
       pkgs <- pkgs[pkgs %in% ip$Package] # can be loadedNamespace, but not installed, if it had been removed in this session
       if (NROW(pkgs)) {
-        installedPkgsCurrent <- lapply(pkgs, function(x) {
-          pv <- try(as.character(numeric_version(packageVersion(x))), silent = TRUE)
-          if (is(pv, "try-error")) {
-            pv <- NA_character_
-          }
-          data.table(VersionFromPV = pv)
-        })
-        installedPkgsCurrent <- rbindlist(lapply(installedPkgsCurrent, as.data.table), idcol = "packageFullName")
-        set(installedPkgsCurrent, NULL, "Package", extractPkgName(installedPkgsCurrent$packageFullName))
-        installedPkgsCurrent <- unique(installedPkgsCurrent, by = c("Package", "VersionFromPV"))
+        pkgs <- pkgs[!duplicated(pkgs)]
+
+        installedPkgsCurrent <- data.table(Package = pkgs, packageFullName = names(pkgs))
+        installedPkgsCurrent[, VersionFromPV := tryCatch({
+          lp <- ip$LibPath[ip$Package %in% Package][1]
+          as.character(packageVersion(Package, lp))
+        }, error = function(e) NA_character_), by = "Package"]
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error")) {
           if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
@@ -359,11 +358,12 @@ installedVers <- function(pkgDT) {
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
   }
+
   installed <- !is.na(pkgDT$Version)
   if (any(installed)) {
     set(pkgDT, NULL, "installed", installed)
   }
-  pkgDT[]
+  pkgDT
 }
 
 #' @importFrom utils available.packages
@@ -718,7 +718,14 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 }
 
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
+
+  gitRepoOrig <- gitRepo
+  # Can have version number --> most cases (other than SpaDES modules) just strip off
+  gitRepo <- trimVersionNumber(gitRepo)
+  hasVersionSpec <- gitRepo != gitRepoOrig
+
   grSplit <- strsplit(gitRepo, "/|@")
+
   repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
   names(grSplit) <- repo
   names(repo) <- repo
@@ -732,12 +739,21 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   }
   lenGT2 <- lengths(grSplit) > 2
   br <- lapply(grSplit, function(x) list())
+  vs <- br
+
   if (any(lenGT2)) {
     br[lenGT2] <- lapply(grSplit[lenGT2], function(grsplit) grsplit[[3]])
   }
+
   br[!lenGT2] <- "HEAD"
 
-  list(acct = acct, repo = repo, br = br)
+  if (any(hasVersionSpec)) {
+    versionSpecs <- extractVersionNumber(gitRepoOrig[hasVersionSpec])
+    inequs <- extractInequality(gitRepoOrig[hasVersionSpec])
+    vs[hasVersionSpec] <- paste0("(", inequs, " ", versionSpecs, ")")
+  }
+
+  list(acct = acct, repo = repo, br = br, versionSpec = vs)
 }
 
 postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
@@ -748,6 +764,18 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
       {
         file <- file.path(libPaths[1], Package, "DESCRIPTION")
         txt <- readLines(file)
+
+        dups <- duplicated(vapply(strsplit(txt, split = "\\:"),
+                          function(x) x[[1]], FUN.VALUE = character(1)))
+        if (any(dups)) {
+          if (all(grepl("Github|Remote", txt[dups])))
+            browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
+                             "the DESCRIPTION file at ", file,
+                             " has duplicated RemoteHost to GithubSHA1. Try to remove ",
+                             "the first set"))
+        }
+
+
         beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
         insertHere <- min(beforeTheseLines)
         sha <- SHAonGH
@@ -796,7 +824,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
 
   url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
   out <- suppressWarnings(
-    try(downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE)
+    try(.downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE)
   )
   if (is(out, "try-error")) {
     return(out)
@@ -889,7 +917,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
   tf <- tempfile()
-  downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
+  .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
   sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
   if (is(sha, "try-error")) {
     return(sha)
@@ -1021,8 +1049,9 @@ getSHAFromGitHubDBFilename <- function() {
 
 
 
-.earliestMRANDate <- "2015-06-06"
-.latestMRANDate <- Sys.Date() - 5
+# .earliestRSPMDate <- "2015-06-06" # THIS WAS MRAN's DATE
+.earliestRSPMDate <- "2017-10-10"
+.latestRSPMDate <- Sys.Date() - 5
 
 #' R versions
 #'
@@ -1218,7 +1247,22 @@ masterMainHEAD <- function(url, need) {
   url
 }
 
-downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
+#' GITHUB_PAT-aware and `main`-`master`-aware download from GitHub
+#'
+#' Equivalent to `utils::download.file`, but taking the `GITHUB_PAT` environment
+#' variable and using it to access the Github url.
+#'
+#' @inheritParams utils::download.file
+#' @param need If specified, user can suggest which `master` or `main` or `HEAD` to
+#'   try first. If unspecified, `HEAD` is used.
+#' @inheritParams Require
+#' @inheritParams messageVerbose
+#' @return
+#' This is called for its side effect, namely, the same as `utils::download.file`, but
+#' using a `GITHUB_PAT`, it if is in the environment, and trying both `master` and
+#' `main` if the actual `url` specifies either `master` or `main` and it does not exist.
+#' @export
+.downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
   hasMasterMain <- grepl(masterMainGrep, url)
   url <- masterMainHEAD(url, need)

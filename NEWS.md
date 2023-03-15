@@ -1,5 +1,27 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.3.0
+=============
+
+## enhancements
+* Moved from MRAN archives for binaries to posit.packagemanager.co
+* because of the move from MRAN to posit package manager, attempts are made to use archived binary packages for Linux also.
+* improved messaging in several places
+* improved error catching in several places
+* a number of cases that were annoying for users were identified and addressed.
+* `setupOff` and `setLibPaths` enhanced to be fully functioning in a wide diversity of cases.
+* When setting `install = "force"` in `Require`, now only the user-specified packages are forced to be installed; the rest are installed if required, mimicking `install.packages`
+* small efficiency gains in many places
+* `(HEAD)` is now more robust as a way to keep a package up to date.
+
+## advanced changes
+* several functions now exported, `.downloadFileMasterMainAuth`, `messageVerbose`, `messageDF` as they were deemed useful enough for other packages.
+
+## bugfixes
+* slow assessment of package dependencies on CRAN packages because of stale `available.packagesCached()` object. Now, catches this condition and refreshes `available.packages()`
+* corrected support for multiple repos that each offer the same packages. Now works like `install.packages`, i.e., first one first.
+* base packages can now be installed as previous issues about installing them were dealt with.
+
 version 0.2.6
 =============
 
@@ -12,7 +34,9 @@ version 0.2.6
 * If non-interactive and no CRAN mirror is set, user gets more informative error.
 
 ## bugfixes
-* Cases of multiple user-specified .libPaths() were treated incorrectly; they are now all respected. 
+* Cases of multiple user-specified `.libPaths()` were treated incorrectly; they are now all respected. 
+* when git repo was not installed because it was identical to the SHA already installed, it would not be loaded, thinking it failed to install; fixed
+* can now deal with case when `repos` has multiple, non-binary CRAN-like repositories, when there is also at least one binary repository supplied e.g., the rstudio package manager, i.e., there are at least 3 repositories supplied, 1 of which is binary.
 * other minor
 
 version 0.2.5

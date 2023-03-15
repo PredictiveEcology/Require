@@ -223,6 +223,7 @@ setMethod(
 #'
 #' @importFrom data.table is.data.table as.data.table
 #' @importFrom utils capture.output
+#' @export
 #' @rdname messageVerbose
 messageDF <-
   function(df,
@@ -284,10 +285,9 @@ tempfile2 <- function(sub = "",
   normPath(file.path(tempdir2(sub = sub, tempdir = tempdir), basename(tempfile(...))))
 }
 
-.RequireTempPath <-
-  function() {
-    normPath(file.path(tempdir(), "Require"))
-  }
+.RequireTempPath <- function() {
+  normPath(file.path(tempdir(), "Require"))
+}
 
 #' Invert a 2-level list
 #'
@@ -424,13 +424,24 @@ timestamp <- function() {
 #' Similar to base::message, but with an verbosity threshold
 #'
 #' This will only show a message if the value of `verbose` is greater than the
-#' `verboseLevel`.
+#' `verboseLevel`. This is mostly useful for developers of code who want to give
+#' users of their code easy access to how verbose their code will be. A developer
+#' of a function will place this `messageVerbose` internally, setting the `verboseLevel`
+#' according to how advanced they may want the message to be. `1` is a reasonable
+#' default for standard use, `0` would be for "a very important message for all users",
+#' `2` or above would be increasing levels of details for e.g., advanced use.
+#' If a user sets to `-1` with this numeric approach, they can avoid all messaging.
 #'
 #' @rdname messageVerbose
 #' @inheritParams base::message
 #' @inheritParams Require
 #' @param verboseLevel A numeric indicating what verbose threshold (level) above
 #'   which this message will show.
+#' @export
+#' @return
+#' Used for side effects, namely messaging that can be turned on or off with different
+#' numeric values of `verboseLevel`. A user sets the `verboseLevel` for a particular
+#' message.
 messageVerbose <-
   function(...,
            verbose = getOption("Require.verbose"),

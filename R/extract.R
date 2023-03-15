@@ -13,8 +13,7 @@ extractPkgName <- function(pkgs, filenames) {
   if (!missing(pkgs)) {
     hasNamesAny <- !is.null(names(pkgs))
     if (hasNamesAny) {
-      browser(expr = exists("aaaaa"))
-      hasNames <- nchar(names(pkgs)) > 0
+      hasNames <- (nchar(names(pkgs)) > 0) %in% TRUE
       pkgs[hasNames] <- names(pkgs)[hasNames]
       pkgs <- unname(pkgs)
     }
@@ -78,7 +77,7 @@ extractInequality <- function(pkgs) {
 #' @examples
 #' extractPkgGitHub("PredictiveEcology/Require")
 extractPkgGitHub <- function(pkgs) {
-  isGH <- grepl("/|@", pkgs, perl = FALSE)
+  isGH <- grepl("^[^//].+/.+[@.+]?", pkgs, perl = FALSE)
   if (any(isGH)) {
     a <- trimVersionNumber(pkgs[isGH])
     hasRepo <- grepl("/", a)
