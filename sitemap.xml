@@ -25,9 +25,6 @@
     <loc>/reference/R_TESTSomit.html</loc>
   </url>
   <url>
-    <loc>/reference/Require-internals.html</loc>
-  </url>
-  <url>
     <loc>/reference/Require.html</loc>
   </url>
   <url>
@@ -56,6 +53,9 @@
   </url>
   <url>
     <loc>/reference/detachAll.html</loc>
+  </url>
+  <url>
+    <loc>/reference/dot-downloadFileMasterMainAuth.html</loc>
   </url>
   <url>
     <loc>/reference/extractPkgName.html</loc>

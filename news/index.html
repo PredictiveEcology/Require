@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">Require</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.0</span>
       </span>
     </div>
 
@@ -48,6 +48,35 @@
     </div>
 
     <div class="section level2">
+<h2 class="page-header" data-toc-text="0.3.0" id="version-030">version 0.3.0<small>2023-03-14</small><a class="anchor" aria-label="anchor" href="#version-030"></a></h2>
+<div class="section level3">
+<h3 id="enhancements-0-3-0">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-3-0"></a></h3>
+<ul><li>Moved from MRAN archives for binaries to posit.packagemanager.co</li>
+<li>because of the move from MRAN to posit package manager, attempts are made to use archived binary packages for Linux also.</li>
+<li>improved messaging in several places</li>
+<li>improved error catching in several places</li>
+<li>a number of cases that were annoying for users were identified and addressed.</li>
+<li>
+<code>setupOff</code> and <code>setLibPaths</code> enhanced to be fully functioning in a wide diversity of cases.</li>
+<li>When setting <code>install = "force"</code> in <code>Require</code>, now only the user-specified packages are forced to be installed; the rest are installed if required, mimicking <code>install.packages</code>
+</li>
+<li>small efficiency gains in many places</li>
+<li>
+<code>(HEAD)</code> is now more robust as a way to keep a package up to date.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="advanced-changes-0-3-0">advanced changes<a class="anchor" aria-label="anchor" href="#advanced-changes-0-3-0"></a></h3>
+<ul><li>several functions now exported, <code>.downloadFileMasterMainAuth</code>, <code>messageVerbose</code>, <code>messageDF</code> as they were deemed useful enough for other packages.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bugfixes-0-3-0">bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-0-3-0"></a></h3>
+<ul><li>slow assessment of package dependencies on CRAN packages because of stale <code><a href="../reference/availableVersions.html">available.packagesCached()</a></code> object. Now, catches this condition and refreshes <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">available.packages()</a></code>
+</li>
+<li>corrected support for multiple repos that each offer the same packages. Now works like <code>install.packages</code>, i.e., first one first.</li>
+<li>base packages can now be installed as previous issues about installing them were dealt with.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="page-header" data-toc-text="0.2.6" id="version-026">version 0.2.6<small>2023-01-05</small><a class="anchor" aria-label="anchor" href="#version-026"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-2-6">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-6"></a></h3>
@@ -63,7 +92,9 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bugfixes-0-2-6">bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-0-2-6"></a></h3>
-<ul><li>Cases of multiple user-specified .libPaths() were treated incorrectly; they are now all respected.</li>
+<ul><li>Cases of multiple user-specified <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code> were treated incorrectly; they are now all respected.</li>
+<li>when git repo was not installed because it was identical to the SHA already installed, it would not be loaded, thinking it failed to install; fixed</li>
+<li>can now deal with case when <code>repos</code> has multiple, non-binary CRAN-like repositories, when there is also at least one binary repository supplied e.g., the rstudio package manager, i.e., there are at least 3 repositories supplied, 1 of which is binary.</li>
 <li>other minor</li>
 </ul></div>
 </div>
