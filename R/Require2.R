@@ -1315,9 +1315,16 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
   }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
+  Nrow <- length(pkgsNotInAP)
 
-  if (length(pkgsNotInAP)) { # basically no version is there
-    ap3 <- ap[seq(length(pkgsNotInAP)), , drop = FALSE]
+  if (Nrow) { # basically no version is there
+
+    if (NROW(ap) < Nrow) {
+      ap3 <- rbind(ap, matrix(nrow = Nrow, rep(rep(NA, NCOL(ap)), Nrow)))
+    } else {
+      ap3 <- ap[seq(length(pkgsNotInAP)), , drop = FALSE]
+    }
+
     ap3[, "Package"] <- pkgsNotInAP
     rownames(ap3) <- ap3[, "Package"]
     ap3[, "Version"] <- toInstall[Package %in% pkgsNotInAP]$VersionOnRepos
