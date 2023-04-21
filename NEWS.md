@@ -4,6 +4,7 @@ version 0.3.1
 =============
 
 ## enhancements
+* minor modifications for when internet is not available
 
 ## bugfixes
 

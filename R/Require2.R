@@ -1315,14 +1315,15 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
   }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
-  Nrow <- length(pkgsNotInAP)
+  NumPkgsNotInAP <- length(pkgsNotInAP)
 
-  if (Nrow) { # basically no version is there
+  if (NumPkgsNotInAP) { # basically no version is there
 
-    if (NROW(ap) < Nrow) {
-      ap3 <- rbind(ap, matrix(nrow = Nrow, rep(rep(NA, NCOL(ap)), Nrow)))
-    } else {
-      ap3 <- ap[seq(length(pkgsNotInAP)), , drop = FALSE]
+    # Have to make the ap object be the same length as the number of pkgsNotInAP
+    if (NROW(ap) < NumPkgsNotInAP) { # no nough rows; must add
+      ap3 <- rbind(ap, matrix(nrow = NumPkgsNotInAP, rep(rep(NA, NCOL(ap)), NumPkgsNotInAP)))
+    } else { #  too many rows, keep first NumPkgsNotInAP
+      ap3 <- ap[seq(NumPkgsNotInAP), , drop = FALSE]
     }
 
     ap3[, "Package"] <- pkgsNotInAP
