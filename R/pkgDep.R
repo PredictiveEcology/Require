@@ -100,45 +100,7 @@ pkgDep <- function(packages,
   if (!includeBase) {
     packages <- packages[!packages %in% .basePkgs]
   }
-  # if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
-  if (!missing(depends)) {
-    wh <-
-      "Depends"
-    which <- if (isTRUE(depends)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-  if (!missing(imports)) {
-    wh <-
-      "Imports"
-    which <- if (isTRUE(imports)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-  if (!missing(suggests)) {
-    wh <-
-      "Suggests"
-    which <- if (isTRUE(suggests)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-  if (!missing(linkingTo)) {
-    wh <-
-      "LinkingTo"
-    which <- if (isTRUE(linkingTo)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-
-  which <- whichToDILES(which)
+  which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
 
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
@@ -521,7 +483,6 @@ pkgDepInner <- function(packages,
     pkgNoVersion = pkgsNoVersionToCheck,
     function( # desc_path,
              pkg, pkgNoVersion) {
-      # if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
         needed <-
@@ -2265,6 +2226,49 @@ clearRequirePackageCache <- function(packages,
     messageVerbose("Nothing to clear in Cache", verbose = verbose, verboseLevel = 1)
   }
 }
+
+
+depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, which) {
+  if (!missing(depends)) {
+    wh <-
+      "Depends"
+    which <- if (isTRUE(depends)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  if (!missing(imports)) {
+    wh <-
+      "Imports"
+    which <- if (isTRUE(imports)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  if (!missing(suggests)) {
+    wh <-
+      "Suggests"
+    which <- if (isTRUE(suggests)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  if (!missing(linkingTo)) {
+    wh <-
+      "LinkingTo"
+    which <- if (isTRUE(linkingTo)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  whichToDILES(which)
+}
+
+
 installedVersionOKPrecise <- function(pkgDT) {
   pkgDT[, localFiles := system.file("DESCRIPTION", package = Package), by = "Package"]
   pkgDT[, localRepo := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRepo")]
