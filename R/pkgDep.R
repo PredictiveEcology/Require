@@ -1527,7 +1527,9 @@ getGitHubDeps <-
            verbose = getOption("Require.verbose"),
            includeBase = FALSE) {
     pkg <- masterMainToHead(pkg)
-    localVersionOK <- (installedVers(pkgDT)$installed %in% TRUE)
+
+    localVersionOK <- installedVersionOKPrecise(pkgDT)
+
     if (isTRUE(localVersionOK)) {
       pkgDT[, DESCFile := system.file("DESCRIPTION", package = pkgDT$Package)]
     } else {
@@ -1850,11 +1852,12 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
-    pkgDT <- installedVers(pkgDT)
+    pkgDT <- installedVersionOKPrecise(pkgDT)
     pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
-    pkgDT <- whichToInstall(pkgDT, install = TRUE)
-    installedNotOK <- pkgDT$installedVersionOK %in% FALSE
-    installedOK <- !installedNotOK
+    # pkgDT <- whichToInstall(pkgDT, install = TRUE)
+
+    installedOK <- pkgDT$installedVersionOK
+    installedNotOK <- !installedOK
     shas <- character(NROW(pkgDT))
     if (any(installedNotOK)) {
       shas[installedNotOK] <-
@@ -2261,4 +2264,24 @@ clearRequirePackageCache <- function(packages,
   } else {
     messageVerbose("Nothing to clear in Cache", verbose = verbose, verboseLevel = 1)
   }
+}
+installedVersionOKPrecise <- function(pkgDT) {
+  pkgDT[, localFiles := system.file("DESCRIPTION", package = Package), by = "Package"]
+  pkgDT[, localRepo := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRepo")]
+  pkgDT[, localUsername := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteUsername")]
+  pkgDT[, localBranch := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRef")]
+  pkgDT[, localSha := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteSha")]
+
+  pkgDT <- installedVers(pkgDT)
+
+  brOrSha <- pkgDT$Branch == pkgDT$localBranch |
+    pkgDT$Branch == pkgDT$localSha
+
+  installedNotOK <- pkgDT$installed %in% FALSE |
+    pkgDT$Account != pkgDT$localUsername |
+    pkgDT$Repo != pkgDT$localRepo |
+    brOrSha %in% FALSE
+
+  set(pkgDT, NULL, "installedVersionOK", installedNotOK %in% FALSE)
+  pkgDT
 }
