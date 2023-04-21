@@ -861,7 +861,30 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     verbose = verbose,
     type = type
   )
-  pkgInstall <- checkAvailableVersions(pkgInstall, repos, purge, libPaths, verbose = verbose, type = type)
+  # When GITHUB_PAT rate limit is hit, the error message in Require is useless;
+  #   use `remotes`
+  pkgInstall <-
+    withCallingHandlers(checkAvailableVersions(pkgInstall, repos, purge, libPaths,
+                                               verbose = verbose, type = type),
+                        error = function(e) {
+                          e$message <- gsub(paste0("(https://).*@"), "\\1", e$message)
+                          if (requireNamespace("remotes")) {
+                            # THIS WILL TRY `remotes` TO GET THE CORRECT REASON FOR THE ERROR -- but will still error
+                            pkgInstallJustGitHub <- pkgInstall[pkgInstall$repoLocation %in% "GitHub"]
+                            lapply(seq(NROW(pkgInstallJustGitHub)),
+                                   function(ind) {
+                                     pijg <- pkgInstallJustGitHub[ind]
+                                     thisOne <- any(grepl(paste(pijg$Account, pijg$Repo, sep = ".+"), e))
+                                     if (isTRUE(thisOne))
+                                       remotes::install_github(pijg$packageFullName)
+                                   })
+
+                          } else {
+                            stop(e, "\nDoes the url exist? ",
+                                 "Are you not using a GITHUB_PAT? Do you have an old GITHUB_PAT?\n",
+                                 "For better error handling, install.packages('remotes')")
+                          }
+                        })
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")

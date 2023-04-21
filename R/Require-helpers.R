@@ -52,9 +52,6 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
         RepoWBranch := gsub(paste0("^", Account, "/"), "", fullGit),
         by = seq(sum(hasSubFolder, na.rm = TRUE))
       ]
-      # withCallingHandlers(set(pkgDT, hasSubFold, "RepoWBranch",
-      #     gsub(paste0("^",pkgDT$Account[hasSubFold],"/"), "", pkgDT$fullGit[hasSubFold])),
-      #     warning = function(w) browser())
       pkgDT[hasSubFolder %in% TRUE,
         GitSubFolder := strsplit(RepoWBranch, split = "/|@")[[1]][2],
         by = seq(sum(hasSubFolder, na.rm = TRUE))
@@ -63,11 +60,6 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
         RepoWBranch := gsub(paste0("/", GitSubFolder), "", RepoWBranch),
         by = seq(sum(hasSubFolder, na.rm = TRUE))
       ]
-
-      # set(pkgDT, hasSubFold, "GitSubFolder",
-      #     strsplit(pkgDT$RepoWBranch[hasSubFold], split = "/|@")[[1]][2])
-      # set(pkgDT, hasSubFold, "RepoWBranch",
-      #     gsub(paste0("/",pkgDT$GitSubFolder[hasSubFold]), "", pkgDT$RepoWBranch[hasSubFold]))
     }
     set(pkgDT, isGitHub, "Repo", gsub("^(.*)@(.*)$", "\\1", pkgDT$RepoWBranch[isGitHub]))
     set(pkgDT, isGitHub, "Branch", "HEAD")
@@ -1278,13 +1270,13 @@ masterMainHEAD <- function(url, need) {
   urls <- split(urls, hasMasterMain)
   outNotMasterMain <- outMasterMain <- character()
 
-  for (i in 1:5) {
+  for (i in 1:2) {
     if (!is.null(urls[["FALSE"]])) {
       outNotMasterMain <-
         withCallingHandlers(
           Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
             if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-              try(download.file(URL, destfile = destfile, quiet = TRUE), silent = TRUE)
+              download.file(URL, destfile = destfile, quiet = TRUE)
             }
           }),
           warning = function(w) {
@@ -1301,7 +1293,7 @@ masterMainHEAD <- function(url, need) {
           outMasterMain <-
             withCallingHandlers(
               {
-                try(download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE))
+                download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
               },
               warning = function(w) {
                 setOfflineModeTRUE()
