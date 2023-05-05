@@ -390,6 +390,18 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     types <- type
   }
 
+  missingHttp <- !startsWith(unlist(repos), "http")
+  if (any(missingHttp)) {
+    repos[missingHttp] <- lapply(repos[missingHttp], function(r) {
+      paste0("https://", r)
+    })
+  }
+  if (is.list(repos)) {
+    nams <- names(repos)
+    repos <- unlist(repos)
+    names(repos) <- nams
+  }
+
   reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
   typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
   objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
