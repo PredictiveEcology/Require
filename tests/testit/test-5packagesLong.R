@@ -141,6 +141,7 @@ if (isDevAndInteractive) {
   pkgs <- list(
     c(
       "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.4.3)",
+      "reproducible (>=2.0.2)", "PredictiveEcology/reproducible@development (>=2.0.0)", # Until reproducible 2.0.2 is on CRAN
       "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
       "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
     ),
