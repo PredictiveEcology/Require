@@ -193,7 +193,7 @@ if (isDevAndInteractive) {
     "LearnBayes (>=1000.3.1)",
     c("LearnBayes (>=1.0.1)", "fpCompare"),
     "LearnBayes (>=2.15.1)",
-    c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
+    c("r-forge/mumin/pkg", MuMIn = "r-forge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
 
