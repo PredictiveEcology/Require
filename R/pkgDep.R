@@ -1650,7 +1650,7 @@ purgeBasedOnTimeSinceCached <- function(savedTime) {
   purgeDiff <-
     as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
   if (is.null(savedTime)) {
-    purge <- FALSE
+    purge <- TRUE
   } else {
     purgeDiff <-
       if (identical(purgeDiff, "") ||
