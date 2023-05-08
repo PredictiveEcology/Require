@@ -2,10 +2,9 @@ utils::globalVariables(
   c(
     "atLeastOneWithVersionSpec",
     "Current",
-    "GithubRepo",
-    "GithubSHA1",
-    "GithubUsername",
+    "GithubRepo", "GithubSHA1", "GithubUsername",
     "hasVers",
+    "localBranch", "localFiles", "localRepo", "localSha", "localUsername",
     "maxVersionSpec",
     "mtime",
     "newPackageFullName",
