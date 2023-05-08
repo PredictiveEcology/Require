@@ -15,7 +15,7 @@ created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
 pkgVF <- file.path(tmpdir, "packageVersions.txt")
 setLibPaths(tmpdir, standAlone = TRUE)
 tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
-Require(c("remotes (==2.4.1)", "testit (==0.12)"), require = FALSE, quiet = quiet)
+Require(c("remotes", "testit"), require = FALSE, quiet = quiet)
 
 setLibPaths(tmpdir2, standAlone = TRUE)
 tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
