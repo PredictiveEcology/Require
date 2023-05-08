@@ -2272,10 +2272,10 @@ installedVersionOKPrecise <- function(pkgDT) {
   pkgDT[, localFiles := system.file("DESCRIPTION", package = Package), by = "Package"]
   fe <- nzchar(pkgDT$localFiles)
   if (any(fe)) {
-    pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRepo")]
-    pkgDT[fe, localUsername := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteUsername")]
-    pkgDT[fe, localBranch := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRef")]
-    pkgDT[fe, localSha := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteSha")]
+    pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(localFiles, "RemoteRepo")]
+    pkgDT[fe, localUsername := DESCRIPTIONFileOtherV(localFiles, "RemoteUsername")]
+    pkgDT[fe, localBranch := DESCRIPTIONFileOtherV(localFiles, "RemoteRef")]
+    pkgDT[fe, localSha := DESCRIPTIONFileOtherV(localFiles, "RemoteSha")]
   } else {
     pkgDT[fe, localRepo := NA]
     pkgDT[fe, localUsername := NA]
