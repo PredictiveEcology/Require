@@ -1282,54 +1282,54 @@ masterMainHEAD <- function(url, need) {
   urls <- split(urls, hasMasterMain)
   outNotMasterMain <- outMasterMain <- character()
 
-  for (i in 1:2) {
-    if (!is.null(urls[["FALSE"]])) {
-      outNotMasterMain <-
-        withCallingHandlers(
+  ret <- withCallingHandlers({
+
+    for (i in 1:2) {
+      if (!is.null(urls[["FALSE"]])) {
+        outNotMasterMain <-
           Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
             if (isFALSE(getOption("Require.offlineMode", FALSE))) {
               download.file(URL, destfile = destfile, quiet = TRUE)
             }
-          }),
-          warning = function(w) {
-            setOfflineModeTRUE()
-            # strip the ghp from the warning message
-            w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
-            invokeRestart("muffleWarning")
+          })
+      }
+      if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
+        for (wh in seq(urls[["TRUE"]])) {
+          if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+            download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
           }
-        )
-    }
-    if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
-      for (wh in seq(urls[["TRUE"]])) {
-        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-          outMasterMain <-
-            withCallingHandlers(
-              {
-                download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
-              },
-              warning = function(w) {
-                setOfflineModeTRUE()
-                # strip the ghp from the warning message
-                w$message <- gsub(paste0(ghp, ".*@"), "", w$message)
-                invokeRestart("muffleWarning")
-              }
-            )
-        }
 
-        if (!is(outMasterMain, "try-error")) {
-          names(outMasterMain) <- urls[["TRUE"]][wh]
-          break
+          if (!is(outMasterMain, "try-error")) {
+            names(outMasterMain) <- urls[["TRUE"]][wh]
+            break
+          }
         }
       }
+      ret <- c(outNotMasterMain, outMasterMain)
+      if (!any(unlist(lapply(ret, is, "try-error")))) {
+        break
+      }
+      Sys.sleep(0.5)
     }
-    ret <- c(outNotMasterMain, outMasterMain)
-    if (!any(unlist(lapply(ret, is, "try-error")))) {
-      break
-    }
-    Sys.sleep(0.5)
-  }
+    return(ret)
+  },
+  warning = function(w) {
+    setOfflineModeTRUE()
+    # strip the ghp from the warning message
+    w$message <- stripGHP(ghp, w$message)
+    invokeRestart("muffleWarning")
+  },
+  error = function(e) {
+    # strip the ghp from the message
+    e$message <- stripGHP(ghp, e$message)
+    stop(e)
+  })
 
   ret
+}
+
+stripGHP <- function(ghp, mess) {
+  gsub(paste0(ghp, ".*@"), "", mess)
 }
 
 messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
