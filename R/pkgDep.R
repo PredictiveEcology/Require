@@ -1819,7 +1819,7 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
     installedOK <- pkgDT$installedVersionOK
     installedNotOK <- !installedOK
     shas <- character(NROW(pkgDT))
-    if (any(installedNotOK)) {
+    if (isTRUE(any(installedNotOK))) {
       shas[installedNotOK] <-
         Map(
           repo = pkgDT$Repo[installedNotOK],
@@ -1830,7 +1830,7 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
         )
     }
 
-    if (any(installedOK)) {
+    if (isTRUE(any(installedOK))) {
       withCallingHandlers(
         shas[installedOK] <-
           DESCRIPTIONFileOtherV(
@@ -2270,21 +2270,32 @@ depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, whic
 
 installedVersionOKPrecise <- function(pkgDT) {
   pkgDT[, localFiles := system.file("DESCRIPTION", package = Package), by = "Package"]
-  pkgDT[, localRepo := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRepo")]
-  pkgDT[, localUsername := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteUsername")]
-  pkgDT[, localBranch := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRef")]
-  pkgDT[, localSha := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteSha")]
+  fe <- nzchar(pkgDT$localFiles)
+  if (any(fe)) {
+    pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRepo")]
+    pkgDT[fe, localUsername := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteUsername")]
+    pkgDT[fe, localBranch := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteRef")]
+    pkgDT[fe, localSha := DESCRIPTIONFileOtherV(pkgDT$localFiles, "RemoteSha")]
+  } else {
+    pkgDT[fe, localRepo := NA]
+    pkgDT[fe, localUsername := NA]
+    pkgDT[fe, localBranch := NA]
+    pkgDT[fe, localSha := NA]
+  }
 
   pkgDT <- installedVers(pkgDT)
 
-  brOrSha <- pkgDT$Branch == pkgDT$localBranch |
-    pkgDT$Branch == pkgDT$localSha
+  if (isTRUE(any(pkgDT$installed %in% TRUE))) {
+    brOrSha <- pkgDT$Branch == pkgDT$localBranch |
+      pkgDT$Branch == pkgDT$localSha
 
-  installedNotOK <- pkgDT$installed %in% FALSE |
-    pkgDT$Account != pkgDT$localUsername |
-    pkgDT$Repo != pkgDT$localRepo |
-    brOrSha %in% FALSE
+    installedNotOK <- pkgDT$Account != pkgDT$localUsername |
+      pkgDT$Repo != pkgDT$localRepo |
+      brOrSha %in% FALSE
 
+  } else {
+    installedNotOK <- NA
+  }
   set(pkgDT, NULL, "installedVersionOK", installedNotOK %in% FALSE)
   pkgDT
 }
