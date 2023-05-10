@@ -1296,11 +1296,11 @@ masterMainHEAD <- function(url, need) {
       if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
         for (wh in seq(urls[["TRUE"]])) {
           if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-            download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
+            outMasterMain <- download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
           }
 
           if (!is(outMasterMain, "try-error")) {
-            names(outMasterMain) <- urls[["TRUE"]][wh]
+            names(outMasterMain) <- stripGHP(ghp, urls[["TRUE"]][wh])
             break
           }
         }
