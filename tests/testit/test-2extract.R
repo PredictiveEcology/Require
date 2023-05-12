@@ -55,7 +55,7 @@ testit::assert({
   isTRUE(all.equal("Require", a))
 })
 
-out <- parseGitHub("rforge/mumin/pkg")
+out <- parseGitHub("r-forge/mumin/pkg")
 testit::assert({
   "hasSubFolder" %in% colnames(out)
 })

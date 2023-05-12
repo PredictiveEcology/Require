@@ -7,6 +7,7 @@ version 0.3.1
 * minor modifications for when internet is not available
 
 ## bugfixes
+* updates to tests that have begun to fail
 
 version 0.3.0
 =============
