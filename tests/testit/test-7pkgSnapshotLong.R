@@ -13,6 +13,10 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     fn <- file.path(pkgPath, "pkgSnapshot.txt")
     pkgs <- data.table::fread(fn)
     pkgs <- pkgs[!(Package %in% "SpaDES.install")]
+
+    # stringfish can't be installed in Eliot's system from binaries
+    if (Sys.info()["user"] == "emcintir")
+      options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
     pkgs <- pkgs[!Package %in% c("RandomFields", "RandomFieldsUtils")] # the version 1.0-7 is corrupt on RSPM
     pkgs[Package %in% "sf", Version := "1.0-9"] # the version 1.0-7 is corrupt on RSPM
     pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",

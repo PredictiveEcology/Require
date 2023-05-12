@@ -34,6 +34,8 @@ if (isDevAndInteractive) {
   pkgsShort <- unique(sort(pkgs))
   deps <- pkgDep(pkgsShort, recursive = TRUE)
 
+  if (Sys.info()["user"] == "emcintir")
+    options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
   # THE INSTALL
   pkgs <- omitPkgsTemporarily(pkgs)
   outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
