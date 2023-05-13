@@ -369,9 +369,10 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
         intern = internal, ignore.stdout = quiet, ignore.stderr = quiet
       )
     })
-    if (any(unlist(out1) == 1L)) {
-      browserDeveloper("Error 456; contact developer")
-    }
+    # if (any(unlist(out1) == 1L)) {
+    #   browser()
+    #   browserDeveloper("Error 456; contact developer")
+    # }
     messageVerbose("  ... Built!",
       verbose = verbose, verboseLevel = 1
     )
@@ -482,10 +483,18 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
         ),
         installAll
       )
-    pkgInstall <- rbindlistRecursive(toInstallList)
-    # afterInstallAll <- by(pkgInstall, list(pkgInstall[["installSafeGroups"]]),
-    #    installAll, repos = repos, purge = purge, install.packagesArgs, numPackages,
-    #    numGroups = maxGroup, startTime, verbose, type = type)
+    pkgInstallTmp <- rbindlistRecursive(toInstallList)
+    needRebuild <- startsWith(basename(pkgInstall$localFile), "NeedRebuild")
+    if (any(needRebuild)) {
+      pkgInstall <- needRebuildAndInstall(needRebuild = needRebuild, pkgInstall = pkgInstall,
+                                          libPaths = libPaths, verbose = verbose,
+                                          install.packagesArgs = install.packagesArgs,
+                                          repos = repos, purge = purge, startTime = startTime, type = type,
+                                          pkgInstallTmp = pkgInstallTmp)
+    } else {
+      pkgInstall <- pkgInstallTmp
+    }
+
     addOK <- if (!is.null(pkgInstall[["installResult"]])) {
       which(is.na(pkgInstall[["installResult"]]))
     } else {
@@ -1024,6 +1033,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
       if (is.null(pkgGitHub[["SHAonGH"]])) {
         colsToUpdate <- c("SHAonGH")
         set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
+        browser()
         pkgGitHub[avOK, (colsToUpdate) := {
           SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
         }, by = "Package"]
@@ -1048,14 +1058,19 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         }
         pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
         #  toDL <- .SD[!SHAonGH %in% FALSE]
-          gitRepo <- paste0(Account, "/", Repo, "@", Branch)
-          names(gitRepo) <- Package
-          out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
-                              overwrite = TRUE, destDir = ".", verbose = verbose)
-          out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
-          fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
-          normPath(fn)
+          downloadAndBuildToLocalFile(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos)
+            # gitRepo <- paste0(Account, "/", Repo, "@", Branch)
+            # names(gitRepo) <- Package
+            # out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
+            #                     overwrite = TRUE, destDir = ".", verbose = verbose)
+            # out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
+            # fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
+            # normPath(fn)
         }, by = "Package"] # seq(NROW(pkgGHtoDL))]
+
+        empty <- !nzchar(pkgGHtoDL[!SHAonGH %in% FALSE]$localFile)
+        if (any(empty))
+            pkgGHtoDL[which(!SHAonGH %in% FALSE)[empty %in% TRUE], localFile := "NeedRebuild"]
         # A bit of cleaning; this will get rid of the source files; we have the tar.gz after `build`
         pkgGHtoDL[, installFrom := "GitHub"]
         pkgGHtoDL <- renameLocalGitPkgDT(pkgGHtoDL)
@@ -1124,8 +1139,6 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Requ
                                        repos = getOption("repos"), type = getOption("pkgType")) {
   dd <- pkgSnapshotObj
   ff <- packageFullNameFromSnapshot(dd)
-  # ff <- ifelse(!is.na(dd$GithubRepo) & nzchar(dd$GithubRepo),
-  #              paste0(dd$GithubUsername, "/", dd$Package, "@", dd$GithubSHA1), paste0(dd$Package, " (==", dd$Version, ")"))
   gg <- pkgDep(ff, recursive = TRUE, purge = purge)
   hh <- sort(unique(gsub("(\\(.*)( )+(.*\\))$", "\\1\\3", gsub("\n", "", unname(unlist(gg))))))
   pkgDT <- toPkgDT(hh, deepCopy = TRUE)
@@ -2166,4 +2179,42 @@ rmPackageFirst <- function(toInstall, verbose) {
     messageVerbose("removed all the packages that are being installed", verbose = verbose)
   }
   toInstall
+}
+
+downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos) {
+  gitRepo <- paste0(Account, "/", Repo, "@", Branch)
+  names(gitRepo) <- Package
+  out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
+                      overwrite = TRUE, destDir = ".", verbose = verbose)
+  out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
+  fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
+  normPath(fn)
+}
+
+
+needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, install.packagesArgs,
+                                  repos, purge, startTime, type,
+                                  pkgInstallTmp) {
+  if (any(needRebuild)) {
+    message("Trying to rebuild and install GitHub build fails... ")
+    pkgInstall[, needRebuild := needRebuild]
+    pkgInstallList <- split(pkgInstall, by = "needRebuild")
+    names(pkgInstallList) <- c("No", "GitHub")
+    pkgInstallList <- downloadGitHub(pkgInstallList, libPaths, verbose, install.packagesArgs)
+    maxGroup <- 1
+    numPackages <- NROW(pkgInstallList[["GitHub"]])
+    pkgInstallList[["GitHub"]][, installOrder := seq(.N)] # renumber the installOrder
+    pkgInstallList <- Map(
+      toInstall = pkgInstallList["GitHub"],
+      MoreArgs = list(
+        repos = repos, purge = purge,
+        install.packagesArgs = install.packagesArgs, numPackages = numPackages,
+        numGroups = maxGroup, startTime = startTime, verbose = verbose, type = type
+      ),
+      installAll
+    )
+    pkgInstall <- rbindlist(list(pkgInstallTmp[!Package %in% pkgInstallList[["GitHub"]]$Package],
+                                 pkgInstallList[["GitHub"]]), use.names = TRUE, fill = TRUE)
+  }
+  pkgInstall
 }
