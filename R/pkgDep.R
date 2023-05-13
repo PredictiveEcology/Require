@@ -1820,14 +1820,27 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
     installedNotOK <- !installedOK
     shas <- character(NROW(pkgDT))
     if (isTRUE(any(installedNotOK))) {
-      shas[installedNotOK] <-
-        Map(
-          repo = pkgDT$Repo[installedNotOK],
-          acct = pkgDT$Account[installedNotOK],
-          br = pkgDT$Branch[installedNotOK],
-          verbose = verbose,
-          getSHAfromGitHubMemoise
+      for (i in 1:2) {
+        brLocals <- if (i == 1) pkgDT$Branch[installedNotOK] else "main"
+        shaOuts <- try(
+          Map(
+            repo = pkgDT$Repo[installedNotOK],
+            acct = pkgDT$Account[installedNotOK],
+            br = brLocals,
+            verbose = verbose,
+            getSHAfromGitHubMemoise
+          )
         )
+        if (all(!is(shaOuts, "try-error"))) {
+          if (i == 2)
+            warning(pkgDT[installedNotOK]$packageFullName,
+                    " could not be found. Was the branch deleted? ",
+                    "Assessing package dependencies in ",
+                    "main branch of that/those repository/repositories. ")
+          shas[installedNotOK] <- shaOuts
+          break
+        }
+      }
     }
 
     if (isTRUE(any(installedOK))) {
