@@ -794,7 +794,7 @@ doLoads <- function(require, pkgDT) {
   if (any(pkgDT$require %in% TRUE)) {
     setorderv(pkgDT, "loadOrder", na.last = TRUE)
     # rstudio intercepts `require` and doesn't work internally
-    out[[1]] <- mapply(x = pkgDT$Package[pkgDT$require %in% TRUE], function(x) {
+    out[[1]] <- mapply(x = unique(pkgDT$Package[pkgDT$require %in% TRUE]), function(x) {
       base::require(x, character.only = TRUE)
     }, USE.NAMES = TRUE)
   }
