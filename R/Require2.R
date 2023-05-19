@@ -1033,7 +1033,6 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
       if (is.null(pkgGitHub[["SHAonGH"]])) {
         colsToUpdate <- c("SHAonGH")
         set(pkgGitHub, NULL, colsToUpdate, list(NA_character_)) # fast to just do all; then next lines may update
-        browser()
         pkgGitHub[avOK, (colsToUpdate) := {
           SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
         }, by = "Package"]

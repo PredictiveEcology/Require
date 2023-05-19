@@ -62,7 +62,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     testit::assert(isTRUE(theTest))
 
     lala <- capture.output(type = "message", {
-      out <- Require(
+      out2 <- Require(
         packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
         require = FALSE, verbose = 2, purge = TRUE
       )

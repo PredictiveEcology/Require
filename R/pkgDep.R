@@ -2116,7 +2116,8 @@ prependSelf <- function(deps, includeSelf) {
   if (isTRUE(includeSelf)) {
     deps <- Map(pkgs = deps, nam = names(deps), function(pkgs, nam) {
       depsInner <- pkgs
-      alreadyHasSelf <- startsWith(pkgs[1], trimVersionNumber(nam))
+      alreadyHasSelf <- !identical(extractPkgName(pkgs[1]), extractPkgName(nam))
+      # alreadyHasSelf <- startsWith(pkgs[1], trimVersionNumber(nam))
       if (!isTRUE(alreadyHasSelf)) {
         depsInner <- c(nam, pkgs)
       }
