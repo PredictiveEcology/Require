@@ -104,7 +104,7 @@ knownRevDeps <- list(
   Require = c(
     # "reproducible",
     "SpaDES", "SpaDES.addins", "SpaDES.core",
-    "SpaDES.experiment", "SpaDES.tools", "SpaDES.project"
+    "SpaDES.experiment", "SpaDES.project"
   )
 )
 knownRevDeps <- append(
