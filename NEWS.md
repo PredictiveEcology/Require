@@ -1,5 +1,15 @@
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.3.1
+=============
+
+## enhancements
+* minor modifications for when internet is not available
+* Issue 81: deal with more edge cases for package snapshots that are not internally consistent, i.e., violate package versions, or skip missing branches on GitHub, if not needed. 
+
+## bugfixes
+* updates to tests that have begun to fail
+
 version 0.3.0
 =============
 

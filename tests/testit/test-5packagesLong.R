@@ -140,12 +140,13 @@ if (isDevAndInteractive) {
 
   pkgs <- list(
     c(
-      "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.3.0)",
+      "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.4.3)",
+      "reproducible (>=2.0.2)", "PredictiveEcology/reproducible@development (>=2.0.0)", # Until reproducible 2.0.2 is on CRAN
       "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
       "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
     ),
     c(
-      "SpaDES.core (>=0.9)",
+      "PredictiveEcology/SpaDES.core@development (>=1.1.2)",
       "PredictiveEcology/map@development (>= 4.0.9)",
       "achubaty/amc@development (>=0.1.5)", "data.table (>=100.0)",
       "tinytest (>=1.3.1)", "PredictiveEcology/LandR@development (>= 1.0.2)",
@@ -161,7 +162,7 @@ if (isDevAndInteractive) {
       "PredictiveEcology/map@master (>= 0.0.0.10)"
     ),
     c(
-      "SpaDES.core (>=0.9)",
+      "PredictiveEcology/SpaDES.core@development (>=1.1.2)",
       "PredictiveEcology/map@development (>= 5.0.0.9)",
       "achubaty/amc@development (>=0.1.5)",
       "data.table (>=100.0)",
@@ -193,7 +194,7 @@ if (isDevAndInteractive) {
     "LearnBayes (>=1000.3.1)",
     c("LearnBayes (>=1.0.1)", "fpCompare"),
     "LearnBayes (>=2.15.1)",
-    c("rforge/mumin/pkg", MuMIn = "rforge/mumin/pkg", "A3")
+    c("r-forge/mumin/pkg", MuMIn = "r-forge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
 
@@ -255,7 +256,8 @@ if (isDevAndInteractive) {
   # two sources, where both are OK; use CRAN by preference
   if (!isMacOSX()) {
     out <- capture.output(remove.packages("SpaDES.core")) ## TODO: fails on macOS
-    out <- Require(c("PredictiveEcology/SpaDES.core (>= 1.0.0)", "SpaDES.core (>=1.0.0)"),
+    out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
+                     "SpaDES.core (>=1.0.0)"),
       require = FALSE, verbose = 2
     )
     out2 <- attr(out, "Require")

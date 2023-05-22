@@ -6,18 +6,20 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     ## Long pkgSnapshot -- issue 41
     pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
     checkPath(pkgPath, create = TRUE)
-    download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt",
-                  destfile = file.path(pkgPath, "pkgSnapshot.txt")
-    )
-    origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
+
     fn <- file.path(pkgPath, "pkgSnapshot.txt")
+    download.file("https://raw.githubusercontent.com/PredictiveEcology/WBI_forecasts/development/packageVersions_clean.txt",
+                  destfile = fn)
+    origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
     pkgs <- data.table::fread(fn)
     pkgs <- pkgs[!(Package %in% "SpaDES.install")]
+
 
     # stringfish can't be installed in Eliot's system from binaries
     if (Sys.info()["user"] == "emcintir")
       options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
     pkgs <- pkgs[!Package %in% c("RandomFields", "RandomFieldsUtils")] # the version 1.0-7 is corrupt on RSPM
+    pkgs <- pkgs[!Package %in% c("usefulFuns")] # incorrectly imports Require from reproducible... while other packages need newer reproducible
     pkgs[Package %in% "sf", Version := "1.0-9"] # the version 1.0-7 is corrupt on RSPM
     pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
                                           GithubUsername = "PredictiveEcology", GithubRef = "development",
@@ -60,7 +62,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     testit::assert(isTRUE(theTest))
 
     lala <- capture.output(type = "message", {
-      out <- Require(
+      out2 <- Require(
         packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
         require = FALSE, verbose = 2, purge = TRUE
       )

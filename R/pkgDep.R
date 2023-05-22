@@ -2,10 +2,9 @@ utils::globalVariables(
   c(
     "atLeastOneWithVersionSpec",
     "Current",
-    "GithubRepo",
-    "GithubSHA1",
-    "GithubUsername",
+    "GithubRepo", "GithubSHA1", "GithubUsername",
     "hasVers",
+    "localBranch", "localFiles", "localRepo", "localSha", "localUsername",
     "maxVersionSpec",
     "mtime",
     "newPackageFullName",
@@ -100,45 +99,7 @@ pkgDep <- function(packages,
   if (!includeBase) {
     packages <- packages[!packages %in% .basePkgs]
   }
-  # if (any(!missing(depends), !missing(linkingTo), !missing(imports), !missing(suggests))) {
-  if (!missing(depends)) {
-    wh <-
-      "Depends"
-    which <- if (isTRUE(depends)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-  if (!missing(imports)) {
-    wh <-
-      "Imports"
-    which <- if (isTRUE(imports)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-  if (!missing(suggests)) {
-    wh <-
-      "Suggests"
-    which <- if (isTRUE(suggests)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-  if (!missing(linkingTo)) {
-    wh <-
-      "LinkingTo"
-    which <- if (isTRUE(linkingTo)) {
-      unique(c(which, wh))
-    } else {
-      setdiff(which, wh)
-    }
-  }
-
-  which <- whichToDILES(which)
+  which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
 
   # Only deal with first one of "which"... deal with second later
   whichCat <- paste(sort(which[[1]]), collapse = "_")
@@ -521,7 +482,6 @@ pkgDepInner <- function(packages,
     pkgNoVersion = pkgsNoVersionToCheck,
     function( # desc_path,
              pkg, pkgNoVersion) {
-      # if (!file.exists(desc_path)) {
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
         needed <-
@@ -1527,7 +1487,9 @@ getGitHubDeps <-
            verbose = getOption("Require.verbose"),
            includeBase = FALSE) {
     pkg <- masterMainToHead(pkg)
-    localVersionOK <- (installedVers(pkgDT)$installed %in% TRUE)
+
+    localVersionOK <- installedVersionOKPrecise(pkgDT)
+
     if (isTRUE(localVersionOK)) {
       pkgDT[, DESCFile := system.file("DESCRIPTION", package = pkgDT$Package)]
     } else {
@@ -1687,7 +1649,7 @@ purgeBasedOnTimeSinceCached <- function(savedTime) {
   purgeDiff <-
     as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
   if (is.null(savedTime)) {
-    purge <- FALSE
+    purge <- TRUE
   } else {
     purgeDiff <-
       if (identical(purgeDiff, "") ||
@@ -1850,24 +1812,38 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
-    pkgDT <- installedVers(pkgDT)
+    pkgDT <- installedVersionOKPrecise(pkgDT)
     pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
-    pkgDT <- whichToInstall(pkgDT, install = TRUE)
-    installedNotOK <- pkgDT$installedVersionOK %in% FALSE
-    installedOK <- !installedNotOK
+    # pkgDT <- whichToInstall(pkgDT, install = TRUE)
+
+    installedOK <- pkgDT$installedVersionOK
+    installedNotOK <- !installedOK
     shas <- character(NROW(pkgDT))
-    if (any(installedNotOK)) {
-      shas[installedNotOK] <-
-        Map(
-          repo = pkgDT$Repo[installedNotOK],
-          acct = pkgDT$Account[installedNotOK],
-          br = pkgDT$Branch[installedNotOK],
-          verbose = verbose,
-          getSHAfromGitHubMemoise
+    if (isTRUE(any(installedNotOK))) {
+      for (i in 1:2) {
+        brLocals <- if (i == 1) pkgDT$Branch[installedNotOK] else "main"
+        shaOuts <- try(
+          Map(
+            repo = pkgDT$Repo[installedNotOK],
+            acct = pkgDT$Account[installedNotOK],
+            br = brLocals,
+            verbose = verbose,
+            getSHAfromGitHubMemoise
+          )
         )
+        if (all(!is(shaOuts, "try-error"))) {
+          if (i == 2)
+            warning(pkgDT[installedNotOK]$packageFullName,
+                    " could not be found. Was the branch deleted? ",
+                    "Assessing package dependencies in ",
+                    "main branch of that/those repository/repositories. ")
+          shas[installedNotOK] <- shaOuts
+          break
+        }
+      }
     }
 
-    if (any(installedOK)) {
+    if (isTRUE(any(installedOK))) {
       withCallingHandlers(
         shas[installedOK] <-
           DESCRIPTIONFileOtherV(
@@ -2140,7 +2116,8 @@ prependSelf <- function(deps, includeSelf) {
   if (isTRUE(includeSelf)) {
     deps <- Map(pkgs = deps, nam = names(deps), function(pkgs, nam) {
       depsInner <- pkgs
-      alreadyHasSelf <- startsWith(pkgs[1], trimVersionNumber(nam))
+      alreadyHasSelf <- identical(extractPkgName(pkgs[1]), extractPkgName(nam))
+      # alreadyHasSelf <- startsWith(pkgs[1], trimVersionNumber(nam))
       if (!isTRUE(alreadyHasSelf)) {
         depsInner <- c(nam, pkgs)
       }
@@ -2261,4 +2238,78 @@ clearRequirePackageCache <- function(packages,
   } else {
     messageVerbose("Nothing to clear in Cache", verbose = verbose, verboseLevel = 1)
   }
+}
+
+
+depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, which) {
+  if (!missing(depends)) {
+    wh <-
+      "Depends"
+    which <- if (isTRUE(depends)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  if (!missing(imports)) {
+    wh <-
+      "Imports"
+    which <- if (isTRUE(imports)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  if (!missing(suggests)) {
+    wh <-
+      "Suggests"
+    which <- if (isTRUE(suggests)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  if (!missing(linkingTo)) {
+    wh <-
+      "LinkingTo"
+    which <- if (isTRUE(linkingTo)) {
+      unique(c(which, wh))
+    } else {
+      setdiff(which, wh)
+    }
+  }
+  whichToDILES(which)
+}
+
+
+installedVersionOKPrecise <- function(pkgDT) {
+  pkgDT[, localFiles := system.file("DESCRIPTION", package = Package), by = "Package"]
+  fe <- nzchar(pkgDT$localFiles)
+  if (any(fe)) {
+    pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(localFiles, "RemoteRepo")]
+    pkgDT[fe, localUsername := DESCRIPTIONFileOtherV(localFiles, "RemoteUsername")]
+    pkgDT[fe, localBranch := DESCRIPTIONFileOtherV(localFiles, "RemoteRef")]
+    pkgDT[fe, localSha := DESCRIPTIONFileOtherV(localFiles, "RemoteSha")]
+  } else {
+    pkgDT[fe, localRepo := NA]
+    pkgDT[fe, localUsername := NA]
+    pkgDT[fe, localBranch := NA]
+    pkgDT[fe, localSha := NA]
+  }
+
+  pkgDT <- installedVers(pkgDT)
+
+  if (isTRUE(any(pkgDT$installed %in% TRUE))) {
+    brOrSha <- pkgDT$Branch == pkgDT$localBranch |
+      pkgDT$Branch == pkgDT$localSha
+
+    installedNotOK <- pkgDT$Account != pkgDT$localUsername |
+      pkgDT$Repo != pkgDT$localRepo |
+      brOrSha %in% FALSE
+
+  } else {
+    installedNotOK <- NA
+  }
+  set(pkgDT, NULL, "installedVersionOK", installedNotOK %in% FALSE)
+  pkgDT
 }

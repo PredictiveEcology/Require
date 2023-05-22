@@ -34,6 +34,10 @@ if (isDevAndInteractive) {
   pkgsShort <- unique(sort(pkgs))
   deps <- pkgDep(pkgsShort, recursive = TRUE)
 
+  if (Sys.info()["user"] == "emcintir") {# source install fails; make sure it is gone
+    options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
+    Require::clearRequirePackageCache("stringfish", ask = FALSE) # get this from RSPM or CRAN fresh
+  }
   # THE INSTALL
   pkgs <- omitPkgsTemporarily(pkgs)
   outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
