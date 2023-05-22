@@ -15,9 +15,9 @@ This is an update submission that addresses minor bugs, and several enhancements
 - os: ubuntu-20.04,   r: 'oldrel'
 
 ### Winbuilder
-* Windows                 (win-builder), R Under development (unstable) (2023-03-13 r83977 ucrt)
-* Windows                 (win-builder), 4.2.2 (2022-10-31 ucrt)
-* Windows                 (win-builder), 4.1.3 (2022-03-10)
+* Windows                 (win-builder), R Under development (unstable) (2023-05-19 r84451 ucrt)
+* Windows                 (win-builder), 4.3.0 (2023-04-21 ucrt)
+* Windows                 (win-builder), 4.2.3 (2023-03-15 ucrt)
 
 
 ### R-hub
