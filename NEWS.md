@@ -2,6 +2,13 @@
 
 Known issues: <https://github.com/PredictiveEcology/Require/issues>
 
+version 0.3.2
+=============
+
+## enhancements
+* Issue 87: If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed.  
+
+
 version 0.3.1
 =============
 
