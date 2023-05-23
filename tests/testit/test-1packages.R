@@ -181,6 +181,23 @@ if (identical(tolower(Sys.getenv("CI")), "true") || # travis
 
 # Code coverage
 if (isDev) { # i.e., GA, R CMD check etc.
+
+  # Issue 87
+  try(remove.packages("reproducible"), silent = TRUE)
+  Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
+  Require::Install("reproducible (==2.0.2)")                               # installs current CRAN version, which is older than SHA below
+  library(reproducible)                                          # load it
+  suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
+    Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
+  )
+  testit::assert(packageVersion("reproducible") == "2.0.2") # # will be 2.0.2 from CRAN
+  detach("package:reproducible", unload = TRUE)
+  # now installs correct SHA which is 2.0.2.9001
+  Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
+  testit::assert(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
+  # End issue 87
+
+  ####
   pkg <- c("r-forge/mumin/pkg", "Require")
   names(pkg) <- c("MuMIn", "")
   aaaa <<- 1
