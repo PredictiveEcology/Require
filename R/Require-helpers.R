@@ -764,7 +764,7 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
   whGitHub <- which(pkgInstall$repoLocation %in% "GitHub")
   if (length(whGitHub)) {
     pkgGitHub <- pkgInstall[whGitHub]
-    pkgGitHub[,
+    pkgGitHub[installed %in% TRUE,
       {
         file <- file.path(libPaths[1], Package, "DESCRIPTION")
         txt <- readLines(file)

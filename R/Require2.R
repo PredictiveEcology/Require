@@ -2099,6 +2099,14 @@ messagesAboutWarnings <- function(w, toInstall) {
       needWarning <- TRUE
     }
   }
+
+  isInUse <- grepl("is in use and will not be installed", w$message)
+  if (length(rowsInPkgDT) && any(isInUse)) {
+    toInstall[rowsInPkgDT, installed := FALSE]
+    toInstall[rowsInPkgDT, installResult := w$message]
+  }
+
+
   if (!is.null(getOptionRPackageCache())) {
     if (startsWith(pkgName, getOptionRPackageCache())) {
       messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
