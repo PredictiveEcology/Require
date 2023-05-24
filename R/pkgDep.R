@@ -577,48 +577,68 @@ pkgDepInner <- function(packages,
                 }
                 if (!is.null(packageURL)) {
                   if (endsWith(packageURL, "tar.gz")) {
-                    messageVerbose(
-                      "available.packages() does not have correct information on package dependencies for ",
-                      pkgPrint,
-                      "; checking CRAN archives",
-                      verbose = verbose,
-                      verboseLevel = 1
-                    )
-                    for (repo in repos) {
-                      url <- getArchiveURL(repo, packageURL)
-                      url2 <-
-                        file.path(contrib.url(repo), basename(packageURL))
+                    # checkLocal
+                    localFileOption <- dir(Require::RequirePkgCacheDir(), pattern = pkgName, full.names = TRUE)
+                    localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
+                    localFileOption <- localFileOption[localOption]
+                    if (any(localOption)) {
+                      messageVerbose(
+                        "found local cached copy of ", pkgPrint, verbose = verbose, verboseLevel = 1
+                      )
                       tf <- tempfile()
-                      if (isFALSE(getOption("Require.offlineMode", FALSE))) {
-                        haveFile <-
-                          suppressWarnings(tryCatch(
-                            download.file(url, tf, quiet = TRUE),
-                            error = function(x) {
-                              tryCatch(
-                                download.file(url2, tf, quiet = TRUE),
-                                error = function(y) {
-                                  FALSE
-                                }
-                              )
-                            }
-                          ))
+                      theTar <- endsWith(localFileOption, "tar.gz")
+                      theZip <- endsWith(localFileOption, ".zip")
+                      if (any(theZip)) {
+                        unzip(localFileOption[theZip], exdir = td)
+                      } else {
+                        untar(tarfile = localFileOption[theTar], exdir = td)
                       }
-                      if (file.exists(tf)) {
-                        untar(tarfile = tf, exdir = td)
-                        filesToDel <-
-                          dir(
-                            packageTD,
-                            recursive = TRUE,
-                            full.names = TRUE,
-                            include.dirs = TRUE
-                          )
-                        filesToDel <-
-                          filesToDel[grep("^DESCRIPTION$",
-                                          basename(filesToDel),
-                                          invert = TRUE
-                          )]
-                        unlink(filesToDel, recursive = TRUE)
-                        break
+                    } else {
+                      messageVerbose(
+                        "available.packages() does not have correct information on package dependencies for ",
+                        pkgPrint,
+                        "; checking CRAN archives",
+                        verbose = verbose,
+                        verboseLevel = 1
+                      )
+                      for (repo in repos) {
+                        url <- getArchiveURL(repo, packageURL)
+                        url2 <-
+                          file.path(contrib.url(repo), basename(packageURL))
+                        tf <- file.path(tempdir2(), basename(tempfile()), basename(url))
+                        checkPath(dirname(tf), create = TRUE)
+                        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+                          haveFile <-
+                            suppressWarnings(tryCatch(
+                              download.file(url, tf, quiet = TRUE),
+                              error = function(x) {
+                                tryCatch(
+                                  download.file(url2, tf, quiet = TRUE),
+                                  error = function(y) {
+                                    FALSE
+                                  }
+                                )
+                              }
+                            ))
+                        }
+                        if (file.exists(tf)) {
+                          linkOrCopy(tf, file.path(RequirePkgCacheDir(), basename(tf)))
+                          untar(tarfile = tf, exdir = td)
+                          filesToDel <-
+                            dir(
+                              packageTD,
+                              recursive = TRUE,
+                              full.names = TRUE,
+                              include.dirs = TRUE
+                            )
+                          filesToDel <-
+                            filesToDel[grep("^DESCRIPTION$",
+                                            basename(filesToDel),
+                                            invert = TRUE
+                            )]
+                          unlink(filesToDel, recursive = TRUE)
+                          break
+                        }
                       }
                     }
                   }
