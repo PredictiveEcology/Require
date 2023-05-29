@@ -81,11 +81,15 @@ utils::globalVariables(c(
 #'   possibly after they are installed. If a character string, then it will only
 #'   call `require` on those specific packages (i.e., it will install the ones
 #'   listed in `packages`, but load the packages listed in `require`)
-#' @param packages Character vector of packages to install via
-#'   `install.packages`, then load (i.e., with `library`). If it is one package,
-#'   it can be unquoted (as in `require`). In the case of a GitHub package, it
+#' @param packages Either a character vector of packages to install via
+#'   `install.packages`, then load (i.e., with `library`), or, for convenience,
+#'   a vector or list (using `c` or `list`) of unquoted package names to install
+#'   and/or load (as in `require`, but vectorized). Passing vectors of names may
+#'   not work in all cases, so user should confirm before relying on this behaviour
+#'   in operational code.
+#'   In the case of a GitHub package, it
 #'   will be assumed that the name of the repository is the name of the package.
-#'   If this is not the case, then pass a named character vector here, where the
+#'   If this is not the case, then pass a *named* character vector here, where the
 #'   names are the package names that could be different than the GitHub
 #'   repository name.
 #' @param packageVersionFile  Character string of a file name or logical. If
@@ -156,8 +160,11 @@ utils::globalVariables(c(
 #'
 #' library(Require)
 #' getCRANrepos(ind = 1)
-#' Require("stats") # analogous to require(stats), but it checks for
+#' Require("utils") # analogous to require(stats), but it checks for
 #' #   pkg dependencies, and installs them, if missing
+#'
+#' # unquoted version
+#' Require(c(tools, utils))
 #'
 #' if (Require:::.runLongExamples()) {
 #'   # Install in a new local library (libPaths)
@@ -284,6 +291,16 @@ Require <- function(packages, packageVersionFile,
     return(invisible(NULL))
   }
 
+  packs <- substitute(packages)
+  if (is.call(packs))
+    packages <- vapply(packs[-1], deparse, FUN.VALUE = character(1))
+
+  if (is.name(packs)) {
+    packagesTmp <- deparse(packs)
+    if (!identical("packages", packagesTmp))
+      packages <- packagesTmp
+  }
+
   # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
     packages <- anyHaveHEAD(packages)
@@ -369,10 +386,6 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
         intern = internal, ignore.stdout = quiet, ignore.stderr = quiet
       )
     })
-    # if (any(unlist(out1) == 1L)) {
-    #   browser()
-    #   browserDeveloper("Error 456; contact developer")
-    # }
     messageVerbose("  ... Built!",
       verbose = verbose, verboseLevel = 1
     )
@@ -2157,6 +2170,14 @@ Install <- function(packages, packageVersionFile,
                     type = getOption("pkgType"),
                     upgrade = FALSE,
                     ...) {
+  packs <- substitute(packages)
+  if (is.name(packs))
+    packages <- deparse(packs)
+
+  packs <- substitute(packages)
+  if (is.call(packs))
+    packages <- vapply(packs[-1], deparse, FUN.VALUE = character(1))
+
   Require(packages,
     packageVersionFile,
     libPaths,
