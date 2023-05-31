@@ -186,7 +186,7 @@ if (isDev) { # i.e., GA, R CMD check etc.
   try(remove.packages("reproducible"), silent = TRUE)
   Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
   Require::Install("reproducible (==2.0.2)")                               # installs current CRAN version, which is older than SHA below
-  library(reproducible)                                          # load it
+  Require("reproducible")                                          # load it
   suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
     Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   )
