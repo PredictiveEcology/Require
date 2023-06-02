@@ -473,10 +473,13 @@ pkgDep <- function(packages,
   }
   if (isTRUE(Additional_repositories)) {
     rmCols <- c("isGitPkg", "Package", "Version", "inequality", "github", "recursion")
-    neededFull1 <- lapply(neededFull1, function(DT)
-      set(DT, NULL, intersect(rmCols, colnames(DT)), NULL))
+    neededFull1 <- lapply(neededFull1, function(DT) {
+      set(DT, NULL, intersect(rmCols, colnames(DT)), NULL)
+      unique(DT)
+    })
+
   } else {
-    neededFull1 <- lapply(neededFull1, function(DT) DT$packageFullName)
+    neededFull1 <- lapply(neededFull1, function(DT) unique(DT$packageFullName))
   }
   neededFull1
 }
