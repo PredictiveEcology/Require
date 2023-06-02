@@ -7,7 +7,7 @@ version 0.3.2
 
 ## enhancements
 * Issue 87: If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed.  
-* `packages` argument for `Require` and `Install` can now be unquoted names (string or vector), in addition to a character string or vector, e.g., using `c()` or `list()`
+* `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string.
 
 
 version 0.3.1

@@ -292,14 +292,19 @@ Require <- function(packages, packageVersionFile,
   }
 
   packs <- substitute(packages)
-  if (is.call(packs))
+  if (is.call(packs) && !is.character(packs)) {
     packages <- vapply(packs[-1], deparse, FUN.VALUE = character(1))
+  }
 
   if (is.name(packs)) {
     packagesTmp <- deparse(packs)
     if (!identical("packages", packagesTmp))
       packages <- packagesTmp
   }
+
+  hasInitSlash <- grepl("^\\\"", packages)
+  if (any(hasInitSlash))
+    packages[hasInitSlash] <- gsub("\\\"", "", packages[hasInitSlash])
 
   # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
