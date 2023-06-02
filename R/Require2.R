@@ -312,12 +312,17 @@ Require <- function(packages, packageVersionFile,
 
     deps <- pkgDep(packages,
       purge = purge, libPath = libPaths, recursive = TRUE,
-      which = which, type = type, verbose = verbose
+      which = which, type = type, verbose = verbose,
+      Additional_repositories = TRUE
     )
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     if (NROW(deps)) {
-      allPackages <- unique(unname(unlist(deps)))
+      deps <- rbindlist(deps, fill = TRUE, use.names = TRUE)
+      deps <- unique(deps)
+      allPackages <- sort(unique(unname(unlist(deps$packageFullName))))
       pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+      if (!is.null(deps$Additional_repositories))
+        pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
       pkgDT <- updatePackagesWithNames(pkgDT, packages)
       pkgDT <- parsePackageFullname(pkgDT)
       pkgDT <- parseGitHub(pkgDT)
@@ -912,6 +917,12 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                                  "For better error handling, install.packages('remotes')")
                           }
                         })
+  naRepository <- is.na(pkgInstall$Repository)
+  if (any(naRepository)) {
+    if (!is.null(pkgInstall$Additional_repositories))
+      pkgInstall[naRepository, Repository := Additional_repositories]
+  }
+
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -1366,6 +1377,10 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     !any(grepl("contrib", toInstall$Repository))) {
     repos <- unique(dirname(dirname(toInstall$Repository)))
   }
+
+  if (!is.null(toInstall$Additional_repositories)) {
+    repos <- c(repos, na.omit(toInstall$Additional_repositories))
+  }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
   NumPkgsNotInAP <- length(pkgsNotInAP)
@@ -1743,7 +1758,22 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
 checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
 
-  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
+  pkgInstallTmp <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
+  if (!is.null(pkgInstall$Additional_repositories)) {
+    pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
+    pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
+      pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
+    })
+    pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
+    pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder")]
+    pkgAddRep <- pkgInstallTmp2[!is.na(pkgInstallTmp$Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]
+    set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
+    pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
+    pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
+    setorderv(pkgInstallTmp, "tmpOrder")
+
+  }
+  pkgInstall <- pkgInstallTmp
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
   pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)

@@ -22,7 +22,8 @@ pkgDep(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose"),
   includeSelf = TRUE,
-  type = getOption("pkgType")
+  type = getOption("pkgType"),
+  Additional_repositories = FALSE
 )
 
 pkgDep2(
@@ -127,6 +128,12 @@ will include the package itself in the returned list elements, otherwise,
 only the "dependencies"}
 
 \item{type}{See \code{utils::install.packages}}
+
+\item{Additional_repositories}{Logical. If \code{TRUE}, then \code{pkgDep} will return
+a list of \code{data.table} objects (instead of character vectors)
+with a column \code{packageFullName} and possibly a second column \code{Additional_repositories},
+which may have been specified in a \code{DESCRIPTION} file. NOTE: THIS ALTERS
+THE OUTPUT CLASS}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
