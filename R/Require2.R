@@ -1738,7 +1738,12 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   }
   pkgInstall <- rbindlist(pkgInstallTmp)
   set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
-  setorderv(pkgInstall, c("Package", "versionSpecGroup", "inequality", "repoLocation"), order = c(1L, 1L, -1L, 1L), na.last = TRUE)
+  setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+                     ordr = c(1L, 1L, -1L, 1L))
+  setDT(setOrderOn)
+  setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
+  setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+            order = setOrderOn$ordr, na.last = TRUE)
 
   pkgInstall[, keepBasedOnRedundantInequalities :=
     unlist(lapply(.I, function(ind) {
@@ -1887,7 +1892,6 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
 
 parsePackageFullname <- function(pkgDT, sorted = TRUE) {
   set(pkgDT, NULL, "versionSpec", extractVersionNumber(pkgDT$packageFullName))
-  # pkgDT[, versionSpec := extractVersionNumber(pkgDT$packageFullName)]
   wh <- which(!is.na(pkgDT$versionSpec))
   if (length(wh)) {
     set(pkgDT, wh, "inequality", extractInequality(pkgDT$packageFullName[wh]))

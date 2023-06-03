@@ -246,10 +246,6 @@ pkgDep <- function(packages,
                 pkgsNew[[i]] <- needed$packageFullName
                 pkgDepDT3 <- needed
                 news <- needed
-                # newPkgs <- !news$packageFullName %in% pkgDepDT3$packageFullName
-                # if (any(newPkgs)) {
-                #   pkgDepDT3 <<- rbindlist(list(pkgDepDT3, news[newPkgs,]), use.names = TRUE, fill = TRUE)
-                # }
 
                 while (TRUE) { # use a break below
                   # while (length(unlist(pkgsNew[[i]])) > 0) {
@@ -259,18 +255,13 @@ pkgDep <- function(packages,
                   names(pkgsToLookupFull) <-
                     pkgsToLookupFull
                   pkgDepDTListNew <-
-                    unlist(recursive = FALSE, unname(lapply(pkgsToLookupFull, function(needed) {
+                    unlist(recursive = FALSE, unname(lapply(pkgsToLookupFull, function(need) {
                       #unique(unlist(recursive = FALSE, {
                         a <- pkgDepInnerMemoise(
-                          packages = needed,
-                          libPath = libPath,
-                          which = which,
-                          keepVersionNumber = keepVersionNumber,
-                          purge = FALSE,
-                          repos = repos,
-                          verbose = verbose,
-                          includeBase = includeBase,
-                          ap = ap
+                          packages = need, libPath = libPath, which = which,
+                          keepVersionNumber = keepVersionNumber, purge = FALSE,
+                          repos = repos, verbose = verbose,
+                          includeBase = includeBase, ap = ap
                         )
                         if (is(a, "try-error")) {
                           browserDeveloper("Error 23")
@@ -387,6 +378,7 @@ pkgDep <- function(packages,
         }
       }
       # Remove "R"
+      pkgDepDTListRecursive <- lapply(pkgDepDTListRecursive, trimRedundancies)
       if (any(theNulls))
         pkgDepDTListRecursive <- append(pkgDepDTListRecursive, pkgDepDTList[theNulls])
 
@@ -2331,11 +2323,16 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
   if (missing(pkg))
     pkg <- packageFullName
 
-  pkgDepDT <- data.table(packageFullName = packageFullName)
+  pkgDepDT <- toPkgDT(packageFullName)
+  # pkgDepDT <- data.table(packageFullName = packageFullName)
   if (NROW(pkgDepDT)) {
-    pkgDepDT[, isGitPkg := grepl("^.+/(.+)@+.*$", packageFullName)]
+    pkgDepDT <- parsePackageFullname(pkgDepDT)
+    pkgDepDT <- parseGitHub(pkgDepDT)
+    pkgDepDT[, isGitPkg := !is.na(githubPkgName)]
+    pkgDepDT <- trimRedundancies(pkgDepDT, repos = repos, purge = FALSE)
     setorderv(pkgDepDT, "isGitPkg", order = -1)
-    pkgDepDT[, Package := extractPkgName(packageFullName)]
+    # pkgDepDT[, Package := extractPkgName(packageFullName)]
+    # set(pkgDepDT, NULL, "versionSpec", extractVersionNumber(packageFullName))
 
     # Here, GitHub package specification in a DESCRIPTION file Remotes section
     #   won't have version numbering --> Need to merge the two fields
