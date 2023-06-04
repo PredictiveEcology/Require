@@ -198,16 +198,11 @@ pkgDep <- function(packages,
         getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
       pkgDepDTList <-
         try(pkgDepInnerMemoise(
-          packages = packageFullNamesToGet,
-          libPath = libPath,
-          which = which[[1]],
-          keepVersionNumber = keepVersionNumber,
-          purge = FALSE,
-          repos = repos,
-          verbose = verbose,
-          includeBase = includeBase,
-          type = type,
-          ap = ap
+          packages = packageFullNamesToGet, libPath = libPath,
+          which = which[[1]], keepVersionNumber = keepVersionNumber,
+          purge = FALSE, repos = repos,
+          verbose = verbose, includeBase = includeBase,
+          type = type, ap = ap
         ))
       if (is(pkgDepDTList, "try-error")) {
         browserDeveloper("Error 2343")
@@ -221,13 +216,8 @@ pkgDep <- function(packages,
       NpackagesRecursive <- NROW(pkgDepDTListNotRecursive)
       if (messageIfGTN) {
         nchars <- rep(" ", 2 * nchar(NpackagesRecursive) + 5)
-        messageVerbose(
-          "... ",
-          NpackagesRecursive,
-          " of these have recursive dependencies",
-          nchars,
-          verbose = verbose,
-          verboseLevel = 0
+        messageVerbose("... ", NpackagesRecursive, " of these have recursive dependencies",
+          nchars, verbose = verbose, verboseLevel = 0
         )
       }
       if (NROW(pkgDepDTListNotRecursive)) {
