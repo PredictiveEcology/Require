@@ -1645,7 +1645,6 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   by = "Package"
   ]
   set(pkgDT, which(pkgDT$isEquals %in% TRUE & pkgDT$hasEqualsAndInequals %in% FALSE), "EqualsDoesntViolate", TRUE)
-
   pkgDT[, violation := if (any(isEquals %in% TRUE) && all(!EqualsDoesntViolate %in% TRUE)) {
     TRUE
   } else {
@@ -1653,6 +1652,36 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   },
   by = "Package"
   ]
+
+  set(pkgDT, NULL, "isGT", pkgDT[["inequality"]] == ">")
+  pkgDT[, hasGTAndInequals := any(isGT %in% TRUE) && any(isGT %in% FALSE), by = "Package"]
+  pkgDT[hasGTAndInequals %in% TRUE, GTDoesntViolate := {
+    out <- rep(NA, length = .N)
+    wh <- which(isGT)
+    whNot <- which(!isGT)
+    if (length(wh)) {
+      out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
+        all(compareVersion2(versionSpec[whNot], verSpec, inequality[wh]))
+      })))
+      if (is(out, "try-error")) {
+        browserDeveloper("Error 844; please contact developer")
+      }
+      out
+    }
+    out
+  },
+  by = "Package"
+  ]
+  # set(pkgDT, which(pkgDT$isGT %in% TRUE & pkgDT$hasGTAndInequals %in% FALSE), "GTsDoesntViolate", TRUE)
+
+  pkgDT[, violation2 := if (any(isGT %in% TRUE) && all(GTDoesntViolate %in% FALSE)) {
+    TRUE
+  } else {
+    FALSE
+  },
+  by = "Package"
+  ]
+
   if (any(pkgDT$violation %in% TRUE)) {
     messageVerbose(green(
       "The following shows packages whose version requirements can not be met; ",
@@ -1678,6 +1707,31 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
     }
   }
 
+  if (any(pkgDT$violation2 %in% TRUE)) {
+    messageVerbose(green(
+      "The following shows packages whose version requirements can not be met; ",
+      "keeping the newer version: "
+    ), verbose = verbose, verboseLevel = 1)
+    cols <- c("Package", "packageFullName", "versionSpec")
+    cols2 <- setdiff(cols, "packageFullName")
+    cols3 <- c(cols, "versionToKeep")
+    violationsDF <- pkgDT[violation2 %in% TRUE & !is.na(versionSpec), ..cols]
+    # can't use setorderv on versions b/c stored as character vector
+    orderVersions <- order(violationsDF[[cols2[1]]],
+                           package_version(violationsDF[[cols2[[2]]]]),
+                           decreasing = TRUE)
+    violationsDF <- violationsDF[orderVersions,]
+    violationsDF <- violationsDF[, versionToKeep := {
+      ver <- rep("", length = .N)
+      ver[1] <- versionSpec[1]
+      ver
+    }, by = "Package"][, ..cols3]
+    messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
+    if (grepl("remove|rm", ifViolation[1])) {
+      pkgDT <- pkgDT[violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE]
+    }
+  }
+
   pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE)) {
     .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
   } else {
@@ -1685,7 +1739,15 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   },
   by = "Package"
   ]
+
   pkgDT <- pkgDT[unique(keep)]
+
+  # get rid of the GT if they are TRUE
+  pkgDT[, remove := (isGT %in% TRUE & GTDoesntViolate %in% TRUE)]
+  if (any(pkgDT$remove))
+    pkgDT <- pkgDT[!remove %in% TRUE]
+
+
   set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
   pkgDT
 }
@@ -1759,6 +1821,20 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
 
+  if (any(pkgInstall$inequality %in% c(">", "<"))) {
+    pkgInstall[, keepBasedOnRedundantInequalities :=
+                 unlist(lapply(.I, function(ind) {
+                   ifelse(is.na(inequality), ind,
+                          ifelse(inequality == ">", .I[1], ifelse(inequality == "<", tail(.I, 1), .I))
+                   )
+                 })),
+               by = pkgAndInequality
+    ]
+    pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+    set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+    pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+
+  }
   pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
   pkgInstall <- removeDups(pkgInstall)
   pkgInstall[]

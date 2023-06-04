@@ -377,7 +377,6 @@ pkgDep <- function(packages,
             )
           pkgDepDTList2 <- pkgDepDTListRecursive
         } else {
-          browser()
           pkgDepDTList2 <- pkgDepDTListNotRecursive
         }
       }
