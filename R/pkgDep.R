@@ -375,16 +375,20 @@ pkgDep <- function(packages,
                 # needed
               }
             )
+          pkgDepDTList2 <- pkgDepDTListRecursive
+        } else {
+          browser()
+          pkgDepDTList2 <- pkgDepDTListNotRecursive
         }
       }
-      pkgDepDTListRecursive <- lapply(pkgDepDTListRecursive, trimRedundancies)
       if (any(theNulls))
-        pkgDepDTListRecursive <- append(pkgDepDTListRecursive, pkgDepDTList[theNulls])
+        pkgDepDTList2 <- append(pkgDepDTList2, pkgDepDTList[theNulls])
+      pkgDepDTList2 <- lapply(pkgDepDTList2, trimRedundancies)
 
       newOnes <- saveNamesDT$names %in% names(pkgDepDTList)
 
       # Remove "R"
-      pkgDepDTListRecursive <- lapply(pkgDepDTListRecursive, function(DT) {
+      pkgDepDTList2 <- lapply(pkgDepDTList2, function(DT) {
         DT[, packageFullName := {
           packageFullName <- grep(.grepR, packageFullName, value = TRUE, invert = TRUE)
           packageFullName <- gsub(.grepTabCR, "", packageFullName)
@@ -395,9 +399,9 @@ pkgDep <- function(packages,
 
       # Add self to vector
       Map(sn = saveNamesDT$saveNames[newOnes], n = saveNamesDT$names[newOnes], function(sn, n) {
-        assign(sn, pkgDepDTListRecursive[[n]], envir = .pkgEnv[["pkgDep"]][["deps"]])
+        assign(sn, pkgDepDTList2[[n]], envir = .pkgEnv[["pkgDep"]][["deps"]])
       })
-      neededFull1 <- append(neededFull1[!needGet], pkgDepDTListRecursive)
+      neededFull1 <- append(neededFull1[!needGet], pkgDepDTList2)
     }
 
     if (isTRUE(sort)) {

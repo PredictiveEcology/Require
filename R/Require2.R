@@ -422,7 +422,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstall <- rmPackageFirst(toInstall, verbose)
   }
 
-  browser()
   ap <- try(availablePackagesOverride(toInstall, repos, purge, type = type))
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -1761,6 +1760,7 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
 
   pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
+  pkgInstall <- removeDups(pkgInstall)
   pkgInstall[]
 }
 
