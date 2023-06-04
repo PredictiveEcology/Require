@@ -1672,7 +1672,6 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   },
   by = "Package"
   ]
-  # set(pkgDT, which(pkgDT$isGT %in% TRUE & pkgDT$hasGTAndInequals %in% FALSE), "GTsDoesntViolate", TRUE)
 
   pkgDT[, violation2 := if (any(isGT %in% TRUE) && all(GTDoesntViolate %in% FALSE)) {
     TRUE

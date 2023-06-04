@@ -466,16 +466,9 @@ pkgDep <- function(packages,
   } else {
     neededFull1 <- list()
   }
-  # if (isTRUE(Additional_repositories)) {
-  #   rmCols <- c("isGitPkg", "Version", "inequality", "github", "recursion")
-  #   neededFull1 <- lapply(neededFull1, function(DT) {
-  #     set(DT, NULL, intersect(rmCols, colnames(DT)), NULL)
-  #     unique(DT)
-  #   })
-  #
-  # } else {
-  #   neededFull1 <- lapply(neededFull1, function(DT) unique(DT$packageFullName))
-  # }
+  if (!isTRUE(Additional_repositories)) {
+    neededFull1 <- lapply(neededFull1, function(DT) unique(DT$packageFullName))
+  }
   neededFull1
 }
 
@@ -764,31 +757,17 @@ pkgDep2 <- function(packages,
                     includeSelf = TRUE,
                     verbose = getOption("Require.verbose")) {
   if (length(packages) > 1) stop("packages should be length 1")
-  deps <- pkgDep(
-    packages,
-    recursive = FALSE,
-    which = which,
-    depends = depends,
-    imports = imports,
-    suggests = suggests,
-    linkingTo = linkingTo,
-    repos = repos,
+  deps <- pkgDep(packages, recursive = FALSE, which = which, depends = depends,
+    imports = imports, suggests = suggests, linkingTo = linkingTo, repos = repos,
     includeSelf = includeSelf
   )
   deps <- lapply(deps, function(d) setdiff(d, packages))[[1]]
 
   a <-
     lapply(
-      deps,
-      pkgDep,
-      depends = depends,
-      imports = imports,
-      suggests = suggests,
-      linkingTo = linkingTo,
-      repos = repos,
-      recursive = recursive,
-      includeSelf = includeSelf,
-      verbose = verbose - 1
+      deps, pkgDep, depends = depends, imports = imports, suggests = suggests,
+      linkingTo = linkingTo, repos = repos, recursive = recursive,
+      includeSelf = includeSelf, verbose = verbose - 1
     )
   a <- unlist(a, recursive = FALSE)
   if (sorted) {
