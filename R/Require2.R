@@ -319,14 +319,15 @@ Require <- function(packages, packageVersionFile,
     if (NROW(deps)) {
       deps <- rbindlist(deps, fill = TRUE, use.names = TRUE)
       deps <- unique(deps)
-      allPackages <- sort(unique(unname(unlist(deps$packageFullName))))
-      pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
-      if (!is.null(deps$Additional_repositories))
-        pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
+      # allPackages <- sort(unique(unname(unlist(deps$packageFullName))))
+      pkgDT <- deps
+      # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+      # if (!is.null(deps$Additional_repositories))
+      #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
       pkgDT <- updatePackagesWithNames(pkgDT, packages)
-      pkgDT <- parsePackageFullname(pkgDT)
-      pkgDT <- parseGitHub(pkgDT)
-      pkgDT <- removeDups(pkgDT)
+      # pkgDT <- parsePackageFullname(pkgDT)
+      # pkgDT <- parseGitHub(pkgDT)
+      # pkgDT <- removeDups(pkgDT)
       # pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
       pkgDT <- installedVers(pkgDT)
@@ -421,6 +422,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstall <- rmPackageFirst(toInstall, verbose)
   }
 
+  browser()
   ap <- try(availablePackagesOverride(toInstall, repos, purge, type = type))
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -1753,10 +1755,25 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
     })),
   by = pkgAndInequality
   ]
+
   pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
   set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
   pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+
+  pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
   pkgInstall[]
+}
+
+trimRedundantVersionAndNoVersion <- function(pkgInstall) {
+  set(pkgInstall, NULL, "hasVers", !is.na(pkgInstall$versionSpec))
+  hasV <- pkgInstall$hasVers == TRUE
+  pkgInstall[, `:=`(
+    atLeastOneWithVersionSpec = any(hasVers)
+    # Current = all(Current == TRUE)
+  ), by = "Package"]
+  pkgInstall <-
+    pkgInstall[!(pkgInstall$atLeastOneWithVersionSpec == TRUE &
+                   pkgInstall$hasVers == FALSE)] # remove cases where no version spec >1 case
 }
 
 
@@ -1765,17 +1782,19 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
 
   pkgInstallTmp <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   if (!is.null(pkgInstall$Additional_repositories)) {
-    pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
-    pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
-      pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
-    })
-    pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
-    pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder")]
-    pkgAddRep <- pkgInstallTmp2[!is.na(pkgInstallTmp$Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]
-    set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
-    pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
-    pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
-    setorderv(pkgInstallTmp, "tmpOrder")
+    if (any(!is.na(pkgInstall$Additional_repositories))) {
+      pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
+      pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
+        pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
+      })
+      pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
+      pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder")]
+      pkgAddRep <- pkgInstallTmp2[!is.na(pkgInstallTmp$Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]
+      set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
+      pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
+      pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
+      setorderv(pkgInstallTmp, "tmpOrder")
+    }
 
   }
   pkgInstall <- pkgInstallTmp

@@ -377,13 +377,13 @@ pkgDep <- function(packages,
             )
         }
       }
-      # Remove "R"
       pkgDepDTListRecursive <- lapply(pkgDepDTListRecursive, trimRedundancies)
       if (any(theNulls))
         pkgDepDTListRecursive <- append(pkgDepDTListRecursive, pkgDepDTList[theNulls])
 
       newOnes <- saveNamesDT$names %in% names(pkgDepDTList)
 
+      # Remove "R"
       pkgDepDTListRecursive <- lapply(pkgDepDTListRecursive, function(DT) {
         DT[, packageFullName := {
           packageFullName <- grep(.grepR, packageFullName, value = TRUE, invert = TRUE)
@@ -463,16 +463,16 @@ pkgDep <- function(packages,
   } else {
     neededFull1 <- list()
   }
-  if (isTRUE(Additional_repositories)) {
-    rmCols <- c("isGitPkg", "Package", "Version", "inequality", "github", "recursion")
-    neededFull1 <- lapply(neededFull1, function(DT) {
-      set(DT, NULL, intersect(rmCols, colnames(DT)), NULL)
-      unique(DT)
-    })
-
-  } else {
-    neededFull1 <- lapply(neededFull1, function(DT) unique(DT$packageFullName))
-  }
+  # if (isTRUE(Additional_repositories)) {
+  #   rmCols <- c("isGitPkg", "Version", "inequality", "github", "recursion")
+  #   neededFull1 <- lapply(neededFull1, function(DT) {
+  #     set(DT, NULL, intersect(rmCols, colnames(DT)), NULL)
+  #     unique(DT)
+  #   })
+  #
+  # } else {
+  #   neededFull1 <- lapply(neededFull1, function(DT) unique(DT$packageFullName))
+  # }
   neededFull1
 }
 
