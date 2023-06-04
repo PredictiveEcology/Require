@@ -2332,7 +2332,7 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
     pkgDepDT <- parsePackageFullname(pkgDepDT)
     pkgDepDT <- parseGitHub(pkgDepDT)
     pkgDepDT[, isGitPkg := !is.na(githubPkgName)]
-    pkgDepDT <- trimRedundancies(pkgDepDT, repos = repos, purge = FALSE)
+    # pkgDepDT <- trimRedundancies(pkgDepDT, repos = repos, purge = FALSE)
     setorderv(pkgDepDT, "isGitPkg", order = -1)
     # pkgDepDT[, Package := extractPkgName(packageFullName)]
     # set(pkgDepDT, NULL, "versionSpec", extractVersionNumber(packageFullName))
