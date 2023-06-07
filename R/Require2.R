@@ -291,16 +291,9 @@ Require <- function(packages, packageVersionFile,
     return(invisible(NULL))
   }
 
-  packs <- substitute(packages)
-  if (is.call(packs) && !is.character(packs)) {
-    packages <- vapply(packs[-1], deparse, FUN.VALUE = character(1))
-  }
 
-  if (is.name(packs)) {
-    packagesTmp <- deparse(packs)
-    if (!identical("packages", packagesTmp))
-      packages <- packagesTmp
-  }
+  packagesSubstituted <- substitute(packages) # can be c(xx), list(xx), "hi", a$b is a call, but it is likely already evaluated
+  packages <- substitutePackages(packages, packagesSubstituted, envir = parent.frame())
 
   hasInitSlash <- grepl("^\\\"", packages)
   if (any(hasInitSlash))
@@ -1773,69 +1766,71 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 #' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
-  if (!is.null(pkgInstall[["hasHEAD"]])) {
-    hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
-    whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
-    whToRM <- setdiff(whToRM, hasHeadRows)
-    if (length(whToRM))
-      pkgInstall <- pkgInstall[-whToRM]
-  }
+  if (NROW(pkgInstall)) {
+    if (!is.null(pkgInstall[["hasHEAD"]])) {
+      hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
+      whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
+      whToRM <- setdiff(whToRM, hasHeadRows)
+      if (length(whToRM))
+        pkgInstall <- pkgInstall[-whToRM]
+    }
 
-  pkgAndInequality <- c("Package", "inequality")
-  versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
-  if (any(versionSpecNotNA)) {
-    ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
-      decreasing = TRUE, na.last = TRUE
-    ) # can't use setorderv because data.table can't sort on package_version class
-  } else {
-    ord <- seq(NROW(pkgInstall))
-  }
+    pkgAndInequality <- c("Package", "inequality")
+    versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
+    if (any(versionSpecNotNA)) {
+      ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+                   decreasing = TRUE, na.last = TRUE
+      ) # can't use setorderv because data.table can't sort on package_version class
+    } else {
+      ord <- seq(NROW(pkgInstall))
+    }
 
-  pkgInstallTmp <- list()
-  if (any(versionSpecNotNA)) {
-    pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord]
-  } # use the order to reorder them. It is not sort key.
-  if (any(!versionSpecNotNA)) {
-    pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
-  }
-  pkgInstall <- rbindlist(pkgInstallTmp)
-  set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
-  setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
-                     ordr = c(1L, 1L, -1L, 1L))
-  setDT(setOrderOn)
-  setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
-  setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
-            order = setOrderOn$ordr, na.last = TRUE)
+    pkgInstallTmp <- list()
+    if (any(versionSpecNotNA)) {
+      pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord]
+    } # use the order to reorder them. It is not sort key.
+    if (any(!versionSpecNotNA)) {
+      pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
+    }
+    pkgInstall <- rbindlist(pkgInstallTmp)
+    set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+    setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+                       ordr = c(1L, 1L, -1L, 1L))
+    setDT(setOrderOn)
+    setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
+    setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+              order = setOrderOn$ordr, na.last = TRUE)
 
-  pkgInstall[, keepBasedOnRedundantInequalities :=
-    unlist(lapply(.I, function(ind) {
-      ifelse(is.na(inequality), ind,
-        ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I))
-      )
-    })),
-  by = pkgAndInequality
-  ]
-
-  pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
-  set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
-  pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
-
-  if (any(pkgInstall$inequality %in% c(">", "<"))) {
     pkgInstall[, keepBasedOnRedundantInequalities :=
                  unlist(lapply(.I, function(ind) {
                    ifelse(is.na(inequality), ind,
-                          ifelse(inequality == ">", .I[1], ifelse(inequality == "<", tail(.I, 1), .I))
+                          ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I))
                    )
                  })),
                by = pkgAndInequality
     ]
+
     pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
     set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
     pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
 
+    if (any(pkgInstall$inequality %in% c(">", "<"))) {
+      pkgInstall[, keepBasedOnRedundantInequalities :=
+                   unlist(lapply(.I, function(ind) {
+                     ifelse(is.na(inequality), ind,
+                            ifelse(inequality == ">", .I[1], ifelse(inequality == "<", tail(.I, 1), .I))
+                     )
+                   })),
+                 by = pkgAndInequality
+      ]
+      pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+      set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+      pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+
+    }
+    pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
+    pkgInstall <- removeDups(pkgInstall)
   }
-  pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
-  pkgInstall <- removeDups(pkgInstall)
   pkgInstall[]
 }
 
@@ -2303,13 +2298,9 @@ Install <- function(packages, packageVersionFile,
                     type = getOption("pkgType"),
                     upgrade = FALSE,
                     ...) {
-  packs <- substitute(packages)
-  if (is.name(packs))
-    packages <- deparse(packs)
 
-  packs <- substitute(packages)
-  if (is.call(packs))
-    packages <- vapply(packs[-1], deparse, FUN.VALUE = character(1))
+  packagesSubstituted <- substitute(packages)
+  packages <- substitutePackages(packages, packagesSubstituted, parent.frame())
 
   Require(packages,
     packageVersionFile,
@@ -2378,4 +2369,23 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, in
                                  pkgInstallList[["GitHub"]]), use.names = TRUE, fill = TRUE)
   }
   pkgInstall
+}
+
+substitutePackages <- function(packages, packagesSubstituted, envir) {
+  if (is.call(packagesSubstituted) && !is.character(packagesSubstituted)) {
+    if (identical(packagesSubstituted[[1]], as.name("c")) || identical(packagesSubstituted[[1]], as.name("list"))) {
+      packages <- vapply(packagesSubstituted[-1], deparse, FUN.VALUE = character(1))
+    }
+  }
+
+  if (is.name(packagesSubstituted)) {
+    packagesTmp <- deparse(packagesSubstituted)
+    if (!identical("packages", packagesTmp)) {
+      packages <- packagesTmp
+      packagesTmp2 <- get0(packagesTmp, envir = envir)
+      if (is.character(packagesTmp2))
+        packages <- packagesTmp2
+    }
+  }
+  packages
 }

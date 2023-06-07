@@ -55,71 +55,71 @@ if (file.exists(pkgVF)) {
   fileNames[["fn0"]][["txt"]] <- pkgVF
 
   try(setLibPaths(origLibPaths[[1]], updateRprofile = FALSE), silent = TRUE)
-
-  origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
-
-  theDir <- Require:::rpackageFolder(getOptionRPackageCache())
-  if (!is.null(theDir)) {
-    localBins <- dir(theDir, pattern = "data.table")
-    localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table")
-    vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
-    vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
-    vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
-
-
-    localBinsOrd <- order(package_version(vers), decreasing = TRUE)
-    localBins <- localBins[localBinsOrd]
-    localBinsFull <- localBinsFull[localBinsOrd]
-    dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
-    localBins <- localBins[!dups]
-    localBinsFull <- localBinsFull[!dups]
-    if (any(grepl("tar.gz", localBinsFull))) {
-      localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
-    }
-    # There might be more than one version
-    dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-    localBinsFull <- na.omit(c(dts)) # , rems))
-    # dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    # localBinsFull <- dts
-  } else {
-    localBinsFull <- NULL
-  }
-
-  ## There might be more than one version
-  Rpath <- Sys.which("Rscript")
-  if (length(localBinsFull) == 1) { # already have the binary in the Cache
-    if (Require:::isWindows()) {
-      system(paste0(
-        Rpath, " -e \"install.packages(c('", localBinsFull[1],
-        "'), quiet = ", quiet, ", type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""
-      ), wait = TRUE)
-    } else {
-      system(paste0(
-        Rpath, " -e \"install.packages(c('", localBinsFull[1],
-        "'), quiet = ", quiet, ", lib = '", .libPaths()[1], "', repos = NULL)\""
-      ), wait = TRUE)
-    }
-  } else {
-    # For some reason, when using Rscript, the RStudio Package Manager repository the Rscript install doesn't use binary
-    pkg <- "data.table"
-    withCallingHandlers(
-      install.packages(pkg,
-        lib = .libPaths()[1],
-        quiet = quiet, repos = getOption("repos")[["CRAN"]]
-      ),
-      warning = function(w) {
-        system(paste0(
-          Rpath, " -e \"install.packages(c('", pkg, "'), lib ='",
-          .libPaths()[1], "', quiet = ", quiet, ", repos = '", getOption("repos")[["CRAN"]], "')\""
-        ), wait = TRUE)
-        invokeRestart("muffleWarning")
-      }
-    )
-  }
-
-  if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
-  Require:::installRequire(getOption("Require.Home"))
+#
+#   origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
+#
+#   theDir <- Require:::rpackageFolder(getOptionRPackageCache())
+#   if (!is.null(theDir)) {
+#     localBins <- dir(theDir, pattern = "data.table")
+#     localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table")
+#     vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
+#     vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
+#     vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
+#
+#
+#     localBinsOrd <- order(package_version(vers), decreasing = TRUE)
+#     localBins <- localBins[localBinsOrd]
+#     localBinsFull <- localBinsFull[localBinsOrd]
+#     dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
+#     localBins <- localBins[!dups]
+#     localBinsFull <- localBinsFull[!dups]
+#     if (any(grepl("tar.gz", localBinsFull))) {
+#       localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
+#     }
+#     # There might be more than one version
+#     dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+#     # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+#     localBinsFull <- na.omit(c(dts)) # , rems))
+#     # dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+#     # localBinsFull <- dts
+#   } else {
+#     localBinsFull <- NULL
+#   }
+#
+#   ## There might be more than one version
+#   Rpath <- Sys.which("Rscript")
+#   if (length(localBinsFull) == 1) { # already have the binary in the Cache
+#     if (Require:::isWindows()) {
+#       system(paste0(
+#         Rpath, " -e \"install.packages(c('", localBinsFull[1],
+#         "'), quiet = ", quiet, ", type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""
+#       ), wait = TRUE)
+#     } else {
+#       system(paste0(
+#         Rpath, " -e \"install.packages(c('", localBinsFull[1],
+#         "'), quiet = ", quiet, ", lib = '", .libPaths()[1], "', repos = NULL)\""
+#       ), wait = TRUE)
+#     }
+#   } else {
+#     # For some reason, when using Rscript, the RStudio Package Manager repository the Rscript install doesn't use binary
+#     pkg <- "data.table"
+#     withCallingHandlers(
+#       install.packages(pkg,
+#         lib = .libPaths()[1],
+#         quiet = quiet, repos = getOption("repos")[["CRAN"]]
+#       ),
+#       warning = function(w) {
+#         system(paste0(
+#           Rpath, " -e \"install.packages(c('", pkg, "'), lib ='",
+#           .libPaths()[1], "', quiet = ", quiet, ", repos = '", getOption("repos")[["CRAN"]], "')\""
+#         ), wait = TRUE)
+#         invokeRestart("muffleWarning")
+#       }
+#     )
+#   }
+#
+#   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
+#   Require:::installRequire(getOption("Require.Home"))
 
   out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
 

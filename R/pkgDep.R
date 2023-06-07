@@ -220,6 +220,7 @@ pkgDep <- function(packages,
           nchars, verbose = verbose, verboseLevel = 0
         )
       }
+      pkgDepDTList2 <- pkgDepDTListNotRecursive
       if (NROW(pkgDepDTListNotRecursive)) {
         if (recursive) {
           which <- tail(which, 1)[[1]] # take the last of the list of which
@@ -366,8 +367,6 @@ pkgDep <- function(packages,
               }
             )
           pkgDepDTList2 <- pkgDepDTListRecursive
-        } else {
-          pkgDepDTList2 <- pkgDepDTListNotRecursive
         }
       }
       if (any(theNulls))
@@ -658,7 +657,6 @@ pkgDepInner <- function(packages,
                 }
               }
             }
-            browser()
             needed <- if (dir.exists(packageTD)) {
               DESCRIPTIONFileDeps(
                 file.path(packageTD, "DESCRIPTION"),
@@ -2381,8 +2379,10 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
           ap <-
             getAvailablePackagesIfNeeded(DT$packageFullName,
                                          repos, purge = needPurge, verbose, type)
-          haveRepos <- unlist(lapply(repos, function(re) any(startsWith(unique(ap$Repository), re))))
-          needPurge <- !all(haveRepos)
+          if (!is.null(ap)) {
+            haveRepos <- unlist(lapply(repos, function(re) any(startsWith(unique(ap$Repository), re))))
+            needPurge <- !all(haveRepos)
+          }
           if (needPurge %in% FALSE)
             break
         }
