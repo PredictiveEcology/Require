@@ -554,7 +554,7 @@ pkgDepInner <- function(packages,
             }
             td <- tempdir2(pkg) #  use the version number for td
             packageTD <- file.path(td, pkgName)
-            if (!dir.exists(packageTD)) {
+            if (!dir.exists(packageTD)) { # only happens in a new session
               verNum <- extractVersionNumber(pkg)
               noSpecNeeded <- is.na(verNum) || identical(verNum, "NA")
               if (noSpecNeeded) {
@@ -591,19 +591,25 @@ pkgDepInner <- function(packages,
                   if (endsWith(packageURL, "tar.gz")) {
                     # checkLocal
                     localFileOption <- dir(Require::RequirePkgCacheDir(), pattern = pkgName, full.names = TRUE)
-                    localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
-                    localFileOption <- localFileOption[localOption]
+                    if (length(localFileOption)) localOption <- TRUE
+                    if (!noSpecNeeded %in% TRUE) {
+                      localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
+                      localFileOption <- localFileOption[localOption]
+                    }
                     if (any(localOption)) {
                       messageVerbose(
                         "found local cached copy of ", pkgPrint, verbose = verbose, verboseLevel = 1
                       )
                       tf <- tempfile()
                       theTar <- endsWith(localFileOption, "tar.gz")
+                      theTarBins <- isBinary(localFileOption[theTar])
+                      if (any(theTarBins))
+                        theTar <- theTar & theTarBins
                       theZip <- endsWith(localFileOption, ".zip")
                       if (any(theZip)) {
-                        unzip(localFileOption[theZip], exdir = td)
+                        unzip(localFileOption[theZip][1], exdir = td)
                       } else {
-                        untar(tarfile = localFileOption[theTar], exdir = td)
+                        untar(tarfile = localFileOption[theTar][1], exdir = td)
                       }
                     } else {
                       messageVerbose(

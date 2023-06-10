@@ -185,12 +185,16 @@ if (isDev) { # i.e., GA, R CMD check etc.
   # Issue 87
   try(remove.packages("reproducible"), silent = TRUE)
   Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
-  Require::Install("reproducible (==2.0.2)")                               # installs current CRAN version, which is older than SHA below
+  Require::Install("reproducible (==2.0.4)")                               # installs current CRAN version, which is older than SHA below
   Require("reproducible")                                          # load it
+  # Apparnetly linux can handle this
   suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
     Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   )
-  testit::assert(packageVersion("reproducible") == "2.0.2") # # will be 2.0.2 from CRAN
+  if (isWindows())
+    testit::assert(packageVersion("reproducible") == "2.0.4") # # will be 2.0.4 from CRAN
+  else
+    testit::assert(packageVersion("reproducible") == "2.0.2.9001") #
   detach("package:reproducible", unload = TRUE)
   # now installs correct SHA which is 2.0.2.9001
   Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
