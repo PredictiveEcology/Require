@@ -1858,8 +1858,9 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
         pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
       })
       pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
-      pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder")]
-      pkgAddRep <- pkgInstallTmp2[!is.na(pkgInstallTmp$Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]
+      pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder", "Additional_repositories")]
+      pkgInstallTmp2 <- unique(pkgInstallTmp2, by = c("packageFullName"))
+      pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]#, allow.cartesian = TRUE]
       set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
       pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
       pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
