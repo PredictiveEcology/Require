@@ -1,15 +1,15 @@
 utils::globalVariables(c(
   "..apCachedCols", "..cols", "..cols3", ".GRP",
-  "Account", "archiveSource", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig",
-  "Branch", "comp", "contrib.url", "correctVersionAvail", "depOrOrig",
-  "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
-  "hasAtLeastOneNonNA", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
-  "haveLocal", "ineq", "installed", "installedVersionOK", "installSafeGroups", "isBinaryInstall",
-  "isEquals", "keepBasedOnRedundantInequalities", "libPaths",
-  "loaded", "loadOrder", "localFile", "needInstall", "NoPkgsSupplied",
-  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
-  "repo", "Repo", "Repository", "SHAonGH", "verbose", "Version",
-  "VersionOnRepos", "versionSpec", "versionToKeep", "violation"
+  "Additional_repositories", "Account", "Branch", "DESCFile",
+  "EqualsDoesntViolate", "GitSubFolder", "Repo", "Repository", "SHAonGH", "Version",
+  "VersionOnRepos", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig", "comp",
+  "depOrOrig", "getOptions", "GTDoesntViolate",
+  "hasEqualsAndInequals", "hasGTAndInequals", "hasSubFolder", "hasVers", "hasVersionsToCompare",
+  "haveLocal", "ineq", "installSafeGroups", "installed",
+  "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
+  "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall", "repo",
+  "verbose", "versionSpec", "versionToKeep",
+  "violation", "violation2"
 ))
 
 

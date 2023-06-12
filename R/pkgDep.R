@@ -1,15 +1,7 @@
 utils::globalVariables(
-  c(
-    "atLeastOneWithVersionSpec",
-    "Current",
-    "GithubRepo", "GithubSHA1", "GithubUsername",
-    "hasVers",
+  c("Additional_repositories", "githubPkgName",
     "localBranch", "localFiles", "localRepo", "localSha", "localUsername",
-    "maxVersionSpec",
-    "mtime",
-    "newPackageFullName",
-    "PackageTrimmed"
-  )
+    "newPackageFullName")
 )
 
 #' Determine package dependencies
