@@ -583,7 +583,7 @@ pkgDepInner <- function(packages,
                   if (endsWith(packageURL, "tar.gz")) {
                     # checkLocal
                     localFileOption <- dir(Require::RequirePkgCacheDir(), pattern = pkgName, full.names = TRUE)
-                    if (length(localFileOption)) localOption <- TRUE
+                    localOption <- length(localFileOption) > 0
                     if (!noSpecNeeded %in% TRUE) {
                       localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
                       localFileOption <- localFileOption[localOption]
