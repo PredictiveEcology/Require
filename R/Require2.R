@@ -1,15 +1,15 @@
 utils::globalVariables(c(
   "..apCachedCols", "..cols", "..cols3", ".GRP",
-  "Account", "archiveSource", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig",
-  "Branch", "comp", "contrib.url", "correctVersionAvail", "depOrOrig",
-  "DESCFile", "EqualsDoesntViolate", "getOptions", "GitSubFolder",
-  "hasAtLeastOneNonNA", "hasEqualsAndInequals", "hasSubFolder", "hasVersionsToCompare",
-  "haveLocal", "ineq", "installed", "installedVersionOK", "installSafeGroups", "isBinaryInstall",
-  "isEquals", "keepBasedOnRedundantInequalities", "libPaths",
-  "loaded", "loadOrder", "localFile", "needInstall", "NoPkgsSupplied",
-  "OlderVersionsAvailable", "OlderVersionsAvailableCh", "PackageUrl",
-  "repo", "Repo", "Repository", "SHAonGH", "verbose", "Version",
-  "VersionOnRepos", "versionSpec", "versionToKeep", "violation"
+  "Additional_repositories", "Account", "Branch", "DESCFile",
+  "EqualsDoesntViolate", "GitSubFolder", "Repo", "Repository", "SHAonGH", "Version",
+  "VersionOnRepos", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig", "comp",
+  "depOrOrig", "getOptions", "GTDoesntViolate",
+  "hasEqualsAndInequals", "hasGTAndInequals", "hasSubFolder", "hasVers", "hasVersionsToCompare",
+  "haveLocal", "ineq", "installSafeGroups", "installed",
+  "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
+  "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall", "repo",
+  "verbose", "versionSpec", "versionToKeep",
+  "violation", "violation2"
 ))
 
 
@@ -81,11 +81,15 @@ utils::globalVariables(c(
 #'   possibly after they are installed. If a character string, then it will only
 #'   call `require` on those specific packages (i.e., it will install the ones
 #'   listed in `packages`, but load the packages listed in `require`)
-#' @param packages Character vector of packages to install via
-#'   `install.packages`, then load (i.e., with `library`). If it is one package,
-#'   it can be unquoted (as in `require`). In the case of a GitHub package, it
+#' @param packages Either a character vector of packages to install via
+#'   `install.packages`, then load (i.e., with `library`), or, for convenience,
+#'   a vector or list (using `c` or `list`) of unquoted package names to install
+#'   and/or load (as in `require`, but vectorized). Passing vectors of names may
+#'   not work in all cases, so user should confirm before relying on this behaviour
+#'   in operational code.
+#'   In the case of a GitHub package, it
 #'   will be assumed that the name of the repository is the name of the package.
-#'   If this is not the case, then pass a named character vector here, where the
+#'   If this is not the case, then pass a *named* character vector here, where the
 #'   names are the package names that could be different than the GitHub
 #'   repository name.
 #' @param packageVersionFile  Character string of a file name or logical. If
@@ -156,8 +160,11 @@ utils::globalVariables(c(
 #'
 #' library(Require)
 #' getCRANrepos(ind = 1)
-#' Require("stats") # analogous to require(stats), but it checks for
+#' Require("utils") # analogous to require(stats), but it checks for
 #' #   pkg dependencies, and installs them, if missing
+#'
+#' # unquoted version
+#' Require(c(tools, utils))
 #'
 #' if (Require:::.runLongExamples()) {
 #'   # Install in a new local library (libPaths)
@@ -284,22 +291,36 @@ Require <- function(packages, packageVersionFile,
     return(invisible(NULL))
   }
 
+
+  packagesSubstituted <- substitute(packages) # can be c(xx), list(xx), "hi", a$b is a call, but it is likely already evaluated
+  packages <- substitutePackages(packages, packagesSubstituted, envir = parent.frame())
+
+  hasInitSlash <- grepl("^\\\"", packages)
+  if (any(hasInitSlash))
+    packages[hasInitSlash] <- gsub("\\\"", "", packages[hasInitSlash])
+
   # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
     packages <- anyHaveHEAD(packages)
 
     deps <- pkgDep(packages,
       purge = purge, libPath = libPaths, recursive = TRUE,
-      which = which, type = type, verbose = verbose
+      which = which, type = type, verbose = verbose,
+      Additional_repositories = TRUE
     )
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     if (NROW(deps)) {
-      allPackages <- unique(unname(unlist(deps)))
-      pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+      deps <- rbindlist(deps, fill = TRUE, use.names = TRUE)
+      deps <- unique(deps)
+      # allPackages <- sort(unique(unname(unlist(deps$packageFullName))))
+      pkgDT <- deps
+      # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+      # if (!is.null(deps$Additional_repositories))
+      #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
       pkgDT <- updatePackagesWithNames(pkgDT, packages)
-      pkgDT <- parsePackageFullname(pkgDT)
-      pkgDT <- parseGitHub(pkgDT)
-      pkgDT <- removeDups(pkgDT)
+      # pkgDT <- parsePackageFullname(pkgDT)
+      # pkgDT <- parseGitHub(pkgDT)
+      # pkgDT <- removeDups(pkgDT)
       # pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
       pkgDT <- installedVers(pkgDT)
@@ -369,10 +390,6 @@ build <- function(Package, VersionOnRepos, verbose, quiet, out) {
         intern = internal, ignore.stdout = quiet, ignore.stderr = quiet
       )
     })
-    # if (any(unlist(out1) == 1L)) {
-    #   browser()
-    #   browserDeveloper("Error 456; contact developer")
-    # }
     messageVerbose("  ... Built!",
       verbose = verbose, verboseLevel = 1
     )
@@ -894,6 +911,12 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                                  "For better error handling, install.packages('remotes')")
                           }
                         })
+  naRepository <- is.na(pkgInstall$Repository)
+  if (any(naRepository)) {
+    if (!is.null(pkgInstall$Additional_repositories))
+      pkgInstall[naRepository, Repository := Additional_repositories]
+  }
+
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
 
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -1348,6 +1371,10 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     !any(grepl("contrib", toInstall$Repository))) {
     repos <- unique(dirname(dirname(toInstall$Repository)))
   }
+
+  if (!is.null(toInstall$Additional_repositories)) {
+    repos <- c(repos, na.omit(toInstall$Additional_repositories))
+  }
   ap <- available.packagesCached(repos = repos, purge = purge, returnDataTable = FALSE, type = type)
   pkgsNotInAP <- toInstall$Package[!toInstall$Package %in% ap[, "Package"]]
   NumPkgsNotInAP <- length(pkgsNotInAP)
@@ -1611,7 +1638,6 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   by = "Package"
   ]
   set(pkgDT, which(pkgDT$isEquals %in% TRUE & pkgDT$hasEqualsAndInequals %in% FALSE), "EqualsDoesntViolate", TRUE)
-
   pkgDT[, violation := if (any(isEquals %in% TRUE) && all(!EqualsDoesntViolate %in% TRUE)) {
     TRUE
   } else {
@@ -1619,6 +1645,35 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   },
   by = "Package"
   ]
+
+  set(pkgDT, NULL, "isGT", pkgDT[["inequality"]] == ">")
+  pkgDT[, hasGTAndInequals := any(isGT %in% TRUE) && any(isGT %in% FALSE), by = "Package"]
+  pkgDT[hasGTAndInequals %in% TRUE, GTDoesntViolate := {
+    out <- rep(NA, length = .N)
+    wh <- which(isGT)
+    whNot <- which(!isGT)
+    if (length(wh)) {
+      out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
+        all(compareVersion2(versionSpec[whNot], verSpec, inequality[wh]))
+      })))
+      if (is(out, "try-error")) {
+        browserDeveloper("Error 844; please contact developer")
+      }
+      out
+    }
+    out
+  },
+  by = "Package"
+  ]
+
+  pkgDT[, violation2 := if (any(isGT %in% TRUE) && all(GTDoesntViolate %in% FALSE)) {
+    TRUE
+  } else {
+    FALSE
+  },
+  by = "Package"
+  ]
+
   if (any(pkgDT$violation %in% TRUE)) {
     messageVerbose(green(
       "The following shows packages whose version requirements can not be met; ",
@@ -1644,6 +1699,31 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
     }
   }
 
+  if (any(pkgDT$violation2 %in% TRUE)) {
+    messageVerbose(green(
+      "The following shows packages whose version requirements can not be met; ",
+      "keeping the newer version: "
+    ), verbose = verbose, verboseLevel = 1)
+    cols <- c("Package", "packageFullName", "versionSpec")
+    cols2 <- setdiff(cols, "packageFullName")
+    cols3 <- c(cols, "versionToKeep")
+    violationsDF <- pkgDT[violation2 %in% TRUE & !is.na(versionSpec), ..cols]
+    # can't use setorderv on versions b/c stored as character vector
+    orderVersions <- order(violationsDF[[cols2[1]]],
+                           package_version(violationsDF[[cols2[[2]]]]),
+                           decreasing = TRUE)
+    violationsDF <- violationsDF[orderVersions,]
+    violationsDF <- violationsDF[, versionToKeep := {
+      ver <- rep("", length = .N)
+      ver[1] <- versionSpec[1]
+      ver
+    }, by = "Package"][, ..cols3]
+    messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
+    if (grepl("remove|rm", ifViolation[1])) {
+      pkgDT <- pkgDT[violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE]
+    }
+  }
+
   pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE)) {
     .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
   } else {
@@ -1651,7 +1731,15 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   },
   by = "Package"
   ]
+
   pkgDT <- pkgDT[unique(keep)]
+
+  # get rid of the GT if they are TRUE
+  pkgDT[, remove := (isGT %in% TRUE & GTDoesntViolate %in% TRUE)]
+  if (any(pkgDT$remove))
+    pkgDT <- pkgDT[!remove %in% TRUE]
+
+
   set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
   pkgDT
 }
@@ -1678,54 +1766,108 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 #' @importFrom data.table rleid
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
-  if (!is.null(pkgInstall[["hasHEAD"]])) {
-    hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
-    whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
-    whToRM <- setdiff(whToRM, hasHeadRows)
-    if (length(whToRM))
-      pkgInstall <- pkgInstall[-whToRM]
-  }
+  if (NROW(pkgInstall)) {
+    if (!is.null(pkgInstall[["hasHEAD"]])) {
+      hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
+      whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
+      whToRM <- setdiff(whToRM, hasHeadRows)
+      if (length(whToRM))
+        pkgInstall <- pkgInstall[-whToRM]
+    }
 
-  pkgAndInequality <- c("Package", "inequality")
-  versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
-  if (any(versionSpecNotNA)) {
-    ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
-      decreasing = TRUE, na.last = TRUE
-    ) # can't use setorderv because data.table can't sort on package_version class
-  } else {
-    ord <- seq(NROW(pkgInstall))
-  }
+    pkgAndInequality <- c("Package", "inequality")
+    versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
+    if (any(versionSpecNotNA)) {
+      ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+                   decreasing = TRUE, na.last = TRUE
+      ) # can't use setorderv because data.table can't sort on package_version class
+    } else {
+      ord <- seq(NROW(pkgInstall))
+    }
 
-  pkgInstallTmp <- list()
-  if (any(versionSpecNotNA)) {
-    pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord]
-  } # use the order to reorder them. It is not sort key.
-  if (any(!versionSpecNotNA)) {
-    pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
-  }
-  pkgInstall <- rbindlist(pkgInstallTmp)
-  set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
-  setorderv(pkgInstall, c("Package", "versionSpecGroup", "inequality", "repoLocation"), order = c(1L, 1L, -1L, 1L), na.last = TRUE)
+    pkgInstallTmp <- list()
+    if (any(versionSpecNotNA)) {
+      pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord]
+    } # use the order to reorder them. It is not sort key.
+    if (any(!versionSpecNotNA)) {
+      pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
+    }
+    pkgInstall <- rbindlist(pkgInstallTmp)
+    set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+    setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+                       ordr = c(1L, 1L, -1L, 1L))
+    setDT(setOrderOn)
+    setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
+    setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+              order = setOrderOn$ordr, na.last = TRUE)
 
-  pkgInstall[, keepBasedOnRedundantInequalities :=
-    unlist(lapply(.I, function(ind) {
-      ifelse(is.na(inequality), ind,
-        ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I))
-      )
-    })),
-  by = pkgAndInequality
-  ]
-  pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
-  set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
-  pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+    pkgInstall[, keepBasedOnRedundantInequalities :=
+                 unlist(lapply(.I, function(ind) {
+                   ifelse(is.na(inequality), ind,
+                          ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I))
+                   )
+                 })),
+               by = pkgAndInequality
+    ]
+
+    pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+    set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+    pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+
+    if (any(pkgInstall$inequality %in% c(">", "<"))) {
+      pkgInstall[, keepBasedOnRedundantInequalities :=
+                   unlist(lapply(.I, function(ind) {
+                     ifelse(is.na(inequality), ind,
+                            ifelse(inequality == ">", .I[1], ifelse(inequality == "<", tail(.I, 1), .I))
+                     )
+                   })),
+                 by = pkgAndInequality
+      ]
+      pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+      set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+      pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+
+    }
+    pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
+    pkgInstall <- removeDups(pkgInstall)
+  }
   pkgInstall[]
+}
+
+trimRedundantVersionAndNoVersion <- function(pkgInstall) {
+  set(pkgInstall, NULL, "hasVers", !is.na(pkgInstall$versionSpec))
+  hasV <- pkgInstall$hasVers == TRUE
+  pkgInstall[, `:=`(
+    atLeastOneWithVersionSpec = any(hasVers)
+    # Current = all(Current == TRUE)
+  ), by = "Package"]
+  pkgInstall <-
+    pkgInstall[!(pkgInstall$atLeastOneWithVersionSpec == TRUE &
+                   pkgInstall$hasVers == FALSE)] # remove cases where no version spec >1 case
 }
 
 
 checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
 
-  pkgInstall <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
+  pkgInstallTmp <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
+  if (!is.null(pkgInstall$Additional_repositories)) {
+    if (any(!is.na(pkgInstall$Additional_repositories))) {
+      pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
+      pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
+        pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
+      })
+      pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
+      pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder")]
+      pkgAddRep <- pkgInstallTmp2[!is.na(pkgInstallTmp$Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]
+      set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
+      pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
+      pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
+      setorderv(pkgInstallTmp, "tmpOrder")
+    }
+
+  }
+  pkgInstall <- pkgInstallTmp
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
   pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
@@ -1839,7 +1981,6 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
 
 parsePackageFullname <- function(pkgDT, sorted = TRUE) {
   set(pkgDT, NULL, "versionSpec", extractVersionNumber(pkgDT$packageFullName))
-  # pkgDT[, versionSpec := extractVersionNumber(pkgDT$packageFullName)]
   wh <- which(!is.na(pkgDT$versionSpec))
   if (length(wh)) {
     set(pkgDT, wh, "inequality", extractInequality(pkgDT$packageFullName[wh]))
@@ -2157,6 +2298,10 @@ Install <- function(packages, packageVersionFile,
                     type = getOption("pkgType"),
                     upgrade = FALSE,
                     ...) {
+
+  packagesSubstituted <- substitute(packages)
+  packages <- substitutePackages(packages, packagesSubstituted, parent.frame())
+
   Require(packages,
     packageVersionFile,
     libPaths,
@@ -2224,4 +2369,23 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, in
                                  pkgInstallList[["GitHub"]]), use.names = TRUE, fill = TRUE)
   }
   pkgInstall
+}
+
+substitutePackages <- function(packages, packagesSubstituted, envir) {
+  if (is.call(packagesSubstituted) && !is.character(packagesSubstituted)) {
+    if (identical(packagesSubstituted[[1]], as.name("c")) || identical(packagesSubstituted[[1]], as.name("list"))) {
+      packages <- vapply(packagesSubstituted[-1], deparse, FUN.VALUE = character(1))
+    }
+  }
+
+  if (is.name(packagesSubstituted)) {
+    packagesTmp <- deparse(packagesSubstituted)
+    if (!identical("packages", packagesTmp)) {
+      packages <- packagesTmp
+      packagesTmp2 <- get0(packagesTmp, envir = envir)
+      if (is.character(packagesTmp2))
+        packages <- packagesTmp2
+    }
+  }
+  packages
 }

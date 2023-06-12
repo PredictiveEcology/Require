@@ -22,7 +22,8 @@ pkgDep(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose"),
   includeSelf = TRUE,
-  type = getOption("pkgType")
+  type = getOption("pkgType"),
+  Additional_repositories = FALSE
 )
 
 pkgDep2(
@@ -56,11 +57,15 @@ pkgDepTopoSort(
 )
 }
 \arguments{
-\item{packages}{Character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}). If it is one package,
-it can be unquoted (as in \code{require}). In the case of a GitHub package, it
+\item{packages}{Either a character vector of packages to install via
+\code{install.packages}, then load (i.e., with \code{library}), or, for convenience,
+a vector or list (using \code{c} or \code{list}) of unquoted package names to install
+and/or load (as in \code{require}, but vectorized). Passing vectors of names may
+not work in all cases, so user should confirm before relying on this behaviour
+in operational code.
+In the case of a GitHub package, it
 will be assumed that the name of the repository is the name of the package.
-If this is not the case, then pass a named character vector here, where the
+If this is not the case, then pass a \emph{named} character vector here, where the
 names are the package names that could be different than the GitHub
 repository name.}
 
@@ -123,6 +128,12 @@ will include the package itself in the returned list elements, otherwise,
 only the "dependencies"}
 
 \item{type}{See \code{utils::install.packages}}
+
+\item{Additional_repositories}{Logical. If \code{TRUE}, then \code{pkgDep} will return
+a list of \code{data.table} objects (instead of character vectors)
+with a column \code{packageFullName} and possibly a second column \code{Additional_repositories},
+which may have been specified in a \code{DESCRIPTION} file. NOTE: THIS ALTERS
+THE OUTPUT CLASS}
 
 \item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
 the returned list from most number of dependencies to least.}
