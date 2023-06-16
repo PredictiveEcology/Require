@@ -1935,7 +1935,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   )
 
   pkgArchive[, (cols) := {
-    repositoryHasArchives <- if (!is.na(Repository)) {
+    repositoryHasArchives <- if (!is.na(Repository) && !is.null(ava[[Package]]$repo)) {
       unlist(lapply(ava[[Package]]$repo, grepl, x = Repository))
     } else {
       TRUE
@@ -2004,7 +2004,9 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
           set(ret, NULL, "availableVersionOK", TRUE)
         }
       } else {
-        ret[, repo := ava[[Package]][1][, c("repo")]]
+        repoToAdd <- ava[[Package]][1][, c("repo")]
+        if (!is.null(repoToAdd))
+          ret[, repo := repoToAdd]
       }
     }
     data.table::setcolorder(ret, cols)
