@@ -281,6 +281,12 @@ archiveVersionsAvailable <- function(package, repos) {
   info <- lapply(info, unname)
   info <- lapply(info, function(dd) lapply(dd, function(d) as.data.table(d, keep.rownames = "PackageUrl")))
   info <- lapply(info, rbindlist)
+  info <- lapply(info, function(d) {
+    if (!is.null(d[["mtime"]])) setorderv(d, "mtime")
+  })
+
+
+
   return(info)
 }
 

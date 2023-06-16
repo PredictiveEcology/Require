@@ -114,7 +114,8 @@ pkgDep <- function(packages,
     ap <-
       getAvailablePackagesIfNeeded(packages, repos, purge = FALSE, verbose, type)
     saveNames <-
-      saveNamesForCache(packages, which, recursive = recursive, ap = ap, verbose = verbose)
+      saveNamesForCache(packages, which, recursive = recursive, ap = ap, repos = repos,
+                        verbose = verbose)
     packagesNoVersion <- trimVersionNumber(packages)
     saveNamesDT <-
       data.table(saveNames, packages, packagesNoVersion, names = names(saveNames))
@@ -186,6 +187,7 @@ pkgDep <- function(packages,
           verboseLevel = 0
         )
       }
+
       ap <-
         getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
       pkgDepDTList <-
@@ -557,32 +559,33 @@ pkgDepInner <- function(packages,
               }
 
               if (!dir.exists(packageTD)) {
-                if (noSpecNeeded) {
-                  ava <- archiveVersionsAvailable(pkgName, repos = repos)
-                  dt <- if (is(ava, "list")) {
-                    rbindlist(lapply(ava, as.data.table, keep.rownames = "packageURL"))
-                  } else {
-                    as.data.table(ava, keep.rownames = "packageURL")
-                  }
-                  colNamesToSortOn <- intersect(colnames(dt), "mtime")
-                  if (length(colNamesToSortOn)) {
-                    data.table::setorderv(dt, "mtime")
-                  } # order it so last one is the most recent one
-                  packageURL <-
-                    if (NROW(dt)) {
-                      tail(dt$packageURL, 1)
-                    } else {
-                      character()
-                    }
+                # if (noSpecNeeded) { # can't tell if this is with ! or without !
+                ava <- archiveVersionsAvailable(pkgName, repos = repos)
+                dt <- if (is(ava, "list")) {
+                  rbindlist(lapply(ava, as.data.table, keep.rownames = "PackageUrl"))
                 } else {
-                  pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
-                  packageURL <- file.path(pkgName, pkgFilename)
-                  dt <- numeric()
+                  as.data.table(ava, keep.rownames = "PackageUrl")
                 }
-                if (!is.null(packageURL)) {
-                  if (endsWith(packageURL, "tar.gz")) {
+                colNamesToSortOn <- intersect(colnames(dt), "mtime")
+                if (length(colNamesToSortOn)) {
+                  data.table::setorderv(dt, "mtime")
+                } # order it so last one is the most recent one
+                PackageUrl <-
+                  if (NROW(dt)) {
+                    tail(dt$PackageUrl, 1)
+                  } else {
+                    character()
+                  }
+                # } else {
+                #   pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
+                #   PackageUrl <- file.path(pkgName, pkgFilename)
+                #   dt <- numeric()
+                # }
+                if (length(PackageUrl) > 0) {
+                  if (endsWith(PackageUrl, "tar.gz")) {
                     # checkLocal
-                    localFileOption <- dir(Require::RequirePkgCacheDir(), pattern = pkgName, full.names = TRUE)
+                    localFileOption <- dir(Require::RequirePkgCacheDir(),
+                                           pattern = paste0("^", pkgName, "$"), full.names = TRUE)
                     localOption <- length(localFileOption) > 0
                     if (!noSpecNeeded %in% TRUE) {
                       localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
@@ -612,9 +615,9 @@ pkgDepInner <- function(packages,
                         verboseLevel = 1
                       )
                       for (repo in repos) {
-                        url <- getArchiveURL(repo, packageURL)
+                        url <- getArchiveURL(repo, PackageUrl)
                         url2 <-
-                          file.path(contrib.url(repo), basename(packageURL))
+                          file.path(contrib.url(repo), basename(PackageUrl))
                         tf <- file.path(tempdir2(), basename(tempfile()), basename(url))
                         checkPath(dirname(tf), create = TRUE)
                         if (isFALSE(getOption("Require.offlineMode", FALSE))) {
@@ -683,6 +686,7 @@ pkgDepInner <- function(packages,
           which = list(which),
           recursive = FALSE,
           verbose = verbose,
+          repos = repos,
           ap = ap
         )
       # needed <- pkgDepDT$packageFullName
@@ -1778,7 +1782,7 @@ paddedFloatToChar <-
   }
 
 
-saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
+saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
   isGH <- isGitHub(packages)
   if (any(isGH)) {
     pkgDT <- parseGitHub(packages[isGH])
@@ -1854,11 +1858,28 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
 
   if (sum(hasIneq)) {
     verNum <- extractVersionNumber(packagesSaveNames[!isGH][hasIneq])
+    hasNonNAverNum <- !verNum %in% "NA"
     # hasIneq <- !is.na(inequ)
     psnNoVersion <- trimVersionNumber(packagesSaveNames[!isGH][hasIneq])
     packagesSaveNames[!isGH][hasIneq] <- psnNoVersion
     versions <- ap$Version[match(packagesSaveNames[!isGH][hasIneq], ap$Package)]
     if (any(hasIneq)) {
+
+      # This means that packages is not on CRAN, but has a version specificity issue
+      naVersions <- is.na(versions)
+      if (any(naVersions)) {
+        ava <- archiveVersionsAvailable(packagesSaveNames[!isGH][hasIneq][naVersions], repos = repos)
+        ava[vapply(ava, is.null, FUN.VALUE = logical(1))] <- NULL
+        if (NROW(ava)) {
+          pkgArchive <- data.table(toPkgDT(packages[!isGH][hasIneq][naVersions]), Repository = repos)
+          pkgArchive[, versionSpec := extractVersionNumber(pkgs = pkgArchive$packageFullName)]
+          pkgArchive[, inequality := extractInequality(pkgs = pkgArchive$packageFullName)]
+          pkgArchive <- getArchiveDetails(pkgArchive, repos = repos, ava = ava, verbose = verbose)
+          pkgArchive <- na.omit(pkgArchive, by = "availableVersionOK")
+          versions[naVersions] <- pkgArchive$VersionOnRepos
+        }
+      }
+
       okVers <- compareVersion2(versions, inequality = inequ, verNum)
       #if (all(!is.na(okVers))) {
       if (any(okVers %in% TRUE)) {

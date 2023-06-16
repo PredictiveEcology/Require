@@ -253,5 +253,22 @@ if (isDev) { # i.e., GA, R CMD check etc.
       warning = function(x) x
     )
   }
+
+
+  # Test substitute(packages)
+  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")), silent = TRUE)
+  verToCompare <- "2.0.8"
+  clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
+  out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
+                           repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  testit::assert(packageVersion("SpaDES") >= verToCompare)
+  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")))
+  clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = F)
+  a <- list(pkg = "fpCompare")
+  out <- Require::Install(
+    c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), a$pkg),
+    repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  testit::assert(packageVersion("SpaDES") < verToCompare)
+
 }
 endTest(setupInitial)
