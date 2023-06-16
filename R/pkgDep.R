@@ -1876,7 +1876,8 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
           pkgArchive[, inequality := extractInequality(pkgs = pkgArchive$packageFullName)]
           pkgArchive <- getArchiveDetails(pkgArchive, repos = repos, ava = ava, verbose = verbose)
           pkgArchive <- na.omit(pkgArchive, by = "availableVersionOK")
-          versions[naVersions] <- pkgArchive$VersionOnRepos
+          if (length(pkgArchive$VersionOnRepos))
+            versions[naVersions] <- pkgArchive$VersionOnRepos
         }
       }
 
