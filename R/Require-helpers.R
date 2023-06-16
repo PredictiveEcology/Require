@@ -242,7 +242,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' It has been borrowed from a sub-set of the code in a non-exported function:
 #' `remotes:::download_version_url`
 archiveVersionsAvailable <- function(package, repos) {
-  info <- NULL
+  info <- list()
   for (repo in repos) {
     archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
     if (!exists(archiveFile, envir = .pkgEnv[["pkgDep"]], inherits = FALSE)) {
@@ -262,18 +262,31 @@ archiveVersionsAvailable <- function(package, repos) {
     } else {
       archive <- get(archiveFile, envir = .pkgEnv[["pkgDep"]])
     }
-    info <- archive[package]
-    naNames <- is.na(names(info))
-    if (any(naNames)) {
-      names(info)[naNames] <- package[naNames]
+    if (length(archive) == 0) {
+      archive <- Map(pack = package, function(pack) NULL)
     }
-    if (!is.null(info)) {
-      info <- lapply(info, function(x) {
+    info[[repo]] <- archive[package]
+    naNames <- is.na(names(info[[repo]]))
+    if (any(naNames)) {
+      names(info[[repo]])[naNames] <- package[naNames]
+    }
+    if (!is.null(info[[repo]][[1]])) {
+      info[[repo]] <- lapply(info[[repo]], function(x) {
         x$repo <- repo
         x
       })
     }
   }
+  info <- invertList(info)
+  info <- lapply(info, unname)
+  info <- lapply(info, function(dd) lapply(dd, function(d) as.data.table(d, keep.rownames = "PackageUrl")))
+  info <- lapply(info, rbindlist)
+  info <- lapply(info, function(d) {
+    if (!is.null(d[["mtime"]])) setorderv(d, "mtime")
+  })
+
+
+
   return(info)
 }
 

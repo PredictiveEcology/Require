@@ -97,4 +97,5 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     setLibPaths(origLibPaths)
   }
 }
+
 endTest(setupInitial)
