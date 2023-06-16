@@ -1873,7 +1873,7 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
       if (any(okVers %in% FALSE))
         packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE], " (", inequ,
+            packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE], " (", inequ[okVers %in% FALSE],
             verNum[okVers %in% FALSE],
             ")"
           )

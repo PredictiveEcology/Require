@@ -953,7 +953,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 }
 
 getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOption("pkgType")) {
-  browser()
   for (i in 1:2) {
     ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
     hasRepos <- unlist(lapply(repos, function(xx) any(grepl(pattern = xx, x = ap$Repository))))
@@ -997,13 +996,14 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     # Not on CRAN; so likely Archive
     notOK <- !pkgCRAN$availableVersionOK %in% TRUE # FALSE means it is on CRAN, but not that version; NA means it is not on CRAN currently
     if (any(notOK)) {
+      pkgNot <- unique(pkgCRAN$packageFullName[notOK])
       messageVerbose(
         blue(
           "  -- ",
-          paste(pkgCRAN$packageFullName[notOK],
+          unique(paste(pkgNot,
             collapse = ", "
-          ), " ",
-          isAre(l = pkgCRAN$packageFullName[notOK]),
+          )), " ",
+          isAre(l = pkgNot),
           " not on CRAN; trying Archives"
         ),
         verbose = verbose, verboseLevel = 1
@@ -1026,12 +1026,13 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
 downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, numToDownload) {
   pkgArchive <- pkgNonLocal[["Archive"]]
   if (NROW(pkgArchive)) {
-    ava <- lapply(archiveVersionsAvailable(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"],
+    browser()
+    ava <- lapply(archiveVersionsAvailable(unique(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"]),
       repos = repos
     ), function(d) {
-      aa <- as.data.table(d, keep.rownames = "PackageUrl")
-      if (!is.null(aa[["mtime"]])) setorderv(aa, "mtime")
-      aa
+      # aa <- as.data.table(d, keep.rownames = "PackageUrl")
+      if (!is.null(d[["mtime"]])) setorderv(d, "mtime")
+      d
     })
     if (isFALSE(getOption("Require.offlineMode", FALSE))) {
       pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
@@ -1879,7 +1880,6 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   }
   pkgInstall <- pkgInstallTmp
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
-  browser()
   pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos", "Repository"))
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall)
@@ -1887,11 +1887,12 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "binOrSrc"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
 
   pkgInstall[, keep := {
-    # This will pick the one that is OK, or if they are all NA (meaning no version spec), or all FALSE (meaning need to try Archive)
+    # This will pick the one that is OK, or if they are all NA (meaning no version spec),
+    #    or all FALSE (meaning need to try Archive) <-- this was removed because can have 2 repositories, e.g., predictiveecology.r-universe.dev and CRAN MUST TRY BOTH
     #    then also pick first one that OK
-    ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne)) || all(availableVersionOKthisOne %in% FALSE)
+    ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne)) # || all(availableVersionOKthisOne %in% FALSE)
     if (ok) .I[ok][1] else .I
-  }, by = c("Package", "Repository")]
+  }, by = c("Package")]
   pkgInstall <- pkgInstall[unique(keep)]
   set(pkgInstall, NULL, "keep", NULL)
   pkgInstall
@@ -1912,6 +1913,7 @@ updateInstallSafeGroups <- function(pkgInstall) {
 }
 
 getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
+  browser()
   cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
   numGroups <- NROW(pkgArchive)
 
