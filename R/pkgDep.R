@@ -665,7 +665,7 @@ pkgDepInner <- function(packages,
             } else {
               messageVerbose(
                 pkgPrint,
-                " dependencies not found on CRAN; perhaps incomplete description? On GitHub?",
+                " not found on CRAN; can't determine dependencies; perhaps incomplete description? Archived? On GitHub?",
                 verbose = verbose,
                 verboseLevel = 1
               )
@@ -1873,7 +1873,7 @@ saveNamesForCache <- function(packages, which, recursive, ap, verbose) {
       if (any(okVers %in% FALSE))
         packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE], " (==",
+            packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE], " (", inequ,
             verNum[okVers %in% FALSE],
             ")"
           )

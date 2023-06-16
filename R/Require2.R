@@ -932,6 +932,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     )
 
     # Archive
+    browser()
     pkgNeedInternet <- downloadArchive(
       pkgNeedInternet, repos, verbose, install.packagesArgs,
       numToDownload
@@ -952,7 +953,15 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 }
 
 getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOption("pkgType")) {
-  ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
+  browser()
+  for (i in 1:2) {
+    ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
+    hasRepos <- unlist(lapply(repos, function(xx) any(grepl(pattern = xx, x = ap$Repository))))
+    if (all(hasRepos)) {
+      break
+    }
+    purge = TRUE
+  }
   setnames(ap, old = "Version", new = "VersionOnRepos")
   pkgInstall <- ap[pkgInstall, on = "Package"]
   # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
@@ -1870,7 +1879,8 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   }
   pkgInstall <- pkgInstallTmp
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
-  pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos"))
+  browser()
+  pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos", "Repository"))
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall)
   pkgInstall[, binOrSrc := c("src", "bin")[grepl("\\<bin\\>", Repository) + 1]]
@@ -1881,7 +1891,7 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
     #    then also pick first one that OK
     ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne)) || all(availableVersionOKthisOne %in% FALSE)
     if (ok) .I[ok][1] else .I
-  }, by = "Package"]
+  }, by = c("Package", "Repository")]
   pkgInstall <- pkgInstall[unique(keep)]
   set(pkgInstall, NULL, "keep", NULL)
   pkgInstall
@@ -2200,6 +2210,7 @@ messagesAboutWarnings <- function(w, toInstall) {
     pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
   }
   if (identical(pkgName, w$message)) { # didn't work again
+    browser()
     if (any(grepl("cannot open URL", pkgName))) { # means needs purge b/c package is on CRAN, but not that url
       url <- gsub(".+(https://.+\\.zip).+", "\\1", pkgName)
       url <- gsub(".+(https://.+\\.tar\\.gz).+", "\\1", url)

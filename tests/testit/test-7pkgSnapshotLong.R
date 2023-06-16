@@ -2,6 +2,8 @@ setupInitial <- setupTest()
 
 if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
   # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
+  # packages that don't compile on Windows:
+  #   checkmate ==2.0.0
   if (getRversion() <= "4.2.3") {
     ## Long pkgSnapshot -- issue 41
     pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
@@ -19,6 +21,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
       options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
     pkgs <- pkgs[!Package %in% c("RandomFields", "RandomFieldsUtils")] # the version 1.0-7 is corrupt on RSPM
     pkgs[Package %in% "sf", Version := "1.0-9"] # the version 1.0-7 is corrupt on RSPM
+    pkgs[Package %in% "checkmate", Version := "2.1.0"] # the version 1.0-7 is corrupt on RSPM
     pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
                                           GithubUsername = "PredictiveEcology", GithubRef = "development",
                                           GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
