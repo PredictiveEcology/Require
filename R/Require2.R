@@ -302,7 +302,6 @@ Require <- function(packages, packageVersionFile,
   if (NROW(packages)) {
     packages <- anyHaveHEAD(packages)
 
-    browser()
     deps <- pkgDep(packages,
       purge = purge, libPath = libPaths, recursive = TRUE,
       which = which, type = type, verbose = verbose, repos = repos,

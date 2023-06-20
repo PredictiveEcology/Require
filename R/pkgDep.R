@@ -129,7 +129,6 @@ pkgDep <- function(packages,
       }
     }
     # this will be short because saveNamesDT$saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
-    browser()
     neededFull1 <-
       lapply(saveNames, get0, envir = .pkgEnv$pkgDep$deps)
     saveNamesOrig <- names(neededFull1)
@@ -191,7 +190,6 @@ pkgDep <- function(packages,
 
       ap <-
         getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
-      browser()
       pkgDepDTList <-
         try(pkgDepInnerMemoise(
           packages = packageFullNamesToGet, libPath = libPath,
@@ -490,7 +488,6 @@ pkgDepInner <- function(packages,
     pkgNoVersion = pkgsNoVersionToCheck,
     function( # desc_path,
              pkg, pkgNoVersion) {
-      browser()
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
         pkgDepDT <-
