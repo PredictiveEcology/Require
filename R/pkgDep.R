@@ -129,6 +129,7 @@ pkgDep <- function(packages,
       }
     }
     # this will be short because saveNamesDT$saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
+    browser()
     neededFull1 <-
       lapply(saveNames, get0, envir = .pkgEnv$pkgDep$deps)
     saveNamesOrig <- names(neededFull1)
@@ -190,6 +191,7 @@ pkgDep <- function(packages,
 
       ap <-
         getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
+      browser()
       pkgDepDTList <-
         try(pkgDepInnerMemoise(
           packages = packageFullNamesToGet, libPath = libPath,
@@ -488,6 +490,7 @@ pkgDepInner <- function(packages,
     pkgNoVersion = pkgsNoVersionToCheck,
     function( # desc_path,
              pkg, pkgNoVersion) {
+      browser()
       pkgDT <- parseGitHub(pkg, verbose = verbose)
       if ("GitHub" %in% pkgDT$repoLocation) {
         pkgDepDT <-
@@ -1883,22 +1886,24 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
 
       okVers <- compareVersion2(versions, inequality = inequ, verNum)
       #if (all(!is.na(okVers))) {
-      if (any(okVers %in% TRUE)) {
-        out <- try(packagesSaveNames[!isGH][hasIneq][okVers %in% TRUE] <-
+      theTRUEs <- okVers %in% TRUE
+      if (any(theTRUEs)) {
+        out <- try(packagesSaveNames[!isGH][hasIneq][theTRUEs] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][okVers %in% TRUE], " (==",
-            versions[okVers %in% TRUE],
+            packagesSaveNames[!isGH][hasIneq][theTRUEs], " (==",
+            versions[theTRUEs],
             ")"
           ))
         if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
       }
-      if (any(okVers %in% FALSE))
-        packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE] <-
+      if (any(!theTRUEs)) # FALSE and NA -- NA means that has inequ, but not on CRAN
+        packagesSaveNames[!isGH][hasIneq][!theTRUEs] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][okVers %in% FALSE], " (", inequ[okVers %in% FALSE],
-            verNum[okVers %in% FALSE],
+            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ,
+            verNum[!theTRUEs],
             ")"
           )
+
     }
     #}
   }
