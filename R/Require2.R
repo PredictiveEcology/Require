@@ -2181,14 +2181,26 @@ browserDeveloper <- function(mess = "") {
 }
 
 updateReposForSrcPkgs <- function(pkgInstall) {
-  if (!isWindows() && !isMacOSX() && any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {
-    mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & pkgInstall$Package %in% sourcePkgs()
+  if (!isWindows() && !isMacOSX() &&
+      any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {
+    dontInstallBecauseForceSrc <- pkgInstall$Package %in% sourcePkgs()
+    mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
     pkgInstall[
       which(mayNeedSwitchToSrc),
       isBinaryInstall := isWindows() | isMacOSX()
     ]
     needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
     if (any(needSwitchToSrc %in% TRUE)) {
+      if (any(isBinaryCRANRepo(getOption("repos")[1]))) {
+        nams <- pkgInstall[needSwitchToSrc]$Package
+        warning(
+          paste(nams, collapse = ", "), isAre(nams), " identified in `sourcePkgs()`, ",
+          "indicating installation from source; if these source installs fail, try changing ",
+          "to\noptions(Require.otherPkgs = c('",
+          paste(setdiff(getOption("Require.otherPkgs"), nams), collapse = "', '"), "'))",
+          "\nremoving ", paste(nams, collapse = ", ")
+        )
+      }
       if (all(isBinaryCRANRepo(getOption("repos")))) {
         warning(
           paste(pkgInstall[needSwitchToSrc]$Package, collapse = ", "), " is identified in `sourcePkgs()`, ",

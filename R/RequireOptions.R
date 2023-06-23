@@ -64,7 +64,7 @@
 RequireOptions <- function() {
   list(
     Require.install = TRUE,
-    Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
+    Require.otherPkgs = c("cpp11", "igraph", "Rcpp", "RcppParallel"),
     Require.packageVersionFile = "packageVersions.txt",
     Require.purge = FALSE,
     Require.RPackageCache = "default",
