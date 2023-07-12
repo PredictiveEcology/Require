@@ -137,7 +137,21 @@ out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
 testArgs <- all("Require" == unlist(as.list(out2)))
 testit::assert(isTRUE(testArgs))
 
-
+if (isDev) {
+  # this was a bug created a warning when there was a package not on CRAN, but there
+  #   were multiple repos; ffbase is no longer on CRAN
+  withCallingHandlers(
+    Install("ffbase",
+            repos = c(RSPM = "https://packagemanager.posit.co/cran/latest", CRAN = "https://cloud.r-project.org"
+    ))
+    , warning = function(w) {
+      testit::assert(
+        !grepl("number of items to replace is not a multiple of replacement length",
+               w$message))
+      invokeRestart("muffleWarning")
+    }
+    )
+}
 
 ooo <- options(Require.RPackageCache = NULL)
 testit::assert(identical(getOptionRPackageCache(), NULL))

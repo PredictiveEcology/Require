@@ -1876,8 +1876,13 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
           pkgArchive[, inequality := extractInequality(pkgs = pkgArchive$packageFullName)]
           pkgArchive <- getArchiveDetails(pkgArchive, repos = repos, ava = ava, verbose = verbose)
           pkgArchive <- na.omit(pkgArchive, by = "availableVersionOK")
-          if (length(pkgArchive$VersionOnRepos))
-            versions[naVersions] <- pkgArchive$VersionOnRepos
+          if (length(pkgArchive$VersionOnRepos)) {
+            vor <- pkgArchive$VersionOnRepos
+            # If there are multiple repos, with same version, vor will be length > 1, but with duplicated version
+            if (length(vor) != length(naVersions))
+              vor <- unique(vor)
+            versions[naVersions] <- vor
+          }
         }
       }
 
