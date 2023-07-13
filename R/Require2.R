@@ -1918,11 +1918,11 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
 
   pkgInstallTmp <- pkgInstall
   if (any(!pkgInstallTmp$availableVersionOK)) {
-    pkgInstallAvails <- split(pkgInstallTmp, pkgInstallTmp$availableVersionOK)
-    if (!is.null(pkgInstallAvails["FALSE"]$Additional_repositories)) {
+    if (!is.null(pkgInstallTmp$Additional_repositories)) {
+      pkgInstallAvails <- split(pkgInstallTmp, pkgInstallTmp$availableVersionOK)
       browser()
-      if (any(!is.na(pkgInstallAvails["FALSE"]$Additional_repositories))) {
-        pkgAddRep <- split(pkgInstallAvails["FALSE"], pkgInstallAvails["FALSE"]$Additional_repositories)
+      if (any(!is.na(pkgInstallAvails[["FALSE"]]$Additional_repositories))) {
+        pkgAddRep <- split(pkgInstallAvails[["FALSE"]], pkgInstallAvails[["FALSE"]]$Additional_repositories)
         pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
           pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
         })
@@ -1932,11 +1932,12 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
         pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]#, allow.cartesian = TRUE]
         set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
         pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
-        pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
-        setorderv(pkgInstallTmp, "tmpOrder")
+        pkgInstallAvails[["FALSE"]] <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
+        setorderv(pkgInstallAvails[["FALSE"]], "tmpOrder")
       }
+      pkgInstall <- rbindlist(pkgInstallAvails, fill = TRUE, use.names = TRUE)
     }
-    pkgInstall <- rbindlist(list(pkgInstallTmp, pkgInstallAvails[["FALSE"]]), fill = TRUE, use.names = TRUE)
+
   }
 
   set(pkgInstall, NULL, "keep", NULL)
