@@ -326,8 +326,10 @@ Require <- function(packages, packageVersionFile,
       if (isTRUE(upgrade)) {
         pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
         if (any(pkgDT$VersionOnRepos != pkgDT$Version, na.rm = TRUE)) {
-          pkgDT[VersionOnRepos != Version, comp := compareVersion2(VersionOnRepos, Version, ">=")]
-          pkgDT[VersionOnRepos != Version & comp %in% TRUE, `:=`(Version = NA, installed = FALSE)]
+          sameVersion <- compareVersion2(pkgDT$VersionOnRepos, pkgDT$Version, "==")
+          pkgDT[!sameVersion, comp := compareVersion2(VersionOnRepos, Version, ">=")]
+          pkgDT[!sameVersion & comp %in% TRUE,
+                `:=`(Version = NA, installed = FALSE, versionSpec = VersionOnRepos)]
           set(pkgDT, NULL, "comp", NULL)
         }
       }
@@ -875,8 +877,6 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
 doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, type = getOption("pkgType")) {
   pkgInstall[, installSafeGroups := 1L]
-
-
   # on.exit()
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
