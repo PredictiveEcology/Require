@@ -965,10 +965,21 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
   }
   setnames(ap, old = "Version", new = "VersionOnRepos")
   pkgInstall <- ap[pkgInstall, on = "Package"]
-  # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
-  pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := NA]
   pkgInstallList <- split(pkgInstall, by = "repoLocation")
   if (!is.null(pkgInstallList[["GitHub"]])) {
+    # If there are 2 repos for a package, must clear out one of them for GitHub packages
+    #   -- the repos are essentially moot for GitHub packages, but will mess downstream with version numbers
+    dupReposForGHPkgs <- pkgInstallList[["GitHub"]][, .N, by = "Package"][N > 1]
+    if (NROW(dupReposForGHPkgs)) {
+      pkgInstallList[["GitHub"]][Package %in% dupReposForGHPkgs$Package,
+                 VersionOK := VersionOnRepos %in% Version,
+                 by = "Package"]
+      setorderv(pkgInstallList[["GitHub"]], "VersionOK", order = -1L, na.last = TRUE)
+      pkgInstallList[["GitHub"]] <- pkgInstallList[["GitHub"]][, .SD[1], by = "Package"]
+      set(pkgInstallList[["GitHub"]], NULL, "VersionOK", NULL)
+    }
+    # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
+    pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := NA]
     pkgInstallList[["GitHub"]] <- getGitHubVersionOnRepos(pkgInstallList[["GitHub"]])
   }
   pkgInstall <- rbindlistRecursive(pkgInstallList)
