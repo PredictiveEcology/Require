@@ -8,10 +8,9 @@ utils::globalVariables(c(
   "haveLocal", "ineq", "installSafeGroups", "installed",
   "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
   "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall", "repo",
-  "verbose", "versionSpec", "versionToKeep",
+  "verbose", "VersionOK", "versionSpec", "versionToKeep",
   "violation", "violation2"
 ))
-
 
 #' Repeatability-safe install and load packages, optionally with specific
 #' versions
