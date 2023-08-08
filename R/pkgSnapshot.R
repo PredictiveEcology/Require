@@ -88,7 +88,7 @@ pkgSnapshot <-
            exact = TRUE,
            includeBase = FALSE,
            verbose = getOption("Require.verbose")) {
-    libPaths <- checkLibPaths(libPaths = libPaths)
+    # libPaths <- checkLibPaths(libPaths = libPaths)
     libPaths <- doLibPaths(libPaths, standAlone)
 
     ip <- doInstalledPackages(libPaths, purge, includeBase)
