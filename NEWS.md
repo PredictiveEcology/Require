@@ -1,12 +1,18 @@
 # Require (development version)
 
-Known issues: <https://github.com/PredictiveEcology/Require/issues>
+## enhancements
+
+* none
+
+## bugfixes
+
+* allow user-specified path in `pkgSnapshot()` (#93)
 
 version 0.3.2
 =============
 
 ## enhancements
-* Issue 87: If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed.  
+* If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87).
 * `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string.
 * Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it doesn't find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually
 
@@ -18,7 +24,7 @@ version 0.3.1
 
 ## enhancements
 * minor modifications for when internet is not available
-* Issue 81: deal with more edge cases for package snapshots that are not internally consistent, i.e., violate package versions, or skip missing branches on GitHub, if not needed. 
+* deal with more edge cases for package snapshots that are not internally consistent, i.e., violate package versions, or skip missing branches on GitHub, if not needed (#81).
 
 ## bugfixes
 * updates to tests that have begun to fail
@@ -27,7 +33,7 @@ version 0.3.0
 =============
 
 ## enhancements
-* Moved from MRAN archives for binaries to posit.packagemanager.co
+* Moved from MRAN archives for binaries to <https://posit.packagemanager.co>
 * because of the move from MRAN to posit package manager, attempts are made to use archived binary packages for Linux also.
 * improved messaging in several places
 * improved error catching in several places
