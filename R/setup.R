@@ -159,6 +159,7 @@ getOptionRPackageCache <- function() {
   # }
   curVal
 }
+
 #' Setup a project library, cache, options
 #'
 #' `setup` and `setupOff` are currently deprecated.

@@ -21,4 +21,6 @@ PackageInstallArgs: --no-multiarch --with-keep.source
 PackageCheckArgs: --as-cran --run-dontrun --no-clean --run-donttest
 PackageRoxygenize: rd,collate,namespace,vignette
 
+QuitChildProcessesOnExit: Yes
+
 SpellingDictionary: en_CA
