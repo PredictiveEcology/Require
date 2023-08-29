@@ -1652,7 +1652,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
   pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
   pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
-    out <- rep(NA, length = .N)
+    out <- rep(NA, length.out = .N)
     wh <- which(isEquals)
     whNot <- which(!isEquals)
     if (length(wh)) {
