@@ -426,6 +426,11 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     keep.null = TRUE
   )
 
+  rcf <- getOption("Require.cloneFrom")
+  if (!is.null(rcf)) {
+    ipa <- clonePackages(rcf, ipa)
+  }
+
   toInstallOut <- withCallingHandlers(
     installPackagesWithQuiet(ipa),
     warning = function(w) {
@@ -2458,4 +2463,36 @@ substitutePackages <- function(packagesSubstituted, envir) {
     packages <- packagesSubstituted
 
   packages
+}
+
+clonePackages <- function(rcf, ipa) {
+  ip <- installed.packages(lib.loc = rcf)
+  alreadyInstalled <- ip[, "Version"][intersect(rownames(ip), ipa$pkgs)]
+  fns <- ipa$available[, "File"]
+  names(fns) <- rownames(ipa$available)
+  NApkgs <- is.na(fns)
+  if (any(NApkgs)) {
+    NApkgNames <- fns[NApkgs]
+    fns <- setdiffNamed(fns, NApkgNames)
+  }
+  wantToInstall <- extractVersionNumber(filenames = fns)
+  needNormalInstall <- setdiffNamed(wantToInstall, alreadyInstalled)
+  if (any(NApkgs))
+    needNormalInstall <- c(needNormalInstall, NApkgs[NApkgs])
+  browser()
+  canClone <- setdiff(ipa$available[, "Package"], names(needNormalInstall))
+  if (length(canClone)) {
+    message(green("Cloning: ", paste(canClone, collapse = ", ")))
+    ret <- lapply(canClone, function(packToClone) {
+      from <- dir(dir(rcf[1], pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
+      to <- file.path(.libPaths()[1], packToClone, from)
+      dirs <- unique(dirname(to))
+      checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
+      outs <- file.copy(file.path(rcf[1], packToClone, from), to)
+    })
+    ipa$pkgs <- names(needNormalInstall)
+    message(green("... Done!"))
+    ipa$available <- ipa$available[names(needNormalInstall), , drop = FALSE]
+  }
+  ipa
 }
