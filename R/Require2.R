@@ -431,13 +431,15 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     ipa <- clonePackages(rcf, ipa)
   }
 
-  toInstallOut <- withCallingHandlers(
-    installPackagesWithQuiet(ipa),
-    warning = function(w) {
-      messagesAboutWarnings(w, toInstall) # changes to toInstall are by reference; so they are in the return below
-      invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
-    }
-  )
+  if (NROW(ipa$available)) {
+    toInstallOut <- withCallingHandlers(
+      installPackagesWithQuiet(ipa),
+      warning = function(w) {
+        messagesAboutWarnings(w, toInstall) # changes to toInstall are by reference; so they are in the return below
+        invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
+      }
+    )
+  }
   toInstall
 }
 
@@ -2476,16 +2478,20 @@ clonePackages <- function(rcf, ipa) {
     fns <- setdiffNamed(fns, NApkgNames)
   }
   wantToInstall <- extractVersionNumber(filenames = fns)
+  couldClone <- wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
   needNormalInstall <- setdiffNamed(wantToInstall, alreadyInstalled)
+  canClone <- setdiff(names(couldClone), names(needNormalInstall))
+
   if (any(NApkgs))
     needNormalInstall <- c(needNormalInstall, NApkgs[NApkgs])
   canClone <- setdiff(ipa$available[, "Package"], names(needNormalInstall))
   if (length(canClone)) {
-    message(green("Cloning: ", paste(canClone, collapse = ", ")))
+    message(green("  -- Cloning instead of Installing: ", paste(canClone, collapse = ", ")))
     ret <- lapply(canClone, function(packToClone) {
       from <- dir(dir(rcf[1], pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
       to <- file.path(.libPaths()[1], packToClone, from)
       dirs <- unique(dirname(to))
+      browser()
       checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
       outs <- file.copy(file.path(rcf[1], packToClone, from), to)
     })
