@@ -2484,20 +2484,20 @@ clonePackages <- function(rcf, ipa) {
 
   if (any(NApkgs))
     needNormalInstall <- c(needNormalInstall, NApkgs[NApkgs])
-  canClone <- setdiff(ipa$available[, "Package"], names(needNormalInstall))
+  needNormalInstall <- setdiff(ipa$available[, "Package"], canClone)
+  canClone <- intersect(ipa$available[, "Package"], canClone)
   if (length(canClone)) {
     message(green("  -- Cloning instead of Installing: ", paste(canClone, collapse = ", ")))
     ret <- lapply(canClone, function(packToClone) {
       from <- dir(dir(rcf[1], pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
       to <- file.path(.libPaths()[1], packToClone, from)
       dirs <- unique(dirname(to))
-      browser()
       checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
       outs <- file.copy(file.path(rcf[1], packToClone, from), to)
     })
-    ipa$pkgs <- names(needNormalInstall)
+    ipa$pkgs <- needNormalInstall
     message(green("... Done!"))
-    ipa$available <- ipa$available[names(needNormalInstall), , drop = FALSE]
+    ipa$available <- ipa$available[needNormalInstall, , drop = FALSE]
   }
   ipa
 }
