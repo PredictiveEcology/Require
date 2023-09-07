@@ -2479,7 +2479,6 @@ clonePackages <- function(rcf, ipa) {
   needNormalInstall <- setdiffNamed(wantToInstall, alreadyInstalled)
   if (any(NApkgs))
     needNormalInstall <- c(needNormalInstall, NApkgs[NApkgs])
-  browser()
   canClone <- setdiff(ipa$available[, "Package"], names(needNormalInstall))
   if (length(canClone)) {
     message(green("Cloning: ", paste(canClone, collapse = ", ")))
