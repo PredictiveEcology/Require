@@ -1907,8 +1907,11 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
 
   }
   pkgInstall <- pkgInstallTmp
-  # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical
-  pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos", "Repository"))
+  # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical URL at top level
+  #  https://cran.rstudio.com/bin/windows/contrib/4.3 should be same Repo as https://cran.rstudio.com/src/contrib
+  set(pkgInstall, NULL, "RepositoryTop", strsplit(gsub("http://|https://", "", pkgInstall$Repository), "/")[[c(1, 1)]])
+  pkgInstall <- unique(pkgInstall, by = c("Package", "VersionOnRepos", "RepositoryTop"))
+  set(pkgInstall, NULL, "RepositoryTop", NULL)
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
   pkgInstall <- availableVersionOK(pkgInstall)
   pkgInstall[, binOrSrc := c("src", "bin")[grepl("\\<bin\\>", Repository) + 1]]
