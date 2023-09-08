@@ -2501,11 +2501,11 @@ clonePackages <- function(rcf, ipa) {
     fns <- setdiffNamed(fns, NApkgNames)
   }
   wantToInstall <- extractVersionNumber(filenames = fns)
-  couldClone <- if (isWindows()) {
-    wantToInstall
-  } else {
+  couldClone <- # if (isWindows()) {
+  #   wantToInstall
+  # } else {
     wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
-  }
+  # }
   needNormalInstall <- setdiffNamed(wantToInstall, alreadyInstalled)
   canClone <- setdiff(names(couldClone), names(needNormalInstall))
 
@@ -2540,6 +2540,7 @@ clonePackages <- function(rcf, ipa) {
 }
 
 linkOrCopyPackageFiles <- function(Packages, fromLib, toLib) {
+  Packages <- setdiff(Packages, sourcePkgs())
   ret <- lapply(Packages, function(packToClone) {
     from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
     fromFull <- file.path(fromLib, packToClone, from)
