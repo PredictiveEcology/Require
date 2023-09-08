@@ -1820,16 +1820,25 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
     }
 
     if (isTRUE(any(installedOK))) {
-      withCallingHandlers(
-        shas[installedOK] <-
-          DESCRIPTIONFileOtherV(
-            file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
-            other = "GithubSHA1"),
-        warning = function(w) {
-          warning(w)
-          browserDeveloper("Error 44322; please contact developer")
-          invokeRestart("muffleWarning")
-        })
+      withCallingHandlers({
+        nas <- is.na(pkgDT$LibPath[installedOK])
+        if (any(nas)) {
+          possSha <- pkgDT$localSha[installedOK]
+          shas[installedOK] <- possSha
+          installedOK[installedOK] <- nchar(possSha) != 40
+
+        }
+        if (isTRUE(any(installedOK)))
+          shas[installedOK] <-
+            DESCRIPTIONFileOtherV(
+              file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
+              other = "GithubSHA1")
+      },
+      warning = function(w) {
+        warning(w)
+        browserDeveloper("Error 44322; please contact developer")
+        invokeRestart("muffleWarning")
+      })
     }
 
     names(shas) <- pkgDT$packageFullName # need to keep order correct

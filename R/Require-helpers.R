@@ -781,23 +781,34 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
       {
         file <- file.path(libPaths[1], Package, "DESCRIPTION")
         txt <- readLines(file)
-
-        dups <- duplicated(vapply(strsplit(txt, split = "\\:"),
-                          function(x) x[[1]], FUN.VALUE = character(1)))
-        if (any(dups)) {
-          if (all(grepl("Github|Remote", txt[dups])))
-            browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
-                             "the DESCRIPTION file at ", file,
-                             " has duplicated RemoteHost to GithubSHA1. Try to remove ",
-                             "the first set"))
+        alreadyHasSHA <- grepl("Github|Remote", txt)
+        leaveAlone <- FALSE
+        if (any(alreadyHasSHA)) {
+          if (any(grepl(SHAonGH, txt))) {
+            leaveAlone <- TRUE
+          }
         }
 
+        if (isFALSE(leaveAlone)) {
+          dups <- duplicated(vapply(strsplit(txt, split = "\\:"),
+                                    function(x) x[[1]], FUN.VALUE = character(1)))
+          if (any(dups)) {
+            if (all(grepl("Github|Remote", txt[dups]))) {
+              browser()
+              txtOut <- unique(readLines(file))
+              browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
+                                      "the DESCRIPTION file at ", file,
+                                      " has duplicated RemoteHost to GithubSHA1. Try to remove ",
+                                      "the first set"))
+            }
+          }
+          if (!exists("txtOut", inherits = FALSE)) {
 
-        beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
-        insertHere <- min(beforeTheseLines)
-        sha <- SHAonGH
-        newTxt <-
-          paste0("RemoteType: github
+            beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
+            insertHere <- min(beforeTheseLines)
+            sha <- SHAonGH
+            newTxt <-
+              paste0("RemoteType: github
 RemoteHost: api.github.com
 RemoteRepo: ", Package, "
 RemoteUsername: ", Account, "
@@ -807,10 +818,13 @@ GithubRepo: ", Package, "
 GithubUsername: ", Account, "
 GithubRef: ", Branch, "
 GithubSHA1: ", sha, "")
-        newTxt <- strsplit(newTxt, split = "\n")[[1]]
-        newTxt <- gsub("^ +", "", newTxt)
-        txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
-        cat(txtOut, file = file, sep = "\n")
+            newTxt <- strsplit(newTxt, split = "\n")[[1]]
+            newTxt <- gsub("^ +", "", newTxt)
+            txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
+          }
+          cat(txtOut, file = file, sep = "\n")
+        }
+
       },
       by = seq(NROW(pkgGitHub))
     ]
