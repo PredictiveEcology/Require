@@ -427,7 +427,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   )
 
   rcf <- getOption("Require.cloneFrom")
-  if (!is.null(rcf)) {
+  if (isTRUE(is.character(rcf))) {
     ipa <- clonePackages(rcf, ipa)
   }
 
@@ -440,6 +440,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       }
     )
   }
+  if (isTRUE(is.character(rcf))) {
+    ipa <- linkOrCopyPackageFiles(Packages = ipa$pkgs, fromLib = .libPaths()[1], toLib = rcf[1])
+  }
+
   toInstall
 }
 
@@ -1572,7 +1576,14 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
   fn <- fn[systemSpecificFileTypes]
 
   if (repoLocation %in% "GitHub") {
-    fn <- if (is.na(SHAonGH)) "" else grep(SHAonGH, fn, value = TRUE)
+    if (grepl("Error in file", SHAonGH) && isTRUE(getOption("Require.offlineMode"))) {
+      message("Using Require.offlineMode; could not identify SHA on Github for ",
+              green(Package), "; using the latest version that exists locally, ",
+                    "which may not be a GitHub version")
+      fn <- fn[order(package_version(extractVersionNumber(filenames = fn)), decreasing = TRUE)]
+    } else {
+      fn <- if (is.na(SHAonGH)) "" else grep(SHAonGH, fn, value = TRUE)
+    }
     fn <- keepOnlyBinary(fn)
   } else {
     if (length(fn)) {
@@ -1621,6 +1632,9 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
       fn <- ""
     }
   }
+# } else {
+#   order(package_version(extractVersionNumber(filenames = fn)), decreasing = TRUE)
+# }
   if (length(fn) > 1) {
     isGH <- isGitHub(filenames = fn)
     if (any(!isGH)) {
@@ -1640,6 +1654,12 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
     localFiles <- doCranCacheCheck(localFiles, verbose)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
+    if (isTRUE(getOption("Require.offlineMode"))) {
+      noneFound <- nchar(pkgInstall$localFile) == 0
+      if (isTRUE(any(noneFound))) {
+        pkgInstall[noneFound]
+      }
+    }
     pkgInstall[, haveLocal :=
       unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
     pkgInstall[haveLocal %in% "Local", `:=`(
@@ -2481,7 +2501,11 @@ clonePackages <- function(rcf, ipa) {
     fns <- setdiffNamed(fns, NApkgNames)
   }
   wantToInstall <- extractVersionNumber(filenames = fns)
-  couldClone <- wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
+  couldClone <- if (isWindows()) {
+    wantToInstall
+  } else {
+    wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
+  }
   needNormalInstall <- setdiffNamed(wantToInstall, alreadyInstalled)
   canClone <- setdiff(names(couldClone), names(needNormalInstall))
 
@@ -2490,17 +2514,45 @@ clonePackages <- function(rcf, ipa) {
   needNormalInstall <- setdiff(ipa$available[, "Package"], canClone)
   canClone <- intersect(ipa$available[, "Package"], canClone)
   if (length(canClone)) {
-    message(green("  -- Cloning instead of Installing: ", paste(canClone, collapse = ", ")))
-    ret <- lapply(canClone, function(packToClone) {
-      from <- dir(dir(rcf[1], pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
-      to <- file.path(.libPaths()[1], packToClone, from)
-      dirs <- unique(dirname(to))
-      checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
-      outs <- file.copy(file.path(rcf[1], packToClone, from), to)
-    })
+    message(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),") instead of Installing: ", paste(canClone, collapse = ", ")))
+
+    linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1])
+    # ret <- lapply(canClone, function(packToClone) {
+    #   from <- dir(dir(rcf[1], pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
+    #   fromFull <- file.path(rcf[1], packToClone, from)
+    #   to <- file.path(.libPaths()[1], packToClone, from)
+    #   dups <- fromFull %in% to
+    #   if (any(dups)) {
+    #     fromFull <- fromFull[!dups]
+    #     to <- to[!dups]
+    #   }
+    #   if (length(fromFull) > 0) {
+    #     dirs <- unique(dirname(to))
+    #     checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
+    #     outs <- linkOrCopy(fromFull, to)
+    #   }
+    # })
     ipa$pkgs <- needNormalInstall
     message(green("... Done!"))
     ipa$available <- ipa$available[needNormalInstall, , drop = FALSE]
   }
   ipa
+}
+
+linkOrCopyPackageFiles <- function(Packages, fromLib, toLib) {
+  ret <- lapply(Packages, function(packToClone) {
+    from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
+    fromFull <- file.path(fromLib, packToClone, from)
+    to <- file.path(toLib, packToClone, from)
+    dups <- fromFull %in% to
+    if (any(dups)) {
+      fromFull <- fromFull[!dups]
+      to <- to[!dups]
+    }
+    if (length(fromFull) > 0) {
+      dirs <- unique(dirname(to))
+      checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
+      outs <- linkOrCopy(fromFull, to)
+    }
+  })
 }

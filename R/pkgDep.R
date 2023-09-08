@@ -498,7 +498,7 @@ pkgDepInner <- function(packages,
             purge = FALSE,
             includeBase = includeBase
           ))
-        if (is(pkgDepDT, "try-error")) {
+        if (is(pkgDepDT, "try-error") && !isTRUE(getOption("Require.offlineMode"))) {
           browserDeveloper("Error 357; please contact developer")
         }
       } else {
@@ -1521,11 +1521,13 @@ getGitHubDeps <-
     hasVersionNum <- grep(grepExtractPkgs, pkgDT$packageFullName)
     set(pkgDT, NULL, "availableVersionOK", NA)
     if (length(hasVersionNum)) {
-      VersionOnRepos <-
-        DESCRIPTIONFileVersionV(pkgDT$DESCFile, purge = purge)
-      pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
-      pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
-      pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, pkgDT$versionSpec, pkgDT$inequality)]
+      if (!isTRUE(getOption("Require.offlineMode"))) {
+        VersionOnRepos <-
+          DESCRIPTIONFileVersionV(pkgDT$DESCFile, purge = purge)
+        pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
+        pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
+        pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, pkgDT$versionSpec, pkgDT$inequality)]
+      }
     }
 
     pkgDepDT <- data.table(packageFullName = character())
