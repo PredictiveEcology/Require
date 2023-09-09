@@ -388,7 +388,11 @@ pkgDep <- function(packages,
 
     if (isTRUE(sort)) {
       neededFull1 <- lapply(neededFull1, function(x) {
-        setorderv(x, "packageFullName")
+        # if Require.offlineMode = TRUE then this can be a vector of packageFullName
+        if (is.data.table(x))
+          setorderv(x, "packageFullName")
+        else
+          sort(x)
       })
     }
     # Put the package *without* its inequality (because they aren't there) in the first slot
