@@ -1975,83 +1975,8 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   )
 
   pkgArchive[, (cols) := {
-    repositoryHasArchives <- if (!is.na(Repository) && !is.null(ava[[Package]]$repo)) {
-      unlist(lapply(ava[[Package]]$repo, grepl, x = Repository))
-    } else {
-      TRUE
-    }
-
-    ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
-    ret <- as.data.table(ret)
-    set(ret, NULL, "availableVersionOK", FALSE)
-
-    if (any(repositoryHasArchives)) {
-      Version2 <- gsub(".*_(.*)\\.tar\\.gz", "\\1", ava[[Package]]$PackageUrl)
-      versionSpec2 <- unique(versionSpec)
-      vs2IsCharNA <- versionSpec2 %in% "NA"
-      if (any(vs2IsCharNA))
-        versionSpec2[vs2IsCharNA] <- NA
-      if (length(Version2) > 0) {
-        if (is.na(versionSpec2)) { # Version2 is length 0 when the package has nothing available
-          correctVersions <- NROW(ava[[Package]])
-        } else {
-          correctVersions <- compareVersion2(Version2, versionSpec2, inequality)
-
-          if (all(correctVersions %in% FALSE)) {
-            correctVersions <- NA
-          } else {
-            latestCorrect <- try(tail(which(correctVersions), 1))
-            if (is(latestCorrect, "try-error")) {
-              browserDeveloper("Error 111; please contact developer")
-            }
-            correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
-          }
-        }
-      } else {
-        correctVersions <- NA
-      }
-      if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
-        if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
-        earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
-        ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
-
-        # if (isWindows() || isMacOSX()) { # relevant for RSPM
-        messageVerbose(.GRP, " of ", numGroups, ": ", Package,
-                       verbose = verbose,
-                       verboseLevel = 2
-        )
-        if (is.na(correctVersions[2])) {
-          dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos,
-                                              numGroups = numGroups,
-                                              counter = .GRP,
-                                              srcPackageURLOnCRAN, repo
-          )
-          dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
-        } else {
-          dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
-        }
-
-        set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
-        #} else {
-        #  set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
-        #}
-        setnames(ret, "mtime", "dayAfterPutOnCRAN")
-        set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
-        set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
-
-        set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
-        if (!is.na(correctVersions)[1]) {
-          set(ret, NULL, "availableVersionOK", TRUE)
-        }
-      } else {
-        repoToAdd <- ava[[Package]][1][, c("repo")]
-        if (!is.null(repoToAdd))
-          ret[, repo := repoToAdd]
-      }
-    }
-    data.table::setcolorder(ret, cols)
-    ret
-
+    ret <- getArchiveDetailsInner(Repository, ava, Package, cols, versionSpec, inequality, secondsInADay, .GRP,
+                                       numGroups, verbose, repos, srcPackageURLOnCRAN)
   }, by = c("Package", "Repository")]
 
   pkgArchive
@@ -2556,4 +2481,90 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib) {
       outs <- linkOrCopy(fromFull, to)
     }
   })
+}
+
+
+
+getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, inequality,
+                                   secondsInADay, .GRP,
+                                   numGroups, verbose, repos, srcPackageURLOnCRAN) {
+  repositoryHasArchives <- if (!is.na(Repository) && !is.null(ava[[Package]]$repo)) {
+    unlist(lapply(ava[[Package]]$repo, grepl, x = Repository))
+  } else {
+    TRUE
+  }
+  if (all(!repositoryHasArchives) && length(repos) > length(unique(Repository))) {
+    repositoryHasArchives <- unlist(lapply(ava[[Package]]$repo, grepl, x = repos))
+  }
+
+  ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
+  ret <- as.data.table(ret)
+  set(ret, NULL, "availableVersionOK", FALSE)
+
+  if (any(repositoryHasArchives)) {
+    Version2 <- gsub(".*_(.*)\\.tar\\.gz", "\\1", ava[[Package]]$PackageUrl)
+    versionSpec2 <- unique(versionSpec)
+    vs2IsCharNA <- versionSpec2 %in% "NA"
+    if (any(vs2IsCharNA))
+      versionSpec2[vs2IsCharNA] <- NA
+    if (length(Version2) > 0) {
+      if (is.na(versionSpec2)) { # Version2 is length 0 when the package has nothing available
+        correctVersions <- NROW(ava[[Package]])
+      } else {
+        correctVersions <- compareVersion2(Version2, versionSpec2, inequality)
+
+        if (all(correctVersions %in% FALSE)) {
+          correctVersions <- NA
+        } else {
+          latestCorrect <- try(tail(which(correctVersions), 1))
+          if (is(latestCorrect, "try-error")) {
+            browserDeveloper("Error 111; please contact developer")
+          }
+          correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
+        }
+      }
+    } else {
+      correctVersions <- NA
+    }
+    if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
+      if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
+      earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
+      ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
+
+      # if (isWindows() || isMacOSX()) { # relevant for RSPM
+      messageVerbose(.GRP, " of ", numGroups, ": ", Package,
+                     verbose = verbose,
+                     verboseLevel = 2
+      )
+      if (is.na(correctVersions[2])) {
+        dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos,
+                                            numGroups = numGroups,
+                                            counter = .GRP,
+                                            srcPackageURLOnCRAN, repo
+        )
+        dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
+      } else {
+        dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
+      }
+
+      set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
+      #} else {
+      #  set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
+      #}
+      setnames(ret, "mtime", "dayAfterPutOnCRAN")
+      set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
+      set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
+
+      set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
+      if (!is.na(correctVersions)[1]) {
+        set(ret, NULL, "availableVersionOK", TRUE)
+      }
+    } else {
+      repoToAdd <- ava[[Package]][1][, c("repo")]
+      if (!is.null(repoToAdd))
+        ret[, repo := repoToAdd]
+    }
+  }
+  data.table::setcolorder(ret, cols)
+  ret
 }
