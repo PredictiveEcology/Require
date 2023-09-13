@@ -2441,7 +2441,15 @@ substitutePackages <- function(packagesSubstituted, envir) {
 
 clonePackages <- function(rcf, ipa) {
   ip <- installed.packages(lib.loc = rcf)
-  alreadyInstalled <- ip[, "Version"][intersect(rownames(ip), ipa$pkgs)]
+  RVersion <- package_version(paste(R.version$major,
+                                    gsub("^(.{1,2})\\..+$", "\\1", R.version$minor),
+                                    sep = "."))
+  BuiltVersion <-
+  package_version(paste(gsub("^(.{1,2}\\..{1,2})\\..+$", "\\1", ip[, "Built"]),
+                        sep = "."))
+  ipCanTry <- ip[ip[, "NeedsCompilation"] == "no" &
+                    BuiltVersion == RVersion,, drop = FALSE]
+  alreadyInstalled <- ipCanTry[, "Version"][intersect(rownames(ipCanTry), ipa$pkgs)]
   fns <- ipa$available[, "File"]
   names(fns) <- rownames(ipa$available)
   NApkgs <- is.na(fns)
