@@ -747,35 +747,40 @@ archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroup
 
       archivedOn <- ""
       if (wasRemoved) {
-        # some CRAN repos e.g., RStudioPackage Manager is not a full CRAN mirror; try all repos
-        if (all(isBinaryCRANRepo(repos))) {
-          repos <- c(repos, CRAN = srcPackageURLOnCRAN)
-        }
-        for (repo in repos) {
-          yy <- url(getArchiveURL(repo, prp)) # posit.co won't return something at repo, pk --> needs prp
-          on.exit(try(close(yy), silent = TRUE))
-          rl2 <- suppressWarnings(try(readLines(yy), silent = TRUE))
-          close(yy)
-          if (!is(rl2, "try-error")) {
-            if (length(repos) > 1 && !identical(repo, repos[1])) {
-              messageVerbose("Found archive at: ", repo, verbose = verbose, verboseLevel = 2)
-            }
-            break
-          }
-          messageVerbose("Could not get ", pk, " at ", repo, verbose = verbose, verboseLevel = 2)
-          if (length(repos) > 1) {
-            messageVerbose("; trying next CRAN repo", verbose = verbose, verboseLevel = 2)
-          }
-        }
-
         archivedOn <- grep("Archived on", rl, value = TRUE)
-
-
         if (length(archivedOn)) {
           archivedOn <- as.POSIXct(gsub("Archived on (.+) (.)+", "\\1", archivedOn))
           PackageUrl <- prp
         } else {
-          lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
+          # some CRAN repos e.g., RStudioPackage Manager is not a full CRAN mirror; try all repos
+          if (all(isBinaryCRANRepo(repos))) {
+            repos <- c(repos, CRAN = srcPackageURLOnCRAN)
+          }
+          for (repo in repos) {
+            pp <- if (grepl(urlForArchivedPkgs, repo)) prp else pk
+            yy <- url(getArchiveURL(repo, pp)) # posit.co won't return something at repo, pk --> needs prp
+
+
+            on.exit(try(close(yy), silent = TRUE))
+            rl2 <- suppressWarnings(try(readLines(yy), silent = TRUE))
+            close(yy)
+            suppressWarnings(lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1))
+            if (!is(rl2, "try-error")) {
+              if (length(lineWDateAndPkgFilename) == 0) {
+                next
+              }
+              if (length(repos) > 1 && !identical(repo, repos[1])) {
+                messageVerbose("Found archive at: ", repo, verbose = verbose, verboseLevel = 2)
+              }
+              break
+            }
+            messageVerbose("Could not get ", pk, " at ", repo, verbose = verbose, verboseLevel = 2)
+            if (length(repos) > 1) {
+              messageVerbose("; trying next CRAN repo", verbose = verbose, verboseLevel = 2)
+            }
+          }
+
+
           pkgFilename <- gsub(paste0(".+(", pk, "_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
           PackageUrl <- file.path(pk, pkgFilename)
           archivedOn <- gsub(".+([[:digit:]]{4,4}-[[:digit:]]{2,2}-[[:digit:]]{2,2}).+", "\\1", lineWDateAndPkgFilename)
