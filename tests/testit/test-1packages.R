@@ -215,7 +215,7 @@ if (isDev) { # i.e., GA, R CMD check etc.
   })
 
   # Try a package taken off CRAN
-  reallyOldPkg <- "ggplot"
+  reallyOldPkg <- "knn"
   out <- Require(reallyOldPkg, require = FALSE)
   ip <- data.table::as.data.table(installed.packages())
   testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
