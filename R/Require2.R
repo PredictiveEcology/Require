@@ -584,12 +584,13 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
       if (!is.null(toInstall$PackageUrl)) {
         hasKnownURL <- nchar(toInstall$PackageUrl) > 0
         if (any(hasKnownURL)) {
-          urls <- getArchiveURL(toInstall$repo, toInstall$PackageUrl)
           toInstall[hasKnownURL %in% TRUE, `:=`(
-            PackageUrl = urls,
-            Repository = dirname(urls),
+            PackageUrl = getArchiveURL(repo, PackageUrl),
             localFile = useRepository
           )]
+          toInstall[hasKnownURL %in% TRUE,
+                    Repository := dirname(PackageUrl)
+          ]
           toInstall[hasKnownURL & grepl(pattern = urlForArchivedPkgs, repo),
                     repoLocation := "RSPM"]
 
@@ -768,17 +769,15 @@ archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroup
         }
 
         archivedOn <- grep("Archived on", rl, value = TRUE)
-        if (FALSE) {
-          lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
-          pkgFilename <- gsub(paste0(".+(", pk, "_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
-          PackageUrl <- file.path(pk, pkgFilename)
-        } else {
-          PackageUrl <- prp
-        }
+
 
         if (length(archivedOn)) {
           archivedOn <- as.POSIXct(gsub("Archived on (.+) (.)+", "\\1", archivedOn))
+          PackageUrl <- prp
         } else {
+          lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
+          pkgFilename <- gsub(paste0(".+(", pk, "_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
+          PackageUrl <- file.path(pk, pkgFilename)
           archivedOn <- gsub(".+([[:digit:]]{4,4}-[[:digit:]]{2,2}-[[:digit:]]{2,2}).+", "\\1", lineWDateAndPkgFilename)
           archivedOn <- as.POSIXct(archivedOn) + 5 * 3600 * 24
         }
@@ -2555,6 +2554,10 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
     Repository <- unique(ava[[Package]]$repo)
     Repository <- Repository[match(repos, Repository)]
   }
+  ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
+  ret <- as.data.table(ret)
+  set(ret, NULL, "availableVersionOK", FALSE)
+
   for (ind in seq(Repository)) {
     repositoryHasArchives <- if (!is.na(Repository[ind]) && !is.null(ava[[Package[ind]]]$repo)) {
       unlist(lapply(ava[[Package[ind]]]$repo, grepl, x = Repository[ind]))
@@ -2564,10 +2567,6 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
     if (all(!repositoryHasArchives) && length(repos) > length(unique(Repository[ind]))) {
       repositoryHasArchives <- unlist(lapply(ava[[Package[ind]]]$repo, grepl, x = repos))
     }
-
-    ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
-    ret <- as.data.table(ret)
-    set(ret, NULL, "availableVersionOK", FALSE)
 
     if (any(repositoryHasArchives)) {
       Version2 <- extractVersionNumber(filenames = ava[[Package[ind]]]$PackageUrl)
