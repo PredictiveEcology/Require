@@ -325,8 +325,10 @@ Require <- function(packages, packageVersionFile,
       if (isTRUE(upgrade)) {
         pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
         if (any(pkgDT$VersionOnRepos != pkgDT$Version, na.rm = TRUE)) {
-          pkgDT[VersionOnRepos != Version, comp := compareVersion2(VersionOnRepos, Version, ">=")]
-          pkgDT[VersionOnRepos != Version & comp %in% TRUE, `:=`(Version = NA, installed = FALSE)]
+          sameVersion <- compareVersion2(pkgDT$VersionOnRepos, pkgDT$Version, "==")
+          pkgDT[!sameVersion, comp := compareVersion2(VersionOnRepos, Version, ">=")]
+          pkgDT[!sameVersion & comp %in% TRUE,
+                `:=`(Version = NA, installed = FALSE, versionSpec = VersionOnRepos)]
           set(pkgDT, NULL, "comp", NULL)
         }
       }
@@ -885,8 +887,6 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
 doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, type = getOption("pkgType")) {
   pkgInstall[, installSafeGroups := 1L]
-
-
   # on.exit()
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
@@ -1909,23 +1909,22 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
                              type = getOption("pkgType")) {
 
   pkgInstallTmp <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
-  if (!is.null(pkgInstall$Additional_repositories)) {
-    if (any(!is.na(pkgInstall$Additional_repositories))) {
-      pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
-      pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
-        pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
-      })
-      pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
-      pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder", "Additional_repositories")]
-      pkgInstallTmp2 <- unique(pkgInstallTmp2, by = c("packageFullName"))
-      pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]#, allow.cartesian = TRUE]
-      set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
-      pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
-      pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
-      setorderv(pkgInstallTmp, "tmpOrder")
-    }
-
-  }
+  # if (!is.null(pkgInstall$Additional_repositories)) {
+  #   if (any(!is.na(pkgInstall$Additional_repositories))) {
+  #     pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
+  #     pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
+  #       pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
+  #     })
+  #     pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
+  #     pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder", "Additional_repositories")]
+  #     pkgInstallTmp2 <- unique(pkgInstallTmp2, by = c("packageFullName"))
+  #     pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]#, allow.cartesian = TRUE]
+  #     set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
+  #     pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
+  #     pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
+  #     setorderv(pkgInstallTmp, "tmpOrder")
+  #   }
+  # }
   pkgInstall <- pkgInstallTmp
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical URL at top level
   #  https://cran.rstudio.com/bin/windows/contrib/4.3 should be same Repo as https://cran.rstudio.com/src/contrib
@@ -1945,6 +1944,31 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
     if (ok) .I[ok][1] else .I
   }, by = c("Package")]
   pkgInstall <- pkgInstall[unique(keep)]
+
+  pkgInstallTmp <- pkgInstall
+  if (any(!pkgInstallTmp$availableVersionOK)) {
+    if (!is.null(pkgInstallTmp$Additional_repositories)) {
+      pkgInstallAvails <- split(pkgInstallTmp, pkgInstallTmp$availableVersionOK)
+      browser()
+      if (any(!is.na(pkgInstallAvails[["FALSE"]]$Additional_repositories))) {
+        pkgAddRep <- split(pkgInstallAvails[["FALSE"]], pkgInstallAvails[["FALSE"]]$Additional_repositories)
+        pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {
+          pkgArTmp <- getVersionOnRepos(pkgAr, repo, purge, libPaths, type = type)
+        })
+        pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
+        pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder", "Additional_repositories")]
+        pkgInstallTmp2 <- unique(pkgInstallTmp2, by = c("packageFullName"))
+        pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]#, allow.cartesian = TRUE]
+        set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
+        pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
+        pkgInstallAvails[["FALSE"]] <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
+        setorderv(pkgInstallAvails[["FALSE"]], "tmpOrder")
+      }
+      pkgInstall <- rbindlist(pkgInstallAvails, fill = TRUE, use.names = TRUE)
+    }
+
+  }
+
   set(pkgInstall, NULL, "keep", NULL)
   pkgInstall
 }

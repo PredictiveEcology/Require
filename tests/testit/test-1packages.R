@@ -62,8 +62,8 @@ remove.packages("fpCompare", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") || # travis
-  isDevAndInteractive || # interactive
-  identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
+    isDevAndInteractive || # interactive
+    identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
   dir2 <- Require::checkPath(dir2, create = TRUE)
   pvWant <- "0.2.2"
@@ -208,7 +208,6 @@ if (isDev) { # i.e., GA, R CMD check etc.
   ####
   pkg <- c("r-forge/mumin/pkg", "Require")
   names(pkg) <- c("MuMIn", "")
-  aaaa <<- 1
   out <- Require(pkg, install = FALSE, require = FALSE)
   testit::assert({
     isFALSE(all(out))
