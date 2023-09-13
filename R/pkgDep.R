@@ -1913,13 +1913,15 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
           ))
         if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
       }
-      if (any(!theTRUEs)) # FALSE and NA -- NA means that has inequ, but not on CRAN
+      if (any(!theTRUEs)) {# FALSE and NA -- NA means that has inequ, but not on CRAN
         packagesSaveNames[!isGH][hasIneq][!theTRUEs] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ,
+            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ[!theTRUEs],
             verNum[!theTRUEs],
             ")"
           )
+
+      }
 
     }
     #}
