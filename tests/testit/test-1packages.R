@@ -263,15 +263,21 @@ if (isDev) { # i.e., GA, R CMD check etc.
   try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")), silent = TRUE)
   verToCompare <- "2.0.8"
   clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
-  out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
+
+  # The warning is about "package ‘Require’ is in use and will not be installed"
+  suppressWarnings(out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
                            repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  )
   testit::assert(packageVersion("SpaDES") >= verToCompare)
   try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")))
   clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = F)
   a <- list(pkg = "fpCompare")
+
+  suppressWarnings(
   out <- Require::Install(
     c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), a$pkg),
     repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  )
   testit::assert(packageVersion("SpaDES") < verToCompare)
 
 }

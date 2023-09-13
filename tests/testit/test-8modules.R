@@ -10,9 +10,10 @@ if (isDevAndInteractive) {
   modulePath <- file.path(pkgDir, "m")
 
   # Install 3 packages that are needed for subsequent module and package installations
-  Require("PredictiveEcology/SpaDES.project@transition",
+  suppressWarnings( # "Require" is in use
+    Require("PredictiveEcology/SpaDES.project@transition",
     upgrade = FALSE, require = FALSE
-  )
+  ))
 
   # Install modules
   getFromNamespace("getModule", "SpaDES.project")(modulePath = modulePath,
@@ -40,7 +41,10 @@ if (isDevAndInteractive) {
   }
   # THE INSTALL
   pkgs <- omitPkgsTemporarily(pkgs)
-  outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
+
+  suppressWarnings( # "Require" is in use
+    outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
+  )
 
   # THE POST INSTALL COMPARISON
   ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
@@ -125,13 +129,17 @@ if (isDevAndInteractive) {
 
   dirForInstall <- tempdir2(.rndstr(1))
 
-  st1 <- system.time(out1 <- capture.output(type = "message",
-                 Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
-                 ))
+  suppressWarnings( # "Require" is in use
+    st1 <- system.time(out1 <- capture.output(type = "message",
+                                              Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
+    ))
+  )
   # Do a second time; should be empty (and fast)
-  st2 <- system.time(out2 <- capture.output(type = "message",
-                         Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
-  ))
+  suppressWarnings( # "Require" is in use
+    st2 <- system.time(out2 <- capture.output(type = "message",
+                                              Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
+    ))
+  )
   # some sort of test about whether anything was installed; pick reproducible as a random pkg
   testit::assert(sum(grepl("reproducible", out1)) == 1)
   testit::assert(sum(grepl("reproducible", out2)) == 0)
