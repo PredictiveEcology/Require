@@ -321,6 +321,7 @@ Require <- function(packages, packageVersionFile,
       # pkgDT <- removeDups(pkgDT)
       # pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
+      setnames(pkgDT, old = "Version", new = "VersionOnRepos")
       pkgDT <- installedVers(pkgDT)
       if (isTRUE(upgrade)) {
         pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
@@ -975,6 +976,12 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
   }
   setnames(ap, old = "Version", new = "VersionOnRepos")
   pkgInstall <- ap[pkgInstall, on = "Package"]
+  if (any(pkgInstall$repoLocation %in% "GitHub")) {
+    if (!is.null(pkgInstall[["i.VersionOnRepos"]]))
+      pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := i.VersionOnRepos]
+  }
+
+
   pkgInstallList <- split(pkgInstall, by = "repoLocation")
   if (!is.null(pkgInstallList[["GitHub"]])) {
     # If there are 2 repos for a package, must clear out one of them for GitHub packages
@@ -989,7 +996,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
       set(pkgInstallList[["GitHub"]], NULL, "VersionOK", NULL)
     }
     # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
-    pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := NA]
+    pkgInstallList[["GitHub"]][repoLocation %in% "GitHub", VersionOnRepos := NA]
     pkgInstallList[["GitHub"]] <- getGitHubVersionOnRepos(pkgInstallList[["GitHub"]])
   }
   pkgInstall <- rbindlistRecursive(pkgInstallList)
@@ -1117,14 +1124,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
         #  toDL <- .SD[!SHAonGH %in% FALSE]
           downloadAndBuildToLocalFile(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos)
-            # gitRepo <- paste0(Account, "/", Repo, "@", Branch)
-            # names(gitRepo) <- Package
-            # out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
-            #                     overwrite = TRUE, destDir = ".", verbose = verbose)
-            # out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
-            # fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
-            # normPath(fn)
-        }, by = "Package"] # seq(NROW(pkgGHtoDL))]
+        }, by = "Package"]
 
         empty <- !nzchar(pkgGHtoDL[!SHAonGH %in% FALSE]$localFile)
         if (any(empty))
