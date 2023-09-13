@@ -2029,7 +2029,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   )
 
   pkgArchive[, (cols) := {
-    ret <- getArchiveDetailsInner(Repository, ava, Package, cols, versionSpec, inequality, secondsInADay, .GRP,
+    ret <- getArchiveDetailsInnerMemoise(Repository, ava, Package, cols, versionSpec, inequality, secondsInADay, .GRP,
                                        numGroups, verbose, repos, srcPackageURLOnCRAN)
   }, by = c("Package")]#, "Repository")] # multiple repositories may have same version and it is OK ... do loop inside
   pkgArchive <- unique(pkgArchive, by = c("Package", "repo", "availableVersionOK"))

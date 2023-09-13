@@ -2442,3 +2442,37 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
   }
   ap
 }
+
+
+
+getArchiveDetailsInnerMemoise <- function(...) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    dots <- list(...)
+    if (!exists("getArchiveDetailsInner", envir = .pkgEnv, inherits = FALSE)) {
+      .pkgEnv$getArchiveDetailsInner <- new.env()
+    }
+    ret <- NULL
+    ss <- match.call(definition = getArchiveDetailsInner)
+    Package <- eval(ss$Package, envir = parent.frame())
+    if (!exists(Package, envir = .pkgEnv$getArchiveDetailsInner, inherits = FALSE)) {
+      .pkgEnv$getArchiveDetailsInner[[Package]] <- list()
+    } else {
+      # This is trigger
+      prevInOuts <- .pkgEnv$getArchiveDetailsInner[[Package]][[2]]
+      whIdent <- identical(prevInOuts$input, dots[[2]])
+      if (any(whIdent)) {
+        ret <- prevInOuts$output
+      }
+    }
+    if (is.null(ret)) {
+      inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
+      ret <- getArchiveDetailsInner(...)
+      .pkgEnv$getArchiveDetailsInner[[Package]] <-
+        list(.pkgEnv$getArchiveDetailsInner[[Package]], list(input = inputs, output = ret))
+    }
+  } else {
+    ret <- getArchiveDetailsInner(...)
+  }
+
+  return(ret)
+}
