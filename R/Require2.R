@@ -575,120 +575,143 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
     earliestDateOnRSPM[!packageVersionOnRSPM] <- as.Date(.earliestRSPMDate) + 10
     onRSPM <- earliestDateOnRSPM > .earliestRSPMDate # & isWinOrMac
     onRSPM[is.na(onRSPM)] <- FALSE
-    onRSPM <- onRSPM & packageVersionTooOldForThisR %in% FALSE
+    onRSPM <- onRSPM & (packageVersionTooOldForThisR %in% FALSE | toInstall$binOrSrc %in% "src")
 
     if (any(onRSPM)) {
-      origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
-      install.packagesArgs["ignore_repo_cache"] <- TRUE
-      installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onRSPM])
-      dirsAlreadyExist <- dir.exists(installedPkgs)
-      if (any(dirsAlreadyExist)) {
-        try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
-      }
-      warnings1 <- list()
 
-      urlsOuter <- c()
-      extension <- if (isWindows()) {
-        ".zip"
+
+      needCheckByDate <- TRUE
+      if (!is.null(toInstall$PackageUrl)) {
+        hasKnownURL <- nchar(toInstall$PackageUrl) > 0
+        if (any(hasKnownURL)) {
+          urls <- getArchiveURL(toInstall$repo, toInstall$PackageUrl)
+          toInstall[hasKnownURL %in% TRUE, `:=`(
+            PackageUrl = urls,
+            Repository = dirname(urls),
+            localFile = useRepository
+          )]
+          toInstall[hasKnownURL & grepl(pattern = urlForArchivedPkgs, repo),
+                    repoLocation := "RSPM"]
+
+          onRSPM[hasKnownURL] <- FALSE # don't need to try again
+        }
+      }
+
+      if (any(onRSPM)) {
+
+        origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
+        install.packagesArgs["ignore_repo_cache"] <- TRUE
+        installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onRSPM])
+        dirsAlreadyExist <- dir.exists(installedPkgs)
+        if (any(dirsAlreadyExist)) {
+          try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
+        }
+        warnings1 <- list()
+
+        urlsOuter <- c()
+        extension <- if (isWindows()) {
+          ".zip"
         } else if (isMacOSX()) {
           ".tgz"
         } else {
           ".tar.gz"
         }
-      osNameOnRSPM <- if (isWindows()) {
-        "windows"
+        osNameOnRSPM <- if (isWindows()) {
+          "windows"
         } else if (isMacOSX()) {
           "macosx"
         } else {
           file.path("__linux__", linuxRelease())
         }
-      messageVerbose("-- Determining dates on RSPM to get binaries with correct versions ... ",
-                     verbose = verbose, verboseLevel = 1
-      )
-      total <- length(unname(installPkgNames)[onRSPM])
-      installVersions <- toInstall[["VersionOnRepos"]]
-      out <- Map(
-        p = unname(installPkgNames)[onRSPM], earliestDateRSPM = earliestDateOnRSPM[onRSPM],
-        latestDateRSPM = latestDateOnRSPM[onRSPM], tot = total, counter = seq(total),
-        v = installVersions[onRSPM], function(p, earliestDateRSPM, latestDateRSPM, v, tot, counter, ...) {
-          if (tot > 1) {
-            messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
-          }
-
-          for (attempt in 0:15) { # Try up to 15 days from known earliestDateRSPM or latestDateRSPM of the package being available on CRAN
-            evenOrOdd <- attempt %% 2 == 0
-            date <- if (evenOrOdd) latestDateRSPM else earliestDateRSPM
-            if (!is.na(date)) {
-              dif <- floor(attempt / 2)
-              date <- if (evenOrOdd) date + dif else date - dif
-              dow <- weekdays(date)
-              wee <- c("Saturday", "Sunday")
-              if (dow %in% wee) {
-                tweak <- if (evenOrOdd) (- which(wee %in% dow)) else which(rev(wee) %in% dow)
-                date <- date + tweak
-                if (evenOrOdd)
-                  latestDateRSPM <- latestDateRSPM + tweak
-                else
-                  earliestDateRSPM <- earliestDateRSPM + tweak
-              }
-
-              if (isWindows() || isMacOSX()) {
-                urls <- file.path(
-                  urlForArchivedPkgs, date, "bin", osNameOnRSPM,
-                  "contrib", rver,
-                  paste0(p, "_", v, extension)
-                )
-              } else {
-                urls <- file.path(
-                  urlForArchivedPkgs, osNameOnRSPM, date, "src",
-                  "contrib", rver,
-                  paste0(p, "_", v, extension)
-                )
-              }
-              con <- url(urls)
-              on.exit(try(close(con), silent = TRUE), add = TRUE)
-              a <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
-              close(con)
-              if (is(a, "try-error")) {
-                earliestDateRSPM <- earliestDateRSPM + 1
-                latestDateRSPM <- latestDateRSPM - 1
-                urls <- "Fail"
-              } else {
-                break
-              }
-            }
-
-          }
-          names(urls) <- p
-          urlsOuter <<- c(urlsOuter, urls)
-        }
-      )
-
-      urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
-      urlsFail <- urlsOuter[urlsOuter == "Fail"]
-
-      toInstall[match(names(urlsSuccess), Package), `:=`(
-        PackageUrl = urlsSuccess,
-        Repository = dirname(urlsSuccess),
-        repoLocation = "RSPM",
-        localFile = useRepository
-      )] #  basename(urlsSuccess))]
-      if (length(urlsFail)) {
-        cantGet <- toInstall[toInstall$Package %in% names(urlsFail)]
-        hasNoVersion <- cantGet$packageFullName == cantGet$Package
-        toReport <- list()
-        if (any(hasNoVersion)) {
-          toReport[[1]] <- paste("latest of", paste0(cantGet$Package[hasNoVersion], collapse = ", "))
-        }
-        if (any(!hasNoVersion)) {
-          toReport[[2]] <- paste(cantGet$packageFullName, collapse = ", ")
-        }
-        messageVerbose("Could not find a binary of ", # paste(cantGet, collapse = ", "),
-                       unlist(toReport, recursive = FALSE),
-                       "\nfor R ", rver, " on RSPM; ",
-                       "trying source archives",
+        messageVerbose("-- Determining dates on RSPM to get binaries with correct versions ... ",
                        verbose = verbose, verboseLevel = 1
         )
+        total <- length(unname(installPkgNames)[onRSPM])
+        installVersions <- toInstall[["VersionOnRepos"]]
+
+        out <- Map(
+          p = unname(installPkgNames)[onRSPM], earliestDateRSPM = earliestDateOnRSPM[onRSPM],
+          latestDateRSPM = latestDateOnRSPM[onRSPM], tot = total, counter = seq(total),
+          v = installVersions[onRSPM], function(p, earliestDateRSPM, latestDateRSPM, v, tot, counter, ...) {
+            if (tot > 1) {
+              messageVerboseCounter(total = tot, verbose = verbose, verboseLevel = 1, counter = counter)
+            }
+
+            for (attempt in 0:15) { # Try up to 15 days from known earliestDateRSPM or latestDateRSPM of the package being available on CRAN
+              evenOrOdd <- attempt %% 2 == 0
+              date <- if (evenOrOdd) latestDateRSPM else earliestDateRSPM
+              if (!is.na(date)) {
+                dif <- floor(attempt / 2)
+                date <- if (evenOrOdd) date + dif else date - dif
+                dow <- weekdays(date)
+                wee <- c("Saturday", "Sunday")
+                if (dow %in% wee) {
+                  tweak <- if (evenOrOdd) (- which(wee %in% dow)) else which(rev(wee) %in% dow)
+                  date <- date + tweak
+                  if (evenOrOdd)
+                    latestDateRSPM <- latestDateRSPM + tweak
+                  else
+                    earliestDateRSPM <- earliestDateRSPM + tweak
+                }
+
+                if (isWindows() || isMacOSX()) {
+                  urls <- file.path(
+                    urlForArchivedPkgs, date, "bin", osNameOnRSPM,
+                    "contrib", rver,
+                    paste0(p, "_", v, extension)
+                  )
+                } else {
+                  urls <- file.path(
+                    urlForArchivedPkgs, osNameOnRSPM, date, "src",
+                    "contrib", rver,
+                    paste0(p, "_", v, extension)
+                  )
+                }
+                con <- url(urls)
+                on.exit(try(close(con), silent = TRUE), add = TRUE)
+                a <- try(suppressWarnings(readLines(con, n = 1)), silent = TRUE)
+                close(con)
+                if (is(a, "try-error")) {
+                  earliestDateRSPM <- earliestDateRSPM + 1
+                  latestDateRSPM <- latestDateRSPM - 1
+                  urls <- "Fail"
+                } else {
+                  break
+                }
+              }
+
+            }
+            names(urls) <- p
+            urlsOuter <<- c(urlsOuter, urls)
+          }
+        )
+
+        urlsSuccess <- urlsOuter[urlsOuter != "Fail"]
+        urlsFail <- urlsOuter[urlsOuter == "Fail"]
+
+        toInstall[match(names(urlsSuccess), Package), `:=`(
+          PackageUrl = urlsSuccess,
+          Repository = dirname(urlsSuccess),
+          repoLocation = "RSPM",
+          localFile = useRepository
+        )] #  basename(urlsSuccess))]
+        if (length(urlsFail)) {
+          cantGet <- toInstall[toInstall$Package %in% names(urlsFail)]
+          hasNoVersion <- cantGet$packageFullName == cantGet$Package
+          toReport <- list()
+          if (any(hasNoVersion)) {
+            toReport[[1]] <- paste("latest of", paste0(cantGet$Package[hasNoVersion], collapse = ", "))
+          }
+          if (any(!hasNoVersion)) {
+            toReport[[2]] <- paste(cantGet$packageFullName, collapse = ", ")
+          }
+          messageVerbose("Could not find a binary of ", # paste(cantGet, collapse = ", "),
+                         unlist(toReport, recursive = FALSE),
+                         "\nfor R ", rver, " on RSPM; ",
+                         "trying source archives",
+                         verbose = verbose, verboseLevel = 1
+          )
+        }
       }
       # if (sum(toInstall$repoLocation %in% "RSPM"))
       #   toInstall[repoLocation %in% "RSPM", {
@@ -708,11 +731,11 @@ urlForArchivedPkgs <- "https://packagemanager.posit.co/cran"
 # urlForArchivedPkgs <- "https://packagemanager.rstudio.com/cran/"
 # urlForArchivedPkgs <- "https://MRAN.revolutionanalytics.com/snapshot"
 
-archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
+archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroups, counter,
                        srcPackageURLOnCRAN, repo) {
   Map(
-    pk = possiblyArchivedPkg, counter = counter, USE.NAMES = TRUE,
-    function(pk, counter) {
+    pk = possiblyArchivedPkg, prp = pkgRelPath, counter = counter, USE.NAMES = TRUE,
+    function(pk, prp, counter) {
       # messageVerbose(counter, " of ", numGroups, ": ", pk, verbose = verbose,
       #                verboseLevel = 2)
       uu <- url(paste0("https://cran.r-project.org/package=", pk))
@@ -728,11 +751,14 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
           repos <- c(repos, CRAN = srcPackageURLOnCRAN)
         }
         for (repo in repos) {
-          yy <- url(getArchiveURL(repo, pk))
+          yy <- url(getArchiveURL(repo, prp)) # posit.co won't return something at repo, pk --> needs prp
           on.exit(try(close(yy), silent = TRUE))
           rl2 <- suppressWarnings(try(readLines(yy), silent = TRUE))
           close(yy)
           if (!is(rl2, "try-error")) {
+            if (length(repos) > 1 && !identical(repo, repos[1])) {
+              messageVerbose("Found archive at: ", repo, verbose = verbose, verboseLevel = 2)
+            }
             break
           }
           messageVerbose("Could not get ", pk, " at ", repo, verbose = verbose, verboseLevel = 2)
@@ -742,9 +768,13 @@ archivedOn <- function(possiblyArchivedPkg, verbose, repos, numGroups, counter,
         }
 
         archivedOn <- grep("Archived on", rl, value = TRUE)
-        lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
-        pkgFilename <- gsub(paste0(".+(", pk, "_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
-        PackageUrl <- file.path(pk, pkgFilename)
+        if (FALSE) {
+          lineWDateAndPkgFilename <- tail(grep(paste0(pk, ".*tar.gz"), rl2, value = TRUE), 1)
+          pkgFilename <- gsub(paste0(".+(", pk, "_.+tar.gz).+.+"), "\\1", lineWDateAndPkgFilename)
+          PackageUrl <- file.path(pk, pkgFilename)
+        } else {
+          PackageUrl <- prp
+        }
 
         if (length(archivedOn)) {
           archivedOn <- as.POSIXct(gsub("Archived on (.+) (.)+", "\\1", archivedOn))
@@ -1055,6 +1085,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
 #' @importFrom utils contrib.url
 downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, numToDownload) {
   pkgArchive <- pkgNonLocal[["Archive"]]
+
   if (NROW(pkgArchive)) {
     ava <- archiveVersionsAvailable(unique(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"]),
       repos = repos
@@ -1990,9 +2021,9 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
   commonCols <- intersect(cols, colnames(pkgArchive))
 
-  numGroups <- NROW(pkgArchive)
+  numGroups <- NROW(unique(pkgArchive$Package))
   messageVerbose("Identifying date range when package versions appear in Archive for ",
-                 NROW(pkgArchive), " packages",
+                 numGroups, " package(s)",
                  verbose = verbose,
                  verboseLevel = 2
   )
@@ -2000,7 +2031,8 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   pkgArchive[, (cols) := {
     ret <- getArchiveDetailsInner(Repository, ava, Package, cols, versionSpec, inequality, secondsInADay, .GRP,
                                        numGroups, verbose, repos, srcPackageURLOnCRAN)
-  }, by = c("Package", "Repository")]
+  }, by = c("Package")]#, "Repository")] # multiple repositories may have same version and it is OK ... do loop inside
+  pkgArchive <- unique(pkgArchive, by = c("Package", "repo", "availableVersionOK"))
 
   pkgArchive
 }
@@ -2519,81 +2551,93 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib) {
 getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, inequality,
                                    secondsInADay, .GRP,
                                    numGroups, verbose, repos, srcPackageURLOnCRAN) {
-  repositoryHasArchives <- if (!is.na(Repository) && !is.null(ava[[Package]]$repo)) {
-    unlist(lapply(ava[[Package]]$repo, grepl, x = Repository))
-  } else {
-    TRUE
+  if (any(is.na(Repository)) || is.null(Repository)) {
+    Repository <- unique(ava[[Package]]$repo)
+    Repository <- Repository[match(repos, Repository)]
   }
-  if (all(!repositoryHasArchives) && length(repos) > length(unique(Repository))) {
-    repositoryHasArchives <- unlist(lapply(ava[[Package]]$repo, grepl, x = repos))
-  }
-
-  ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
-  ret <- as.data.table(ret)
-  set(ret, NULL, "availableVersionOK", FALSE)
-
-  if (any(repositoryHasArchives)) {
-    Version2 <- gsub(".*_(.*)\\.tar\\.gz", "\\1", ava[[Package]]$PackageUrl)
-    versionSpec2 <- unique(versionSpec)
-    vs2IsCharNA <- versionSpec2 %in% "NA"
-    if (any(vs2IsCharNA))
-      versionSpec2[vs2IsCharNA] <- NA
-    if (length(Version2) > 0) {
-      if (is.na(versionSpec2)) { # Version2 is length 0 when the package has nothing available
-        correctVersions <- NROW(ava[[Package]])
-      } else {
-        correctVersions <- compareVersion2(Version2, versionSpec2, inequality)
-
-        if (all(correctVersions %in% FALSE)) {
-          correctVersions <- NA
-        } else {
-          latestCorrect <- try(tail(which(correctVersions), 1))
-          if (is(latestCorrect, "try-error")) {
-            browserDeveloper("Error 111; please contact developer")
-          }
-          correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
-        }
-      }
+  for (ind in seq(Repository)) {
+    repositoryHasArchives <- if (!is.na(Repository[ind]) && !is.null(ava[[Package[ind]]]$repo)) {
+      unlist(lapply(ava[[Package[ind]]]$repo, grepl, x = Repository[ind]))
     } else {
-      correctVersions <- NA
+      TRUE
     }
-    if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
-      if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
-      earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
-      ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
+    if (all(!repositoryHasArchives) && length(repos) > length(unique(Repository[ind]))) {
+      repositoryHasArchives <- unlist(lapply(ava[[Package[ind]]]$repo, grepl, x = repos))
+    }
 
-      # if (isWindows() || isMacOSX()) { # relevant for RSPM
-      messageVerbose(.GRP, " of ", numGroups, ": ", Package,
-                     verbose = verbose,
-                     verboseLevel = 2
-      )
-      if (is.na(correctVersions[2])) {
-        dayBeforeTakenOffCRAN <- archivedOn(Package, verbose, repos,
-                                            numGroups = numGroups,
-                                            counter = .GRP,
-                                            srcPackageURLOnCRAN, repo
-        )
-        dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
+    ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
+    ret <- as.data.table(ret)
+    set(ret, NULL, "availableVersionOK", FALSE)
+
+    if (any(repositoryHasArchives)) {
+      Version2 <- extractVersionNumber(filenames = ava[[Package[ind]]]$PackageUrl)
+      versionSpec2 <- unique(versionSpec[ind])
+      vs2IsCharNA <- versionSpec2 %in% "NA"
+      if (any(vs2IsCharNA))
+        versionSpec2[vs2IsCharNA] <- NA
+      if (length(Version2) > 0) {
+        if (is.na(versionSpec2)) { # Version2 is length 0 when the package has nothing available
+          nver <- numeric_version(Version2)
+          highest <- max(nver)
+          correctVersions <- which(highest == nver)
+          if (length(correctVersions) > 1) {
+            correctVersions <- correctVersions[ava[[Package[ind]]][correctVersions]$repo %in% Repository[ind]]
+          }
+        } else {
+          correctVersions <- compareVersion2(Version2, versionSpec2, inequality[ind])
+
+          if (all(correctVersions %in% FALSE)) {
+            correctVersions <- NA
+          } else {
+            latestCorrect <- try(tail(which(correctVersions), 1))
+            if (is(latestCorrect, "try-error")) {
+              browserDeveloper("Error 111; please contact developer")
+            }
+            correctVersions <- unique(c(latestCorrect, min(latestCorrect + 1, length(correctVersions))))
+          }
+        }
       } else {
-        dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
+        correctVersions <- NA
       }
+      if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
+        if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
+        earlyDate <- ava[[Package[ind]]][correctVersions[1]][["mtime"]] + secondsInADay
+        ret <- ava[[Package[ind]]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
 
-      set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
-      #} else {
-      #  set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
-      #}
-      setnames(ret, "mtime", "dayAfterPutOnCRAN")
-      set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
-      set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
+        # if (isWindows() || isMacOSX()) { # relevant for RSPM
+        messageVerbose(.GRP, " of ", numGroups, ": ", Package[ind],
+                       verbose = verbose,
+                       verboseLevel = 2
+        )
+        if (is.na(correctVersions[2])) { # if 2nd one is NA, it means it an archived package
+          dayBeforeTakenOffCRAN <- archivedOn(Package, pkgRelPath = ret$PackageUrl, verbose, repos,
+                                              numGroups = numGroups,
+                                              counter = .GRP,
+                                              srcPackageURLOnCRAN, repo
+          )
+          dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
+        } else {
+          dayBeforeTakenOffCRAN <- ava[[Package[ind]]][correctVersions[2]][["mtime"]]
+        }
 
-      set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
-      if (!is.na(correctVersions)[1]) {
-        set(ret, NULL, "availableVersionOK", TRUE)
+        set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
+        #} else {
+        #  set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
+        #}
+        setnames(ret, "mtime", "dayAfterPutOnCRAN")
+        set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
+        set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
+
+        set(ret, NULL, "VersionOnRepos", Version2[correctVersions[1]])
+        if (!is.na(correctVersions)[1]) {
+          set(ret, NULL, "availableVersionOK", TRUE)
+        }
+        if (isTRUE(ret$availableVersionOK)) break
+      } else {
+        repoToAdd <- ava[[Package[ind]]][1][, c("repo")]
+        if (!is.null(repoToAdd))
+          ret[, repo := repoToAdd]
       }
-    } else {
-      repoToAdd <- ava[[Package]][1][, c("repo")]
-      if (!is.null(repoToAdd))
-        ret[, repo := repoToAdd]
     }
   }
   data.table::setcolorder(ret, cols)
