@@ -321,6 +321,7 @@ Require <- function(packages, packageVersionFile,
       # pkgDT <- removeDups(pkgDT)
       # pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
+      setnames(pkgDT, old = "Version", new = "VersionOnRepos")
       pkgDT <- installedVers(pkgDT)
       if (isTRUE(upgrade)) {
         pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
@@ -886,7 +887,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, type = getOption("pkgType")) {
   pkgInstall[, installSafeGroups := 1L]
 
-
   # on.exit()
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
@@ -975,6 +975,12 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
   }
   setnames(ap, old = "Version", new = "VersionOnRepos")
   pkgInstall <- ap[pkgInstall, on = "Package"]
+  if (any(pkgInstall$repoLocation %in% "GitHub")) {
+    if (!is.null(pkgInstall[["i.VersionOnRepos"]]))
+      pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := i.VersionOnRepos]
+  }
+
+
   pkgInstallList <- split(pkgInstall, by = "repoLocation")
   if (!is.null(pkgInstallList[["GitHub"]])) {
     # If there are 2 repos for a package, must clear out one of them for GitHub packages
@@ -989,7 +995,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
       set(pkgInstallList[["GitHub"]], NULL, "VersionOK", NULL)
     }
     # packages that are both on GitHub and CRAN will get a VersionOnRepos; if the request is to load from GH, then change to NA
-    pkgInstall[repoLocation %in% "GitHub", VersionOnRepos := NA]
+    pkgInstallList[["GitHub"]][repoLocation %in% "GitHub", VersionOnRepos := NA]
     pkgInstallList[["GitHub"]] <- getGitHubVersionOnRepos(pkgInstallList[["GitHub"]])
   }
   pkgInstall <- rbindlistRecursive(pkgInstallList)
@@ -1117,14 +1123,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
         #  toDL <- .SD[!SHAonGH %in% FALSE]
           downloadAndBuildToLocalFile(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos)
-            # gitRepo <- paste0(Account, "/", Repo, "@", Branch)
-            # names(gitRepo) <- Package
-            # out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
-            #                     overwrite = TRUE, destDir = ".", verbose = verbose)
-            # out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
-            # fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
-            # normPath(fn)
-        }, by = "Package"] # seq(NROW(pkgGHtoDL))]
+        }, by = "Package"]
 
         empty <- !nzchar(pkgGHtoDL[!SHAonGH %in% FALSE]$localFile)
         if (any(empty))
@@ -1909,6 +1908,7 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
                              type = getOption("pkgType")) {
 
   pkgInstallTmp <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
+  pkgInstallTmp3 <- data.table::copy(pkgInstallTmp)
   if (!is.null(pkgInstall$Additional_repositories)) {
     if (any(!is.na(pkgInstall$Additional_repositories))) {
       pkgAddRep <- split(pkgInstall, pkgInstall$Additional_repositories)
@@ -1923,6 +1923,10 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
       pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
       pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
       setorderv(pkgInstallTmp, "tmpOrder")
+      noGoods <- is.na(pkgInstallTmp$VersionOnRepos)
+      if (any(noGoods))
+        pkgInstallTmp <- pkgInstallTmp[!noGoods]
+      pkgInstallTmp <- rbindlist(list(pkgInstallTmp, pkgInstallTmp3), fill = TRUE)
     }
 
   }
