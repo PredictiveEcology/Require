@@ -1949,7 +1949,7 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   if (any(!pkgInstallTmp$availableVersionOK)) {
     if (!is.null(pkgInstallTmp$Additional_repositories)) {
       pkgInstallAvails <- split(pkgInstallTmp, pkgInstallTmp$availableVersionOK)
-      browser()
+      # browser()
       if (any(!is.na(pkgInstallAvails[["FALSE"]]$Additional_repositories))) {
         pkgAddRep <- split(pkgInstallAvails[["FALSE"]], pkgInstallAvails[["FALSE"]]$Additional_repositories)
         pkgAddRepTmp <- Map(repo = names(pkgAddRep), pkgAr = pkgAddRep, function(repo, pkgAr) {

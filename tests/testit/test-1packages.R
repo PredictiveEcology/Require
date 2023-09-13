@@ -204,6 +204,7 @@ if (isDev) { # i.e., GA, R CMD check etc.
   Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   testit::assert(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
   # End issue 87
+  detach("package:reproducible", unload = TRUE)
 
   ####
   pkg <- c("r-forge/mumin/pkg", "Require")
@@ -259,7 +260,7 @@ if (isDev) { # i.e., GA, R CMD check etc.
 
 
   # Test substitute(packages)
-  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")), silent = TRUE)
+  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")), silent = TRUE)
   verToCompare <- "2.0.8"
   clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
   out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
