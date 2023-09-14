@@ -365,7 +365,6 @@ pkgDep <- function(packages,
       }
       if (any(theNulls))
         pkgDepDTList2 <- append(pkgDepDTList2, pkgDepDTList[theNulls])
-      browser()
       pkgDepDTList2 <- lapply(pkgDepDTList2, trimRedundancies)
 
       newOnes <- saveNamesDT$names %in% names(pkgDepDTList)

@@ -794,7 +794,6 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
                                     function(x) x[[1]], FUN.VALUE = character(1)))
           if (any(dups)) {
             if (all(grepl("Github|Remote", txt[dups]))) {
-              browser()
               txtOut <- unique(readLines(file))
               browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
                                       "the DESCRIPTION file at ", file,
