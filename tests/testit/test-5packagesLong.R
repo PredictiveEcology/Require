@@ -231,7 +231,7 @@ if (isDevAndInteractive) {
 
   # Use a mixture of different types of "off CRAN"
   if (!isMacOSX()) {
-    pkgs <- c("ggplot", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
+    pkgs <- c("knn", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
     pkgsClean <- extractPkgName(pkgs)
     lala <- suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean))))
     Require(pkgs, require = FALSE)

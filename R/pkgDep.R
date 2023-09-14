@@ -388,7 +388,11 @@ pkgDep <- function(packages,
 
     if (isTRUE(sort)) {
       neededFull1 <- lapply(neededFull1, function(x) {
-        setorderv(x, "packageFullName")
+        # if Require.offlineMode = TRUE then this can be a vector of packageFullName
+        if (is.data.table(x))
+          setorderv(x, "packageFullName")
+        else
+          sort(x)
       })
     }
     # Put the package *without* its inequality (because they aren't there) in the first slot
@@ -1909,13 +1913,15 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
           ))
         if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
       }
-      if (any(!theTRUEs)) # FALSE and NA -- NA means that has inequ, but not on CRAN
+      if (any(!theTRUEs)) {# FALSE and NA -- NA means that has inequ, but not on CRAN
         packagesSaveNames[!isGH][hasIneq][!theTRUEs] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ,
+            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ[!theTRUEs],
             verNum[!theTRUEs],
             ")"
           )
+
+      }
 
     }
     #}
@@ -2435,4 +2441,38 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
     }
   }
   ap
+}
+
+
+
+getArchiveDetailsInnerMemoise <- function(...) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    dots <- list(...)
+    if (!exists("getArchiveDetailsInner", envir = .pkgEnv, inherits = FALSE)) {
+      .pkgEnv$getArchiveDetailsInner <- new.env()
+    }
+    ret <- NULL
+    ss <- match.call(definition = getArchiveDetailsInner)
+    Package <- eval(ss$Package, envir = parent.frame())
+    if (!exists(Package, envir = .pkgEnv$getArchiveDetailsInner, inherits = FALSE)) {
+      .pkgEnv$getArchiveDetailsInner[[Package]] <- list()
+    } else {
+      # This is trigger
+      prevInOuts <- .pkgEnv$getArchiveDetailsInner[[Package]][[2]]
+      whIdent <- identical(prevInOuts$input, dots[[2]])
+      if (any(whIdent)) {
+        ret <- prevInOuts$output
+      }
+    }
+    if (is.null(ret)) {
+      inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
+      ret <- getArchiveDetailsInner(...)
+      .pkgEnv$getArchiveDetailsInner[[Package]] <-
+        list(.pkgEnv$getArchiveDetailsInner[[Package]], list(input = inputs, output = ret))
+    }
+  } else {
+    ret <- getArchiveDetailsInner(...)
+  }
+
+  return(ret)
 }
