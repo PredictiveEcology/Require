@@ -1052,7 +1052,7 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
     ava <- archiveVersionsAvailable(unique(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"]),
       repos = repos
     )
-    if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+    if (!isTRUE(getOption("Require.offlineMode"))) {
       pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
       if (any(pkgArchive[, .N, by = "Package"]$N > 1)) {
         # keep user supplied repos order, in case there are multiple repos that have the package
@@ -1550,7 +1550,7 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 }
 
 getGitHubVersionOnRepos <- function(pkgGitHub) {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     notYet <- is.na(pkgGitHub$VersionOnRepos)
     if (any(notYet)) {
       pkgGitHub <- getGitHubFile(pkgGitHub)

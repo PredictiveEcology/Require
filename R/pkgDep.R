@@ -502,7 +502,7 @@ pkgDepInner <- function(packages,
           browserDeveloper("Error 357; please contact developer")
         }
       } else {
-        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+        if (!isTRUE(getOption("Require.offlineMode"))) {
           for (attmpt in 1:2) {
             needed <- unique(unname(unlist(
               pkgDepCRANMemoise(
@@ -620,7 +620,7 @@ pkgDepInner <- function(packages,
                           file.path(contrib.url(repo), basename(PackageUrl))
                         tf <- file.path(tempdir2(), basename(tempfile()), basename(url))
                         checkPath(dirname(tf), create = TRUE)
-                        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+                        if (!isTRUE(getOption("Require.offlineMode"))) {
                           haveFile <-
                             suppressWarnings(tryCatch(
                               download.file(url, tf, quiet = TRUE),
@@ -1645,7 +1645,7 @@ defaultCacheAgeForPurge <- 3600
 dealWithCache <- function(purge,
                           checkAge = TRUE,
                           repos = getOption("repos")) {
-  if (isTRUE(getOption("Require.offlineMode", FALSE))) {
+  if (isTRUE(getOption("Require.offlineMode"))) {
     purge <- FALSE
     checkAge <- FALSE
   }

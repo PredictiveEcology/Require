@@ -198,7 +198,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT, NULL, "destFile",
       file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Branch, "_", filename))
     )
-    if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+    if (!isTRUE(getOption("Require.offlineMode"))) {
       pkgDT[repoLocation == "GitHub",
         filepath := {
           ret <- NA
@@ -380,7 +380,7 @@ installedVers <- function(pkgDT) {
 #' @inheritParams utils::install.packages
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
                                      returnDataTable = TRUE, type) {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     repos <- getCRANrepos(repos)
     purge <- dealWithCache(purge = purge)
   } else {
@@ -1140,7 +1140,7 @@ urlExists <- function(url) {
 
 #' @inheritParams Require
 internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       if (!is.null(.pkgEnv$internetExistsTime)) {
@@ -1315,14 +1315,14 @@ masterMainHEAD <- function(url, need) {
       if (!is.null(urls[["FALSE"]])) {
         outNotMasterMain <-
           Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
-            if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+            if (!isTRUE(getOption("Require.offlineMode"))) {
               download.file(URL, destfile = destfile, quiet = TRUE)
             }
           })
       }
       if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
         for (wh in seq(urls[["TRUE"]])) {
-          if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+          if (!isTRUE(getOption("Require.offlineMode"))) {
             outMasterMain <- download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
           }
 
@@ -1434,7 +1434,7 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
 
 
 setOfflineModeTRUE <- function() {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     if (!internetExists()) {
       options(
         "Require.offlineMode" = TRUE,
