@@ -356,6 +356,9 @@ Require <- function(packages, packageVersionFile,
     out <- doLoads(require, pkgDT)
 
     if (verbose >= 2) {
+      if (is.null(require)) {
+        out <- character()
+      }
       attr(out, "Require") <- pkgDT[]
     }
   } else {
