@@ -1825,9 +1825,9 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
 
     if (isTRUE(any(installedOK))) {
       withCallingHandlers({
+        possSha <- pkgDT$localSha[installedOK]
         nas <- is.na(pkgDT$LibPath[installedOK])
-        if (any(nas)) {
-          possSha <- pkgDT$localSha[installedOK]
+        if (any(nchar(possSha) > 0 | nas %in% TRUE)) {
           shas[installedOK] <- possSha
           installedOK[installedOK] <- nchar(possSha) != 40
 
