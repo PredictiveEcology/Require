@@ -62,8 +62,8 @@ remove.packages("fpCompare", lib = dir1)
 
 # Try older version
 if (identical(tolower(Sys.getenv("CI")), "true") || # travis
-  isDevAndInteractive || # interactive
-  identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
+    isDevAndInteractive || # interactive
+    identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
   dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
   dir2 <- Require::checkPath(dir2, create = TRUE)
   pvWant <- "0.2.2"
@@ -185,14 +185,18 @@ if (isDev) { # i.e., GA, R CMD check etc.
   # Issue 87
   try(remove.packages("reproducible"), silent = TRUE)
   Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
-  Require::Install("reproducible (==2.0.4)")                               # installs current CRAN version, which is older than SHA below
+
+  ap <- available.packagesCached(repos = getOption("repos"), purge = FALSE, type = "both")
+  curVer <- unique(ap[Package %in% "reproducible"]$Version)
+
+  Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
   Require("reproducible")                                          # load it
   # Apparnetly linux can handle this
   suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
     Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   )
   if (isWindows())
-    testit::assert(packageVersion("reproducible") == "2.0.4") # # will be 2.0.4 from CRAN
+    testit::assert(packageVersion("reproducible") == curVer) # # will be curVer from CRAN
   else
     testit::assert(packageVersion("reproducible") == "2.0.2.9001") #
   detach("package:reproducible", unload = TRUE)
@@ -200,18 +204,18 @@ if (isDev) { # i.e., GA, R CMD check etc.
   Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   testit::assert(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
   # End issue 87
+  detach("package:reproducible", unload = TRUE)
 
   ####
   pkg <- c("r-forge/mumin/pkg", "Require")
   names(pkg) <- c("MuMIn", "")
-  aaaa <<- 1
   out <- Require(pkg, install = FALSE, require = FALSE)
   testit::assert({
     isFALSE(all(out))
   })
 
   # Try a package taken off CRAN
-  reallyOldPkg <- "ggplot"
+  reallyOldPkg <- "knn"
   out <- Require(reallyOldPkg, require = FALSE)
   ip <- data.table::as.data.table(installed.packages())
   testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
@@ -256,18 +260,24 @@ if (isDev) { # i.e., GA, R CMD check etc.
 
 
   # Test substitute(packages)
-  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")), silent = TRUE)
+  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")), silent = TRUE)
   verToCompare <- "2.0.8"
   clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
-  out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
+
+  # The warning is about "package ‘Require’ is in use and will not be installed"
+  suppressWarnings(out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
                            repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  )
   testit::assert(packageVersion("SpaDES") >= verToCompare)
   try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")))
   clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = F)
   a <- list(pkg = "fpCompare")
+
+  suppressWarnings(
   out <- Require::Install(
     c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), a$pkg),
     repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  )
   testit::assert(packageVersion("SpaDES") < verToCompare)
 
 }

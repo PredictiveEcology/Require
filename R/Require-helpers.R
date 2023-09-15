@@ -198,7 +198,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT, NULL, "destFile",
       file.path(tempdir(), paste0(pkgDT$Package, "_", pkgDT$Branch, "_", filename))
     )
-    if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+    if (!isTRUE(getOption("Require.offlineMode"))) {
       pkgDT[repoLocation == "GitHub",
         filepath := {
           ret <- NA
@@ -380,7 +380,7 @@ installedVers <- function(pkgDT) {
 #' @inheritParams utils::install.packages
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
                                      returnDataTable = TRUE, type) {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     repos <- getCRANrepos(repos)
     purge <- dealWithCache(purge = purge)
   } else {
@@ -781,23 +781,33 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
       {
         file <- file.path(libPaths[1], Package, "DESCRIPTION")
         txt <- readLines(file)
-
-        dups <- duplicated(vapply(strsplit(txt, split = "\\:"),
-                          function(x) x[[1]], FUN.VALUE = character(1)))
-        if (any(dups)) {
-          if (all(grepl("Github|Remote", txt[dups])))
-            browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
-                             "the DESCRIPTION file at ", file,
-                             " has duplicated RemoteHost to GithubSHA1. Try to remove ",
-                             "the first set"))
+        alreadyHasSHA <- grepl("Github|Remote", txt)
+        leaveAlone <- FALSE
+        if (any(alreadyHasSHA)) {
+          if (any(grepl(SHAonGH, txt))) {
+            leaveAlone <- TRUE
+          }
         }
 
+        if (isFALSE(leaveAlone)) {
+          dups <- duplicated(vapply(strsplit(txt, split = "\\:"),
+                                    function(x) x[[1]], FUN.VALUE = character(1)))
+          if (any(dups)) {
+            if (all(grepl("Github|Remote", txt[dups]))) {
+              txtOut <- unique(readLines(file))
+              browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
+                                      "the DESCRIPTION file at ", file,
+                                      " has duplicated RemoteHost to GithubSHA1. Try to remove ",
+                                      "the first set"))
+            }
+          }
+          if (!exists("txtOut", inherits = FALSE)) {
 
-        beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
-        insertHere <- min(beforeTheseLines)
-        sha <- SHAonGH
-        newTxt <-
-          paste0("RemoteType: github
+            beforeTheseLines <- grep("NeedsCompilation:|Packaged:|Author:", txt)
+            insertHere <- min(beforeTheseLines)
+            sha <- SHAonGH
+            newTxt <-
+              paste0("RemoteType: github
 RemoteHost: api.github.com
 RemoteRepo: ", Package, "
 RemoteUsername: ", Account, "
@@ -807,10 +817,13 @@ GithubRepo: ", Package, "
 GithubUsername: ", Account, "
 GithubRef: ", Branch, "
 GithubSHA1: ", sha, "")
-        newTxt <- strsplit(newTxt, split = "\n")[[1]]
-        newTxt <- gsub("^ +", "", newTxt)
-        txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
-        cat(txtOut, file = file, sep = "\n")
+            newTxt <- strsplit(newTxt, split = "\n")[[1]]
+            newTxt <- gsub("^ +", "", newTxt)
+            txtOut <- c(txt[seq(insertHere - 1)], newTxt, txt[insertHere:length(txt)])
+          }
+          cat(txtOut, file = file, sep = "\n")
+        }
+
       },
       by = seq(NROW(pkgGitHub))
     ]
@@ -1126,7 +1139,7 @@ urlExists <- function(url) {
 
 #' @inheritParams Require
 internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       if (!is.null(.pkgEnv$internetExistsTime)) {
@@ -1301,14 +1314,14 @@ masterMainHEAD <- function(url, need) {
       if (!is.null(urls[["FALSE"]])) {
         outNotMasterMain <-
           Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
-            if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+            if (!isTRUE(getOption("Require.offlineMode"))) {
               download.file(URL, destfile = destfile, quiet = TRUE)
             }
           })
       }
       if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
         for (wh in seq(urls[["TRUE"]])) {
-          if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+          if (!isTRUE(getOption("Require.offlineMode"))) {
             outMasterMain <- download.file(urls[["TRUE"]][wh], destfile = destfile[wh], quiet = TRUE)
           }
 
@@ -1420,7 +1433,7 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
 
 
 setOfflineModeTRUE <- function() {
-  if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+  if (!isTRUE(getOption("Require.offlineMode"))) {
     if (!internetExists()) {
       options(
         "Require.offlineMode" = TRUE,

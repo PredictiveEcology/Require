@@ -388,7 +388,11 @@ pkgDep <- function(packages,
 
     if (isTRUE(sort)) {
       neededFull1 <- lapply(neededFull1, function(x) {
-        setorderv(x, "packageFullName")
+        # if Require.offlineMode = TRUE then this can be a vector of packageFullName
+        if (is.data.table(x))
+          setorderv(x, "packageFullName")
+        else
+          sort(x)
       })
     }
     # Put the package *without* its inequality (because they aren't there) in the first slot
@@ -498,11 +502,11 @@ pkgDepInner <- function(packages,
             purge = FALSE,
             includeBase = includeBase
           ))
-        if (is(pkgDepDT, "try-error")) {
+        if (is(pkgDepDT, "try-error") && !isTRUE(getOption("Require.offlineMode"))) {
           browserDeveloper("Error 357; please contact developer")
         }
       } else {
-        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+        if (!isTRUE(getOption("Require.offlineMode"))) {
           for (attmpt in 1:2) {
             needed <- unique(unname(unlist(
               pkgDepCRANMemoise(
@@ -620,7 +624,7 @@ pkgDepInner <- function(packages,
                           file.path(contrib.url(repo), basename(PackageUrl))
                         tf <- file.path(tempdir2(), basename(tempfile()), basename(url))
                         checkPath(dirname(tf), create = TRUE)
-                        if (isFALSE(getOption("Require.offlineMode", FALSE))) {
+                        if (!isTRUE(getOption("Require.offlineMode"))) {
                           haveFile <-
                             suppressWarnings(tryCatch(
                               download.file(url, tf, quiet = TRUE),
@@ -1521,11 +1525,13 @@ getGitHubDeps <-
     hasVersionNum <- grep(grepExtractPkgs, pkgDT$packageFullName)
     set(pkgDT, NULL, "availableVersionOK", NA)
     if (length(hasVersionNum)) {
-      VersionOnRepos <-
-        DESCRIPTIONFileVersionV(pkgDT$DESCFile, purge = purge)
-      pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
-      pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
-      pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, pkgDT$versionSpec, pkgDT$inequality)]
+      if (!isTRUE(getOption("Require.offlineMode"))) {
+        VersionOnRepos <-
+          DESCRIPTIONFileVersionV(pkgDT$DESCFile, purge = purge)
+        pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
+        pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
+        pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, pkgDT$versionSpec, pkgDT$inequality)]
+      }
     }
 
     pkgDepDT <- data.table(packageFullName = character())
@@ -1643,7 +1649,7 @@ defaultCacheAgeForPurge <- 3600
 dealWithCache <- function(purge,
                           checkAge = TRUE,
                           repos = getOption("repos")) {
-  if (isTRUE(getOption("Require.offlineMode", FALSE))) {
+  if (isTRUE(getOption("Require.offlineMode"))) {
     purge <- FALSE
     checkAge <- FALSE
   }
@@ -1818,16 +1824,25 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
     }
 
     if (isTRUE(any(installedOK))) {
-      withCallingHandlers(
-        shas[installedOK] <-
-          DESCRIPTIONFileOtherV(
-            file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
-            other = "GithubSHA1"),
-        warning = function(w) {
-          warning(w)
-          browserDeveloper("Error 44322; please contact developer")
-          invokeRestart("muffleWarning")
-        })
+      withCallingHandlers({
+        possSha <- pkgDT$localSha[installedOK]
+        nas <- is.na(pkgDT$LibPath[installedOK])
+        if (any(nchar(possSha) > 0 | nas %in% TRUE)) {
+          shas[installedOK] <- possSha
+          installedOK[installedOK] <- nchar(possSha) != 40
+
+        }
+        if (isTRUE(any(installedOK)))
+          shas[installedOK] <-
+            DESCRIPTIONFileOtherV(
+              file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
+              other = "GithubSHA1")
+      },
+      warning = function(w) {
+        warning(w)
+        browserDeveloper("Error 44322; please contact developer")
+        invokeRestart("muffleWarning")
+      })
     }
 
     names(shas) <- pkgDT$packageFullName # need to keep order correct
@@ -1898,13 +1913,15 @@ saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
           ))
         if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
       }
-      if (any(!theTRUEs)) # FALSE and NA -- NA means that has inequ, but not on CRAN
+      if (any(!theTRUEs)) {# FALSE and NA -- NA means that has inequ, but not on CRAN
         packagesSaveNames[!isGH][hasIneq][!theTRUEs] <-
           paste0(
-            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ,
+            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ[!theTRUEs],
             verNum[!theTRUEs],
             ")"
           )
+
+      }
 
     }
     #}
@@ -2424,4 +2441,38 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
     }
   }
   ap
+}
+
+
+
+getArchiveDetailsInnerMemoise <- function(...) {
+  if (getOption("Require.useMemoise", TRUE)) {
+    dots <- list(...)
+    if (!exists("getArchiveDetailsInner", envir = .pkgEnv, inherits = FALSE)) {
+      .pkgEnv$getArchiveDetailsInner <- new.env()
+    }
+    ret <- NULL
+    ss <- match.call(definition = getArchiveDetailsInner)
+    Package <- eval(ss$Package, envir = parent.frame())
+    if (!exists(Package, envir = .pkgEnv$getArchiveDetailsInner, inherits = FALSE)) {
+      .pkgEnv$getArchiveDetailsInner[[Package]] <- list()
+    } else {
+      # This is trigger
+      prevInOuts <- .pkgEnv$getArchiveDetailsInner[[Package]][[2]]
+      whIdent <- identical(prevInOuts$input, dots[[2]])
+      if (any(whIdent)) {
+        ret <- prevInOuts$output
+      }
+    }
+    if (is.null(ret)) {
+      inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
+      ret <- getArchiveDetailsInner(...)
+      .pkgEnv$getArchiveDetailsInner[[Package]] <-
+        list(.pkgEnv$getArchiveDetailsInner[[Package]], list(input = inputs, output = ret))
+    }
+  } else {
+    ret <- getArchiveDetailsInner(...)
+  }
+
+  return(ret)
 }
