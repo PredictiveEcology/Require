@@ -122,18 +122,18 @@ testit::assert(all(startsWith(names(gro), "Require")))
 # Ensure the "which" for pkgDep are working correctly
 wh <- expand.grid(suggests = c(TRUE, FALSE), depends = c(TRUE, FALSE), imports = c(TRUE, FALSE), linkingTo = c(TRUE, FALSE))
 utilsOut <- list()
-for (i in c("Suggests", "Imports", "Depends", "LinkingTo"))
-  utilsOut[[i]] <-
-  strsplit(gsub("\n", "", utils::packageDescription("Require", fields = i)), ",")[[1]] |>
-  gsub(x = _, " ", "") # remove spaces
+for (i in c("Suggests", "Imports", "Depends", "LinkingTo")) {
+  lala <- strsplit(gsub("\n", "", utils::packageDescription("Require", fields = i)), ",")[[1]]
+  utilsOut[[i]] <- gsub(x = lala, " ", "") # remove spaces
+}
 
 
 out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
   out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
   o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])
   if (length(o2)) {
-    pkgs <- unname(unlist(utilsOut[o2])) |> gsub(x = _, " ", "") # remove spaces
-    out <- out |> gsub(x = _, " ", "") # remove spaces
+    pkgs <- gsub(x = unname(unlist(utilsOut[o2])), " ", "") # remove spaces
+    out <- gsub(x = out, " ", "") # remove spaces
     out <- setdiff(out, grep("R\\(.+", pkgs, value = TRUE, invert = TRUE))
   }
   setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020

@@ -5,9 +5,10 @@ utils::globalVariables(c(
   "VersionOnRepos", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig", "comp",
   "depOrOrig", "getOptions", "GTDoesntViolate",
   "hasEqualsAndInequals", "hasGTAndInequals", "hasSubFolder", "hasVers", "hasVersionsToCompare",
-  "haveLocal", "ineq", "installSafeGroups", "installed",
+  "haveLocal", "ineq", "i.VersionOnRepos", "installSafeGroups", "installed",
   "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
-  "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall", "repo",
+  "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall",
+  "PackageUrl", "repo",
   "verbose", "VersionOK", "versionSpec", "versionToKeep",
   "violation", "violation2"
 ))
