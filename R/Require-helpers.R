@@ -1315,7 +1315,7 @@ masterMainHEAD <- function(url, need) {
         outNotMasterMain <-
           Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
             if (!isTRUE(getOption("Require.offlineMode"))) {
-              download.file(URL, destfile = destfile, quiet = TRUE)
+              download.file(URL, destfile = df, quiet = TRUE) # need TRUE to hide ghp
             }
           })
       }
