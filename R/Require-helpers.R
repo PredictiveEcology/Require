@@ -1316,7 +1316,12 @@ masterMainHEAD <- function(url, need) {
           Map(URL = urls[["FALSE"]], df = destfile, function(URL, df) {
             if (!isTRUE(getOption("Require.offlineMode"))) {
               for (tryNum in 1:2) {
-                download.file(URL, destfile = df, quiet = TRUE) # need TRUE to hide ghp
+                tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
+                         error = function(e) {
+                           e$message <- stripGHP(ghp, e$message)
+                           if (tryNum > 1)
+                             message(e$message)
+                           })
                 if (file.exists(df))
                   break
                 URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
@@ -1353,8 +1358,7 @@ masterMainHEAD <- function(url, need) {
   error = function(e) {
     # strip the ghp from the message
     e$message <- stripGHP(ghp, e$message)
-    if (tryNum > 1)
-      stop(e)
+    stop(e)
   })
 
   ret
