@@ -99,14 +99,18 @@ testit::assert({
 # testit::assert({isTRUE(all.equal(e, eAlt))})
 
 ### pkgDepTopoSort
-out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
+
+# MUST HAVE the "knownRevDeps" installed first
 knownRevDeps <- list(
   Require = c(
     # "reproducible",
-    "SpaDES", "SpaDES.addins", "SpaDES.core",
+    "SpaDES",
+    "SpaDES.addins", "SpaDES.core",
     "SpaDES.experiment", "SpaDES.project"
   )
 )
+Require::Install(knownRevDeps$Require)
+out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
 knownRevDeps <- append(
   knownRevDeps,
   list(data.table = c(knownRevDeps$Require, "Require"))
