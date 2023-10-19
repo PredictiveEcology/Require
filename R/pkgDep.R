@@ -2457,12 +2457,15 @@ getArchiveDetailsInnerMemoise <- function(...) {
     if (!exists(Package, envir = .pkgEnv$getArchiveDetailsInner, inherits = FALSE)) {
       .pkgEnv$getArchiveDetailsInner[[Package]] <- list()
     } else {
-      # This is trigger
-      prevInOuts <- .pkgEnv$getArchiveDetailsInner[[Package]][[2]]
-      whIdent <- identical(prevInOuts$input, dots[[2]])
-      if (any(whIdent)) {
-        ret <- prevInOuts$output
+      if (length(.pkgEnv$getArchiveDetailsInner[[Package]]) > 0) {
+        # This is trigger
+        prevInOuts <- .pkgEnv$getArchiveDetailsInner[[Package]][[2]]
+        whIdent <- identical(prevInOuts$input, dots[[2]])
+        if (any(whIdent)) {
+          ret <- prevInOuts$output
+        }
       }
+
     }
     if (is.null(ret)) {
       inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
