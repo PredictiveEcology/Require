@@ -2195,12 +2195,11 @@ getVersionOnReposLocal <- function(pkgDT) {
   pkgDT
 }
 
-browserDeveloper <- function(mess = "") {
+browserDeveloper <- function(mess = "", envir = parent.frame()) {
   if (identical(SysInfo[["user"]], "emcintir")) {
     # print(mess)
-    # pf <- parent.frame()
-    # attach(pf)
-    # on.exit(detach(pf))
+    # attach(envir)
+    # on.exit(detach(envir))
     print(mess)
     browser()
   } else {
