@@ -2448,27 +2448,45 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, in
   pkgInstall
 }
 
-substitutePackages <- function(packagesSubstituted, envir) {
+substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 
   # Deal with non character strings first
-  if (is.name(packagesSubstituted)) {
-    packages <- deparse(packagesSubstituted)
-    packagesTmp2 <- get0(packages, envir = envir)
+  packages2 <- deparse(packagesSubstituted)
+  isName <- is.name(packagesSubstituted)
+  if (isName) {
+    packagesTmp2 <- get0(packages2, envir = envir)
     if (is.character(packagesTmp2))
       packages <- packagesTmp2
-  }
 
-  # Recursion internally to c or list
-  if (is.call(packagesSubstituted) && !is.character(packagesSubstituted)) {
-    packages <- try(eval(packagesSubstituted, envir = envir), silent = TRUE)
-    if (is(packages, "try-error"))
-      packages <- unlist(lapply(seq_len(length(packagesSubstituted[-1])) + 1, function(i) {
-        # First try to evaluate; only if fails do we do the recursion on each element
-        out <- try(eval(packagesSubstituted[[i]], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
-        if (is(out, "try-error"))
-          out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
-        out
-      }))
+    # packages <- packages2
+  } else {
+    isGH <- isGitHub(packages2)
+    if (isTRUE(isGH)) {
+      packages <- packages2
+    } else {
+      # if (length(packages2) > 1) {
+      #   packagesTmp2 <- packages2
+      # } else {
+      #   browser()
+      #   # packagesTmp2 <- get0(packages2, envir = envir)
+      #   # if (is.character(packagesTmp2))
+      #   #   packages <- packagesTmp2
+      # }
+      # }
+
+      # Recursion internally to c or list
+      if (is.call(packagesSubstituted) && !is.character(packagesSubstituted) || is(packagesSubstituted, "list")) {
+        packages <- try(eval(packagesSubstituted, envir = envir), silent = TRUE)
+        if (is(packages, "try-error") || is(packagesSubstituted, "list"))
+          packages <- unlist(lapply(seq_len(length(packagesSubstituted[-1])) + 1, function(i) {
+            # First try to evaluate; only if fails do we do the recursion on each element
+            out <- try(eval(packagesSubstituted[[i]], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
+            if (is(out, "try-error"))
+              out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
+            out
+          }))
+      }
+    }
   }
 
   if (!exists("packages", inherits = FALSE))
