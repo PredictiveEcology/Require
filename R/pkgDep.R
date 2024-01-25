@@ -2424,7 +2424,8 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
             getAvailablePackagesIfNeeded(DT$packageFullName,
                                          repos, purge = needPurge, verbose, type)
           if (!is.null(ap)) {
-            haveRepos <- unlist(lapply(repos, function(re) any(startsWith(unique(ap$Repository), re))))
+            repo1 <- noHttp(repos)
+            haveRepos <- unlist(lapply(repo1, function(re) any(startsWith(noHttp(unique(ap$Repository)), re))))
             needPurge <- !all(haveRepos)
           }
           if (needPurge %in% FALSE)
@@ -2478,4 +2479,8 @@ getArchiveDetailsInnerMemoise <- function(...) {
   }
 
   return(ret)
+}
+
+noHttp <- function(url) {
+  gsub("^http.*://", "", url)
 }
