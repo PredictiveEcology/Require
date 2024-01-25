@@ -77,7 +77,7 @@ extractInequality <- function(pkgs) {
 #' @examples
 #' extractPkgGitHub("PredictiveEcology/Require")
 extractPkgGitHub <- function(pkgs) {
-  isGH <- grepl("^[^//].+/.+[@.+]?", pkgs, perl = FALSE)
+  isGH <- grepl("^[^//][[:alnum:]\\_\\.]+/.+[@.+]?", pkgs, perl = FALSE)
   if (any(isGH)) {
     a <- trimVersionNumber(pkgs[isGH])
     hasRepo <- grepl("/", a)
