@@ -188,8 +188,9 @@ pkgDep <- function(packages,
         )
       }
 
-      ap <-
-        getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
+      # browser()
+      # ap <-
+      #   getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
       pkgDepDTList <-
         try(pkgDepInnerMemoise(
           packages = packageFullNamesToGet, libPath = libPath,
@@ -523,17 +524,18 @@ pkgDepInner <- function(packages,
             )))
             # null means not in ap; attmpt is only try 1x after purging, but 3rd condition -->
             #    if the pkg is ap, then it is a version problem, so no purging will help.
-            if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
-              ap <-
-                available.packagesCached(
-                  repos = repos,
-                  purge = TRUE,
-                  verbose = verbose,
-                  type = type
-                )
-            } else {
+            # if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
+            #   browser()
+            #   ap <-
+            #     available.packagesCached(
+            #       repos = repos,
+            #       purge = TRUE,
+            #       verbose = verbose,
+            #       type = type
+            #     )
+            # } else {
               break
-            }
+            # }
           }
 
 
