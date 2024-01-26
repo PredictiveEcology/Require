@@ -2451,7 +2451,11 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, in
 substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 
   # Deal with non character strings first
-  packages2 <- deparse(packagesSubstituted)
+  packages2 <- if (isTRUE(all(is.character(packagesSubstituted)))) {
+    packagesSubstituted
+  } else {
+    deparse(packagesSubstituted)
+  }
   isName <- is.name(packagesSubstituted)
   if (isName) {
     packagesTmp2 <- get0(packages2, envir = envir)
@@ -2478,11 +2482,15 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
       if (is.call(packagesSubstituted) && !is.character(packagesSubstituted) || is(packagesSubstituted, "list")) {
         packages <- try(eval(packagesSubstituted, envir = envir), silent = TRUE)
         if (is(packages, "try-error") || is(packagesSubstituted, "list"))
-          packages <- unlist(lapply(seq_len(length(packagesSubstituted[-1])) + 1, function(i) {
+          packages <- unlist(Map(i = seq_len(length(packagesSubstituted[-1])) + 1,
+                                 nam = names(packagesSubstituted[-1]), function(i, nam) {
             # First try to evaluate; only if fails do we do the recursion on each element
-            out <- try(eval(packagesSubstituted[[i]], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
+            out <- try(eval(packagesSubstituted[i], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
             if (is(out, "try-error"))
               out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
+            if (!is.null(nam))
+              if (nzchar(nam))
+                names(out) <- nam
             out
           }))
       }
