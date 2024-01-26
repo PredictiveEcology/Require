@@ -24,19 +24,19 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
   libPath <- .libPaths()
   origWd <- getwd()
   thisFilename <- Require:::getInStack("r")
-  env <- Require:::whereInStack("ee")
+  # env <- Require:::whereInStack("ee")
   startTime <- Sys.time()
-  Require:::messageVerbose("\033[32m --------------------------------- Starting ",
+  Require:::messageVerbose(Require:::green(" --------------------------------- Starting ",
     thisFilename, "  at: ", format(startTime, digits = 2),
-    "---------------------------\033[39m",
+    "---------------------------"),
     verbose = verbose, verboseLevel = 0
   )
-  Require:::messageVerbose("\033[34m getOption('Require.verbose'): ",
-    getOption("Require.verbose"), "\033[39m",
+  Require:::messageVerbose(Require:::blue(" getOption('Require.verbose'): ",
+    getOption("Require.verbose")),
     verboseLevel = 0
   )
-  Require:::messageVerbose("\033[34m getOption('repos'): ",
-    paste(getOption("repos"), collapse = ", "), "\033[39m",
+  Require:::messageVerbose(Require:::blue(" getOption('repos'): ",
+    paste(getOption("repos"), collapse = ", ")),
     verboseLevel = 0
   )
   return(list(startTime = startTime, thisFilename = thisFilename, libPath = libPath, origWd = origWd, opts = opts))
