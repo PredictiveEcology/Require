@@ -2195,12 +2195,11 @@ getVersionOnReposLocal <- function(pkgDT) {
   pkgDT
 }
 
-browserDeveloper <- function(mess = "") {
+browserDeveloper <- function(mess = "", envir = parent.frame()) {
   if (identical(SysInfo[["user"]], "emcintir")) {
     # print(mess)
-    # pf <- parent.frame()
-    # attach(pf)
-    # on.exit(detach(pf))
+    # attach(envir)
+    # on.exit(detach(envir))
     print(mess)
     browser()
   } else {
@@ -2449,31 +2448,60 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, in
   pkgInstall
 }
 
-substitutePackages <- function(packagesSubstituted, envir) {
+substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 
   # Deal with non character strings first
-  if (is.name(packagesSubstituted)) {
-    packages <- deparse(packagesSubstituted)
-    packagesTmp2 <- get0(packages, envir = envir)
+  packages2 <- if (isTRUE(all(is.character(packagesSubstituted)))) {
+    packagesSubstituted
+  } else {
+    deparse(packagesSubstituted)
+  }
+  isName <- is.name(packagesSubstituted)
+  if (isName) {
+    packagesTmp2 <- get0(packages2, envir = envir)
     if (is.character(packagesTmp2))
       packages <- packagesTmp2
-  }
 
-  # Recursion internally to c or list
-  if (is.call(packagesSubstituted) && !is.character(packagesSubstituted)) {
-    packages <- try(eval(packagesSubstituted, envir = envir), silent = TRUE)
-    if (is(packages, "try-error"))
-      packages <- unlist(lapply(seq_len(length(packagesSubstituted[-1])) + 1, function(i) {
-        # First try to evaluate; only if fails do we do the recursion on each element
-        out <- try(eval(packagesSubstituted[[i]], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
-        if (is(out, "try-error"))
-          out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
-        out
-      }))
+    # packages <- packages2
+  } else {
+    isGH <- isGitHub(packages2)
+    if (isTRUE(isGH)) {
+      packages <- packages2
+    } else {
+      # if (length(packages2) > 1) {
+      #   packagesTmp2 <- packages2
+      # } else {
+      #   browser()
+      #   # packagesTmp2 <- get0(packages2, envir = envir)
+      #   # if (is.character(packagesTmp2))
+      #   #   packages <- packagesTmp2
+      # }
+      # }
+
+      # Recursion internally to c or list
+      if (is.call(packagesSubstituted) && !is.character(packagesSubstituted) || is(packagesSubstituted, "list")) {
+        packages <- try(eval(packagesSubstituted, envir = envir), silent = TRUE)
+        if (is(packages, "try-error") || is(packagesSubstituted, "list")) {
+          nams <- names(packagesSubstituted[-1])
+          if (is.null(nams)) nams <- rep("", length(packagesSubstituted[-1]))
+          packages <- unlist(Map(i = seq_len(length(packagesSubstituted[-1])) + 1,
+                                 nam = nams, function(i, nam) {
+                                   # First try to evaluate; only if fails do we do the recursion on each element
+                                   out <- try(eval(packagesSubstituted[i], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
+                                   if (is(out, "try-error"))
+                                     out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
+                                   if (!is.null(nam))
+                                     if (nzchar(nam))
+                                       names(out) <- nam
+                                   out
+                                 }))
+        }
+      }
+    }
   }
 
   if (!exists("packages", inherits = FALSE))
-    packages <- packagesSubstituted
+    packages <- packages2
 
   packages
 }
@@ -2568,17 +2596,17 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
   set(ret, NULL, "availableVersionOK", FALSE)
 
   for (ind in seq(Repository)) {
-    repositoryHasArchives <- if (!is.na(Repository[ind]) && !is.null(ava[[Package[ind]]]$repo)) {
-      unlist(lapply(ava[[Package[ind]]]$repo, grepl, x = Repository[ind]))
+    repositoryHasArchives <- if (!is.na(Repository[ind]) && !is.null(ava[[Package]]$repo)) {
+      unlist(lapply(ava[[Package]]$repo, grepl, x = Repository[ind]))
     } else {
       TRUE
     }
     if (all(!repositoryHasArchives) && length(repos) > length(unique(Repository[ind]))) {
-      repositoryHasArchives <- unlist(lapply(ava[[Package[ind]]]$repo, grepl, x = repos))
+      repositoryHasArchives <- unlist(lapply(ava[[Package]]$repo, grepl, x = repos))
     }
 
     if (any(repositoryHasArchives)) {
-      Version2 <- extractVersionNumber(filenames = ava[[Package[ind]]]$PackageUrl)
+      Version2 <- extractVersionNumber(filenames = ava[[Package]]$PackageUrl)
       versionSpec2 <- unique(versionSpec[ind])
       vs2IsCharNA <- versionSpec2 %in% "NA"
       if (any(vs2IsCharNA))
@@ -2589,7 +2617,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
           highest <- max(nver)
           correctVersions <- which(highest == nver)
           if (length(correctVersions) > 1) {
-            correctVersions <- correctVersions[ava[[Package[ind]]][correctVersions]$repo %in% Repository[ind]]
+            correctVersions <- correctVersions[ava[[Package]][correctVersions]$repo %in% Repository[ind]]
           }
         } else {
           correctVersions <- compareVersion2(Version2, versionSpec2, inequality[ind])
@@ -2609,11 +2637,11 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
       }
       if (any(!is.na(correctVersions))) { # nothing on Archive that will fulfill the Version requirements
         if (length(correctVersions) == 1) correctVersions <- c(correctVersions, NA_integer_)
-        earlyDate <- ava[[Package[ind]]][correctVersions[1]][["mtime"]] + secondsInADay
-        ret <- ava[[Package[ind]]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
+        earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
+        ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
 
         # if (isWindows() || isMacOSX()) { # relevant for RSPM
-        messageVerbose(.GRP, " of ", numGroups, ": ", Package[ind],
+        messageVerbose(.GRP, " of ", numGroups, ": ", Package,
                        verbose = verbose,
                        verboseLevel = 2
         )
@@ -2625,7 +2653,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
           )
           dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
         } else {
-          dayBeforeTakenOffCRAN <- ava[[Package[ind]]][correctVersions[2]][["mtime"]]
+          dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
         }
 
         set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
@@ -2642,7 +2670,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
         }
         if (isTRUE(ret$availableVersionOK)) break
       } else {
-        repoToAdd <- ava[[Package[ind]]][1][, c("repo")]
+        repoToAdd <- ava[[Package]][1][, c("repo")]
         if (!is.null(repoToAdd))
           ret[, repo := repoToAdd]
       }

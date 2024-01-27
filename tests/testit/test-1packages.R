@@ -260,7 +260,8 @@ if (isDev) { # i.e., GA, R CMD check etc.
 
 
   # Test substitute(packages)
-  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")), silent = TRUE)
+  suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")),
+                       silent = TRUE))
   verToCompare <- "2.0.8"
   clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
 
@@ -269,13 +270,13 @@ if (isDev) { # i.e., GA, R CMD check etc.
                            repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
   )
   testit::assert(packageVersion("SpaDES") >= verToCompare)
-  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare")))
-  clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = F)
+  try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core")))
+  clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
   a <- list(pkg = "fpCompare")
 
   suppressWarnings(
   out <- Require::Install(
-    c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), a$pkg),
+    c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), "SpaDES.core (== 2.0.3)", a$pkg),
     repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
   )
   testit::assert(packageVersion("SpaDES") < verToCompare)

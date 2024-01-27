@@ -188,8 +188,9 @@ pkgDep <- function(packages,
         )
       }
 
-      ap <-
-        getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
+      # browser()
+      # ap <-
+      #   getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
       pkgDepDTList <-
         try(pkgDepInnerMemoise(
           packages = packageFullNamesToGet, libPath = libPath,
@@ -523,17 +524,18 @@ pkgDepInner <- function(packages,
             )))
             # null means not in ap; attmpt is only try 1x after purging, but 3rd condition -->
             #    if the pkg is ap, then it is a version problem, so no purging will help.
-            if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
-              ap <-
-                available.packagesCached(
-                  repos = repos,
-                  purge = TRUE,
-                  verbose = verbose,
-                  type = type
-                )
-            } else {
+            # if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
+            #   browser()
+            #   ap <-
+            #     available.packagesCached(
+            #       repos = repos,
+            #       purge = TRUE,
+            #       verbose = verbose,
+            #       type = type
+            #     )
+            # } else {
               break
-            }
+            # }
           }
 
 
@@ -927,10 +929,14 @@ pkgDepTopoSort <-
                       })
                     ))
                   })))
+
+                r <- setdiff(r, used) # addresses circularity
+
                 used <- unique(c(r, used))
                 if (length(r) == 0) {
                   break
                 }
+
                 p <- r
               })
             } else {
@@ -2424,7 +2430,8 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
             getAvailablePackagesIfNeeded(DT$packageFullName,
                                          repos, purge = needPurge, verbose, type)
           if (!is.null(ap)) {
-            haveRepos <- unlist(lapply(repos, function(re) any(startsWith(unique(ap$Repository), re))))
+            repo1 <- noHttp(repos)
+            haveRepos <- unlist(lapply(repo1, function(re) any(startsWith(noHttp(unique(ap$Repository)), re))))
             needPurge <- !all(haveRepos)
           }
           if (needPurge %in% FALSE)
@@ -2478,4 +2485,8 @@ getArchiveDetailsInnerMemoise <- function(...) {
   }
 
   return(ret)
+}
+
+noHttp <- function(url) {
+  gsub("^http.*://", "", url)
 }
