@@ -2501,7 +2501,7 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
   }
 
   if (!exists("packages", inherits = FALSE))
-    packages <- packagesSubstituted
+    packages <- packages2
 
   packages
 }
