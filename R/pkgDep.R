@@ -929,10 +929,14 @@ pkgDepTopoSort <-
                       })
                     ))
                   })))
+
+                r <- setdiff(r, used) # addresses circularity
+
                 used <- unique(c(r, used))
                 if (length(r) == 0) {
                   break
                 }
+
                 p <- r
               })
             } else {
