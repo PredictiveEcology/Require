@@ -2481,18 +2481,21 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
       # Recursion internally to c or list
       if (is.call(packagesSubstituted) && !is.character(packagesSubstituted) || is(packagesSubstituted, "list")) {
         packages <- try(eval(packagesSubstituted, envir = envir), silent = TRUE)
-        if (is(packages, "try-error") || is(packagesSubstituted, "list"))
+        if (is(packages, "try-error") || is(packagesSubstituted, "list")) {
+          nams <- names(packagesSubstituted[-1])
+          if (is.null(nams)) nams <- rep("", length(packagesSubstituted[-1]))
           packages <- unlist(Map(i = seq_len(length(packagesSubstituted[-1])) + 1,
-                                 nam = names(packagesSubstituted[-1]), function(i, nam) {
-            # First try to evaluate; only if fails do we do the recursion on each element
-            out <- try(eval(packagesSubstituted[i], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
-            if (is(out, "try-error"))
-              out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
-            if (!is.null(nam))
-              if (nzchar(nam))
-                names(out) <- nam
-            out
-          }))
+                                 nam = nams, function(i, nam) {
+                                   # First try to evaluate; only if fails do we do the recursion on each element
+                                   out <- try(eval(packagesSubstituted[i], envir = envir), silent = TRUE) # e.g., paste("SpaDES (>= ",version,")")
+                                   if (is(out, "try-error"))
+                                     out <- substitutePackages(packagesSubstituted = as.list(packagesSubstituted)[[i]], envir = envir)
+                                   if (!is.null(nam))
+                                     if (nzchar(nam))
+                                       names(out) <- nam
+                                   out
+                                 }))
+        }
       }
     }
   }
