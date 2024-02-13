@@ -1788,167 +1788,252 @@ paddedFloatToChar <-
   }
 
 
-saveNamesForCache <- function(packages, which, recursive, ap, repos, verbose) {
-  isGH <- isGitHub(packages)
-  if (any(isGH)) {
-    pkgDT <- parseGitHub(packages[isGH])
-    pkgDT <- installedVersionOKPrecise(pkgDT)
-    pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
-    # pkgDT <- whichToInstall(pkgDT, install = TRUE)
-
-    installedOK <- pkgDT$installedVersionOK
-    installedNotOK <- !installedOK
-    shas <- character(NROW(pkgDT))
-    if (isTRUE(any(installedNotOK))) {
-      for (i in 1:2) {
-        brLocals <- if (i == 1) pkgDT$Branch[installedNotOK] else "main"
-        shaOuts <- try(
-          Map(
-            repo = pkgDT$Repo[installedNotOK],
-            acct = pkgDT$Account[installedNotOK],
-            br = brLocals,
-            verbose = verbose,
-            getSHAfromGitHubMemoise
-          )
-        )
-        if (all(!is(shaOuts, "try-error"))) {
-          if (i == 2)
-            warning(pkgDT[installedNotOK]$packageFullName,
-                    " could not be found. Was the branch deleted? ",
-                    "Assessing package dependencies in ",
-                    "main branch of that/those repository/repositories. ")
-          shas[installedNotOK] <- shaOuts
-          break
-        }
-      }
-    }
-
-    if (isTRUE(any(installedOK))) {
-      withCallingHandlers({
-        possSha <- pkgDT$localSha[installedOK]
-        nas <- is.na(pkgDT$LibPath[installedOK])
-        if (any(nchar(possSha) > 0 | nas %in% TRUE)) {
-          shas[installedOK] <- possSha
-          installedOK[installedOK] <- nchar(possSha) != 40
-
-        }
-        if (isTRUE(any(installedOK)))
-          shas[installedOK] <-
-            DESCRIPTIONFileOtherV(
-              file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
-              other = "GithubSHA1")
-      },
-      warning = function(w) {
-        warning(w)
-        browserDeveloper("Error 44322; please contact developer")
-        invokeRestart("muffleWarning")
-      })
-    }
-
-    names(shas) <- pkgDT$packageFullName # need to keep order correct
-  }
-
-  hasIneq <- grepl("==|>|<", packages[!isGH])
-  inequ <- extractInequality(packages[!isGH][hasIneq])
-  hasNoEquality <- grep("^(==)", inequ, invert = TRUE)
-  packagesSaveNames <- packages
-
-  if (any(isGH)) {
-    hasAt <- grepl("@", packagesSaveNames[isGH])
-    if (any(hasAt %in% FALSE)) {
-      packagesSaveNames[isGH][hasAt %in% FALSE] <-
-        gsub(
-          "(.+/.+)( \\()|(\\()(.+\\))",
-          "\\1@HEAD (\\4",
-          packagesSaveNames[isGH][hasAt %in% FALSE]
-        )
-    }
-    psnSplits <- strsplit(packagesSaveNames[isGH], "@")
-    packagesSaveNamesGH <-
-      mapply(psnSplit = psnSplits, sha = shas, function(psnSplit, sha) {
-        paste0(psnSplit[1], "@", sha)
-      }, SIMPLIFY = TRUE)
-    packagesSaveNames[isGH] <- packagesSaveNamesGH
-  }
-
-  if (sum(hasIneq)) {
-    verNum <- extractVersionNumber(packagesSaveNames[!isGH][hasIneq])
-    hasNonNAverNum <- !verNum %in% "NA"
-    # hasIneq <- !is.na(inequ)
-    psnNoVersion <- trimVersionNumber(packagesSaveNames[!isGH][hasIneq])
-    packagesSaveNames[!isGH][hasIneq] <- psnNoVersion
-    versions <- ap$Version[match(packagesSaveNames[!isGH][hasIneq], ap$Package)]
-    if (any(hasIneq)) {
-
-      # This means that packages is not on CRAN, but has a version specificity issue
-      naVersions <- is.na(versions)
-      if (any(naVersions)) {
-        ava <- archiveVersionsAvailable(packagesSaveNames[!isGH][hasIneq][naVersions], repos = repos)
-        ava[vapply(ava, is.null, FUN.VALUE = logical(1))] <- NULL
-        if (NROW(ava)) {
-          pkgArchive <- data.table(toPkgDT(packages[!isGH][hasIneq][naVersions]), Repository = repos)
-          pkgArchive[, versionSpec := extractVersionNumber(pkgs = pkgArchive$packageFullName)]
-          pkgArchive[, inequality := extractInequality(pkgs = pkgArchive$packageFullName)]
-          pkgArchive <- getArchiveDetails(pkgArchive, repos = repos, ava = ava, verbose = verbose)
-          pkgArchive <- na.omit(pkgArchive, by = "availableVersionOK")
-          if (length(pkgArchive$VersionOnRepos)) {
-            vor <- pkgArchive$VersionOnRepos
-            # If there are multiple repos, with same version, vor will be length > 1, but with duplicated version
-            if (length(vor) != length(naVersions))
-              vor <- unique(vor)
-            versions[naVersions] <- vor
-          }
-        }
-      }
-
-      okVers <- compareVersion2(versions, inequality = inequ, verNum)
-      #if (all(!is.na(okVers))) {
-      theTRUEs <- okVers %in% TRUE
-      if (any(theTRUEs)) {
-        out <- try(packagesSaveNames[!isGH][hasIneq][theTRUEs] <-
-          paste0(
-            packagesSaveNames[!isGH][hasIneq][theTRUEs], " (==",
-            versions[theTRUEs],
-            ")"
-          ))
-        if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
-      }
-      if (any(!theTRUEs)) {# FALSE and NA -- NA means that has inequ, but not on CRAN
-        packagesSaveNames[!isGH][hasIneq][!theTRUEs] <-
-          paste0(
-            packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ[!theTRUEs],
-            verNum[!theTRUEs],
-            ")"
-          )
-
-      }
-
-    }
-    #}
-  }
-  noIneq <- hasIneq %in% FALSE
-  if (any(noIneq)) {
-    versions <- ap$Version[match(packagesSaveNames[!isGH][noIneq], ap$Package)]
-    # if versions has NA then it means it is not on CRAN; maybe other causes as well
-    packagesSaveNames[!isGH][noIneq] <-
-      paste0(
-        packagesSaveNames[!isGH][noIneq], " (==",
-        versions,
-        ")"
-      )
-  }
-
-
+#' The `packages` argument may have up to 4 pieces of information for GitHub
+#' packages: name, repository, branch, version. For CRAN-alikes, it will only
+#' be 2 pieces: name, version. There can also be an inequality or equality, if
+#' there is a version.
+#'
+#' @param packages A vector of GitHub or CRAN-alike packages. These can include
+#'   package name (required) and optionally repository, branch/sha and/or version.
+#' @param ap is used for CRAN-alikes to get version number, if not part of `packages`
+#' @param repos is used for `ap`.
+#'
+#' @details
+#' If version is not supplied, it will take the local, installed version, if it
+#' exists. Otherwise, it is assumed that the HEAD is desired.
+#' The function will find it in the `ap` or on `github.com`. For github packages,
+#' this is obviously a slow step, which can be accelerated if user supplies a sha
+#' or a version e.g., saveNamesForCache("PredictiveEcology/LandR@development (==1.0.2)")
+#'
+#' @return
+#' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
+#' above, plus the `which` and the `recursive`.
+saveNamesForCache <- function(packages, which, recursive, ap, type = type, repos, verbose) {
+  if (NROW(packages) == 0) browser()
+  if (missing(which))
+    which <- eval(formals(pkgDep)[["which"]])
   whichCat <- paste(sort(which[[1]]), collapse = "_")
-  saveNames <-
-    paste(packagesSaveNames,
-      paste(whichCat, "recursive", recursive, sep = "_")[1],
-      sep = "_"
-    )
-  saveNames <- gsub("[[:punct:]]| ", "_", saveNames)
-  names(saveNames) <- packagesSaveNames
-  saveNames
+
+  if (missing(recursive))
+    recursive <- formals(pkgDep)[["recursive"]]
+  whichCatRecursive <- paste(whichCat, "Recursive", recursive, sep = "")[1]
+  if (is.data.table(packages)) {
+    isGH <- if (is.null(packages$Account)) {
+      rep(FALSE, NROW(packages))
+    } else {
+      !is.na(packages$Account)
+    }
+  } else {
+    isGH <- isGitHub(packages)
+  }
+  ord <- seq(NROW(packages))
+  if (any(!isGH)) {
+    pkgDT <- saveNamesNonGH(packages, isGH, ord, ap, repos, type = type, verbose, whichCatRecursive)
+  }
+  if (any(isGH)) {
+    pkgDT1 <- saveNamesGH(packages, isGH, ord, ap, verbose, whichCatRecursive)
+    if (exists("pkgDT", inherits = FALSE)) {
+      pkgDT <- rbindlist(list(pkgDT, pkgDT1), use.names = TRUE, fill = TRUE)
+    } else {
+      pkgDT <- pkgDT1
+    }
+  }
+  set(pkgDT, NULL, "saveNamesLabel", saveNamesLabel(pkgDT))
+  newOrd <- order(pkgDT$ord)
+  pkgDT <- pkgDT[newOrd]
+  # sn <- pkgDT$sn[newOrd]
+  # names(sn) <- pkgDT$saveNamesLabel[newOrd]
+  return(pkgDT)
 }
+
+#
+#   if (FALSE) {
+#
+#     if (all(!is(shaOuts, "try-error"))) {
+#       if (i == 2)
+#         warning(pkgDT[installedNoOKAndNoPkgEnv]$packageFullName,
+#                 " could not be found. Was the branch deleted? ",
+#                 "Assessing package dependencies in ",
+#                 "main branch of that/those repository/repositories. ")
+#       shas[installedNoOKAndNoPkgEnv] <- shaOuts
+#       names(shas)[installedNoOKAndNoPkgEnv] <- names(shaOuts)
+#       break
+#     }
+#   }
+#
+#   if (any(!areNULLs)) {
+#     brs <- if (is.null(versionInPkgEnv))
+#       pkgDT$Version[!areNULLs]
+#     else
+#       unlist(versionInPkgEnv[!areNULLs])
+#     shas[!areNULLs] <- pkgDT$Branch[installedNotOK][!areNULLs]
+#     names(shas)[!areNULLs] <- paste0(pkgDT$Account[!areNULLs], "/",
+#                                      pkgDT$Package[!areNULLs], " (==",
+#                                      brs, ")")
+#   }
+#
+#
+#   if (isTRUE(any(installedOK))) {
+#     withCallingHandlers({
+#       possSha <- pkgDT$installedSha[installedOK]
+#       nas <- is.na(pkgDT$LibPath[installedOK])
+#       if (any(nchar(possSha) > 0 | nas %in% TRUE)) {
+#         shas[installedOK] <- possSha
+#         installedOK[installedOK] <- nchar(possSha) != 40
+#
+#       }
+#       if (isTRUE(any(installedOK)))
+#         shas[installedOK] <-
+#         DESCRIPTIONFileOtherV(
+#           file.path(pkgDT$LibPath[installedOK], pkgDT$Package[installedOK], "DESCRIPTION"),
+#           other = "GithubSHA1")
+#     },
+#     warning = function(w) {
+#       warning(w)
+#       browserDeveloper("Error 44322; please contact developer")
+#       invokeRestart("muffleWarning")
+#     })
+#   }
+#
+#   if (is.null(names(shas)))
+#     names(shas) <- pkgDT$packageFullName # need to keep order correct
+#
+#
+#   hasIneq <- grepl(">|<", packages[!isGH])
+#   # hasIneq <- grepl("==|>|<", packages[!isGH])
+#   inequ <- extractInequality(packages[!isGH][hasIneq])
+#   hasEquality <- grepl("==", packages[!isGH])
+#   # hasNoEquality <- !hasEquality#grep("^(==)", inequ, invert = TRUE)
+#   packagesSaveNames <- packages
+#
+#   if (any(isGH)) {
+#     hasAt <- grepl("@", packagesSaveNames[isGH])
+#     if (any(hasAt %in% FALSE)) {
+#       packagesSaveNames[isGH][hasAt %in% FALSE] <-
+#         gsub(
+#           "(.+/.+)( \\()|(\\()(.+\\))",
+#           "\\1@HEAD (\\4",
+#           packagesSaveNames[isGH][hasAt %in% FALSE]
+#         )
+#     }
+#     psnSplits <- strsplit(packagesSaveNames[isGH], "@")
+#     packagesSaveNamesGH <-
+#       mapply(psnSplit = psnSplits, sha = shas, function(psnSplit, sha) {
+#         paste0(psnSplit[1], "@", sha)
+#       }, SIMPLIFY = TRUE)
+#     packagesSaveNames[isGH] <- packagesSaveNamesGH
+#     names(packagesSaveNames)[isGH] <- names(shas)
+#   }
+#
+#   if (sum(hasIneq)) {
+#     verNum <- extractVersionNumber(packagesSaveNames[!isGH][hasIneq])
+#     # hasNonNAverNum <- !verNum %in% "NA"
+#     # hasIneq <- !is.na(inequ)
+#     psnNoVersion <- trimVersionNumber(packagesSaveNames[!isGH][hasIneq])
+#     packagesSaveNames[!isGH][hasIneq] <- psnNoVersion
+#     if (missing(ap)) {
+#       versions <- getVersionOptionPkgEnv(psnNoVersion, verNum, inequ)
+#     } else {
+#       versions <- ap$Version[match(packagesSaveNames[!isGH][hasIneq], ap$Package)]
+#       if (any(hasIneq)) {
+#
+#         # This means that packages is not on CRAN, but has a version specificity issue
+#         naVersions <- is.na(versions)
+#         if (any(naVersions)) {
+#           ava <- archiveVersionsAvailable(packagesSaveNames[!isGH][hasIneq][naVersions], repos = repos)
+#           ava[vapply(ava, is.null, FUN.VALUE = logical(1))] <- NULL
+#           if (NROW(ava)) {
+#             pkgArchive <- data.table(toPkgDT(packages[!isGH][hasIneq][naVersions]), Repository = repos)
+#             pkgArchive[, versionSpec := extractVersionNumber(pkgs = pkgArchive$packageFullName)]
+#             pkgArchive[, inequality := extractInequality(pkgs = pkgArchive$packageFullName)]
+#             bbb <- try(
+#               pkgArchive <- getArchiveDetails(pkgArchive, repos = repos, ava = ava, verbose = verbose)
+#             )
+#             if (is(bbb, "try-error")) browser()
+#
+#             pkgArchive <- na.omit(pkgArchive, by = "availableVersionOK")
+#             if (length(pkgArchive$VersionOnRepos)) {
+#               vor <- pkgArchive$VersionOnRepos
+#               # If there are multiple repos, with same version, vor will be length > 1, but with duplicated version
+#               if (length(vor) != length(naVersions))
+#                 vor <- unique(vor)
+#               versions[naVersions] <- vor
+#             }
+#           }
+#         }
+#
+#         okVers <- compareVersion2(versions, inequality = inequ, verNum)
+#         #if (all(!is.na(okVers))) {
+#         theTRUEs <- okVers %in% TRUE
+#         if (any(theTRUEs)) {
+#           out <- try(packagesSaveNames[!isGH][hasIneq][theTRUEs] <-
+#                        paste0(
+#                          packagesSaveNames[!isGH][hasIneq][theTRUEs], " (==",
+#                          versions[theTRUEs],
+#                          ")"
+#                        ))
+#           if (is(out, "try-error")) browserDeveloper("Error 7788; please contact developer")
+#         }
+#         if (any(!theTRUEs)) {# FALSE and NA -- NA means that has inequ, but not on CRAN
+#           packagesSaveNames[!isGH][hasIneq][!theTRUEs] <-
+#             paste0(
+#               packagesSaveNames[!isGH][hasIneq][!theTRUEs], " (", inequ[!theTRUEs],
+#               verNum[!theTRUEs],
+#               ")"
+#             )
+#
+#         }
+#
+#       }
+#     }
+#     #}
+#   } else {
+#     if (any(!hasEquality)) {
+#       if (!exists("versions", inherits = FALSE))
+#         versions <- character(NROW(packagesSaveNames))
+#       possVers <- getVersionOptionPkgEnv(packagesSaveNames[!hasEquality], verNum = NULL, inequ = NULL)
+#       if (length(possVers)) {
+#         if (length(versions[!hasEquality]) != length(possVers)) browser()
+#         versions[!hasEquality] <- possVers
+#       }
+#     }
+#   }
+#   hasIneq <- hasIneq %in% TRUE
+#   needAddVersion <- hasIneq | !hasEquality
+#   if (any(needAddVersion)) {
+#     if (!missing(ap)) {
+#       versions <- ap$Version[match(packagesSaveNames[!isGH][needAddVersion], ap$Package)]
+#     }
+#     packagesSaveNames[!isGH][needAddVersion] <-
+#       paste0(
+#         packagesSaveNames[!isGH][needAddVersion], " (==",
+#         versions,
+#         ")"
+#       )
+#   }
+#
+#   # if versions has NA then it means it is not on CRAN; maybe other causes as well
+#   # packagesSaveNames[!isGH][noIneq] <-
+#   #   paste0(
+#   #     packagesSaveNames[!isGH][noIneq], " (==",
+#   #     versions,
+#   #     ")"
+#   #   )
+#   # }
+#
+#
+#   saveNames <-
+#     paste(packagesSaveNames,
+#           paste(whichCat, "recursive", recursive, sep = "_")[1],
+#           sep = "_"
+#     )
+#   saveNames <- gsub("[[:punct:]]| ", "_", saveNames)
+#   names(saveNames) <- packagesSaveNames
+#   if (any(isGH))
+#     names(saveNames)[isGH] <- names(packagesSaveNames)[isGH]
+#   saveNames
+
+
 
 pkgDepCRANMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
