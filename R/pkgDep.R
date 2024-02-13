@@ -1499,33 +1499,35 @@ getGitHubDeps <-
            purge,
            verbose = getOption("Require.verbose"),
            includeBase = FALSE) {
-    pkg <- masterMainToHead(pkg)
+    pkg <- masterMainToHead(pkgDT$packageFullName)
 
-    localVersionOK <- installedVersionOKPrecise(pkgDT)
+    # localVersionOK <- installedVersionOKPrecise(pkgDT)
 
-    if (isTRUE(localVersionOK)) {
+    # if (isTRUE(any(pkgDT$localBranch == "HEAD"))) browser()
+    if (isTRUE(pkgDT$localVersionOK)) {
       pkgDT[, DESCFile := system.file("DESCRIPTION", package = pkgDT$Package)]
     } else {
       pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
     }
-    hasVersionNum <- grep(grepExtractPkgs, pkgDT$packageFullName)
+    hasVersionNum <- pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
     set(pkgDT, NULL, "availableVersionOK", NA)
-    if (length(hasVersionNum)) {
+    if (any(hasVersionNum)) {
       if (!isTRUE(getOption("Require.offlineMode"))) {
-        VersionOnRepos <-
-          DESCRIPTIONFileVersionV(pkgDT$DESCFile, purge = purge)
-        pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
-        pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
-        pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, pkgDT$versionSpec, pkgDT$inequality)]
+        pkgDT[hasVersionNum, VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile, purge = purge)]
+        if (is.null(pkgDT$versionSpec)) {
+          pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
+          pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
+        }
+        pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, versionSpec, inequality)]
       }
     }
 
-    pkgDepDT <- data.table(packageFullName = character())
+    pkgDepDTOuter <- data.table(packageFullName = character())
 
     if (any(!pkgDT$availableVersionOK %in% FALSE)) {
-      needed <-
-        try(DESCRIPTIONFileDeps(pkgDT$DESCFile, which = which, purge = purge))
-      if (is(needed, "try-error")) {
+      neededV <-
+        try(DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = which, purge = purge))
+      if (is(neededV, "try-error")) {
         unlink(pkgDT$DESCFile)
         unlink(pkgDT$destFile)
         set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
@@ -1534,16 +1536,26 @@ getGitHubDeps <-
              file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
              "\nIf it does exist, try rerunning with `purge = TRUE`",
              "\nIf this error is inaccurate, and the problem persists, ",
-             "please contact developers with error code 949"))
+                                "please contact developers with error code 949"))
       }
 
-      neededAdditionalRepos <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
+      neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
 
-      neededRemotes <-
-        DESCRIPTIONFileDeps(pkgDT$DESCFile, which = "Remotes", purge = purge)
-      neededRemotesName <- extractPkgName(neededRemotes)
-      neededName <- extractPkgName(needed)
-      needSomeRemotes <- neededName %in% neededRemotesName
+      neededRemotesV <-
+        DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
+      names(neededV) <- pkgDT$packageFullName
+
+      pkgDepDTOuter <- Map(
+        needed = neededV, neededRemotes = neededRemotesV,
+        localVersionOK = pkgDT$installedVersionOK,
+        neededAdditionalRepos = neededAdditionalReposV,
+        localPackageName = pkgDT$Package,
+        packageFullName = pkgDT$packageFullName,
+        function(needed, neededRemotes, neededName, localVersionOK, localPackageName,
+                 packageFullName, neededAdditionalRepos) {
+          neededRemotesName <- extractPkgName(neededRemotes)
+          neededName <- extractPkgName(needed)
+          needSomeRemotes <- neededName %in% neededRemotesName
       if (any(needSomeRemotes)) {
         hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
         if (length(hasVersionNum)) {
@@ -1571,16 +1583,16 @@ getGitHubDeps <-
         needed <- c(needed[!needSomeRemotes], remotesAll)
       }
 
-      # Check NAMESPACE too -- because imperfect DESCRIPTION files
-      if (isTRUE(localVersionOK)) {
-        namespaceFile <-
-          system.file("NAMESPACE", package = pkgDT$Package)
-      } else {
-        namespaceFile <-
-          getGitHubNamespace(pkgDT$packageFullName)$NAMESPACE
-      }
-      if (is.null(namespaceFile)) {
-        needed <- NULL
+          # Check NAMESPACE too -- because imperfect DESCRIPTION files
+          if (isTRUE(localVersionOK)) {
+            namespaceFile <-
+              system.file("NAMESPACE", package = localPackageName)
+          } else {
+            namespaceFile <-
+              getGitHubNamespace(packageFullName)$NAMESPACE
+          }
+          if (is.null(namespaceFile)) {
+            needed <- NULL
       } else {
         rr <- readLines(namespaceFile)
         depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
@@ -1597,18 +1609,20 @@ getGitHubDeps <-
         bp <- if (isTRUE(includeBase)) {
           NULL
         } else {
-          .basePkgs
-        }
+              .basePkgs
+            }
 
-        pkgDepDT <- toPkgDepDT(setdiff(union(needed, depsFromNamespace), bp), needed, pkg, verbose)
-        if (!is.na(neededAdditionalRepos))
-          pkgDepDT[, Additional_repositories := neededAdditionalRepos]
-        needed <- pkgDepDT$packageFullName
-      }
+            pkgDepDT <- toPkgDepDT(setdiff(union(needed, depsFromNamespace), bp), needed,
+                                   localPackageName, verbose)
+            if (!is.na(neededAdditionalRepos))
+              pkgDepDT[, Additional_repositories := neededAdditionalRepos]
+            # needed <- pkgDepDT$packageFullName
+          }
+          pkgDepDT
+        }
+      )
     } # else {
-    #   needed <- character() # ""#NA_character_
-    # }
-    pkgDepDT
+    pkgDepDTOuter
   }
 
 purgeBasedOnTimeSinceCached <- function(savedTime) {
