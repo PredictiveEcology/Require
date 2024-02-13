@@ -1020,80 +1020,106 @@ pkgDepTopoSort <-
 pkgDepCRANInner <-
   function(ap,
            which,
-           pkgs,
-           pkgsNoVersion,
-           keepVersionNumber,
-           keepSeparate = FALSE,
+           pkgDT,
+           repos,
+           purge,
+           type,
+           # pkgsNoVersion,
+           # keepVersionNumber,
+           # keepSeparate = FALSE,
            verbose = getOption("Require.verbose")) {
-    # MUCH faster to use base "ap$Package %in% pkgs" than data.table internal "Package %in% pkgs"
-    if (missing(pkgsNoVersion)) {
-      pkgsNoVersion <- trimVersionNumber(pkgs)
-    }
-    if (isFALSE(keepVersionNumber)) {
-      pkgs <- pkgsNoVersion
-    }
-    depsOut <- list()
-    if (pkgsNoVersion %in% ap$Package) {
-      # is it on CRAN
 
-      if (length(pkgsNoVersion) > 1) {
-        # the next %in% used to be a `match`, which didn't work when there were 2 matches; which Windows now has with bin and src package options
-        browserDeveloper("Error number 555; please contact developers")
-      }
-
-      ap <-
-        ap[ap$Package %in% pkgsNoVersion] # gets only this package, but not necessarily in correct order
-      # ap <- ap[match( pkgsNoVersion, ap$Package)]
-      ap[, versionSpec := extractVersionNumber(pkgs)]
-      ap[!is.na(versionSpec), ineq := extractInequality(pkgs)]
-      ap[is.na(versionSpec), availableVersionOK := TRUE]
-      b <-
-        try(ap[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, ineq)])
-      if (is(b, "try-error")) {
-        browserDeveloper("Error 818; please contact developers")
-      }
-      apList <- split(ap, by = "availableVersionOK")
-      ap <- apList[["TRUE"]]
-
-      if (!is.null(ap)) {
-        keep <- match(ap$Package, pkgsNoVersion)
-        keep <- keep[!is.na(keep)]
-        pkgsNoVersion1 <- pkgsNoVersion[keep]
-        pkgs <- pkgs[keep]
-        ap <- ap[order(pkgsNoVersion1)]
-
-        names(which) <- which
-        deps <- lapply(which, function(i) {
-          lapply(ap[[i]], function(x) {
-            out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
-            out <- out[!is.na(out)]
-            out <-
-              grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
-          })
-        })
-
-        ss <- seq_along(pkgsNoVersion1)
-        names(ss) <- pkgsNoVersion1
-        if (isFALSE(keepSeparate)) {
-          deps <-
-            lapply(ss, function(x) {
-              unname(unlist(lapply(deps, function(y) {
-                y[[x]]
-              })))
-            })
-        }
-        depsOut <- modifyList2(depsOut, deps, keep.null = TRUE)
-      }
-      if (!is.null(apList[["FALSE"]])) {
-        depsFALSE <- Map(x = pkgs, function(x) {
-          NULL
-        }, USE.NAMES = TRUE)
-        depsOut <- modifyList2(depsOut, depsFALSE, keep.null = TRUE)
-      }
+    if (is.null(pkgDT$Depends)) {
+      if (missing(ap))
+        ap <- getAvailablePackagesIfNeeded(pkgDT$Package, repos = repos, purge = purge, verbose = verbose, type = type)
+      keepNames <- c("Package", setdiff(colnames(pkgDT), colnames(ap)))
+      pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
     }
 
-    depsOut
+    pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
+    pkgDT[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
+    for (co in which)
+      set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
+
+    pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+    pkgDT[, deps := gsub("(, )+$", "", deps)] # remove final ", "
+    pkgDT[, deps := gsub("^(, )", "", deps)] # remove initial ", "
+    deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
+      out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+      out <- out[!is.na(out)]
+      out <-
+        grep(.grepR, out, value = TRUE, invert = TRUE)
+      out
+    })
+    depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
+    depsAll
   }
+#
+#     depsOut <- list()
+#
+#     pkgsNoVersion <- pkgDT$Package
+#     pkgs <- pkgDT$packageFullName
+#     if (any(pkgsNoVersion %in% ap$Package)) {
+#       # is it on CRAN
+#
+#       # if (length(pkgsNoVersion) > 1) {
+#       #   # the next %in% used to be a `match`, which didn't work when there were 2 matches; which Windows now has with bin and src package options
+#       #   browserDeveloper("Error number 555; please contact developers")
+#       # }
+#
+#       # ap <- ap[ap$Package %in% pkgsNoVersion] # gets only this package, but not necessarily in correct order
+#       ap[pkgDT, on = "Package"]
+#       ap <- ap[match( pkgsNoVersion, ap$Package)]
+#       ap[, versionSpec := pkgDT$versionSpec]
+#       ap[!is.na(versionSpec), ineq := inequality]
+#       ap[is.na(versionSpec), availableVersionOK := TRUE]
+#       b <-
+#         try(ap[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, ineq)])
+#       if (is(b, "try-error")) {
+#         browserDeveloper("Error 818; please contact developers")
+#       }
+#       apList <- split(ap, by = "availableVersionOK")
+#       ap <- apList[["TRUE"]]
+#
+#       if (!is.null(ap)) {
+#         keep <- match(ap$Package, pkgsNoVersion)
+#         keep <- keep[!is.na(keep)]
+#         pkgsNoVersion1 <- pkgsNoVersion[keep]
+#         pkgs <- pkgs[keep]
+#         ap <- ap[order(pkgsNoVersion1)]
+#
+#         names(which) <- which
+#         deps <- lapply(which, function(i) {
+#           lapply(ap[[i]], function(x) {
+#             out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+#             out <- out[!is.na(out)]
+#             out <-
+#               grep(.grepR, out, value = TRUE, invert = TRUE) # remove references to R
+#           })
+#         })
+#
+#         ss <- seq_along(pkgsNoVersion1)
+#         names(ss) <- pkgsNoVersion1
+#         if (isFALSE(keepSeparate)) {
+#           deps <-
+#             lapply(ss, function(x) {
+#               unname(unlist(lapply(deps, function(y) {
+#                 y[[x]]
+#               })))
+#             })
+#         }
+#         depsOut <- modifyList2(depsOut, deps, keep.null = TRUE)
+#       }
+#       if (!is.null(apList[["FALSE"]])) {
+#         depsFALSE <- Map(x = pkgs, function(x) {
+#           NULL
+#         }, USE.NAMES = TRUE)
+#         depsOut <- modifyList2(depsOut, depsFALSE, keep.null = TRUE)
+#       }
+#     }
+#
+#     depsOut
+#   }
 
 DESCRIPTIONFileDeps <-
   function(desc_path,
