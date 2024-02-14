@@ -377,7 +377,7 @@ rbindlistRecursive <- function(ll) {
 }
 
 
-build <- function(Package, VersionOnRepos, verbose, quiet, out) {
+build <- function(Package, VersionOnRepos, verbose, quiet) {
   if (nchar(Sys.which("R")) > 0) {
     messageVerbose("building package (R CMD build)",
       verbose = verbose, verboseLevel = 1
