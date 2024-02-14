@@ -2573,6 +2573,145 @@ noHttp <- function(url) {
   gsub("^http.*://", "", url)
 }
 getPkgDeps <- function(packages, recursive, repos, verbose, type, which, purge) {
+
+saveNameConcat <- function(pkgDT, whichCatRecursive) {
+  p <- pkgDT
+  if ("Account" %in% colnames(pkgDT)) {
+    out <- p[, ifelse(is.na(Account),
+                      saveNameConcatNonGH(Package, Version),
+                      saveNameConcatGH(Package, Version, Account, Repo, shas)) , by = "Package"]$V1
+  } else {
+    # non github
+    out <- p[, saveNameConcatNonGH(Package, Version), by = "Package"]$V1
+  }
+  paste(out, whichCatRecursive, sep = sepForSaveNames)
+}
+
+saveNameConcatGH <- function(Package, Version, Account, Repo, shas)
+  paste(Package, Version, Account, Repo, shas, sep = sepForSaveNames)
+
+saveNameConcatNonGH <- function(Package, Version)
+  paste(Package, Version, sep = sepForSaveNames)
+
+sepForSaveNames <- "__"
+
+saveNamesLabel <- function(pkgDT) {
+  if (!is.null(pkgDT$Account)) {
+    isGH <- !is.na(pkgDT$Account)
+  } else {
+    isGH <- rep(FALSE, NROW(pkgDT))
+  }
+  set(pkgDT, NULL, "label", pkgDT$Package)
+  set(pkgDT, which(isGH), "label",
+      paste0(pkgDT$Account[isGH], "/",
+             pkgDT$Repo[isGH], "@",
+             pkgDT$Branch[isGH]))
+
+  paste0(pkgDT$label, " (==", pkgDT$Version, ")")
+}
+
+
+needVersions <- function(pkgDT) {
+  if ("Version" %in% colnames(pkgDT)) {
+    needVersions <- is.na(pkgDT$Version)
+  } else {
+    needVersions <- rep(TRUE, NROW(pkgDT))
+  }
+  needVersions
+}
+
+
+
+
+saveNamesNonGH <- function(packages, isGH, ord, ap, repos, verbose, type, whichCatRecursive) {
+  pkgDT1 <- toPkgDT(packages[!isGH])
+  set(pkgDT1, NULL, "ord", ord[!isGH])
+  needVersions <- FALSE
+  if ("Version" %in% colnames(pkgDT1)) {
+    haveVersions <- is.na(pkgDT1$Version)
+    if (any(haveVersions)) needVersions <- TRUE
+  } else {
+    needVersions <- TRUE
+  }
+  if (needVersions) {
+    if (missing(ap))
+      ap <-
+        getAvailablePackagesIfNeeded(pkgDT1, repos, purge = FALSE, verbose, type = type)
+    pkgDT1 <- ap[pkgDT1, on = "Package"]
+  }
+
+  pkgDT1[, sn := saveNameConcat(.SD, whichCatRecursive)]
+  dups <- duplicated(pkgDT1$sn)
+  if (any(dups))
+    pkgDT1 <- pkgDT1[!dups]
+  pkgDT1[]
+}
+
+saveNamesGH <- function(packages, isGH, ord, ap, verbose, whichCatRecursive) {
+  pkgDT <- parseGitHub(packages[isGH])
+  set(pkgDT, NULL, "ord", ord[isGH])
+  pkgDT <- installedVersionOKPrecise(pkgDT)
+  pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
+  # pkgDT <- whichToInstall(pkgDT, install = TRUE)
+
+  installedOK <- pkgDT$installedVersionOK
+  installedNotOK <- !installedOK
+  shas <- character(NROW(pkgDT))
+  set(pkgDT, NULL, "shas", shas)
+  areNULLs <- rep(TRUE, NROW(pkgDT))
+  if (isTRUE(any(installedNotOK))) {
+    versionInPkgEnv <-
+      getVersionOptionPkgEnv(paste0(pkgDT$Account[installedNotOK], "_", pkgDT$Package[installedNotOK]),
+                             verNum = pkgDT$versionSpec[installedNotOK],
+                             inequ = pkgDT$inequality[installedNotOK])
+    if (!is.null(versionInPkgEnv)) {
+      areNULLs <- sapply(versionInPkgEnv, is.null)
+    }
+    if (any(areNULLs) || length(areNULLs) == 0) {
+      installedNoOKAndNoPkgEnv <- which(installedNotOK[areNULLs])
+      for (i in 1:2) {
+        brLocals <- if (i == 1) pkgDT$Branch[installedNoOKAndNoPkgEnv] else rep("main", length(installedNoOKAndNoPkgEnv))
+        haveLocalSHAfull <- grepl("^[[:alnum:]]{40}$", pkgDT$installedSha)
+        haveLocalSHA <- haveLocalSHAfull[installedNoOKAndNoPkgEnv]
+        if (!missing(ap)) {
+          ghshacolname <- "GithubSHA1"
+          if (ghshacolname %in% colnames(ap)) {
+            isGHinAP <- !is.na(ap[[ghshacolname]])
+            shaOuts <- pkgDT[installedNoOKAndNoPkgEnv][ap[isGHinAP], on = c("Branch" = ghshacolname)]$Branch
+            haveLocalSHA <- shaOuts %in% brLocals
+          }
+        }
+        installedNoOKAndNoPkgEnv <- installedNoOKAndNoPkgEnv[!haveLocalSHA]
+        if (length(installedNoOKAndNoPkgEnv)) {
+          shaOuts <- try(
+            Map(
+              repo = pkgDT$Repo[installedNoOKAndNoPkgEnv],
+              acct = pkgDT$Account[installedNoOKAndNoPkgEnv],
+              br = pkgDT$Branch[installedNoOKAndNoPkgEnv],
+              verbose = verbose,
+              getSHAfromGitHubMemoise
+            )
+          )
+          pkgDT[installedNoOKAndNoPkgEnv, shas := unlist(shaOuts)]
+        }
+        wh <- which(haveLocalSHAfull)
+        pkgDT[wh, shas := installedSha]
+        needVersion <- needVersions(pkgDT)
+        if (any(needVersion)) {
+          # if (any("tiler" %in% pkgDT$Package)) browser()
+          descs <- getGitHubDESCRIPTION(pkgDT$packageFullName[needVersion])
+          pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
+          pkgDT[!is.na(descFiles), Version := DESCRIPTIONFileVersionV(descFiles)]
+        }
+        break
+
+      }
+    }
+  }
+  pkgDT[, sn := saveNameConcat(.SD, whichCatRecursive)]
+  pkgDT[]
+}
+}
 getPkgDeps <- function(packages, recursive, inner = FALSE, repos, verbose, type, which, purge) {
 
   deps <- NULL
