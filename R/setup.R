@@ -99,7 +99,7 @@ normPathMemoise <- function(d) {
 #'  `options("Require.RPackageCache" = "somedir")`.
 RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
-    create <- FALSE # !is.null(getOptionRPackageCache())
+    create <- FALSE
   }
   pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
   if (isTRUE(create)) {
@@ -112,6 +112,20 @@ RequirePkgCacheDir <- function(create) {
   return(pkgCacheDir)
 }
 
+RequireGitHubCacheDir <- function(create) {
+  if (missing(create)) {
+    create <- FALSE
+  }
+  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "GitHub"))
+  if (isTRUE(create)) {
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+  }
+
+  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
+  ##       - remind them how to change this, and make sure it's documented!
+
+  return(pkgCacheDir)
+}
 #' Get the option for `Require.RPackageCache`
 #'
 #' First checks if an environment variable `Require.RPackageCache`
