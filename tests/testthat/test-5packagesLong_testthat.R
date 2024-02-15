@@ -7,8 +7,9 @@ test_that("test 5", {
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
 
-  if (isDevAndInteractive) {
-    tmpdir <- file.path(tempdir2(basename(setupInitial$thisFilename)), paste0("RequireTmp", sample(1e5, 1)))
+  browser()
+#  if (isDevAndInteractive) {
+    tmpdir <- file.path(tempdir2(paste0("RequireTmp", sample(1e5, 1))))
 
     dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
     # repo <- chooseCRANmirror(ind = 1)
@@ -230,10 +231,6 @@ test_that("test 5", {
       names(pkgsToTest) <- pkgsToTest
       runTests(have, pkg)
       endTime <- Sys.time()
-      message(
-        "\033[32m --- ", i, " --------------------------",
-        basename(setupInitial$thisFilename), ": ", format(endTime - setupInitial$startTime), " \033[39m"
-      )
     }
 
     # Use a mixture of different types of "off CRAN"
@@ -272,6 +269,6 @@ test_that("test 5", {
       testthat::expect_true(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
       testthat::expect_true(out2[Package == "SpaDES.core"]$installed)
     }
-  }
+#   }
 
 })

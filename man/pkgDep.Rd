@@ -2,7 +2,6 @@
 % Please edit documentation in R/pkgDep.R, R/pkgDep3.R
 \name{pkgDep4}
 \alias{pkgDep4}
-\alias{pkgDep2}
 \alias{pkgDepTopoSort}
 \alias{pkgDep}
 \title{Determine package dependencies}
@@ -25,21 +24,6 @@ pkgDep4(
   includeSelf = TRUE,
   type = getOption("pkgType"),
   Additional_repositories = FALSE
-)
-
-pkgDep2(
-  packages,
-  recursive = TRUE,
-  which = c("Depends", "Imports", "LinkingTo"),
-  depends,
-  imports,
-  suggests,
-  linkingTo,
-  repos = getOption("repos"),
-  sorted = TRUE,
-  purge = getOption("Require.purge", FALSE),
-  includeSelf = TRUE,
-  verbose = getOption("Require.verbose")
 )
 
 pkgDepTopoSort(
@@ -156,9 +140,6 @@ with a column \code{packageFullName} and possibly a second column \code{Addition
 which may have been specified in a \code{DESCRIPTION} file. NOTE: THIS ALTERS
 THE OUTPUT CLASS}
 
-\item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
-the returned list from most number of dependencies to least.}
-
 \item{pkgs}{A vector of package names to evaluate their
 reverse depends (i.e., the packages that \emph{use} each
 of these packages)}
@@ -201,9 +182,6 @@ get package dependencies from the GitHub \file{DESCRIPTION} file. This is
 intended to replace \code{tools::package_dependencies} or \code{pkgDep} in the
 \pkg{miniCRAN} package, but with modifications to allow multiple sources to
 be searched in the same function call.
-
-\code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
-i.e., the first order dependencies, and runs the \code{pkgDep} on those.
 
 This is a wrapper around \code{tools::dependsOnPkgs},
 but with the added option of \code{sorted}, which
@@ -248,17 +226,6 @@ if (Require:::.runLongExamples()) {
 
   # GitHub, local, and CRAN packages
   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
-
-  Require:::.cleanup(opts)
-}
-}
-\dontrun{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
-
-  pkgDep2("reproducible")
-  # much bigger one
-  pkgDep2("tidyverse")
 
   Require:::.cleanup(opts)
 }

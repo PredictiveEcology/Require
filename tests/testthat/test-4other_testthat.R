@@ -17,7 +17,7 @@ test_that("test 3", {
   if (!isDev) {
     pkgDep("data.table", purge = TRUE)
   }
-  pkgDep2("Require")
+  # pkgDep2("Require")
 
 
   pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)
@@ -28,10 +28,10 @@ test_that("test 3", {
                  deps = "Require", returnFull = FALSE, reverse = TRUE
   )
 
-  Require:::pkgDepCRAN("Require", keepVersionNumber = TRUE, purge = TRUE)
+  Require:::pkgDepCRAN("Require", purge = TRUE)
 
 
-  if (Sys.info()["user"] == "emcintir2") {
+  if (Sys.info()["user"] == "emcintir") {
     options(
       "Require.RPackageCache" = TRUE,
       "Require.unloadNamespaces" = FALSE
@@ -54,7 +54,8 @@ test_that("test 3", {
 
   data.table::set(pkgDT, NULL, "versionSpec", NA)
 
-  out <- detachAll("data.table", dontTry = "testit")
+  out <- detachAll("data.table",
+                   dontTry = extractPkgName(pkgDep("devtools", recursive = T)[["devtools"]]))
   testthat::expect_true({
     isTRUE(out["data.table"] == 1)
   })

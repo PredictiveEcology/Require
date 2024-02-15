@@ -8,7 +8,8 @@ if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
 }
 
+
 withr::local_options(
-  list(Require.isDev = isDev, isDevAndInteractive = isDevAndInteractive),
+  list(Require.isDev = isDev, Require.isDevAndInteractive = isDevAndInteractive),
   .local_envir = teardown_env()
 )

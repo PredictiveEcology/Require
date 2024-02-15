@@ -252,7 +252,7 @@ getPkgDepsNonRecursive <- function(pkgDT, which, repos, type, purge, includeBase
   pkgDTList <- split(pkgDT, by = "repoLocation")
   pkgDTDep <- list()
   if (!is.null(pkgDTList[["CRAN"]])) {
-    pkgDTDep[["CRAN"]] <- pkgDepCRAN3(pkgDT = pkgDTList$CRAN, which = which[[1]],
+    pkgDTDep[["CRAN"]] <- pkgDepCRAN(pkgDT = pkgDTList$CRAN, which = which[[1]],
                                           repos = repos, type = type, purge = purge, ap = ap)
   }
   if (!is.null(pkgDTList[["GitHub"]]))
@@ -264,14 +264,16 @@ getPkgDepsNonRecursive <- function(pkgDT, which, repos, type, purge, includeBase
   depsNew
 }
 
-pkgDepCRAN3 <- function(pkgDT, which, repos, purge, type, ap,
-           verbose = getOption("Require.verbose")) {
+pkgDepCRAN <- function(pkgDT, which, repos, purge, type, ap, verbose) {
+  fillDefaults(pkgDep)
 
-    if (is.null(pkgDT$Depends)) {
-      if (missing(ap))
-        ap <- getAvailablePackagesIfNeeded(pkgDT$Package, repos = repos, purge = purge, verbose = verbose, type = type)
-      keepNames <- c("Package", setdiff(colnames(pkgDT), colnames(ap)))
-      pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
+  if (!is.data.table(pkgDT))
+    pkgDT <- toPkgDT(pkgDT) |> parsePackageFullname()
+  if (is.null(pkgDT$Depends)) {
+    if (is.null(ap))
+      ap <- getAvailablePackagesIfNeeded(pkgDT$Package, repos = repos, purge = purge, verbose = verbose, type = type)
+    keepNames <- c("Package", setdiff(colnames(pkgDT), colnames(ap)))
+    pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
     }
 
     pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
@@ -294,10 +296,9 @@ pkgDepCRAN3 <- function(pkgDT, which, repos, purge, type, ap,
         grep(.grepR, out, value = TRUE, invert = TRUE)
       out
     })
-    depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
-    depsAll
-  }
-#
+  depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
+  depsAll
+}
 
 
 #' @inheritParams Require
@@ -340,62 +341,6 @@ pkgDepGitHub <- function(pkgDT, which, purge, includeBase = FALSE, verbose = get
   }
 
 
-#' The `packages` argument may have up to 4 pieces of information for GitHub
-#' packages: name, repository, branch, version. For CRAN-alikes, it will only
-#' be 2 pieces: name, version. There can also be an inequality or equality, if
-#' there is a version.
-#'
-#' @param packages A vector of GitHub or CRAN-alike packages. These can include
-#'   package name (required) and optionally repository, branch/sha and/or version.
-#' @param ap is used for CRAN-alikes to get version number, if not part of `packages`
-#' @param repos is used for `ap`.
-#'
-#' @details
-#' If version is not supplied, it will take the local, installed version, if it
-#' exists. Otherwise, it is assumed that the HEAD is desired.
-#' The function will find it in the `ap` or on `github.com`. For github packages,
-#' this is obviously a slow step, which can be accelerated if user supplies a sha
-#' or a version e.g., saveNamesForCache("PredictiveEcology/LandR@development (==1.0.2)")
-#'
-#' @return
-#' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
-#' above, plus the `which` and the `recursive`.
-saveNamesForCache3 <- function(packages, which, recursive, ap, type = type, repos, verbose) {
-  if (missing(which))
-    which <- eval(formals(pkgDep)[["which"]])
-  whichCat <- paste(sort(which[[1]]), collapse = "_")
-
-  if (missing(recursive))
-    recursive <- formals(pkgDep)[["recursive"]]
-  if (!startsWith(recursive, "Recursive"))
-    recursive <- paste0("Recursive", recursive)
-  whichCatRecursive <- paste(whichCat, recursive, sep = "")[1]
-  if (is.data.table(packages)) {
-    isGH <- if (is.null(packages$Account)) {
-      rep(FALSE, NROW(packages))
-    } else {
-      !is.na(packages$Account)
-    }
-  } else {
-    isGH <- isGitHub(packages)
-  }
-  ord <- seq(NROW(packages))
-  if (any(!isGH)) {
-    pkgDT <- saveNamesNonGH(packages, isGH, ord, ap, repos, type = type, verbose, whichCatRecursive)
-  }
-  if (any(isGH)) {
-    pkgDT1 <- saveNamesGH(packages, isGH, ord, ap, verbose, whichCatRecursive)
-    if (exists("pkgDT", inherits = FALSE)) {
-      pkgDT <- rbindlist(list(pkgDT, pkgDT1), use.names = TRUE, fill = TRUE)
-    } else {
-      pkgDT <- pkgDT1
-    }
-  }
-  set(pkgDT, NULL, "saveNamesLabel", saveNamesLabel(pkgDT))
-  newOrd <- order(pkgDT$ord)
-  pkgDT <- pkgDT[newOrd]
-  return(pkgDT)
-}
 
 saveNamesNonGH <- function(packages, isGH, ord, ap, repos, verbose, type, whichCatRecursive) {
   pkgDT1 <- toPkgDT(packages[!isGH])
