@@ -274,28 +274,28 @@ pkgDepCRAN <- function(pkgDT, which, repos, purge, type, ap, verbose) {
       ap <- getAvailablePackagesIfNeeded(pkgDT$Package, repos = repos, purge = purge, verbose = verbose, type = type)
     keepNames <- c("Package", setdiff(colnames(pkgDT), colnames(ap)))
     pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
-    }
+  }
 
-    pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
-    pkgDT[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
-    for (co in which)
-      set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
+  pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
+  pkgDT[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
+  for (co in which)
+    set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
 
-    pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+  pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
 
-    # remove trailing and initial commas
-    set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
-    set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
-    # remove middle empty commas
-    set(pkgDT, NULL, "deps", gsub(", ,", ",", pkgDT$deps))
+  # remove trailing and initial commas
+  set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
+  set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
+  # remove middle empty commas
+  set(pkgDT, NULL, "deps", gsub(", ,", ",", pkgDT$deps))
 
-    deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
-      out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
-      out <- out[!is.na(out)]
-      out <-
-        grep(.grepR, out, value = TRUE, invert = TRUE)
-      out
-    })
+  deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
+    out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+    out <- out[!is.na(out)]
+    out <-
+      grep(.grepR, out, value = TRUE, invert = TRUE)
+    out
+  })
   depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
   depsAll
 }
@@ -604,4 +604,26 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
       pkgDepDT[, Additional_repositories := neededAdditionalRepos]
   }
   list(pkgDepDT)
+}
+
+fillDefaults <- function(fillFromFn, envir = parent.frame()) {
+  i <- 0
+  sf <- sys.frames()
+  len <- length(sf)
+  for (en in rev(sf)) {
+    i  = i + 1
+    if (identical(en, envir))
+      break
+  }
+  whFrame <- len - i + 1
+  # whFrame <- which(sapply(sys.frames(), function(en) identical(en, envir)))
+  mc <- match.call(sys.function(whFrame), call = sys.call(whFrame))
+  used <- names(mc)[-1]
+  forms <- formalArgs(eval(as.list(mc[1])[[1]]))
+  # miss <- setdiff(forms, used)
+  miss <- forms[!forms %in% used]
+  for (m in miss) {
+    defVal <- eval(formals(fillFromFn)[[m]])
+    assign(m, defVal, envir = parent.frame())
+  }
 }
