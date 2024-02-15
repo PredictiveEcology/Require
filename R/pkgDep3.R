@@ -103,13 +103,15 @@ pkgDep <- function(packages,
 
     if (length(which) < length(packages))
       which <- rep(which, length.out = length(packages))
-    # Only deal with first one of "which"... deal with second later
+    # Only deal with first one of "which"...
     whichCat <- paste(sort(which[[1]]), collapse = "_")
 
     deps <- getPkgDeps(packages, recursive = recursive, repos = repos, verbose = verbose,
                        type = type, which = which, purge = purge, includeBase = includeBase,
                        includeSelf = includeSelf)
   }
+
+  # collapse or not to list of character vector
   if (!isTRUE(Additional_repositories)) {
     deps <- Map(pkgFN = deps, function(pkgFN) pkgFN[["packageFullName"]])
   }
@@ -282,6 +284,8 @@ pkgDepCRAN3 <- function(pkgDT, which, repos, purge, type, ap,
     # remove trailing and initial commas
     set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
     set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
+    # remove middle empty commas
+    set(pkgDT, NULL, "deps", gsub(", ,", ",", pkgDT$deps))
 
     deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
