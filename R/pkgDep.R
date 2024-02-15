@@ -1,6 +1,6 @@
 utils::globalVariables(
   c("Additional_repositories", "githubPkgName",
-    "localBranch", "localFiles", "localRepo", "localSha", "localUsername",
+    "localBranch", "localFiles", "localRepo", "installedSha", "localUsername",
     "newPackageFullName")
 )
 
@@ -74,7 +74,7 @@ utils::globalVariables(
 #'   Require:::.cleanup(opts)
 #' }
 #' }
-pkgDep <- function(packages,
+pkgDep4 <- function(packages,
                    libPath = .libPaths(),
                    which = c("Depends", "Imports", "LinkingTo"),
                    recursive = FALSE,
@@ -105,10 +105,9 @@ pkgDep <- function(packages,
       which <- rep(which, length.out = length(packages))
     # Only deal with first one of "which"... deal with second later
     whichCat <- paste(sort(which[[1]]), collapse = "_")
-    # trim redundancies
-    depsAll <- list()
+
     deps <- getPkgDeps(packages, recursive = recursive, repos = repos, verbose = verbose,
-                       type = type, which = which, purge = purge)
+                       type = type, which = which, purge = purge, includeBase = includeBase)
   }
   deps
 }
@@ -121,7 +120,6 @@ pkgDep <- function(packages,
 
 
 # if (recursive %in% TRUE) {
-#   browser()
 #   out <- Map(packages = deps, f = getPkgDeps, MoreArgs = list(repos, verbose, type, which, purge))
 #   out2 <- lapply(out, rbindlist, fill = TRUE, use.names = TRUE)
 #   out3 <- Map(na = names(out2), function(na) {
@@ -150,7 +148,7 @@ pkgDep <- function(packages,
 #     }
 #     # this will be short because saveNamesDT$saveNames has no version numbers if they are "inequalities" i.e,. >= or <=
 #     neededFull1 <-
-#       lapply(saveNames, get0, envir = .pkgEnv$pkgDep$deps)
+#       lapply(saveNames, get0, envir = pkgDepDepsEnv())
 #     saveNamesOrig <- names(neededFull1)
 #     out111 <-
 #       try(set(saveNamesDT, NULL, "saveNamesOrig", saveNamesOrig))
@@ -212,11 +210,10 @@ pkgDep <- function(packages,
 #       # ap <-
 #       #   getAvailablePackagesIfNeeded(packages[needGet], repos, purge = FALSE, verbose, type)
 #
-#       pkgDepDTList <- lapply(saveNamesRecursiveFalse, get0, envir = .pkgEnv$pkgDep$deps)
-#       # pkgDepDTList <- mget(saveNamesRecursiveFalse, envir = .pkgEnv$pkgDep$deps)
+#       pkgDepDTList <- lapply(saveNamesRecursiveFalse, get0, envir = pkgDepDepsEnv())
+#       # pkgDepDTList <- mget(saveNamesRecursiveFalse, envir = pkgDepDepsEnv())
 #       names(pkgDepDTList) <- names(saveNamesRecursiveFalse)
 #       nulls <- sapply(pkgDepDTList, is.null)
-#       browser()
 #       if (any(nulls)) {
 #         pkgDepDTListTmp <-
 #           pkgDepInnerMemoise(
@@ -247,7 +244,6 @@ pkgDep <- function(packages,
 #         )
 #       }
 #       pkgDepDTList2 <- pkgDepDTListNotRecursive
-#       browser()
 #       if (NROW(pkgDepDTListNotRecursive)) {
 #         if (recursive) {
 #           which <- tail(which, 1)[[1]] # take the last of the list of which
@@ -275,7 +271,6 @@ pkgDep <- function(packages,
 #                     pkgDepDTListNew <-
 #                       unlist(recursive = FALSE, unname(lapply(pkgsToLookupFull, function(need) {
 #                         #unique(unlist(recursive = FALSE, {
-#                         browser()
 #                         a <- pkgDepInnerMemoise(
 #                           packages = need, libPath = libPath, which = which, purge = FALSE,
 #                           keepVersionNumber = keepVersionNumber, ap = ap,
@@ -323,7 +318,6 @@ pkgDep <- function(packages,
 #       newOnes <- saveNamesDT$names %in% names(pkgDepDTList)
 #
 #       # Remove "R"
-#       browser()
 #       pkgDepDTList2 <- lapply(pkgDepDTList2, function(DT) {
 #         DT[, packageFullName := {
 #           packageFullName <- grep(.grepR, packageFullName, value = TRUE, invert = TRUE)
@@ -333,11 +327,10 @@ pkgDep <- function(packages,
 #           packageFullName
 #         }]})
 #
-#       # Add deps to .pkgEnv$pkgDep$deps
-#       browser()
+#       # Add deps to pkgDepDepsEnv()
 #       assignPkgDepDTtoSaveNames(sn = saveNamesDT$saveNames[newOnes], pkgDepDT = pkgDepDTList2)
 #       # Map(sn = saveNamesDT$saveNames[newOnes], n = saveNamesDT$names[newOnes], function(sn, n) {
-#       #   assign(sn, pkgDepDTList2[[n]], envir = .pkgEnv[["pkgDep"]][["deps"]])
+#       #   assign(sn, pkgDepDTList2[[n]], envir = .pkgEnv[[.pkgDepEnvName]][["deps"]])
 #       # })
 #       neededFull1 <- append(neededFull1[!needGet], pkgDepDTList2)
 #     }
@@ -418,6 +411,7 @@ pkgDep <- function(packages,
 #' @importFrom utils untar download.file
 #' @inheritParams Require
 pkgDepInner <- function(packages,
+                        packageNames,
                         libPath,
                         which,
                         keepVersionNumber,
@@ -427,7 +421,7 @@ pkgDepInner <- function(packages,
                         verbose = getOption("Require.verbose"),
                         type = getOption("pkgType"),
                         ap) {
-  names(packages) <- packages
+  names(packages) <- packageNames
   pkgsNoVersion <- extractPkgName(packages)
   # purge <- dealWithCache(purge, checkAge = TRUE)
   if (!isTRUE(includeBase)) {
@@ -443,217 +437,13 @@ pkgDepInner <- function(packages,
     pkgsNoVersionToCheck <- pkgsNoVersion
   }
 
-  pkgDepDTList <- Map( # desc_path = desc_paths,
-    pkg = packagesToCheck,
+  pkgDepDTList <- Map(pkg = packagesToCheck,
+    pkgName = names(packagesToCheck),
     pkgNoVersion = pkgsNoVersionToCheck,
-    function( # desc_path,
-             pkg, pkgNoVersion) {
-      pkgDT <- parseGitHub(pkg, verbose = verbose)
-      if ("GitHub" %in% pkgDT$repoLocation) {
-        pkgDepDT <-
-          try(getGitHubDepsMemoise(
-            pkg = pkg,
-            pkgDT = pkgDT,
-            which = which,
-            purge = FALSE,
-            includeBase = includeBase
-          ))
-        if (is(pkgDepDT, "try-error") && !isTRUE(getOption("Require.offlineMode"))) {
-          browserDeveloper("Error 357; please contact developer")
-        }
-      } else {
-        if (!isTRUE(getOption("Require.offlineMode"))) {
-          for (attmpt in 1:2) {
-            needed <- unique(unname(unlist(
-              pkgDepCRANMemoise(
-                pkg = pkg,
-                pkgsNoVersion = pkgNoVersion,
-                which = which,
-                keepVersionNumber = keepVersionNumber,
-                purge = FALSE,
-                repos = repos,
-                verbose = verbose,
-                type = type,
-                ap = ap
-              )
-            )))
-            # null means not in ap; attmpt is only try 1x after purging, but 3rd condition -->
-            #    if the pkg is ap, then it is a version problem, so no purging will help.
-            # if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
-            #   browser()
-            #   ap <-
-            #     available.packagesCached(
-            #       repos = repos,
-            #       purge = TRUE,
-            #       verbose = verbose,
-            #       type = type
-            #     )
-            # } else {
-              break
-            # }
-          }
-
-
-          if (is.null(needed)) {
-            # essesntially, failed
-            pkgName <- extractPkgName(pkg)
-            pkgPrint <-
-              if (any(grepl("==NA", pkg))) {
-                pkgName
-              } else {
-                pkg
-              }
-            inequ <- extractInequality(pkg)
-            if (!inequ %in% "==") {
-              pkg <- gsub(inequ, "==", pkg)
-            }
-            td <- tempdir2(pkg) #  use the version number for td
-            packageTD <- file.path(td, pkgName)
-            if (!dir.exists(packageTD)) { # only happens in a new session
-              verNum <- extractVersionNumber(pkg)
-              noSpecNeeded <- is.na(verNum) || identical(verNum, "NA")
-              if (noSpecNeeded) {
-                localInstallOK <- installedVers(pkgName)
-                if (isTRUE(localInstallOK$installed %in% TRUE)) {
-                  packageTD <- system.file(package = pkgName)
-                }
-              }
-
-              if (!dir.exists(packageTD)) {
-                # if (noSpecNeeded) { # can't tell if this is with ! or without !
-                ava <- archiveVersionsAvailable(pkgName, repos = repos)
-                dt <- if (is(ava, "list")) {
-                  rbindlist(lapply(ava, as.data.table, keep.rownames = "PackageUrl"))
-                } else {
-                  as.data.table(ava, keep.rownames = "PackageUrl")
-                }
-                colNamesToSortOn <- intersect(colnames(dt), "mtime")
-                if (length(colNamesToSortOn)) {
-                  data.table::setorderv(dt, "mtime")
-                } # order it so last one is the most recent one
-                PackageUrl <-
-                  if (NROW(dt)) {
-                    tail(dt$PackageUrl, 1)
-                  } else {
-                    character()
-                  }
-                # } else {
-                #   pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
-                #   PackageUrl <- file.path(pkgName, pkgFilename)
-                #   dt <- numeric()
-                # }
-                if (length(PackageUrl) > 0) {
-                  if (endsWith(PackageUrl, "tar.gz")) {
-                    # checkLocal
-                    localFileOption <- dir(Require::RequirePkgCacheDir(),
-                                           pattern = paste0("^", pkgName, "$"), full.names = TRUE)
-                    localOption <- length(localFileOption) > 0
-                    if (!noSpecNeeded %in% TRUE) {
-                      localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
-                      localFileOption <- localFileOption[localOption]
-                    }
-                    if (any(localOption)) {
-                      messageVerbose(
-                        "found local cached copy of ", pkgPrint, verbose = verbose, verboseLevel = 1
-                      )
-                      tf <- tempfile()
-                      theTar <- endsWith(localFileOption, "tar.gz")
-                      theTarBins <- isBinary(localFileOption[theTar])
-                      if (any(theTarBins))
-                        theTar <- theTar & theTarBins
-                      theZip <- endsWith(localFileOption, ".zip")
-                      if (any(theZip)) {
-                        unzip(localFileOption[theZip][1], exdir = td)
-                      } else {
-                        untar(tarfile = localFileOption[theTar][1], exdir = td)
-                      }
-                    } else {
-                      messageVerbose(
-                        "available.packages() does not have correct information on package dependencies for ",
-                        pkgPrint,
-                        "; checking CRAN archives",
-                        verbose = verbose,
-                        verboseLevel = 1
-                      )
-                      for (repo in repos) {
-                        url <- getArchiveURL(repo, PackageUrl)
-                        url2 <-
-                          file.path(contrib.url(repo), basename(PackageUrl))
-                        tf <- file.path(tempdir2(), basename(tempfile()), basename(url))
-                        checkPath(dirname(tf), create = TRUE)
-                        if (!isTRUE(getOption("Require.offlineMode"))) {
-                          haveFile <-
-                            suppressWarnings(tryCatch(
-                              download.file(url, tf, quiet = TRUE),
-                              error = function(x) {
-                                tryCatch(
-                                  download.file(url2, tf, quiet = TRUE),
-                                  error = function(y) {
-                                    FALSE
-                                  }
-                                )
-                              }
-                            ))
-                        }
-                        if (file.exists(tf)) {
-                          linkOrCopy(tf, file.path(RequirePkgCacheDir(), basename(tf)))
-                          untar(tarfile = tf, exdir = td)
-                          filesToDel <-
-                            dir(
-                              packageTD,
-                              recursive = TRUE,
-                              full.names = TRUE,
-                              include.dirs = TRUE
-                            )
-                          filesToDel <-
-                            filesToDel[grep("^DESCRIPTION$",
-                                            basename(filesToDel),
-                                            invert = TRUE
-                            )]
-                          unlink(filesToDel, recursive = TRUE)
-                          break
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            needed <- if (dir.exists(packageTD)) {
-              DESCRIPTIONFileDeps(
-                file.path(packageTD, "DESCRIPTION"),
-                which = which,
-                keepVersionNumber = keepVersionNumber,
-                purge = FALSE
-              )
-            } else {
-              messageVerbose(
-                pkgPrint,
-                " not found on CRAN; can't determine dependencies; perhaps incomplete description? Archived? On GitHub?",
-                verbose = verbose,
-                verboseLevel = 1
-              )
-              character()
-            }
-          }
-          purge <<- FALSE
-          pkgDepDT <- toPkgDepDT(needed, needed, needed, verbose)
-        } else {
-          pkgDepDT <- toPkgDepDT(NULL)
-        }
-      }
-      sn <-
-        saveNamesForCache(pkg,
-          which = list(which),
-          recursive = FALSE,
-          verbose = verbose,
-          repos = repos,
-          ap = ap
-        )
-      # needed <- pkgDepDT$packageFullName
-      .pkgEnv[["pkgDep"]][["deps"]][[sn]] <- pkgDepDT
-      # needed
-    }
+    MoreArgs = list(verbose = verbose, which = which, includeBase = includeBase,
+                    keepVersionNumber = keepVersionNumber, repos = repos,
+                    type = type, ap = ap),
+    f = pkgDepInnerByPkg
   ) # a list of pkgDepDT
   if (!isTRUE(includeBase)) {
     if (NROW(packagesBase)) {
@@ -1043,8 +833,11 @@ pkgDepCRANInner <-
       set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
 
     pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
-    pkgDT[, deps := gsub("(, )+$", "", deps)] # remove final ", "
-    pkgDT[, deps := gsub("^(, )", "", deps)] # remove initial ", "
+
+    # remove trailing and initial commas
+    set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
+    set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
+
     deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
       out <- out[!is.na(out)]
@@ -1128,11 +921,11 @@ DESCRIPTIONFileDeps <-
            keepVersionNumber = TRUE,
            purge = getOption("Require.purge", FALSE),
            keepSeparate = FALSE) {
-    if (!exists("pkgDep", envir = .pkgEnv)) {
-      .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
+    if (is.null(pkgDepEnv())) {
+      pkgDepEnvCreate()
     }
-    if (!exists("DESCRIPTIONFile", envir = .pkgEnv[["pkgDep"]])) {
-      .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <- newPkgDepEnv()
+    if (is.null(pkgDepDESCFileEnv())) {
+      pkgDepDESCFileEnvCreate()
     }
     objName <- if (length(desc_path) == 1) {
       paste0(
@@ -1165,12 +958,13 @@ DESCRIPTIONFileDeps <-
       )
     }
     if (isTRUE(length(objName) > 1) ||
-      isTRUE(any(!exists(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]))) ||
+      isTRUE(any(!exists(objName, envir = pkgDepDESCFileEnv()))) ||
       isTRUE(purge)) {
       if (is.null(desc_path)) {
         needed <- NULL
       } else {
         lines <- if (length(desc_path) == 1) {
+          # linesAll <- lapply(desc_path, read.dcf)
           try(readLines(desc_path))
         } else {
           lines <- desc_path
@@ -1215,12 +1009,12 @@ DESCRIPTIONFileDeps <-
             }
           })
         if (length(objName) == 1) {
-          assign(objName, needed, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+          assign(objName, needed, envir = pkgDepDESCFileEnv())
         }
       }
     } else {
       needed <-
-        get(objName, envir = .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]])
+        get(objName, envir = pkgDepDESCFileEnv())
     }
     if (!keepSeparate) {
       needed <- unname(unlist(needed))
@@ -1259,6 +1053,7 @@ whichToDILES <- function(which) {
            which = c("Depends", "Imports", "LinkingTo"),
            other = NULL,
            purge = getOption("Require.purge", FALSE)) {
+    browser()
     purge <- dealWithCache(purge)
     if (!is.null(other)) {
       if (any(grepl("github", tolower(other)))) {
@@ -1281,9 +1076,14 @@ whichToDILES <- function(which) {
         })
       versions <- DESCRIPTIONFileVersionV(desc_lines, purge = FALSE)
       deps <- if (length(which)) {
-        lapply(desc_lines, function(lines) {
-          DESCRIPTIONFileDeps(lines, which = which, purge = purge)
+        names(which) <- which
+        browser()
+        deps <- lapply(desc_lines, function(lines) {
+          lapply(which, function(wh)
+            paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = ", ")
+          )
         })
+        invertList(deps)
       } else {
         NULL
       }
@@ -1298,9 +1098,10 @@ whichToDILES <- function(which) {
       mat <-
         cbind(
           "Package" = dirs[filesExist],
-          "Version" = versions,
-          "Depends" = deps
+          "Version" = versions
         )
+      if (!is.null(deps))
+        mat <- cbind(mat, as.matrix(as.data.table(deps)), stringsAsFactors = FALSE)
       if (!is.null(other)) {
         others <- lapply(others, function(co) {
           if (!is(co, "character")) {
@@ -1314,30 +1115,36 @@ whichToDILES <- function(which) {
       }
       mat
     })
+
     lengths <- unlist(lapply(out, function(x) {
       NROW(x)
     }))
     out <- do.call(rbind, out)
-    ret <-
-      cbind(
-        "Package" = basename(unlist(out[, "Package"])),
-        "LibPath" = rep(lib.loc, lengths),
-        "Version" = out[, "Version"]
-      )
-    if (length(which)) {
-      ret <-
-        cbind(ret,
-          "Dependencies" = out[, "Depends"],
-          stringsAsFactors = FALSE
-        )
-    }
-    if (NROW(ret)) {
-      if (!is.null(other)) {
-        ncolBefore <- NCOL(ret)
-        ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
-      }
-    }
-    ret
+    out[, "Package"] <- rownames(out)
+    out <- cbind(out, "LibPath" = rep(lib.loc, lengths), stringsAsFactors = FALSE)
+    colNames <- c("Package", "Version", "LibPath", which, other)
+    colNames <- intersect(colNames, colnames(out))
+    out <- out[, colNames]
+    # ret <-
+    #   cbind(
+    #     "Package" = basename(unlist(out[, "Package"])),
+    #     "LibPath" = rep(lib.loc, lengths),
+    #     "Version" = out[, "Version"]
+    #   )
+    # if (length(which)) {
+    #   ret <-
+    #     cbind(ret,
+    #       "Dependencies" = out[, "Depends"],
+    #       stringsAsFactors = FALSE
+    #     )
+    # }
+    # if (NROW(ret)) {
+    #   if (!is.null(other)) {
+    #     ncolBefore <- NCOL(ret)
+    #     ret <- cbind(ret, out[, other], stringsAsFactors = FALSE)
+    #   }
+    # }
+    out
   }
 
 .basePkgs <-
@@ -1502,14 +1309,20 @@ getGitHubDeps <-
            includeBase = FALSE) {
     pkg <- masterMainToHead(pkgDT$packageFullName)
 
-    # localVersionOK <- installedVersionOKPrecise(pkgDT)
+    localVersionOK <- pkgDT$installedVersionOK
+    pkgDepDTOuter <- data.table(packageFullName = character())
 
-    # if (isTRUE(any(pkgDT$localBranch == "HEAD"))) browser()
-    if (isTRUE(pkgDT$localVersionOK)) {
-      pkgDT[, DESCFile := system.file("DESCRIPTION", package = pkgDT$Package)]
-    } else {
-      pkgDT <- getGitHubDESCRIPTION(pkgDT, purge = purge)
+    if (any(!localVersionOK %in% TRUE)) {
+      pkgDTNotLocal <- getGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
     }
+    if (any(localVersionOK %in% TRUE)) {
+      pkgDT[localVersionOK %in% TRUE, DESCFile := system.file("DESCRIPTION", package = Package), by = "Package"]
+      if (exists("pkgDTNotLocal", inherits = FALSE))
+        pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)
+    } else {
+      pkgDT <- pkgDTNotLocal
+    }
+
     hasVersionNum <- pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
     set(pkgDT, NULL, "availableVersionOK", NA)
     if (any(hasVersionNum)) {
@@ -1523,7 +1336,6 @@ getGitHubDeps <-
       }
     }
 
-    pkgDepDTOuter <- data.table(packageFullName = character())
 
     if (any(!pkgDT$availableVersionOK %in% FALSE)) {
       neededV <-
@@ -1533,10 +1345,10 @@ getGitHubDeps <-
         unlink(pkgDT$destFile)
         set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
         browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
-             "\nTo confirm whether it exists, try browsing to ",
-             file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
-             "\nIf it does exist, try rerunning with `purge = TRUE`",
-             "\nIf this error is inaccurate, and the problem persists, ",
+                                "\nTo confirm whether it exists, try browsing to ",
+                                file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
+                                "\nIf it does exist, try rerunning with `purge = TRUE`",
+                                "\nIf this error is inaccurate, and the problem persists, ",
                                 "please contact developers with error code 949"))
       }
 
@@ -1546,87 +1358,8 @@ getGitHubDeps <-
         DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
       names(neededV) <- pkgDT$packageFullName
 
-      pkgDepDTOuter <- Map(
-        needed = neededV, neededRemotes = neededRemotesV,
-        localVersionOK = pkgDT$installedVersionOK,
-        neededAdditionalRepos = neededAdditionalReposV,
-        localPackageName = pkgDT$Package,
-        packageFullName = pkgDT$packageFullName,
-        function(needed, neededRemotes, neededName, localVersionOK, localPackageName,
-                 packageFullName, neededAdditionalRepos) {
-          neededRemotesName <- extractPkgName(neededRemotes)
-          neededName <- extractPkgName(needed)
-          needSomeRemotes <- neededName %in% neededRemotesName
-      if (any(needSomeRemotes)) {
-        hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
-        if (length(hasVersionNum)) {
-          neededInRemotesWVersion <- needed[needSomeRemotes][hasVersionNum]
-          vn <- extractVersionNumber(neededInRemotesWVersion)
-          ineq <- extractInequality(neededInRemotesWVersion)
-          neededPkgsInRemotes <-
-            extractPkgName(neededInRemotesWVersion)
-          inequWVN <- paste0(" (", ineq, " ", vn, ")")
-          remotes <- neededRemotes[neededRemotesName %in% neededName]
-          whNeedVN <-
-            match(neededPkgsInRemotes, extractPkgName(remotes))
-          remotesWVN <- remotes[whNeedVN]
-          remotesWVN <- paste0(remotesWVN, inequWVN)
-          remotesWoVN <-
-            if (length(neededRemotes) != length(whNeedVN)) {
-              remotes[-whNeedVN]
-            } else {
-              NULL
-            }
-          remotesAll <- c(remotesWVN, remotesWoVN)
-        } else {
-          remotesAll <- neededRemotes[neededRemotesName %in% neededName]
-        }
-        needed <- c(needed[!needSomeRemotes], remotesAll)
-      }
-
-          # Check NAMESPACE too -- because imperfect DESCRIPTION files
-          if (isTRUE(localVersionOK)) {
-            namespaceFile <-
-              system.file("NAMESPACE", package = localPackageName)
-          } else {
-            namespaceFile <-
-              getGitHubNamespace(packageFullName)$NAMESPACE
-          }
-          if (is.null(namespaceFile)) {
-            needed <- NULL
-      } else {
-        rr <- readLines(namespaceFile)
-        depsFromNamespace <- gsub(", except.*(\\))$", "\\1", rr)
-        depsFromNamespace <-
-          unique(gsub(
-            "^import.*\\((.+)\\,.*$",
-            "\\1",
-            grep("^import", depsFromNamespace, value = TRUE)
-          ))
-        depsFromNamespace <-
-              unique(gsub("^import\\((.+)\\)", "\\1", depsFromNamespace))
-            depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
-            depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
-
-            bp <- if (isTRUE(includeBase)) {
-              NULL
-            } else {
-              .basePkgs
-            }
-
-            # needed could have version number specification
-            neededReally <- union(needed, depsFromNamespace)
-            neededReally <- neededReally[!extractPkgName(neededReally) %in% bp]
-
-            pkgDepDT <- toPkgDepDT(neededReally, needed,
-                                   localPackageName, verbose)
-            if (!is.na(neededAdditionalRepos))
-              pkgDepDT[, Additional_repositories := neededAdditionalRepos]
-          }
-          pkgDepDT
-        }
-      )
-    } # else {
+      pkgDepDTOuter <- updateWithRemotesNamespaceAddRepos(neededV, neededRemotesV, pkgDT, neededAdditionalReposV, includeBase, verbose)
+    }
 
     pkgDepDTOuter
   }
@@ -1660,30 +1393,17 @@ dealWithCache <- function(purge,
     checkAge <- FALSE
   }
 
+  purgeBasedOnTime <- FALSE
   if (!isTRUE(purge) && isTRUE(checkAge)) {
-    # purgeDiff <-
-    #   as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"))
-    # if (is.null(.pkgEnv[["startTime"]])) {
-    #   purge <- FALSE
-    # } else {
-    #   purgeDiff <-
-    #     if (identical(purgeDiff, "") ||
-    #         is.na(purgeDiff)) {
-    #       3600
-    #     } else {
-    #       purgeDiff
-    #     }
-    #   autoPurge <-
-    #     purgeDiff < as.numeric(difftime(Sys.time(), .pkgEnv[["startTime"]], units = "sec"))
-    #   purge <- purge || autoPurge
-    # }
-    purgeBasedOnTime <- purgeBasedOnTimeSinceCached(.pkgEnv[["startTime"]])
+    purgeBasedOnTime <- purgeBasedOnTimeSinceCached(pkgEnvStartTime())
     purge <- purge || purgeBasedOnTime
   }
 
-  if (isTRUE(purge) || is.null(.pkgEnv[["pkgDep"]])) {
-    .pkgEnv[["pkgDep"]] <- newPkgDepEnv()
-    .pkgEnv[["startTime"]] <- Sys.time()
+  if (is.null(pkgDepEnv()) || purgeBasedOnTime) {
+    pkgDepEnvCreate()
+  }
+  if (isTRUE(purge) || purgeBasedOnTime) {
+    pkgEnvStartTimeCreate()
   }
   if (isTRUE(purge)) {
 
@@ -1703,15 +1423,14 @@ dealWithCache <- function(purge,
     unlink(fn)
   }
 
-  if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE) && purge)
-    rm(list = getSHAfromGitHubObjName, envir = .pkgEnv)
-  if (is.null(.pkgEnv[["pkgDep"]][["deps"]]) || purgeBasedOnTime) {
-    # browser()
-    .pkgEnv[["pkgDep"]][["deps"]] <- new.env(parent = emptyenv())
+  if (!is.null(pkgDepGitHubSHAEnv()) && purge)
+    rm(list = getSHAfromGitHubObjName, envir = pkgEnv())
+
+  if (is.null(pkgDepDepsEnv()) || purgeBasedOnTime) {
+    pkgDepDepsEnvCreate()
   }
-  if (is.null(.pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]]) || purge) {
-    .pkgEnv[["pkgDep"]][["DESCRIPTIONFile"]] <-
-      new.env(parent = emptyenv())
+  if (is.null(pkgDepDESCFileEnv()) || purge) {
+    pkgDepDESCFileEnvCreate()
   }
 
   purge
@@ -1720,9 +1439,7 @@ dealWithCache <- function(purge,
 .grepTooManySpaces <- " {2,}"
 .grepTabCR <- "\n|\t"
 
-newPkgDepEnv <- function() {
-  new.env(parent = emptyenv())
-}
+
 
 masterMainToHead <- function(gitRepo) {
   masterOrMain <- "@(master|main) *"
@@ -1814,14 +1531,15 @@ paddedFloatToChar <-
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
 #' above, plus the `which` and the `recursive`.
 saveNamesForCache <- function(packages, which, recursive, ap, type = type, repos, verbose) {
-  if (NROW(packages) == 0) browser()
   if (missing(which))
     which <- eval(formals(pkgDep)[["which"]])
   whichCat <- paste(sort(which[[1]]), collapse = "_")
 
   if (missing(recursive))
     recursive <- formals(pkgDep)[["recursive"]]
-  whichCatRecursive <- paste(whichCat, "Recursive", recursive, sep = "")[1]
+  if (!startsWith(recursive, "Recursive"))
+    recursive <- paste0("Recursive", recursive)
+  whichCatRecursive <- paste(whichCat, recursive, sep = "")[1]
   if (is.data.table(packages)) {
     isGH <- if (is.null(packages$Account)) {
       rep(FALSE, NROW(packages))
@@ -1952,7 +1670,6 @@ saveNamesForCache <- function(packages, which, recursive, ap, type = type, repos
 #             bbb <- try(
 #               pkgArchive <- getArchiveDetails(pkgArchive, repos = repos, ava = ava, verbose = verbose)
 #             )
-#             if (is(bbb, "try-error")) browser()
 #
 #             pkgArchive <- na.omit(pkgArchive, by = "availableVersionOK")
 #             if (length(pkgArchive$VersionOnRepos)) {
@@ -1996,7 +1713,6 @@ saveNamesForCache <- function(packages, which, recursive, ap, type = type, repos
 #         versions <- character(NROW(packagesSaveNames))
 #       possVers <- getVersionOptionPkgEnv(packagesSaveNames[!hasEquality], verNum = NULL, inequ = NULL)
 #       if (length(possVers)) {
-#         if (length(versions[!hasEquality]) != length(possVers)) browser()
 #         versions[!hasEquality] <- possVers
 #       }
 #     }
@@ -2046,8 +1762,8 @@ pkgDepCRANMemoise <- function(...) {
     }
     ret <- NULL
     if (!exists(dots$pkgsNoVersion,
-      envir = .pkgEnv$pkgDepCRAN,
-      inherits = FALSE
+                envir = .pkgEnv$pkgDepCRAN,
+                inherits = FALSE
     )) {
       .pkgEnv$pkgDepCRAN[[dots$pkgsNoVersion]] <- list()
     } else {
@@ -2073,6 +1789,7 @@ pkgDepCRANMemoise <- function(...) {
 }
 
 pkgDepInnerMemoise <- function(...) {
+
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
     if (isTRUE(dots$purge) &&
@@ -2085,18 +1802,28 @@ pkgDepInnerMemoise <- function(...) {
     ret <- NULL
     ss <- match.call(definition = pkgDepInner)
     packages <- eval(ss$packages, envir = parent.frame())
-    if (length(packages) > 1) {
+    packageNames <- eval(ss$packageNames, envir = parent.frame())
+
+    if (NROW(packages) > 1) {
       dots2 <- dots
-      dots2[[1]] <- NULL
+      dots2[[1]] <- NULL # get rid of packages ... already have locally
+      dots2$packageNames <- NULL
       dots2 <- modifyList2(dots2, list(purge = FALSE))
-      if (!is.null(names(packages))) {
-        names(packages) <- NULL
+      # if (!is.data.table(packages)) {
+      #   if (!is.null(names(packages))) {
+      #     names(packages) <- NULL
+      #   }
+      # }
+      if (!is.data.table(packages)) {
+        packages <- toPkgDT(packages)
       }
-      ret <-
-        lapply(packages, function(p) {
-          do.call(pkgDepInnerMemoise, append(list(packages = p), dots2))
-        })
-      ret <- unlist(ret, recursive = FALSE)
+      ret <- packages[, pkgDepInnerMemoise(.SD), by = "Package"]
+
+      # ret <-
+      #   Map(p = packages, pn = packageNames, function(p, pn) {
+      #     do.call(pkgDepInnerMemoise, append(list(packages = p, packageNames = pn), dots2))
+      #   })
+      # ret <- unlist(ret, recursive = FALSE)
     } else {
       if (!exists(packages,
         envir = .pkgEnv$pkgDepInner,
@@ -2114,7 +1841,12 @@ pkgDepInnerMemoise <- function(...) {
         }
       }
       if (is.null(ret)) {
-        ret <- pkgDepInner(...)
+        if (is.null(ret)) {
+          ret <- pkgDepInner(...) # uses pkgDepCRANInner
+        } else {
+          ret <- list(ret)
+          names(ret) <- packages
+        }
         .pkgEnv$pkgDepInner[[packages]] <-
           list(.pkgEnv$pkgDepInner[[packages]], list(input = dots, output = ret))
       }
@@ -2234,7 +1966,13 @@ prependSelf <- function(deps, includeSelf) {
 
 getAvailablePackagesIfNeeded <-
   function(packages, repos, purge, verbose, type) {
-    isCRAN <- parseGitHub(packages)[["repoLocation"]] %in% "CRAN"
+    if (is.data.table(packages)) {
+      pkgDT <- packages
+    } else {
+      pkgDT <- parseGitHub(packages)
+    }
+    isCRAN <- pkgDT[["repoLocation"]] %in% "CRAN"
+
     if (any(isCRAN %in% TRUE)) {
       ap <-
         available.packagesCached(
@@ -2393,19 +2131,20 @@ installedVersionOKPrecise <- function(pkgDT) {
     pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(localFiles, "RemoteRepo")]
     pkgDT[fe, localUsername := DESCRIPTIONFileOtherV(localFiles, "RemoteUsername")]
     pkgDT[fe, localBranch := DESCRIPTIONFileOtherV(localFiles, "RemoteRef")]
-    pkgDT[fe, localSha := DESCRIPTIONFileOtherV(localFiles, "RemoteSha")]
-  } else {
-    pkgDT[fe, localRepo := NA]
-    pkgDT[fe, localUsername := NA]
-    pkgDT[fe, localBranch := NA]
-    pkgDT[fe, localSha := NA]
+    pkgDT[fe, installedSha := DESCRIPTIONFileOtherV(localFiles, "RemoteSha")]
+  }
+  if (any(!fe)) {
+    pkgDT[!fe, localRepo := NA]
+    pkgDT[!fe, localUsername := NA]
+    pkgDT[!fe, localBranch := NA]
+    pkgDT[!fe, installedSha := NA]
   }
 
   pkgDT <- installedVers(pkgDT)
 
   if (isTRUE(any(pkgDT$installed %in% TRUE))) {
     brOrSha <- pkgDT$Branch == pkgDT$localBranch |
-      pkgDT$Branch == pkgDT$localSha
+      pkgDT$Branch == pkgDT$installedSha
 
     installedNotOK <- pkgDT$Account != pkgDT$localUsername |
       pkgDT$Repo != pkgDT$localRepo |
@@ -2473,12 +2212,12 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
     dup <- duplicated(pkgDepDT, by = c("Package", "Version"))
     pkgDepDT <- pkgDepDT[dup == FALSE]
     differences <-
-      setdiff(pkgDepDT$Package, extractPkgName(neededFromDESCRIPTION))
+      setdiff(setdiff(pkgDepDT$Package, .basePkgs), extractPkgName(neededFromDESCRIPTION))
     if (length(differences)) {
       messageVerbose(
         " (-- The DESCRIPTION file for ",
         pkg,
-        " is incomplete; there are missing imports:\n",
+        " is incomplete; there are missing imports: ",
         paste(differences, collapse = ", "),
         " --) ",
         verbose = verbose,
@@ -2491,42 +2230,48 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
 
 
 getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, verbose, type, ap = NULL) {
-  isDT <- vapply(pkgDepDTList2, is.data.table, FUN.VALUE = logical(1))
-  if (any(isDT)) {
-    if (any(!isDT))
-      pkgDepDTList2 <- pkgDepDTList2[isDT]
-    if (missing(pkgDepDT))
-      pkgDepDT <- rbindlist(pkgDepDTList2, fill = TRUE, use.names = TRUE)
-    additionalRepos <- lapply(pkgDepDTList2, function(DT)
-      if (!is.null(DT$Additional_repositories)) unique(DT$Additional_repositories) else NULL)
-    uniqueAdditionalRepos <- vapply(additionalRepos, function(ar) paste(sort(ar), collapse = "__"), FUN.VALUE = character(1))
-    uniques <- as.integer(factor(paste0(seq(uniqueAdditionalRepos), uniqueAdditionalRepos)))
-    hasAdditionalRepos <- vapply(additionalRepos, function(ar) NROW(ar) > 0, FUN.VALUE = logical(1))
-    if (sum(hasAdditionalRepos)) {
-      ap <- lapply(uniques, function(un) {
-        DT <- rbindlist(pkgDepDTList2[un], fill = TRUE, use.names = TRUE)
-        repos <- c(repos, na.omit(unique(DT$Additional_repositories)))
-        needPurge <- FALSE
-        for (i in 1:2) {
-          ap <-
-            getAvailablePackagesIfNeeded(DT$packageFullName,
-                                         repos, purge = needPurge, verbose, type)
-          if (!is.null(ap)) {
-            repo1 <- noHttp(repos)
-            haveRepos <- unlist(lapply(repo1, function(re) any(startsWith(noHttp(unique(ap$Repository)), re))))
-            needPurge <- !all(haveRepos)
+#
+  anyNewAdditionalRepositories <-
+    unlist(lapply(pkgDepDTList2, function(dt)
+      if (is.null(dt$Additional_repositories)) NULL else unique(dt$Additional_repositories)))
+  if (!is.null(anyNewAdditionalRepositories) || is.null(ap)) {
+
+
+    isDT <- vapply(pkgDepDTList2, is.data.table, FUN.VALUE = logical(1))
+    if (any(isDT)) {
+      if (any(!isDT))
+        pkgDepDTList2 <- pkgDepDTList2[isDT]
+      if (missing(pkgDepDT))
+        pkgDepDT <- rbindlist(pkgDepDTList2, fill = TRUE, use.names = TRUE)
+      additionalRepos <- lapply(pkgDepDTList2, function(DT)
+        if (!is.null(DT$Additional_repositories)) unique(DT$Additional_repositories) else NULL)
+      uniqueAdditionalRepos <- vapply(additionalRepos, function(ar) paste(sort(ar), collapse = "__"), FUN.VALUE = character(1))
+      uniques <- as.integer(factor(paste0(seq(uniqueAdditionalRepos), uniqueAdditionalRepos)))
+      hasAdditionalRepos <- vapply(additionalRepos, function(ar) NROW(ar) > 0, FUN.VALUE = logical(1))
+      if (sum(hasAdditionalRepos)) {
+        ap <- lapply(uniques, function(un) {
+          DT <- rbindlist(pkgDepDTList2[un], fill = TRUE, use.names = TRUE)
+          repos <- c(repos, na.omit(unique(DT$Additional_repositories)))
+          needPurge <- FALSE
+          for (i in 1:2) {
+            ap <-
+              getAvailablePackagesIfNeeded(DT, repos, purge = needPurge, verbose, type)
+            if (!is.null(ap)) {
+              repo1 <- noHttp(repos)
+              haveRepos <- unlist(lapply(repo1, function(re) any(startsWith(noHttp(unique(ap$Repository)), re))))
+              needPurge <- !all(haveRepos)
+            }
+            if (needPurge %in% FALSE)
+              break
           }
-          if (needPurge %in% FALSE)
-            break
-        }
-        ap
-      })
-      ap <- unique(rbindlist(ap, use.names = TRUE, fill = TRUE))
-    } else {
-      if (is.null(ap))
-        ap <-
-          getAvailablePackagesIfNeeded(pkgDepDT$packageFullName,
-                                       repos, purge = FALSE, verbose, type)
+          ap
+        })
+        ap <- unique(rbindlist(ap, use.names = TRUE, fill = TRUE))
+      } else {
+        if (is.null(ap))
+          ap <-
+            getAvailablePackagesIfNeeded(pkgDepDT, repos, purge = FALSE, verbose, type)
+      }
     }
   }
   ap
@@ -2572,253 +2317,275 @@ getArchiveDetailsInnerMemoise <- function(...) {
 noHttp <- function(url) {
   gsub("^http.*://", "", url)
 }
-getPkgDeps <- function(packages, recursive, repos, verbose, type, which, purge) {
 
-saveNameConcat <- function(pkgDT, whichCatRecursive) {
-  p <- pkgDT
-  if ("Account" %in% colnames(pkgDT)) {
-    out <- p[, ifelse(is.na(Account),
-                      saveNameConcatNonGH(Package, Version),
-                      saveNameConcatGH(Package, Version, Account, Repo, shas)) , by = "Package"]$V1
+
+getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
+  pat <- paste0(psnNoVersion)
+  pat <- gsub("[[:punct:]]| ", "_", pat)
+  nams <- names(as.list(pkgDepDepsEnv()))
+  if (!is.null(nams)) {
+    versions <- Map(pa = pat, ver = verNum, ineq = inequ, #MoreArgs = list(nam = nams),
+                function(pa, ver, ineq) {
+                  sw <- startsWith(prefix = pa, nams)
+                  if (any(sw)) {
+                    # if (all(sw %in% FALSE))
+                    #   sw <- grep(pa, nams)
+                    nams <- nams[sw]
+                    # nams <- nams[have]
+
+                    poss <- get0(nams, envir = pkgDepDepsEnv())
+                    versions <- extractVersionNumber(names(poss))
+                    # have <- ls(pkgDepDepsEnv(), pattern = pat) # TOO SLOW APPARENTLY
+                    # versions <- gsub(paste0("^", pa, "\\_\\_*([[:alnum:]]{40})|[(.+)\\_\\_+].+$"), "\\1", nams)
+                    if (!is.null(ineq)) {
+                      if (!is.na(ineq)) {
+                        if (length(versions) > 0) {
+                          okVers <- compareVersion2(gsub("_", "\\.", versions),
+                                                    versionSpec = ver, inequality = ineq)
+                          if (any(!okVers)) {
+                            versions[!okVers] <- ""
+                          }
+                        }
+                      }
+                    }
+                    noSavedOption <- nchar(versions) == 0
+                    if (!is.null(ver))
+                      if (any(noSavedOption))
+                        versions[noSavedOption] <- verNum[noSavedOption]
+                    if (length(versions) > 1)
+                      versions <- tail(versions, 1)
+                    versions
+                  } else {
+                    NULL
+                  }
+                })
   } else {
-    # non github
-    out <- p[, saveNameConcatNonGH(Package, Version), by = "Package"]$V1
+    versions <- NULL
   }
-  paste(out, whichCatRecursive, sep = sepForSaveNames)
+
+  versions
+
 }
 
-saveNameConcatGH <- function(Package, Version, Account, Repo, shas)
-  paste(Package, Version, Account, Repo, shas, sep = sepForSaveNames)
 
-saveNameConcatNonGH <- function(Package, Version)
-  paste(Package, Version, sep = sepForSaveNames)
 
-sepForSaveNames <- "__"
 
-saveNamesLabel <- function(pkgDT) {
-  if (!is.null(pkgDT$Account)) {
-    isGH <- !is.na(pkgDT$Account)
+
+
+pkgDepInnerByPkg <- function(pkgDT, verbose, which, includeBase, repos, type, ap) {
+  # names(pkg) <- pkgName
+  #
+  # pkgDT <- parseGitHub(pkg, verbose = verbose)
+  if ("GitHub" %in% pkgDT$repoLocation) {
+    pkgDepDT <-
+      getGitHubDeps(
+        pkg = pkgDT$Package,
+        pkgDT = pkgDT,
+        which = which,
+        purge = FALSE,
+        includeBase = includeBase
+      )
+    # if (is(pkgDepDT, "try-error") && !isTRUE(getOption("Require.offlineMode"))) {
+    #   browserDeveloper("Error 357; please contact developer")
+    # }
   } else {
-    isGH <- rep(FALSE, NROW(pkgDT))
-  }
-  set(pkgDT, NULL, "label", pkgDT$Package)
-  set(pkgDT, which(isGH), "label",
-      paste0(pkgDT$Account[isGH], "/",
-             pkgDT$Repo[isGH], "@",
-             pkgDT$Branch[isGH]))
-
-  paste0(pkgDT$label, " (==", pkgDT$Version, ")")
-}
-
-
-needVersions <- function(pkgDT) {
-  if ("Version" %in% colnames(pkgDT)) {
-    needVersions <- is.na(pkgDT$Version)
-  } else {
-    needVersions <- rep(TRUE, NROW(pkgDT))
-  }
-  needVersions
-}
-
-
-
-
-saveNamesNonGH <- function(packages, isGH, ord, ap, repos, verbose, type, whichCatRecursive) {
-  pkgDT1 <- toPkgDT(packages[!isGH])
-  set(pkgDT1, NULL, "ord", ord[!isGH])
-  needVersions <- FALSE
-  if ("Version" %in% colnames(pkgDT1)) {
-    haveVersions <- is.na(pkgDT1$Version)
-    if (any(haveVersions)) needVersions <- TRUE
-  } else {
-    needVersions <- TRUE
-  }
-  if (needVersions) {
-    if (missing(ap))
-      ap <-
-        getAvailablePackagesIfNeeded(pkgDT1, repos, purge = FALSE, verbose, type = type)
-    pkgDT1 <- ap[pkgDT1, on = "Package"]
-  }
-
-  pkgDT1[, sn := saveNameConcat(.SD, whichCatRecursive)]
-  dups <- duplicated(pkgDT1$sn)
-  if (any(dups))
-    pkgDT1 <- pkgDT1[!dups]
-  pkgDT1[]
-}
-
-saveNamesGH <- function(packages, isGH, ord, ap, verbose, whichCatRecursive) {
-  pkgDT <- parseGitHub(packages[isGH])
-  set(pkgDT, NULL, "ord", ord[isGH])
-  pkgDT <- installedVersionOKPrecise(pkgDT)
-  pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
-  # pkgDT <- whichToInstall(pkgDT, install = TRUE)
-
-  installedOK <- pkgDT$installedVersionOK
-  installedNotOK <- !installedOK
-  shas <- character(NROW(pkgDT))
-  set(pkgDT, NULL, "shas", shas)
-  areNULLs <- rep(TRUE, NROW(pkgDT))
-  if (isTRUE(any(installedNotOK))) {
-    versionInPkgEnv <-
-      getVersionOptionPkgEnv(paste0(pkgDT$Account[installedNotOK], "_", pkgDT$Package[installedNotOK]),
-                             verNum = pkgDT$versionSpec[installedNotOK],
-                             inequ = pkgDT$inequality[installedNotOK])
-    if (!is.null(versionInPkgEnv)) {
-      areNULLs <- sapply(versionInPkgEnv, is.null)
-    }
-    if (any(areNULLs) || length(areNULLs) == 0) {
-      installedNoOKAndNoPkgEnv <- which(installedNotOK[areNULLs])
-      for (i in 1:2) {
-        brLocals <- if (i == 1) pkgDT$Branch[installedNoOKAndNoPkgEnv] else rep("main", length(installedNoOKAndNoPkgEnv))
-        haveLocalSHAfull <- grepl("^[[:alnum:]]{40}$", pkgDT$installedSha)
-        haveLocalSHA <- haveLocalSHAfull[installedNoOKAndNoPkgEnv]
-        if (!missing(ap)) {
-          ghshacolname <- "GithubSHA1"
-          if (ghshacolname %in% colnames(ap)) {
-            isGHinAP <- !is.na(ap[[ghshacolname]])
-            shaOuts <- pkgDT[installedNoOKAndNoPkgEnv][ap[isGHinAP], on = c("Branch" = ghshacolname)]$Branch
-            haveLocalSHA <- shaOuts %in% brLocals
-          }
-        }
-        installedNoOKAndNoPkgEnv <- installedNoOKAndNoPkgEnv[!haveLocalSHA]
-        if (length(installedNoOKAndNoPkgEnv)) {
-          shaOuts <- try(
-            Map(
-              repo = pkgDT$Repo[installedNoOKAndNoPkgEnv],
-              acct = pkgDT$Account[installedNoOKAndNoPkgEnv],
-              br = pkgDT$Branch[installedNoOKAndNoPkgEnv],
-              verbose = verbose,
-              getSHAfromGitHubMemoise
-            )
+    if (!isTRUE(getOption("Require.offlineMode"))) {
+      for (attmpt in 1:2) {
+        needed <- unique(unname(unlist(
+          pkgDepCRANMemoise(
+            pkg = pkg,
+            pkgsNoVersion = pkgNoVersion,
+            which = which,
+            keepVersionNumber = keepVersionNumber,
+            purge = FALSE,
+            repos = repos,
+            verbose = verbose,
+            type = type,
+            ap = ap
           )
-          pkgDT[installedNoOKAndNoPkgEnv, shas := unlist(shaOuts)]
-        }
-        wh <- which(haveLocalSHAfull)
-        pkgDT[wh, shas := installedSha]
-        needVersion <- needVersions(pkgDT)
-        if (any(needVersion)) {
-          # if (any("tiler" %in% pkgDT$Package)) browser()
-          descs <- getGitHubDESCRIPTION(pkgDT$packageFullName[needVersion])
-          pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
-          pkgDT[!is.na(descFiles), Version := DESCRIPTIONFileVersionV(descFiles)]
-        }
+        )))
+        # null means not in ap; attmpt is only try 1x after purging, but 3rd condition -->
+        #    if the pkg is ap, then it is a version problem, so no purging will help.
+        # if (is.null(needed) && attmpt < 2 && !(pkgNoVersion %in% ap$Package)) {
+        #   ap <-
+        #     available.packagesCached(
+        #       repos = repos,
+        #       purge = TRUE,
+        #       verbose = verbose,
+        #       type = type
+        #     )
+        # } else {
         break
-
+        # }
       }
-    }
-  }
-  pkgDT[, sn := saveNameConcat(.SD, whichCatRecursive)]
-  pkgDT[]
-}
-}
-getPkgDeps <- function(packages, recursive, inner = FALSE, repos, verbose, type, which, purge) {
 
-  deps <- NULL
-  if (NROW(packages) > 0) {
-    if (is.data.table(packages))
-      packages <- packages$packageFullName
-    pkgDT <- parseGitHub(packages)
-    pkgDT <- updatePackagesWithNames(pkgDT, packages)
-    pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE)
-    pkgDT <- trimRedundancies(pkgDT, repos = repos, purge = FALSE) # changes order
 
-    ap <- getAvailablePackagesIfNeeded(pkgDT, repos, purge = FALSE, verbose, type)
-
-    rec <- if (recursive %in% TRUE) c(TRUE, FALSE) else FALSE
-    for (recursiveUsed in rec) {
-      pkgDT <- saveNamesForCache(pkgDT, which, recursive = recursiveUsed, ap = ap,
-                                 repos = repos, type = type, verbose = verbose - 1)
-      alreadySaved <- pkgDT$sn %in% names(.pkgEnv$pkgDep$deps)
-      names(alreadySaved) <- pkgDT$sn
-      if (all(alreadySaved))
-        break
-    }
-
-    if (any(alreadySaved)) {
-      deps <- lapply(pkgDT$sn[alreadySaved], get0, envir = .pkgEnv$pkgDep$deps)
-      names(deps) <- pkgDT$packageFullName[alreadySaved]
-      pkgDTSaved <- pkgDT[which(alreadySaved)]
-      pkgDT <- pkgDT[-which(alreadySaved)]
-    }
-    isBase <- pkgDT$Package %in% .basePkgs
-
-    if (any(isBase))
-      pkgDT <- pkgDT[-which(isBase)]
-    if (NROW(pkgDT) > 0) {
-      # if (any("tiler" %in% pkgDT$Package)) browser()
-      deps <- getPkgDepsNonRecursive(pkgDT, which, ap, repos, type, purge, deps)
-      if (exists("pkgDTSaved", inherits = FALSE)) {
-        pkgDT <- rbindlist(list(pkgDT, pkgDTSaved))
-      }
-      assignPkgDepDTtoSaveNames(pkgDT$sn, deps)
-      if (recursive %in% TRUE) {
-        deps <- getPkgDepsRecursive(deps, recursive, repos, verbose, type, which, purge, libPaths)
-      }
-    }
-    if (inner %in% FALSE) {
-      if (recursive %in% TRUE) {
-        if (any(!alreadySaved)) {
-          deps <- deps[match(pkgDT$packageFullName, names(deps))]
-          wh <- names(alreadySaved)[!alreadySaved]
-          pkgDT2 <- saveNamesForCache(pkgDT[sn %in% wh], which, recursive = recursive,
-                                         ap = ap, repos = repos, type = type,
-                                         verbose = verbose - 1)
-          if (any(alreadySaved)) {
-            pkgDT <- rbindlist(list(pkgDTSaved, pkgDT2), fill = TRUE, use.names = TRUE)
+      if (is.null(needed)) {
+        # essesntially, failed
+        pkgName <- extractPkgName(pkg)
+        pkgPrint <-
+          if (any(grepl("==NA", pkg))) {
+            pkgName
           } else {
-            pkgDT <- pkgDT2
+            pkg
+          }
+        inequ <- extractInequality(pkg)
+        if (!inequ %in% "==") {
+          pkg <- gsub(inequ, "==", pkg)
+        }
+        td <- tempdir2(pkg) #  use the version number for td
+        packageTD <- file.path(td, pkgName)
+        if (!dir.exists(packageTD)) { # only happens in a new session
+          verNum <- extractVersionNumber(pkg)
+          noSpecNeeded <- is.na(verNum) || identical(verNum, "NA")
+          if (noSpecNeeded) {
+            localInstallOK <- installedVers(pkgName)
+            if (isTRUE(localInstallOK$installed %in% TRUE)) {
+              packageTD <- system.file(package = pkgName)
+            }
+          }
+
+          if (!dir.exists(packageTD)) {
+            ava <- archiveVersionsAvailable(pkgName, repos = repos)
+            dt <- if (is(ava, "list")) {
+              rbindlist(lapply(ava, as.data.table, keep.rownames = "PackageUrl"))
+            } else {
+              as.data.table(ava, keep.rownames = "PackageUrl")
+            }
+            colNamesToSortOn <- intersect(colnames(dt), "mtime")
+            if (length(colNamesToSortOn)) {
+              data.table::setorderv(dt, "mtime")
+            } # order it so last one is the most recent one
+
+            if (NROW(dt))
+              if (noSpecNeeded %in% FALSE)
+                dt <- dt[grep(verNum, PackageUrl)]
+            PackageUrl <-if (NROW(dt)) {
+              tail(dt$PackageUrl, 1)
+            } else {
+              character()
+            }
+
+            # } else {
+            #   pkgFilename <- paste0(pkgName, "_", verNum, ".tar.gz")
+            #   PackageUrl <- file.path(pkgName, pkgFilename)
+            #   dt <- numeric()
+            # }
+            if (length(PackageUrl) > 0) {
+              if (endsWith(PackageUrl, "tar.gz")) {
+                # checkLocal
+                localFileOption <- dir(Require::RequirePkgCacheDir(),
+                                       pattern = paste0("^", pkgName, "_", verNum, "\\."), full.names = TRUE)
+                localOption <- length(localFileOption) > 0
+                if (!noSpecNeeded %in% TRUE) {
+                  localOption <- extractVersionNumber(filenames = localFileOption) %in% verNum
+                  localFileOption <- localFileOption[localOption]
+                }
+
+                if (any(localOption)) {
+                  messageVerbose(
+                    "found local cached copy of ", pkgPrint, verbose = verbose, verboseLevel = 1
+                  )
+                  tf <- tempfile()
+                  theTar <- endsWith(localFileOption, "tar.gz")
+                  theTarBins <- isBinary(localFileOption[theTar])
+                  if (any(theTarBins))
+                    theTar <- theTar & theTarBins
+                  theZip <- endsWith(localFileOption, ".zip")
+                  if (any(theZip)) {
+                    unzip(localFileOption[theZip][1], exdir = td, files = file.path(pkgName, "DESCRIPTION"))
+                  } else {
+                    untar(tarfile = localFileOption[theTar][1], exdir = td, files = file.path(pkgName, "DESCRIPTION"))
+                  }
+                } else {
+                  messageVerbose(
+                    "available.packages() does not have correct information on package dependencies for ",
+                    pkgPrint,
+                    "; checking CRAN archives",
+                    verbose = verbose,
+                    verboseLevel = 1
+                  )
+                  for (repo in repos) {
+                    url <- getArchiveURL(repo, PackageUrl)
+                    url2 <-
+                      file.path(contrib.url(repo), basename(PackageUrl))
+                    tf <- file.path(tempdir2(), basename(tempfile()), basename(url))
+                    checkPath(dirname(tf), create = TRUE)
+                    if (!isTRUE(getOption("Require.offlineMode"))) {
+                      haveFile <-
+                        suppressWarnings(tryCatch(
+                          download.file(url, tf, quiet = TRUE),
+                          error = function(x) {
+                            tryCatch(
+                              download.file(url2, tf, quiet = TRUE),
+                              error = function(y) {
+                                FALSE
+                              }
+                            )
+                          }
+                        ))
+                    }
+                    if (file.exists(tf)) {
+                      linkOrCopy(tf, file.path(RequirePkgCacheDir(), basename(tf)))
+                      untar(tarfile = tf, exdir = td)
+                      filesToDel <-
+                        dir(
+                          packageTD,
+                          recursive = TRUE,
+                          full.names = TRUE,
+                          include.dirs = TRUE
+                        )
+                      filesToDel <-
+                        filesToDel[grep("^DESCRIPTION$",
+                                        basename(filesToDel),
+                                        invert = TRUE
+                        )]
+                      unlink(filesToDel, recursive = TRUE)
+                      break
+                    }
+                  }
+                }
+              }
+            }
           }
         }
-        assignPkgDepDTtoSaveNames(pkgDT$sn, deps)
+        needed <- if (dir.exists(packageTD)) {
+          DESCRIPTIONFileDeps(
+            file.path(packageTD, "DESCRIPTION"),
+            which = which,
+            keepVersionNumber = keepVersionNumber,
+            purge = FALSE
+          )
+        } else {
+          messageVerbose(
+            pkgPrint,
+            " not found on CRAN; can't determine dependencies; perhaps incomplete description? Archived? On GitHub?",
+            verbose = verbose,
+            verboseLevel = 1
+          )
+          character()
+        }
       }
-      deps <- Map(pkgFN = deps, function(pkgFN) pkgFN[["packageFullName"]])
-      deps <- deps[match(packages, names(deps))] # reorder to initial order
-      deps <- Map(dep = deps, function(dep) {
-        pkgsCleaned <- gsub(.grepTooManySpaces, " ", dep)
-        gsub(.grepTabCR, "", pkgsCleaned)
-      })
-
+      purge <<- FALSE
+      pkgDepDT <- toPkgDepDT(needed, needed, needed, verbose)
+    } else {
+      pkgDepDT <- toPkgDepDT(NULL)
     }
   }
-
-  deps
+  sn <-
+    saveNamesForCache(pkg,
+                      which = list(which),
+                      recursive = FALSE,
+                      verbose = verbose - 1,
+                      repos = repos,
+                      ap = ap
+    )
+  pkgDepDTList <- list(pkgDepDT)
+  names(pkgDepDTList) <- names(sn)
+  assignPkgDepDTtoSaveNames(sn, pkgDepDTList)
+  pkgDepDT
 }
 
 
-getPkgDepsRecursive <- function(deps, recursive, repos, verbose, type, which, purge, libPaths) {
-  ndeps <- sapply(deps, NROW)
-  noDeps <- ndeps == 0
-  out <- Map(packages = deps[!noDeps], f = getPkgDeps,
-             MoreArgs = list(recursive = recursive, repos = repos, inner = TRUE, verbose = verbose,
-                             type = type, which = which, purge = purge))
-  out2 <- try(lapply(out, rbindlist, fill = TRUE, use.names = TRUE))
-        if (is(out2, "try-error")) browser()
-        out3 <- Map(na = names(out2), function(na) {
-          rr <- rbindlist(list(deps[[na]], out2[[na]]), use.names = TRUE, fill = TRUE)
-    rr <- trimRedundancies(rr, purge = purge, repos = repos, libPaths = libPaths,
-                           type = type)
-  })
 
-  if (any(noDeps)) {
-    deps <- append(out3, deps[noDeps])
-  } else {
-    deps <- out3
-  }
-}
-
-
-getPkgDepsNonRecursive <- function(pkgDT, which, ap, repos, type, purge, deps) {
-  pkgDTList <- split(pkgDT, by = "repoLocation")
-  pkgDTDep <- list()
-  if (!is.null(pkgDTList[["CRAN"]]))
-    pkgDTDep[["CRAN"]] <- pkgDepCRANInner(pkgDT = pkgDTList$CRAN, which = which[[1]],
-                                          ap = ap, repos = repos, type = type, purge = purge)
-  if (!is.null(pkgDTList[["GitHub"]]))
-    pkgDTDep[["GitHub"]] <- getGitHubDeps(pkgDT = pkgDTList$GitHub, which = which[[1]], purge = purge)
-  depsNew <- unlist(unname(pkgDTDep), recursive = FALSE)
-  depsNew <- depsNew[match(pkgDT$packageFullName, names(depsNew))] # return to original order
-  deps <- append(deps, depsNew)
-  deps
-}
 

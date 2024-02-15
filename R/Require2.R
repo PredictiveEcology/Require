@@ -230,7 +230,7 @@ Require <- function(packages, packageVersionFile,
                     type = getOption("pkgType"),
                     upgrade = FALSE,
                     ...) {
-  .pkgEnv$hasGHP <- NULL # clear GITHUB_PAT message; only once per Require session
+  assign("hasGHP", NULL, envir = pkgEnv()) # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
   checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
   on.exit(
@@ -894,7 +894,8 @@ recordLoadOrder <- function(packages, pkgDT) {
 }
 
 removeDups <- function(pkgDT) {
-  pkgDT[!duplicated(pkgDT[["packageFullName"]])]
+  dups <- duplicated(pkgDT[["packageFullName"]])
+  pkgDT[!dups]
 }
 
 dealWithStandAlone <- function(pkgDT, standAlone) {
@@ -1027,8 +1028,13 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     dupReposForGHPkgs <- pkgInstallList[["GitHub"]][, .N, by = "Package"][N > 1]
     if (NROW(dupReposForGHPkgs)) {
       pkgInstallList[["GitHub"]][Package %in% dupReposForGHPkgs$Package,
-                 VersionOK := VersionOnRepos %in% Version,
-                 by = "Package"]
+                                 VersionOK := compareVersion2(version = VersionOnRepos,
+                                                              versionSpec = versionSpec,
+                                                              inequality = inequality),
+                                 by = "Package"]
+      # aaa <- try(pkgInstallList[["GitHub"]][Package %in% dupReposForGHPkgs$Package,
+      #            VersionOK := VersionOnRepos %in% Version,
+      #            by = "Package"])
       setorderv(pkgInstallList[["GitHub"]], "VersionOK", order = -1L, na.last = TRUE)
       pkgInstallList[["GitHub"]] <- pkgInstallList[["GitHub"]][, .SD[1], by = "Package"]
       set(pkgInstallList[["GitHub"]], NULL, "VersionOK", NULL)
@@ -1216,7 +1222,8 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
     packages <- data.table::fread(packageVersionFile)
     packages <- dealWithSnapshotViolations(packages,
       verbose = verbose, purge = purge,
-      libPaths = libPaths, type = type
+      libPaths = libPaths, type = type, install_githubArgs = install_githubArgs,
+      install.packagesArgs = install.packagesArgs
     ) # i.e., packages that can't coexist
     packages <- packages[!packages$Package %in% .basePkgs]
     out <- Require(packages$packageFullName,
@@ -1230,12 +1237,55 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
   out
 }
 
-dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Require.verbose"),
+dealWithSnapshotViolations <- function(pkgSnapshotObj, install_githubArgs, install.packagesArgs,
+                                       verbose = getOption("Require.verbose"),
                                        purge = getOption("Require.purge", FALSE),
                                        libPaths = .libPaths(),
                                        repos = getOption("repos"), type = getOption("pkgType")) {
   dd <- pkgSnapshotObj
+  pkgDT <- toPkgDT(packageFullNameFromSnapshot(dd))
+  pkgDT <- trimRedundancies(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
+                            verbose = verbose, type = type)
+  return(pkgDT)
+
+  browser()
+  # if (FALSE) {
+    isGH <- !is.na(dd$GithubRepo)
+    ddGH <- dd[isGH]
+    sn <- saveNamesForCache(packageFullNameFromSnapshot(dd), ap = dd, verbose = verbose,
+                            which = list(eval(formals(pkgDep)$which)), recursive = FALSE)
+    colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
+    colsOfDeps <- intersect(colsOfDeps, colnames(dd))
+    aa <- apply(dd[, ..colsOfDeps], 1, strsplit, split = ", ")
+    names(aa) <- dd$Package
+    deps <- lapply(aa, function(x) unname(unlist(x)))
+    deps2 <- mergeRemotes(deps)
+
+    pkgNameWithVersion <- paste0(dd$Package, " (==", dd$Version, ")")
+    browser()
+    pkgDepDT <- Map(d = deps, pkg = pkgNameWithVersion, function(d, pkg) {
+      pkgDep <- toPkgDepDT(d, d, d, verbose = verbose)
+      pkgDep <- list(pkgDep)
+      names(pkgDep) <- pkg
+      pkgDep
+      })
+    names(pkgDepDT) <- names(sn)
+
+    browser()
+    assignPkgDepDTtoSaveNames(sn, pkgDepDT)
+  # }
+  # aa <- parseGitHub(dd)
   ff <- packageFullNameFromSnapshot(dd)
+  # ff <- addNamesToPackageFullName(ff, dd$Package)
+  # gg <- extractPkgName(ff)
+  # dif <- !dd$Package %in% gg
+  # alternateNamedPkgs <- dd[dif,]
+  # if (NROW(alternateNamedPkgs)) {
+  #   names(ff) <- rep("", length(ff))
+  #   names(ff)[dif] <- dd$Package[dif]
+  # }
+  # browser()
+  browser()
   gg <- pkgDep(ff, recursive = TRUE, purge = purge)
   hh <- sort(unique(gsub("(\\(.*)( )+(.*\\))$", "\\1\\3", gsub("\n", "", unname(unlist(gg))))))
   pkgDT <- toPkgDT(hh, deepCopy = TRUE)
@@ -1245,10 +1295,15 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, verbose = getOption("Requ
     purge = purge, repos = repos, libPaths = libPaths,
     type = type
   )
-  pkgDT <- checkAvailableVersions(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
-                                  verbose = verbose, type = type)
+  alternateNamedPkgs <- dd[!dd$Package %in% pkgDT$Package,]
+  pkgDT1 <- checkAvailableVersions(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
+                                  verbose = verbose - 1, type = type)
 
-  pkgDT[, c("Package", "packageFullName")]
+  pkgDT1 <- dd[, .(Package, GithubRepo, GithubUsername, GithubSHA1)][
+    !is.na(GithubRepo)][
+      pkgDT1, on = .("GithubRepo" = githubPkgName, "GithubUsername" = Account, "GithubSHA1" = Branch)][
+        , Package := ifelse(is.na(Package), i.Package, Package)]
+  pkgDT1[, c("Package", "packageFullName")]
 }
 
 apCachedCols <- c("Package", "Repository", "Version", "Archs", "Depends", "Imports", "Suggests", "LinkingTo")
@@ -1367,6 +1422,7 @@ updatePackagesWithNames <- function(pkgDT, packages) {
         hasHEAD := packageFullName %in% packageFullNameWithHEAD
       ]
       names(packages)[whHasHEAD] <- NA
+      origPackagesHaveNames[whHasHEAD] <- FALSE # Dealt with in previous line
       if (all(is.na(names(packages)))) names(packages) <- NULL
     }
     if (!is.null(names(packages))) {
@@ -1377,6 +1433,18 @@ updatePackagesWithNames <- function(pkgDT, packages) {
     }
   }
   pkgDT
+}
+
+
+addNamesToPackageFullName <- function(packageFullName, Package) {
+  gg <- extractPkgName(packageFullName)
+  dif <- !Package %in% gg
+  alternateNamedPkgs <- Package[dif]
+  if (NROW(alternateNamedPkgs)) {
+    names(packageFullName) <- rep("", length(packageFullName))
+    names(packageFullName)[dif] <- Package[dif]
+  }
+  packageFullName
 }
 
 messageDownload <- function(pkgDT, numToDownload, fromWhere) {
@@ -1476,6 +1544,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     }
     ap3[, "Depends"] <- NA
+    browser()
     deps <- pkgDep(toInstall[Package %in% pkgsNotInAP]$packageFullName, recursive = T)
     pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP]$Package
     if (any(pkgHasNameDiffrntThanRepo)) {
@@ -1717,127 +1786,133 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
                                                          verbose = getOption("Require.verbose")) {
   set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
   pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
-  pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
-    out <- rep(NA, length.out = .N)
-    wh <- which(isEquals)
-    whNot <- which(!isEquals)
-    if (length(wh)) {
-      out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
-        all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))
-      })))
-      if (is(out, "try-error")) {
-        browserDeveloper("Error 844; please contact developer")
+  if (!exists("aa")) aa <<- 0
+  aa <<- aa + 1
+  if (any(pkgDT$hasEqualsAndInequals)) {
+    if (!exists("bb")) bb <<- 0
+    bb <<- bb + 1
+    pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
+      out <- rep(NA, length.out = .N)
+      wh <- which(isEquals)
+      whNot <- which(!isEquals)
+      if (length(wh)) {
+        out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
+          all(compareVersion2(verSpec, versionSpec[whNot], inequality[whNot]))
+        })))
+        if (is(out, "try-error")) {
+          browserDeveloper("Error 844; please contact developer")
+        }
+        out
       }
       out
-    }
-    out
-  },
-  by = "Package"
-  ]
-  set(pkgDT, which(pkgDT$isEquals %in% TRUE & pkgDT$hasEqualsAndInequals %in% FALSE), "EqualsDoesntViolate", TRUE)
-  pkgDT[, violation := if (any(isEquals %in% TRUE) && all(!EqualsDoesntViolate %in% TRUE)) {
-    TRUE
-  } else {
-    FALSE
-  },
-  by = "Package"
-  ]
+    },
+    by = "Package"
+    ]
+    set(pkgDT, which(pkgDT$isEquals %in% TRUE & pkgDT$hasEqualsAndInequals %in% FALSE), "EqualsDoesntViolate", TRUE)
+    pkgDT[, violation := if (any(isEquals %in% TRUE) && all(!EqualsDoesntViolate %in% TRUE)) {
+      TRUE
+    } else {
+      FALSE
+    },
+    by = "Package"
+    ]
 
-  set(pkgDT, NULL, "isGT", pkgDT[["inequality"]] == ">")
-  pkgDT[, hasGTAndInequals := any(isGT %in% TRUE) && any(isGT %in% FALSE), by = "Package"]
-  pkgDT[hasGTAndInequals %in% TRUE, GTDoesntViolate := {
-    out <- rep(NA, length = .N)
-    wh <- which(isGT)
-    whNot <- which(!isGT)
-    if (length(wh)) {
-      out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
-        all(compareVersion2(versionSpec[whNot], verSpec, inequality[wh]))
-      })))
-      if (is(out, "try-error")) {
-        browserDeveloper("Error 844; please contact developer")
+    set(pkgDT, NULL, "isGT", pkgDT[["inequality"]] == ">")
+    pkgDT[, hasGTAndInequals := any(isGT %in% TRUE) && any(isGT %in% FALSE), by = "Package"]
+    pkgDT[hasGTAndInequals %in% TRUE, GTDoesntViolate := {
+      out <- rep(NA, length = .N)
+      wh <- which(isGT)
+      whNot <- which(!isGT)
+      if (length(wh)) {
+        out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
+          all(compareVersion2(versionSpec[whNot], verSpec, inequality[wh]))
+        })))
+        if (is(out, "try-error")) {
+          browserDeveloper("Error 844; please contact developer")
+        }
+        out
       }
       out
-    }
-    out
-  },
-  by = "Package"
-  ]
+    },
+    by = "Package"
+    ]
 
-  pkgDT[, violation2 := if (any(isGT %in% TRUE) && all(GTDoesntViolate %in% FALSE)) {
-    TRUE
-  } else {
-    FALSE
-  },
-  by = "Package"
-  ]
+    pkgDT[, violation2 := if (any(isGT %in% TRUE) && all(GTDoesntViolate %in% FALSE)) {
+      TRUE
+    } else {
+      FALSE
+    },
+    by = "Package"
+    ]
 
-  if (any(pkgDT$violation %in% TRUE)) {
-    messageVerbose(green(
-      "The following shows packages whose version requirements can not be met; ",
-      "keeping the newer version: "
-    ), verbose = verbose, verboseLevel = 1)
-    cols <- c("Package", "packageFullName", "versionSpec")
-    cols2 <- setdiff(cols, "packageFullName")
-    cols3 <- c(cols, "versionToKeep")
-    violationsDF <- pkgDT[violation %in% TRUE & !is.na(versionSpec), ..cols]
-    # can't use setorderv on versions b/c stored as character vector
-    orderVersions <- order(violationsDF[[cols2[1]]],
-                           package_version(violationsDF[[cols2[[2]]]]),
-                           decreasing = TRUE)
-    violationsDF <- violationsDF[orderVersions,]
-    violationsDF <- violationsDF[, versionToKeep := {
-      ver <- rep("", length = .N)
-      ver[1] <- versionSpec[1]
-      ver
-    }, by = "Package"][, ..cols3]
-    messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
-    if (grepl("remove|rm", ifViolation[1])) {
-      pkgDT <- pkgDT[violation %in% TRUE & !inequality %in% "==" | violation %in% FALSE]
+    if (any(pkgDT$violation %in% TRUE)) {
+      messageVerbose(green(
+        "The following shows packages whose version requirements can not be met; ",
+        "keeping the newer version: "
+      ), verbose = verbose, verboseLevel = 1)
+      cols <- c("Package", "packageFullName", "versionSpec")
+      cols2 <- setdiff(cols, "packageFullName")
+      cols3 <- c(cols, "versionToKeep")
+      violationsDF <- pkgDT[violation %in% TRUE & !is.na(versionSpec), ..cols]
+      # can't use setorderv on versions b/c stored as character vector
+      orderVersions <- order(violationsDF[[cols2[1]]],
+                             package_version(violationsDF[[cols2[[2]]]]),
+                             decreasing = TRUE)
+      violationsDF <- violationsDF[orderVersions,]
+      violationsDF <- violationsDF[, versionToKeep := {
+        ver <- rep("", length = .N)
+        ver[1] <- versionSpec[1]
+        ver
+      }, by = "Package"][, ..cols3]
+      messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
+      if (grepl("remove|rm", ifViolation[1])) {
+        pkgDT <- pkgDT[violation %in% TRUE & !inequality %in% "==" | violation %in% FALSE]
+      }
     }
+
+    if (any(pkgDT$violation2 %in% TRUE)) {
+      messageVerbose(green(
+        "The following shows packages whose version requirements can not be met; ",
+        "keeping the newer version: "
+      ), verbose = verbose, verboseLevel = 1)
+      cols <- c("Package", "packageFullName", "versionSpec")
+      cols2 <- setdiff(cols, "packageFullName")
+      cols3 <- c(cols, "versionToKeep")
+      violationsDF <- pkgDT[violation2 %in% TRUE & !is.na(versionSpec), ..cols]
+      # can't use setorderv on versions b/c stored as character vector
+      orderVersions <- order(violationsDF[[cols2[1]]],
+                             package_version(violationsDF[[cols2[[2]]]]),
+                             decreasing = TRUE)
+      violationsDF <- violationsDF[orderVersions,]
+      violationsDF <- violationsDF[, versionToKeep := {
+        ver <- rep("", length = .N)
+        ver[1] <- versionSpec[1]
+        ver
+      }, by = "Package"][, ..cols3]
+      messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
+      if (grepl("remove|rm", ifViolation[1])) {
+        pkgDT <- pkgDT[violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE]
+      }
+    }
+
+    pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE)) {
+      .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
+    } else {
+      .I
+    },
+    by = "Package"
+    ]
+
+    pkgDT <- pkgDT[unique(keep)]
+
+    # get rid of the GT if they are TRUE
+    pkgDT[, remove := (isGT %in% TRUE & GTDoesntViolate %in% TRUE)]
+    if (any(pkgDT$remove))
+      pkgDT <- pkgDT[!remove %in% TRUE]
+
+
+    set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
   }
-
-  if (any(pkgDT$violation2 %in% TRUE)) {
-    messageVerbose(green(
-      "The following shows packages whose version requirements can not be met; ",
-      "keeping the newer version: "
-    ), verbose = verbose, verboseLevel = 1)
-    cols <- c("Package", "packageFullName", "versionSpec")
-    cols2 <- setdiff(cols, "packageFullName")
-    cols3 <- c(cols, "versionToKeep")
-    violationsDF <- pkgDT[violation2 %in% TRUE & !is.na(versionSpec), ..cols]
-    # can't use setorderv on versions b/c stored as character vector
-    orderVersions <- order(violationsDF[[cols2[1]]],
-                           package_version(violationsDF[[cols2[[2]]]]),
-                           decreasing = TRUE)
-    violationsDF <- violationsDF[orderVersions,]
-    violationsDF <- violationsDF[, versionToKeep := {
-      ver <- rep("", length = .N)
-      ver[1] <- versionSpec[1]
-      ver
-    }, by = "Package"][, ..cols3]
-    messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
-    if (grepl("remove|rm", ifViolation[1])) {
-      pkgDT <- pkgDT[violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE]
-    }
-  }
-
-  pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE)) {
-    .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
-  } else {
-    .I
-  },
-  by = "Package"
-  ]
-
-  pkgDT <- pkgDT[unique(keep)]
-
-  # get rid of the GT if they are TRUE
-  pkgDT[, remove := (isGT %in% TRUE & GTDoesntViolate %in% TRUE)]
-  if (any(pkgDT$remove))
-    pkgDT <- pkgDT[!remove %in% TRUE]
-
-
-  set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
   pkgDT
 }
 
@@ -1864,69 +1939,72 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
 trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
   if (NROW(pkgInstall)) {
-    if (!is.null(pkgInstall[["hasHEAD"]])) {
-      hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
-      whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
-      whToRM <- setdiff(whToRM, hasHeadRows)
-      if (length(whToRM))
-        pkgInstall <- pkgInstall[-whToRM]
-    }
+    pkgInstall <- removeDups(pkgInstall)
+    if (anyDuplicated(pkgInstall$Package)) {
+      if (!is.null(pkgInstall[["hasHEAD"]])) {
+        hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
+        whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
+        whToRM <- setdiff(whToRM, hasHeadRows)
+        if (length(whToRM))
+          pkgInstall <- pkgInstall[-whToRM]
+      }
 
-    pkgAndInequality <- c("Package", "inequality")
-    versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
-    if (any(versionSpecNotNA)) {
-      ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
-                   decreasing = TRUE, na.last = TRUE
-      ) # can't use setorderv because data.table can't sort on package_version class
-    } else {
-      ord <- seq(NROW(pkgInstall))
-    }
+      pkgAndInequality <- c("Package", "inequality")
+      versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
+      if (any(versionSpecNotNA)) {
+        ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+                     decreasing = TRUE, na.last = TRUE
+        ) # can't use setorderv because data.table can't sort on package_version class
+      } else {
+        ord <- seq(NROW(pkgInstall))
+      }
 
-    pkgInstallTmp <- list()
-    if (any(versionSpecNotNA)) {
-      pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord]
-    } # use the order to reorder them. It is not sort key.
-    if (any(!versionSpecNotNA)) {
-      pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
-    }
-    pkgInstall <- rbindlist(pkgInstallTmp)
-    set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
-    setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
-                       ordr = c(1L, 1L, -1L, 1L))
-    setDT(setOrderOn)
-    setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
-    setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
-              order = setOrderOn$ordr, na.last = TRUE)
+      pkgInstallTmp <- list()
+      if (any(versionSpecNotNA)) {
+        pkgInstallTmp[[1]] <- pkgInstall[versionSpecNotNA][ord]
+      } # use the order to reorder them. It is not sort key.
+      if (any(!versionSpecNotNA)) {
+        pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
+      }
+      pkgInstall <- rbindlist(pkgInstallTmp)
+      set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+      setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+                         ordr = c(1L, 1L, -1L, 1L))
+      setDT(setOrderOn)
+      setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
+      setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
+                order = setOrderOn$ordr, na.last = TRUE)
 
-    pkgInstall[, keepBasedOnRedundantInequalities :=
-                 unlist(lapply(.I, function(ind) {
-                   ifelse(is.na(inequality), ind,
-                          ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I))
-                   )
-                 })),
-               by = pkgAndInequality
-    ]
-
-    pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
-    set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
-    pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
-
-    if (any(pkgInstall$inequality %in% c(">", "<"))) {
       pkgInstall[, keepBasedOnRedundantInequalities :=
                    unlist(lapply(.I, function(ind) {
                      ifelse(is.na(inequality), ind,
-                            ifelse(inequality == ">", .I[1], ifelse(inequality == "<", tail(.I, 1), .I))
+                            ifelse(inequality == ">=", .I[1], ifelse(inequality == "<=", tail(.I, 1), .I))
                      )
                    })),
                  by = pkgAndInequality
       ]
+
       pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
       set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
       pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
 
+      if (any(pkgInstall$inequality %in% c(">", "<"))) {
+        pkgInstall[, keepBasedOnRedundantInequalities :=
+                     unlist(lapply(.I, function(ind) {
+                       ifelse(is.na(inequality), ind,
+                              ifelse(inequality == ">", .I[1], ifelse(inequality == "<", tail(.I, 1), .I))
+                       )
+                     })),
+                   by = pkgAndInequality
+        ]
+        pkgInstall <- pkgInstall[unique(keepBasedOnRedundantInequalities)]
+        set(pkgInstall, NULL, "keepBasedOnRedundantInequalities", NULL)
+        pkgInstall <- confirmEqualsDontViolateInequalitiesThenTrim(pkgInstall)
+
+      }
+      pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
+      # pkgInstall <- removeDups(pkgInstall)
     }
-    pkgInstall <- trimRedundantVersionAndNoVersion(pkgInstall)
-    pkgInstall <- removeDups(pkgInstall)
   }
   pkgInstall[]
 }
@@ -2142,15 +2220,18 @@ anyHaveHEAD <- function(packages) {
 HEADgrep <- " *\\(HEAD\\)"
 
 packageFullNameFromSnapshot <- function(snapshot) {
-  ifelse(!is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo),
+  out <- ifelse(!is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo),
     paste0(
-      snapshot$GithubUsername, "/", snapshot$Package, "@",
+      snapshot$GithubUsername, "/", snapshot$GithubRepo, "@",
       snapshot$GithubSHA1
-    ), paste0(
-      snapshot$Package,
-      " (==", snapshot$Version, ")"
-    )
+    ), snapshot$Package
   )
+  out <- paste0(
+    out,
+    " (==", snapshot$Version, ")"
+  )
+  out <- addNamesToPackageFullName(out, snapshot$Package)
+  out
 }
 
 getVersionOnReposLocal <- function(pkgDT) {
@@ -2295,10 +2376,11 @@ messagesAboutWarnings <- function(w, toInstall) {
           needWarning <- FALSE
           outcome <- TRUE
           rowsInPkgDT <- grep(pkgName, toInstall$Package)
-          if (!is.null(outcome2$installed))
-            toInstall[rowsInPkgDT, installed := outcome2$installed]
-          if (!is.null(outcome2$installResult))
-            toInstall[rowsInPkgDT, installResult := outcome2$installResult]
+          outcome2JustOne <- outcome2[outcome2$Package %in% toInstall$Package]
+          if (!is.null(outcome2JustOne$installed))
+            toInstall[rowsInPkgDT, installed := outcome2JustOne$installed]
+          if (!is.null(outcome2JustOne$installResult))
+            toInstall[rowsInPkgDT, installResult := outcome2JustOne$installResult]
         }
       }
     }
@@ -2376,8 +2458,10 @@ Install <- function(packages, packageVersionFile,
                     upgrade = FALSE,
                     ...) {
 
-  packagesSubstituted <- substitute(packages)
-  packages <- substitutePackages(packagesSubstituted, parent.frame())
+  if (!missing(packages)) {
+    packagesSubstituted <- substitute(packages)
+    packages <- substitutePackages(packagesSubstituted, parent.frame())
+  }
 
   Require(packages,
     packageVersionFile,
@@ -2457,8 +2541,13 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
     deparse(packagesSubstituted)
   }
   isName <- is.name(packagesSubstituted)
+  # isName <- is.name(packages2)
   if (isName) {
     packagesTmp2 <- get0(packages2, envir = envir)
+    if (is(packagesTmp2, "list")) {
+      browser()
+      kk <- lapply(packagesTmp2, substitutePackages, envir = envir)
+    }
     if (is.character(packagesTmp2))
       packages <- packagesTmp2
 
@@ -2599,7 +2688,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
     repositoryHasArchives <- if (!is.na(Repository[ind]) && !is.null(ava[[Package]]$repo)) {
       unlist(lapply(ava[[Package]]$repo, grepl, x = Repository[ind]))
     } else {
-      TRUE
+      FALSE
     }
     if (all(!repositoryHasArchives) && length(repos) > length(unique(Repository[ind]))) {
       repositoryHasArchives <- unlist(lapply(ava[[Package]]$repo, grepl, x = repos))
@@ -2678,4 +2767,35 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
   }
   data.table::setcolorder(ret, cols)
   ret
+}
+
+
+#' If a list of dependencies includes Remotes from DESCRIPTION file
+mergeRemotes <- function(depsList) {
+  lapply(depsList, function(dep) {
+    pkgDT <- parseGitHub(dep)
+    isGH <- !is.na(pkgDT$githubPkgName)
+    ver <- extractVersionNumber(pkgDT$packageFullName)
+    verNotGH <- ver[!isGH]
+    hasVerNotGH <- !is.na(verNotGH)
+    verGH <- ver[isGH]
+    wh1 <- which(!isGH)[hasVerNotGH]
+    ma1 <- match(pkgDT$Package[!isGH], pkgDT$Package[isGH]) |> na.omit()
+    ma2 <- match(pkgDT$Package[isGH], pkgDT$Package[!isGH]) |> na.omit()
+    wh <- which(!is.na(ma2))
+    hasVer2 <- hasVerNotGH[ma2]#[wh]
+    ineq <- extractInequality(pkgDT$packageFullName[ma2][hasVer2])#[!isGH])
+    # ma[!is.na(ver)]
+    newPFN <- paste0(pkgDT$packageFullName[isGH][ma1][hasVer2], " (", ineq, verNotGH[ma2][hasVer2], ")")
+    pkgDT[which(!isGH)[ma2][hasVer2], packageFullName := newPFN]
+    pkgDT <- pkgDT[-which(isGH)[hasVer2]]
+    pkgDT$packageFullName
+  })
+}
+
+assignPkgDepDTtoSaveNames <- function(sn, pkgDepDT) {
+  Map(sn = sn, n = names(pkgDepDT), function(sn, n) {
+    assign(sn, pkgDepDT[[n]], envir = pkgDepDepsEnv())
+  })
+  return(invisible())
 }
