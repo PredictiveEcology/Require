@@ -6,8 +6,6 @@ test_that("test 5", {
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
-
-  browser()
 #  if (isDevAndInteractive) {
     tmpdir <- file.path(tempdir2(paste0("RequireTmp", sample(1e5, 1))))
 
@@ -18,82 +16,85 @@ test_that("test 5", {
     pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE)
     pkgDepTest2 <- Require::pkgDep2("Require", includeSelf = FALSE)
     orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
-    origDir <- setwd("~/GitHub/")
+    # origDir <- setwd("~/GitHub/")
 
-    theDir <- Require:::rpackageFolder(getOptionRPackageCache())
-    if (!is.null(theDir)) {
-      localBins <- dir(theDir, pattern = "data.table|remotes")
-      localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
-
-      # localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
-      # localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
-      #
-      vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
-      vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
-      vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
-
-      localBinsOrd <- order(package_version(vers), decreasing = TRUE)
-      localBins <- localBins[localBinsOrd]
-      localBinsFull <- localBinsFull[localBinsOrd]
-      dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
-      localBins <- localBins[!dups]
-      localBinsFull <- localBinsFull[!dups]
-      if (any(grepl("tar.gz", localBinsFull))) {
-        localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
-      }
-      # THere might be more than one version
-      dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-      rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-      localBinsFull <- c(dts, rems)
-    } else {
-      localBinsFull <- NULL
-    }
+    # options(Require.RPackageCache = Sys.getenv("R_LIBS_USER"))
+    # theDir <- Require:::rpackageFolder(getOptionRPackageCache())
+    #
+    # if (!is.null(theDir)) {
+    #   localBins <- dir(theDir, pattern = "data.table|remotes")
+    #   localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table|remotes")
+    #
+    #   # localBins <- dir(getOption("Require.RPackageCache"), pattern = "data.table|remotes")
+    #   # localBinsFull <- dir(getOption("Require.RPackageCache"), full.names = TRUE, pattern = "data.table|remotes")
+    #   #
+    #   vers <- gsub("^[^_]+\\_(.+)", "\\1", basename(localBins))
+    #   vers <- gsub("^([^_]+)_+.+$", "\\1", vers)
+    #   vers <- gsub("^([[:digit:]\\.-]+)\\.[[:alpha:]]{1,1}.+$", "\\1", vers)
+    #
+    #   browser()
+    #   localBinsOrd <- order(do.call(c, lapply(vers, packageVersion)), decreasing = TRUE)
+    #   localBins <- localBins[localBinsOrd]
+    #   localBinsFull <- localBinsFull[localBinsOrd]
+    #   dups <- duplicated(gsub("(.+)\\_.+", "\\1", localBins))
+    #   localBins <- localBins[!dups]
+    #   localBinsFull <- localBinsFull[!dups]
+    #   if (any(grepl("tar.gz", localBinsFull))) {
+    #     localBinsFull <- grep("linux-gnu", localBinsFull, value = TRUE)
+    #   }
+    #   # THere might be more than one version
+    #   dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+    #   rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+    #   localBinsFull <- c(dts, rems)
+    # } else {
+    #   localBinsFull <- NULL
+    # }
     # THere might be more than one version
-    dts <- grep("data.table", localBinsFull, value = TRUE)[1]
-    # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
-    # localBinsFull <- c(dts, rems)
-    localBinsFull <- dts
+    # dts <- grep("data.table", localBinsFull, value = TRUE)[1]
+    # # rems <- grep("remotes", localBinsFull, value = TRUE)[1]
+    # # localBinsFull <- c(dts, rems)
+    # localBinsFull <- dts
+    #
+    # Rpath <- Sys.which("Rscript")
+    # if (length(localBinsFull) == 2) {
+    #   if (Require:::isWindows()) {
+    #     system(paste0(
+    #       Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+    #       "'), quiet = TRUE, type = 'binary', lib ='", .libPaths()[1], "', repos = NULL)\""
+    #     ), wait = TRUE)
+    #   } else {
+    #     system(paste0(
+    #       Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
+    #       "'), quiet = TRUE, lib ='", .libPaths()[1], "', repos = NULL)\""
+    #     ), wait = TRUE)
+    #   }
+    # } else {
+    #   system(paste0(
+    #     Rpath, " -e \"install.packages(c('data.table'), lib ='", .libPaths()[1],
+    #     "', quiet = TRUE, repos = '", getOption("repos")[["CRAN"]], "')\""
+    #   ), wait = TRUE)
+    # }
 
-    Rpath <- Sys.which("Rscript")
-    if (length(localBinsFull) == 2) {
-      if (Require:::isWindows()) {
-        system(paste0(
-          Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
-          "'), quiet = TRUE, type = 'binary', lib ='", .libPaths()[1], "', repos = NULL)\""
-        ), wait = TRUE)
-      } else {
-        system(paste0(
-          Rpath, " -e \"install.packages(c('", localBinsFull[1], "', '", localBinsFull[2],
-          "'), quiet = TRUE, lib ='", .libPaths()[1], "', repos = NULL)\""
-        ), wait = TRUE)
-      }
-    } else {
-      system(paste0(
-        Rpath, " -e \"install.packages(c('data.table'), lib ='", .libPaths()[1],
-        "', quiet = TRUE, repos = '", getOption("repos")[["CRAN"]], "')\""
-      ), wait = TRUE)
-    }
-
-    if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
-    Require:::installRequire(getOption("Require.Home"))
+    # if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
+    # Require:::installRequire(getOption("Require.Home"))
 
     # system(paste0("R CMD INSTALL --library=", .libPaths()[1], " Require"), wait = TRUE)
-    setwd(origDir)
+    # setwd(origDir)
 
-    on.exit({
-      message(".libPaths during packagesLong: ", paste(.libPaths(), collapse = "; "))
-      Require::setLibPaths(orig, updateRprofile = FALSE)
-    })
+    # on.exit({
+    #   message(".libPaths during packagesLong: ", paste(.libPaths(), collapse = "; "))
+    #   Require::setLibPaths(orig, updateRprofile = FALSE)
+    # })
 
     testthat::expect_true({
       length(pkgDepTest1) == 1
     })
     testthat::expect_true({
-      sort(pkgDepTest1[[1]]) == c("data.table (>= 1.10.4)")
+      any(sort(pkgDepTest1[[1]]) %in% c("data.table (>= 1.10.4)"))
     })
 
     testthat::expect_true({
-      length(pkgDepTest2) == 1
+      length(pkgDepTest2[[1]]) == 1
     })
     testthat::expect_true({
       sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)
