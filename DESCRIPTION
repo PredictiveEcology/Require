@@ -41,9 +41,13 @@ Imports:
     utils
 Suggests:
     covr,
+    later,
     parallel,
     remotes,
-    testit
+    testit,
+    testthat (>= 3.0.0),
+    waldo,
+    withr
 Encoding: UTF-8
 Language: en-CA
 License: GPL-3
@@ -66,3 +70,4 @@ Collate:
     'setLibPaths.R'
     'setup.R'
     'zzz.R'
+Config/testthat/edition: 3
