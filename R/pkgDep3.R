@@ -197,7 +197,9 @@ getPkgDeps <- function(packages, recursive, which, repos, type, purge, includeBa
           }
         }
       }
-      deps <- deps[match(packages, names(deps))] # reorder to initial order
+
+      # reorder to initial order; if there were redundancies, it would create NAs; thus na.omit
+      deps <- deps[na.omit(match(packages, names(deps)))]
 
       deps <- Map(dep = deps, function(dep) {
         set(dep, NULL, "packageFullName", {
