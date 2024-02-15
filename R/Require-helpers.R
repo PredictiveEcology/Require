@@ -1308,13 +1308,12 @@ masterMainHEAD <- function(url, need) {
 #' @export
 .downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
-  if (!exists("dls"))
-    dls <- list()
-  dls <<- append(dls, list(url))
-  if (length(url) > 1) stop("This function is not vectorized")
   hasMasterMain <- grepl(masterMainGrep, url)
-  if (length(url) != length(destfile))
-    stop("destfile must be same length as url")
+  if (!all(hasMasterMain)) {
+    if (length(url) > 1) stop("This function is not vectorized")
+    if (length(url) != length(destfile))
+      stop("destfile must be same length as url")
+  }
   url <- masterMainHEAD(url, need) # makes 2
 
   # Authentication
