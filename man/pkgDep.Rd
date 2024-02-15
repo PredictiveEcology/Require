@@ -3,6 +3,7 @@
 \name{pkgDep4}
 \alias{pkgDep4}
 \alias{pkgDepTopoSort}
+\alias{pkgDep2}
 \alias{pkgDep}
 \title{Determine package dependencies}
 \usage{
@@ -38,6 +39,21 @@ pkgDepTopoSort(
   purge = getOption("Require.purge", FALSE),
   which = c("Depends", "Imports", "LinkingTo"),
   type = getOption("pkgType"),
+  verbose = getOption("Require.verbose")
+)
+
+pkgDep2(
+  packages,
+  recursive = TRUE,
+  which = c("Depends", "Imports", "LinkingTo"),
+  depends,
+  imports,
+  suggests,
+  linkingTo,
+  repos = getOption("repos"),
+  sorted = TRUE,
+  purge = getOption("Require.purge", FALSE),
+  includeSelf = TRUE,
   verbose = getOption("Require.verbose")
 )
 
@@ -165,6 +181,9 @@ If \code{TRUE}, then then all installed packages will be searched.
 If \code{FALSE}, the default, only packages that are currently in
 the \code{search()} path and passed in \code{pkgs} will be included
 in the possible reverse dependencies.}
+
+\item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
+the returned list from most number of dependencies to least.}
 }
 \value{
 A possibly ordered, named (with packages as names) list where list elements
@@ -191,6 +210,9 @@ This is essentially a topological sort, but it is done
 heuristically. This can be used to e.g., \code{detach} or
 \code{unloadNamespace} packages in order so that they each
 of their dependencies are detached or unloaded first.
+
+\code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",
+i.e., the first order dependencies, and runs the \code{pkgDep} on those.
 
 This will first look in local filesystem (in \code{.libPaths()}) and will use a
 local package to find its dependencies. If the package does not exist
@@ -240,6 +262,17 @@ if (Require:::.runLongExamples()) {
 }
 }
 
+\dontrun{
+if (Require:::.runLongExamples()) {
+  opts <- Require:::.setupExample()
+
+  pkgDep2("reproducible")
+  # much bigger one
+  pkgDep2("tidyverse")
+
+  Require:::.cleanup(opts)
+}
+}
 \dontrun{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()

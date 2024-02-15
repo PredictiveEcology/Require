@@ -1544,3 +1544,57 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 
 
 
+
+#' @description
+#' `pkgDep2` is a convenience wrapper of `pkgDep` that "goes one level in",
+#' i.e., the first order dependencies, and runs the `pkgDep` on those.
+#' @rdname pkgDep
+#' @export
+#' @param sorted Logical. If `TRUE`, the default, the packages will be sorted in
+#'   the returned list from most number of dependencies to least.
+#' @examples
+#' \dontrun{
+#' if (Require:::.runLongExamples()) {
+#'   opts <- Require:::.setupExample()
+#'
+#'   pkgDep2("reproducible")
+#'   # much bigger one
+#'   pkgDep2("tidyverse")
+#'
+#'   Require:::.cleanup(opts)
+#' }
+#' }
+pkgDep2 <- function(packages,
+                    recursive = TRUE,
+                    which = c("Depends", "Imports", "LinkingTo"),
+                    depends,
+                    imports,
+                    suggests,
+                    linkingTo,
+                    repos = getOption("repos"),
+                    sorted = TRUE,
+                    purge = getOption("Require.purge", FALSE),
+                    includeSelf = TRUE,
+                    verbose = getOption("Require.verbose")) {
+  if (length(packages) > 1) stop("packages should be length 1")
+  deps <- pkgDep(packages, recursive = FALSE, which = which, depends = depends,
+                 imports = imports, suggests = suggests, linkingTo = linkingTo, repos = repos,
+                 includeSelf = includeSelf
+  )
+  deps <- lapply(deps, function(d) setdiff(d, packages))[[1]]
+
+  a <-
+    lapply(
+      deps, pkgDep, depends = depends, imports = imports, suggests = suggests,
+      linkingTo = linkingTo, repos = repos, recursive = recursive,
+      includeSelf = includeSelf, verbose = verbose - 1
+    )
+  a <- unlist(a, recursive = FALSE)
+  if (sorted) {
+    ord <- order(sapply(a, function(x) {
+      length(x)
+    }), decreasing = TRUE)
+    a <- a[ord]
+  }
+  return(a)
+}
