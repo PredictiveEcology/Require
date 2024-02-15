@@ -4,7 +4,6 @@ test_that("test 1", {
   on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
-  setupInitial <- setupTest()
 
   ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
   origCRAN_REPO <- Sys.getenv("CRAN_REPO")
@@ -15,10 +14,10 @@ test_that("test 1", {
   Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
   repos <- Require:::getCRANrepos("")
-  testit::assert({
+  testthat::expect_true({
     is.character(repos)
   })
-  testit::assert({
+  testthat::expect_true({
     nchar(repos) > 0
   })
 
@@ -27,7 +26,7 @@ test_that("test 1", {
   # Sys.setenv("R_TESTS" = "")
   # Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
-  library(testit)
+  # library(testit)
 
   dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
@@ -35,10 +34,10 @@ test_that("test 1", {
                                            standAlone = TRUE, libPaths = dir1,
                                            quiet = TRUE, verbose = 2
   ))
-  testit::assert({
+  testthat::expect_true({
     data.table::is.data.table(attr(out, "Require"))
   })
-  testit::assert({
+  testthat::expect_true({
     isTRUE(out)
   })
   isInstalled <- tryCatch(
@@ -48,18 +47,19 @@ test_that("test 1", {
     },
     error = function(x) FALSE
   )
-  testit::assert({
+  testthat::expect_true({
     isTRUE(isInstalled)
   })
-  out <- detachAll(c("Require", "fpCompare", "sdfd"), dontTry = "testit")
+  out <- detachAll(c("Require", "fpCompare", "sdfd"),
+                   dontTry = extractPkgName(pkgDep("devtools", recursive = T)[["devtools"]]))
   out <- out[names(out) != "testit"]
   expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
   keep <- intersect(names(expectedPkgs), names(out))
   out <- out[keep]
-  testit::assert({
+  testthat::expect_true({
     identical(sort(out), sort(expectedPkgs))
   })
-  testit::assert({
+  testthat::expect_true({
     names(out)[out == 2] == "fpCompare"
   })
 
@@ -78,7 +78,7 @@ test_that("test 1", {
                              libPaths = dir2, dependencies = FALSE, quiet = TRUE, require = FALSE
     )
     pv <- packageVersion("fpCompare", lib.loc = dir2)
-    testit::assert({
+    testthat::expect_true({
       pv == pvWant
     })
     # Test snapshot file
@@ -92,7 +92,7 @@ test_that("test 1", {
       packageVersionFile = pkgSnapFile, libPaths = dir6,
       quiet = TRUE, install = "force"
     )
-    testit::assert({
+    testthat::expect_true({
       identical(
         packageVersion("fpCompare", lib.loc = dir2),
         packageVersion("fpCompare", lib.loc = dir6)
@@ -111,38 +111,39 @@ test_that("test 1", {
     pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile),
                                         colClasses = "character"
     ) # if empty, they become logical
-    testit::assert({
+    testthat::expect_true({
       is.data.frame(out)
     })
-    testit::assert({
+    testthat::expect_true({
       file.exists(eval(formals("pkgSnapshot")$packageVersionFile))
     })
     out1 <- data.table::as.data.table(out)
-    testit::assert({
+    testthat::expect_true({
       isTRUE(all.equal(out1[], pkgSnapFileRes[], check.attributes = FALSE))
     })
 
     out3 <- pkgSnapshot2()
-    testit::assert(is(out3, "character"))
+    testthat::expect_true(is(out3, "character"))
     setwd(prevDir)
 
     # Check for packageVersionFile = FALSE
     mess11 <- capture.output(type = "message", {
       outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE)
     })
-    testit::assert(any(grepl(NoPkgsSupplied, mess11)))
-    testit::assert(isFALSE(outInner))
+    testthat::expect_true(any(grepl(NoPkgsSupplied, mess11)))
+    testthat::expect_true(isFALSE(outInner))
 
     # Skip on CRAN
     dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
     dir3 <- Require::checkPath(dir3, create = TRUE)
     dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
     # try({
-    browser()
-    inst <- suppressMessages(Require::Require("achubaty/fpCompare",
-                                              install = "force", verbose = 2,
-                                              quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3
-    ))
+    #inst <- suppressMessages(
+      Require::Require("achubaty/fpCompare",
+                       install = "force", verbose = 2,
+                       quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3
+      )
+    #)
     attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
     # }, silent = TRUE)
     pkgs <- c("fpCompare")
@@ -154,7 +155,7 @@ test_that("test 1", {
       },
       error = function(x) FALSE
     )
-    testit::assert({
+    testthat::expect_true({
       isTRUE(isInstalled)
     })
 
@@ -164,7 +165,7 @@ test_that("test 1", {
     inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                              quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
     )
-    testit::assert({
+    testthat::expect_true({
       isFALSE(inst)
     })
     mess <- utils::capture.output(
@@ -176,10 +177,10 @@ test_that("test 1", {
       },
       type = "message"
     )
-    testit::assert({
+    testthat::expect_true({
       length(mess) > 0
     })
-    testit::assert({
+    testthat::expect_true({
       sum(grepl("could not be installed", mess)) == 1
     })
     unlink(dirname(dir3), recursive = TRUE)
@@ -203,13 +204,13 @@ test_that("test 1", {
       Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
     )
     if (isWindows())
-      testit::assert(packageVersion("reproducible") == curVer) # # will be curVer from CRAN
+      testthat::expect_true(packageVersion("reproducible") == curVer) # # will be curVer from CRAN
     else
-      testit::assert(packageVersion("reproducible") == "2.0.2.9001") #
+      testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") #
     detach("package:reproducible", unload = TRUE)
     # now installs correct SHA which is 2.0.2.9001
     Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
-    testit::assert(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
+    testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
     # End issue 87
     detach("package:reproducible", unload = TRUE)
 
@@ -217,7 +218,7 @@ test_that("test 1", {
     pkg <- c("r-forge/mumin/pkg", "Require")
     names(pkg) <- c("MuMIn", "")
     out <- Require(pkg, install = FALSE, require = FALSE)
-    testit::assert({
+    testthat::expect_true({
       isFALSE(all(out))
     })
 
@@ -225,21 +226,21 @@ test_that("test 1", {
     reallyOldPkg <- "knn"
     out <- Require(reallyOldPkg, require = FALSE)
     ip <- data.table::as.data.table(installed.packages())
-    testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
+    testthat::expect_true(NROW(ip[Package == reallyOldPkg]) == 1)
 
     out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
-    testit::assert({
+    testthat::expect_true({
       data.table::is.data.table(out)
     })
-    testit::assert({
+    testthat::expect_true({
       !is.null(out$DESCFile)
     })
-    testit::assert({
+    testthat::expect_true({
       file.exists(out$DESCFile)
     })
 
     out <- getGitHubDESCRIPTION(pkg = character())
-    testit::assert({
+    testthat::expect_true({
       length(out) == 0
     })
 
@@ -276,7 +277,7 @@ test_that("test 1", {
     suppressWarnings(out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
                                               repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
     )
-    testit::assert(packageVersion("SpaDES") >= verToCompare)
+    testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
     try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core")))
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
     a <- list(pkg = "fpCompare")
@@ -286,8 +287,7 @@ test_that("test 1", {
         c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), "SpaDES.core (== 2.0.3)", a$pkg),
         repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
     )
-    testit::assert(packageVersion("SpaDES") < verToCompare)
+    testthat::expect_true(packageVersion("SpaDES") < verToCompare)
 
   }
-  endTest(setupInitial)
 })

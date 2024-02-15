@@ -1,7 +1,5 @@
 setupTest <- function(verbose = getOption("Require.verbose")) {
   opts <- options()
-  requireNamespace("waldo")
-  require("later")
 
   # cannot open file 'startup.Rs': No such file or directory
   # suggested solution https://stackoverflow.com/a/27994299/3890027
