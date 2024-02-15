@@ -57,7 +57,7 @@ RequireCacheDir <- function(create) {
     readme <- file.path(cacheDir, "README")
     if (!file.exists(readme)) {
       if (isTRUE(create)) {
-        file.copy(system.file("cache-README", package = "Require"), readme)
+        file.copy(base::system.file("cache-README", package = "Require"), readme)
       }
     }
   }

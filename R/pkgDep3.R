@@ -311,7 +311,7 @@ pkgDepGitHub <- function(pkgDT, which, purge, includeBase = FALSE, verbose = get
       pkgDTNotLocal <- getGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
     }
     if (any(localVersionOK %in% TRUE)) {
-      pkgDT[localVersionOK %in% TRUE, DESCFile := system.file("DESCRIPTION", package = Package), by = "Package"]
+      pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
       if (exists("pkgDTNotLocal", inherits = FALSE))
         pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)
     } else {
@@ -622,7 +622,7 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
   # Check NAMESPACE too -- because imperfect DESCRIPTION files
   if (isTRUE(installedVersionOK)) {
     namespaceFile <-
-      system.file("NAMESPACE", package = Package)
+      base::system.file("NAMESPACE", package = Package)
   } else {
     namespaceFile <-
       getGitHubNamespace(packageFullName)[["NAMESPACE"]]

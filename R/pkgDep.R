@@ -1065,38 +1065,38 @@ whichToDILES <- function(which) {
       dirs <- dir(path, full.names = TRUE)
       mat <- NULL
       if (length(dirs)) {
-      areDirs <- dir.exists(dirs)
-      dirs <- dirs[areDirs]
-      files <- file.path(dirs, "DESCRIPTION")
-      filesExist <- file.exists(files)
-      files <- files[filesExist]
-      names(files) <- basename(dirs[filesExist])
-      desc_lines <-
-        lapply(files, function(file) {
-          DESCRIPTIONFile(file)
-        })
+        areDirs <- dir.exists(dirs)
+        dirs <- dirs[areDirs]
+        files <- file.path(dirs, "DESCRIPTION")
+        filesExist <- file.exists(files)
+        files <- files[filesExist]
+        names(files) <- basename(dirs[filesExist])
+        desc_lines <-
+          lapply(files, function(file) {
+            DESCRIPTIONFile(file)
+          })
         versions <- DESCRIPTIONFileVersionV(desc_lines, purge = FALSE)
         deps <- if (length(which)) {
           names(which) <- which
           deps <- lapply(desc_lines, function(lines) {
             lapply(which, function(wh)
               paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = ", ")
-          )
-        })
-        invertList(deps)
-      } else {
-        NULL
-      }
-      if (!is.null(other)) {
-        names(other) <- other
-        others <-
-          lapply(other, function(oth) {
-            DESCRIPTIONFileOtherV(desc_lines, other = oth)
+            )
           })
-        # shas <- DESCRIPTIONFileOtherV(desc_lines)
-      }
-      mat <-
-        cbind(
+          invertList(deps)
+        } else {
+          NULL
+        }
+        if (!is.null(other)) {
+          names(other) <- other
+          others <-
+            lapply(other, function(oth) {
+              DESCRIPTIONFileOtherV(desc_lines, other = oth)
+            })
+          # shas <- DESCRIPTIONFileOtherV(desc_lines)
+        }
+        mat <-
+          cbind(
             "Package" = dirs[filesExist],
             "Version" = versions
           )
@@ -1108,11 +1108,11 @@ whichToDILES <- function(which) {
         if (!is.null(other)) {
           others <- lapply(others, function(co) {
             if (!is(co, "character")) {
-            as.character(co)
-          } else {
-            co
-          }
-        })
+              as.character(co)
+            } else {
+              co
+            }
+          })
           othersDF <- as.data.frame(others, stringsAsFactors = FALSE)
           mat <- cbind(mat, othersDF, stringsAsFactors = FALSE)
         }
@@ -1320,7 +1320,7 @@ getGitHubDeps <-
       pkgDTNotLocal <- getGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
     }
     if (any(localVersionOK %in% TRUE)) {
-      pkgDT[localVersionOK %in% TRUE, DESCFile := system.file("DESCRIPTION", package = Package), by = "Package"]
+      pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
       if (exists("pkgDTNotLocal", inherits = FALSE))
         pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)
     } else {
@@ -2129,7 +2129,8 @@ depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, whic
 
 
 installedVersionOKPrecise <- function(pkgDT) {
-  pkgDT[, localFiles := system.file("DESCRIPTION", package = Package), by = "Package"]
+  # pkgload steals system.file but fails under some conditions, not sure what...
+  pkgDT[, localFiles := base::system.file("DESCRIPTION", package = Package), by = "Package"]
   fe <- nzchar(pkgDT$localFiles)
   if (any(fe)) {
     pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(localFiles, "RemoteRepo")]
@@ -2445,7 +2446,7 @@ pkgDepInnerByPkg <- function(pkgDT, verbose, which, includeBase, repos, type, ap
           if (noSpecNeeded) {
             localInstallOK <- installedVers(pkgName)
             if (isTRUE(localInstallOK$installed %in% TRUE)) {
-              packageTD <- system.file(package = pkgName)
+              packageTD <- base::system.file(package = pkgName)
             }
           }
 
