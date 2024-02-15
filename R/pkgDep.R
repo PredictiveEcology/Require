@@ -1053,7 +1053,6 @@ whichToDILES <- function(which) {
            which = c("Depends", "Imports", "LinkingTo"),
            other = NULL,
            purge = getOption("Require.purge", FALSE)) {
-    browser()
     purge <- dealWithCache(purge)
     if (!is.null(other)) {
       if (any(grepl("github", tolower(other)))) {
@@ -1064,6 +1063,8 @@ whichToDILES <- function(which) {
 
     out <- lapply(lib.loc, function(path) {
       dirs <- dir(path, full.names = TRUE)
+      mat <- NULL
+      if (length(dirs)) {
       areDirs <- dir.exists(dirs)
       dirs <- dirs[areDirs]
       files <- file.path(dirs, "DESCRIPTION")
@@ -1074,13 +1075,12 @@ whichToDILES <- function(which) {
         lapply(files, function(file) {
           DESCRIPTIONFile(file)
         })
-      versions <- DESCRIPTIONFileVersionV(desc_lines, purge = FALSE)
-      deps <- if (length(which)) {
-        names(which) <- which
-        browser()
-        deps <- lapply(desc_lines, function(lines) {
-          lapply(which, function(wh)
-            paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = ", ")
+        versions <- DESCRIPTIONFileVersionV(desc_lines, purge = FALSE)
+        deps <- if (length(which)) {
+          names(which) <- which
+          deps <- lapply(desc_lines, function(lines) {
+            lapply(which, function(wh)
+              paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = ", ")
           )
         })
         invertList(deps)
@@ -1097,21 +1097,25 @@ whichToDILES <- function(which) {
       }
       mat <-
         cbind(
-          "Package" = dirs[filesExist],
-          "Version" = versions
-        )
-      if (!is.null(deps))
-        mat <- cbind(mat, as.matrix(as.data.table(deps)), stringsAsFactors = FALSE)
-      if (!is.null(other)) {
-        others <- lapply(others, function(co) {
-          if (!is(co, "character")) {
+            "Package" = dirs[filesExist],
+            "Version" = versions
+          )
+        if (!is.null(deps)) {
+          cn <- c(colnames(mat), names(deps))
+          mat <- cbind(mat, matrix(unlist(deps), ncol = 4))
+          colnames(mat) <- cn
+        }
+        if (!is.null(other)) {
+          others <- lapply(others, function(co) {
+            if (!is(co, "character")) {
             as.character(co)
           } else {
             co
           }
         })
-        othersDF <- as.data.frame(others, stringsAsFactors = FALSE)
-        mat <- cbind(mat, othersDF, stringsAsFactors = FALSE)
+          othersDF <- as.data.frame(others, stringsAsFactors = FALSE)
+          mat <- cbind(mat, othersDF, stringsAsFactors = FALSE)
+        }
       }
       mat
     })

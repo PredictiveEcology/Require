@@ -150,14 +150,10 @@ doLibPaths <- function(libPaths, standAlone) {
 }
 
 doInstalledPackages <- function(libPaths, purge, includeBase) {
-  browser()
   ip <-
     as.data.table(
-      .installed.pkgs(
-        lib.loc = libPaths,
-        which = c("Depends", "Imports", "LinkingTo", "Remotes"),
-        other = "GitHubSha",
-        purge = purge
+      .installed.pkgs(lib.loc = libPaths, which = c("Depends", "Imports", "LinkingTo", "Remotes"),
+        other = "GitHubSha", purge = purge
       )
     )
   if (isFALSE(includeBase)) {
