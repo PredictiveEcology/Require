@@ -1,25 +1,37 @@
 setupInitial <- setupTest()
+b <- function() {
+  if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
+    # Require::Install("profvis")
+    # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
+    pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
+    checkPath(pkgPath, create = TRUE)
 
-if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
-  # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
-  if (getRversion() <= "4.2.3") {
+    if (getRversion() <= "4.2.3") {
 
-    snapshotFiles <- rev(c(
-      "https://raw.githubusercontent.com/PredictiveEcology/WBI_forecasts/development/packageVersions_clean.txt"
-      ,
-      "https://raw.githubusercontent.com/PredictiveEcology/LandWeb/rework-config/packages_2022-03-22.txt"
+      snapshotFiles <- rev(c(
+        "https://raw.githubusercontent.com/PredictiveEcology/WBI_forecasts/development/packageVersions_clean.txt"
+        ,
+        "https://raw.githubusercontent.com/PredictiveEcology/LandWeb/rework-config/packages_2022-03-22.txt"
       ))
-    ## Long pkgSnapshot -- issue 41
-    for (snf in snapshotFiles) {
-      pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
-      checkPath(pkgPath, create = TRUE)
-
       fn <- file.path(pkgPath, "pkgSnapshot.txt")
       download.file(snf, destfile = fn)
+
+    } else {
+      od <- setwd(pkgPath)
+      on.exit(setwd(od), add = TRUE)
+      snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
+                                                   overwrite = TRUE)
+      fn <- snapshotFiles$local_path
+    }
+    ## Long pkgSnapshot -- issue 41
+    for (snf in snapshotFiles) {
       origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
       pkgs <- data.table::fread(fn)
-      pkgs <- pkgs[!(Package %in% "SpaDES.install")]
 
+
+      # remove some specifics for tests that are not expected to work
+      skips <- c("rJava", "Require", "testit", "SpaDES.install")
+      pkgs <- pkgs[!(Package %in% skips)]
 
       # stringfish can't be installed in Eliot's system from binaries
       if (Sys.info()["user"] == "emcintir")
@@ -27,12 +39,12 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
       pkgs <- pkgs[!Package %in% c("RandomFields", "RandomFieldsUtils")] # the version 1.0-7 is corrupt on RSPM
       pkgs <- pkgs[!Package %in% c("usefulFuns")] # incorrectly imports Require from reproducible... while other packages need newer reproducible
       pkgs[Package %in% "sf", Version := "1.0-9"] # the version 1.0-7 is corrupt on RSPM
-      pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
-                                            GithubUsername = "PredictiveEcology", GithubRef = "development",
-                                            GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
+      #pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
+      #                                      GithubUsername = "PredictiveEcology", GithubRef = "development",
+      #                                      GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
       # pks <- c("ymlthis", "SpaDES.tools", "amc")
       # pkgs <- pkgs[Package %in% pks]
-      data.table::fwrite(pkgs, file = fn) # have to get rid of SpaDES.install
+      data.table::fwrite(pkgs, file = fn) # have to get rid of skips in the fn
       packageFullName <- ifelse(is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
@@ -40,7 +52,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
 
       # remove.packages(pks)
       # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-      out <- Require(packageVersionFile = fn, require = FALSE)
+      out <- Require(packageVersionFile = fn, require = FALSE, dependencies = FALSE)
       out11 <- pkgDep(packageFullName, recursive = TRUE)
       allNeeded <- unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
       allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
@@ -66,10 +78,11 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
       pkgsInOut <- allInpkgDTareInIP
       theTest <- NROW(ip) >= NROW(pkgsInOut)
       testit::assert(isTRUE(theTest))
+      browser()
 
       lala <- capture.output(type = "message", {
         out2 <- Require(
-          packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
+          packageVersionFile = fn,
           require = FALSE, verbose = 2, purge = TRUE
         )
       })
@@ -83,8 +96,9 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
       # } else {
       #   NnotInstalled <- 0
       # }
-      allNeeded <- setdiff(allNeeded, "Require")
-      installedPkgs <- setdiff(installedPkgs, "Require")
+      browser()
+      allNeeded <- setdiff(allNeeded, skips)
+      installedPkgs <- setdiff(installedPkgs, skips)
 
       theTest <- NROW(installedPkgs) == NROW(allNeeded)
       if (isDevAndInteractive) if (!isTRUE(theTest)) browser()
@@ -97,5 +111,6 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     setLibPaths(origLibPaths)
   }
 }
+b()
 
 endTest(setupInitial)
