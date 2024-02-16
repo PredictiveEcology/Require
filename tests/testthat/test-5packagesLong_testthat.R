@@ -18,7 +18,9 @@ test_that("test 5", {
     orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
     # origDir <- setwd("~/GitHub/")
 
-    withr::local_options(Require.RPackageCache = Sys.getenv("R_LIBS_USER"))
+    if (Sys.info()["user"] %in% "emcintir")
+      withr::local_options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"))
+    withr::local_options(Require.RPackageCache = RequirePkgCacheDir())
     # theDir <- Require:::rpackageFolder(getOptionRPackageCache())
     #
     # if (!is.null(theDir)) {
@@ -125,27 +127,7 @@ test_that("test 5", {
         if (!isTRUE(theTest)) browser()
         testthat::expect_true(isTRUE(theTest))
       }
-      # out <- try(testthat::expect_true({
-      #   all(have[loadOrder > 0 & (correctVersion == TRUE | hasVersionSpec == FALSE)]$loadOrder > 0)
-      # }))
-      # if (is(out, "try-error")) stop("Error 855; please contact developer")
-      # couldHaveLoaded <- gsub(".*\\<mumin\\>.*", "MuMIn", unique(pkgs))
-      # # couldHaveLoaded <- setdiff(unique(Require:::extractPkgName(pkgs)) , "mumin")
-      #
-      # actuallyLoaded <- if ("correctVersionAvail" %in% colnames(have)) {
-      #   didntLoad <- have[packageFullName %in% couldHaveLoaded & correctVersionAvail  == FALSE]
-      #   # didntLoad <- have[Package %in% couldHaveLoaded & correctVersionAvail == FALSE]
-      #   setdiff(couldHaveLoaded, didntLoad$packageFullName)
-      # } else {
-      #   couldHaveLoaded
-      # }
-      #
-      # theTest <- isTRUE(all.equal(unique(sort(extractPkgName(actuallyLoaded))),
-      #                             sort(unique(have[loadOrder > 0]$Package))))
-      # browser(expr = !theTest)
-      # testthat::expect_true({isTRUE(theTest)})
     }
-
 
     pkgs <- list(
       c(
@@ -224,10 +206,11 @@ test_that("test 5", {
       silent <- capture.output(type = "message", {
         out <- Require(pkg, standAlone = FALSE, require = FALSE, verbose = 2)
       })
-      testthat::expect_true({
-        all.equal(outFromRequire, out)
-      })
+      testthat::expect_true(
+        all.equal(out, outFromRequire, check.attributes = FALSE)
+      )
       have <- attr(out, "Require")
+      # have <- have[!Package %in% c("Require", "testthat")] # these don't have Version number because they may be load_all'd
       pkgsToTest <- unique(Require::extractPkgName(pkg))
       names(pkgsToTest) <- pkgsToTest
       runTests(have, pkg)
