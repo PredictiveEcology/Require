@@ -63,6 +63,7 @@
 #' @rdname RequireOptions
 RequireOptions <- function() {
   list(
+    Require.cloneFrom = NULL,
     Require.install = TRUE,
     Require.otherPkgs = c("cpp11", "igraph", "Rcpp", "RcppParallel"),
     Require.packageVersionFile = "packageVersions.txt",

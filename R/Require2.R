@@ -2608,51 +2608,22 @@ clonePackages <- function(rcf, ipa) {
   BuiltVersion <-
   package_version(paste(gsub("^(.{1,2}\\..{1,2})\\..+$", "\\1", ip[, "Built"]),
                         sep = "."))
-  ipCanTry <- ip[ip[, "NeedsCompilation"] == "no" &
-                    BuiltVersion == RVersion,, drop = FALSE]
-  alreadyInstalled <- ipCanTry[, "Version"][intersect(rownames(ipCanTry), ipa$pkgs)]
-  fns <- ipa$available[, "File"]
-  names(fns) <- rownames(ipa$available)
-  NApkgs <- is.na(fns)
-  if (any(NApkgs)) {
-    NApkgNames <- fns[NApkgs]
-    fns <- setdiffNamed(fns, NApkgNames)
-  }
-  wantToInstall <- extractVersionNumber(filenames = fns)
-  couldClone <- # if (isWindows()) {
-  #   wantToInstall
-  # } else {
-    wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
-  # }
-  needNormalInstall <- setdiffNamed(wantToInstall, alreadyInstalled)
-  canClone <- setdiff(names(couldClone), names(needNormalInstall))
-
-  if (any(NApkgs))
-    needNormalInstall <- c(needNormalInstall, NApkgs[NApkgs])
-  needNormalInstall <- setdiff(ipa$available[, "Package"], canClone)
-  canClone <- intersect(ipa$available[, "Package"], canClone)
+  ipCanTryNeedsNoCompilAndGoodRVer <- ip[ (ip[, "NeedsCompilation"] == "no" & BuiltVersion == RVersion)  %in% TRUE ,, drop = FALSE]
+  alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)]
+  wantToInstall <- ipa$available[, "Version"]
+  wantToInstallWOSrcPkgs <- wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
+  couldClone <- wantToInstallWOSrcPkgs# if (isWindows()) {
+  canClone <- setdiffNamed(couldClone, alreadyInstalledCanClone)
+  needNormalInstall <- setdiffNamed(wantToInstall, canClone)
+  canClone <- names(canClone)
   if (length(canClone)) {
-    message(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),") instead of Installing: ", paste(canClone, collapse = ", ")))
+    message(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),") instead of Installing: ",
+                  paste(canClone, collapse = ", ")))
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1])
-    # ret <- lapply(canClone, function(packToClone) {
-    #   from <- dir(dir(rcf[1], pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
-    #   fromFull <- file.path(rcf[1], packToClone, from)
-    #   to <- file.path(.libPaths()[1], packToClone, from)
-    #   dups <- fromFull %in% to
-    #   if (any(dups)) {
-    #     fromFull <- fromFull[!dups]
-    #     to <- to[!dups]
-    #   }
-    #   if (length(fromFull) > 0) {
-    #     dirs <- unique(dirname(to))
-    #     checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
-    #     outs <- linkOrCopy(fromFull, to)
-    #   }
-    # })
-    ipa$pkgs <- needNormalInstall
+    ipa$pkgs <- names(needNormalInstall)
     message(green("... Done!"))
-    ipa$available <- ipa$available[needNormalInstall, , drop = FALSE]
+    ipa$available <- ipa$available[ipa$pkgs, , drop = FALSE]
   }
   ipa
 }
