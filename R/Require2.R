@@ -354,7 +354,13 @@ Require <- function(packages, packageVersionFile,
       pkgDT <- pkgDTBase
     }
 
+    # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT)
+    # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
+    packagesDT <- pkgDT[, c("Package", "loadOrder", "require")][toPkgDT(packages)[, c("Package", "packageFullName")], on = "Package"]
+    packagesDT <- unique(packagesDT)
+    out <- packagesDT$require
+    names(out) <- packagesDT$packageFullName
 
     if (verbose >= 2) {
       if (is.null(require)) {
@@ -1544,7 +1550,6 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     }
     ap3[, "Depends"] <- NA
-    browser()
     deps <- pkgDep(toInstall[Package %in% pkgsNotInAP]$packageFullName, recursive = T)
     pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP]$Package
     if (any(pkgHasNameDiffrntThanRepo)) {

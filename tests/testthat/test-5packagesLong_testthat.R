@@ -18,7 +18,7 @@ test_that("test 5", {
     orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
     # origDir <- setwd("~/GitHub/")
 
-    # options(Require.RPackageCache = Sys.getenv("R_LIBS_USER"))
+    withr::local_options(Require.RPackageCache = Sys.getenv("R_LIBS_USER"))
     # theDir <- Require:::rpackageFolder(getOptionRPackageCache())
     #
     # if (!is.null(theDir)) {
