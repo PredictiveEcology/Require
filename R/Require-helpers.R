@@ -301,38 +301,38 @@ archiveVersionsAvailable <- function(package, repos) {
   return(info)
 }
 
-getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
-  pkgs <- trimVersionNumber(packages)
-  browser()
-  out1 <- pkgDep(packages,
-    recursive = TRUE, which = which, purge = purge,
-    includeSelf = FALSE
-  )
-  out1 <- unique(unname(unlist(out1)))
-  out2 <- c(out1, pkgs)
-  out3 <- c(out1, packages)
-  dt <- data.table(
-    github = extractPkgGitHub(out2), Package = extractPkgName(out2),
-    depOrOrig = c(rep("dep", length(out1)), rep("orig", length(packages))),
-    packageFullName = out3
-  )
-  set(dt, NULL, "origOrder", seq_along(dt$github))
-  dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
-  dt[bothDepAndOrig == TRUE, depOrOrig := "both"]
-
-
-  if ("github" %in% colnames(dt)) {
-    setorderv(dt, na.last = TRUE, "github")
-  } # keep github packages up at top -- they take precedence
-  setorderv(dt, "origOrder")
-  ret <- dt$packageFullName
-  if (!is.null(names(packages))) {
-    dt[depOrOrig == "orig", Names := names(packages)[match(packageFullName, packages)]]
-    dt[is.na(Names), Names := ""]
-    names(ret) <- dt$Names
-  }
-  ret
-}
+# getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
+#   pkgs <- trimVersionNumber(packages)
+#   browser()
+#   out1 <- pkgDep(packages,
+#     recursive = TRUE, which = which, purge = purge,
+#     includeSelf = FALSE
+#   )
+#   out1 <- unique(unname(unlist(out1)))
+#   out2 <- c(out1, pkgs)
+#   out3 <- c(out1, packages)
+#   dt <- data.table(
+#     github = extractPkgGitHub(out2), Package = extractPkgName(out2),
+#     depOrOrig = c(rep("dep", length(out1)), rep("orig", length(packages))),
+#     packageFullName = out3
+#   )
+#   set(dt, NULL, "origOrder", seq_along(dt$github))
+#   dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
+#   dt[bothDepAndOrig == TRUE, depOrOrig := "both"]
+#
+#
+#   if ("github" %in% colnames(dt)) {
+#     setorderv(dt, na.last = TRUE, "github")
+#   } # keep github packages up at top -- they take precedence
+#   setorderv(dt, "origOrder")
+#   ret <- dt$packageFullName
+#   if (!is.null(names(packages))) {
+#     dt[depOrOrig == "orig", Names := names(packages)[match(packageFullName, packages)]]
+#     dt[is.na(Names), Names := ""]
+#     names(ret) <- dt$Names
+#   }
+#   ret
+# }
 
 
 
