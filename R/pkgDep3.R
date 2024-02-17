@@ -629,3 +629,43 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
     assign(m, defVal, envir = parent.frame())
   }
 }
+
+
+
+
+getArchiveDESCRIPTION <- function(pkgDTList, repos, verbose, which) {
+  pkgDTList <- downloadArchive(pkgDTList, repos = repos, verbose = verbose)
+  tmpdir <- Require::tempdir2(.rndstr())
+  pkgDTList$Archive[, DESCFileFull := {
+    tf <- file.path(Require:::RequirePkgCacheDir(), basename(PackageUrl))
+    out <- if (file.exists(tf)) { NULL } else {
+      try(download.file(
+        url = file.path(Repository, basename(PackageUrl)),
+        destfile = tf), silent = TRUE)
+    }
+    if (is(out, "try-error")) {
+      message(out)
+      out <- NA
+    } else {
+      DESCFile <- file.path(Package, "DESCRIPTION")
+      untar(tf, files = DESCFile, exdir = tmpdir)
+      out <- file.path(tmpdir, DESCFile)
+    }
+    out
+  }, by = "packageFullName"]
+
+  gotDESC <- !is.na(pkgDTList$Archive$DESCFileFull)
+  deps <- DESCRIPTIONFileDepsV(
+    pkgDTList$Archive[gotDESC]$DESCFileFull,
+    which = which, keepSeparate = TRUE)
+  names(deps) <- pkgDTList$Archive$packageFullName[gotDESC]
+  deps <- lapply(deps, function(x) {
+    unlist(lapply(x, function(y) paste(y, collapse = ", ")))
+    })
+  deps <- do.call(rbind, deps)
+  # deps <- invertList(deps)
+  # deps <- as.data.table(deps)
+  for (co in colnames(deps))
+    set(pkgDTList$Archive, which(gotDESC), co, deps[, co])
+  pkgDTList
+}
