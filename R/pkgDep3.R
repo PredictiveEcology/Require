@@ -278,6 +278,15 @@ pkgDepCRAN <- function(pkgDT, which, repos, purge, type, ap, verbose) {
     pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
   }
 
+  notInCurrentCRAN <- is.na(pkgDT[!Package %in% .basePkgs]$Version)
+  if (any(notInCurrentCRAN)) {
+    set(pkgDT, which(notInCurrentCRAN), "repoLocation", "Archive")
+    pkgDTList <- split(pkgDT, by = "repoLocation")
+    pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, verbose, which)
+    pkgDT <- rbindlist(pkgDTList, fill = TRUE, use.names = TRUE)
+  }
+
+
   pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
   pkgDT[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
   for (co in which)
