@@ -1,4 +1,4 @@
-test_that("test 5", {
+test_that("test 6", {
 
   setupInitial <- setupTest()
   on.exit(endTest(setupInitial))

@@ -99,7 +99,7 @@ test_that("test 5", {
       length(pkgDepTest2[[1]]) == 1
     })
     testthat::expect_true({
-      sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require)
+      all(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
     })
 
     tmpdirForPkgs <- gsub(".+ ([[:digit:]]\\.[[:digit:]])\\.[[:digit:]].+", "\\1", R.version.string)
@@ -117,19 +117,7 @@ test_that("test 5", {
     )
     out <- unlink(pkgsToRm, recursive = TRUE)
 
-    runTests <- function(have, pkgs) {
-      # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
-      theTest <- all(!is.na(have[installed == TRUE]$Version))
-      if (!isTRUE(theTest)) browser()
-      testthat::expect_true(isTRUE(theTest))
-      if ("installResult" %in% colnames(have)) {
-        theTest <- NROW(have[is.na(installResult) | installResult %in% "OK"]) == sum(have$installed)
-        if (!isTRUE(theTest)) browser()
-        testthat::expect_true(isTRUE(theTest))
-      }
-    }
-
-    pkgs <- list(
+        pkgs <- list(
       c(
         "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.4.3)",
         "reproducible (>=2.0.2)", "PredictiveEcology/reproducible@development (>=2.0.0)", # Until reproducible 2.0.2 is on CRAN
@@ -201,16 +189,20 @@ test_that("test 5", {
       # if (i == 11) ._Require_0 <<- 1
       # if (length(grep("LandR", pkg))) browser()
       pkg <- omitPkgsTemporarily(pkg)
-      outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
+      suppressWarnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
+        outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
+      )
       # Rerun it to get output table, but capture messages for quiet; should be no installs
-      silent <- capture.output(type = "message", {
+      #silent <- capture.output(type = "message", {
+      suppressWarnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
         out <- Require(pkg, standAlone = FALSE, require = FALSE, verbose = 2)
-      })
+      )
+      #})
       testthat::expect_true(
         all.equal(out, outFromRequire, check.attributes = FALSE)
       )
       have <- attr(out, "Require")
-      # have <- have[!Package %in% c("Require", "testthat")] # these don't have Version number because they may be load_all'd
+      have <- have[!Package %in% c("Require", "testthat")] # these don't have Version number because they may be load_all'd
       pkgsToTest <- unique(Require::extractPkgName(pkg))
       names(pkgsToTest) <- pkgsToTest
       runTests(have, pkg)
@@ -222,7 +214,9 @@ test_that("test 5", {
       pkgs <- c("knn", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
       pkgsClean <- extractPkgName(pkgs)
       lala <- suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean))))
-      Require(pkgs, require = FALSE)
+      suppressWarnings(# package 'Require' is in use and will not be installed
+        Require(pkgs, require = FALSE)
+      )
       ip <- installed.packages() ## silly1 won't be installed
       testthat::expect_true(sum(pkgsClean %in% ip[, "Package"]) == length(pkgsClean) - 1) ## TODO: fails on macOS
     }
@@ -244,9 +238,11 @@ test_that("test 5", {
     # two sources, where both are OK; use CRAN by preference
     if (!isMacOSX()) {
       out <- capture.output(remove.packages("SpaDES.core")) ## TODO: fails on macOS
-      out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
-                       "SpaDES.core (>=1.0.0)"),
-                     require = FALSE, verbose = 2
+      suppressWarnings(
+        out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
+                         "SpaDES.core (>=1.0.0)"),
+                       require = FALSE, verbose = 2
+        )
       )
       out2 <- attr(out, "Require")
       try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
