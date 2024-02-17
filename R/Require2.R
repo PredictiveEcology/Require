@@ -1067,27 +1067,11 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       pkgNoLocal[["CRAN"]] <- ap[pkgCRAN, on = "Package"]
       pkgCRAN <- pkgNoLocal[["CRAN"]] # pointer
     }
-    # N <- pkgCRAN[, .N, by = Package]
-    # if (any(N$N > 1)) {
-    #   pkgCRAN <- pkgCRAN[, .SD[1], by = "Package"]
-    # }
-    # pkgCRAN <- availableVersionOK(pkgCRAN)
 
     # Not on CRAN; so likely Archive
     notOK <- !pkgCRAN$availableVersionOK %in% TRUE # FALSE means it is on CRAN, but not that version; NA means it is not on CRAN currently
     if (any(notOK)) {
       pkgNot <- unique(pkgCRAN$packageFullName[notOK])
-      messageVerbose(
-        blue(
-          "  -- ",
-          unique(paste(pkgNot,
-            collapse = ", "
-          )), " ",
-          isAre(l = pkgNot),
-          " not on CRAN; trying Archives"
-        ),
-        verbose = verbose, verboseLevel = 1
-      )
       pkgCRAN[notOK, `:=`(repoLocation = "Archive", installFrom = "Archive")]
       pkgNoLocal[["CRAN"]] <- pkgCRAN
       pkgNoLocal <- rbindlistRecursive(pkgNoLocal)
@@ -1112,6 +1096,30 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
     )
     if (!isTRUE(getOption("Require.offlineMode"))) {
       pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
+
+      tf <- file.path(Require:::RequirePkgCacheDir(), basename(pkgArchive$PackageUrl))
+      fe <- file.exists(tf)
+      if (any(fe)) {
+        messageVerbose(
+          blue("  -- ", unique(paste(pkgArchive$packageFullName[fe], collapse = ", ")), " ",
+               isAre(l = pkgArchive$packageFullName[fe]),
+               " not on CRAN; have local cached copy"),
+          verbose = verbose, verboseLevel = 1
+        )
+        pkgArchive[fe, haveLocal := "Local"]
+        pkgArchive[fe, localFile := tf[fe]]
+
+
+      }
+      if (any(!fe)) {
+        messageVerbose(
+          blue("  -- ", unique(paste(pkgArchive$packageFullName[!fe], collapse = ", ")), " ",
+               isAre(l = pkgArchive$packageFullName[!fe]),
+               " not on CRAN; trying Archives"),
+          verbose = verbose, verboseLevel = 1
+        )
+      }
+
       if (any(pkgArchive[, .N, by = "Package"]$N > 1)) {
         # keep user supplied repos order, in case there are multiple repos that have the package
         set(pkgArchive, NULL, "repoOrder", match(pkgArchive$repo, repos))
@@ -1126,8 +1134,8 @@ downloadArchive <- function(pkgNonLocal, repos, verbose, install.packagesArgs, n
       if (any(pkgArchive$repoLocation %in% "Archive" & pkgArchive$availableVersionOK %in% TRUE)) {
         pkgArchive <- split(pkgArchive, pkgArchive[["repoLocation"]])
         pkgArchOnly <- pkgArchive[["Archive"]]
-        pkgArchOnly[, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
-        pkgArchOnly[, localFile := useRepository]
+        pkgArchOnly[!fe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
+        pkgArchOnly[!fe, localFile := useRepository]
       }
       pkgArchive <- rbindlistRecursive(pkgArchive)
     }
