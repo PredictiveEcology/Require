@@ -1,6 +1,8 @@
 test_that("test 6", {
 
   setupInitial <- setupTest()
+  tmpdir <- tempdir2(.rndstr())
+  .libPaths(tmpdir)
   on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
@@ -81,7 +83,6 @@ test_that("test 6", {
   # testthat::expect_true({length(e) == length(eAlt)})
   # testthat::expect_true({names(e) == names(eAlt)})
 
-  aaaa <- 1
   a <- pkgDep("Require", which = "all", recursive = FALSE)
   b <- pkgDep("Require", which = "most", recursive = FALSE)
   d <- pkgDep("Require", which = TRUE, recursive = FALSE)
@@ -115,7 +116,7 @@ test_that("test 6", {
       "SpaDES.experiment", "SpaDES.project"
     )
   )
-  Require::Install(knownRevDeps$Require)
+  Require::Install(knownRevDeps$Require, repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
   knownRevDeps <- append(
     knownRevDeps,
@@ -128,7 +129,7 @@ test_that("test 6", {
     knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
   }))
 
-  if (isDevAndInteractive) {
+  if (isDev) {
     testthat::expect_true({
       length(test) == 0
     })
