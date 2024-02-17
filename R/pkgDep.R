@@ -199,9 +199,11 @@ pkgDepTopoSort <-
     if (missing(deps)) {
       aa <- if (isTRUE(reverse)) {
         ip <- .installed.pkgs()
-        deps <- lapply(ip[, "Dependencies"], extractPkgName)
-        names(deps) <- ip[, "Package"]
-        names(pkgs) <- pkgs
+        ip <- installed.packagesDeps(ip, which)
+        deps <- depsWithCommasToVector(ip$Package, ip$deps)
+         deps <- lapply(deps, extractPkgName)
+        # names(deps) <- ip[, "Package"]
+        # names(pkgs) <- pkgs
         deps <- deps[order(names(deps))]
         revDeps <-
           lapply(pkgs, function(p) {
