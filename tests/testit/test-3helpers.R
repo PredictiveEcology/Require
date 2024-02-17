@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232),
   round = 2,
   verboseLevel = 1

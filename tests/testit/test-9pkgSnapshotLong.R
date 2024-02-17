@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 b <- function() {
   if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
     # Require::Install("profvis")

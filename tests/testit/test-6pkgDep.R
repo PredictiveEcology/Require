@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 
 a <- pkgDep("Require", recursive = TRUE)
 testit::assert({

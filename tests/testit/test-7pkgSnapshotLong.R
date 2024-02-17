@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 
 if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
   # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile

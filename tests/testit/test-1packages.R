@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 
 ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
 origCRAN_REPO <- Sys.getenv("CRAN_REPO")

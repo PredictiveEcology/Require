@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 
 if (isDevAndInteractive) {
   projectDir <- Require:::tempdir2(Require:::.rndstr(1))

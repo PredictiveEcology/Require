@@ -1,4 +1,4 @@
-setupInitial <- setupTest()
+setupInitial <- setupTestOld()
 library(Require)
 # Test misspelled
 out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
@@ -71,9 +71,9 @@ setLibPaths() # reset it to original
 setwd(origDir)
 
 ## setup
-# setupTestDir <- normPath(tempdir2("setupTests"))
-# ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
-# out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
+# setupTestOldDir <- normPath(tempdir2("setupTestOlds"))
+# ccc <- checkPath(file.path(setupTestOldDir, ".cache"), create = TRUE)
+# out2222 <- capture.output(setup(setupTestOldDir, RPackageCache = ccc))
 # testit::assert(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
 # out2222 <- capture.output(setupOff())
 # Require:::messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
@@ -87,10 +87,10 @@ setwd(origDir)
 # }
 
 # reset options after setupOff()
-# secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
+# secondTry <- normPath(file.path(setupTestOldDir, ".cacheSecond"))
 # opt22 <- options("Require.RPackageCache" = secondTry)
 # ccc <- checkPath(secondTry, create = TRUE)
-# out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
+# out2222 <- capture.output(setup(setupTestOldDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
 # testit::assert(identical(Require:::getOptionRPackageCache(), ccc))
 # out2222 <- capture.output(setupOff())
 # testit::assert(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv

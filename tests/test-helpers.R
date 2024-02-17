@@ -1,4 +1,4 @@
-setupTest <- function(verbose = getOption("Require.verbose")) {
+setupTestOld <- function(verbose = getOption("Require.verbose")) {
   opts <- options()
 
   # cannot open file 'startup.Rs': No such file or directory

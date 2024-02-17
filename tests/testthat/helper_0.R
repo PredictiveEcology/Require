@@ -1,4 +1,4 @@
-setupTest <- function(verbose = getOption("Require.verbose")) {
+setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.frame()) {
   opts <- options()
   requireNamespace("waldo")
   # requireNamespace("diffob")
@@ -17,6 +17,11 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
     Require.unloadNamespaces = TRUE
   )
 
+  if (Sys.info()["user"] %in% "emcintir")
+    withr::local_options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"), .local_envir = envir)
+  withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = envir)
+
+
   if (Sys.info()["user"] == "achubaty") {
     outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
   } else {
@@ -24,6 +29,7 @@ setupTest <- function(verbose = getOption("Require.verbose")) {
   }
 
   libPath <- .libPaths()
+  setLibPaths(tempdir2(.rndstr()))
   origWd <- getwd()
   # thisFilename <- Require:::getInStack("r")
   # env <- Require:::whereInStack("ee")
