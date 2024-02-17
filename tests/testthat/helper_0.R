@@ -17,9 +17,13 @@ setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.fra
     Require.unloadNamespaces = TRUE
   )
 
-  if (Sys.info()["user"] %in% "emcintir")
-    withr::local_options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"), .local_envir = envir)
+  if (Sys.info()["user"] %in% "emcintir") {
+    withr::local_options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
+                         gargle_oauth_email = "eliotmcintire@gmail.com",
+                         gargle_oauth_cache = "~/.secret", .local_envir = envir)
+  }
   withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = envir)
+
 
 
   if (Sys.info()["user"] == "achubaty") {

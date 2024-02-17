@@ -693,6 +693,8 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, verbose, which) {
 
 
 installed.packagesDeps <- function(ip, which) {
+  if (missing(ip))
+    ip <- .installed.pkgs()
 
   if (!is.data.table(ip))
     ip <- as.data.table(ip)
@@ -704,6 +706,8 @@ installed.packagesDeps <- function(ip, which) {
   set(ip, NULL, "deps", gsub("^(, )+", "", ip$deps))
   # remove middle empty commas
   set(ip, NULL, "deps", gsub(", ,", ",", ip$deps))
+  # remove empty, but no space
+  set(ip, NULL, "deps", gsub("(,,)+", ",", ip$deps))
 }
 
 depsWithCommasToVector <- function(packageFullName, depsWithCommas) {
