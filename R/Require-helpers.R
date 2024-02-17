@@ -1485,6 +1485,6 @@ checkAutomaticOfflineMode <- function() {
 messageCantInstallNoVersion <- function(packagesFullName) {
   turquoise(
     paste(unique(packagesFullName), collapse = ", "),
-    " could not be installed; the version specification cannot be met"
+    " could not be installed; package doesn't exist or the version specification cannot be met"
   )
 }

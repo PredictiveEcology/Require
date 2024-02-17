@@ -1,3 +1,15 @@
+runTests <- function(have, pkgs) {
+  # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
+  theTest <- all(!is.na(have[installed == TRUE]$Version))
+  if (!isTRUE(theTest)) browser()
+  testthat::expect_true(isTRUE(theTest))
+  if ("installResult" %in% colnames(have)) {
+    theTest <- NROW(have[is.na(installResult) | installResult %in% "OK"]) == sum(have$installed)
+    if (!isTRUE(theTest)) browser()
+    testthat::expect_true(isTRUE(theTest))
+  }
+}
+
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
