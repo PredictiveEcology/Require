@@ -141,6 +141,10 @@ getPkgDeps <- function(packages, recursive, which, repos, type, purge, includeBa
       pkgDT <- saveNamesForCache(pkgDT, which, recursive = recursiveUsed, ap = ap,
                                  repos = repos, type = type, verbose = verbose - 1)
       alreadySaved[[recursiveUsed]] <- pkgDT$sn %in% names(pkgDepDepsEnv())
+      if (purge %in% TRUE && any(alreadySaved[[recursiveUsed]])) {
+        rm(list = pkgDT$sn[alreadySaved[[recursiveUsed]]], envir = pkgDepDepsEnv())
+      }
+
       names(alreadySaved[[recursiveUsed]]) <- pkgDT$sn
       if (all(alreadySaved[[recursiveUsed]]))
         break
