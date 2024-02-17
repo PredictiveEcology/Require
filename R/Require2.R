@@ -2602,34 +2602,33 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 
 clonePackages <- function(rcf, ipa) {
   ip <- installed.packages(lib.loc = rcf)
-  RVersion <- package_version(paste(R.version$major,
-                                    gsub("^(.{1,2})\\..+$", "\\1", R.version$minor),
-                                    sep = "."))
-  BuiltVersion <-
-  package_version(paste(gsub("^(.{1,2}\\..{1,2})\\..+$", "\\1", ip[, "Built"]),
-                        sep = "."))
-  ipCanTryNeedsNoCompilAndGoodRVer <- ip[ (ip[, "NeedsCompilation"] == "no" & BuiltVersion == RVersion)  %in% TRUE ,, drop = FALSE]
-  alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)]
+  ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
+  alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
+  alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][alreadyInstalledCanClone]
+  alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% sourcePkgs()]
   wantToInstall <- ipa$available[, "Version"]
-  wantToInstallWOSrcPkgs <- wantToInstall[!names(wantToInstall) %in% sourcePkgs()]
-  couldClone <- wantToInstallWOSrcPkgs# if (isWindows()) {
-  canClone <- setdiffNamed(couldClone, alreadyInstalledCanClone)
-  needNormalInstall <- setdiffNamed(wantToInstall, canClone)
+  cantClone <- setdiffNamed(wantToInstall, alreadyInstalledCanClone)# if (isWindows()) {
+  canClone <- setdiffNamed(wantToInstall, cantClone)
   canClone <- names(canClone)
   if (length(canClone)) {
-    message(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),") instead of Installing: ",
+    message(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
+                  ") instead of Installing (don't need compiling): ",
                   paste(canClone, collapse = ", ")))
 
-    linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1])
-    ipa$pkgs <- names(needNormalInstall)
+    linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1], ip = ip)
+    ipa$pkgs <- names(cantClone)
     message(green("... Done!"))
     ipa$available <- ipa$available[ipa$pkgs, , drop = FALSE]
   }
   ipa
 }
 
-linkOrCopyPackageFiles <- function(Packages, fromLib, toLib) {
-  Packages <- setdiff(Packages, sourcePkgs())
+linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
+  if (missing(ip))
+    ip <- installed.packages(fromLib)
+  cant <- cantClone(ip)
+  cant <- unique(c(sourcePkgs(), cant[, "Package"]))
+  Packages <- setdiff(Packages, cant)
   ret <- lapply(Packages, function(packToClone) {
     from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
     fromFull <- file.path(fromLib, packToClone, from)
@@ -2774,4 +2773,33 @@ assignPkgDepDTtoSaveNames <- function(sn, pkgDepDT) {
     assign(sn, pkgDepDT[[n]], envir = pkgDepDepsEnv())
   })
   return(invisible())
+}
+
+canClone <- function(ip) {
+  RversionDot <- RversionDot()
+  correctBuilt <- correctBuilt(ip, RversionDot)
+  # correctBuilt <- Rversion == BuiltVersion # needs to re-add package_version to both those functions
+  ip[ (ip[, "NeedsCompilation"] == "no" & correctBuilt %in% TRUE)  %in% TRUE ,, drop = FALSE]
+}
+
+cantClone <- function(ip) {
+  RversionDot <- RversionDot()
+  correctBuilt <- correctBuilt(ip, RversionDot)
+  ip[ (ip[, "NeedsCompilation"] == "yes" | correctBuilt %in% FALSE)  %in% TRUE ,, drop = FALSE]
+}
+
+RversionDot <- function() {
+  # This adds a trailing "." so that it is e.g., 4.3., not 4.3  because
+  paste0(paste(R.version$major,
+        gsub("^(.{1,2})\\..+$", "\\1", R.version$minor),
+        sep = "."), ".")
+}
+
+BuiltVersion2 <- function(ip) {
+  paste(gsub("^(.{1,2}\\..{1,2})\\..+$", "\\1", ip[, "Built"]),
+                        sep = ".")
+}
+
+correctBuilt <- function(ip, RversionDot) {
+  startsWith(ip[, "Built"], prefix = RversionDot)
 }
