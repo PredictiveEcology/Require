@@ -469,11 +469,11 @@ DESCRIPTIONFileDeps <-
         Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
         on.exit(Sys.setlocale(locale = ""))
         sl <- list()
-        sl[["depends"]] <- grep("^Depends: *", lines) # nolint
-        sl[["suggests"]] <- grep("^Suggests: *", lines) # nolint
-        sl[["imports"]] <- grep("^Imports: *", lines) # nolint
-        sl[["linkingto"]] <- grep("^LinkingTo: *", lines) # nolint
-        sl[["remotes"]] <- grep("^Remotes: *", lines) # nolint
+        sl[["Depends"]] <- grep("^Depends: *", lines) # nolint
+        sl[["Suggests"]] <- grep("^Suggests: *", lines) # nolint
+        sl[["Imports"]] <- grep("^Imports: *", lines) # nolint
+        sl[["Linkingto"]] <- grep("^LinkingTo: *", lines) # nolint
+        sl[["Remotes"]] <- grep("^Remotes: *", lines) # nolint
         sl[["colon"]] <- grep(": *", lines) # nolint
         # sl[["Additional_repositories"]] <- grep("^Additional_repositories: *", lines) # nolint
 
@@ -482,15 +482,17 @@ DESCRIPTIONFileDeps <-
         which <- unique(which)
         whichLower <- tolower(which)
         needed <-
-          Map(whLower = whichLower, wh = which, function(whLower, wh) {
-            if (length(sl[[whLower]])) {
-              whEnd <- which(sl[["colon"]] %in% sl[[whLower]]) + 1
+          Map(#whLower = whichLower,
+              # wh = which, function(whLower, wh) {
+                wh = which, function(wh) {
+            if (length(sl[[wh]])) {
+              whEnd <- which(sl[["colon"]] %in% sl[[wh]]) + 1
               whEnd <- if (length(sl[["colon"]]) < whEnd) {
                 length(lines)
               } else {
                 (sl[["colon"]][whEnd] - 1)
               }
-              allLines <- sl[[whLower]]:whEnd # nolint
+              allLines <- sl[[wh]]:whEnd # nolint
               needs <- paste(lines[allLines], collapse = "")
               needs <- gsub(paste0(wh, ": *"), "", needs)
               needs <- strsplit(needs, split = ", *")
