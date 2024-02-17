@@ -453,9 +453,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       }
     )
   }
-  if (isTRUE(is.character(rcf))) {
-    ipa <- linkOrCopyPackageFiles(Packages = ipa$pkgs, fromLib = .libPaths()[1], toLib = rcf[1])
-  }
+  # if (isTRUE(is.character(rcf))) {
+  #   ipa <- linkOrCopyPackageFiles(Packages = ipa$pkgs, fromLib = .libPaths()[1], toLib = rcf[1])
+  # }
 
   toInstall
 }
