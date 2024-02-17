@@ -367,7 +367,9 @@ saveNamesNonGH <- function(packages, isGH, ord, ap, repos, verbose, type, whichC
     if (missing(ap))
       ap <-
         getAvailablePackagesIfNeeded(pkgDT1, repos, purge = FALSE, verbose, type = type)
-    pkgDT1 <- ap[ap$Package %in% pkgDT1$Package][pkgDT1, on = "Package"] # ap[pkgDT1, on = "Package"]
+    cn <- setdiff(colnames(ap), "Package")
+    onlyKeep <- setdiff(colnames(pkgDT1), cn)
+    pkgDT1 <- ap[ap$Package %in% pkgDT1$Package][pkgDT1[, ..onlyKeep], on = "Package"] # ap[pkgDT1, on = "Package"]
   }
 
   set(pkgDT1, NULL, "sn", saveNameConcat(pkgDT1, whichCatRecursive))
