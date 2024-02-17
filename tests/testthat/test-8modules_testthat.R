@@ -147,7 +147,7 @@ test_that("test 5", {
       ))
     )
     # some sort of test about whether anything was installed; pick reproducible as a random pkg
-    testthat::expect_true(sum(grepl("reproducible", out1)) == 1)
+    testthat::expect_true(sum(grepl("reproducible", out1)) == 1 + is.character(getOption("Require.cloneFrom")))
     testthat::expect_true(sum(grepl("reproducible", out2)) == 0)
     testthat::expect_true(st1["elapsed"]/st2["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
