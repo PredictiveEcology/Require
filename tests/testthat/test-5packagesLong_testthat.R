@@ -18,9 +18,6 @@ test_that("test 5", {
     orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
     # origDir <- setwd("~/GitHub/")
 
-    if (Sys.info()["user"] %in% "emcintir")
-      withr::local_options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"))
-    withr::local_options(Require.RPackageCache = RequirePkgCacheDir())
     # theDir <- Require:::rpackageFolder(getOptionRPackageCache())
     #
     # if (!is.null(theDir)) {
