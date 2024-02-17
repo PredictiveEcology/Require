@@ -111,8 +111,11 @@ pkgDep <- function(packages,
                        includeSelf = includeSelf)
   }
 
-  # collapse or not to list of character vector
-  if (!isTRUE(Additional_repositories)) {
+
+  if (keepVersionNumber %in% FALSE) {
+    deps <- Map(pkgFN = deps, function(pkgFN) pkgFN[["Package"]])
+  } else if (!isTRUE(Additional_repositories)) {
+    # collapse or not to list of character vector
     deps <- Map(pkgFN = deps, function(pkgFN) pkgFN[["packageFullName"]])
   }
 
