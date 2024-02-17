@@ -1320,7 +1320,7 @@ masterMainHEAD <- function(url, need) {
   ghp <- Sys.getenv("GITHUB_PAT")
   messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
   if (nzchar(ghp)) {
-    url <- sprintf(paste0("https://%s:@", gsub("https://", "", url)), ghp)
+    url <- sprintf(paste0("https://%s:@", gsub("https*://", "", url)), ghp)
   }
 
   urls <- url
