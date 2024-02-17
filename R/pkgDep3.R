@@ -299,21 +299,24 @@ pkgDepCRAN <- function(pkgDT, which, repos, purge, type, ap, verbose) {
   for (co in which)
     set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
 
-  pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+  pkgDT <- installed.packagesDeps(pkgDT, which)
+  #
+  # pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+  #
+  # # remove trailing and initial commas
+  # set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
+  # set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
+  # # remove middle empty commas
+  # set(pkgDT, NULL, "deps", gsub(", ,", ",", pkgDT$deps))
 
-  # remove trailing and initial commas
-  set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
-  set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
-  # remove middle empty commas
-  set(pkgDT, NULL, "deps", gsub(", ,", ",", pkgDT$deps))
-
-  deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
-    out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
-    out <- out[!is.na(out)]
-    out <-
-      grep(.grepR, out, value = TRUE, invert = TRUE)
-    out
-  })
+  deps <- depsWithCommasToVector(pkgDT$packageFullName, pkgDT$deps)
+  # deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
+  #   out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+  #   out <- out[!is.na(out)]
+  #   out <-
+  #     grep(.grepR, out, value = TRUE, invert = TRUE)
+  #   out
+  # })
   depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
   depsAll
 }
@@ -686,4 +689,29 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, verbose, which) {
   for (co in colnames(deps))
     set(pkgDTList$Archive, which(gotDESC), co, deps[, co])
   pkgDTList
+}
+
+
+installed.packagesDeps <- function(ip, which) {
+
+  if (!is.data.table(ip))
+    ip <- as.data.table(ip)
+
+  ip[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+
+  # remove trailing and initial commas
+  set(ip, NULL, "deps", gsub("(, )+$", "", ip$deps))
+  set(ip, NULL, "deps", gsub("^(, )+", "", ip$deps))
+  # remove middle empty commas
+  set(ip, NULL, "deps", gsub(", ,", ",", ip$deps))
+}
+
+depsWithCommasToVector <- function(packageFullName, depsWithCommas) {
+  Map(pkgFN = packageFullName, x = depsWithCommas, function(pkgFN, x) {
+    out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+    out <- out[!is.na(out)]
+    out <-
+      grep(.grepR, out, value = TRUE, invert = TRUE)
+    out
+  })
 }
