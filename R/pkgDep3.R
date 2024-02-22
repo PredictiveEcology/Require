@@ -187,8 +187,6 @@ getPkgDeps <- function(packages, outerPackages = NULL, recursive, which, repos, 
         if (.inner == 0) {
           messageVerbose("  Determining recursive dependencies", verbose = verbose)
         }
-        browser()
-
         deps <- getPkgDepsMap(deps, outerPackages = outerPackages, recursive,  repos, which, type,  libPaths,
                               includeBase = includeBase, includeSelf = includeSelf, verbose,
                               .inner = .inner)
@@ -239,7 +237,6 @@ getPkgDeps <- function(packages, outerPackages = NULL, recursive, which, repos, 
           rbindlist(list(toPkgDepDT(self), dep), fill = TRUE, use.names = TRUE)
         })
       }
-      browser()
     }
   }
 
@@ -296,6 +293,8 @@ getPkgDepsNonRecursive <- function(pkgDT, outerPackages, which, repos, type, inc
 
   depsNew <- unlist(unname(pkgDTDep), recursive = FALSE)
   depsNew <- lapply(depsNew, function(depsInner) set(depsInner, NULL, ".inner", .inner))
+  depsNew <- Map(depsInner = depsNew, nam = names(depsNew), function(depsInner, nam)
+    set(depsInner, NULL, "parentPackage", nam))
   depsNew <- depsNew[match(pkgDT$packageFullName, names(depsNew))] # return to original order
   depsNew
 }
