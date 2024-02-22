@@ -40,6 +40,7 @@ pkgDepEnvCreate <- function() {
 }
 
 
+
 # 2nd level
 pkgDepGitHubSHAEnvCreate <- function() {
   if (is.null(pkgEnv()))
@@ -80,11 +81,23 @@ pkgDepDESCFileEnv <- function() {
   get0(.pkgDepDESCFileEnvName, envir = pkgDepEnv())
 }
 
+pkgDepArchiveDetailsInnerEnvCreate <- function() {
+  if (is.null(pkgEnv()))
+    pkgEnvCreate()
+  assign(getArchiveDetailsInnerTxt, newEmptyEnv(), envir = pkgEnv())
+}
+
+pkgDepArchiveDetailsInnerEnv <- function() {
+  if (is.null(pkgEnv()))
+    pkgEnvCreate()
+  get0(getArchiveDetailsInnerTxt, envir = pkgEnv())
+}
 
 .pkgDepDESCFileEnvName <- "DESCRIPTIONFile"
 .pkgDepDepsEnvName <- "deps"
 .pkgDepEnvName <- "pkgDep"
 .pkgEnvName <- ".pkgEnv"
+getArchiveDetailsInnerTxt <- "getArchiveDetailsInner"
 .pkgEnvStartTimeName <- "startTime"
 getSHAfromGitHubObjName <- "getSHAfromGitHub"
 .pkgHasGHP <- "hasGHP"
