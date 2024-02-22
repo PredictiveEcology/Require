@@ -905,16 +905,16 @@ dealWithCache <- function(purge,
   purgeBasedOnTime <- FALSE
   if (!isTRUE(purge) && isTRUE(checkAge)) {
     purgeBasedOnTime <- purgeBasedOnTimeSinceCached(pkgEnvStartTime())
-    purge <- purge || purgeBasedOnTime
   }
+  purge <- purge || purgeBasedOnTime
 
-  if (is.null(pkgDepEnv()) || purgeBasedOnTime) {
+  if (is.null(pkgDepEnv()) || purge) {
     pkgDepEnvCreate()
   }
-  if (isTRUE(purge) || purgeBasedOnTime) {
+  if (purge) {
     pkgEnvStartTimeCreate()
   }
-  if (isTRUE(purge)) {
+  if (purge) {
 
     # getSHAFromGItHubMemoise
     SHAfile <- getSHAFromGitHubDBFilename()
@@ -932,18 +932,17 @@ dealWithCache <- function(purge,
     unlink(fn)
   }
 
-  if (!is.null(pkgDepGitHubSHAEnv()) && purge)
-    rm(list = getSHAfromGitHubObjName, envir = pkgEnv())
+  if (is.null(pkgDepGitHubSHAEnv()) || purge)
+    pkgDepGitHubSHAEnvCreate()
 
-  if (is.null(pkgDepDepsEnv()) || purgeBasedOnTime) {
+  if (is.null(pkgDepDepsEnv()) || purge)
     pkgDepDepsEnvCreate()
-  }
-  if (is.null(pkgDepDESCFileEnv()) || purge) {
+
+  if (is.null(pkgDepDESCFileEnv()) || purge)
     pkgDepDESCFileEnvCreate()
-  }
-  if (is.null(pkgDepArchiveDetailsInnerEnv()) || purge) {
+
+  if (is.null(pkgDepArchiveDetailsInnerEnv()) || purge)
     pkgDepArchiveDetailsInnerEnvCreate()
-  }
 
   purge
 }
@@ -1492,8 +1491,8 @@ getArchiveDetailsInnerMemoise <- function(...) {
 
     }
     if (is.null(ret)) {
-      inputs <- dots[[2]]
-      # inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
+      # inputs <- dots[[2]]
+      inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
       ret <- getArchiveDetailsInner(...)
       assign(Package,
              list(pkgDepArchiveDetailsInnerEnv()[[Package]], list(input = inputs, output = ret)),
