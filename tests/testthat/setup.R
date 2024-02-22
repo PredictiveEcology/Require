@@ -10,6 +10,14 @@ runTests <- function(have, pkgs) {
   }
 }
 
+if (Sys.info()["user"] %in% "emcintir") {
+  options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
+          gargle_oauth_email = "eliotmcintire@gmail.com",
+          gargle_oauth_cache = "c:/Eliot/.secret")#, .local_envir = teardown_env())
+  googledrive::drive_auth()
+}
+withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = teardown_env())
+
 
 if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
