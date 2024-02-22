@@ -289,9 +289,10 @@ archiveVersionsAvailable <- function(package, repos) {
     }
   }
   info <- invertList(info)
-  info <- lapply(info, unname)
+  # info <- lapply(info, unname)
   info <- lapply(info, function(dd) lapply(dd, function(d) as.data.table(d, keep.rownames = "PackageUrl")))
-  info <- lapply(info, rbindlist)
+  info <- lapply(info, rbindlist, idcol = "repo")
+  # info <- lapply(info, rbindlist)
   info <- lapply(info, function(d) {
     if (!is.null(d[["mtime"]])) setorderv(d, "mtime")
   })
@@ -704,10 +705,10 @@ rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE) {
     if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
       path
     } else {
-      if (interactive() && !endsWith(path, rversion())) {
+      if (interactive() && !endsWith(path, versionMajorMinor())) {
         ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
         ## need to know if it's a user, who *should* keep R-version-specific dirs
-        file.path(path, rversion())
+        file.path(path, versionMajorMinor())
       } else {
         path
       }
@@ -1127,8 +1128,12 @@ rversions <- structure(
   row.names = 108:128, class = "data.frame"
 )
 
-rversion <- function() {
-  paste0(version$major, ".", strsplit(version$minor, "[.]")[[1]][1])
+versionMajorMinor <- function(version = base::version) {
+  if (!is(version, "simple.list")) {
+    version <- strsplit(version, "[.]")[[1]]
+    names(version) <- c("major", "minor", "revision")
+  }
+  paste0(version[["major"]], ".", strsplit(version[["minor"]], "[.]")[[1]][1])
 }
 
 

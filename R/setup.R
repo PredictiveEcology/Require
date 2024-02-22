@@ -101,7 +101,7 @@ RequirePkgCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
   }
-  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
+  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", versionMajorMinor()))
   if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
   }
@@ -264,7 +264,7 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @param backupCRAN If there is no CRAN repository set
 #'
 #' @export
-setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.posit.co/",
+setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {
   if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
