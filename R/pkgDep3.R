@@ -111,6 +111,7 @@ pkgDep <- function(packages,
                        includeSelf = includeSelf)
   }
 
+  deps <- lapply(deps, trimRedundancies) # faster to only do this once
 
   if (keepVersionNumber %in% FALSE) {
     deps <- Map(pkgFN = deps, function(pkgFN) pkgFN[["Package"]])
@@ -259,8 +260,8 @@ getPkgDepsMap <- function(deps, outerPackages, recursive, repos, which, type, li
     out2 <- try(lapply(out, rbindlist, fill = TRUE, use.names = TRUE))
     out3 <- Map(na = names(out2), function(na) {
       rr <- rbindlist(list(deps[[na]], out2[[na]]), use.names = TRUE, fill = TRUE)
-      rr <- trimRedundancies(rr, purge = FALSE, repos = repos, libPaths = libPaths,
-                             type = type)
+      # rr <- trimRedundancies(rr, purge = FALSE, repos = repos, libPaths = libPaths,
+      #                        type = type)
     })
 
     if (any(noDeps)) {

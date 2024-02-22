@@ -304,7 +304,6 @@ archiveVersionsAvailable <- function(package, repos) {
 
 # getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
 #   pkgs <- trimVersionNumber(packages)
-#   browser()
 #   out1 <- pkgDep(packages,
 #     recursive = TRUE, which = which, purge = purge,
 #     includeSelf = FALSE
