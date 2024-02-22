@@ -461,11 +461,11 @@ saveNamesGH <- function(packages, isGH, ord, ap, verbose, whichCatRecursive) {
       areNULLs <- sapply(versionInPkgEnv, is.null)
     }
     if (any(areNULLs) || length(areNULLs) == 0) {
-      installedNoOKAndNoPkgEnv <- which(installedNotOK[areNULLs])
+      installedNoOKAndNoPkgEnv <- installedNotOK[areNULLs]
       for (i in 1:2) {
-        brLocals <- if (i == 1) pkgDT$Branch[installedNoOKAndNoPkgEnv] else rep("main", length(installedNoOKAndNoPkgEnv))
+        brLocals <- if (i == 1) pkgDT$Branch[installedNoOKAndNoPkgEnv] else rep("main", sum(installedNoOKAndNoPkgEnv))
         haveLocalSHAfull <- grepl("^[[:alnum:]]{40}$", pkgDT$installedSha)
-        haveLocalSHA <- haveLocalSHAfull[installedNoOKAndNoPkgEnv]
+        haveLocalSHA <- haveLocalSHAfull & !installedNoOKAndNoPkgEnv
         if (!missing(ap)) {
           ghshacolname <- "GithubSHA1"
           if (ghshacolname %in% colnames(ap)) {
