@@ -92,6 +92,9 @@ pkgSnapshot <-
     libPaths <- doLibPaths(libPaths, standAlone)
 
     ip <- doInstalledPackages(libPaths, purge, includeBase)
+    rv <- versionMajorMinor()
+    rv <- cbind(Package = "R", Version = rv)
+    ip <- rbind(rv, ip, fill = TRUE)
 
     fwrite(ip,
       file = packageVersionFile,
@@ -153,7 +156,7 @@ doInstalledPackages <- function(libPaths, purge, includeBase) {
   ip <-
     as.data.table(
       .installed.pkgs(lib.loc = libPaths, which = c("Depends", "Imports", "LinkingTo", "Remotes"),
-        other = "GitHubSha", purge = purge
+        other = c("GitHubSha", "Repository"), purge = purge
       )
     )
   if (isFALSE(includeBase)) {
