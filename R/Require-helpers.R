@@ -393,6 +393,7 @@ installedVers <- function(pkgDT) {
 #' @inheritParams utils::install.packages
 available.packagesCached <- function(repos, purge, verbose = getOption("Require.verbose"),
                                      returnDataTable = TRUE, type) {
+  fillDefaults(pkgDep)
   if (!isTRUE(getOption("Require.offlineMode"))) {
     repos <- getCRANrepos(repos)
     purge <- dealWithCache(purge = purge)

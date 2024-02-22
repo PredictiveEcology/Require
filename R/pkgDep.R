@@ -553,9 +553,11 @@ whichToDILES <- function(which) {
            purge = getOption("Require.purge", FALSE)) {
     purge <- dealWithCache(purge)
     if (!is.null(other)) {
-      if (any(grepl("github", tolower(other)))) {
-        other <-
-          c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")
+      hasGit <- grepl("github", tolower(other))
+      if (any(hasGit)) {
+        other <- c(
+          c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1"),
+          other[!hasGit])
       }
     }
 
@@ -621,9 +623,14 @@ whichToDILES <- function(which) {
     lengths <- unlist(lapply(out, function(x) {
       NROW(x)
     }))
+
     out <- do.call(rbind, out)
-    out[, "Package"] <- rownames(out)
+    out[, "Package"] <- basename(out[, "Package"])
     out <- cbind(out, "LibPath" = rep(lib.loc, lengths), stringsAsFactors = FALSE)
+
+    dups <- duplicated(out[, "Package"]) # means installed in >1 .libPaths()
+    out <- out[!dups, ]
+
     colNames <- c("Package", "Version", "LibPath", which, other)
     colNames <- intersect(colNames, colnames(out))
     out <- out[, colNames]
@@ -934,6 +941,9 @@ dealWithCache <- function(purge,
   if (is.null(pkgDepDESCFileEnv()) || purge) {
     pkgDepDESCFileEnvCreate()
   }
+  if (is.null(pkgDepArchiveDetailsInnerEnv()) || purge) {
+    pkgDepArchiveDetailsInnerEnvCreate()
+  }
 
   purge
 }
@@ -1182,11 +1192,11 @@ getAvailablePackagesIfNeeded <-
 #' @rdname clearRequire
 clearRequirePackageCache <- function(packages,
                                      ask = interactive(),
-                                     Rversion = rversion(),
+                                     Rversion = versionMajorMinor(),
                                      clearCranCache = FALSE,
                                      verbose = getOption("Require.verbose")) {
   out <- RequirePkgCacheDir(create = FALSE)
-  if (!identical(Rversion, rversion())) {
+  if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)
   }
   if (getOption("Require.useCranCache")) {
@@ -1461,18 +1471,19 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
 getArchiveDetailsInnerMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
-    if (!exists("getArchiveDetailsInner", envir = .pkgEnv, inherits = FALSE)) {
-      .pkgEnv$getArchiveDetailsInner <- new.env()
+    if (is.null(pkgDepArchiveDetailsInnerEnv())) {
+      pkgDepArchiveDetailsInnerEnvCreate()
     }
     ret <- NULL
     ss <- match.call(definition = getArchiveDetailsInner)
     Package <- eval(ss$Package, envir = parent.frame())
-    if (!exists(Package, envir = .pkgEnv$getArchiveDetailsInner, inherits = FALSE)) {
-      .pkgEnv$getArchiveDetailsInner[[Package]] <- list()
+    if (!exists(Package, envir = pkgDepArchiveDetailsInnerEnv(), inherits = FALSE)) {
+      assign(Package, list(), envir = pkgDepArchiveDetailsInnerEnv())
+      # pkgDepArchiveDetailsInnerEnv()[[Package]] <- list()
     } else {
-      if (length(.pkgEnv$getArchiveDetailsInner[[Package]]) > 0) {
+      if (length(pkgDepArchiveDetailsInnerEnv()[[Package]]) > 0) {
         # This is trigger
-        prevInOuts <- .pkgEnv$getArchiveDetailsInner[[Package]][[2]]
+        prevInOuts <- pkgDepArchiveDetailsInnerEnv()[[Package]][[2]]
         whIdent <- identical(prevInOuts$input, dots[[2]])
         if (any(whIdent)) {
           ret <- prevInOuts$output
@@ -1481,10 +1492,14 @@ getArchiveDetailsInnerMemoise <- function(...) {
 
     }
     if (is.null(ret)) {
-      inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
+      inputs <- dots[[2]]
+      # inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
       ret <- getArchiveDetailsInner(...)
-      .pkgEnv$getArchiveDetailsInner[[Package]] <-
-        list(.pkgEnv$getArchiveDetailsInner[[Package]], list(input = inputs, output = ret))
+      assign(Package,
+             list(pkgDepArchiveDetailsInnerEnv()[[Package]], list(input = inputs, output = ret)),
+             envir = pkgDepArchiveDetailsInnerEnv())
+      # pkgDepArchiveDetailsInnerEnv()[[Package]] <-
+      #   list(pkgDepArchiveDetailsInnerEnv()[[Package]], list(input = inputs, output = ret))
     }
   } else {
     ret <- getArchiveDetailsInner(...)
