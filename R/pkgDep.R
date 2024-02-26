@@ -104,7 +104,7 @@ pkgDep4 <- function(packages,
     if (length(which) < length(packages))
       which <- rep(which, length.out = length(packages))
     # Only deal with first one of "which"... deal with second later
-    whichCat <- paste(sort(which[[1]]), collapse = "_")
+    # whichCat <- paste(sort(which[[1]]), collapse = "_")
 
     deps <- getPkgDeps(packages, recursive = recursive, repos = repos, verbose = verbose,
                        type = type, which = which, purge = purge, includeBase = includeBase)
@@ -1020,63 +1020,6 @@ paddedFloatToChar <-
   }
 
 
-#' The `packages` argument may have up to 4 pieces of information for GitHub
-#' packages: name, repository, branch, version. For CRAN-alikes, it will only
-#' be 2 pieces: name, version. There can also be an inequality or equality, if
-#' there is a version.
-#'
-#' @param packages A vector of GitHub or CRAN-alike packages. These can include
-#'   package name (required) and optionally repository, branch/sha and/or version.
-#' @param ap is used for CRAN-alikes to get version number, if not part of `packages`
-#' @param repos is used for `ap`.
-#'
-#' @details
-#' If version is not supplied, it will take the local, installed version, if it
-#' exists. Otherwise, it is assumed that the HEAD is desired.
-#' The function will find it in the `ap` or on `github.com`. For github packages,
-#' this is obviously a slow step, which can be accelerated if user supplies a sha
-#' or a version e.g., saveNamesForCache("PredictiveEcology/LandR@development (==1.0.2)")
-#'
-#' @return
-#' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
-#' above, plus the `which` and the `recursive`.
-saveNamesForCache <- function(packages, which, recursive, ap, type = type, repos, verbose) {
-  if (missing(which))
-    which <- eval(formals(pkgDep)[["which"]])
-  whichCat <- paste(sort(which[[1]]), collapse = "_")
-
-  if (missing(recursive))
-    recursive <- formals(pkgDep)[["recursive"]]
-  if (!startsWith(recursive, "Recursive"))
-    recursive <- paste0("Recursive", recursive)
-  whichCatRecursive <- paste(whichCat, recursive, sep = "")[1]
-  if (is.data.table(packages)) {
-    isGH <- if (is.null(packages$Account)) {
-      rep(FALSE, NROW(packages))
-    } else {
-      !is.na(packages$Account)
-    }
-  } else {
-    isGH <- isGitHub(packages)
-  }
-  ord <- seq(NROW(packages))
-  if (any(!isGH)) {
-    pkgDT <- saveNamesNonGH(packages, isGH, ord, ap, repos, type = type, verbose, whichCatRecursive)
-  }
-  if (any(isGH)) {
-    pkgDT1 <- saveNamesGH(packages, isGH, ord, ap, verbose, whichCatRecursive)
-    if (exists("pkgDT", inherits = FALSE)) {
-      pkgDT <- rbindlist(list(pkgDT, pkgDT1), use.names = TRUE, fill = TRUE)
-    } else {
-      pkgDT <- pkgDT1
-    }
-  }
-  set(pkgDT, NULL, "saveNamesLabel", saveNamesLabel(pkgDT))
-  newOrd <- order(pkgDT$ord)
-  pkgDT <- pkgDT[newOrd]
-  return(pkgDT)
-}
-
 
 pkgDepTopoSortMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
@@ -1125,15 +1068,23 @@ pkgDepDBFilename <- function() {
 }
 
 isAre <- function(l, v) {
-  isare <- c("is", "are")
+  singularPlural(c("is", "are"), l, v)
+}
+
+hasHave <- function(l, v) {
+  singularPlural(c("has", "have"), l, v)
+}
+
+singularPlural <- function(singPlur, l, v) {
   if (!missing(l)) {
-    out <- isare[(length(l) > 1) + 1]
+    out <- singPlur[(length(l) > 1) + 1]
   }
   if (!missing(v)) {
-    out <- isare[(v > 1) + 1]
+    out <- singPlur[(v > 1) + 1]
   }
   out
 }
+
 
 prependSelf <- function(deps, includeSelf) {
   if (isTRUE(includeSelf)) {
@@ -1347,13 +1298,13 @@ installedVersionOKPrecise <- function(pkgDT) {
 
 
 toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
-  if (missing(neededFromDESCRIPTION))
-    neededFromDESCRIPTION <- packageFullName
   if (missing(pkg))
     pkg <- packageFullName
 
   pkgDepDT <- toPkgDT(packageFullName)
-  # pkgDepDT <- data.table(packageFullName = packageFullName)
+  if (missing(neededFromDESCRIPTION)) {
+    neededFromDESCRIPTION <- pkgDepDT$packageFullName
+  }
   if (NROW(pkgDepDT)) {
     pkgDepDT <- parsePackageFullname(pkgDepDT)
     pkgDepDT <- parseGitHub(pkgDepDT)
@@ -1582,37 +1533,13 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 #'   Require:::.cleanup(opts)
 #' }
 #' }
-pkgDep2 <- function(packages,
-                    recursive = TRUE,
-                    which = c("Depends", "Imports", "LinkingTo"),
-                    depends,
-                    imports,
-                    suggests,
-                    linkingTo,
-                    repos = getOption("repos"),
-                    sorted = TRUE,
-                    purge = getOption("Require.purge", FALSE),
-                    includeSelf = TRUE,
-                    verbose = getOption("Require.verbose")) {
-  if (length(packages) > 1) stop("packages should be length 1")
-  deps <- pkgDep(packages, recursive = FALSE, which = which, depends = depends,
-                 imports = imports, suggests = suggests, linkingTo = linkingTo, repos = repos,
-                 includeSelf = includeSelf
-  )
-  deps <- lapply(deps, function(d) setdiff(d, packages))[[1]]
-
-  a <-
-    lapply(
-      deps, pkgDep, depends = depends, imports = imports, suggests = suggests,
-      linkingTo = linkingTo, repos = repos, recursive = recursive,
-      includeSelf = includeSelf, verbose = verbose - 1
-    )
-  a <- unlist(a, recursive = FALSE)
-  if (sorted) {
-    ord <- order(sapply(a, function(x) {
-      length(x)
-    }), decreasing = TRUE)
-    a <- a[ord]
-  }
-  return(a)
+pkgDep2 <- function(...) {
+  dots <- list(...)
+  dots$recursive = FALSE
+  deps <- do.call(pkgDep, dots)
+  dots[[1]] <- NULL
+  deps1 <- lapply(deps, function(dep) do.call(pkgDep, append(list(dep$packageFullName), dots)))
+  deps1
 }
+
+

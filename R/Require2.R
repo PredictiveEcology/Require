@@ -302,7 +302,7 @@ Require <- function(packages, packageVersionFile,
   if (NROW(packages)) {
     packages <- anyHaveHEAD(packages)
 
-    deps <- pkgDep(packages,
+    deps <- pkgDep(packages, simplify = FALSE,
       purge = purge, libPath = libPaths, recursive = TRUE,
       which = which, type = type, verbose = verbose, repos = repos,
       Additional_repositories = TRUE
@@ -430,6 +430,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
   }
+
+  browser() # need to remove RequireDeps
+  toInstall <- removeRequireDeps(toInstall)
+
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -1267,12 +1271,10 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
       if (any(dups)) {
         repos <- repos[!dups]
       }
-
-
     }
 
-    RequireDeps <- pkgDep("Require", recursive = TRUE)
-    packages <- packages[!Package %in% extractPkgName(RequireDeps[[1]])]
+    # Get Require dependencies to omit them: it has to exist locally unless this is first install
+    # packages <- removeRequireDeps(packages)
 
     need <- packages$packageFullName
     names(need) <- rep("", NROW(need))
@@ -1317,7 +1319,6 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, install_githubArgs, insta
     ddGH <- dd[isGH]
     sn <- saveNamesForCache(packageFullNameFromSnapshot(dd), ap = dd, verbose = verbose,
                             which = list(eval(formals(pkgDep)$which)), recursive = FALSE)
-    colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
     colsOfDeps <- intersect(colsOfDeps, colnames(dd))
     aa <- apply(dd[, ..colsOfDeps], 1, strsplit, split = ", ")
     names(aa) <- dd$Package
@@ -1428,16 +1429,17 @@ availableVersionOK <- function(pkgDT) {
     out <- try(pkgDT[hasAtLeastOneNonNA %in% TRUE, (availableOKcols) := {
       out <- Map(vor = VersionOnRepos, function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
       avokto <- Map(vor = VersionOnRepos, function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
-      avok <- unlist(out)
+      avok <- any(unlist(out))
       list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
     }, by = "Package"])
     if (is(out, "try-error")) {
       browserDeveloper("Error 553; please contact developer")
     }
   } else {
-    pkgDT[!is.na(VersionOnRepos), (availableOKcols) := list(TRUE, TRUE)]
+    pkgDT[!is.na(VersionOnRepos)  | is.na(versionSpec),
+          (availableOKcols) := list(TRUE, TRUE)]
   }
-  pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
+  # pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
 
   # Then update this for the subset that have an actual inequality
 
@@ -2167,9 +2169,10 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
     ret <- getArchiveDetailsInnerMemoise(Repository, ava, Package, cols, versionSpec, inequality, secondsInADay, .GRP,
                                        numGroups, verbose, repos, srcPackageURLOnCRAN)
   }, by = c("Package")]#, "Repository")] # multiple repositories may have same version and it is OK ... do loop inside
-  set(pkgArchive, NULL, "Version", pkgArchive$VersionOnRepos)
-  set(pkgArchive, NULL, "sn", saveNameConcatNonGH(pkgArchive$Package, pkgArchive$Version))
-  set(pkgArchive, NULL, "saveNamesLabel", saveNamesLabel(pkgArchive))
+  hasVoR <- which(!is.na(pkgArchive$VersionOnRepos))
+  set(pkgArchive, hasVoR, "Version", pkgArchive$VersionOnRepos[hasVoR])
+  set(pkgArchive, hasVoR, "sn", saveNameConcatNonGH(pkgArchive$Package[hasVoR], pkgArchive$Version[hasVoR]))
+  set(pkgArchive, hasVoR, "saveNamesLabel", saveNamesLabel(pkgArchive[hasVoR]))
   pkgArchive <- unique(pkgArchive, by = c("Package", "repo", "availableVersionOK"))
 
   pkgArchive
@@ -2762,7 +2765,6 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
           if (fe) {
             dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
           } else {
-            browser()
             dayBeforeTakenOffCRAN <- archivedOn(Package, pkgRelPath = ret$PackageUrl, verbose, repos,
                                                 numGroups = numGroups,
                                                 counter = .GRP,
@@ -2856,4 +2858,32 @@ BuiltVersion2 <- function(ip) {
 
 correctBuilt <- function(ip, RversionDot) {
   startsWith(ip[, "Built"], prefix = RversionDot)
+}
+
+colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
+
+
+
+# Get Require dependencies to omit them: it has to exist locally unless this is first install
+removeRequireDeps <- function(pkgDT) {
+  if (!is.data.table(pkgDT))
+    pkgDT <- toPkgDT(pkgDT)
+  localRequireDir <- file.path(.libPaths(), "Require")
+  de <- dir.exists(localRequireDir)
+  if (any(de)) {
+    localRequireDir <- localRequireDir[de][1]
+    RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
+  } else {
+    # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
+    #  then the next line will work to find it
+    deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
+    if (nzchar(deps)) {
+      RequireDeps <- depsWithCommasToVector("Require", depsWithCommas = deps)
+    } else {
+      RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
+    }
+
+  }
+
+  pkgDT <- pkgDT[!Package %in% extractPkgName(RequireDeps[[1]])]
 }
