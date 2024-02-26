@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 ## pak
 - when it fails due to "dependency conflict", there is no way to diagnose
 - seems to work if there is only one "branch" for each given package, but not multiple branches e.g., `c("PredictiveEcology/reproducible@development", "PredictiveEcology/reproducible")`, but 
@@ -333,3 +338,36 @@ pak::pkg_install(c("RandomFields", "RandomFieldsUtils"))
 # * RandomFields: Can't find package called RandomFields.
 # * RandomFieldsUtils: Can't find package called RandomFieldsUtils.
 ```
+
+
+
+```{r}
+
+tf <- tempfile()
+download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR/LandWeb/DESCRIPTION", tf)
+readLines(tf)
+strsplit(read.dcf(tf, fields = "Remotes"), ",|,\n")[[1]]
+
+pk <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb")
+
+pk2 <- pkgDep("PredictiveEcology/LandR@LandWeb", recursive = TRUE, Additional_repositories = T, purge = TRUE,
+              which = c("Depends", "Imports"), includeBase = FALSE)[[1]]
+
+pk3 <- sort(trimRedundancies(pk2$packageFullName)$packageFullName)
+
+setdiff(trimVersionNumber(pk3), pk$ref)
+setdiff(pk$ref, trimVersionNumber(pk3))
+
+```
+
+
+## default arguments -- `pkgDep(..., which = XX)` includes `LinkingTo`
+
+`pkgDep`, by default, includes `LinkingTo` as these are required by `Rcpp` if that is required, and so are strictly necessary.
+`pak::pkg_deps` does not include `LinkingTo` by default.
+
+## default behaviour -- CRAN-preference
+
+If there is no version specification, `pkgDep` prefers CRAN packages when there are multiple pointers to a package. Thus, even though a package may have a `Remotes` field pointint to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfited with the `Remotes` option. Then `pkgDep` will take that.
+
+`pak::pkg_deps` prefers the top-level specification, i.e., the non-recursive `Remotes` field will be returned, even if the same package is also specified within a recursive dependency without a `Remotes` field, i.e, if a recursive dependency points the CRAN package, it will not return that version of the dependency.
