@@ -1520,6 +1520,7 @@ messageDownload <- function(pkgDT, numToDownload, fromWhere) {
 
 colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")
 purple <- function(...) colr(..., digit = 30)
+red <- function(...) colr(..., digit = 31)
 green <- function(...) colr(..., digit = 32)
 yellow <- function(...) colr(..., digit = 33)
 blue <- function(...) colr(..., digit = 34)
@@ -2172,7 +2173,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   hasVoR <- which(!is.na(pkgArchive$VersionOnRepos))
   set(pkgArchive, hasVoR, "Version", pkgArchive$VersionOnRepos[hasVoR])
   set(pkgArchive, hasVoR, "sn", saveNameConcatNonGH(pkgArchive$Package[hasVoR], pkgArchive$Version[hasVoR]))
-  set(pkgArchive, hasVoR, "saveNamesLabel", saveNamesLabel(pkgArchive[hasVoR]))
+  # set(pkgArchive, hasVoR, "saveNamesLabel", saveNamesLabel(pkgArchive[hasVoR]))
   pkgArchive <- unique(pkgArchive, by = c("Package", "repo", "availableVersionOK"))
 
   pkgArchive
@@ -2822,13 +2823,6 @@ mergeRemotes <- function(depsList) {
     pkgDT <- pkgDT[-which(isGH)[hasVer2]]
     pkgDT$packageFullName
   })
-}
-
-assignPkgDepDTtoSaveNames <- function(sn, pkgDepDT) {
-  Map(sn = sn, n = names(pkgDepDT), function(sn, n) {
-    assign(sn, pkgDepDT[[n]], envir = pkgDepDepsEnv())
-  })
-  return(invisible())
 }
 
 canClone <- function(ip) {
