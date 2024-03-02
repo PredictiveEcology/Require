@@ -116,7 +116,7 @@ RequireGitHubCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
   }
-  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "GitHub"))
+  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), .txtGitHub))
   if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
   }

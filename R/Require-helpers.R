@@ -34,12 +34,12 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
     set(pkgDT, NULL, "githubPkgName", extractPkgGitHub(pkgDT$packageFullName))
     isGH <- !is.na(pkgDT$githubPkgName)
     if (is.null(pkgDT$repoLocation)) {
-      set(pkgDT, which(isGH), "repoLocation", "GitHub")
+      set(pkgDT, which(isGH), "repoLocation", .txtGitHub)
       set(pkgDT, which(!isGH), "repoLocation", "CRAN")
     }
 
-    if (any(pkgDT$repoLocation == "GitHub")) {
-      isGH <- pkgDT$repoLocation == "GitHub"
+    if (any(pkgDT$repoLocation == .txtGitHub)) {
+      isGH <- pkgDT$repoLocation == .txtGitHub
       isGitHub <- which(isGH)
       set(pkgDT, isGitHub, "fullGit", trimVersionNumber(pkgDT$packageFullName[isGitHub]))
       set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit[isGitHub]))
@@ -77,12 +77,12 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FALSE)) {
-  if (is.null(pkgDepDESCFileEnv())) purge <- dealWithCache(purge, checkAge = FALSE)
+  if (is.null(envPkgDepDESCFile())) purge <- dealWithCache(purge, checkAge = FALSE)
   out <- lapply(file, function(f) {
-    out <- if (!is.null(pkgDepDESCFileEnv())) {
-      if (purge && length(f) == 1) suppressWarnings(rm(f, envir = pkgDepDESCFileEnv()))
+    out <- if (!is.null(envPkgDepDESCFile())) {
+      if (purge && length(f) == 1) suppressWarnings(rm(f, envir = envPkgDepDESCFile()))
       if (length(f) == 1) {
-        get0(f, envir = pkgDepDESCFileEnv())
+        get0(f, envir = envPkgDepDESCFile())
       } else {
         f
       }
@@ -104,7 +104,7 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
     out <- gsub("Version: ", "", vers_line)
     if (length(out) == 0) out <- NA
     if (length(f) == 1) {
-      assign(f, out, envir = pkgDepDESCFileEnv())
+      assign(f, out, envir = envPkgDepDESCFile())
     }
     out
   })
@@ -187,7 +187,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
     } else {
       pkgDT <- pkg
     }
-    pkgDT[repoLocation == "GitHub",
+    a <- try(pkgDT[repoLocation == .txtGitHub,
       url := {
         gitHubFileUrl(
           hasSubFolder = hasSubFolder, Branch = Branch, GitSubFolder = GitSubFolder,
@@ -195,7 +195,8 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
         )
       },
       by = "Package"
-    ]
+    ])
+    if (is(a, "try-error")) browser()
     theDir <- RequireGitHubCacheDir(create = TRUE)
     # checkPath(theDir, create = TRUE)
     destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
@@ -206,7 +207,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
     if (!isTRUE(getOption("Require.offlineMode"))) {
       alreadyExists <- file.exists(pkgDT$destFile)
       if (any(!alreadyExists)) {
-        pkgDT[repoLocation == "GitHub" & alreadyExists %in% FALSE,
+        pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
               filepath := {
                 message(Package, "@", Branch, " downloading ", filename)
                 ret <- NA
@@ -787,7 +788,7 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 }
 
 postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
-  whGitHub <- which(pkgInstall$repoLocation %in% "GitHub")
+  whGitHub <- which(pkgInstall$repoLocation %in% .txtGitHub)
   if (length(whGitHub)) {
     pkgGitHub <- pkgInstall[whGitHub]
     for (pk in pkgGitHub[installed %in% TRUE]$Package) {
@@ -1001,28 +1002,28 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
 getSHAfromGitHubMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
-    if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
+    if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE)) {
       loadGitHubSHAsFromDisk(verbose = dots$verbose) # puts it into the Memoise-expected location
-    if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
-        .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
+    if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE))
+        .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
     }
     ret <- NULL
     ss <- match.call(definition = getSHAfromGitHub)
     uniqueID <- paste(lapply(ss[-1], eval, envir = parent.frame()), collapse = "_")
-    if (!exists(uniqueID, envir = .pkgEnv[[getSHAfromGitHubObjName]], inherits = FALSE)) {
-      .pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]] <- list()
+    if (!exists(uniqueID, envir = .pkgEnv[[.txtGetSHAfromGitHub]], inherits = FALSE)) {
+      .pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]] <- list()
     } else {
-      whIdent <- unlist(lapply(.pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]], function(x) identical(x$input, dots)))
+      whIdent <- unlist(lapply(.pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]], function(x) identical(x$input, dots)))
       if (any(whIdent)) {
-        ret <- .pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]][[which(whIdent)]]$output
+        ret <- .pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]][[which(whIdent)]]$output
       }
     }
     if (is.null(ret)) { # Case where it doesn't exist in .pkgEnv
       inputs <- data.table::copy(dots)
       ret <- getSHAfromGitHub(...)
       # Add it to the .pkgEnv
-      newObj <- list(.pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]], list(input = inputs, output = ret))
-      .pkgEnv[[getSHAfromGitHubObjName]][[uniqueID]] <- newObj
+      newObj <- list(.pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]], list(input = inputs, output = ret))
+      .pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]] <- newObj
 
     }
   } else {
@@ -1034,15 +1035,15 @@ getSHAfromGitHubMemoise <- function(...) {
 
 loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
   ret <- list()
-  if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
+  if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE)) {
     fn <- getSHAFromGitHubDBFilename()
     if (isTRUE(file.exists(fn))) {
       out <- readRDS(fn)
       removeFile <- purgeBasedOnTimeSinceCached(out[[GitHubSHAonDiskCacheTime]])
       if (!removeFile) { # remove if 24 hours old
-        # if (!exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE))
-        .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
-        list2env(out, envir = .pkgEnv[[getSHAfromGitHubObjName]])
+        # if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE))
+        .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
+        list2env(out, envir = .pkgEnv[[.txtGetSHAfromGitHub]])
       } else {
         messageVerbose("Purging disk-backed pkgDep cache for GitHub SHA values; it has ",
                        "been more than ", defaultCacheAgeForPurge, ". Change this by setting ",
@@ -1061,7 +1062,7 @@ loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
 GitHubSHAonDiskCacheTime <- ".GitHubSHAonDiskCacheTime"
 
 saveGitHubSHAsToDisk <- function(preShas) {
-  if (exists(getSHAfromGitHubObjName, envir = .pkgEnv, inherits = FALSE)) {
+  if (exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE)) {
     obj <- getSHAFromPkgEnv()
     needSave <- if (missing(preShas)) { TRUE } else {
       length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
@@ -1077,14 +1078,14 @@ saveGitHubSHAsToDisk <- function(preShas) {
 }
 
 getSHAFromPkgEnv <- function() {
-  as.list(.pkgEnv[[getSHAfromGitHubObjName]])
+  as.list(.pkgEnv[[.txtGetSHAfromGitHub]])
 }
 
 
 getSHAFromGitHubDBFilename <- function() {
   go <- getOptionRPackageCache()
   if (!is.null(go))
-    out <- file.path(go, paste0(getSHAfromGitHubObjName, ".rds")) # returns NULL if no Cache used
+    out <- file.path(go, paste0(.txtGetSHAfromGitHub, ".rds")) # returns NULL if no Cache used
   else
     out <- character()
   out
@@ -1160,7 +1161,7 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       browser()
-      iet <- get0(.internetExistsTime, envir = pkgEnv())
+      iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
       if (!is.null(iet)) {
         if ((Sys.time() - getOption("Require.internetExistsTimeout", 30)) < iet) {
           internetMightExist <- FALSE
@@ -1177,7 +1178,7 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
             verbose = verbose, verboseLevel = 2
           )
         }
-        assign(.internetExistsTime, Sys.time(), envir = pkgEnv())
+        assign(.txtInternetExistsTime, Sys.time(), envir = pkgEnv())
       }
       out <- internetMightExist
     } else {
@@ -1394,8 +1395,8 @@ stripGHP <- function(ghp, mess) {
 
 messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
   if (nzchar(ghp)) {
-    if (is.null(get0(.pkgHasGHP, envir = pkgEnv()))) {
-      assign(.pkgHasGHP, TRUE, envir = pkgEnv())
+    if (is.null(get0(.txtPkgHasGHP, envir = pkgEnv()))) {
+      assign(.txtPkgHasGHP, TRUE, envir = pkgEnv())
       messageVerbose("Using GITHUB_PAT to access files on GitHub",
         verboseLevel = 0, verbose = verbose
       )
@@ -1493,3 +1494,4 @@ messageCantInstallNoVersion <- function(packagesFullName) {
     " could not be installed; package doesn't exist or the version specification cannot be met"
   )
 }
+

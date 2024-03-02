@@ -418,10 +418,10 @@ DESCRIPTIONFileDeps <-
            purge = getOption("Require.purge", FALSE),
            keepSeparate = FALSE) {
     if (is.null(pkgDepEnv())) {
-      pkgDepEnvCreate()
+      envPkgDepCreate()
     }
-    if (is.null(pkgDepDESCFileEnv())) {
-      pkgDepDESCFileEnvCreate()
+    if (is.null(envPkgDepDESCFile())) {
+      envPkgDepDESCFileCreate()
     }
     objName <- if (length(desc_path) == 1) {
       paste0(
@@ -454,7 +454,7 @@ DESCRIPTIONFileDeps <-
       )
     }
     if (isTRUE(length(objName) > 1) ||
-      isTRUE(any(!exists(objName, envir = pkgDepDESCFileEnv()))) ||
+      isTRUE(any(!exists(objName, envir = envPkgDepDESCFile()))) ||
       isTRUE(purge)) {
       if (is.null(desc_path)) {
         needed <- NULL
@@ -507,12 +507,12 @@ DESCRIPTIONFileDeps <-
             }
           })
         if (length(objName) == 1) {
-          assign(objName, needed, envir = pkgDepDESCFileEnv())
+          assign(objName, needed, envir = envPkgDepDESCFile())
         }
       }
     } else {
       needed <-
-        get(objName, envir = pkgDepDESCFileEnv())
+        get(objName, envir = envPkgDepDESCFile())
     }
     if (!keepSeparate) {
       needed <- unname(unlist(needed))
@@ -909,7 +909,7 @@ dealWithCache <- function(purge,
   purge <- purge || purgeBasedOnTime
 
   if (is.null(pkgDepEnv()) || purge) {
-    pkgDepEnvCreate()
+    envPkgDepCreate()
   }
   if (purge) {
     pkgEnvStartTimeCreate()
@@ -932,17 +932,17 @@ dealWithCache <- function(purge,
     unlink(fn)
   }
 
-  if (is.null(pkgDepGitHubSHAEnv()) || purge)
-    pkgDepGitHubSHAEnvCreate()
+  if (is.null(envPkgDepGitHubSHA()) || purge)
+    envPkgDepGitHubSHACreate()
 
-  if (is.null(pkgDepDepsEnv()) || purge)
-    pkgDepDepsEnvCreate()
+  if (is.null(envPkgDepDeps()) || purge)
+    envPkgDepDepsCreate()
 
-  if (is.null(pkgDepDESCFileEnv()) || purge)
-    pkgDepDESCFileEnvCreate()
+  if (is.null(envPkgDepDESCFile()) || purge)
+    envPkgDepDESCFileCreate()
 
-  if (is.null(pkgDepArchiveDetailsInnerEnv()) || purge)
-    pkgDepArchiveDetailsInnerEnvCreate()
+  if (is.null(envPkgDepArchiveDetailsInner()) || purge)
+    envPkgDepArchiveDetailsInnerCreate()
 
   purge
 }
@@ -1306,9 +1306,10 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
     neededFromDESCRIPTION <- pkgDepDT$packageFullName
   }
   if (NROW(pkgDepDT)) {
-    pkgDepDT <- parsePackageFullname(pkgDepDT)
+    pkgDepDT <- parsePackageFullname(pkgDepDT, sorted = FALSE)
     pkgDepDT <- parseGitHub(pkgDepDT)
-    pkgDepDT[, isGitPkg := !is.na(githubPkgName)]
+    set(pkgDepDT, NULL, "isGitPkg", !is.na(pkgDepDT$githubPkgName))
+    # pkgDepDT[, isGitPkg := !is.na(pkgDepDT$githubPkgName)]
     # pkgDepDT <- trimRedundancies(pkgDepDT, repos = repos, purge = FALSE)
     setorderv(pkgDepDT, "isGitPkg", order = -1)
     # pkgDepDT[, Package := extractPkgName(packageFullName)]
@@ -1316,24 +1317,40 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
 
     # Here, GitHub package specification in a DESCRIPTION file Remotes section
     #   won't have version numbering --> Need to merge the two fields
-    pkgDepDT[, Version := extractVersionNumber(packageFullName)]
+    set(pkgDepDT, NULL, "Version", extractVersionNumber(pkgDepDT$packageFullName))
+    # pkgDepDT[, Version := extractVersionNumber(packageFullName)]
     if (any(!is.na(pkgDepDT$Version))) {
-      pkgDepDT[!is.na(Version), inequality := extractInequality(packageFullName)]
-      pkgDepDT[, Version := {
-        if (all(is.na(Version))) {
-          NA_character_
-        } else {
-          as.character(max(as.package_version(Version[!is.na(Version)])))
-        }
-      }, by = "Package"]
-      pkgDepDT[, inequality := {
-        if (all(is.na(inequality))) {
-          NA_character_
-        } else {
-          inequality[!is.na(inequality)][[1]]
-        }
-      }, by = "Package"]
-      pkgDepDT[, github := extractPkgGitHub(packageFullName)]
+      whHasVersion <- which(!is.na(pkgDepDT$Version))
+      set(pkgDepDT, whHasVersion, "inequality",
+          extractInequality(pkgDepDT$packageFullName[whHasVersion]))
+      # pkgDepDT[!is.na(Version), inequality := extractInequality(packageFullName)]
+      # pkgDepDT[, .N, by = "Package"]
+      tt <- table(pkgDepDT$Package)
+      haveMT1 <- names(tt)[tt > 1]
+      if (length(haveMT1)) {
+        keepRows <- which(pkgDepDT$Package %in% haveMT1)
+        pkgDepDT[keepRows, Version := {
+          if (all(is.na(Version))) {
+            NA_character_
+          } else {
+            if (.N == 1) {
+              Version
+            } else {
+              as.character(max(as.package_version(Version[!is.na(Version)])))
+            }
+
+          }
+        }, by = "Package"]
+        pkgDepDT[keepRows, inequality := {
+          if (all(is.na(inequality))) {
+            NA_character_
+          } else {
+            inequality[!is.na(inequality)][[1]]
+          }
+        }, by = "Package"]
+      }
+      set(pkgDepDT, NULL, "github", extractPkgGitHub(pkgDepDT$packageFullName))
+      # pkgDepDT[, github := extractPkgGitHub(packageFullName)]
       if (any(pkgDepDT$isGitPkg == TRUE &
               !is.na(pkgDepDT$Version))) {
         pkgDepDT[isGitPkg == TRUE & !is.na(Version), newPackageFullName :=
@@ -1421,19 +1438,19 @@ getAvailablePackagesCheckAdditRepos <- function(pkgDepDTList2, pkgDepDT, repos, 
 getArchiveDetailsInnerMemoise <- function(...) {
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
-    if (is.null(pkgDepArchiveDetailsInnerEnv())) {
-      pkgDepArchiveDetailsInnerEnvCreate()
+    if (is.null(envPkgDepArchiveDetailsInner())) {
+      envPkgDepArchiveDetailsInnerCreate()
     }
     ret <- NULL
     ss <- match.call(definition = getArchiveDetailsInner)
     Package <- eval(ss$Package, envir = parent.frame())
-    if (!exists(Package, envir = pkgDepArchiveDetailsInnerEnv(), inherits = FALSE)) {
-      assign(Package, list(), envir = pkgDepArchiveDetailsInnerEnv())
-      # pkgDepArchiveDetailsInnerEnv()[[Package]] <- list()
+    if (!exists(Package, envir = envPkgDepArchiveDetailsInner(), inherits = FALSE)) {
+      assign(Package, list(), envir = envPkgDepArchiveDetailsInner())
+      # envPkgDepArchiveDetailsInner()[[Package]] <- list()
     } else {
-      if (length(pkgDepArchiveDetailsInnerEnv()[[Package]]) > 0) {
+      if (length(envPkgDepArchiveDetailsInner()[[Package]]) > 0) {
         # This is trigger
-        prevInOuts <- pkgDepArchiveDetailsInnerEnv()[[Package]][[2]]
+        prevInOuts <- envPkgDepArchiveDetailsInner()[[Package]][[2]]
         whIdent <- identical(prevInOuts$input, dots[[2]])
         if (any(whIdent)) {
           ret <- prevInOuts$output
@@ -1446,10 +1463,10 @@ getArchiveDetailsInnerMemoise <- function(...) {
       inputs <- data.table::copy(dots[[2]])  # just take ava argument -- it has everything that is relevant
       ret <- getArchiveDetailsInner(...)
       assign(Package,
-             list(pkgDepArchiveDetailsInnerEnv()[[Package]], list(input = inputs, output = ret)),
-             envir = pkgDepArchiveDetailsInnerEnv())
-      # pkgDepArchiveDetailsInnerEnv()[[Package]] <-
-      #   list(pkgDepArchiveDetailsInnerEnv()[[Package]], list(input = inputs, output = ret))
+             list(envPkgDepArchiveDetailsInner()[[Package]], list(input = inputs, output = ret)),
+             envir = envPkgDepArchiveDetailsInner())
+      # envPkgDepArchiveDetailsInner()[[Package]] <-
+      #   list(envPkgDepArchiveDetailsInner()[[Package]], list(input = inputs, output = ret))
     }
   } else {
     ret <- getArchiveDetailsInner(...)
@@ -1466,7 +1483,7 @@ noHttp <- function(url) {
 getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
   pat <- paste0(psnNoVersion)
   pat <- gsub("[[:punct:]]| ", "_", pat)
-  nams <- names(as.list(pkgDepDepsEnv()))
+  nams <- names(as.list(envPkgDepDeps()))
   if (!is.null(nams)) {
     versions <- Map(pa = pat, ver = verNum, ineq = inequ, #MoreArgs = list(nam = nams),
                 function(pa, ver, ineq) {
@@ -1477,9 +1494,9 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
                     nams <- nams[sw]
                     # nams <- nams[have]
 
-                    poss <- get0(nams, envir = pkgDepDepsEnv())
+                    poss <- get0(nams, envir = envPkgDepDeps())
                     versions <- extractVersionNumber(names(poss))
-                    # have <- ls(pkgDepDepsEnv(), pattern = pat) # TOO SLOW APPARENTLY
+                    # have <- ls(envPkgDepDeps(), pattern = pat) # TOO SLOW APPARENTLY
                     # versions <- gsub(paste0("^", pa, "\\_\\_*([[:alnum:]]{40})|[(.+)\\_\\_+].+$"), "\\1", nams)
                     if (!is.null(ineq)) {
                       if (!is.na(ineq)) {

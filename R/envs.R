@@ -3,105 +3,105 @@ newEmptyEnv <- function() {
 }
 
 #' 1st level --> create the .pkgEnv object in Require
-pkgEnvCreate <- function() {
-  assign(.pkgEnvName, newEmptyEnv(), envir = asNamespace("Require"))
+envPkgCreate <- function() {
+  assign(.envPkgName, newEmptyEnv(), envir = asNamespace("Require"))
 }
 
 pkgEnv <- function() {
-  get(.pkgEnvName, envir = asNamespace("Require"))
+  get(.envPkgName, envir = asNamespace("Require"))
 }
 
 # 2nd level
 pkgEnvStartTimeCreate <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  assign(.pkgEnvStartTimeName, Sys.time(), envir = pkgEnv())
+    envPkgCreate()
+  assign(.envPkgStartTimeName, Sys.time(), envir = pkgEnv())
 }
 
 pkgEnvStartTime <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  get0(.pkgEnvStartTimeName, envir = pkgEnv())
+    envPkgCreate()
+  get0(.envPkgStartTimeName, envir = pkgEnv())
 }
 
 
 #' 2nd level
 pkgDepEnv <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  get0(.pkgDepEnvName, envir = pkgEnv())
+    envPkgCreate()
+  get0(.envPkgDepName, envir = pkgEnv())
 }
 
-pkgDepEnvCreate <- function() {
+envPkgDepCreate <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-
-  assign(.pkgDepEnvName, newEmptyEnv(), envir = pkgEnv())
+    envPkgCreate()
+  assign(.envPkgDepName, newEmptyEnv(), envir = pkgEnv())
 }
 
 
 
 # 2nd level
-pkgDepGitHubSHAEnvCreate <- function() {
+envPkgDepGitHubSHACreate <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  assign(getSHAfromGitHubObjName, newEmptyEnv(), envir = pkgEnv())
+    envPkgCreate()
+  assign(.txtGetSHAfromGitHub, newEmptyEnv(), envir = pkgEnv())
 }
 
-pkgDepGitHubSHAEnv <- function() {
+envPkgDepGitHubSHA <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  get0(getSHAfromGitHubObjName, envir = pkgEnv())
+    envPkgCreate()
+  get0(.txtGetSHAfromGitHub, envir = pkgEnv())
 }
 
 
 #' 3rd level  for deps #############################################
-pkgDepDepsEnvCreate <- function() {
+envPkgDepDepsCreate <- function() {
   if (is.null(pkgDepEnv()))
-    pkgDepEnvCreate()
-  assign(.pkgDepDepsEnvName, newEmptyEnv(), envir = pkgDepEnv())
+    envPkgDepCreate()
+  assign(.envPkgDepDepsName, newEmptyEnv(), envir = pkgDepEnv())
 }
 
-pkgDepDepsEnv <- function() {
+envPkgDepDeps <- function() {
   if (is.null(pkgDepEnv()))
-    pkgDepEnvCreate()
-  get0(.pkgDepDepsEnvName, envir = pkgDepEnv())
+    envPkgDepCreate()
+  get0(.envPkgDepDepsName, envir = pkgDepEnv())
 }
 
 #' 3rd level for DESCRIPTIONFile
-pkgDepDESCFileEnvCreate <- function() {
+envPkgDepDESCFileCreate <- function() {
   if (is.null(pkgDepEnv()))
-    pkgDepEnvCreate()
-  assign(.pkgDepDESCFileEnvName, newEmptyEnv(), envir = pkgDepEnv())
+    envPkgDepCreate()
+  assign(.envPkgDepDESCFileName, newEmptyEnv(), envir = pkgDepEnv())
 }
 
-pkgDepDESCFileEnv <- function() {
+envPkgDepDESCFile <- function() {
   if (is.null(pkgDepEnv()))
-    pkgDepEnvCreate()
-  get0(.pkgDepDESCFileEnvName, envir = pkgDepEnv())
+    envPkgDepCreate()
+  get0(.envPkgDepDESCFileName, envir = pkgDepEnv())
 }
 
-pkgDepArchiveDetailsInnerEnvCreate <- function() {
+envPkgDepArchiveDetailsInnerCreate <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  assign(getArchiveDetailsInnerTxt, newEmptyEnv(), envir = pkgEnv())
+    envPkgCreate()
+  assign(.txtGetArchiveDetailsInner, newEmptyEnv(), envir = pkgEnv())
 }
 
-pkgDepArchiveDetailsInnerEnv <- function() {
+envPkgDepArchiveDetailsInner <- function() {
   if (is.null(pkgEnv()))
-    pkgEnvCreate()
-  get0(getArchiveDetailsInnerTxt, envir = pkgEnv())
+    envPkgCreate()
+  get0(.txtGetArchiveDetailsInner, envir = pkgEnv())
 }
 
-.pkgDepDESCFileEnvName <- "DESCRIPTIONFile"
-.pkgDepDepsEnvName <- "deps"
-.pkgDepEnvName <- "pkgDep"
-.pkgEnvName <- ".pkgEnv"
-getArchiveDetailsInnerTxt <- "getArchiveDetailsInner"
-.pkgEnvStartTimeName <- "startTime"
-getSHAfromGitHubObjName <- "getSHAfromGitHub"
-.pkgHasGHP <- "hasGHP"
-.internetExistsTime <- "internetExistsTime"
-# .pkgEnv[[getSHAfromGitHubObjName]] <- new.env()
+.envPkgDepDESCFileName <- "DESCRIPTIONFile"
+.envPkgDepDepsName <- "deps"
+.envPkgDepName <- "pkgDep"
+.envPkgName <- ".pkgEnv"
+.envPkgStartTimeName <- "startTime"
 
+.txtGetArchiveDetailsInner <- "getArchiveDetailsInner"
+.txtGetSHAfromGitHub <- "getSHAfromGitHub"
+.txtPkgHasGHP <- "hasGHP"
+.txtInternetExistsTime <- "internetExistsTime"
+# .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
 
+.txtGitHub <- "GitHub"
