@@ -115,7 +115,8 @@ pkgDep <- function(packages,
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
 
     keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
-                  "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
+                  "githubPkgName", "repoLocation", ".depth", "which", "parentPackage",
+                  .txtGitHubParsedCols)
     whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0)
     set(deps, whHasDeps, depsCol,
         Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],

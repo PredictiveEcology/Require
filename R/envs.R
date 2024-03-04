@@ -105,3 +105,13 @@ envPkgDepArchiveDetailsInner <- function() {
 # .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
 
 .txtGitHub <- "GitHub"
+
+.txtGitHubCols <- list()
+.txtGitHubCols$Br <- "Branch"
+.txtGitHubCols$Repo <- "Repo"
+.txtGitHubHasSubFolder <- "hasSubFolder"
+.txtGitHubCols$GSF <- "GitSubFolder"
+.txtGitHubCols$Acct <- "Account"
+
+.txtGitHubParsedCols <- unname(unlist(.txtGitHubCols))
+# .txtGitHubParsedCols <- c(.txt, "Repo", "Branch", "Account")
