@@ -31,6 +31,7 @@ test_that("test 1", {
   .libPaths(c(tmpdirActual, tmpdir2Actual))
   # .libPaths(c(tmpdir, tmpdir2))
   aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1:2])
+  aa <- aa[!Package %in% "R"]
 
   bb <- list()
   for (lp in unique(aa$LibPath)) {
