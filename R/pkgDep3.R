@@ -114,27 +114,33 @@ pkgDep <- function(packages,
     depsCol <- "deps"
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
 
-    keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
-                  "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
-    whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0)
-    set(deps, whHasDeps, depsCol,
-        Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
+    # keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
+    #              "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
+    # whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0) + 1 # (self)
+    set(deps, NULL, #whHasDeps,
+        depsCol,
+        Map(dep = deps[[depsCol]], self = deps[["packageFullName"]],
+            # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
             function(dep, self) {
-              setorderv(dep, cols = ".depth")
-              keepCols <- c(keepCols, intersect(colnames(dep), .txtGitHubParsedCols))
-              # dep <- dep[, ..keepCols]
-              dep <- dep[!duplicated(dep[["Package"]])]
-              set(dep, NULL, c("packageFullName", "parentPackage"),
-                  list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
-              dep <- rmBase(includeBase, dep)
-              dep <- addSelf(includeSelf, dep, self)
-              dep <- dep[, ..keepCols] # includeSelf added some cols
-              # setnames(dep, old = depsCol, new = "deps")
+              if (!is.null(dep)) {
+                dotDepth <- ".depth"
+                if (dotDepth %in% colnames(dep))
+                  setorderv(dep, cols = dotDepth)
+                set(dep, NULL, intersect(colnames(dep), c(deps(TRUE), deps(FALSE))), NULL)   |> try() -> a; if (is(a, "try-error")) browser()
+                # keepCols <- c(keepCols, intersect(colnames(dep), .txtGitHubParsedCols))
+                dep <- dep[!duplicated(dep[["Package"]])]
+                set(dep, NULL, c("packageFullName", "parentPackage"),
+                    list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
+                dep <- rmBase(includeBase, dep)
+                dep <- addSelf(includeSelf, dep, self)
+                # dep <- dep[, ..keepCols] # includeSelf added some cols
+                # setnames(dep, old = depsCol, new = "deps")
+              }
               dep
             }))
 
     keepColsOuter <- c("Package", "packageFullName", depsCol)
-    deps <- deps[, ..keepColsOuter]
+    # deps <- deps[, ..keepColsOuter]
     # trimRedundancies is better for following the deps, but it will fail to keep original
     #   user request. Use only duplicated instead ... to keep user order
 
@@ -646,7 +652,7 @@ saveNamesGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE)
 
   out <- pkgDepGitHub(pkgDT = pkgDT, which = which,
                       includeBase = TRUE, verbose = verbose)
-  set(pkgDT, NULL, deps(FALSE), unname(out))
+  set(pkgDT, NULL, deps(FALSE), unname(out))   |> try() -> a; if (is(a, "try-error")) browser()
 
   rec <- recursiveType(whichCatRecursive)
   snHere <- sn(rec)

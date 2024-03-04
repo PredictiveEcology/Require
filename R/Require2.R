@@ -308,7 +308,8 @@ Require <- function(packages, packageVersionFile,
       Additional_repositories = TRUE
     )
     basePkgsToLoad <- packages[packages %in% .basePkgs]
-    if (NROW(deps)) {
+    pkgDT <- deps
+    if (NROW(pkgDT)) {
       # stop()
       deps <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
       deps <- unique(deps)
@@ -323,7 +324,8 @@ Require <- function(packages, packageVersionFile,
       # pkgDT <- removeDups(pkgDT)
       # pkgDT <- removeBasePkgs(pkgDT)
       pkgDT <- recordLoadOrder(packages, pkgDT)
-      setnames(pkgDT, old = "Version", new = "VersionOnRepos")
+      if (!is.null(pkgDT[["Version"]]))
+        setnames(pkgDT, old = "Version", new = "VersionOnRepos")
       pkgDT <- installedVers(pkgDT)
       if (isTRUE(upgrade)) {
         pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
@@ -1038,7 +1040,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
       pkgInstall[repoLocation %in% .txtGitHub, VersionOnRepos := i.VersionOnRepos]
   }
 
-  pkgInstallList <- split(pkgInstall, by = "repoLocation")
+  pkgInstallList <- split(pkgInstall, by = "repoLocation")  |> try() -> a; if (is(a, "try-error")) browser()
   if (!is.null(pkgInstallList[[.txtGitHub]])) {
     # If there are 2 repos for a package, must clear out one of them for GitHub packages
     #   -- the repos are essentially moot for GitHub packages, but will mess downstream with version numbers

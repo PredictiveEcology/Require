@@ -1132,7 +1132,8 @@ rversions <- structure(
 versionMajorMinor <- function(version = base::version) {
   if (!is(version, "simple.list")) {
     version <- strsplit(version, "[.]")[[1]]
-    names(version) <- c("major", "minor", "revision")
+    nams <- c("major", "minor", "revision")
+    names(version) <- nams[seq_along(version)]
   }
   paste0(version[["major"]], ".", strsplit(version[["minor"]], "[.]")[[1]][1])
 }
