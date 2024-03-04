@@ -1031,13 +1031,16 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     }
     purge = TRUE
   }
-  setnames(ap, old = "Version", new = "VersionOnRepos")
+  setnames(ap, old = "Version", new = "VersionOnReposCurrent")
+  browser()
   pkgInstall <- ap[pkgInstall, on = "Package"]
+  whHasVoR <- which(!is.na(pkgInstall$VersionOnReposCurrent))
+  set(pkgInstall, whHasVoR, "VersionOnRepos", pkgInstall[["VersionOnReposCurrent"]][whHasVoR])
+
   if (any(pkgInstall$repoLocation %in% .txtGitHub)) {
     if (!is.null(pkgInstall[["i.VersionOnRepos"]]))
       pkgInstall[repoLocation %in% .txtGitHub, VersionOnRepos := i.VersionOnRepos]
   }
-
 
   pkgInstallList <- split(pkgInstall, by = "repoLocation")
   if (!is.null(pkgInstallList[[.txtGitHub]])) {
