@@ -118,13 +118,13 @@ pkgDep <- function(packages,
                   "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
     whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0)
     set(deps, whHasDeps, depsCol,
-        Map(dep = deps[[depsCol]][whHasDeps], self = deps$packageFullName[whHasDeps],
+        Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
             function(dep, self) {
           setorderv(dep, cols = ".depth")
           dep <- dep[, ..keepCols]
-          dep <- dep[!duplicated(dep$Package)]
+          dep <- dep[!duplicated(dep[["Package"]])]
           set(dep, NULL, c("packageFullName", "parentPackage"),
-              list(cleanPkgs(dep$packageFullName), cleanPkgs(dep$parentPackage)))
+              list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
           dep <- rmBase(includeBase, dep)
           dep <- addSelf(includeSelf, dep, self)
           # setnames(dep, old = depsCol, new = "deps")
