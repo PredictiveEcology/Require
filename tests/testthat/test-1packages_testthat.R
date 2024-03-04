@@ -198,7 +198,7 @@ test_that("test 1", {
     curVer <- unique(ap[Package %in% "reproducible"]$Version)
 
     Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
-    Require("reproducible")                                          # load it
+    Require("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ...                                          # load it
     # Apparnetly linux can handle this
     suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
       Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
