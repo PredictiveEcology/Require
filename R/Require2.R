@@ -309,7 +309,6 @@ Require <- function(packages, packageVersionFile,
     )
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     if (NROW(deps)) {
-      browser()
       # stop()
       deps <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
       deps <- unique(deps)
@@ -441,9 +440,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     browserDeveloper("Error 9566")
   }
 
-  browser() # need to remove RequireDeps
   toInstall <- removeRequireDeps(toInstall)
-
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -1032,7 +1029,6 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     purge = TRUE
   }
   setnames(ap, old = "Version", new = "VersionOnReposCurrent")
-  browser()
   pkgInstall <- ap[pkgInstall, on = "Package"]
   whHasVoR <- which(!is.na(pkgInstall$VersionOnReposCurrent))
   set(pkgInstall, whHasVoR, "VersionOnRepos", pkgInstall[["VersionOnReposCurrent"]][whHasVoR])
@@ -2103,7 +2099,6 @@ trimRedundantVersionAndNoVersion <- function(pkgInstall) {
 checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
 
-  browser()
   pkgInstallTmp <- getVersionOnRepos(pkgInstall, repos, purge, libPaths, type = type)
   pkgInstall <- pkgInstallTmp
   # coming out of getVersionOnRepos, will be some with bin and src on windows; possibly different versions; take only first, if identical URL at top level

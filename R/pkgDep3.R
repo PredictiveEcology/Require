@@ -115,22 +115,23 @@ pkgDep <- function(packages,
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
 
     keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
-                  "githubPkgName", "repoLocation", ".depth", "which", "parentPackage",
-                  .txtGitHubParsedCols)
+                  "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
     whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0)
     set(deps, whHasDeps, depsCol,
         Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
             function(dep, self) {
-          setorderv(dep, cols = ".depth")
-          dep <- dep[, ..keepCols]
-          dep <- dep[!duplicated(dep[["Package"]])]
-          set(dep, NULL, c("packageFullName", "parentPackage"),
-              list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
-          dep <- rmBase(includeBase, dep)
-          dep <- addSelf(includeSelf, dep, self)
-          # setnames(dep, old = depsCol, new = "deps")
-          dep
-        }))
+              setorderv(dep, cols = ".depth")
+              keepCols <- c(keepCols, intersect(colnames(dep), .txtGitHubParsedCols))
+              # dep <- dep[, ..keepCols]
+              dep <- dep[!duplicated(dep[["Package"]])]
+              set(dep, NULL, c("packageFullName", "parentPackage"),
+                  list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
+              dep <- rmBase(includeBase, dep)
+              dep <- addSelf(includeSelf, dep, self)
+              dep <- dep[, ..keepCols] # includeSelf added some cols
+              # setnames(dep, old = depsCol, new = "deps")
+              dep
+            }))
 
     keepColsOuter <- c("Package", "packageFullName", depsCol)
     deps <- deps[, ..keepColsOuter]
