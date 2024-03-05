@@ -300,7 +300,7 @@ Require <- function(packages, packageVersionFile,
 
   # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
-    packages <- anyHaveHEAD(packages)
+     # packages <- anyHaveHEAD(packages)
 
     deps <- pkgDep(packages, simplify = FALSE,
       purge = purge, libPath = libPaths, recursive = TRUE,
@@ -309,12 +309,16 @@ Require <- function(packages, packageVersionFile,
     )
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     pkgDT <- deps
+
     if (NROW(pkgDT)) {
+      if (exists("aaa")) browser()
       # stop()
       deps <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
       deps <- unique(deps)
       # allPackages <- sort(unique(unname(unlist(deps$packageFullName))))
       pkgDT <- deps
+      pkgDT <- checkHEAD(pkgDT)
+
       # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
       # if (!is.null(deps$Additional_repositories))
       #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
@@ -842,6 +846,12 @@ whichToInstall <- function(pkgDT, install, verbose) {
     ]
   }
 
+  pkgDT <- checkHEAD(pkgDT)
+  # set(pkgDT, NULL, "hasHEAD", grepl(HEADgrep, pkgDT$packageFullName))
+  if (any(pkgDT[["hasHEAD"]])) {
+    set(pkgDT, which(pkgDT[["hasHEAD"]]), "installedVersionOK", FALSE)
+  }
+
   set(pkgDT, NULL, "needInstall", c("dontInstall", "install")[pkgDT$installedVersionOK %in% FALSE + 1])
   whDontInstall <- pkgDT[["needInstall"]] %in% "dontInstall"
   if (any(whDontInstall & pkgDT$installedVersionOK %in% FALSE)) {
@@ -902,7 +912,8 @@ recordLoadOrder <- function(packages, pkgDT) {
   pfn <- trimVersionNumber(pkgDT$packageFullName)
   wh <- pfn %in% packagesWObase
   out <- try(pkgDT[wh, loadOrder := seq(sum(wh))])
-  pkgDT[, loadOrder := na.omit(unique(loadOrder))[1], by = "Package"] # all but one will be removed in trimRedundancies
+  pkgDT[, loadOrder := na.omit(unique(loadOrder))[1], by = "Package"] |>
+    try() -> a; if (is(a, "try-error")) browser()
 
   if (is(out, "try-error")) {
     browserDeveloper("Error 1253; please contact developer")
@@ -1030,6 +1041,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     }
     purge = TRUE
   }
+
   setnames(ap, old = "Version", new = "VersionOnReposCurrent")
   pkgInstall <- ap[pkgInstall, on = "Package"]
   whHasVoR <- which(!is.na(pkgInstall$VersionOnReposCurrent))
@@ -1046,7 +1058,10 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     #   -- the repos are essentially moot for GitHub packages, but will mess downstream with version numbers
     dupReposForGHPkgs <- pkgInstallList[[.txtGitHub]][, .N, by = "Package"][N > 1]
     if (NROW(dupReposForGHPkgs)) {
-      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs$Package,
+      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs$Package & hasHEAD,
+                                   VersionOK := FALSE]
+
+      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs$Package & !hasHEAD,
                                  VersionOK := compareVersion2(version = VersionOnRepos,
                                                               versionSpec = versionSpec,
                                                               inequality = inequality),
@@ -1392,6 +1407,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
     colsToUpdate <- c("SHAonLocal", "SHAonGH")
     set(pkgGitHub, NULL, colsToUpdate, list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
+    if (exists("bbb")) browser()
+
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {
         alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
@@ -1438,12 +1455,24 @@ availableVersionOK <- function(pkgDT) {
   hasAtLeastOneNonNA <- !is.na(pkgDT$inequality) & !is.na(pkgDT$VersionOnRepos)
   if (any(hasAtLeastOneNonNA)) {
     pkgDT[, hasAtLeastOneNonNA := any(hasAtLeastOneNonNA), by = "Package"]
-    out <- try(pkgDT[hasAtLeastOneNonNA %in% TRUE, (availableOKcols) := {
+    toUpdate <- hasAtLeastOneNonNA %in% TRUE
+    whToUpdate <- which(toUpdate)
+    if (!is.null(pkgDT[["hasHEAD"]])) {
+      if (any(pkgDT[["hasHEAD"]])) {
+        whToUpdate1 <- which(toUpdate & pkgDT[["hasHEAD"]])
+        whToUpdate <- which(toUpdate & pkgDT[["hasHEAD"]] %in% FALSE)
+        set(pkgDT, whToUpdate1, "availableVersionOK", TRUE)
+        set(pkgDT, whToUpdate1, "availableVersionOKthisOne", TRUE)
+      }
+    }
+
+    out <- try(pkgDT[whToUpdate, (availableOKcols) := {
       out <- Map(vor = VersionOnRepos, function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
       avokto <- Map(vor = VersionOnRepos, function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
       avok <- any(unlist(out))
       list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
     }, by = "Package"])
+
     if (is(out, "try-error")) {
       browserDeveloper("Error 553; please contact developer")
     }
@@ -1833,6 +1862,8 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
+  if (exists("aaa")) browser() # check installResult
+
   if (!is.null(getOptionRPackageCache())) {
     # check for crancache copies
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
@@ -2468,8 +2499,10 @@ messagesAboutWarnings <- function(w, toInstall) {
 
   isInUse <- grepl("is in use and will not be installed", w$message)
   if (length(rowsInPkgDT) && any(isInUse)) {
-    toInstall[rowsInPkgDT, installed := FALSE]
-    toInstall[rowsInPkgDT, installResult := w$message]
+    set(toInstall, rowsInPkgDT, "installed", FALSE)
+    # toInstall[rowsInPkgDT, installed := FALSE]
+    set(toInstall, rowsInPkgDT, "installResult", w$message)
+    # toInstall[rowsInPkgDT, installResult := w$message]
   }
 
 

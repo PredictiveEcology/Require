@@ -339,6 +339,7 @@ archiveVersionsAvailable <- function(package, repos) {
 
 #' @importFrom utils packageVersion installed.packages
 installedVers <- function(pkgDT) {
+
   pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {
     ip <- as.data.table(installed.packages(fields = c("Package", "LibPath", "Version")))
@@ -362,7 +363,7 @@ installedVers <- function(pkgDT) {
         }, error = function(e) NA_character_), by = "Package"]
         ip <- try(installedPkgsCurrent[ip, on = "Package"])
         if (is(ip, "try-error")) {
-          if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 234; please contact developers")
+          browserDeveloper("Error 234")
         }
         ip[!is.na(VersionFromPV), Version := VersionFromPV]
       }
@@ -371,7 +372,7 @@ installedVers <- function(pkgDT) {
     ip <- unique(ip, by = c("Package")) # , "LibPath" # basically, only take the first one if 2 installed in LibPath
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
     if (is(pkgDT, "try-error")) {
-      if (identical(SysInfo[["user"]], "emcintir")) browser() else stop("Error number 123; please contact developers")
+      browserDeveloper("Error 123")
     }
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
@@ -1415,6 +1416,7 @@ mainGrep <- paste0("/", "main", "(/|\\.)")
 
 extractPkgNameFromWarning <- function(x) {
   out <- gsub(".+\u2018(.+)_.+\u2019.+", "\\1", x) # those two escape characters are the inverted commas
+  out <- gsub("^.+\\'(.+)\\'.+$", "\\1", out)
   gsub(".+\u2018(.+)\u2019.+", "\\1", out) # package XXX is in use and will not be installed
 }
 

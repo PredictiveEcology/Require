@@ -50,8 +50,8 @@ test_that("test 1", {
   testthat::expect_true({
     isTRUE(isInstalled)
   })
-  out <- detachAll(c("Require", "fpCompare", "sdfd"),
-                   dontTry = extractPkgName(pkgDep("devtools", recursive = T)[["devtools"]]))
+  out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+                   dontTry = c(extractPkgName(pkgDep("devtools", verbose = 0, recursive = T)[["devtools"]])))
   out <- out[names(out) != "testit"]
   expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
   keep <- intersect(names(expectedPkgs), names(out))
@@ -198,21 +198,35 @@ test_that("test 1", {
     curVer <- unique(ap[Package %in% "reproducible"]$Version)
 
     Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
-    Require("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ...                                          # load it
-    # Apparnetly linux can handle this
+    Require("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
+    # detach("package:reproducible", unload = TRUE)    # Apparnetly linux can handle this
+    # aaa <<- 1
+    # on.exit(rm(aaa, envir = .GlobalEnv), add = TRUE)
     suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
       Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
     )
+    on.exit({
+      try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+                           dontTry = c(extractPkgName(pkgDep("testthat", verbose = 0, recursive = T)[["testthat"]])))
+      , silent = TRUE)
+      # unloadNamespace("package:fpCompare")
+      # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
+    }, add = TRUE)
     if (isWindows())
-      testthat::expect_true(packageVersion("reproducible") == curVer) # # will be curVer from CRAN
+      testthat::expect_true(packageVersion("reproducible") == curVer) # # will be curVer from CRAN, bc can't install when loaded
     else
       testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") #
-    detach("package:reproducible", unload = TRUE)
+    detach("package:reproducible", unload = TRUE);
+    unloadNamespace("package:fpCompare")
     # now installs correct SHA which is 2.0.2.9001
-    Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
+    Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
     testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
     # End issue 87
-    detach("package:reproducible", unload = TRUE)
+    out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+                     dontTry = c(extractPkgName(
+                       pkgDep("testthat", verbose = 0, recursive = T)[["testthat"]])))
+
+    # detach("package:reproducible", unload = TRUE)
 
     ####
     pkg <- c("r-forge/mumin/pkg", "Require")
