@@ -51,7 +51,7 @@ test_that("test 1", {
     isTRUE(isInstalled)
   })
   out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                   dontTry = c(extractPkgName(pkgDep("devtools", verbose = 0, recursive = T)[["devtools"]])))
+                   dontTry = c(extractPkgName(unname(unlist(pkgDep(c("devtools", "testthat"), verbose = 0, recursive = T))))))
   out <- out[names(out) != "testit"]
   expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
   keep <- intersect(names(expectedPkgs), names(out))

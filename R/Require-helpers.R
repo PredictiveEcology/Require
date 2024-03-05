@@ -592,8 +592,7 @@ toDT <- function(...) {
 #' @return
 #' A numeric named vector, with names of the packages that were attempted.
 #' `2` means the package was successfully unloaded, `1` it was
-#' tried, but failed, `3` it was in the search path and was detached
-#' and unloaded.
+#' tried, but failed, `3` it was not loaded, so was not unloaded.
 #' @export
 #' @param pkgs A character vector of packages to detach. Will be topologically sorted
 #'   unless `doSort` is `FALSE`.
@@ -671,9 +670,9 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
     pkgString <- grep(pkgString, srch, value = TRUE)
     pkgString <- gsub(pkgGrp, "", pkgString)
   }))
-  detached[detached] <- 2
-  detached[!detached] <- 1
-  detached[is.na(detached)] <- 3
+  detached[unlist(detached) %in% TRUE] <- 2
+  detached[unlist(detached) %in% FALSE] <- 1
+  detached[is.na(unlist(detached))] <- 3
   detached
 }
 
