@@ -1275,7 +1275,11 @@ getFromCache <- function(pkgDT, which, recursive) {
     keep <- setdiff(colnames(maybeHaveCacheDT), names(lst)[which(lst)])
     # if (any(lst)) browser()
     # if (identical("fpCompare (<=0.2.2)", pkgDT$packageFullName)) browser()
-    if (!identical(unique(maybeHaveCacheDT[, ..keep]), maybeHaveCacheDT[, ..keep])) browser()
+    dups <- duplicated(maybeHaveCacheDT[, ..keep])
+    if (any(dups)) {
+      maybeHaveCacheDT <- maybeHaveCacheDT[which(!dups)]
+      # browser()
+    }
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = TRUE, curCache)
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = FALSE, curCache)
 
