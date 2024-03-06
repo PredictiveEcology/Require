@@ -1773,7 +1773,15 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
     notYet <- is.na(pkgGitHub$VersionOnRepos)
     if (any(notYet)) {
       pkgGitHub <- getGitHubFile(pkgGitHub)
-      pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
+      dFile <- pkgGitHub$DESCFile
+      hasDFile <- which(!is.na(dFile))
+      set(pkgGitHub, hasDFile, "VersionOnRepos",  DESCRIPTIONFileVersionV(dFile))
+      mayNeedPackageNameChange <- DESCRIPTIONFileOtherV(dFile, other = "Package")
+      alreadyCorrect <- pkgGitHub$Package[hasDFile] == mayNeedPackageNameChange
+      if (any(!alreadyCorrect)) {
+        set(pkgGitHub, hasDFile[!alreadyCorrect], "Package",  mayNeedPackageNameChange[!alreadyCorrect])
+      }
+      # pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
     }
   }
   pkgGitHub
