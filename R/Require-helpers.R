@@ -1431,6 +1431,7 @@ installPackagesWithQuiet <- function(ipa) {
       })
     })
   } else {
+    browser()
     do.call(install.packages, ipa)
   }
 }

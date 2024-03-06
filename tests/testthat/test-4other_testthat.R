@@ -28,7 +28,7 @@ test_that("test 3", {
                  deps = "Require", returnFull = FALSE, reverse = TRUE
   )
 
-  Require:::pkgDepCRAN("Require", purge = TRUE)
+  Require:::pkgDepCRAN("Require")
 
 
   if (Sys.info()["user"] == "emcintir") {

@@ -311,8 +311,6 @@ Require <- function(packages, packageVersionFile,
     pkgDT <- deps
 
     if (NROW(pkgDT)) {
-      if (exists("aaa")) browser()
-      # stop()
       deps <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
       deps <- unique(deps)
       # allPackages <- sort(unique(unname(unlist(deps$packageFullName))))
@@ -1478,7 +1476,7 @@ availableVersionOK <- function(pkgDT) {
       browserDeveloper("Error 553; please contact developer")
     }
   } else {
-    pkgDT[!is.na(VersionOnRepos)  | is.na(versionSpec),
+    pkgDT[!is.na(VersionOnRepos), #  | is.na(versionSpec),
           (availableOKcols) := list(TRUE, TRUE)]
   }
   # pkgDT[is.na(VersionOnRepos), (availableOKcols) := list(FALSE, FALSE)]
@@ -1864,8 +1862,6 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
-  if (exists("aaa")) browser() # check installResult
-
   if (!is.null(getOptionRPackageCache())) {
     # check for crancache copies
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
