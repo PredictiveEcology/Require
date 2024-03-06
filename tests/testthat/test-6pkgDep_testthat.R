@@ -116,7 +116,8 @@ test_that("test 6", {
       "SpaDES.experiment", "SpaDES.project"
     )
   )
-  Require::Install(knownRevDeps$Require, repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  Require::Install(knownRevDeps$Require, repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))) |>
+    suppressWarnings() # package 'Require' is in use and will not be installed
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
   knownRevDeps <- append(
     knownRevDeps,
