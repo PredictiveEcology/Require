@@ -28,8 +28,6 @@ test_that("test 3", {
                  deps = "Require", returnFull = FALSE, reverse = TRUE
   )
 
-  Require:::pkgDepCRAN("Require")
-
 
   if (Sys.info()["user"] == "emcintir") {
     options(
@@ -143,7 +141,7 @@ test_that("test 3", {
     }
     setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020
   })
-  testArgs <- all("Require" == unlist(as.list(out2)))
+  testArgs <- all(c("Require", "data.table") %in% extractPkgName(unname(unlist(as.list(out2)))))
   testthat::expect_true(isTRUE(testArgs))
 
   if (isDev) {
