@@ -1552,10 +1552,18 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 #' }
 pkgDep2 <- function(...) {
   dots <- list(...)
-  dots$recursive = FALSE
+  dots$recursive <- FALSE
+  forms <- formals(pkgDep)
+  if (is.null(dots$simplify)) dots$simplify <- forms$simplify
+  # dots$simplify <- FALSE
   deps <- do.call(pkgDep, dots)
   dots[[1]] <- NULL
-  deps1 <- lapply(deps, function(dep) do.call(pkgDep, append(list(dep$packageFullName), dots)))
+  dots$recursive <- TRUE
+  if (isTRUE(dots$simplify %in% FALSE)) {
+    deps1 <- lapply(deps$deps, function(dep) do.call(pkgDep, append(list(dep$packageFullName), dots)))
+  } else {
+    deps1 <- lapply(deps, function(dep) do.call(pkgDep, append(list(dep), dots)))
+  }
   deps1
 }
 

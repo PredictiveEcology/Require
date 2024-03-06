@@ -361,9 +361,16 @@ Require <- function(packages, packageVersionFile,
 
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT)
-    # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
-    packagesDT <- pkgDT[, c("Package", "loadOrder", "require")][toPkgDT(packages)[, c("Package", "packageFullName")], on = "Package"]
-    packagesDT <- unique(packagesDT)
+
+    packagesDT <- matchWithOriginalPackages(pkgDT, packages)
+    # packagesDT <- pkgDT[, c("Package", "loadOrder", "require")]
+    # if (isTRUE(!all(pkgDT[["packageFullName"]] %in% packages))) {
+    #   # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
+    #   packagesDT <- unique(packagesDT, on = "Package")[
+    #     toPkgDT(packages)[, c("Package", "packageFullName")], on = c("Package")] |>
+    #     try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
+    # }
+    # packagesDT <- unique(packagesDT)
     out <- packagesDT$require
     names(out) <- packagesDT$packageFullName
 
@@ -2922,4 +2929,15 @@ removeRequireDeps <- function(pkgDT) {
   }
 
   pkgDT <- pkgDT[!Package %in% extractPkgName(RequireDeps[[1]])]
+}
+
+
+matchWithOriginalPackages <- function(pkgDT, packages) {
+  packagesDT <- pkgDT[, c("Package", "loadOrder", "require")]
+  if (isTRUE(!all(pkgDT[["packageFullName"]] %in% packages))) {
+    # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
+    packagesDT <- unique(packagesDT, on = "Package")[
+      toPkgDT(packages)[, c("Package", "packageFullName")], on = c("Package")]
+  }
+  unique(packagesDT)[]
 }

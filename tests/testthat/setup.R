@@ -21,7 +21,6 @@ withr::local_package("waldo", .local_envir = teardown_env())
 withr::local_package("rematch2", .local_envir = teardown_env())
 withr::local_package("diffobj", .local_envir = teardown_env())
 withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = teardown_env())
-withr::local_options(Require.verbose = -2, .local_envir = teardown_env())
 
 
 if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
@@ -32,6 +31,8 @@ isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
 # Actually interactive
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
+
+withr::local_options(Require.verbose = ifelse(isDev, 2, -2), .local_envir = teardown_env())
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")

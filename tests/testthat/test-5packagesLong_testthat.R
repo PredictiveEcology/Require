@@ -6,15 +6,16 @@ test_that("test 5", {
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
-#  if (isDevAndInteractive) {
+  if (isDevAndInteractive) {
     tmpdir <- file.path(tempdir2(paste0("RequireTmp", sample(1e5, 1))))
 
     dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
     # repo <- chooseCRANmirror(ind = 1)
 
-
     pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE)
-    pkgDepTest2 <- Require::pkgDep2("Require", includeSelf = FALSE)
+    pkgDepTest2 <- Require::pkgDep2(c("Require"), # simplify = FALSE,
+                                    # which = c("Depends", "Imports"),
+                                    includeSelf = FALSE)
     orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
     # origDir <- setwd("~/GitHub/")
 
@@ -96,7 +97,7 @@ test_that("test 5", {
       length(pkgDepTest2[[1]]) == 1
     })
     testthat::expect_true({
-      all(sort(names(pkgDepTest2)) == sort(pkgDepTest1$Require))
+      all(sort(names(pkgDepTest2$Require)) == sort(pkgDepTest1$Require))
     })
 
     tmpdirForPkgs <- gsub(".+ ([[:digit:]]\\.[[:digit:]])\\.[[:digit:]].+", "\\1", R.version.string)
@@ -191,9 +192,9 @@ test_that("test 5", {
       )
       # Rerun it to get output table, but capture messages for quiet; should be no installs
       #silent <- capture.output(type = "message", {
-      suppressWarnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
+      suppressMessages(suppressWarnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
         out <- Require(pkg, standAlone = FALSE, require = FALSE, verbose = 2)
-      )
+      ))
       #})
       testthat::expect_true(
         all.equal(out, outFromRequire, check.attributes = FALSE)
@@ -246,6 +247,6 @@ test_that("test 5", {
       testthat::expect_true(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
       testthat::expect_true(out2[Package == "SpaDES.core"]$installed)
     }
-#   }
+   }
 
 })

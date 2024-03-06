@@ -136,6 +136,7 @@ pkgDep <- function(packages,
                 # setnames(dep, old = depsCol, new = "deps")
               }
               dep <- addSelf(includeSelf, dep, self)
+              dep <- dep[order(dep$Package)]
               dep
             }))
 
@@ -548,7 +549,7 @@ saveNamesForCache <- function(pkgDT, which, recursive, type = type, repos, verbo
   set(pkgDT, NULL, "cached", FALSE)
   set(pkgDT, which(pkgDT$Package %in% .basePkgs), "cached", TRUE)
 
-  pkgDT <- getFromCache(pkgDT)
+  pkgDT <- getFromCache(pkgDT, which, recursive)
 
   if (any(!pkgDT[["cached"]] %in% TRUE) &&
       sum(!pkgDT[["Package"]][!pkgDT[["cached"]]] %in% .basePkgs)) {
@@ -1248,9 +1249,11 @@ splitKeepOrderAndDTIntegrity <- function(pkgDT, splitOn) {
   # pkgDTHaveDeps <- split(pkgDT[whHasDeps], f = splitOn)
 }
 
-getFromCache <- function(pkgDT) {
+getFromCache <- function(pkgDT, which, recursive) {
 
   curCache <- names(envPkgDepDeps())
+  # must be correctx which & recursive too
+  curCache <- grep(whichCatRecursive(which, recursive), curCache, value = TRUE)
   # if (!is.null(pkgDT$snNeeded))
   maybeHaveCache <- Map(nam = pkgDT$packageFullName, sw = paste0(pkgDT$Package, sepForSaveNames),
                         function(nam, sw) which(startsWith(prefix = sw, curCache)))
