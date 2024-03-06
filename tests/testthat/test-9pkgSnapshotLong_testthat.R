@@ -22,7 +22,6 @@ test_that("test 5", {
       download.file(snapshotFiles[2], destfile = fn)
 
     } else {
-      browser()
       withr::local_tempdir(pkgPath)
       snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
                                                    overwrite = TRUE)
