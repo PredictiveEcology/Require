@@ -209,7 +209,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
       if (any(!alreadyExists)) {
         pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
               filepath := {
-                message(Package, "@", Branch, " downloading ", filename)
+                messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose)
                 ret <- NA
                 dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
                                                   need = "master",
@@ -253,7 +253,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' `archiveVersionsAvailable` searches CRAN Archives for available versions.
 #' It has been borrowed from a sub-set of the code in a non-exported function:
 #' `remotes:::download_version_url`
-archiveVersionsAvailable <- function(package, repos) {
+archiveVersionsAvailable <- function(package, repos, verbose = getOption("Require.verbose")) {
   info <- list()
   for (repo in repos) {
     archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
@@ -265,7 +265,7 @@ archiveVersionsAvailable <- function(package, repos) {
           readRDS(con)
         },
         warning = function(e) {
-          setOfflineModeTRUE()
+          setOfflineModeTRUE(verbose = verbose)
           list()
         },
         error = function(e) list()
@@ -1346,7 +1346,7 @@ masterMainHEAD <- function(url, need) {
                          error = function(e) {
                            e$message <- stripGHP(ghp, e$message)
                            if (tryNum > 1)
-                             message(e$message)
+                             messageVerbose(e$message, verbose = verbose)
                            })
                 if (file.exists(df))
                   break
@@ -1376,7 +1376,7 @@ masterMainHEAD <- function(url, need) {
     return(ret)
   },
   warning = function(w) {
-    setOfflineModeTRUE()
+    setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
     w$message <- stripGHP(ghp, w$message)
     invokeRestart("muffleWarning")
@@ -1469,14 +1469,15 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
 }
 
 
-setOfflineModeTRUE <- function() {
+setOfflineModeTRUE <- function(verbose = getOption("Require.verbose")) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
     if (!internetExists()) {
       options(
         "Require.offlineMode" = TRUE,
         "Require.offlineModeSetAutomatically" = TRUE
       )
-      message("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)")
+      messageVerbose("Internet appears to be unavailable; setting options('Require.offlineMode' = TRUE)",
+                     verbose = verbose)
     }
   }
 }

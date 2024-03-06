@@ -280,9 +280,9 @@ Require <- function(packages, packageVersionFile,
       messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     }
 
-    pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, verbose, purge, libPaths,
+    pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths,
       install_githubArgs, install.packagesArgs, standAlone,
-      type = type
+      type = type, verbose = verbose
     )
     return(invisible(pkgSnapshotOut))
   }
@@ -426,7 +426,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
 
 
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
-                       numPackages, numGroups, startTime, verbose, type = type) {
+                       numPackages, numGroups, startTime, type = type, verbose = getOption("Require.verbose")) {
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
     # "binary"
@@ -458,14 +458,14 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   rcf <- getOption("Require.cloneFrom")
   if (isTRUE(is.character(rcf))) {
-    ipa <- clonePackages(rcf, ipa)
+    ipa <- clonePackages(rcf, ipa, verbose)
   }
 
   if (NROW(ipa$available)) {
     toInstallOut <- withCallingHandlers(
       installPackagesWithQuiet(ipa),
       warning = function(w) {
-        messagesAboutWarnings(w, toInstall) # changes to toInstall are by reference; so they are in the return below
+        messagesAboutWarnings(w, toInstall, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
     )
@@ -535,7 +535,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
         MoreArgs = list(
           repos = repos, purge = purge,
           install.packagesArgs = install.packagesArgs, numPackages = numPackages,
-          numGroups = maxGroup, startTime = startTime, verbose = verbose, type = type
+          numGroups = maxGroup, startTime = startTime, type = type, verbose = verbose
         ),
         installAll
       )
@@ -543,10 +543,10 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     needRebuild <- startsWith(basename(pkgInstall$localFile), "NeedRebuild")
     if (any(needRebuild)) {
       pkgInstall <- needRebuildAndInstall(needRebuild = needRebuild, pkgInstall = pkgInstall,
-                                          libPaths = libPaths, verbose = verbose,
+                                          libPaths = libPaths,
                                           install.packagesArgs = install.packagesArgs,
                                           repos = repos, purge = purge, startTime = startTime, type = type,
-                                          pkgInstallTmp = pkgInstallTmp)
+                                          pkgInstallTmp = pkgInstallTmp, verbose = verbose)
     } else {
       pkgInstall <- pkgInstallTmp
     }
@@ -1122,7 +1122,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
 
   if (NROW(pkgArchive)) {
     ava <- archiveVersionsAvailable(unique(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"]),
-      repos = repos
+      repos = repos, verbose = verbose
     )
     if (!isTRUE(getOption("Require.offlineMode"))) {
       pkgArchive <- getArchiveDetails(pkgArchive, ava, verbose, repos)
@@ -1262,9 +1262,9 @@ types <- function(length = 1L) {
   }
 }
 
-doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
+doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                           install_githubArgs, install.packagesArgs, standAlone = TRUE,
-                          type = getOption("pkgType")) {
+                          type = getOption("pkgType"), verbose = getOption("Require.verbose")) {
   if (!isFALSE(packageVersionFile)) {
     if (isTRUE(packageVersionFile)) {
       packageVersionFile <- getOption("Require.packageVersionFile")
@@ -1273,10 +1273,11 @@ doPkgSnapshot <- function(packageVersionFile, verbose, purge, libPaths,
     if (packages[1, "Package"] == "R") {
       Rversion <- packages$Version[1] |> versionMajorMinor()
       if (!compareVersion2(versionMajorMinor(), Rversion, inequality = "=="))
-        message("The package snapshot was made using R ", Rversion,
+        messageVerbose("The package snapshot was made using R ", Rversion,
                 ". Current session is running R ", getRversion(),
                 "\nThere may be difficulties installing packages. ",
-                "If there are please restart session using the appropriate R version")
+                "If there are please restart session using the appropriate R version",
+                verbose = verbose)
       packages <- packages[-1, ]
     }
     packages <- dealWithSnapshotViolations(packages,
@@ -1438,7 +1439,7 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
 
   pkgInstall[, localFile := localFileID(
     Package, localFiles, repoLocation, SHAonGH,
-    inequality, VersionOnRepos, versionSpec
+    inequality, VersionOnRepos, versionSpec, verbose = verbose
   ), by = seq(NROW(pkgInstall))]
 
   pkgInstall
@@ -1585,7 +1586,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
   installRangeCh <- paste(installRange, collapse = ":")
 
   srces <- names(pkgToReportBySource)
-  messageVerbose("-- Installing from:", verbose = verbose, verboseLevel = 0)
+  messageVerbose("-- Installing from:", verbose = verbose)
   nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = .txtGitHub, purple = "RSPM")
   Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
     pp <- pkgToReportBySource[[type]]
@@ -1594,7 +1595,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
         pp <- pkgFullNameToReportBySource[[type]]
       }
       messageVerbose(get(colr)("  -- ", type, ": ", paste(pp, collapse = ", ")),
-        verbose = verbose, verboseLevel = 0
+        verbose = verbose
       )
     }
   })
@@ -1774,7 +1775,8 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 }
 
 #' @importFrom utils tail
-localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, VersionOnRepos, versionSpec) {
+localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
+                        VersionOnRepos, versionSpec, verbose = getOption("Require.verbose")) {
   ##### Not vectorized ######
   PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
@@ -1790,9 +1792,9 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality, 
 
   if (repoLocation %in% .txtGitHub) {
     if (grepl("Error in file", SHAonGH) && isTRUE(getOption("Require.offlineMode"))) {
-      message("Using Require.offlineMode; could not identify SHA on Github for ",
+      messageVerbose("Using Require.offlineMode; could not identify SHA on Github for ",
               green(Package), "; using the latest version that exists locally, ",
-                    "which may not be a GitHub version")
+                    "which may not be a GitHub version", verbose = verbose)
       fn <- fn[order(package_version(extractVersionNumber(filenames = fn)), decreasing = TRUE)]
     } else {
       fn <- if (is.na(SHAonGH)) "" else grep(SHAonGH, fn, value = TRUE)
@@ -2445,7 +2447,7 @@ updateReposForSrcPkgs <- function(pkgInstall) {
   pkgInstall
 }
 
-messagesAboutWarnings <- function(w, toInstall) {
+messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.verbose")) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
   pkgName <- extractPkgNameFromWarning(w$message)
   outcome <- FALSE
@@ -2461,7 +2463,8 @@ messagesAboutWarnings <- function(w, toInstall) {
       pkgName <- extractPkgName(filenames = basename(url))
 
       try(dealWithCache(purge = TRUE, checkAge = FALSE))
-      message("purging availablePackages; trying to download ", pkgName, " again")
+      messageVerbose("purging availablePackages; trying to download ", pkgName, " again",
+                     verbose = verbose)
       res <- try(Install(pkgName))
       if (is(res, "try-error")) {
         needWarning <- TRUE
@@ -2604,11 +2607,11 @@ downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFo
 }
 
 
-needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, install.packagesArgs,
+needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.packagesArgs,
                                   repos, purge, startTime, type,
-                                  pkgInstallTmp) {
+                                  pkgInstallTmp, verbose = getOption("Require.verbose")) {
   if (any(needRebuild)) {
-    message("Trying to rebuild and install GitHub build fails... ")
+    messageVerbose("Trying to rebuild and install GitHub build fails... ", verbose = verbose)
     pkgInstall[, needRebuild := needRebuild]
     pkgInstallList <- split(pkgInstall, by = "needRebuild")
     names(pkgInstallList) <- c("No", .txtGitHub)
@@ -2621,7 +2624,7 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, verbose, in
       MoreArgs = list(
         repos = repos, purge = purge,
         install.packagesArgs = install.packagesArgs, numPackages = numPackages,
-        numGroups = maxGroup, startTime = startTime, verbose = verbose, type = type
+        numGroups = maxGroup, startTime = startTime, type = type, verbose = verbose
       ),
       installAll
     )
@@ -2694,7 +2697,7 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
   packages
 }
 
-clonePackages <- function(rcf, ipa) {
+clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
   ip <- installed.packages(lib.loc = rcf)
   ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
@@ -2705,13 +2708,13 @@ clonePackages <- function(rcf, ipa) {
   canClone <- setdiffNamed(wantToInstall, cantClone)
   canClone <- names(canClone)
   if (length(canClone)) {
-    message(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
+    messageVerbose(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
                   ") instead of Installing (don't need compiling): ",
-                  paste(canClone, collapse = ", ")))
+                  paste(canClone, collapse = ", ")), verbose = verbose)
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1], ip = ip)
     ipa$pkgs <- names(cantClone)
-    message(green("... Done!"))
+    messageVerbose(green("... Done!"), verbose = verbose)
     ipa$available <- ipa$available[ipa$pkgs, , drop = FALSE]
   }
   ipa

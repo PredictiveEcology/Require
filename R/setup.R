@@ -15,7 +15,7 @@
 #' @inheritParams checkPath
 #' @export
 #' @rdname RequireCacheDir
-RequireCacheDir <- function(create) {
+RequireCacheDir <- function(create, verbose = getOption("Require.verbose")) {
   if (missing(create)) {
     create <- FALSE
   } # !is.null(getOptionRPackageCache())
@@ -33,7 +33,7 @@ RequireCacheDir <- function(create) {
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
-          message(
+          messageVerbose(
             "Require has changed default package cache folder from\n",
             defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
             "in the old Cache, moving them now..."

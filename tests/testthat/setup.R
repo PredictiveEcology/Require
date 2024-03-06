@@ -21,6 +21,7 @@ withr::local_package("waldo", .local_envir = teardown_env())
 withr::local_package("rematch2", .local_envir = teardown_env())
 withr::local_package("diffobj", .local_envir = teardown_env())
 withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = teardown_env())
+withr::local_options(Require.verbose = -2, .local_envir = teardown_env())
 
 
 if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {

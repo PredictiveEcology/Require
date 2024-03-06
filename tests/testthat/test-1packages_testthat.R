@@ -50,8 +50,13 @@ test_that("test 1", {
   testthat::expect_true({
     isTRUE(isInstalled)
   })
-  out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                   dontTry = c(extractPkgName(unname(unlist(pkgDep(c("devtools", "testthat"), verbose = 0, recursive = T))))))
+  out <- try(
+    detachAll(
+      c("Require", "fpCompare", "sdfd", "reproducible"),
+      dontTry = c(extractPkgName(
+        unname(unlist(pkgDep(c("devtools", "testthat"), recursive = T)))))),
+    silent = TRUE) |>
+    suppressWarnings()
   out <- out[names(out) != "testit"]
   expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
   keep <- intersect(names(expectedPkgs), names(out))
@@ -138,12 +143,12 @@ test_that("test 1", {
     dir3 <- Require::checkPath(dir3, create = TRUE)
     dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
     # try({
-    #inst <- suppressMessages(
+    inst <- suppressMessages(
       Require::Require("achubaty/fpCompare",
                        install = "force", verbose = 2,
                        quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3
       )
-    #)
+    )
     attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
     # }, silent = TRUE)
     pkgs <- c("fpCompare")
@@ -207,8 +212,9 @@ test_that("test 1", {
     )
     on.exit({
       try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                           dontTry = c(extractPkgName(pkgDep("testthat", verbose = 0, recursive = T)[["testthat"]])))
-      , silent = TRUE)
+                           dontTry = c(extractPkgName(pkgDep("testthat", recursive = T)[["testthat"]])))
+      , silent = TRUE) |>
+        suppressWarnings()
       # unloadNamespace("package:fpCompare")
       # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
     }, add = TRUE)
@@ -222,9 +228,12 @@ test_that("test 1", {
     Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
     testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
     # End issue 87
-    out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                     dontTry = c(extractPkgName(
-                       pkgDep("testthat", verbose = 0, recursive = T)[["testthat"]])))
+    out <- try(
+      detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+                dontTry = c(extractPkgName(
+                  pkgDep("testthat", recursive = T)[["testthat"]]))),
+      silent = TRUE) |>
+      suppressWarnings()
 
     # detach("package:reproducible", unload = TRUE)
 

@@ -162,7 +162,8 @@ pkgDep <- function(packages,
 getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, includeBase,
                        includeSelf, verbose, .depth = 0, .counter) {
 
-  messageVerbose(paste(rep("  ", .depth), collapse = ""), cleanPkgs(parentPackage), verbose = .depth == 1)
+  messageVerbose(paste(rep("  ", .depth), collapse = ""), cleanPkgs(parentPackage),
+                 verbose = .depth == 1 && verbose >= 1)
   deps <- NULL
   if (NROW(pkgDT) > 0) { # this will skip any pkgDT that has no deps, breaks out of recursion
     if (is(pkgDT, "list")) pkgDT <- pkgDT[[1]]
@@ -914,7 +915,7 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 
 
-getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose) {
+getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose = getOption("Require.cloneFrom")) {
   pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge, verbose = verbose)
 
   tmpdir <- Require::tempdir2(.rndstr())
@@ -927,7 +928,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
           destfile = tf), silent = TRUE)
       }
       if (is(out, "try-error")) {
-        message(out)
+        messageVerbose(out, verbose = verbose)
         out <- NA
       } else {
         DESCFile <- file.path(Package, "DESCRIPTION")
