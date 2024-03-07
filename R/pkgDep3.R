@@ -110,10 +110,12 @@ pkgDep <- function(packages,
   if (length(packages)) {
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
 
-    if (length(which) < length(packages))
-      which <- rep(which, length.out = length(packages))
+    # if (length(which) < length(packages))
+    #   which <- rep(which, length.out = length(packages))
     # Only deal with first one of "which"...
-    whichCat <- paste(sort(which[[1]]), collapse = "_")
+    if (is.list(which)) which <- which[[1]]
+
+    # whichCat <- paste(sort(which[[1]]), collapse = "_")
 
     deps <- getPkgDeps(packages, parentPackage = NULL, recursive = recursive, repos = repos, verbose = verbose,
                        type = type, which = which, includeBase = includeBase,
@@ -171,18 +173,26 @@ pkgDep <- function(packages,
 getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, includeBase,
                        includeSelf, verbose, .depth = 0, .counter) {
 
+  if (is.list(which)) which <- which[[1]]
+
   messageVerbose(paste(rep("  ", .depth), collapse = ""), cleanPkgs(parentPackage),
                  verbose = .depth == 1 && verbose >= 1)
   deps <- NULL
   if (NROW(pkgDT) > 0) { # this will skip any pkgDT that has no deps, breaks out of recursion
     if (is(pkgDT, "list")) pkgDT <- pkgDT[[1]]
+    # if (.depth == 4) browser()
+    # if (i == 1) browser()
     pkgDT <- toPkgDTFull(pkgDT)
+    # if (any(pkgDT$packageFullName %in% "Rcpp (>= 0.12.18)")) browser()
     pkgDT <- rmRifInPackageCol(pkgDT)
+
+    if (NROW(pkgDT[Package %in% "BioSIM"])) browser()
 
     pkgDT <- saveNamesForCache(pkgDT, which, recursive = FALSE,
                                repos = repos, type = type, verbose = verbose)
 
     if (recursive %in% TRUE) {
+      which <- setdiff(which, "Suggests")
       pkgDT <- getPkgDepsMap(pkgDT, recursive, parentPackage = parentPackage, repos, which, type,  libPaths,
                              includeBase = includeBase, includeSelf = includeSelf, verbose,
                              .depth = .depth)
@@ -319,6 +329,8 @@ getPkgDepsMap <- function(pkgDT, parentPackage, recursive, repos, which, type, l
   noDeps <- ndeps == 0
   hasDeps <- !noDeps
   whHasDeps <- which(hasDeps)
+  if (any(pkgDT$packageFullName %in% "Rcpp (>= 0.12.18)")) browser()
+
   if (any(hasDeps)) {
     depsToDo <- pkgDT[[deps(FALSE)]][hasDeps]
     col <- deps(FALSE)
@@ -1032,7 +1044,7 @@ recursiveType <- function(x)
   paste0(x, suff)
 
 whichCatRecursive <- function(which, recursive) {
-  whichCat <- paste(sort(which[[1]]), collapse = "_")
+  whichCat <- paste(sort(which), collapse = "_")
   if (is.logical(recursive))
     recursive <- as.character(recursive)
   if (!startsWith(recursive, "Recursive"))
