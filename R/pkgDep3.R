@@ -56,6 +56,9 @@ utils::globalVariables(
 #'   with a column `packageFullName` and possibly a second column `Additional_repositories`,
 #'   which may have been specified in a `DESCRIPTION` file. NOTE: THIS ALTERS
 #'   THE OUTPUT CLASS
+#' @param ... Currently only `dependencies` as an alternative to `which`. If specified,
+#'   then `which` will be ignored.
+#'
 #' @inheritParams Require
 #'
 #' @export
@@ -91,7 +94,12 @@ pkgDep <- function(packages,
                    purge = getOption("Require.purge", FALSE),
                    verbose = getOption("Require.verbose"),
                    type = getOption("pkgType"),
-                   Additional_repositories = FALSE) {
+                   Additional_repositories = FALSE, ...) {
+
+  doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NULL
+  if (!is.null(doDeps))
+    which <- whichToDILES(doDeps)
+
   purge <- dealWithCache(purge)
   checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
 
