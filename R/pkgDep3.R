@@ -816,6 +816,26 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
     neededRemotesName <- extractPkgName(neededRemotes)
     neededName <- extractPkgName(needed)
     needSomeRemotes <- neededName %in% neededRemotesName
+    dontMatch <- neededRemotes[!neededRemotesName %in% neededName]
+    if (length(dontMatch)) { # These either are missing from Depends/Imports/Suggests but are in Remotes
+      #  or else the package name doesn't match the GitHub repo name e.g., BioSIM = RNCan/BioSimClient_R
+      #  Need to try to figure out which it is for the dontMatch
+      Packages <- Map(packageFullName = trimVersionNumber(dontMatch), function(packageFullName) {
+        descFiles <- getGitHubDESCRIPTION(packageFullName)
+        DESCRIPTIONFileOtherV(descFiles$DESCFile, "Package")
+      })
+      RepoNotPkgName <- !mapply(pack = Packages, nam = names(Packages), function(pack, nam) {
+        extractPkgGitHub(nam) == pack
+      })
+
+      if (any(RepoNotPkgName)) {
+        addToNeededName <- neededName %in% unname(Packages[RepoNotPkgName])
+        needSomeRemotes[addToNeededName] <- TRUE
+        neededName <- unique(c(neededName, extractPkgName(names(Packages)[RepoNotPkgName])))
+      }
+
+
+    }
     if (any(needSomeRemotes)) {
       hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
       if (length(hasVersionNum)) {
@@ -882,6 +902,11 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
 
     pkgDepDT <- toPkgDepDT(neededReally, needed,
                            Package, verbose)
+
+    if (exists("Packages", inherits = FALSE)) {
+      whOverride <- match(names(Packages)[RepoNotPkgName], pkgDepDT$packageFullName)
+      set(pkgDepDT, whOverride, "Package", unname(unlist(Packages[RepoNotPkgName])))
+    }
     if (!is.na(neededAdditionalRepos))
       pkgDepDT[, Additional_repositories := neededAdditionalRepos]
 
