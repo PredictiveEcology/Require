@@ -2623,7 +2623,7 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
                                   pkgInstallTmp, verbose = getOption("Require.verbose")) {
   if (any(needRebuild)) {
     messageVerbose("Trying to rebuild and install GitHub build fails... ", verbose = verbose)
-    pkgInstall[, needRebuild := needRebuild]
+    pkgInstall[which(needRebuild), needRebuild := repoLocation]
     pkgInstallList <- split(pkgInstall, by = "needRebuild")
     names(pkgInstallList) <- c("No", .txtGitHub)
     pkgInstallList <- downloadGitHub(pkgInstallList, libPaths, verbose, install.packagesArgs)

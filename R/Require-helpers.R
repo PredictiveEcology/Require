@@ -227,10 +227,13 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
         ]
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
+      wh <- which(pkgDT$repoLocation == .txtGitHub)
       if (identical("DESCRIPTION", filename)) {
-        setnames(pkgDT, old = old, new = "DESCFile")
+        set(pkgDT, wh, "DESCFile", pkgDT[[old]][wh])
+        # setnames(pkgDT, old = old, new = "DESCFile") # don't do this because might already exist
       } else {
-        setnames(pkgDT, old = old, new = filename)
+        set(pkgDT, wh, "filename", pkgDT[[old]][wh])
+        # setnames(pkgDT, old = old, new = filename)
       }
 
     }

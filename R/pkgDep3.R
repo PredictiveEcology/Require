@@ -134,7 +134,7 @@ pkgDep <- function(packages,
                 dotDepth <- ".depth"
                 if (dotDepth %in% colnames(dep))
                   setorderv(dep, cols = dotDepth)
-                set(dep, NULL, intersect(colnames(dep), c(deps(TRUE), deps(FALSE))), NULL)   |> try() -> a; if (is(a, "try-error")) browser()
+                set(dep, NULL, intersect(colnames(dep), c(deps(TRUE), deps(FALSE))), NULL)
                 # keepCols <- c(keepCols, intersect(colnames(dep), .txtGitHubParsedCols))
                 dep <- dep[!duplicated(dep[["Package"]])]
                 set(dep, NULL, c("packageFullName", "parentPackage"),
@@ -192,7 +192,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
         set(pkgDT, whHasRecursiveTRUE, sn(TRUE),
             gsub("FALSE$", "TRUE", pkgDT[[sn(FALSE)]][whHasRecursiveTRUE]))
         # moveDeps <- pkgDT[[deps(FALSE)]][whHasRecursiveTRUE]
-        # if (length(whHasRecursiveTRUE) != NROW(pkgDT)) browser()
         # if (is.null(unlist(moveDeps))) {
         #   lst <- pkgDT[[deps(FALSE)]]
         #   lst[whHasRecursiveTRUE] <- lapply(whHasRecursiveTRUE, function(x)
@@ -202,8 +201,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 
         moveDeps <- pkgDT[[deps(FALSE)]][whHasRecursiveTRUE]
         if (!is.null(unlist(moveDeps))) {
-          set(pkgDT, whHasRecursiveTRUE, deps(TRUE), pkgDT[[deps(FALSE)]][whHasRecursiveTRUE]) |>
-           try() -> a; if (is(a, "try-error")) browser()
+          set(pkgDT, whHasRecursiveTRUE, deps(TRUE), pkgDT[[deps(FALSE)]][whHasRecursiveTRUE])
         } else {
           set(pkgDT, NULL, deps(TRUE), lapply(seq(NROW(pkgDT)), function(x) emptyDT()))
           #  list(Package = character(), packageFullName = character(), which = character()) |> setDT()))
@@ -226,7 +224,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #     for (recursiveUsed in rec) {
 #       pkgDT <- saveNamesForCache(pkgDT, which, recursive = recursiveUsed,
 #                                  repos = repos, type = type, verbose = verbose - 1)
-#       browser()
 #       sns <- pkgDT$sn[!is.na(pkgDT$sn)]
 #       alreadySaved[[recursiveUsed]] <- sns %in% names(envPkgDepDeps())
 #
@@ -245,7 +242,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #       # messageVerbose("  ", NROW(pkgDTSaved), " packages already saved in Cache", verbose = verbose)
 #       deps <- Map(nam = pkgDTSaved$packageFullName, obj = pkgDTSaved$sn,
 #                   f = function(nam, obj) get0(obj, envir = envPkgDepDeps()))
-#       browser()
 #       set(pkgDT, which(whSaved), .suffix("deps", recursiveUsed), deps)
 #       deps <- addDepthAndParentPkg(pkgDT$deps, .depth)
 #       pkgDT <- pkgDT[-which(whSaved)]
@@ -259,7 +255,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #       .depsNew <- getPkgDepsNonRecursive(pkgDT, outerPackages, which, repos, type,
 #                                         includeBase = includeBase, verbose = verbose)
 #       .depsNew <- addDepthAndParentPkg(.depsNew, .depth)
-#       browser()
 #       set(pkgDT, NULL, "deps", .depsNew)
 #
 #       # Because we aren't trimRedundancies, multiple versions of e.g., Rcpp (>= 0.11.0) and Rcpp (>= 1.0-10) both get downloaded
@@ -271,7 +266,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #         outerPackages <- names(deps) # outerPackages <- packages # packages has "named" vector, i.e., BioSIM
 #       }
 #
-#       browser()
 #       deps <- getPkgDepsMap(deps, outerPackages = outerPackages, recursive,  repos, which, type,  libPaths,
 #                             includeBase = includeBase, includeSelf = includeSelf, verbose,
 #                             .depth = .depth)
@@ -289,7 +283,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #           deps <- deps[whDepsArePkgDT]
 #           alreadySavedNow <- pkgDT$sn %in% names(envPkgDepDeps())
 #           if (any(!alreadySavedNow)) {# this is for the FALSEs ... it will be no new assignments unless a partial update
-#             browser()
 #             pkgDT3 <- assignPkgDTdepsToSaveNames(pkgDT[!alreadySavedNow], deps[whDepsArePkgDT][!alreadySavedNow])
 #           }
 #
@@ -300,7 +293,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #           alreadySavedNow <- pkgDT2$sn %in% names(envPkgDepDeps())
 #           if (any(!alreadySavedNow)) {
 #             whDepsArePkgDT <- match(pkgDT2$packageFullName, names(deps))
-#             browser()
 #             pkgDT4 <- assignPkgDTdepsToSaveNames(pkgDT2[!alreadySavedNow], deps[whDepsArePkgDT][!alreadySavedNow])
 #           }
 #         }
@@ -333,8 +325,6 @@ getPkgDepsMap <- function(pkgDT, parentPackage, recursive, repos, which, type, l
     pkgDTHaveDeps <- pkgDT[whHasDeps]
 
     # can't use data.table "by" because I need to change .SD
-    # if (parentPackage %in% "digest") browser()
-    # browser()
     out <- Map(pkgDT = pkgDTHaveDeps$depsFALSE, nam = pkgDTHaveDeps$packageFullName,
         .counter = seq(NROW(pkgDTHaveDeps)), function(pkgDT, nam, .counter)
       getPkgDeps(pkgDT, parentPackage = nam,
@@ -373,32 +363,31 @@ getPkgDepsMap <- function(pkgDT, parentPackage, recursive, repos, which, type, l
 }
 
 
-getPkgDepsNonRecursive <- function(pkgDT, outerPackages, which, repos, type, includeBase, verbose) {
-
-  browser()
-  if (verbose >= 1) {
-    num <- NROW(unique(pkgDT$Package)) # unique b/c can have src and bin listed here if they are different on CRAN
-    messageVerbose("Determining dependencies of ", num,
-                   singularPlural(c(" package", " packages"), v = num),
-                   verbose = verbose)
-  }
-
-  pkgDT <- rmRifInPackageCol(pkgDT)
-  pkgDTList <- split(pkgDT, by = "repoLocation")
-  pkgDTDep <- list()
-
-  if (!is.null(pkgDTList[["CRAN"]])) {
-    pkgDTDep[["CRAN"]] <- pkgDepCRAN(pkgDT = pkgDTList$CRAN, which = which[[1]],
-                                          repos = repos, type = type)
-  }
-  if (!is.null(pkgDTList[[.txtGitHub]])) {
-    pkgDTDep[[.txtGitHub]] <- pkgDepGitHub(pkgDT = pkgDTList$GitHub, which = which[[1]],
-                                         includeBase = includeBase, verbose = verbose)
-  }
-
-  depsNew <- unlist(unname(pkgDTDep), recursive = FALSE)
-  depsNew
-}
+# getPkgDepsNonRecursive <- function(pkgDT, outerPackages, which, repos, type, includeBase, verbose) {
+#
+#   if (verbose >= 1) {
+#     num <- NROW(unique(pkgDT$Package)) # unique b/c can have src and bin listed here if they are different on CRAN
+#     messageVerbose("Determining dependencies of ", num,
+#                    singularPlural(c(" package", " packages"), v = num),
+#                    verbose = verbose)
+#   }
+#
+#   pkgDT <- rmRifInPackageCol(pkgDT)
+#   pkgDTList <- split(pkgDT, by = "repoLocation")
+#   pkgDTDep <- list()
+#
+#   if (!is.null(pkgDTList[["CRAN"]])) {
+#     pkgDTDep[["CRAN"]] <- pkgDepCRAN(pkgDT = pkgDTList$CRAN, which = which[[1]],
+#                                           repos = repos, type = type)
+#   }
+#   if (!is.null(pkgDTList[[.txtGitHub]])) {
+#     pkgDTDep[[.txtGitHub]] <- pkgDepGitHub(pkgDT = pkgDTList$GitHub, which = which[[1]],
+#                                          includeBase = includeBase, verbose = verbose)
+#   }
+#
+#   depsNew <- unlist(unname(pkgDTDep), recursive = FALSE)
+#   depsNew
+# }
 
 pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
   fillDefaults(pkgDep)
@@ -416,8 +405,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
   set(pkgDT, NULL, "availableVersionOK", NA) # default
 
   if (any(needsVersionCheck)) {
-    a <- try(pkgDT <- availableVersionOK(pkgDT))
-    if (is(a, "try-error")) browser()
+    pkgDT <- availableVersionOK(pkgDT)
 
     # NOT SURE ABOUT THIS -- SHOULDN"T BE NECESSARY TO PICK THE availableVersionOKthisOne
     # pkgDTVerNums <- split(pkgDT, f = needsVersionCheck)
@@ -569,11 +557,11 @@ saveNamesForCache <- function(pkgDT, which, recursive, type = type, repos, verbo
     pkgDTNonGH <- pkgDTGH <- NULL
     if (!all(pkgDTCached[["FALSE"]]$Package %in% .basePkgs)) {
       if (any(!isGH)) {
-        pkgDTNonGH <- saveNamesNonGH(pkgDTCached[["FALSE"]][!isGH], repos, type = type, verbose,
-                                     which = which[[1]], whichCatRecursive)
+        pkgDTNonGH <- getDepsNonGH(pkgDTCached[["FALSE"]][!isGH], repos, type = type, verbose,
+                                     which = which, whichCatRecursive)
       }
       if (any(isGH)) {
-        pkgDTGH <- saveNamesGH(pkgDTCached[["FALSE"]][isGH], verbose, which = which[[1]], whichCatRecursive)
+        pkgDTGH <- getDepsGH(pkgDTCached[["FALSE"]][isGH], verbose, which = which, whichCatRecursive)
       }
       pkgDTCached[["FALSE"]] <- rbindlistNULL(list(pkgDTNonGH, pkgDTGH), use.names = TRUE, fill = TRUE)
     }
@@ -584,7 +572,7 @@ saveNamesForCache <- function(pkgDT, which, recursive, type = type, repos, verbo
 }
 
 
-saveNamesNonGH <- function(pkgDT, repos, verbose, type, which,
+getDepsNonGH <- function(pkgDT, repos, verbose, type, which,
                            whichCatRecursive, doSave = TRUE) {
   pkgDT <- toPkgDTFull(pkgDT)
 
@@ -616,7 +604,7 @@ saveNamesNonGH <- function(pkgDT, repos, verbose, type, which,
   pkgDT[]
 }
 
-saveNamesGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
+getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
   if (!is.data.table(pkgDT)) {
     pkgDT <- toPkgDTFull(pkgDT)
   }
@@ -687,7 +675,7 @@ saveNamesGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE)
     pkgDT <- pkgDT[!dups]
   out <- pkgDepGitHub(pkgDT = pkgDT, which = which,
                       includeBase = TRUE, verbose = verbose)
-  set(pkgDT, NULL, deps(FALSE), unname(out))   |> try() -> a; if (is(a, "try-error")) browser()
+  set(pkgDT, NULL, deps(FALSE), unname(out))
 
   rec <- recursiveType(whichCatRecursive)
   snHere <- sn(rec)
@@ -867,12 +855,13 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
       depsFromNamespace <- gsub(",.*", "", depsFromNamespace)
       depsFromNamespace <- gsub("\\\"", "", depsFromNamespace)
 
-      bp <- if (isTRUE(includeBase)) {
-        NULL
-      } else {
-        .basePkgs
-      }
 
+
+    }
+    bp <- if (isTRUE(includeBase)) {
+      NULL
+    } else {
+      .basePkgs
     }
     # needed could have version number specification
     neededReally <- union(needed, depsFromNamespace)
@@ -1143,8 +1132,7 @@ assignPkgDTdepsToSaveNames <- function(pkgDT, rowsToUpdate = seq(NROW(pkgDT)), r
 
   deps1 <- pkgDT[[deps]][rowsToUpdate]
   names(deps1) <- pkgDT[[sn]][rowsToUpdate]
-  a <- try(list2env(deps1, envir = envPkgDepDeps()))
-  if (is(a, "try-error")) browser()
+  list2env(deps1, envir = envPkgDepDeps())
   set(pkgDT, rowsToUpdate, "cached", TRUE)
 
   pkgDT[]
@@ -1158,7 +1146,6 @@ addDepthAndParentPkg <- function(deps, nam, .depth) {
       return(Map(deps = deps, nam = names(deps), addDepthAndParentPkg, .depth = .depth))
     }
 
-    if (is.null(nam)) browser()
     set(deps, NULL, "parentPackage", nam)
     deps <- rmRifInPackageCol(deps)
     set(deps, NULL, ".depth", .depth)
@@ -1268,10 +1255,10 @@ getFromCache <- function(pkgDT, which, recursive) {
   maybeHaveCacheCurCache <- unlist(maybeHaveCache)
   maybeHaveCacheDT <- list(packageFullName = rep(names(maybeHaveCache), lengths(maybeHaveCache)),
                            rowNum = maybeHaveCacheCurCache) |> setDT()
-  maybeHaveCacheDT <- pkgDT[maybeHaveCacheDT, on = "packageFullName"]
   # set(pkgDT, NULL, "cached", TRUE)
 
-  if (NROW(maybeHaveCacheDT)) {
+  # if (NROW(maybeHaveCacheDT)) {
+  if (any(maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName)) {
     # rowToFillIn <- if (is.null(pkgDT[[deps(FALSE)]])) seq(NROW(pkgDT)) else which(sapply(pkgDT[[deps(FALSE)]], NROW) == 0)
     # depsList <- lapply(rowToFillIn, function(x) data.table(Package = character(0)))
     # set(pkgDT, rowToFillIn, deps(FALSE), depsList)
@@ -1281,97 +1268,93 @@ getFromCache <- function(pkgDT, which, recursive) {
 
     lst <- sapply(maybeHaveCacheDT, is.list)
     keep <- setdiff(colnames(maybeHaveCacheDT), names(lst)[which(lst)])
-    # if (any(lst)) browser()
-    # if (identical("fpCompare (<=0.2.2)", pkgDT$packageFullName)) browser()
     dups <- duplicated(maybeHaveCacheDT[, ..keep])
     if (any(dups)) {
       maybeHaveCacheDT <- maybeHaveCacheDT[which(!dups)]
-      # browser()
     }
+
+    maybeHaveCacheDT <- pkgDT[maybeHaveCacheDT, on = "packageFullName"]
+
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = TRUE, curCache)
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = FALSE, curCache)
 
-    if (FALSE) {
-
-      isRecursiveTRUE <- endsWith(curCache[maybeHaveCacheDT$rowNum], "TRUE")
-
-      if (any(isRecursiveTRUE)) {
-        set(maybeHaveCacheDT, NULL, "isRecursiveTRUE", isRecursiveTRUE)
-        maybeHaveCacheDTRecTRUE <- maybeHaveCacheDT[isRecursiveTRUE]
-        set(maybeHaveCacheDTRecTRUE, NULL, "curCache", curCache[maybeHaveCacheDTRecTRUE$rowNum])
-        # curCachePoss <- curCache[maybeHaveCacheDT$rowNum[which(maybeHaveCacheDT$isRecursiveTRUE)]]
-
-        getFromCurCachePoss <- grepl(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+TRUE$"),
-                                     maybeHaveCacheDTRecTRUE$curCache)
-        set(maybeHaveCacheDTRecTRUE, NULL, "toGet", getFromCurCachePoss)
-
-        whHaveCacheDT <- which(maybeHaveCacheDTRecTRUE$toGet)
-        whHaveCachePkgDT <- match(maybeHaveCacheDTRecTRUE$Package[whHaveCacheDT], pkgDT$Package)
-        a <- mget(maybeHaveCacheDTRecTRUE$curCache[whHaveCacheDT], envir = envPkgDepDeps())
-        if (!identical(unname(a), pkgDT[[deps(FALSE)]][whHaveCachePkgDT])) {
-          # if (any(grepl("^car__", names(a)))) browser()
-          bb <- try(set(pkgDT, whHaveCachePkgDT, deps(TRUE), unname(a)))
-          if (is(bb, "try-error")) browser()
-        }
-        set(pkgDT, whHaveCachePkgDT, "cached", TRUE)
-        set(pkgDT, whHaveCachePkgDT, sn(TRUE), maybeHaveCacheDTRecTRUE$curCache[whHaveCacheDT])
-        pkgsWithRecursiveTRUE <- maybeHaveCacheDT$Package[match(maybeHaveCacheDT$rowNum[getFromCurCachePoss],
-                                                                maybeHaveCacheDT$rowNum)]
-        # This changes the "maybes" becaues some are now gotten
-        browser() # need to change to maybeHaveCacheDT
-        maybeHaveCacheDT <- maybeHaveCacheDT[!maybeHaveCacheDT$Package %in% pkgsWithRecursiveTRUE]
-      }
-      isRecursiveFALSE <- endsWith(curCache[maybeHaveCacheDT$rowNum], "FALSE")
-      if (any(isRecursiveFALSE)) {
-
-        browser()
-        set(maybeHaveCacheDT, NULL, "isRecursiveFALSE", isRecursiveFALSE)
-        maybeHaveCacheDTRecFALSE <- maybeHaveCacheDT[isRecursiveFALSE]
-        set(maybeHaveCacheDTRecFALSE, NULL, "curCache", curCache[maybeHaveCacheDTRecFALSE$rowNum])
-
-        ###
-        getFromCurCachePoss <- grepl(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+TRUE$"),
-                                     maybeHaveCacheDTRecFALSE$curCache)
-        set(maybeHaveCacheDTRecFALSE, NULL, "toGet", getFromCurCachePoss)
-
-        whHaveCacheDT <- which(maybeHaveCacheDTRecFALSE$toGet)
-        whHaveCachePkgDT <- match(maybeHaveCacheDTRecFALSE$Package[whHaveCacheDT], pkgDT$Package)
-
-        # maybeHaveCacheCurCache <- maybeHaveCacheCurCache[isRecursiveFALSE]
-
-        # getThese <- grep(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+FALSE$"),
-        #                  curCache[maybeHaveCacheCurCache])
-        # whHaveCache <- match(maybeHaveCacheDT$Package[getThese], pkgDT$Package)
-        noColYet <- pkgDT[whHaveCachePkgDT][[deps(FALSE)]]
-        if (is.null(noColYet)) {
-          a <- mget(maybeHaveCacheDTRecFALSE$curCache[whHaveCacheDT], envir = envPkgDepDeps())
-          # a <- mget(curCache[maybeHaveCacheCurCache][getThese], envir = envPkgDepDeps())
-          b <- try(set(pkgDT, whHaveCachePkgDT, deps(FALSE), unname(a)))
-          if (is(b, "try-error")) browser()
-        } else {
-          a <- lapply(whHaveCachePkgDT, function(x) emptyDT())#list(Package = NULL)
-        }
-        # set(pkgDT, whHaveCache,
-        #     # unname(maybeHaveCacheCurCache[getThese]),
-        #     deps(FALSE),
-        #     unname(mget(curCache[maybeHaveCacheCurCache][getThese], envir = envPkgDepDeps())))
-        set(pkgDT, whHaveCachePkgDT, "cached", TRUE)
-        set(pkgDT, whHaveCachePkgDT, sn(FALSE), curCache[maybeHaveCacheCurCache][getThese])
-        # }
-        # if (any(!wantLatestCRAN)) {
-        # Here, we may not want latest CRAN, so we need to check Archives for this package
-        # isRecursiveTRUE <- endsWith(curCache[maybeHaveCacheCurCache], "TRUE")
-        # if (any(isRecursiveTRUE)) {
-        #   a <- mget(curCache[maybeHaveCacheCurCache][isRecursiveTRUE], envir = envPkgDepDeps())
-        #   getThese <- grep(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+TRUE$"),
-        #                    curCache[maybeHaveCacheDT$rowNum])
-        #   whHaveCache <- match(maybeHaveCacheDT$Package[getThese], pkgDT$Package)
-        #   set(pkgDT, whHaveCache, deps(TRUE), unname(a))
-        # }
-        # get0(pkgDTPoss)
-      }
-
-    }
+    if (isTRUE(!pkgDT[Package %in% "Rcpp"]$cached %in% TRUE)) browser()
+    # if (FALSE) {
+    #
+    #   isRecursiveTRUE <- endsWith(curCache[maybeHaveCacheDT$rowNum], "TRUE")
+    #
+    #   if (any(isRecursiveTRUE)) {
+    #     set(maybeHaveCacheDT, NULL, "isRecursiveTRUE", isRecursiveTRUE)
+    #     maybeHaveCacheDTRecTRUE <- maybeHaveCacheDT[isRecursiveTRUE]
+    #     set(maybeHaveCacheDTRecTRUE, NULL, "curCache", curCache[maybeHaveCacheDTRecTRUE$rowNum])
+    #     # curCachePoss <- curCache[maybeHaveCacheDT$rowNum[which(maybeHaveCacheDT$isRecursiveTRUE)]]
+    #
+    #     getFromCurCachePoss <- grepl(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+TRUE$"),
+    #                                  maybeHaveCacheDTRecTRUE$curCache)
+    #     set(maybeHaveCacheDTRecTRUE, NULL, "toGet", getFromCurCachePoss)
+    #
+    #     whHaveCacheDT <- which(maybeHaveCacheDTRecTRUE$toGet)
+    #     whHaveCachePkgDT <- match(maybeHaveCacheDTRecTRUE$Package[whHaveCacheDT], pkgDT$Package)
+    #     a <- mget(maybeHaveCacheDTRecTRUE$curCache[whHaveCacheDT], envir = envPkgDepDeps())
+    #     if (!identical(unname(a), pkgDT[[deps(FALSE)]][whHaveCachePkgDT])) {
+    #       set(pkgDT, whHaveCachePkgDT, deps(TRUE), unname(a))
+    #     }
+    #     set(pkgDT, whHaveCachePkgDT, "cached", TRUE)
+    #     set(pkgDT, whHaveCachePkgDT, sn(TRUE), maybeHaveCacheDTRecTRUE$curCache[whHaveCacheDT])
+    #     pkgsWithRecursiveTRUE <- maybeHaveCacheDT$Package[match(maybeHaveCacheDT$rowNum[getFromCurCachePoss],
+    #                                                             maybeHaveCacheDT$rowNum)]
+    #     # This changes the "maybes" becaues some are now gotten
+    #     maybeHaveCacheDT <- maybeHaveCacheDT[!maybeHaveCacheDT$Package %in% pkgsWithRecursiveTRUE]
+    #   }
+    #   isRecursiveFALSE <- endsWith(curCache[maybeHaveCacheDT$rowNum], "FALSE")
+    #   if (any(isRecursiveFALSE)) {
+    #
+    #     set(maybeHaveCacheDT, NULL, "isRecursiveFALSE", isRecursiveFALSE)
+    #     maybeHaveCacheDTRecFALSE <- maybeHaveCacheDT[isRecursiveFALSE]
+    #     set(maybeHaveCacheDTRecFALSE, NULL, "curCache", curCache[maybeHaveCacheDTRecFALSE$rowNum])
+    #
+    #     ###
+    #     getFromCurCachePoss <- grepl(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+TRUE$"),
+    #                                  maybeHaveCacheDTRecFALSE$curCache)
+    #     set(maybeHaveCacheDTRecFALSE, NULL, "toGet", getFromCurCachePoss)
+    #
+    #     whHaveCacheDT <- which(maybeHaveCacheDTRecFALSE$toGet)
+    #     whHaveCachePkgDT <- match(maybeHaveCacheDTRecFALSE$Package[whHaveCacheDT], pkgDT$Package)
+    #
+    #     # maybeHaveCacheCurCache <- maybeHaveCacheCurCache[isRecursiveFALSE]
+    #
+    #     # getThese <- grep(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+FALSE$"),
+    #     #                  curCache[maybeHaveCacheCurCache])
+    #     # whHaveCache <- match(maybeHaveCacheDT$Package[getThese], pkgDT$Package)
+    #     noColYet <- pkgDT[whHaveCachePkgDT][[deps(FALSE)]]
+    #     if (is.null(noColYet)) {
+    #       a <- mget(maybeHaveCacheDTRecFALSE$curCache[whHaveCacheDT], envir = envPkgDepDeps())
+    #       # a <- mget(curCache[maybeHaveCacheCurCache][getThese], envir = envPkgDepDeps())
+    #       set(pkgDT, whHaveCachePkgDT, deps(FALSE), unname(a))
+    #     } else {
+    #       a <- lapply(whHaveCachePkgDT, function(x) emptyDT())#list(Package = NULL)
+    #     }
+    #     # set(pkgDT, whHaveCache,
+    #     #     # unname(maybeHaveCacheCurCache[getThese]),
+    #     #     deps(FALSE),
+    #     #     unname(mget(curCache[maybeHaveCacheCurCache][getThese], envir = envPkgDepDeps())))
+    #     set(pkgDT, whHaveCachePkgDT, "cached", TRUE)
+    #     set(pkgDT, whHaveCachePkgDT, sn(FALSE), curCache[maybeHaveCacheCurCache][getThese])
+    #     # }
+    #     # if (any(!wantLatestCRAN)) {
+    #     # Here, we may not want latest CRAN, so we need to check Archives for this package
+    #     # isRecursiveTRUE <- endsWith(curCache[maybeHaveCacheCurCache], "TRUE")
+    #     # if (any(isRecursiveTRUE)) {
+    #     #   a <- mget(curCache[maybeHaveCacheCurCache][isRecursiveTRUE], envir = envPkgDepDeps())
+    #     #   getThese <- grep(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, ".+TRUE$"),
+    #     #                    curCache[maybeHaveCacheDT$rowNum])
+    #     #   whHaveCache <- match(maybeHaveCacheDT$Package[getThese], pkgDT$Package)
+    #     #   set(pkgDT, whHaveCache, deps(TRUE), unname(a))
+    #     # }
+    #     # get0(pkgDTPoss)
+    #   }
+    #
+    # }
   }
   pkgDT
 }
@@ -1391,11 +1374,9 @@ getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
     getFromCurCachePoss <- grepl(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, paste0(".+", recursive, "$")),
                                  maybeHaveCacheDTRec$curCache)
 
-    # if (length(getFromCurCachePoss) == 4) browser()
     versions <- sapply(strsplit(maybeHaveCacheDTRec$curCache, sepForSaveNames), function(x) x[2])
     set(maybeHaveCacheDTRec, NULL, "version", versions)
     # maybeHaveCacheDTRec1 <- pkgDT[, c("inequality", "versionSpec", "Package")][maybeHaveCacheDTRec, on = "Package"]
-    # if (NROW(maybeHaveCacheDTRec1) == 6 &&  (length(getFromCurCachePoss) == 4)) browser()
     # maybeHaveCacheDTRec <- maybeHaveCacheDTRec1
     haveCache <- getFromCurCachePoss
     CRANvOKbcNeedLatest <- is.na(maybeHaveCacheDTRec$inequality)
@@ -1419,7 +1400,7 @@ getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
 
     if (any(haveCache)) {
 
-      set(maybeHaveCacheDTRec, NULL, "toGet", getFromCurCachePoss) |> try() -> a; if (is(a, "try-error")) browser()
+      set(maybeHaveCacheDTRec, NULL, "toGet", getFromCurCachePoss)
 
       whHaveCacheDT <- which(maybeHaveCacheDTRec[["toGet"]])
       whHaveCachePkgDT <- match(maybeHaveCacheDTRec[["Package"]][whHaveCacheDT], pkgDT[["Package"]])
@@ -1427,21 +1408,18 @@ getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
       if (recursive %in% FALSE) {
         noColYet <- pkgDT[whHaveCachePkgDT][[deps(recursive)]]
         if (is.null(noColYet)) {
-          a <- mget(maybeHaveCacheDTRec$curCache[whHaveCacheDT], envir = envPkgDepDeps()) |> try() -> a; if (is(a, "try-error")) browser()
+          a <- mget(maybeHaveCacheDTRec$curCache[whHaveCacheDT], envir = envPkgDepDeps())
           if (is.null(unlist(a)))
             a <- lapply(seq(NROW(pkgDT)), function(x) emptyDT())
           # a <- mget(curCache[maybeHaveCacheCurCache][getThese], envir = envPkgDepDeps())
-          b <- try(set(pkgDT, whHaveCachePkgDT, deps(recursive), unname(a)))
-          if (is(b, "try-error")) browser()
+          set(pkgDT, whHaveCachePkgDT, deps(recursive), unname(a))
         } else {
           # a <- lapply(whHaveCachePkgDT, function(x) data.table())#list(Package = NULL)
         }
       } else {
         a <- mget(maybeHaveCacheDTRec$curCache[whHaveCacheDT], envir = envPkgDepDeps())
         if (!identical(unname(a), pkgDT[[deps(recursive)]][whHaveCachePkgDT])) {
-          # if (any(grepl("^car__", names(a)))) browser()
-          bb <- try(set(pkgDT, whHaveCachePkgDT, deps(recursive), unname(a)))
-          if (is(bb, "try-error")) browser()
+          set(pkgDT, whHaveCachePkgDT, deps(recursive), unname(a))
         }
       }
 
