@@ -32,8 +32,7 @@ processes of the installs.}
 \value{
 A numeric named vector, with names of the packages that were attempted.
 \code{2} means the package was successfully unloaded, \code{1} it was
-tried, but failed, \code{3} it was in the search path and was detached
-and unloaded.
+tried, but failed, \code{3} it was not loaded, so was not unloaded.
 }
 \description{
 This uses \code{pkgDepTopoSort} internally so that the package

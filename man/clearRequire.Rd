@@ -7,7 +7,7 @@
 clearRequirePackageCache(
   packages,
   ask = interactive(),
-  Rversion = rversion(),
+  Rversion = versionMajorMinor(),
   clearCranCache = FALSE,
   verbose = getOption("Require.verbose")
 )

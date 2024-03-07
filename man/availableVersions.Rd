@@ -5,7 +5,11 @@
 \alias{available.packagesCached}
 \title{Available and archived versions}
 \usage{
-archiveVersionsAvailable(package, repos)
+archiveVersionsAvailable(
+  package,
+  repos,
+  verbose = getOption("Require.verbose")
+)
 
 available.packagesCached(
   repos,
@@ -21,6 +25,13 @@ available.packagesCached(
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
+
 \item{purge}{Logical. Should all caches be purged? Default is
 \code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
 results throughout the \code{Require} package. These help with speed and reduce
@@ -31,13 +42,6 @@ This maximum age can be set in seconds with the environment variable
 (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
-
-\item{verbose}{Numeric or logical indicating how verbose should the function
-be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
-then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
-\code{Require} function, when \code{verbose >= 2}, the return object will have an
-attribute: \code{attr(.., "Require")} which has lots of information about the
-processes of the installs.}
 
 \item{returnDataTable}{Logical. If \code{TRUE}, the default, then the return
 is a data.table.

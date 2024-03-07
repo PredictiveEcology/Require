@@ -5,7 +5,7 @@
 \title{Setup for binary Linux repositories}
 \usage{
 setLinuxBinaryRepo(
-  binaryLinux = "https://packagemanager.posit.co/",
+  binaryLinux = urlForArchivedPkgs,
   backupCRAN = srcPackageURLOnCRAN
 )
 }

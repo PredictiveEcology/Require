@@ -5,7 +5,7 @@
 \alias{RequirePkgCacheDir}
 \title{Path to (package) cache directory}
 \usage{
-RequireCacheDir(create)
+RequireCacheDir(create, verbose = getOption("Require.verbose"))
 
 RequirePkgCacheDir(create)
 }
