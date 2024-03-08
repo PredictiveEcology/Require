@@ -188,7 +188,7 @@ test_that("test 5", {
       # if (length(grep("LandR", pkg))) browser()
       pkg <- omitPkgsTemporarily(pkg)
       suppressWarnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
-        outFromRequire <-  <- <- <- <- <- <- <- <- (pkg, standAlone = FALSE, require = FALSE)
+        outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
       )
       # Rerun it to get output table, but capture messages for quiet; should be no installs
       #silent <- capture.output(type = "message", {

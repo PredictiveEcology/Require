@@ -1190,7 +1190,8 @@ getFromCache <- function(pkgDT, which, recursive) {
 
     # if (i >= 92) browser()
     keep <- intersect(c("Package", "packageFullName", deps(FALSE)), colnames(pkgDT))
-    maybeHaveCacheDT <- pkgDT[, ..keep][maybeHaveCacheDT, on = "packageFullName"]
+    maybeHaveCacheDT <- pkgDT[, ..keep][maybeHaveCacheDT, on = "packageFullName"] |>
+    try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
 
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = TRUE, curCache)
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = FALSE, curCache)

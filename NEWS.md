@@ -18,6 +18,7 @@ version 0.3.2
 * If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87).
 * `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string.
 * Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it doesn't find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually
+* `verbose` now propagates better through all internal functions, so e.g., `verbose = -2` will make installing very silent
 
 ## bugfixes
 * Warning occurred if a package was no longer on CRAN and user had supplied multiple `repos` or `getOption('repos')`. The result was unaffected by the warning, but warning is now removed.
