@@ -69,7 +69,7 @@ test_that("test 1", {
   })
 
   # detach("package:fpCompare", unload = TRUE)
-  remove.packages("fpCompare", lib = dir1)
+  remove.packages("fpCompare", lib = dir1) |> suppressMessages()
 
   # Try older version
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
@@ -105,8 +105,8 @@ test_that("test 1", {
     })
 
 
-    remove.packages("fpCompare", lib = dir2)
-    remove.packages("fpCompare", lib = dir6)
+    remove.packages("fpCompare", lib = dir2) |> suppressMessages()
+    remove.packages("fpCompare", lib = dir6) |> suppressMessages()
 
     setLibPaths(orig, updateRprofile = FALSE)
 
@@ -196,36 +196,33 @@ test_that("test 1", {
   if (isDev) { # i.e., GA, R CMD check etc.
 
     # Issue 87
-    try(remove.packages("reproducible"), silent = TRUE)
+    try(remove.packages("reproducible"), silent = TRUE) |> suppressMessages()
     Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
 
     ap <- available.packagesCached(repos = getOption("repos"), purge = FALSE, type = "both")
     curVer <- unique(ap[Package %in% "reproducible"]$Version)
 
     Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
-    Require("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
+    Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
     # detach("package:reproducible", unload = TRUE)    # Apparnetly linux can handle this
     # aaa <<- 1
     # on.exit(rm(aaa, envir = .GlobalEnv), add = TRUE)
     suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
-      Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
+      Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
     )
     on.exit({
-      try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+      try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
                            dontTry = c(extractPkgName(pkgDep("testthat", recursive = T)[["testthat"]])))
       , silent = TRUE) |>
-        suppressWarnings()
+        suppressWarnings() |> suppressMessages()
       # unloadNamespace("package:fpCompare")
       # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
     }, add = TRUE)
-    if (isWindows())
-      testthat::expect_true(packageVersion("reproducible") == curVer) # # will be curVer from CRAN, bc can't install when loaded
-    else
-      testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") #
-    detach("package:reproducible", unload = TRUE);
+    testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") #
+    # detach("package:reproducible", unload = TRUE);
     unloadNamespace("package:fpCompare")
     # now installs correct SHA which is 2.0.2.9001
-    Require::Require(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
+    Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
     testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
     # End issue 87
     out <- try(
@@ -292,7 +289,7 @@ test_that("test 1", {
 
     # Test substitute(packages)
     suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")),
-                         silent = TRUE))
+                         silent = TRUE)) |> suppressMessages()
     verToCompare <- "2.0.8"
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
 
@@ -301,7 +298,7 @@ test_that("test 1", {
                                               repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
     )
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
-    try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core")))
+    try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core"))) |> suppressMessages()
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
     a <- list(pkg = "fpCompare")
 

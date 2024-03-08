@@ -513,6 +513,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     messageVerbose(messageCantInstallNoVersion(pkgInstallList[[noneAvailable]]$packageFullName),
                    verbose = verbose, verboseLevel = 1)
   }
+
   if (!is.null(pkgInstall)) {
     pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
     pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
@@ -559,9 +560,14 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     addOK <- if (!is.null(pkgInstall[["installResult"]])) {
       which(is.na(pkgInstall[["installResult"]]))
     } else {
-      NULL
+      seq_len(NROW(pkgInstall)) # was NULL, but that is "all rows" in data.table
     }
-    set(pkgInstall, addOK, c("installResult", "installed"), list("OK", TRUE))
+#     set(pkgInstall, addOK, c("installResult", "installed"), list("OK", TRUE))
+
+      set(pkgInstall, addOK,
+        c("installResult", "installed", "Version", "LibPath"),
+        list("OK", TRUE, pkgInstall[["VersionOnRepos"]][addOK], .libPaths()[1])
+        )
     pkgInstallList[["install"]] <- pkgInstall
   }
   if (!is.null(pkgInstallList[[noneAvailable]])) {
@@ -1048,6 +1054,11 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
   }
 
   setnames(ap, old = "Version", new = "VersionOnReposCurrent")
+
+  # if both have a column, this creates i.XXX columns
+  rmFromPkgInstall <- intersect(colnames(ap), colnames(pkgInstall)) |> setdiff("Package")
+  if (length(rmFromPkgInstall))
+    set(pkgInstall, NULL, rmFromPkgInstall, NULL)
   pkgInstall <- ap[pkgInstall, on = "Package"]
   whHasVoR <- which(!is.na(pkgInstall$VersionOnReposCurrent))
   set(pkgInstall, whHasVoR, "VersionOnRepos", pkgInstall[["VersionOnReposCurrent"]][whHasVoR])
@@ -2612,7 +2623,7 @@ downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFo
   names(gitRepo) <- Package
   out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
                       overwrite = TRUE, destDir = ".", verbose = verbose)
-  out1 <- try(build(Package, verbose = verbose, quiet = FALSE, VersionOnRepos = VersionOnRepos))
+  out1 <- try(build(Package, verbose = verbose, quiet = verbose <= 0, VersionOnRepos = VersionOnRepos))
   fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
   normPath(fn)
 }
