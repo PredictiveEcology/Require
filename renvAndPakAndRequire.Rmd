@@ -371,3 +371,24 @@ setdiff(pk$ref, trimVersionNumber(pk3))
 If there is no version specification, `pkgDep` prefers CRAN packages when there are multiple pointers to a package. Thus, even though a package may have a `Remotes` field pointint to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfited with the `Remotes` option. Then `pkgDep` will take that.
 
 `pak::pkg_deps` prefers the top-level specification, i.e., the non-recursive `Remotes` field will be returned, even if the same package is also specified within a recursive dependency without a `Remotes` field, i.e, if a recursive dependency points the CRAN package, it will not return that version of the dependency.
+
+
+### `pak` fails for packages on GitHub that are not same name as Git Repo in Remotes
+
+```{r}
+gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE)
+# Error:                                                                                  
+# ! error in pak subprocess
+# Caused by error: 
+# ! Could not solve package dependencies:
+# * PredictiveEcology/LandR@development: Can't install dependency BioSIM
+# * BioSIM: Can't find package called BioSIM.
+# Type .Last.error to see the more details.
+ff <- pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+# $`PredictiveEcology/LandR@development`
+#  [1] "BIEN"                                                  "RNCan/BioSimClient_R"
+#  [3] "DBI (>= 0.8)"                                          "ENMeval"
+#  [5] "Formula"                                               "Hmisc"
+#  [7] "PredictiveEcology/LandR@development"                   "MatrixModels"
+#  ...
+```

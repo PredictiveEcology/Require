@@ -307,6 +307,7 @@ Require <- function(packages, packageVersionFile,
       which = which, type = type, verbose = verbose, repos = repos,
       Additional_repositories = TRUE
     )
+    browser()
     basePkgsToLoad <- packages[packages %in% .basePkgs]
     pkgDT <- deps
 
@@ -446,7 +447,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstall <- rmPackageFirst(toInstall, verbose)
   }
 
-  ap <- try(availablePackagesOverride(toInstall, repos, purge, type = type))
+  ap <- availablePackagesOverride(toInstall, repos, purge, type = type) |>
+    try() -> ap; if (is(abab, "try-error")) {rm(abab); browser()}
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
   }

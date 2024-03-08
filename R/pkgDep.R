@@ -1212,30 +1212,31 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
           extractInequality(pkgDepDT$packageFullName[whHasVersion]))
       # pkgDepDT[!is.na(Version), inequality := extractInequality(packageFullName)]
       # pkgDepDT[, .N, by = "Package"]
-      tt <- table(pkgDepDT$Package)
-      haveMT1 <- names(tt)[tt > 1]
-      if (length(haveMT1)) {
-        keepRows <- which(pkgDepDT$Package %in% haveMT1)
-        pkgDepDT[keepRows, Version := {
-          if (all(is.na(Version))) {
-            NA_character_
-          } else {
-            if (.N == 1) {
-              Version
-            } else {
-              as.character(max(as.package_version(Version[!is.na(Version)])))
-            }
-
-          }
-        }, by = "Package"]
-        pkgDepDT[keepRows, inequality := {
-          if (all(is.na(inequality))) {
-            NA_character_
-          } else {
-            inequality[!is.na(inequality)][[1]]
-          }
-        }, by = "Package"]
-      }
+      # tt <- table(pkgDepDT$Package)
+      # haveMT1 <- names(tt)[tt > 1]
+      # if (length(haveMT1)) {
+      #   keepRows <- which(pkgDepDT$Package %in% haveMT1)
+      #   browser()
+      #   pkgDepDT[keepRows, Version := {
+      #     if (all(is.na(Version))) {
+      #       NA_character_
+      #     } else {
+      #       if (.N == 1) {
+      #         Version
+      #       } else {
+      #         as.character(max(as.package_version(Version[!is.na(Version)])))
+      #       }
+      #
+      #     }
+      #   }, by = "Package"]
+      #   pkgDepDT[keepRows, inequality := {
+      #     if (all(is.na(inequality))) {
+      #       NA_character_
+      #     } else {
+      #       inequality[!is.na(inequality)][[1]]
+      #     }
+      #   }, by = "Package"]
+      # }
       set(pkgDepDT, NULL, "github", extractPkgGitHub(pkgDepDT$packageFullName))
       # pkgDepDT[, github := extractPkgGitHub(packageFullName)]
       if (any(pkgDepDT$isGitPkg == TRUE &
@@ -1252,7 +1253,7 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
         }
       }
     }
-    dup <- duplicated(pkgDepDT, by = c("Package", "Version"))
+    dup <- duplicated(pkgDepDT, by = c("Package", "Version", "versionSpec"))
     pkgDepDT <- pkgDepDT[dup == FALSE]
     differences <-
       setdiff(setdiff(pkgDepDT$Package, .basePkgs), extractPkgName(neededFromDESCRIPTION))

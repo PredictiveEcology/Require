@@ -142,22 +142,22 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' A series of helpers to access and deal with GitHub packages
 #'
 #' @details
-#' `getGitHubDESCRIPTION` retrieves the DESCRIPTION file from GitHub.com
+#' `dlGitHubDESCRIPTION` retrieves the DESCRIPTION file from GitHub.com
 #'
 #' @rdname DESCRIPTION-helpers
 #' @export
 #' @param pkg A character string with a GitHub package specification (c.f. remotes)
 #' @inheritParams pkgDep
 #' @inheritParams Require
-getGitHubDESCRIPTION <- function(pkg, purge = getOption("Require.purge", FALSE),
+dlGitHubDESCRIPTION <- function(pkg, purge = getOption("Require.purge", FALSE),
                                  verbose = getOption("Require.verbose")) {
-  getGitHubFile(pkg, "DESCRIPTION", purge = purge, verbose = verbose)
+  dlGitHubFile(pkg, "DESCRIPTION", purge = purge, verbose = verbose)
 }
 
 #' @inheritParams Require
-getGitHubNamespace <- function(pkg, purge = getOption("Require.purge", FALSE),
+dlGitHubNamespace <- function(pkg, purge = getOption("Require.purge", FALSE),
                                verbose = getOption("Require.verbose")) {
-  getGitHubFile(pkg, "NAMESPACE", purge = purge, verbose = verbose)
+  dlGitHubFile(pkg, "NAMESPACE", purge = purge, verbose = verbose)
 }
 
 pkgDTtoPackageFullName <- function(pkg) {
@@ -172,7 +172,7 @@ pkgDTtoPackageFullName <- function(pkg) {
 }
 
 #' @inheritParams Require
-getGitHubFile <- function(pkg, filename = "DESCRIPTION",
+dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                           purge = getOption("Require.purge", FALSE),
                           verbose = getOption("Require.verbose")) {
   ret <- if (NROW(pkg) > 0) {
@@ -187,7 +187,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
     } else {
       pkgDT <- pkg
     }
-    a <- try(pkgDT[repoLocation == .txtGitHub,
+    pkgDT[repoLocation == .txtGitHub,
       url := {
         gitHubFileUrl(
           hasSubFolder = hasSubFolder, Branch = Branch, GitSubFolder = GitSubFolder,
@@ -195,8 +195,7 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
         )
       },
       by = "Package"
-    ])
-    if (is(a, "try-error")) browser()
+    ]
     theDir <- RequireGitHubCacheDir(create = TRUE)
     # checkPath(theDir, create = TRUE)
     destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
@@ -253,10 +252,10 @@ getGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' @export
 #' @param package A single package name (without version or github specifications)
 #' @details
-#' `archiveVersionsAvailable` searches CRAN Archives for available versions.
+#' `dlArchiveVersionsAvailable` searches CRAN Archives for available versions.
 #' It has been borrowed from a sub-set of the code in a non-exported function:
 #' `remotes:::download_version_url`
-archiveVersionsAvailable <- function(package, repos, verbose = getOption("Require.verbose")) {
+dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Require.verbose")) {
   info <- list()
   for (repo in repos) {
     archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
