@@ -41,7 +41,8 @@ pkgDep(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose"),
   type = getOption("pkgType"),
-  Additional_repositories = FALSE
+  Additional_repositories = FALSE,
+  ...
 )
 }
 \arguments{
@@ -103,10 +104,8 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 attribute: \code{attr(.., "Require")} which has lots of information about the
 processes of the installs.}
 
-\item{...}{Passed to \code{install.packages}. Good candidates are e.g., \code{type} or
-\code{dependencies}. This can be used with \code{install_githubArgs} or
-\code{install.packageArgs} which give individual options for those 2 internal
-function calls.}
+\item{...}{Currently only \code{dependencies} as an alternative to \code{which}. If specified,
+then \code{which} will be ignored.}
 
 \item{packages}{Either a character vector of packages to install via
 \code{install.packages}, then load (i.e., with \code{library}), or, for convenience,

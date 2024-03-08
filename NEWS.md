@@ -11,6 +11,9 @@
 version 0.3.2
 =============
 
+## major changes
+* All internals for `pkgDep` have been changed. The new algorithms are faster and more reliable, with far fewer lines of code.
+
 ## enhancements
 * If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87).
 * `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string.

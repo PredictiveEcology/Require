@@ -251,7 +251,7 @@ test_that("test 1", {
     ip <- data.table::as.data.table(installed.packages())
     testthat::expect_true(NROW(ip[Package == reallyOldPkg]) == 1)
 
-    out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
+    out <- dlGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
     testthat::expect_true({
       data.table::is.data.table(out)
     })
@@ -262,7 +262,7 @@ test_that("test 1", {
       file.exists(out$DESCFile)
     })
 
-    out <- getGitHubDESCRIPTION(pkg = character())
+    out <- dlGitHubDESCRIPTION(pkg = character())
     testthat::expect_true({
       length(out) == 0
     })

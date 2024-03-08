@@ -3,14 +3,14 @@
 \name{DESCRIPTIONFileVersionV}
 \alias{DESCRIPTIONFileVersionV}
 \alias{DESCRIPTIONFileOtherV}
-\alias{getGitHubDESCRIPTION}
+\alias{dlGitHubDESCRIPTION}
 \title{GitHub package tools}
 \usage{
 DESCRIPTIONFileVersionV(file, purge = getOption("Require.purge", FALSE))
 
 DESCRIPTIONFileOtherV(file, other = "RemoteSha")
 
-getGitHubDESCRIPTION(
+dlGitHubDESCRIPTION(
   pkg,
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose")
@@ -46,5 +46,5 @@ processes of the installs.}
 A series of helpers to access and deal with GitHub packages
 }
 \details{
-\code{getGitHubDESCRIPTION} retrieves the DESCRIPTION file from GitHub.com
+\code{dlGitHubDESCRIPTION} retrieves the DESCRIPTION file from GitHub.com
 }

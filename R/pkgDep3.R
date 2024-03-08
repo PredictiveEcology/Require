@@ -144,7 +144,8 @@ pkgDep <- function(packages,
                 # setnames(dep, old = depsCol, new = "deps")
               }
               dep <- addSelf(includeSelf, dep, self)
-              dep <- dep[order(dep$Package)]
+              if (!is.null(dep))
+                dep <- dep[order(dep$Package)]
               dep
             }))
 
@@ -407,14 +408,14 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
   set(pkgDT, NULL, "cached", FALSE)
   set(pkgDT, which(pkgDT$Package %in% .basePkgs), "cached", TRUE)
 
-  if (i >= 92) browser()
+  # if (i >= 92) browser()
   pkgDT <- getFromCache(pkgDT, which, recursive)
 
   if (any(!pkgDT[["cached"]] %in% TRUE) &&
       sum(!pkgDT[["Package"]][!pkgDT[["cached"]]] %in% .basePkgs)) {
     set(pkgDT, NULL, "ord", seq(NROW(pkgDT)))
     pkgDTCached <- splitKeepOrderAndDTIntegrity(pkgDT, pkgDT$cached)
-    messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = ", "), verbose = verbose)
+    messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = ", "), verbose = verbose - 2)
     whichCatRecursive <- whichCatRecursive(which, recursive)
     isGH <- !is.na(pkgDTCached[["FALSE"]]$githubPkgName)
     pkgDTNonGH <- pkgDTGH <- NULL
@@ -1187,7 +1188,7 @@ getFromCache <- function(pkgDT, which, recursive) {
       maybeHaveCacheDT <- maybeHaveCacheDT[which(!dups)]
     }
 
-    if (i >= 92) browser()
+    # if (i >= 92) browser()
     keep <- intersect(c("Package", "packageFullName", deps(FALSE)), colnames(pkgDT))
     maybeHaveCacheDT <- pkgDT[, ..keep][maybeHaveCacheDT, on = "packageFullName"]
 
