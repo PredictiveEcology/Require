@@ -136,8 +136,9 @@ test_that("test 5", {
     dirForInstall <- tempdir2(.rndstr(1))
 
     suppressWarnings( # "Require" is in use
-      st1 <- system.time(out1 <- capture.output(type = "message",
-                                                Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
+      st1 <- system.time(out1 <- capture.output(
+        type = "message",
+        Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
       ))
     )
     # Do a second time; should be empty (and fast)

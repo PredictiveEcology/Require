@@ -220,7 +220,7 @@ if (isDev) { # i.e., GA, R CMD check etc.
   ip <- data.table::as.data.table(installed.packages())
   testit::assert(NROW(ip[Package == reallyOldPkg]) == 1)
 
-  out <- getGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
+  out <- dlGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
   testit::assert({
     data.table::is.data.table(out)
   })
@@ -231,7 +231,7 @@ if (isDev) { # i.e., GA, R CMD check etc.
     file.exists(out$DESCFile)
   })
 
-  out <- getGitHubDESCRIPTION(pkg = character())
+  out <- dlGitHubDESCRIPTION(pkg = character())
   testit::assert({
     length(out) == 0
   })
