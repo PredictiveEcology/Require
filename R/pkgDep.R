@@ -709,7 +709,7 @@ getGitHubDeps <-
     pkgDepDTOuter <- data.table(packageFullName = character())
 
     if (any(!localVersionOK %in% TRUE)) {
-      pkgDTNotLocal <- getGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
+      pkgDTNotLocal <- dlGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
     }
     if (any(localVersionOK %in% TRUE)) {
       pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]

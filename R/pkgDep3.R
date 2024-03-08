@@ -239,7 +239,6 @@ getPkgDepsMap <- function(pkgDT, parentPackage, recursive, repos, which, type, l
   noDeps <- ndeps == 0
   hasDeps <- !noDeps
   whHasDeps <- which(hasDeps)
-  if (any(pkgDT$packageFullName %in% "Rcpp (>= 0.12.18)")) browser()
 
   if (any(hasDeps)) {
     depsToDo <- pkgDT[[deps(FALSE)]][hasDeps]
@@ -253,32 +252,12 @@ getPkgDepsMap <- function(pkgDT, parentPackage, recursive, repos, which, type, l
                  .counter = .counter,
                  recursive = recursive, which = which, repos = repos,
                  type = type, includeBase = includeBase,
-                 includeSelf = includeSelf,
-                 .depth = .depth + 1, verbose = verbose))
-
-    # out <- by(pkgDT, INDICES = pkgDTHaveDeps$packageFullName, FUN = function(pkgDTInner, nam, .counter)
-    #   getPkgDeps(pkgDTInner[[deps(FALSE)]],
-    #              parentPackage = pkgDT,
-    #              .counter = .counter,
-    #              recursive = recursive, which = which, repos = repos,
-    #              type = type, includeBase = includeBase,
-    #              includeSelf = includeSelf,
-    #              .depth = .depth + 1, verbose = verbose))
-    # )
-    # pkgDTHaveDepsList <- splitKeepOrderAndDTIntegrity(pkgDTHaveDeps, pkgDTHaveDeps$packageFullName)
-    # out <- Map(pkgDT = pkgDTHaveDepsList, nam = names(pkgDTHaveDepsList), .counter = seq(NROW(pkgDTHaveDepsList)),
-    #            function(pkgDT, nam, .counter)
-    #              getPkgDeps(pkgDT[[deps(FALSE)]],
-    #                         parentPackage = nam,
-    #                         .counter = .counter,
-    #                         recursive = recursive, which = which, repos = repos,
-    #                         type = type, includeBase = includeBase,
-    #                         includeSelf = includeSelf,
-    #                         .depth = .depth + 1, verbose = verbose))
+                            includeSelf = includeSelf,
+                            .depth = .depth + 1, verbose = verbose))
 
     set(pkgDT, whHasDeps, deps(FALSE), lapply(seq(NROW(pkgDTHaveDeps)), function(ind)
       append(list(out[[ind]]), # pkgDT$depsFALSE[whHasDeps[ind]],
-              list(unname(out)[[ind]]$depsFALSE))
+             list(unname(out)[[ind]]$depsFALSE))
     ))
   }
   pkgDT[]
@@ -364,7 +343,7 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, verbose = getOption(
   }
 
   if (any(!localVersionOK %in% TRUE)) {
-    pkgDTNotLocal <- getGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = FALSE)
+    pkgDTNotLocal <- dlGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = FALSE)
   }
   if (any(localVersionOK %in% TRUE)) {
     pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
@@ -527,7 +506,7 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
         }
         needVersion <- needVersions(pkgDT)
         # if (any(needVersion)) {
-          descs <- getGitHubDESCRIPTION(pkgDT$packageFullName)
+          descs <- dlGitHubDESCRIPTION(pkgDT$packageFullName)
           pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
           pkgDT[!is.na(descFiles), Version := DESCRIPTIONFileVersionV(descFiles)]
         # }
@@ -668,7 +647,7 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
       #  or else the package name doesn't match the GitHub repo name e.g., BioSIM = RNCan/BioSimClient_R
       #  Need to try to figure out which it is for the dontMatch
       Packages <- Map(packageFullName = trimVersionNumber(dontMatch), function(packageFullName) {
-        descFiles <- getGitHubDESCRIPTION(packageFullName)
+        descFiles <- dlGitHubDESCRIPTION(packageFullName)
         DESCRIPTIONFileOtherV(descFiles$DESCFile, "Package")
       })
       RepoNotPkgName <- !mapply(pack = Packages, nam = names(Packages), function(pack, nam) {
@@ -716,7 +695,7 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
         base::system.file("NAMESPACE", package = Package)
     } else {
       namespaceFile <-
-        getGitHubNamespace(packageFullName)[["NAMESPACE"]]
+        dlGitHubNamespace(packageFullName)[["NAMESPACE"]]
     }
     if (is.null(namespaceFile)) {
       depsFromNamespace <- NULL

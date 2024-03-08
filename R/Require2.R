@@ -1126,7 +1126,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
   pkgArchive <- pkgNonLocal[["Archive"]]
 
   if (NROW(pkgArchive)) {
-    ava <- archiveVersionsAvailable(unique(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"]),
+    ava <- dlArchiveVersionsAvailable(unique(pkgArchive$Package[pkgArchive$repoLocation %in% "Archive"]),
       repos = repos, verbose = verbose
     )
     if (!isTRUE(getOption("Require.offlineMode"))) {
@@ -1772,7 +1772,7 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
     notYet <- is.na(pkgGitHub$VersionOnRepos)
     if (any(notYet)) {
-      pkgGitHub <- getGitHubFile(pkgGitHub)
+      pkgGitHub <- dlGitHubFile(pkgGitHub)
       dFile <- pkgGitHub$DESCFile
       hasDFile <- which(!is.na(dFile))
       set(pkgGitHub, hasDFile, "VersionOnRepos",  DESCRIPTIONFileVersionV(dFile))
