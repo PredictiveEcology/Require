@@ -386,7 +386,7 @@ Require <- function(packages, packageVersionFile,
   return(invisible(out))
 }
 
-rbindlistRecursive <- function(ll) {
+rbindlistRecursive <- function(ll, colToRecurse) {
   if (is(ll, "list")) {
     ll <- lapply(ll, rbindlistRecursive)
     ll <- rbindlist(ll, fill = TRUE, use.names = TRUE, idcol = FALSE)
