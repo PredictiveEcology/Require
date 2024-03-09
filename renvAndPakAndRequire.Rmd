@@ -3,6 +3,45 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
+
+## Top level principles used in `Require`
+
+It its core, `Require` is intended to be used in continuous workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are so fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
+
+## How `Require` differs from other approaches
+
+
+| Description                      |  Outcome                                   |
+| -------------------------------- | ------------------------------------------ |
+| `Install("data.table")`          | `data.table` installed *if not installed*  |
+| `install.packages("data.table")` | `data.table` installed; package NOT loaded |
+| `pak::pkg_install("data.table")` | `data.table` installed; package NOT loaded |
+| `remotes::install("data.table")` | error; not for CRAN packages               |
+
+## Version requirements determine package installation
+
+1. **Version number requirements** drive package updates. If a user doesn't need an update because version numbers are sufficient, no update will occur.
+
+2. If no version number specification, then installs only occur if package is not present.
+
+3. Multiple simultaneous requests to install a package will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence.
+
+```
+# The following has no version specifications, 
+#   so CRAN version will be installed or none installed if already installed
+Require(c("PredictiveEcology/reproducible@development", "reproducible"))
+
+# The following specifies "HEAD" after the Github package name. This means the 
+#   tip of the development branch of reproducible will be installed if not already installed
+Require(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
+
+# The following specifies "HEAD" after the package name. This means the 
+#   tip of the development branch of reproducible
+Require(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
+
+```
+
+
 ## pak
 - when it fails due to "dependency conflict", there is no way to diagnose
 - seems to work if there is only one "branch" for each given package, but not multiple branches e.g., `c("PredictiveEcology/reproducible@development", "PredictiveEcology/reproducible")`, but 

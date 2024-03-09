@@ -195,19 +195,8 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
       if (length(whHasRecursiveTRUE)) {
         set(pkgDT, NULL, deps(FALSE), lapply(pkgDT[[deps(FALSE)]], rbindlistRecursive))
 
-        # i <<- i + 1
-        # if (any(pkgDT$Package %in% "LandR") && NROW(pkgDT) == 1)  browser()
-        # print(i)
         set(pkgDT, whHasRecursiveTRUE, sn(TRUE),
             gsub("FALSE$", "TRUE", pkgDT[[sn(FALSE)]][whHasRecursiveTRUE]))
-        # moveDeps <- pkgDT[[deps(FALSE)]][whHasRecursiveTRUE]
-        # if (is.null(unlist(moveDeps))) {
-        #   lst <- pkgDT[[deps(FALSE)]]
-        #   lst[whHasRecursiveTRUE] <- lapply(whHasRecursiveTRUE, function(x)
-        #     list(Package = character(), packageFullName = character()) |> setDT())
-        #   pkgDT[[deps(FALSE)]][whHasRecursiveTRUE] <- lapply(whHasRecursiveTRUE, function(x) list(Package = character(), packageFullName = character()) |> setDT())
-        # }
-
         len <- length(pkgDT[[deps(FALSE)]][whHasRecursiveTRUE])
         moveDeps <- FALSE
         if (len < 16) moveDeps <- is.null(unlist(moveDeps))
@@ -312,8 +301,10 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
     dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
     pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
     num <- NROW(pkgDTList$Archive$Package)
-    messageVerbose("  ", num, " ", singularPlural(c("package has", "packages have"), v = num),
-                   " been archived...", verbose = verbose)
+    messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = ", "), " ",
+                   hasHave(v = num), " been archived ... ", verbose = verbose)
+    # messageVerbose("  ", num, " ", singularPlural(c("package has", "packages have"), v = num),
+    #                " been archived...", verbose = verbose)
     pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, verbose, purge = FALSE)
     wcr <- whichCatRecursive(which, recursive = FALSE)
     hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
@@ -1178,7 +1169,8 @@ getFromCache <- function(pkgDT, which, recursive) {
   maybeHaveCache <- Map(nam = pkgDT$packageFullName, sw = paste0(pkgDT$Package, sepForSaveNames),
                         function(nam, sw) which(startsWith(prefix = sw, curCache)))
   maybeHaveCacheCurCache <- unlist(maybeHaveCache)
-  maybeHaveCacheDT <- list(packageFullName = rep(names(maybeHaveCache), lengths(maybeHaveCache)),
+  maybeHaveCacheDT <- list(Package = rep(pkgDT$Package, lengths(maybeHaveCache)),
+                             packageFullName = rep(names(maybeHaveCache), lengths(maybeHaveCache)),
                            rowNum = maybeHaveCacheCurCache) |> setDT()
   if (any(maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName)) {
     lst <- sapply(maybeHaveCacheDT, is.list)
@@ -1190,7 +1182,11 @@ getFromCache <- function(pkgDT, which, recursive) {
 
     # if (i >= 92) browser()
     keep <- intersect(c("Package", "packageFullName", deps(FALSE)), colnames(pkgDT))
-    maybeHaveCacheDT <- pkgDT[, ..keep][maybeHaveCacheDT, on = "packageFullName"] |>
+    keepShort <- keep[1:2]
+    dups <- duplicated(pkgDT[, ..keepShort])
+    pkgDT2 <- if (any(dups)) { pkgDT[which(!dups)] } else { pkgDT }
+
+    maybeHaveCacheDT <- pkgDT2[, ..keep][maybeHaveCacheDT, on = c("Package", "packageFullName")] |>
     try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
 
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = TRUE, curCache)
@@ -1203,7 +1199,7 @@ getFromCache <- function(pkgDT, which, recursive) {
 
 getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
 
-  alreadyCached <- pkgDT$cached %in% TRUE
+  alreadyCached <- pkgDT$cached %in% TRUE & !is.null(pkgDT[[deps(recursive)]])
   if (any(alreadyCached)) {
     toRm <- maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName[alreadyCached]
     maybeHaveCacheDT <- maybeHaveCacheDT[!toRm]

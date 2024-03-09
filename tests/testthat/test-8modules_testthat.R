@@ -135,17 +135,30 @@ test_that("test 5", {
 
     dirForInstall <- tempdir2(.rndstr(1))
 
-    suppressWarnings( # "Require" is in use
-      st1 <- system.time(out1 <- capture.output(
-        type = "message",
-        Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
-      ))
-    )
+    out <- st <- list()
+    for (i in 1:2) {
+      browser()
+      suppressWarnings( # "Require" is in use
+        st[[i]] <- system.time(
+          #out1 <- capture.output(
+          #  type = "message",
+          out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
+                              libPaths = dirForInstall, verbose = 2)
+          #)
+        )
+      )
+    }
+
+    allInstalled <- all(setdiff(trimRedundancies(pkgs)$Package, "Require") %in% ip$Package)
+    expect_true(allInstalled)
+
     # Do a second time; should be empty (and fast)
     suppressWarnings( # "Require" is in use
-      st2 <- system.time(out2 <- capture.output(type = "message",
-                                                Install(pkgs, standAlone = TRUE, upgrade = FALSE, libPaths = dirForInstall)
-      ))
+      st2 <- system.time(out2 <-
+                           capture.output(type = "message",
+                                          Install(pkgs, standAlone = TRUE, upgrade = FALSE,
+                                                  libPaths = dirForInstall, verbose = 2)
+                           ))
     )
     # some sort of test about whether anything was installed; pick reproducible as a random pkg
     testthat::expect_true(sum(grepl("reproducible", out1)) == 1 + is.character(getOption("Require.cloneFrom")))
