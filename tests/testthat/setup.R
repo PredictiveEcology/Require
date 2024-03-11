@@ -32,8 +32,8 @@ isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
 # Actually interactive
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
-wtry(rm(getFromCache1, getDeps1, getDepsFromCache1)); i <- 0
-ithr::local_options(Require.verbose = ifelse(isDev, 2, -2), .local_envir = teardown_env())
+# try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
+withr::local_options(Require.verbose = ifelse(isDev, -2, -2), .local_envir = teardown_env())
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")

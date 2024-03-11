@@ -281,5 +281,11 @@ if (isDev) { # i.e., GA, R CMD check etc.
   )
   testit::assert(packageVersion("SpaDES") < verToCompare)
 
+
+  system.time(a <- Require::pkgDep("PredictiveEcology/LandR@development", which = c("Depends", "Imports")))
+  system.time(b <- pak::pkg_deps("PredictiveEcology/LandR@development"))
+  setdiff(extractPkgName(a$`PredictiveEcology/LandR@development`), setdiff(basename(extractPkgName(b$ref)), Require:::.basePkgs))
+  setdiff(setdiff(basename(extractPkgName(b$ref)), Require:::.basePkgs),
+          extractPkgName(a$`PredictiveEcology/LandR@development`))
 }
 endTest(setupInitial)
