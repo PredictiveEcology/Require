@@ -110,8 +110,6 @@ pkgDep <- function(packages,
   if (length(packages)) {
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
 
-    # if (length(which) < length(packages))
-    #   which <- rep(which, length.out = length(packages))
     # Only deal with first one of "which"...
     if (is.list(which)) which <- which[[1]]
 
@@ -161,8 +159,6 @@ pkgDep <- function(packages,
       # collapse or not to list of character vector
       pfn <- deps$packageFullName
       deps <- lapply(deps[[depsCol]], function(x) x[["packageFullName"]])
-
-      # deps <- Map(pkgFN = deps[[deps(recuir)]], function(pkgFN) pkgFN[["packageFullName"]])
       names(deps) <- pfn
     }
   } else {
@@ -280,9 +276,11 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
             }
           }
         } else {
+          keep <- match(colnames(pkgDTBase[["FALSE"]]), c(deps(FALSE), cached(FALSE))) |> na.omit()
           setnames(pkgDTBase[["FALSE"]],
-                   old = c(deps(FALSE), cached(FALSE)),
-                   new = c(deps(TRUE), cached(TRUE)))
+                   old = c(deps(FALSE), cached(FALSE))[keep],
+                   new = c(deps(TRUE), cached(TRUE))[keep])  |>
+            try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
 
         }
       }
@@ -496,7 +494,7 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
 
   if (any(!pkgDT[[cached(recursive)]] %in% TRUE) &&
       sum(!pkgDT[["Package"]][!pkgDT[[cached(recursive)]]] %in% .basePkgs)) {
-    if (i >= 92) browser()
+
     set(pkgDT, NULL, "ord", seq(NROW(pkgDT)))
     pkgDTCached <- splitKeepOrderAndDTIntegrity(pkgDT, pkgDT[[cached(recursive)]])
     messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = ", "),
@@ -571,14 +569,6 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
         brLocals <- if (i == 1) pkgDT$Branch[installedNoOKAndNoPkgEnv] else rep("main", length(installedNoOKAndNoPkgEnv))
         haveLocalSHAfull <- grepl("^[[:alnum:]]{40}$", pkgDT$installedSha) # full length
         haveLocalSHA <- haveLocalSHAfull & !installedNoOKAndNoPkgEnv # full length
-        # if (!missing(ap)) {
-        #   ghshacolname <- "GithubSHA1"
-        #   if (ghshacolname %in% colnames(ap)) {
-        #     isGHinAP <- !is.na(ap[[ghshacolname]])
-        #     shaOuts <- pkgDT[installedNoOKAndNoPkgEnvWh][ap[isGHinAP], on = c("Branch" = ghshacolname)]$Branch
-        #     haveLocalSHA <- shaOuts %in% brLocals
-        #   }
-        # }
         installedNoOKAndNoPkgEnv <- installedNoOKAndNoPkgEnv & !haveLocalSHA
         installedNoOKAndNoPkgEnvWh <- which(installedNoOKAndNoPkgEnv)
         if (length(installedNoOKAndNoPkgEnvWh)) {
@@ -622,11 +612,7 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
   set(pkgDT, NULL, snHere, saveNameConcat(pkgDT, whichCatRecursive))
 
   if (isTRUE(doSave)) {
-    # browser()
     pkgDT <- assignPkgDTdepsToSaveNames(pkgDT = pkgDT, recursive = rec)
-    # if (!all(sapply(seq(NROW(pkgDT))[!is.na(pkgDT$snFALSE)], function(i)
-    #   isTRUE(all.equal(pkgDT[[deps(FALSE)]][[i]], get(pkgDT[[sn(FALSE)]][i], envir = envPkgDepDeps()))))))
-    #   browser()
   }
 
   pkgDT[]
@@ -660,20 +646,6 @@ saveNameConcat <- function(pkgDT, whichCatRecursive = NULL, versionCol = c("Vers
 
   paste(out, p$repoLocation, whichCatRecursive, sep = sepForSaveNames)
 }
-
-# saveNameConcatGH <- function(Package, Version, Account, Repo, Branch, shas) {
-#   a <- unname(unlist(do.call(Map, append(mget(saveNameOrderGH), list(paste, sep = sepForSaveNames)))))
-#   b <- paste(Package, Version, Account, Repo, Branch, shas, sep = sepForSaveNames)
-#   if (!identical(a, b)) browser()
-#   a
-# }
-#
-# saveNameConcatNonGH <- function(Package, Version) {
-#   a <- unname(unlist(do.call(Map, append(mget(saveNameOrderNonGH), list(paste, sep = sepForSaveNames)))))
-#   b <- paste(Package, Version, sep = sepForSaveNames)
-#   if (!identical(a, b)) browser()
-#   a
-# }
 
 saveNameConcat2 <- function(argsCh, envir = parent.frame()) {
   mget(argsCh, envir = envir) |>
@@ -1268,10 +1240,6 @@ splitKeepOrderAndDTIntegrity <- function(pkgDT, splitOn) {
 }
 
 getFromCache <- function(pkgDT, which, recursive) {
-
-  if (!exists("getFromCache1")) getFromCache1 <<- 0
-  getFromCache1 <<- getFromCache1 + 1
-  # if (any(pkgDT$Package %in% "Rcpp")) browser()
   curCache <- names(envPkgDepDeps())
   # must be correctx which & recursive too
   curCache <- grep(paste(which, collapse = sepForWhich), curCache, value = TRUE)
@@ -1281,6 +1249,7 @@ getFromCache <- function(pkgDT, which, recursive) {
   maybeHaveCacheDT <- list(Package = rep(pkgDT$Package, lengths(maybeHaveCache)),
                              packageFullName = rep(names(maybeHaveCache), lengths(maybeHaveCache)),
                            rowNum = maybeHaveCacheCurCache) |> setDT()
+
   if (any(maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName)) {
     if (any(isTRUE(pkgDT$Package %in% .basePkgs))) browser()
     lst <- sapply(maybeHaveCacheDT, is.list)
@@ -1459,3 +1428,5 @@ isNotNULLAnd <- function(x, cond) {
     ret <- eval(cond)
   ret
 }
+
+
