@@ -124,7 +124,8 @@ pkgDep <- function(packages,
     # browser()
     depsCol <- "deps"
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
-    set(deps, NULL, deps(recursive), NULL)
+    # if (!is.null(deps[[deps(recursive)]]))
+    #   set(deps, NULL, deps(recursive), NULL)
 
     keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
                 "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")

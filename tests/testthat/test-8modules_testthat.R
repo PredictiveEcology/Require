@@ -137,7 +137,6 @@ test_that("test 5", {
 
     out <- st <- list()
     for (i in 1:2) {
-      browser()
       suppressWarnings( # "Require" is in use
         st[[i]] <- system.time(
           #out1 <- capture.output(
@@ -149,20 +148,22 @@ test_that("test 5", {
       )
     }
 
-    allInstalled <- all(setdiff(trimRedundancies(pkgs)$Package, "Require") %in% ip$Package)
+    allInstalled <- all(setdiff(trimRedundancies(pkgs)$Package, "Require") %in%
+                          ip$Package)
+    browser()
     expect_true(allInstalled)
 
     # Do a second time; should be empty (and fast)
-    suppressWarnings( # "Require" is in use
-      st2 <- system.time(out2 <-
-                           capture.output(type = "message",
-                                          Install(pkgs, standAlone = TRUE, upgrade = FALSE,
-                                                  libPaths = dirForInstall, verbose = 2)
-                           ))
-    )
+    # suppressWarnings( # "Require" is in use
+    #   st2 <- system.time(out2 <-
+    #                        capture.output(type = "message",
+    #                                       Install(pkgs, standAlone = TRUE, upgrade = FALSE,
+    #                                               libPaths = dirForInstall, verbose = 2)
+    #                        ))
+    # )
     # some sort of test about whether anything was installed; pick reproducible as a random pkg
-    testthat::expect_true(sum(grepl("reproducible", out1)) == 1 + is.character(getOption("Require.cloneFrom")))
-    testthat::expect_true(sum(grepl("reproducible", out2)) == 0)
+    testthat::expect_true(sum(grepl("reproducible", out[[1]])) == 1 + is.character(getOption("Require.cloneFrom")))
+    testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
     testthat::expect_true(st1["elapsed"]/st2["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
   }
