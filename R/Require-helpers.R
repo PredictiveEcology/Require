@@ -195,7 +195,8 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         )
       },
       by = "Package"
-    ]
+    ] |>
+    try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
     theDir <- RequireGitHubCacheDir(create = TRUE)
     # checkPath(theDir, create = TRUE)
     destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
@@ -1464,7 +1465,7 @@ packageFullName <- function(pkgDT) {
 }
 
 gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, filename) {
-  if (any(hasSubFolder)) {
+  if (any(hasSubFolder, na.rm = TRUE)) {
     Branch <- paste0(Branch, "/", GitSubFolder)
   }
   file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")

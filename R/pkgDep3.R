@@ -1247,7 +1247,7 @@ getFromCache <- function(pkgDT, which, recursive) {
 
   curCache <- names(envPkgDepDeps())
   # must be correctx which & recursive too
-  curCache <- grep(paste(which, collapse = sepForWhich), curCache, value = TRUE)
+  curCache <- grep(whichCatRecursive(which, ""), curCache, value = TRUE)
   maybeHaveCache <- Map(nam = pkgDT$packageFullName, sw = paste0(pkgDT$Package, sepForSaveNames),
                         function(nam, sw) which(startsWith(prefix = sw, curCache)))
   maybeHaveCacheCurCache <- unlist(maybeHaveCache)
