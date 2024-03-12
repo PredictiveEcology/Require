@@ -50,7 +50,6 @@ test_that("test 1", {
   testthat::expect_true({
     isTRUE(isInstalled)
   })
-  browser()
   out <- try(
     detachAll(
       c("Require", "fpCompare", "sdfd", "reproducible"),

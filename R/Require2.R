@@ -363,14 +363,6 @@ Require <- function(packages, packageVersionFile,
     out <- doLoads(require, pkgDT)
 
     packagesDT <- matchWithOriginalPackages(pkgDT, packages)
-    # packagesDT <- pkgDT[, c("Package", "loadOrder", "require")]
-    # if (isTRUE(!all(pkgDT[["packageFullName"]] %in% packages))) {
-    #   # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
-    #   packagesDT <- unique(packagesDT, on = "Package")[
-    #     toPkgDT(packages)[, c("Package", "packageFullName")], on = c("Package")] |>
-    #     try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
-    # }
-    # packagesDT <- unique(packagesDT)
     out <- packagesDT$require
     names(out) <- packagesDT$packageFullName
 

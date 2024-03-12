@@ -126,8 +126,8 @@ pkgDep <- function(packages,
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
     set(deps, NULL, deps(recursive), NULL)
 
-    # keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
-    #              "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
+    keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
+                "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
     # whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0) + 1 # (self)
     set(deps, NULL, #whHasDeps,
         depsCol,
@@ -139,12 +139,12 @@ pkgDep <- function(packages,
                 if (dotDepth %in% colnames(dep))
                   setorderv(dep, cols = dotDepth)
                 set(dep, NULL, intersect(colnames(dep), c(deps(TRUE), deps(FALSE))), NULL)
-                # keepCols <- c(keepCols, intersect(colnames(dep), .txtGitHubParsedCols))
+                keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
                 dep <- dep[!duplicated(dep[["Package"]])]
                 set(dep, NULL, c("packageFullName", "parentPackage"),
                     list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
                 dep <- rmBase(includeBase, dep)
-                # dep <- dep[, ..keepCols] # includeSelf added some cols
+                dep <- dep[, ..keepCols] # includeSelf added some cols
                 # setnames(dep, old = depsCol, new = "deps")
               }
               dep <- addSelf(includeSelf, dep, self)
@@ -153,8 +153,9 @@ pkgDep <- function(packages,
               dep
             }))
 
-    keepColsOuter <- c("Package", "packageFullName", depsCol)
-    # deps <- deps[, ..keepColsOuter]
+    # if (!is.null(deps$depsTRUE)) browser()
+    keepColsOuter <- c("Package", "packageFullName", "parentPackage", depsCol)
+    deps <- deps[, ..keepColsOuter]
     # trimRedundancies is better for following the deps, but it will fail to keep original
     #   user request. Use only duplicated instead ... to keep user order
 
@@ -279,8 +280,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
           keep <- match(colnames(pkgDTBase[["FALSE"]]), c(depFa, caFa)) |> na.omit()
           setnames(pkgDTBase[["FALSE"]],
                    old = c(depFa, caFa)[keep],
-                   new = c(depTr, caTr)[keep])  |>
-            try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
+                   new = c(depTr, caTr)[keep])
 
         }
       }
@@ -1124,8 +1124,7 @@ assignPkgDTdepsToSaveNames <- function(pkgDT, rowsToUpdate = seq(NROW(pkgDT)), r
 
   deps1 <- pkgDT[[deps]][rowsToUpdate]
   names(deps1) <- pkgDT[[sn]][rowsToUpdate]
-  list2env(deps1, envir = envPkgDepDeps()) |>
-  try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
+  list2env(deps1, envir = envPkgDepDeps())
   set(pkgDT, rowsToUpdate, cached(recursive), TRUE)
 
   pkgDT[]
@@ -1271,8 +1270,7 @@ getFromCache <- function(pkgDT, which, recursive) {
     dups <- duplicated(pkgDT[, ..keepShort])
     pkgDT2 <- if (any(dups)) { pkgDT[which(!dups)] } else { pkgDT }
 
-    maybeHaveCacheDT <- pkgDT2[, ..keep][maybeHaveCacheDT, on = c("Package", "packageFullName")] |>
-    try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
+    maybeHaveCacheDT <- pkgDT2[, ..keep][maybeHaveCacheDT, on = c("Package", "packageFullName")]
 
     if (recursive %in% TRUE) {
     #   browser()
@@ -1447,8 +1445,7 @@ appendRecursiveToDeps <- function(pkgDT, caTr, depFa, caFa, snFa, depTr, snTr) {
   if (any(chColNames)) {
     setnames(pkgDT[["TRUE"]],
              old = c(depFa, caFa, snFa)[chColNames],
-             new = c(depTr, caTr, snTr)[chColNames]) |>
-      try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
+             new = c(depTr, caTr, snTr)[chColNames])
 
     set(pkgDT[["TRUE"]],  NULL, snTr, gsub("FALSE$", "TRUE", pkgDT[["TRUE"]][[snTr]]))
   }
