@@ -33,22 +33,22 @@ test_that("test 5", {
       fnMissing <- c("tiler", "map", "SpaDES.project")
       snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
                                                    overwrite = TRUE)
-      fn <- snapshotFiles$local_path
+      snapshotFiles <- snapshotFiles$local_path
 
     }
     ## Long pkgSnapshot -- issue 41
     for (snf in snapshotFiles) {
       origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
-      pkgs <- data.table::fread(fn)
+      pkgs <- data.table::fread(snf)
 
       if (FALSE) {
         # minor corrections
         pkgs[Package %in% "climateData", Version := "1.0.4"]
         pkgs[Package %in% "rnaturalearthhires", Version := "1.0.0.9000"]
         #
-        data.table::fwrite(pkgs, file = fn)
+        data.table::fwrite(pkgs, file = snf)
         googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
-                                  media = fn)
+                                  media = snf)
       }
 
 
@@ -70,7 +70,7 @@ test_that("test 5", {
       #                                      GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
       # pks <- c("ymlthis", "SpaDES.tools", "amc")
       # pkgs <- pkgs[Package %in% pks]
-      data.table::fwrite(pkgs, file = fn) # have to get rid of skips in the fn
+      data.table::fwrite(pkgs, file = snf) # have to get rid of skips in the snf
       packageFullName <- ifelse(!nzchar(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
