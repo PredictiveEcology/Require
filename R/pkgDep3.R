@@ -116,12 +116,6 @@ pkgDep <- function(packages,
     deps <- getPkgDeps(packages, parentPackage = "user", recursive = recursive, repos = repos, verbose = verbose,
                        type = type, which = which, includeBase = includeBase,
                        includeSelf = includeSelf, grandp = "aboveuser")
-    if (!exists("aaaa")) aaaa <<- data.frame(parentPackage = character(), nnum = numeric())
-    aaaa <<- rbind(aaaa,
-                   data.frame("user",
-                              nnum = paste(sort(deps$packageFullName), collapse = ", ")))
-
-    # browser()
     depsCol <- "deps"
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
     # if (!is.null(deps[[deps(recursive)]]))
@@ -340,7 +334,7 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
     set(pkgDT, NULL, "ord", seq(NROW(pkgDT)))
     pkgDTCached <- splitKeepOrderAndDTIntegrity(pkgDT, pkgDT[[cached(recursiveHere)]])
     messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = ", "),
-                   verbose = verbose - 2)
+                   verbose = verbose, verboseLevel = 3)
     whichCatRecursive <- whichCatRecursive(which, recursiveHere)
     isGH <- !is.na(pkgDTCached[["FALSE"]]$githubPkgName)
     pkgDTNonGH <- pkgDTGH <- NULL
@@ -363,47 +357,6 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
 
 
 
-# getPkgDepsMap <- function(pkgDT, parentPackage, recursive, repos, which, type, libPaths,
-#                           includeBase, includeSelf, verbose, .depth = 0) {
-#
-#   browser()
-#   if (.depth == 0) {
-#     messageVerbose("  Determining recursive dependencies", verbose = verbose - 2)
-#   }
-#   # ndeps <- sapply(pkgDT[[deps(FALSE)]], NROW)
-#   # noDeps <- ndeps == 0
-#   # hasDeps <- !noDeps
-#   # whHasDeps <- which(hasDeps)
-#
-#   # if (any(hasDeps)) {
-#     # depsToDo <- pkgDT[[deps(FALSE)]][hasDeps]
-#     # col <- deps(FALSE)
-#     # pkgDTHaveDeps <- pkgDT[whHasDeps]
-#     # if (getDeps1 >= 614) browser()
-# # if (any(pkgDT$Package %in% "insight")) browser()
-#     # can't use data.table "by" because I need to change .SD
-#     # if (getFromCache1 >= 27) browser()
-#
-#     # if (all(c("data.table", "digest", "filelock", "fpCompare", "fs", "lobstr",
-#     #           "methods", "stats", "utils") %in% pkgDT$Package )) browser()
-#
-#
-#     if (any(sapply(pkgDTHaveDeps$depsFALSE, is.null))) browser()
-#     out <- Map(pkgDT = pkgDTHaveDeps$depsFALSE, nam = pkgDTHaveDeps$packageFullName,
-#                .counter = seq(NROW(pkgDTHaveDeps)), function(pkgDT, nam, .counter)
-#                  getPkgDeps(pkgDT, parentPackage = nam,
-#                             .counter = .counter,
-#                             recursive = recursive, which = which, repos = repos,
-#                             type = type, includeBase = includeBase,
-#                             includeSelf = includeSelf,
-#                             .depth = .depth + 1, verbose = verbose))
-#     set(pkgDT, whHasDeps, deps(TRUE), lapply(seq(NROW(pkgDTHaveDeps)), function(ind)
-#       append(list(out[[ind]]), # pkgDT$depsFALSE[whHasDeps[ind]],
-#              list(unname(out)[[ind]]$depsFALSE))
-#     ))
-#   # }
-#   pkgDT[]
-# }
 
 
 pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
@@ -411,7 +364,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
 
   num <- NROW(unique(pkgDT$Package)) # can have src and bin listed
   messageVerbose("  ", num, " ", singularPlural(c("package", "packages"), v = num),
-                 " on CRAN", verbose = verbose - 2)
+                 " on CRAN", verbose = verbose, verboseLevel = 3)
 
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT) |> parsePackageFullname()
@@ -1111,7 +1064,7 @@ inCurrentCRAN <- function(pkgDT, verbose) {
     if (any(inCurrentCRAN)) {
       num <- NROW(unique(pkgDT$Package[inCurrentCRAN]))
       messageVerbose("  Done for ", num, " ", singularPlural(c("package", "packages"), v = num),
-                     " currently on CRAN!", verbose = verbose - 2)
+                     " currently on CRAN!", verbose = verbose, verboseLevel = 3)
     }
   }
   inCurrentCRAN

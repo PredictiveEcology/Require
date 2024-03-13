@@ -217,7 +217,8 @@ utils::globalVariables(c(
 #' }
 #' }
 #'
-Require <- function(packages, packageVersionFile,
+Require <- function(packages,
+                    packageVersionFile,
                     libPaths, # nolint
                     install_githubArgs = list(),
                     install.packagesArgs = list(INSTALL_opts = "--no-multiarch"),
@@ -1343,61 +1344,61 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, install_githubArgs, insta
   pkgDT <- trimRedundancies(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
                             verbose = verbose, type = type)
   return(pkgDT)
-
-  browser()
-  # if (FALSE) {
-  isGH <- !is.na(dd$GithubRepo)
-  ddGH <- dd[isGH]
-  sn <- saveNamesForCache(packageFullNameFromSnapshot(dd), ap = dd, verbose = verbose,
-                          which = list(eval(formals(pkgDep)$which)), recursive = FALSE)
-  colsOfDeps <- intersect(colsOfDeps, colnames(dd))
-  aa <- apply(dd[, ..colsOfDeps], 1, strsplit, split = ", ")
-  names(aa) <- dd$Package
-  deps <- lapply(aa, function(x) unname(unlist(x)))
-  deps2 <- mergeRemotes(deps)
-
-  pkgNameWithVersion <- paste0(dd$Package, " (==", dd$Version, ")")
-  browser()
-  pkgDepDT <- Map(d = deps, pkg = pkgNameWithVersion, function(d, pkg) {
-    pkgDep <- toPkgDepDT(d, d, d, verbose = verbose)
-    pkgDep <- list(pkgDep)
-    names(pkgDep) <- pkg
-    pkgDep
-  })
-  names(pkgDepDT) <- names(sn)
-
-  browser()
-  assignPkgDTdepsToSaveNames(sn, pkgDepDT)
-  # }
-  # aa <- parseGitHub(dd)
-  ff <- packageFullNameFromSnapshot(dd)
-  # ff <- addNamesToPackageFullName(ff, dd$Package)
-  # gg <- extractPkgName(ff)
-  # dif <- !dd$Package %in% gg
-  # alternateNamedPkgs <- dd[dif,]
-  # if (NROW(alternateNamedPkgs)) {
-  #   names(ff) <- rep("", length(ff))
-  #   names(ff)[dif] <- dd$Package[dif]
-  # }
-  browser()
-  gg <- pkgDep(ff, recursive = TRUE, purge = purge)
-  hh <- sort(unique(gsub("(\\(.*)( )+(.*\\))$", "\\1\\3", gsub("\n", "", unname(unlist(gg))))))
-  pkgDT <- toPkgDT(hh, deepCopy = TRUE)
-  pkgDT <- parsePackageFullname(pkgDT)
-  pkgDT <- parseGitHub(pkgDT)
-  pkgDT <- trimRedundancies(pkgDT,
-                            purge = purge, repos = repos, libPaths = libPaths,
-                            type = type
-  )
-  alternateNamedPkgs <- dd[!dd$Package %in% pkgDT$Package,]
-  pkgDT1 <- checkAvailableVersions(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
-                                   verbose = verbose - 1, type = type)
-
-  pkgDT1 <- dd[, .(Package, GithubRepo, GithubUsername, GithubSHA1)][
-    !is.na(GithubRepo)][
-      pkgDT1, on = .("GithubRepo" = githubPkgName, "GithubUsername" = Account, "GithubSHA1" = Branch)][
-        , Package := ifelse(is.na(Package), i.Package, Package)]
-  pkgDT1[, c("Package", "packageFullName")]
+#
+#   browser()
+#   # if (FALSE) {
+#   isGH <- !is.na(dd$GithubRepo)
+#   ddGH <- dd[isGH]
+#   sn <- saveNamesForCache(packageFullNameFromSnapshot(dd), ap = dd, verbose = verbose,
+#                           which = list(eval(formals(pkgDep)$which)), recursive = FALSE)
+#   colsOfDeps <- intersect(colsOfDeps, colnames(dd))
+#   aa <- apply(dd[, ..colsOfDeps], 1, strsplit, split = ", ")
+#   names(aa) <- dd$Package
+#   deps <- lapply(aa, function(x) unname(unlist(x)))
+#   deps2 <- mergeRemotes(deps)
+#
+#   pkgNameWithVersion <- paste0(dd$Package, " (==", dd$Version, ")")
+#   browser()
+#   pkgDepDT <- Map(d = deps, pkg = pkgNameWithVersion, function(d, pkg) {
+#     pkgDep <- toPkgDepDT(d, d, d, verbose = verbose)
+#     pkgDep <- list(pkgDep)
+#     names(pkgDep) <- pkg
+#     pkgDep
+#   })
+#   names(pkgDepDT) <- names(sn)
+#
+#   browser()
+#   assignPkgDTdepsToSaveNames(sn, pkgDepDT)
+#   # }
+#   # aa <- parseGitHub(dd)
+#   ff <- packageFullNameFromSnapshot(dd)
+#   # ff <- addNamesToPackageFullName(ff, dd$Package)
+#   # gg <- extractPkgName(ff)
+#   # dif <- !dd$Package %in% gg
+#   # alternateNamedPkgs <- dd[dif,]
+#   # if (NROW(alternateNamedPkgs)) {
+#   #   names(ff) <- rep("", length(ff))
+#   #   names(ff)[dif] <- dd$Package[dif]
+#   # }
+#   browser()
+#   gg <- pkgDep(ff, recursive = TRUE, purge = purge)
+#   hh <- sort(unique(gsub("(\\(.*)( )+(.*\\))$", "\\1\\3", gsub("\n", "", unname(unlist(gg))))))
+#   pkgDT <- toPkgDT(hh, deepCopy = TRUE)
+#   pkgDT <- parsePackageFullname(pkgDT)
+#   pkgDT <- parseGitHub(pkgDT)
+#   pkgDT <- trimRedundancies(pkgDT,
+#                             purge = purge, repos = repos, libPaths = libPaths,
+#                             type = type
+#   )
+#   alternateNamedPkgs <- dd[!dd$Package %in% pkgDT$Package,]
+#   pkgDT1 <- checkAvailableVersions(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
+#                                    verbose = verbose, verboseLevel = 2, type = type)
+#
+#   pkgDT1 <- dd[, .(Package, GithubRepo, GithubUsername, GithubSHA1)][
+#     !is.na(GithubRepo)][
+#       pkgDT1, on = .("GithubRepo" = githubPkgName, "GithubUsername" = Account, "GithubSHA1" = Branch)][
+#         , Package := ifelse(is.na(Package), i.Package, Package)]
+#   pkgDT1[, c("Package", "packageFullName")]
 }
 
 apCachedCols <- c("Package", "Repository", "Version", "Archs", "Depends", "Imports", "Suggests", "LinkingTo")
