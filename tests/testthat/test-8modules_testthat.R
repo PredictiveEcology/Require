@@ -135,23 +135,25 @@ test_that("test 5", {
 
     dirForInstall <- tempdir2(.rndstr(1))
 
-    out <- st <- list()
+    out <- mess <- st <- list()
     for (i in 1:2) {
       suppressWarnings( # "Require" is in use
         st[[i]] <- system.time(
-          #out1 <- capture.output(
-          #  type = "message",
-          out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
-                              libPaths = dirForInstall, verbose = 2)
-          #)
+          mess[[i]] <- capture.output(
+            type = "message",
+            out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
+                                libPaths = dirForInstall, verbose = 2)
+          )
         )
       )
     }
 
+    ip <- installed.packages() |> as.data.table()
+
     allInstalled <- all(setdiff(trimRedundancies(pkgs)$Package, "Require") %in%
                           ip$Package)
-    browser()
     expect_true(allInstalled)
+
 
     # Do a second time; should be empty (and fast)
     # suppressWarnings( # "Require" is in use
@@ -161,10 +163,18 @@ test_that("test 5", {
     #                                               libPaths = dirForInstall, verbose = 2)
     #                        ))
     # )
+    out1Attr <- attr(out[[1]], "Require")
+    out2Attr <- attr(out[[2]], "Require")
     # some sort of test about whether anything was installed; pick reproducible as a random pkg
-    testthat::expect_true(sum(grepl("reproducible", out[[1]])) == 1 + is.character(getOption("Require.cloneFrom")))
-    testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
-    testthat::expect_true(st1["elapsed"]/st2["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
+    testthat::expect_true(
+      sum(grepl("reproducible",
+                out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1 &&
+        is.character(getOption("Require.cloneFrom")))
+    testthat::expect_true(
+      sum(grepl("reproducible",
+                out2Attr$Package[out2Attr$installResult %in% "OK"])) == 0)
+    # testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
+    testthat::expect_true(st[[1]]["elapsed"]/st[[2]]["elapsed"] > 15) # WAY faster -- though st1 is not that slow b/c local binaries
 
   }
 

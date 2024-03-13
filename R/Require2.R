@@ -1472,9 +1472,17 @@ availableVersionOK <- function(pkgDT) {
     }
 
     out <- try(pkgDT[whToUpdate, (availableOKcols) := {
-      out <- Map(vor = VersionOnRepos, function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
-      avokto <- Map(vor = VersionOnRepos, function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
-      avok <- any(unlist(out))
+      isHEAD <- versionSpec == "HEAD"
+      if (isTRUE(any(isHEAD %in% TRUE))) {
+        avok <- rep(TRUE, length(versionSpec))
+        avokto <- avok
+      }
+      if (isTRUE(any(isHEAD %in% FALSE))) {
+        out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
+        avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
+        avok <- any(unlist(out))
+      }
+
       list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
     }, by = "Package"])
 
@@ -1564,15 +1572,6 @@ messageDownload <- function(pkgDT, numToDownload, fromWhere) {
   ))
 }
 
-colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")
-purple <- function(...) colr(..., digit = 30)
-red <- function(...) colr(..., digit = 31)
-green <- function(...) colr(..., digit = 32)
-yellow <- function(...) colr(..., digit = 33)
-blue <- function(...) colr(..., digit = 34)
-turquoise <- function(...) colr(..., digit = 36)
-greyLight <- function(...) colr(..., digit = 37)
-
 messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGroups) {
   # currentTime <- Sys.time()
   # dft <- difftime(currentTime, startTime, units = "secs")
@@ -1591,7 +1590,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 
   srces <- names(pkgToReportBySource)
   messageVerbose("-- Installing from:", verbose = verbose)
-  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = .txtGitHub, purple = "RSPM")
+  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
   Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
     pp <- pkgToReportBySource[[type]]
     if (type %in% srces) {
@@ -1829,11 +1828,16 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
           fn <- ""
         }
       } else {
-        keepLoc <- try(unlist(compareVersion2(localVer, versionSpec, inequality)))
+        isHEAD <- identical(versionSpec, "HEAD")
+        if (isHEAD) {
+          keepLoc <- FALSE
+        } else {
+          keepLoc <- try(unlist(compareVersion2(localVer[!isHEAD], versionSpec[!isHEAD], inequality[!isHEAD])))
+        }
         if (is(keepLoc, "try-error")) {
           browserDeveloper("Error 978; please contact developer")
         }
-        if (!identical(inequality, "==") && !is.na(VersionOnRepos)) {
+        if (!identical(inequality, "==") && !is.na(VersionOnRepos) && !isHEAD) {
           keepRep <- compareVersion2(VersionOnRepos, versionSpec, inequality)
           if (any(keepLoc %in% TRUE)) { # local has at least 1 that is good -- could be many versions of the package locally
             locPacVer <- package_version(localVer[keepLoc]) # keep all that pass version check

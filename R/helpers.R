@@ -668,3 +668,17 @@ rversionHistory <- as.data.table(
 crancacheFolder <- function() {
   crancache <- file.path(dirname(dirname(tools::R_user_dir("Require", "cache"))), "R-crancache")
 }
+
+
+colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")
+purple <- function(...) colr(..., digit = "38;5;129m")
+black <- function(...) colr(..., digit = 30)
+green2 <- function(...) colr(..., digit = 38)
+cyan <- function(...) colr(..., digit = 29)
+red <- function(...) colr(..., digit = 31)
+green <- function(...) colr(..., digit = 32)
+yellow <- function(...) colr(..., digit = 33)
+blue <- function(...) colr(..., digit = 34)
+turquoise <- function(...) colr(..., digit = 36)
+greyLight <- function(...) colr(..., digit = 37)
+

@@ -180,13 +180,13 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 
   if (is.list(which)) which <- which[[1]]
 
-  cols <- c("red", "blue", "yellow", "green", "purple", "cyan", "orange")
+  cols <- c("red", "blue", "yellow", "green", "black", "turquoise", "cyan")
 
   lim <- 5
   if (isNotNULLAnd(.depth, .depth <= lim))
-    messageVerbose(get(cols[.depth + 1], envir = asNamespace("crayon"))(paste(rep("  ", .depth), collapse = ""),
+    messageVerbose(get(cols[.depth + 1])(paste(rep("  ", .depth), collapse = ""),
                                          cleanPkgs(parentPackage)),
-                   verbose = .depth <= (lim ) && verbose >= 0)
+                   verbose = .depth <= (lim ) && verbose >= 2)
   deps <- NULL
   snTr <- sn(TRUE)
   snFa <- sn(FALSE)
@@ -340,7 +340,7 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
     set(pkgDT, NULL, "ord", seq(NROW(pkgDT)))
     pkgDTCached <- splitKeepOrderAndDTIntegrity(pkgDT, pkgDT[[cached(recursiveHere)]])
     messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = ", "),
-                   verbose = verbose)
+                   verbose = verbose - 2)
     whichCatRecursive <- whichCatRecursive(which, recursiveHere)
     isGH <- !is.na(pkgDTCached[["FALSE"]]$githubPkgName)
     pkgDTNonGH <- pkgDTGH <- NULL
@@ -451,8 +451,6 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
     num <- NROW(pkgDTList$Archive$Package)
     messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = ", "), " ",
                    hasHave(v = num), " been archived ... ", verbose = verbose)
-    # messageVerbose("  ", num, " ", singularPlural(c("package has", "packages have"), v = num),
-    #                " been archived...", verbose = verbose)
     pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, verbose, purge = FALSE)
     wcr <- whichCatRecursive(which, recursive = FALSE)
     hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
@@ -465,7 +463,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
 
     }
 
-    messageVerbose("    Done package archives!", verbose = verbose)
+    messageVerbose("    Done evaluating archives!", verbose = verbose)
     pkgDT <- rbindlistNULL(pkgDTList, fill = TRUE, use.names = TRUE)
   }
 
@@ -476,7 +474,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
 #' @inheritParams Require
 pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, verbose = getOption("Require.verbose")) {
 
-  messageVerbose("  ", NROW(pkgDT), " packages on GitHub", verbose = verbose - 2)
+  messageVerbose("  ", NROW(pkgDT), " packages on GitHub", verbose = verbose)
 
   pkg <- masterMainToHead(pkgDT$packageFullName)
 
