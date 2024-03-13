@@ -123,6 +123,8 @@ pkgDep <- function(packages,
 
     keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
                 "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
+    dotDepth <- ".depth"
+
     # whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0) + 1 # (self)
     set(deps, NULL, #whHasDeps,
         depsCol,
@@ -130,10 +132,16 @@ pkgDep <- function(packages,
             # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
             function(dep, self) {
               if (!is.null(dep)) {
-                dotDepth <- ".depth"
-                if (dotDepth %in% colnames(dep))
-                  setorderv(dep, cols = dotDepth)
                 set(dep, NULL, intersect(colnames(dep), c(deps(TRUE), deps(FALSE))), NULL)
+                # if (dotDepth %in% colnames(dep) && !all(diff(dep[[dotDepth]]) >= 0)) {
+                #   if (!exists("sorted")) sorted <<- 0
+                #   sorted <<- sorted + 1
+                #   setorderv(dep, cols = dotDepth)
+                # } else {
+                #   if (!exists("unsorted")) unsorted <<- 0
+                #   unsorted <<- unsorted + 1
+                # }
+
                 keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
                 dep <- dep[!duplicated(dep[["Package"]])]
                 set(dep, NULL, c("packageFullName", "parentPackage"),
@@ -144,7 +152,7 @@ pkgDep <- function(packages,
               }
               dep <- addSelf(includeSelf, dep, self)
               if (!is.null(dep))
-                dep <- dep[order(dep$Package)]
+                setorderv(dep, cols = c("Package", intersect(dotDepth, colnames(dep))))# <- dep[order(dep$Package)]
               dep
             }))
 
