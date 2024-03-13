@@ -318,6 +318,8 @@ Require <- function(packages,
       pkgDT <- deps
       pkgDT <- checkHEAD(pkgDT)
 
+      pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+
       # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
       # if (!is.null(deps$Additional_repositories))
       #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
@@ -551,16 +553,19 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
     } else {
       seq_len(NROW(pkgInstall)) # was NULL, but that is "all rows" in data.table
     }
-#     set(pkgInstall, addOK, c("installResult", "installed"), list("OK", TRUE))
 
-      set(pkgInstall, addOK,
-        c("installResult", "installed", "Version", "LibPath"),
-        list("OK", TRUE, pkgInstall[["VersionOnRepos"]][addOK], .libPaths()[1])
-        )
+    set(pkgInstall, addOK,
+        c("installed", "Version", "LibPath"),
+        list(TRUE, pkgInstall[["VersionOnRepos"]][addOK], .libPaths()[1])
+    )
+    pkgInstall <- appendInstallResult(pkgInstall, addOK, installResult = "OK")
     pkgInstallList[["install"]] <- pkgInstall
   }
   if (!is.null(pkgInstallList[[noneAvailable]])) {
-    pkgInstallList[[noneAvailable]][, `:=`(installResult = needInstall, installed = FALSE)]
+    pkgInstallList[[noneAvailable]] <-
+      appendInstallResult(pkgInstallList[[noneAvailable]], seq_len(NROW(pkgInstallList[[noneAvailable]])),
+                          pkgInstallList[[noneAvailable]]$needInstall)
+    set(pkgInstallList[[noneAvailable]], NULL, "installed", FALSE)
   }
   pkgDTList[["install"]] <- rbindlistRecursive(pkgInstallList)
   pkgDT <- rbindlistRecursive(pkgDTList)
@@ -1436,8 +1441,21 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
       }, by = "packageFullName"]
     }
     saveGitHubSHAsToDisk()
-    pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local",
-                                          installedVersionOK = TRUE, installResult = "OK")]
+    prevInstallResult <- pkgGitHub$installResult
+    rowsToUpdate <- which(pkgGitHub$SHAonLocal == pkgGitHub$SHAonGH)
+
+    pkgGitHub[rowsToUpdate, `:=`(needInstall = FALSE, haveLocal = "Local", installedVersionOK = TRUE)]
+    pkgGitHub <- appendInstallResult(pkgGitHub, rowsToUpdate, installResult = "OK", sep = "; ")
+
+    # pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local",
+    #                                       installedVersionOK = TRUE, installResult = "OK")]
+    # if (!is.null(prevInstallResult)) {
+    #   nas <- is.na(prevInstallResult)
+    #   if (any(!nas)) {
+    #     browser()
+    #     pkgGitHub[which(!nas), installResult := paste(installResult, prevInstallResult[!nas], sep = "; ")]
+    #   }
+    # }
     pkgWhere[[.txtGitHub]] <- pkgGitHub
     pkgInstall <- rbindlistRecursive(pkgWhere)
   }
@@ -1986,7 +2004,10 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
       }, by = "Package"][, ..cols3]
       messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
       if (grepl("remove|rm", ifViolation[1])) {
-        pkgDT <- pkgDT[violation %in% TRUE & !inequality %in% "==" | violation %in% FALSE]
+        keep <- pkgDT$violation %in% TRUE & !pkgDT$inequality %in% "==" | pkgDT$violation %in% FALSE
+        rm <- pkgDT[which(!keep)]
+        pkgDT <- pkgDT[which(keep)]
+        pkgDT[Package %in% rm$Package, installResult := "Package version violation detected; installing this"]
       }
     }
 
@@ -2502,10 +2523,11 @@ messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.ver
 
   }
 
-  rowsInPkgDT <- grep(pkgName, toInstall$Package)
+  rowsInPkgDT <- which(toInstall$Package %in% pkgName)
   if (length(rowsInPkgDT) && any(toInstall[rowsInPkgDT]$installed %in% FALSE)) {
     toInstall[rowsInPkgDT, installed := outcome]
-    toInstall[rowsInPkgDT, installResult := w$message]
+    toInstall <- appendInstallResult(toInstall, rowsInPkgDT, w$message, sep = "; ")
+    # toInstall[rowsInPkgDT, installResult := w$message]
 
     if (any(grepl("cannot remove prior installation of package", w$message))) {
       warning("Is ", pkgName, " loaded in another R session? Please close all sessions before installing packages")
@@ -2515,17 +2537,21 @@ messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.ver
     }
   }
 
-  isInUse <- grepl("is in use and will not be installed", w$message)
+  isInUse <- grepl("in use and will not be installed", w$message)
   if (length(rowsInPkgDT) && any(isInUse)) {
-    set(toInstall, rowsInPkgDT, "installed", FALSE)
-    # toInstall[rowsInPkgDT, installed := FALSE]
-    set(toInstall, rowsInPkgDT, "installResult", w$message)
+    if (!all(toInstall$installed[rowsInPkgDT] %in% FALSE) &&
+        !all(toInstall$installResult[rowsInPkgDT] %in% w$message)) {
+      browser()
+      set(toInstall, rowsInPkgDT, "installed", FALSE)
+      # toInstall[rowsInPkgDT, installed := FALSE]
+      set(toInstall, rowsInPkgDT, "installResult", w$message)
+    }
     # toInstall[rowsInPkgDT, installResult := w$message]
   }
 
 
   if (!is.null(getOptionRPackageCache())) {
-    if (startsWith(pkgName, getOptionRPackageCache())) {
+    if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache())))) {
       messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
       unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
       retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
@@ -2953,4 +2979,22 @@ matchWithOriginalPackages <- function(pkgDT, packages) {
       toPkgDT(packages)[, c("Package", "packageFullName")], on = c("Package")]
   }
   unique(packagesDT)[]
+}
+
+
+appendInstallResult <- function(pkgDT, rowsToUpdate, installResult, sep = "; ") {
+  if (length(rowsToUpdate)) {
+    prevInstallResult <- pkgDT$installResult[rowsToUpdate]
+    ir <- installResult # needed for next line s
+    pkgDT[rowsToUpdate, `:=`(installResult = ir)]
+    if (!is.null(prevInstallResult)) {
+      nas <- is.na(prevInstallResult)
+      if (any(!nas)) {
+        browser()
+        pkgDT[rowsToUpdate[which(!nas)],
+              installResult := paste(installResult, prevInstallResult[which(!nas)], sep = sep)]
+      }
+    }}
+  pkgDT
+
 }

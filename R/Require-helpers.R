@@ -1417,9 +1417,21 @@ masterGrep <- paste0("/", "master", "(/|\\.)")
 mainGrep <- paste0("/", "main", "(/|\\.)")
 
 extractPkgNameFromWarning <- function(x) {
-  out <- gsub(".+\u2018(.+)_.+\u2019.+", "\\1", x) # those two escape characters are the inverted commas
-  out <- gsub("^.+\\'(.+)\\'.+$", "\\1", out)
-  gsub(".+\u2018(.+)\u2019.+", "\\1", out) # package XXX is in use and will not be installed
+
+  if (any(grepl("are in use", x))) {
+    aa <- strsplit(x, "\\'")
+    out <- lapply(aa, function(y) {
+      wh <- grep(", ", y)
+      wh <- c(1, wh)
+      y[c(wh + 1)]
+    })
+    out <- unlist(out)
+  } else {
+    out <- gsub(".+\u2018(.+)_.+\u2019.+", "\\1", x) # those two escape characters are the inverted commas
+    out <- gsub("^.+\\'(.+)\\'.+$", "\\1", out)
+    out <- gsub(".+\u2018(.+)\u2019.+", "\\1", out) # package XXX is in use and will not be installed
+  }
+  out
 }
 
 availablePackagesCachedPath <- function(repos, type) {
