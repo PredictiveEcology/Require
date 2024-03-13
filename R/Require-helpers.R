@@ -1003,30 +1003,31 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
 }
 
 getSHAfromGitHubMemoise <- function(...) {
+  pe <- pkgEnv()
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
-    if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE)) {
+    if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE)) {
       loadGitHubSHAsFromDisk(verbose = dots$verbose) # puts it into the Memoise-expected location
-    if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE))
-        .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
+    if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE))
+        pe[[.txtGetSHAfromGitHub]] <- new.env()
     }
     ret <- NULL
     ss <- match.call(definition = getSHAfromGitHub)
     uniqueID <- paste(lapply(ss[-1], eval, envir = parent.frame()), collapse = "_")
-    if (!exists(uniqueID, envir = .pkgEnv[[.txtGetSHAfromGitHub]], inherits = FALSE)) {
-      .pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]] <- list()
+    if (!exists(uniqueID, envir = pe[[.txtGetSHAfromGitHub]], inherits = FALSE)) {
+      pe[[.txtGetSHAfromGitHub]][[uniqueID]] <- list()
     } else {
-      whIdent <- unlist(lapply(.pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]], function(x) identical(x$input, dots)))
+      whIdent <- unlist(lapply(pe[[.txtGetSHAfromGitHub]][[uniqueID]], function(x) identical(x$input, dots)))
       if (any(whIdent)) {
-        ret <- .pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]][[which(whIdent)]]$output
+        ret <- pe[[.txtGetSHAfromGitHub]][[uniqueID]][[which(whIdent)]]$output
       }
     }
-    if (is.null(ret)) { # Case where it doesn't exist in .pkgEnv
+    if (is.null(ret)) { # Case where it doesn't exist in pe
       inputs <- data.table::copy(dots)
       ret <- getSHAfromGitHub(...)
-      # Add it to the .pkgEnv
-      newObj <- list(.pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]], list(input = inputs, output = ret))
-      .pkgEnv[[.txtGetSHAfromGitHub]][[uniqueID]] <- newObj
+      # Add it to the pe
+      newObj <- list(pe[[.txtGetSHAfromGitHub]][[uniqueID]], list(input = inputs, output = ret))
+      pe[[.txtGetSHAfromGitHub]][[uniqueID]] <- newObj
 
     }
   } else {
@@ -1038,15 +1039,16 @@ getSHAfromGitHubMemoise <- function(...) {
 
 loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
   ret <- list()
-  if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE)) {
+  pe <- pkgEnv()
+  if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE)) {
     fn <- getSHAFromGitHubDBFilename()
     if (isTRUE(file.exists(fn))) {
       out <- readRDS(fn)
       removeFile <- purgeBasedOnTimeSinceCached(out[[GitHubSHAonDiskCacheTime]])
       if (!removeFile) { # remove if 24 hours old
-        # if (!exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE))
-        .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
-        list2env(out, envir = .pkgEnv[[.txtGetSHAfromGitHub]])
+        # if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE))
+        pe[[.txtGetSHAfromGitHub]] <- new.env()
+        list2env(out, envir = pe[[.txtGetSHAfromGitHub]])
       } else {
         messageVerbose("Purging disk-backed pkgDep cache for GitHub SHA values; it has ",
                        "been more than ", defaultCacheAgeForPurge, ". Change this by setting ",
@@ -1065,7 +1067,8 @@ loadGitHubSHAsFromDisk <- function(verbose = getOption("Require.verbose")) {
 GitHubSHAonDiskCacheTime <- ".GitHubSHAonDiskCacheTime"
 
 saveGitHubSHAsToDisk <- function(preShas) {
-  if (exists(.txtGetSHAfromGitHub, envir = .pkgEnv, inherits = FALSE)) {
+  pe <- pkgEnv()
+  if (exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE)) {
     obj <- getSHAFromPkgEnv()
     needSave <- if (missing(preShas)) { TRUE } else {
       length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
@@ -1081,7 +1084,8 @@ saveGitHubSHAsToDisk <- function(preShas) {
 }
 
 getSHAFromPkgEnv <- function() {
-  as.list(.pkgEnv[[.txtGetSHAfromGitHub]])
+  pe <- pkgEnv()
+  as.list(pe[[.txtGetSHAfromGitHub]])
 }
 
 
@@ -1174,7 +1178,8 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
       if (internetMightExist) {
         opts2 <- options(timeout = 2)
         on.exit(options(opts2))
-        ue <- .pkgEnv$internetExists <- urlExists("https://www.google.com")
+        pe <- pkgEnv()
+        ue <- pe$internetExists <- urlExists("https://www.google.com")
         if (isFALSE(ue)) {
           internetMightExist <- FALSE
 

@@ -913,8 +913,9 @@ pkgDepTopoSortMemoise <- function(...) {
     dots <- list(...)
     fnName <- "pkgDepTopoSort"
     fn <- eval(parse(text = fnName))
-    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE)) {
-      .pkgEnv[[fnName]] <- new.env()
+    pe <- pkgEnv()
+    if (!exists(fnName, envir = pe, inherits = FALSE)) {
+      pe[[fnName]] <- new.env()
     }
     ret <- NULL
     ss <- match.call(definition = fn)
@@ -924,22 +925,22 @@ pkgDepTopoSortMemoise <- function(...) {
         object = pkg, ascii = T, NULL
       )))
     hash <- as.character(hash)
-    if (!exists(hash, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
-      .pkgEnv[[fnName]][[hash]] <- list()
+    if (!exists(hash, envir = pe[[fnName]], inherits = FALSE)) {
+      pe[[fnName]][[hash]] <- list()
     } else {
       whIdent <-
-        unlist(lapply(.pkgEnv[[fnName]][[hash]], function(x) {
+        unlist(lapply(pe[[fnName]][[hash]], function(x) {
           identical(x$input, dots)
         }))
       if (any(whIdent)) {
-        ret <- .pkgEnv[[fnName]][[hash]][[which(whIdent)]]$output
+        ret <- pe[[fnName]][[hash]][[which(whIdent)]]$output
       }
     }
     if (is.null(ret)) {
       inputs <- data.table::copy(dots)
       ret <- fn(...)
-      .pkgEnv[[fnName]][[hash]] <-
-        list(.pkgEnv[[fnName]][[hash]], list(input = inputs, output = ret))
+      pe[[fnName]][[hash]] <-
+        list(pe[[fnName]][[hash]], list(input = inputs, output = ret))
     }
   } else {
     ret <- fn(...)

@@ -66,16 +66,18 @@ RequireCacheDir <- function(create, verbose = getOption("Require.verbose")) {
 }
 
 normPathMemoise <- function(d) {
+  pe <- pkgEnv()
   if (getOption("Require.useMemoise", TRUE)) {
     fnName <- "normPath"
-    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE)) {
-      .pkgEnv[[fnName]] <- new.env()
+    if (!exists(fnName, envir = pe, inherits = FALSE)) {
+      assign(fnName, newEmptyEnv(), envir = pe)
     }
+    fnEnv <- get(fnName, envir = pe)
     ret <- Map(di = d, function(di) {
-      if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
-        .pkgEnv[[fnName]][[di]] <- normPath(di)
+      if (!exists(di, envir = fnEnv, inherits = FALSE)) {
+        assign(di, normPath(di), envir = fnEnv)
       }
-      .pkgEnv[[fnName]][[di]]
+      fnEnv[[di]]
     })
     ret <- unlist(ret)
   } else {

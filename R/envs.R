@@ -3,12 +3,15 @@ newEmptyEnv <- function() {
 }
 
 #' 1st level --> create the .pkgEnv object in Require
-envPkgCreate <- function() {
-  assign(.envPkgName, newEmptyEnv(), envir = asNamespace("Require"))
+envPkgCreate <- function(parentEnv = asNamespace("Require")) {
+  assign(.envPkgName, newEmptyEnv(), envir = parentEnv)
 }
 
-pkgEnv <- function() {
-  get(.envPkgName, envir = asNamespace("Require"))
+pkgEnv <- function(envir = .GlobalEnv) {
+  memPersist <- isTRUE(getOption("Require.cachePersist", NULL))
+  if (!memPersist)
+    envir <- asNamespace("Require")
+  get(.envPkgName, envir = envir, inherits = FALSE)
 }
 
 # 2nd level
@@ -95,14 +98,13 @@ envPkgDepArchiveDetailsInner <- function() {
 .envPkgDepDESCFileName <- "DESCRIPTIONFile"
 .envPkgDepDepsName <- "deps"
 .envPkgDepName <- "pkgDep"
-.envPkgName <- ".pkgEnv"
+.envPkgName <- ".Require.pkgEnv"
 .envPkgStartTimeName <- "startTime"
 
 .txtGetArchiveDetailsInner <- "getArchiveDetailsInner"
 .txtGetSHAfromGitHub <- "getSHAfromGitHub"
 .txtPkgHasGHP <- "hasGHP"
 .txtInternetExistsTime <- "internetExistsTime"
-# .pkgEnv[[.txtGetSHAfromGitHub]] <- new.env()
 
 .txtGitHub <- "GitHub"
 

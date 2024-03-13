@@ -4,7 +4,8 @@ utils::globalVariables(c(
 
 
 #' @include envs.R
-.pkgEnv <- newEmptyEnv() # new.env(parent = emptyenv())
+envPkgCreate()
+# .pkgEnv <- newEmptyEnv() # new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()

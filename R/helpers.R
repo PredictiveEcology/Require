@@ -624,8 +624,9 @@ SysInfo <-
 
 doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
   if (getOption("Require.useCranCache", FALSE)) {
-    if (is.null(.pkgEnv[["crancacheCheck"]])) {
-      .pkgEnv[["crancacheCheck"]] <- TRUE
+    pe <- pkgEnv()
+    if (is.null(pe[["crancacheCheck"]])) {
+      pe[["crancacheCheck"]] <- TRUE
       crancache <- crancacheFolder()
       if (dir.exists(crancache)) {
         ccFiles <- dir(crancache, full.names = TRUE, recursive = TRUE)
