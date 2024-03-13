@@ -83,7 +83,7 @@ b <- function() {
       lala <- capture.output(type = "message", {
         out2 <- Require(
           packageVersionFile = fn,
-          require = FALSE, verbose = 2, purge = TRUE
+          require = FALSE, returnDetails = TRUE, purge = TRUE
         )
       })
       # missings <- grep("The following shows packages", lala, value = TRUE)

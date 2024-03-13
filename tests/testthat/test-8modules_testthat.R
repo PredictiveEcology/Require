@@ -142,7 +142,7 @@ test_that("test 5", {
           mess[[i]] <- capture.output(
             type = "message",
             out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
-                                libPaths = dirForInstall, verbose = 2)
+                                libPaths = dirForInstall, returnDetails = TRUE)
           )
         )
       )
@@ -154,15 +154,6 @@ test_that("test 5", {
                           ip$Package)
     expect_true(allInstalled)
 
-
-    # Do a second time; should be empty (and fast)
-    # suppressWarnings( # "Require" is in use
-    #   st2 <- system.time(out2 <-
-    #                        capture.output(type = "message",
-    #                                       Install(pkgs, standAlone = TRUE, upgrade = FALSE,
-    #                                               libPaths = dirForInstall, verbose = 2)
-    #                        ))
-    # )
     out1Attr <- attr(out[[1]], "Require")
     out2Attr <- attr(out[[2]], "Require")
     # some sort of test about whether anything was installed; pick reproducible as a random pkg

@@ -133,7 +133,9 @@ utils::globalVariables(c(
 #' @param verbose Numeric or logical indicating how verbose should the function
 #'   be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 #'   then minimal outputs; if `1` or TRUE, more outputs; `2` even more. NOTE: in
-#'   `Require` function, when `verbose >= 2`, the return object will have an
+#'   `Require` function, when `verbose >= 2`, also returns details as if
+#'   `returnDetails = TRUE` (for backwards compatibility).
+#' @param returnDetails Logical. If `TRUE` the return object will have an
 #'   attribute: `attr(.., "Require")` which has lots of information about the
 #'   processes of the installs.
 #' @param type See `utils::install.packages`
@@ -230,6 +232,7 @@ Require <- function(packages,
                     verbose = getOption("Require.verbose", FALSE),
                     type = getOption("pkgType"),
                     upgrade = FALSE,
+                    returnDetails = FALSE,
                     ...) {
   assign("hasGHP", NULL, envir = pkgEnv()) # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
@@ -369,7 +372,7 @@ Require <- function(packages,
     out <- packagesDT$require
     names(out) <- packagesDT$packageFullName
 
-    if (verbose >= 2) {
+    if (verbose >= 2 || returnDetails %in% TRUE) {
       if (is.null(require)) {
         out <- character()
       }

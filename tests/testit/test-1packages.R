@@ -27,7 +27,7 @@ dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
 dir1 <- Require::checkPath(dir1, create = TRUE)
 out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
   standAlone = TRUE, libPaths = dir1,
-  quiet = TRUE, verbose = 2
+  quiet = TRUE, returnDetails = TRUE
 ))
 testit::assert({
   data.table::is.data.table(attr(out, "Require"))
@@ -133,7 +133,7 @@ if (identical(tolower(Sys.getenv("CI")), "true") || # travis
   dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
   # try({
   inst <- suppressMessages(Require::Require("achubaty/fpCompare",
-    install = "force", verbose = 2,
+    install = "force", returnDetails = TRUE,
     quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3
   ))
   attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))

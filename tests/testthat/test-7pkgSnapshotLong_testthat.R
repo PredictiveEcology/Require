@@ -71,7 +71,7 @@ test_that("test 5", {
       lala <- capture.output(type = "message", {
         out <- Require(
           packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
-          require = FALSE, verbose = 2, purge = TRUE
+          require = FALSE, returnDetails = TRUE, purge = TRUE
         )
       })
       # missings <- grep("The following shows packages", lala, value = TRUE)

@@ -40,7 +40,6 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     allNeeded <- unique(extractPkgName(unname(c(names(out11), unlist(out11)))))
     allNeeded <- allNeeded[!allNeeded %in% .basePkgs]
     persLibPathOld <- pkgs$LibPath[which(pkgs$Package == "amc")]
-    # pkgDT <- attr(out, "Require")
     # pkgsInOut <- extractPkgName(pkgDT$Package[pkgDT$installed])
     installedInFistLib <- pkgs[LibPath == persLibPathOld]
     # testit::assert(all(installed))
@@ -65,7 +64,7 @@ if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on ma
     lala <- capture.output(type = "message", {
       out <- Require(
         packageVersionFile = file.path(pkgPath, "pkgSnapshot.txt"),
-        require = FALSE, verbose = 2, purge = TRUE
+        require = FALSE, returnDetails = TRUE, purge = TRUE
       )
     })
     # missings <- grep("The following shows packages", lala, value = TRUE)

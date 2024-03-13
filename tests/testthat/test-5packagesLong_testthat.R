@@ -193,7 +193,7 @@ test_that("test 5", {
       # Rerun it to get output table, but capture messages for quiet; should be no installs
       #silent <- capture.output(type = "message", {
       suppressMessages(suppressWarnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
-        out <- Require(pkg, standAlone = FALSE, require = FALSE, verbose = 2)
+        out <- Require(pkg, standAlone = FALSE, require = FALSE, returnDetails = TRUE)
       ))
       #})
       testthat::expect_true(
@@ -222,11 +222,11 @@ test_that("test 5", {
     ## Test Install and also (HEAD)
     capted1 <- capture.output(
       type = "message",
-      Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 2) # will install
+      Install("PredictiveEcology/fpCompare@development (HEAD)", returnDetails = TRUE) # will install
     )
     capted2 <- capture.output(
       type = "message",
-      Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 2) # will install
+      Install("PredictiveEcology/fpCompare@development (HEAD)", returnDetails = TRUE) # will install
     )
     theGrep1 <- "Installing from"
     theGrep2 <- "SHA1 has not"
@@ -239,7 +239,7 @@ test_that("test 5", {
       suppressWarnings(
         out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
                          "SpaDES.core (>=1.0.0)"),
-                       require = FALSE, verbose = 2
+                       require = FALSE, returnDetails = TRUE
         )
       )
       out2 <- attr(out, "Require")

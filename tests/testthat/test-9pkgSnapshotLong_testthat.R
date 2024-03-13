@@ -155,8 +155,8 @@ test_that("test 5", {
       warns <- capture_warnings(
         lala <- capture.output(type = "message", {
           out2 <- Require(
-            packageVersionFile = fn,
-            require = FALSE, verbose = 2, purge = TRUE
+            packageVersionFile = snf,
+            require = FALSE, returnDetails = TRUE, purge = TRUE
           )
         })
       )

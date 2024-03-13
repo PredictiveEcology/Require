@@ -32,7 +32,7 @@ test_that("test 1", {
   dir1 <- Require::checkPath(dir1, create = TRUE)
   out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
                                            standAlone = TRUE, libPaths = dir1,
-                                           quiet = TRUE, verbose = 2
+                                           quiet = TRUE, returnDetails = TRUE
   ))
   testthat::expect_true({
     data.table::is.data.table(attr(out, "Require"))
@@ -145,7 +145,7 @@ test_that("test 1", {
     # try({
     inst <- suppressMessages(
       Require::Require("achubaty/fpCompare",
-                       install = "force", verbose = 2,
+                       install = "force", returnDetails = TRUE,
                        quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3
       )
     )

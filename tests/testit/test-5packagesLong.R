@@ -213,7 +213,7 @@ if (isDevAndInteractive) {
     outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)
     # Rerun it to get output table, but capture messages for quiet; should be no installs
     silent <- capture.output(type = "message", {
-      out <- Require(pkg, standAlone = FALSE, require = FALSE, verbose = 2)
+      out <- Require(pkg, standAlone = FALSE, require = FALSE, returnDetails = TRUE)
     })
     testit::assert({
       all.equal(outFromRequire, out)
@@ -258,7 +258,7 @@ if (isDevAndInteractive) {
     out <- capture.output(remove.packages("SpaDES.core")) ## TODO: fails on macOS
     out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
                      "SpaDES.core (>=1.0.0)"),
-      require = FALSE, verbose = 2
+      require = FALSE, returnDetails = TRUE
     )
     out2 <- attr(out, "Require")
     try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
