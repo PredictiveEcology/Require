@@ -1076,6 +1076,10 @@ assignPkgDTdepsToSaveNames <- function(pkgDT, rowsToUpdate = seq(NROW(pkgDT)), r
 
   deps1 <- pkgDT[[deps]][rowsToUpdate]
   names(deps1) <- pkgDT[[sn]][rowsToUpdate]
+  isDT <- unlist(lapply(deps1, is.data.table))
+  if (!all(isDT)) {
+    deps1[which(!isDT)] <- lapply(deps1[which(!isDT)], rbindlistRecursive)
+  }
   list2env(deps1, envir = envPkgDepDeps())
   set(pkgDT, rowsToUpdate, cached(recursive), TRUE)
 
@@ -1408,9 +1412,13 @@ appendRecursiveToDeps <- function(pkgDT, caTr, depFa, caFa, snFa, depTr, snTr) {
     whNeedFlatten <- which(needFlatten)
     set(pkgDT[["TRUE"]], whNeedFlatten, depTr,
         lapply(whNeedFlatten,
-               function(ind)
-                 append(list(pkgDT[["TRUE"]][[depTr]][[ind]]),
-                        pkgDT[["TRUE"]][[depTr]][[ind]][[depTr]]))
+               function(ind) {
+                 rbindlistRecursive(
+                   append(list(pkgDT[["TRUE"]][[depTr]][[ind]]),
+                        pkgDT[["TRUE"]][[depTr]][[ind]][[depTr]])
+                   )
+                 })
+
     )
 
   }
