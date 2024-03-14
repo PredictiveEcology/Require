@@ -2165,7 +2165,10 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
       pkgAndInequality <- c("Package", "inequality")
       versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
       if (any(versionSpecNotNA)) {
-        ord <- order(package_version(pkgInstall$versionSpec[versionSpecNotNA]),
+        verSpec <- pkgInstall$versionSpec[versionSpecNotNA]
+        isHEAD <- verSpec %in% "HEAD"
+        verSpec[isHEAD] <- "0.0.0"
+        ord <- order(package_version(verSpec),
                      decreasing = TRUE, na.last = TRUE
         ) # can't use setorderv because data.table can't sort on package_version class
       } else {
