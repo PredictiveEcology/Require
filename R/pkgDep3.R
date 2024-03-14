@@ -1315,9 +1315,11 @@ getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
         maybeCRANOKNeedVerCheck <- CRANvOKbcNeedLatest %in% FALSE
 
         # correctVersionInCache -- if versionSpec is satisfied
-        if (sum(maybeCRANOKNeedVerCheck))
-          maybeHaveCacheDTRec[maybeCRANOKNeedVerCheck,
-                              correctVersionInCache := compareVersion2(version, versionSpec, inequality)]
+        if (sum(maybeCRANOKNeedVerCheck)) {
+          maybeHaveCacheDTRec[which(maybeCRANOKNeedVerCheck),
+                              correctVersionInCache := compareVersion2(version, versionSpec, inequality)] |>
+          try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+        }
 
         # correctVersionInCache -- if CRANvOKbcNeedLatest
         if (sum(CRANvOKbcNeedLatest %in% TRUE))
