@@ -4,7 +4,7 @@
 \alias{envPkgCreate}
 \title{1st level --> create the .pkgEnv object in Require}
 \usage{
-envPkgCreate()
+envPkgCreate(parentEnv = asNamespace("Require"))
 }
 \description{
 1st level --> create the .pkgEnv object in Require

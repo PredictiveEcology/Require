@@ -21,6 +21,7 @@ Require(
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
   upgrade = FALSE,
+  returnDetails = FALSE,
   ...
 )
 
@@ -113,9 +114,8 @@ Internally, there are calls to \code{available.packages}.}
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
-\code{Require} function, when \code{verbose >= 2}, the return object will have an
-attribute: \code{attr(.., "Require")} which has lots of information about the
-processes of the installs.}
+\code{Require} function, when \code{verbose >= 2}, also returns details as if
+\code{returnDetails = TRUE} (for backwards compatibility).}
 
 \item{type}{See \code{utils::install.packages}}
 
@@ -123,6 +123,10 @@ processes of the installs.}
 version on in the local library is not adequate for the version requirements
 of the \code{packages}. Note: for convenience, \code{update}
 can be used for this argument.}
+
+\item{returnDetails}{Logical. If \code{TRUE} the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 
 \item{...}{Passed to \code{install.packages}. Good candidates are e.g., \code{type} or
 \code{dependencies}. This can be used with \code{install_githubArgs} or
