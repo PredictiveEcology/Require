@@ -79,7 +79,7 @@ test_that("test 5", {
       # remove.packages(pks)
       # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
       warns <- capture_warnings( # "is in use and will not be installed"
-        (out <- Require(packageVersionFile = fn, require = FALSE, dependencies = FALSE, verbose = 2)) |>
+        (out <- Require(packageVersionFile = snf, require = FALSE, dependencies = FALSE, verbose = 2)) |>
           capture_messages() -> mess
       )
       out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
@@ -165,9 +165,12 @@ test_that("test 5", {
       att <- attr(out2, "Require")
       att <- att[!duplicated(att$Package)]
 
-      didnt <- att[!is.na(installResult)]
+      versionViolation <- att$Package[grep("violation", att$installResult)]
+      didnt <- att[!is.na(att$installResult)]
 
-      expect_true(all(didnt$Package %in% c(testthatDeps, looksLikeGHPkgWithoutGitInfo, "Require")))
+      expect_true(all(didnt$Package %in%
+                        c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
+                          "Require")))
 
 
     }

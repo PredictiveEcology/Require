@@ -286,7 +286,7 @@ Require <- function(packages,
 
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths,
       install_githubArgs, install.packagesArgs, standAlone,
-      type = type, verbose = verbose
+      type = type, verbose = verbose, returnDetails = returnDetails
     )
     return(invisible(pkgSnapshotOut))
   }
@@ -1277,7 +1277,8 @@ types <- function(length = 1L) {
 
 doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                           install_githubArgs, install.packagesArgs, standAlone = TRUE,
-                          type = getOption("pkgType"), verbose = getOption("Require.verbose")) {
+                          type = getOption("pkgType"), verbose = getOption("Require.verbose"),
+                          returnDetails) {
   if (!isFALSE(packageVersionFile)) {
     if (isTRUE(packageVersionFile)) {
       packageVersionFile <- getOption("Require.packageVersionFile")
@@ -1326,8 +1327,10 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     #packages$packageFullName
     out <- Require(need,
                    verbose = verbose, purge = purge, libPaths = libPaths, repos = repos,
-                   install_githubArgs = install_githubArgs, install.packagesArgs = install.packagesArgs,
-                   standAlone = standAlone, require = FALSE, install = TRUE
+                   install_githubArgs = install_githubArgs,
+                   install.packagesArgs = install.packagesArgs,
+                   standAlone = standAlone, require = FALSE, install = TRUE,
+                   returnDetails = returnDetails
     )
   } else {
     out <- FALSE
@@ -1961,19 +1964,25 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
     set(pkgDT, NULL, "isGT", pkgDT[["inequality"]] == ">")
     pkgDT[, hasGTAndInequals := any(isGT %in% TRUE) && any(isGT %in% FALSE), by = "Package"]
     pkgDT[hasGTAndInequals %in% TRUE, GTDoesntViolate := {
-      out <- rep(NA, length = .N)
-      wh <- which(isGT)
-      whNot <- which(!isGT)
-      if (length(wh)) {
-        out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
-          all(compareVersion2(versionSpec[whNot], verSpec, inequality[wh]))
-        })))
-        if (is(out, "try-error")) {
-          browserDeveloper("Error 844; please contact developer")
-        }
-        out
-      }
-      out
+      compareVersion3(.N, isGT, versionSpec, inequality)
+      # out <- rep(NA, length = .N)
+      # wh <- which(isGT)
+      # whNot <- which(!isGT)
+      # if (length(wh)) {
+      #   browser()
+      #   out[wh] <- try(unlist(Map(verSpec = versionSpec[wh], function(verSpec) {
+      #     withCallingHandlers(
+      #       all(compareVersion2(versionSpec[whNot], verSpec, inequality[wh]))
+      #       , warning = function(w) browser()#stop()
+      #     )
+      #   })))
+      #   if (is(out, "try-error")) {
+      #     browser()
+      #     browserDeveloper("Error 844; please contact developer")
+      #   }
+      #   out
+      # }
+      # out
     },
     by = "Package"
     ]
@@ -2058,6 +2067,31 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
     set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
   }
   pkgDT
+}
+
+
+compareVersion3 <- function(.N, isGT, versionSpec, inequality) {
+  out <- rep(NA, length = .N)
+  wh <- which(isGT)
+  whNot <- which(!isGT)
+  if (length(wh)) {
+    out[wh] <- # try(
+      unlist(
+        Map(verSpec = versionSpec[wh], function(verSpec) {
+          withCallingHandlers(
+            all(compareVersion2(versionSpec[whNot], verSpec, inequality[whNot]))
+            , warning = function(w) browser()#stop()
+          )
+        })
+      )
+    # )
+    if (is(out[wh], "try-error")) {
+      browser()
+      browserDeveloper("Error 844; please contact developer")
+    }
+    out
+  }
+  out
 }
 
 keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose")) {
@@ -2557,7 +2591,8 @@ messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.ver
     if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache())))) {
       messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
       unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
-      retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE))
+      retrying <- try(Require(toInstall[Package %in% basename(pkgName)]$packageFullName, require = FALSE,
+                              verbose = verbose, returnDetails = returnDetails))
       if (is(retrying, "try-error")) {
         needWarning <- TRUE
       }
