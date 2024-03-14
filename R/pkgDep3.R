@@ -1310,15 +1310,24 @@ getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
         if (any(isGitHead)) {
           maybeHaveCacheDTRec[which(isGitHead), correctVersionInCache := FALSE] # force re-check
           # hasVersionNum <- hasVersionNum[!isGitHead]
-          CRANvOKbcNeedLatest <- CRANvOKbcNeedLatest[!isGitHead]
+          CRANvOKbcNeedLatest[!isGitHead] <- CRANvOKbcNeedLatest[!isGitHead]
         }
         maybeCRANOKNeedVerCheck <- CRANvOKbcNeedLatest %in% FALSE
 
         # correctVersionInCache -- if versionSpec is satisfied
         if (sum(maybeCRANOKNeedVerCheck)) {
-          maybeHaveCacheDTRec[which(maybeCRANOKNeedVerCheck),
-                              correctVersionInCache := compareVersion2(version, versionSpec, inequality)] |>
-          try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+
+          whMaybeCRANOK <- which(maybeCRANOKNeedVerCheck)
+          isHEAD <- maybeHaveCacheDTRec$versionSpec[whMaybeCRANOK] %in% "HEAD"
+          if (isTRUE(any(isHEAD %in% TRUE))) {
+            maybeHaveCacheDTRec[whMaybeCRANOK[isHEAD], correctVersionInCache := FALSE]
+          }
+          if (isTRUE(any(isHEAD %in% FALSE))) {
+            maybeHaveCacheDTRec[-whMaybeCRANOK[isHEAD],
+                                correctVersionInCache := compareVersion2(version, versionSpec, inequality)] |>
+              try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+          }
+
         }
 
         # correctVersionInCache -- if CRANvOKbcNeedLatest
