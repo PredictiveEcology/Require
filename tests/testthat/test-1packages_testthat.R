@@ -290,7 +290,7 @@ test_that("test 1", {
     # Test substitute(packages)
     suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")),
                          silent = TRUE)) |> suppressMessages()
-    verToCompare <- "2.0.8"
+    verToCompare <- "1.0.0"
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
 
     # The warning is about "package ‘Require’ is in use and will not be installed"
@@ -302,12 +302,15 @@ test_that("test 1", {
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
     a <- list(pkg = "fpCompare")
 
-    suppressWarnings(
+    browser()
+    warns <- capture_warnings(
       out <- Require::Install(
-        c("quickPlot (< 1.0.0)", NetLogoR, paste0("SpaDES (< ", verToCompare,")"), "SpaDES.core (== 2.0.3)", a$pkg),
-        repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
+        c(paste0("quickPlot (< ",verToCompare,")"), "NetLogoR", # paste0("SpaDES (< ", verToCompare,")"), # there is no package called 'Require'
+          "SpaDES.core (== 2.0.3)", a$pkg),
+        repos = c("https://predictiveecology.r-universe.dev", getOption("repos")),
+        returnDetails = TRUE)
     )
-    testthat::expect_true(packageVersion("SpaDES") < verToCompare)
+    testthat::expect_true(packageVersion("quickPlot") < verToCompare)
 
   }
 })
