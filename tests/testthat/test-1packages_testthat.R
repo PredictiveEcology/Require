@@ -302,11 +302,19 @@ test_that("test 1", {
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
     a <- list(pkg = "fpCompare")
 
-    browser()
     warns <- capture_warnings(
       out <- Require::Install(
-        c(paste0("quickPlot (< ",verToCompare,")"), "NetLogoR", # paste0("SpaDES (< ", verToCompare,")"), # there is no package called 'Require'
+        c(paste0("quickPlot (< ",verToCompare,")"), NetLogoR,
+          "quickPlot (>= 1.0.1)", "quickPlot (>= 0.9.0)",
           "SpaDES.core (== 2.0.3)", a$pkg),
+        repos = c("https://predictiveecology.r-universe.dev", getOption("repos")),
+        returnDetails = TRUE)
+    )
+    testthat::expect_true(packageVersion("quickPlot") != verToCompare)
+
+    warns <- capture_warnings(
+      out <- Require::Install(
+        c(paste0("quickPlot (< ",verToCompare,")")),
         repos = c("https://predictiveecology.r-universe.dev", getOption("repos")),
         returnDetails = TRUE)
     )

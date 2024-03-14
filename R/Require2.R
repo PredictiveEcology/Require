@@ -321,6 +321,7 @@ Require <- function(packages,
       pkgDT <- deps
       pkgDT <- checkHEAD(pkgDT)
 
+      if (exists("aaaa")) browser()
       pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
 
       # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
@@ -1424,7 +1425,6 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
     colsToUpdate <- c("SHAonLocal", "SHAonGH")
     set(pkgGitHub, NULL, colsToUpdate, list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
-    if (exists("bbb")) browser()
 
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {
@@ -1933,8 +1933,10 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
                                                          ifViolation = c("removeEquals", "stop"),
                                                          verbose = getOption("Require.verbose")) {
   set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
+  pkgDT[,  oppositeInequals := any(grepl("<", inequality)) & any(grepl(">", inequality)), by = "Package"]
   pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
-  if (any(pkgDT$hasEqualsAndInequals)) {
+
+  if (any(pkgDT$hasEqualsAndInequals) ) {
     pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
       out <- rep(NA, length.out = .N)
       wh <- which(isEquals)
@@ -2019,7 +2021,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
         keep <- pkgDT$violation %in% TRUE & !pkgDT$inequality %in% "==" | pkgDT$violation %in% FALSE
         rm <- pkgDT[which(!keep)]
         pkgDT <- pkgDT[which(keep)]
-        pkgDT[Package %in% rm$Package, installResult := "Package version violation detected; installing this"]
+        pkgDT[Package %in% rm$Package, installResult := msgPackageViolation]
       }
     }
 
@@ -2066,9 +2068,38 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
 
     set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
   }
+
+  if (any(pkgDT$oppositeInequals)) {
+    whOppositeInequals <- which(pkgDT$oppositeInequals)
+    pkgDT[whOppositeInequals,
+          violationsDoubleInequals := detectDoubleInequalsViolations(inequality, versionSpec, .N)
+          , by = "Package"]
+    if (grepl("remove|rm", ifViolation[1]) && any(pkgDT$violationsDoubleInequals[whOppositeInequals])) {
+      set(pkgDT, NULL, "keep", TRUE)
+      pkgDT[whOppositeInequals, keep := !grepl("<", pkgDT$inequality[whOppositeInequals]), by = "Package"]
+      rm <- pkgDT[which(!keep)]
+      pkgDT <- pkgDT[which(keep)]
+      pkgDT[Package %in% rm$Package, installResult := msgPackageViolation]
+    }
+    set(pkgDT, NULL, c("violationsDoubleInequals", "keep"), NULL)
+
+  }
   pkgDT
 }
 
+detectDoubleInequalsViolations <- function(inequality, versionSpec, N) {
+  {
+    res <- logical(N)
+    whGT <- grep(">", inequality)
+    whLT <- grep("<", inequality)
+    res[whLT] <- mapply(whL = whLT, function(whL) {
+      all(compareVersion2(rep(versionSpec[whL], length(whGT)), versionSpec[whGT], inequality[whGT]))
+    })
+    res[whGT] <- mapply(whG = whGT, function(whG)
+      compareVersion2(rep(versionSpec[whG], length(whLT)), versionSpec[whLT], inequality[whLT]))
+    return(!res)
+  }
+}
 
 compareVersion3 <- function(.N, isGT, versionSpec, inequality) {
   out <- rep(NA, length = .N)
