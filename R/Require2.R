@@ -274,7 +274,7 @@ Require <- function(packages,
   }
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   suppressMessages({
-    origLibPaths <- setLibPaths(libPaths, standAlone, exact = TRUE)
+    origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
   })
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
@@ -2559,7 +2559,7 @@ messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.ver
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
   pkgName <- extractPkgNameFromWarning(w$message)
   outcome <- FALSE
-  needWarning <- FALSE
+  needWarning <- TRUE
   if (identical(pkgName, w$message)) { # didn't work
     pkgName <- gsub(".+\u2018(.+)\u2019.*", "\\1", w$message)
   }
@@ -2618,7 +2618,8 @@ messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.ver
       # toInstall[rowsInPkgDT, installed := FALSE]
       set(toInstall, rowsInPkgDT, "installResult", w$message)
     }
-    # toInstall[rowsInPkgDT, installResult := w$message]
+    if (length(grep("Require", pkgName)))
+      needWarning <- FALSE
   }
 
 
@@ -2631,8 +2632,6 @@ messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.ver
       if (is(retrying, "try-error")) {
         needWarning <- TRUE
       }
-    } else {
-      needWarning <- TRUE
     }
   } else {
     needWarning <- TRUE
