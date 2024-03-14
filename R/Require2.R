@@ -2715,7 +2715,7 @@ downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFo
   names(gitRepo) <- Package
   out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
                       overwrite = TRUE, destDir = ".", verbose = verbose)
-  out1 <- try(build(Package, verbose = verbose, quiet = verbose <= 0, VersionOnRepos = VersionOnRepos))
+  out1 <- try(build(Package, verbose = verbose, quiet = verbose <= 0 || verbose >= 5, VersionOnRepos = VersionOnRepos))
   fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
   normPath(fn)
 }

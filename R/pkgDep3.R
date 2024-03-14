@@ -865,7 +865,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
     pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {
       tf <- file.path(Require:::RequirePkgCacheDir(), basename(PackageUrl))
       out <- if (file.exists(tf)) { NULL } else {
-        try(download.file(quiet = verbose <= 0,
+        try(download.file(quiet = verbose <= 0 || verbose >= 5,
           url = file.path(Repository, basename(PackageUrl)),
           destfile = tf), silent = TRUE)
       }

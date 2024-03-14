@@ -224,11 +224,11 @@ test_that("test 5", {
     ## Test Install and also (HEAD)
     capted1 <- capture.output(
       type = "message",
-      Install("PredictiveEcology/fpCompare@development (HEAD)", returnDetails = TRUE) # will install
+      out1 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
     )
     capted2 <- capture.output(
       type = "message",
-      Install("PredictiveEcology/fpCompare@development (HEAD)", returnDetails = TRUE) # will install
+      out2 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
     )
     theGrep1 <- "Installing from"
     theGrep2 <- "SHA1 has not"
