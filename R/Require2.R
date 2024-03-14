@@ -234,6 +234,7 @@ Require <- function(packages,
                     upgrade = FALSE,
                     returnDetails = FALSE,
                     ...) {
+  if (is.null(require)) require <- FALSE
   assign("hasGHP", NULL, envir = pkgEnv()) # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
   checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
