@@ -3041,7 +3041,10 @@ removeRequireDeps <- function(pkgDT) {
 
 
 matchWithOriginalPackages <- function(pkgDT, packages) {
-  packagesDT <- pkgDT[, c("Package", "loadOrder", "require")]
+
+  # might be missing `require` column
+  colsToKeep <- intersect(colnames(pkgDT), c("Package", "loadOrder", "require"))
+  packagesDT <- pkgDT[, ..colsToKeep]
   if (isTRUE(!all(pkgDT[["packageFullName"]] %in% packages))) {
     # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
     packagesDT <- unique(packagesDT, on = "Package")[
