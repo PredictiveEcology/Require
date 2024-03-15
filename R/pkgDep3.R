@@ -460,6 +460,11 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, verbose = getOption(
   }
 
   hasVersionNum <- grep(grepExtractPkgs, pkgDT$packageFullName)# pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
+  isHEAD <- grep("(HEAD)", pkgDT$packageFullName)
+  if (length(isHEAD)) {
+    set(pkgDT, isHEAD, "availableVersionOK", TRUE)
+    hasVersionNum <- setdiff(hasVersionNum, isHEAD)
+  }
   set(pkgDT, NULL, "availableVersionOK", NA)
   if (length(hasVersionNum)) {
     if (!isTRUE(getOption("Require.offlineMode"))) {
