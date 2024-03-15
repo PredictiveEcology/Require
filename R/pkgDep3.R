@@ -132,7 +132,10 @@ pkgDep <- function(packages,
             # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
             function(dep, self) {
               if (!is.null(dep)) {
-                set(dep, NULL, intersect(colnames(dep), c(deps(TRUE), deps(FALSE))), NULL)
+
+                rmCols <- intersect(colnames(dep), c(deps(TRUE), deps(FALSE)))
+                if (length(rmCols))
+                  set(dep, NULL, rmCols, NULL)
                 # if (dotDepth %in% colnames(dep) && !all(diff(dep[[dotDepth]]) >= 0)) {
                 #   if (!exists("sorted")) sorted <<- 0
                 #   sorted <<- sorted + 1
