@@ -652,6 +652,7 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
         } else {
           ".tar.gz"
         }
+        browser()
         osNameOnRSPM <- if (isWindows()) {
           "windows"
         } else if (isMacOSX()) {
@@ -763,7 +764,8 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
 
 secondsInADay <- 3600 * 24
 
-urlForArchivedPkgs <- "https://packagemanager.posit.co/cran/latest"
+urlForArchivedPkgs <- "https://packagemanager.posit.co/cran/"
+# urlForArchivedPkgs <- "https://packagemanager.posit.co/cran/latest/"
 # urlForArchivedPkgs <- "https://packagemanager.rstudio.com/cran/"
 # urlForArchivedPkgs <- "https://MRAN.revolutionanalytics.com/snapshot"
 

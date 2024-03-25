@@ -508,9 +508,11 @@ isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
 isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
                              repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
   if (isWindows() || isMacOSX()) {
-    isBin <- grepl("[\\|/])|/bin[\\|/]", curCRANRepo)
+    isBin <- grepl("[\\|/])|/bin[\\|/]", curCRANRepo[1])
   } else {
-    isBin <- startsWith(prefix = repoToTest, curCRANRepo)
+    if (is.name(repoToTest))
+      repoToTest <- eval(repoToTest)
+    isBin <- startsWith(prefix = repoToTest, curCRANRepo[1])
   }
   isBin
 }

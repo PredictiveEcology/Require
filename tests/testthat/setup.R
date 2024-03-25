@@ -13,7 +13,7 @@ runTests <- function(have, pkgs) {
 if (Sys.info()["user"] %in% "emcintir") {
   options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
           gargle_oauth_email = "eliotmcintire@gmail.com",
-          gargle_oauth_cache = "c:/Eliot/.secret")#, .local_envir = teardown_env())
+          gargle_oauth_cache = "~/.secret")#, .local_envir = teardown_env())
   googledrive::drive_auth()
 }
 

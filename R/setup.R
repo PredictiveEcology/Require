@@ -272,7 +272,8 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(
         CRAN =
-          paste0(binaryLinux, "all/__linux__/", linuxRelease(), "/latest")
+          # paste0(binaryLinux, "all/__linux__/", linuxRelease(), "/latest")
+          paste0(binaryLinux, "__linux__/", linuxRelease(), "/latest")
       )
       if (!is.null(getOption("repos"))) {
         backupCRAN <- getOption("repos")
