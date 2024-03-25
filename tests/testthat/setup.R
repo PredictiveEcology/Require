@@ -10,17 +10,30 @@ runTests <- function(have, pkgs) {
   }
 }
 
-if (Sys.info()["user"] %in% "emcintir") {
-  options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
-          gargle_oauth_email = "eliotmcintire@gmail.com",
-          gargle_oauth_cache = "~/.secret")#, .local_envir = teardown_env())
-  googledrive::drive_auth()
-}
 
+withr::local_package("curl", lib.loc = getOption("Require.origLibPathForTests"))
+# withr::local_package("openssl", lib.loc = getOption("Require.origLibPathForTests"))
+# withr::local_package("googledrive", lib.loc = getOption("Require.origLibPathForTests"))
+# withr::local_package("httr", lib.loc = getOption("Require.origLibPathForTests"))
+# withr::local_package("rappdirs", lib.loc = getOption("Require.origLibPathForTests"))
+
+withr::local_package("openssl", .local_envir = teardown_env())
+withr::local_package("googledrive", .local_envir = teardown_env())
+withr::local_package("rappdirs", .local_envir = teardown_env())
+withr::local_package("httr", .local_envir = teardown_env())
 withr::local_package("waldo", .local_envir = teardown_env())
 withr::local_package("rematch2", .local_envir = teardown_env())
 withr::local_package("diffobj", .local_envir = teardown_env())
 withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = teardown_env())
+
+if (Sys.info()["user"] %in% "emcintir") {
+  secretPath <- if (isWindows()) "c:/Eliot/.secret" else "~/.secret"
+  options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
+          Require.origLibPathForTests = .libPaths()[1],
+          gargle_oauth_email = "eliotmcintire@gmail.com",
+          gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
+  googledrive::drive_auth()
+}
 
 
 if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {

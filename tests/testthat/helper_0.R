@@ -1,6 +1,7 @@
 setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.frame()) {
   opts <- options()
-  requireNamespace("waldo")
+  # print(paste("googledrive is loaded: ", "googledrive" %in% loadedNamespaces()))
+  # requireNamespace("waldo")
 
   # cannot open file 'startup.Rs': No such file or directory
   # suggested solution https://stackoverflow.com/a/27994299/3890027
@@ -77,4 +78,10 @@ omitPkgsTemporarily <- function(pkgs) {
   pkgs <- grep("^SpaDES.core", pkgs, invert = TRUE, value = TRUE) # not on CRAN
 #   pkgs <- grep("SpaDES.experiment", pkgs, invert = TRUE, value = TRUE) # file.move is not exported from reproducible
   pkgs
+}
+
+dontTryDetach <- c("devtools", "testthat", "googledrive")
+
+dontDetach <- function() {
+  extractPkgName(unlist(unname(pkgDep(dontTryDetach, recursive = T))))
 }

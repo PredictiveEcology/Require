@@ -53,7 +53,7 @@ test_that("test 3", {
   data.table::set(pkgDT, NULL, "versionSpec", NA)
 
   out <- detachAll("data.table",
-                   dontTry = extractPkgName(pkgDep("devtools", recursive = T)[["devtools"]]))
+                   dontTry = dontDetach())
   testthat::expect_true({
     isTRUE(out["data.table"] == 1)
   })

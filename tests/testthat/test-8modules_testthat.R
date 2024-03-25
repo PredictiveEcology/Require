@@ -135,9 +135,9 @@ test_that("test 5", {
 
     dirForInstall <- tempdir2(.rndstr(1))
 
-    out <- mess <- st <- list()
+    warns <- out <- mess <- st <- list()
     for (i in 1:2) {
-      suppressWarnings( # "Require" is in use
+      warns[[i]] <- capture_warnings( # "Require" is in use
         st[[i]] <- system.time(
           mess[[i]] <- capture.output(
             type = "message",
@@ -148,11 +148,12 @@ test_that("test 5", {
       )
     }
 
-    ip <- installed.packages() |> as.data.table()
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
 
-    allInstalled <- all(setdiff(trimRedundancies(pkgs)$Package, "Require") %in%
-                          ip$Package)
-    expect_true(allInstalled)
+    allInstalled <- setdiff(setdiff(trimRedundancies(pkgs)$Package, "Require"),
+                            ip$Package)
+    a <- attr(out[[i]], "Require")
+    expect_true(length(allInstalled) == 0)
 
     out1Attr <- attr(out[[1]], "Require")
     out2Attr <- attr(out[[2]], "Require")

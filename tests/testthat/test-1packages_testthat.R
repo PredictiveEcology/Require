@@ -53,8 +53,7 @@ test_that("test 1", {
   out <- try(
     detachAll(
       c("Require", "fpCompare", "sdfd", "reproducible"),
-      dontTry = c(extractPkgName(
-        unname(unlist(pkgDep(c("devtools", "testthat"), recursive = T)))))),
+      dontTry = dontDetach()),
     silent = TRUE) |>
     suppressWarnings()
   out <- out[names(out) != "testit"]
@@ -212,7 +211,7 @@ test_that("test 1", {
     )
     on.exit({
       try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
-                           dontTry = c(extractPkgName(pkgDep("testthat", recursive = T)[["testthat"]])))
+                           dontTry = dontDetach())
       , silent = TRUE) |>
         suppressWarnings() |> suppressMessages()
       # unloadNamespace("package:fpCompare")
@@ -227,8 +226,7 @@ test_that("test 1", {
     # End issue 87
     out <- try(
       detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                dontTry = c(extractPkgName(
-                  pkgDep("testthat", recursive = T)[["testthat"]]))),
+                dontTry = dontDetach()),
       silent = TRUE) |>
       suppressWarnings()
 

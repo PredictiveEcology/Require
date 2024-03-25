@@ -1,13 +1,11 @@
 test_that("test 5", {
 
-  withr::local_package("googledrive")
   setupInitial <- setupTest()
   on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
   if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
-    # Require::Install("profvis")
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)

@@ -23,7 +23,9 @@ test_that("test 1", {
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
   if (isDev) {
-    Require(c("covr (==3.6.0)"), require = FALSE, quiet = quiet)
+    warns <- capture_warnings(Require(c("covr (==3.6.0)"), require = FALSE, quiet = quiet))
+    if (length(warns))
+      expect_true(all(grepl("is in use", warns)))
   } else {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }
