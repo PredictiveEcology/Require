@@ -75,7 +75,6 @@ testit::assert({
 # testit::assert({length(e) == length(eAlt)})
 # testit::assert({names(e) == names(eAlt)})
 
-aaaa <- 1
 a <- pkgDep("Require", which = "all", recursive = FALSE)
 b <- pkgDep("Require", which = "most", recursive = FALSE)
 d <- pkgDep("Require", which = TRUE, recursive = FALSE)

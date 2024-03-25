@@ -256,11 +256,12 @@ Require <- function(packages,
     if (is.null(names(install.packagesArgs)))
       stop("install.packagesArgs must be a list with *named* elements, e.g., INSTALL_opts")
 
-  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1)), install.packagesArgs,
+  verboseSpecial <- verbose < 5
+  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1) && verboseSpecial), install.packagesArgs,
     dots,
     keep.null = TRUE
   )
-  install_githubArgs <- modifyList2(list(quiet = !(verbose >= 0)), install_githubArgs,
+  install_githubArgs <- modifyList2(list(quiet = !(verbose >= 0)  && verboseSpecial), install_githubArgs,
     dots,
     keep.null = TRUE
   )
@@ -322,7 +323,6 @@ Require <- function(packages,
       pkgDT <- deps
       pkgDT <- checkHEAD(pkgDT)
 
-      if (exists("aaaa")) browser()
       pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
 
       # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
