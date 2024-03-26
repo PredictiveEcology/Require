@@ -580,7 +580,6 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
 
 
 downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
-  browser()
 
   if (any(grepl(dirname(urlForArchivedPkgs), toInstall$Repository)) ||
       isWindows() || isMacOSX()) {
