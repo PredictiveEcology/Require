@@ -1207,8 +1207,8 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
     #   won't have version numbering --> Need to merge the two fields
     set(pkgDepDT, NULL, "Version", extractVersionNumber(pkgDepDT$packageFullName))
     # pkgDepDT[, Version := extractVersionNumber(packageFullName)]
-    if (any(!is.na(pkgDepDT$Version))) {
-      whHasVersion <- which(!is.na(pkgDepDT$Version))
+    if (any(!is.na(pkgDepDT[["Version"]]))) {
+      whHasVersion <- which(!is.na(pkgDepDT[["Version"]]))
       set(pkgDepDT, whHasVersion, "inequality",
           extractInequality(pkgDepDT$packageFullName[whHasVersion]))
       # pkgDepDT[!is.na(Version), inequality := extractInequality(packageFullName)]
@@ -1241,7 +1241,7 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
       set(pkgDepDT, NULL, "github", extractPkgGitHub(pkgDepDT$packageFullName))
       # pkgDepDT[, github := extractPkgGitHub(packageFullName)]
       if (any(pkgDepDT$isGitPkg == TRUE &
-              !is.na(pkgDepDT$Version))) {
+              !is.na(pkgDepDT[["Version"]]))) {
         pkgDepDT[isGitPkg == TRUE & !is.na(Version), newPackageFullName :=
                    ifelse(
                      is.na(extractVersionNumber(packageFullName)),
