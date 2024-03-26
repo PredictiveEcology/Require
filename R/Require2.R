@@ -580,6 +580,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
 
 
 downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
+  browser()
 
   if (any(grepl(dirname(urlForArchivedPkgs), toInstall$Repository)) ||
       isWindows() || isMacOSX()) {
@@ -765,6 +766,7 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
 secondsInADay <- 3600 * 24
 
 urlForArchivedPkgs <- "https://packagemanager.posit.co/cran/"
+urlForPositPACKAGES <- file.path(urlForArchivedPkgs, "latest")
 # urlForArchivedPkgs <- "https://packagemanager.posit.co/cran/latest/"
 # urlForArchivedPkgs <- "https://packagemanager.rstudio.com/cran/"
 # urlForArchivedPkgs <- "https://MRAN.revolutionanalytics.com/snapshot"
@@ -1313,7 +1315,7 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
       reposPoss <- setdiff(reposPoss, "CRAN")
       isRSPM <- reposPoss == "RSPM"
       RSPM <- if (any(isRSPM))
-        reposPoss <- c(RSPM = urlForArchivedPkgs, reposPoss[!isRSPM])
+        reposPoss <- c(RSPM = urlForPositPACKAGES, reposPoss[!isRSPM])
       repos <- c(reposPoss, repos)
       dups <- duplicated(repos)
       if (any(dups)) {
@@ -3093,7 +3095,6 @@ appendInstallResult <- function(pkgDT, rowsToUpdate, installResult, sep = "; ") 
     if (!is.null(prevInstallResult)) {
       nas <- is.na(prevInstallResult)
       if (any(!nas)) {
-        browser()
         pkgDT[rowsToUpdate[which(!nas)],
               installResult := paste(installResult, prevInstallResult[which(!nas)], sep = sep)]
       }
