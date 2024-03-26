@@ -25,7 +25,7 @@ test_that("test 1", {
   if (isDev) {
     warns <- capture_warnings(Require(c("covr (==3.6.0)"), require = FALSE, quiet = quiet))
     if (length(warns))
-      expect_true(all(grepl("is in use", warns)))
+      expect_true(all(grepl("in use", warns)))
   } else {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }

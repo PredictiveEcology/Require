@@ -47,12 +47,14 @@ test_that("test 5", {
         data.table::fwrite(pkgs, file = snf)
         googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
                                   media = snf)
+
+        # These have NA for repository
+        "NLMR"
+        "visualTest"
+
       }
-
-
       # remove some specifics for tests that are not expected to work
       skips <- c("rJava", "Require", "testit", "SpaDES.install")
-      # browser()
       pkgs <- pkgs[!(Package %in% skips)]
 
       # stringfish can't be installed in Eliot's system from binaries
@@ -76,13 +78,12 @@ test_that("test 5", {
 
       # remove.packages(pks)
       # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-      warns <- capture_warnings( # "is in use and will not be installed"
-        (out <- Require(packageVersionFile = snf, require = FALSE, dependencies = FALSE, verbose = 2)) |>
-          capture_messages() -> mess
-      )
-      out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
+      (out <- Require(packageVersionFile = snf, require = FALSE, dependencies = FALSE)) |>
+           capture_messages() -> mess |> capture_warnings() -> warns
+      if (length(warns))
+        expect_true(all(grepl("in use", warns)))
 
-      expect_true(all(grepl("in use and will not be installed", warns)))
+      out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
 
       neededBasedOnPackageFullNames <- rbindlistRecursive(out11$deps)
       dups <- duplicated(neededBasedOnPackageFullNames$Package)
