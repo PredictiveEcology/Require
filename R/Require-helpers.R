@@ -259,7 +259,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Require.verbose")) {
   info <- list()
   for (repo in repos) {
-    archiveFile <- sprintf("%s/src/contrib/Meta/archive.rds", repo)
+    archiveFile <- archiveFile(repo) # sprintf("%s/src/contrib/Meta/archive.rds", repo)
     if (!exists(archiveFile, envir = pkgDepEnv(), inherits = FALSE)) {
       archive <- tryCatch(
         {

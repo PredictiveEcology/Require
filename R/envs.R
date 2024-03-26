@@ -119,3 +119,6 @@ envPkgDepArchiveDetailsInner <- function() {
 # .txtGitHubParsedCols <- c(.txt, "Repo", "Branch", "Account")
 
 envPkgDepDepsFilename <- "pkgDepCache.rds"
+
+archiveFile <- function(repo)
+  sprintf("%s/src/contrib/Meta/archive.rds", repo)
