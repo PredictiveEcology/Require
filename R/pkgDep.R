@@ -1205,10 +1205,14 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
 
     # Here, GitHub package specification in a DESCRIPTION file Remotes section
     #   won't have version numbering --> Need to merge the two fields
-    set(pkgDepDT, NULL, "Version", extractVersionNumber(pkgDepDT$packageFullName))
+
+
+
+    # This shouldn't be "Version" but "versionSpec" from here
+    # set(pkgDepDT, NULL, "Version", extractVersionNumber(pkgDepDT$packageFullName))
     # pkgDepDT[, Version := extractVersionNumber(packageFullName)]
-    if (any(!is.na(pkgDepDT[["Version"]]))) {
-      whHasVersion <- which(!is.na(pkgDepDT[["Version"]]))
+    if (any(!is.na(pkgDepDT[["versionSpec"]]))) {
+      whHasVersion <- which(!is.na(pkgDepDT[["versionSpec"]]))
       set(pkgDepDT, whHasVersion, "inequality",
           extractInequality(pkgDepDT$packageFullName[whHasVersion]))
       # pkgDepDT[!is.na(Version), inequality := extractInequality(packageFullName)]
@@ -1241,11 +1245,11 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
       set(pkgDepDT, NULL, "github", extractPkgGitHub(pkgDepDT$packageFullName))
       # pkgDepDT[, github := extractPkgGitHub(packageFullName)]
       if (any(pkgDepDT$isGitPkg == TRUE &
-              !is.na(pkgDepDT[["Version"]]))) {
-        pkgDepDT[isGitPkg == TRUE & !is.na(Version), newPackageFullName :=
+              !is.na(pkgDepDT[["versionSpec"]]))) {
+        pkgDepDT[isGitPkg == TRUE & !is.na(versionSpec), newPackageFullName :=
                    ifelse(
                      is.na(extractVersionNumber(packageFullName)),
-                     paste0(packageFullName, " (", inequality, Version, ")"),
+                     paste0(packageFullName, " (", inequality, versionSpec, ")"),
                      NA
                    )]
         whGitNeedVersion <- !is.na(pkgDepDT$newPackageFullName)
@@ -1254,7 +1258,7 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
         }
       }
     }
-    dup <- duplicated(pkgDepDT, by = c("Package", "Version", "versionSpec"))
+    dup <- duplicated(pkgDepDT, by = c("Package", "versionSpec"))
     pkgDepDT <- pkgDepDT[dup == FALSE]
     differences <-
       setdiff(setdiff(pkgDepDT$Package, .basePkgs), extractPkgName(neededFromDESCRIPTION))
