@@ -1062,7 +1062,8 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     set(pkgInstall, NULL, rmFromPkgInstall, NULL)
   pkgInstall <- ap[pkgInstall, on = "Package"]
   whHasVoR <- which(!is.na(pkgInstall$VersionOnReposCurrent))
-  set(pkgInstall, whHasVoR, "VersionOnRepos", pkgInstall[["VersionOnReposCurrent"]][whHasVoR])
+  if (length(whHasVoR))
+    set(pkgInstall, whHasVoR, "VersionOnRepos", pkgInstall[["VersionOnReposCurrent"]][whHasVoR])
 
   if (any(pkgInstall$repoLocation %in% .txtGitHub)) {
     if (!is.null(pkgInstall[["i.VersionOnRepos"]]))
@@ -2311,7 +2312,8 @@ updateInstallSafeGroups <- function(pkgInstall) {
 }
 
 getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
-  cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo", "VersionOnRepos", "availableVersionOK")
+  cols <- c("PackageUrl", "dayAfterPutOnCRAN", "dayBeforeTakenOffCRAN", "repo",
+            "VersionOnRepos", "availableVersionOK")
   commonCols <- intersect(cols, colnames(pkgArchive))
 
   numGroups <- NROW(unique(pkgArchive$Package))
@@ -2900,7 +2902,36 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
           correctVersions <- compareVersion2(Version2, versionSpec2, inequality[ind])
 
           if (all(correctVersions %in% FALSE)) {
-            correctVersions <- NA
+            # This is case where the inequality cannot be fulfilled... check why:
+            # e.g., NLMR == 1.1.1 ... did not exist on CRAN archives
+            # case 1 -- package exists in archive, but not specific version
+            # no version on CRAN
+            if (length(correctVersions)) {
+              # if (inequality[ind] == "==") {
+              ineq <- ">="
+              altVersion <- compareVersion2(Version2, versionSpec2, ineq)
+              if (!any(altVersion)) {
+                ineq <- "<="
+                altVersion <- compareVersion2(Version2, versionSpec2, ineq)
+              }
+              if (any(altVersion)) {
+                messageVerbose("Package ",
+                     Package, " (", inequality[ind], "", versionSpec2,
+                     ") is not on CRAN archives. ",
+                     "Available versions are:"
+                )
+                messageDF(data.frame(Version = Version2,
+                                     ava[[Package]][, c("repo", "PackageUrl", "mtime")]))
+                warning("Please change required version e.g., ",
+                     paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
+
+              }
+              # correctVersions <- altVersion
+              # }
+              correctVersions <- NA
+
+            }
+
           } else {
             latestCorrect <- try(tail(which(correctVersions), 1))
             if (is(latestCorrect, "try-error")) {
