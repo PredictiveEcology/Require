@@ -257,7 +257,7 @@ Require <- function(packages,
       stop("install.packagesArgs must be a list with *named* elements, e.g., INSTALL_opts")
 
   verboseSpecial <- verbose < 5
-  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1) && verboseSpecial), install.packagesArgs,
+  install.packagesArgs <- modifyList2(list(quiet = !(verbose >= 1 && verboseSpecial)), install.packagesArgs,
     dots,
     keep.null = TRUE
   )
