@@ -206,9 +206,14 @@ test_that("test 1", {
     # detach("package:reproducible", unload = TRUE)    # Apparnetly linux can handle this
     # aaa <<- 1
     # on.exit(rm(aaa, envir = .GlobalEnv), add = TRUE)
-    suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
-      Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
-    )
+    # suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
+    (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
+      capture_warnings() -> warns
+    if (length(warns))
+      expect_true(all(grepl("in use", warns)))
+
+
+    # )
     on.exit({
       try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
                            dontTry = dontDetach())
