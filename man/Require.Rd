@@ -57,7 +57,12 @@ repository name.}
 \item{packageVersionFile}{Character string of a file name or logical. If
 \code{TRUE}, then this function will load the default file,
 \code{getOption("Require.packageVersionFile")}. If this argument is provided,
-then this will override all any packages passed to \code{packages}.}
+then this will override any packages passed to \code{packages}. By default,
+\code{Require} will attempt to resolve dependency violations (i.e., if this
+\code{packageVersionFile} specifies a version of a package that violates
+the dependency specification of another package). If a user wishes to attempt
+to install the \code{packageVersionFile} without assessing the dependencies,
+set \code{dependencies = FALSE}.}
 
 \item{libPaths}{The library path (or libraries) where all packages should be
 installed, and looked for to load (i.e., call \code{library}). This can be used

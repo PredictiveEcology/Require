@@ -95,7 +95,12 @@ utils::globalVariables(c(
 #' @param packageVersionFile  Character string of a file name or logical. If
 #'   `TRUE`, then this function will load the default file,
 #'   `getOption("Require.packageVersionFile")`. If this argument is provided,
-#'   then this will override all any packages passed to `packages`.
+#'   then this will override any packages passed to `packages`. By default,
+#'   `Require` will attempt to resolve dependency violations (i.e., if this
+#'   `packageVersionFile` specifies a version of a package that violates
+#'   the dependency specification of another package). If a user wishes to attempt
+#'   to install the `packageVersionFile` without assessing the dependencies,
+#'   set `dependencies = FALSE`.
 #' @param libPaths The library path (or libraries) where all packages should be
 #'   installed, and looked for to load (i.e., call `library`). This can be used
 #'   to create isolated, stand alone package installations, if used with
@@ -288,7 +293,7 @@ Require <- function(packages,
 
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths,
       install_githubArgs, install.packagesArgs, standAlone,
-      type = type, verbose = verbose, returnDetails = returnDetails
+      type = type, verbose = verbose, returnDetails = returnDetails, ...
     )
     return(invisible(pkgSnapshotOut))
   }
@@ -308,19 +313,22 @@ Require <- function(packages,
   if (NROW(packages)) {
      # packages <- anyHaveHEAD(packages)
 
-    deps <- pkgDep(packages, simplify = FALSE,
-      purge = purge, libPath = libPaths, recursive = TRUE,
-      which = which, type = type, verbose = verbose, repos = repos,
-      Additional_repositories = TRUE
-    )
-    basePkgsToLoad <- packages[packages %in% .basePkgs]
-    pkgDT <- deps
-
-    if (NROW(pkgDT)) {
+    if (length(which)) {
+      deps <- pkgDep(packages, simplify = FALSE,
+                     purge = purge, libPath = libPaths, recursive = TRUE,
+                     which = which, type = type, verbose = verbose, repos = repos,
+                     Additional_repositories = TRUE
+      )
       deps <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
       deps <- unique(deps)
       # allPackages <- sort(unique(unname(unlist(deps[["packageFullName"]]))))
       pkgDT <- deps
+    } else {
+      pkgDT <- toPkgDTFull(packages)
+    }
+    basePkgsToLoad <- packages[packages %in% .basePkgs]
+
+    if (NROW(pkgDT)) {
       pkgDT <- checkHEAD(pkgDT)
 
       pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
@@ -1286,7 +1294,7 @@ types <- function(length = 1L) {
 doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                           install_githubArgs, install.packagesArgs, standAlone = TRUE,
                           type = getOption("pkgType"), verbose = getOption("Require.verbose"),
-                          returnDetails) {
+                          returnDetails, ...) {
   if (!isFALSE(packageVersionFile)) {
     if (isTRUE(packageVersionFile)) {
       packageVersionFile <- getOption("Require.packageVersionFile")
@@ -1332,13 +1340,12 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     if (any(funnyNames)) {
       names(need)[funnyNames] <- packages[["Package"]][funnyNames]
     }
-    #packages[["packageFullName"]]
     out <- Require(need,
                    verbose = verbose, purge = purge, libPaths = libPaths, repos = repos,
                    install_githubArgs = install_githubArgs,
                    install.packagesArgs = install.packagesArgs,
                    standAlone = standAlone, require = FALSE, install = TRUE,
-                   returnDetails = returnDetails
+                   returnDetails = returnDetails, ...
     )
   } else {
     out <- FALSE
@@ -1681,7 +1688,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     }
     ap3[, "Depends"] <- NA
-    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = T)
+    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = TRUE)
     pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP][["Package"]]
     if (any(pkgHasNameDiffrntThanRepo)) {
       names(deps)[pkgHasNameDiffrntThanRepo] <- toInstall[Package %in% pkgsNotInAP][["Package"]][pkgHasNameDiffrntThanRepo]
