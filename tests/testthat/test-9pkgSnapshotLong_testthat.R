@@ -48,6 +48,8 @@ test_that("test 5", {
         googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
                                   media = snf)
 
+        pkgs <- pkgs[Package %in% "reproducible", Version := "2.0.9"]
+        pkgs <- pkgs[Package %in% "SpaDES.core", Version := "2.0.2"]
         # These have NA for repository
         "NLMR"
         "visualTest"
@@ -58,8 +60,9 @@ test_that("test 5", {
       pkgs <- pkgs[!(Package %in% skips)]
 
       # stringfish can't be installed in Eliot's system from binaries
-      if (Sys.info()["user"] == "emcintir")
-        options(Require.otherPkgs = union(getOption("Require.otherPkgs"), "stringfish"))
+      if (isWindows())
+        if (Sys.info()["user"] == "emcintir")
+          withr::local_options(Require.otherPkgs = union(getOption("Require.otherPkgs"), "stringfish"))
       # pkgs <- pkgs[!Package %in% c("RandomFields", "RandomFieldsUtils")] # the version 1.0-7 is corrupt on RSPM
       pkgs <- pkgs[!Package %in% c("usefulFuns")] # incorrectly imports Require from reproducible... while other packages need newer reproducible
 
@@ -78,10 +81,18 @@ test_that("test 5", {
 
       # remove.packages(pks)
       # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-      (out <- Require(packageVersionFile = snf, require = FALSE, dependencies = FALSE)) |>
-           capture_messages() -> mess |> capture_warnings() -> warns
-      if (length(warns))
+      (out <- Require(packageVersionFile = snf, require = FALSE, dependencies = FALSE,
+                      verbose = 2)) |>
+        #    capture_messages() -> mess |>
+        capture_warnings() -> warns
+
+      # NLMR specification is for a version that doesn't exist
+      NLMRwarn <- grepl("Please change required version", warns)
+      expect_identical(sum(NLMRwarn), 1L)
+      warns <- warns[-NLMRwarn]
+      if (length(warns)) {
         expect_true(all(grepl("in use", warns)))
+      }
 
       out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
 
@@ -110,6 +121,7 @@ test_that("test 5", {
 
       # scales didn't install the "equals" version because a different package needs >= 1.3.0
       versionProblems <- versionProblems[!Package %in% "scales"]
+      browser()
       expect_true(NROW(versionProblems) == 0)
 
       attrA <- attr(out, "Require")

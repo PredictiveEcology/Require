@@ -300,13 +300,15 @@ test_that("test 1", {
 
     out2 <- Require::Install(
       c("quickPlot (< 1.0.0)", "NetLogoR",
-        "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)",  # This is needed b/c .unwrap is not exported from reproducible on CRAN
+        # This is needed b/c .unwrap is not exported from reproducible on CRAN
+        ifelse(isWindows(), "reproducible", "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)"),
         "SpaDES")#,
       # repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
       ) |>
       capture_warnings() -> warns
-    if (length(warns))
+    if (length(warns)) {
       expect_true(all(grepl("in use", warns)))
+    }
 
 
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
