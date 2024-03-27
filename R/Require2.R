@@ -2253,7 +2253,8 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
     ))
   set(pkgInstall, NULL, "RepositoryTop", NULL)
   pkgInstall <- keepOnlyGitHubAtLines(pkgInstall, verbose = verbose)
-  pkgInstall[, binOrSrc := c("src", "bin")[grepl("\\<bin\\>", Repository) + 1]]
+  pkgInstall[, binOrSrc := binOrSrc(grepl("\\<bin\\>", Repository))]
+  # pkgInstall[, binOrSrc := c("src", "bin")[grepl("\\<bin\\>", Repository) + 1]]
   setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "binOrSrc"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
 
   pkgInstall[, keep := {
@@ -2322,6 +2323,14 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
     ret <- getArchiveDetailsInnerMemoise(Repository, ava, Package, cols, versionSpec, inequality, secondsInADay, .GRP,
                                          numGroups, verbose, repos, srcPackageURLOnCRAN)
   }, by = c("Package")]#, "Repository")] # multiple repositories may have same version and it is OK ... do loop inside
+
+  # need to update binary or src because the getArchiveDetailsInner doesn't address this --
+  #   it just returns the PackageURL
+  bins <- isBinary(pkgArchive$PackageUrl)
+  needBinsUpdate <- !is.na(bins)
+  if (any(needBinsUpdate))
+    # set(pkgArchive, which(needBinsUpdate), "binOrSrc", c("src", "bin")[bins[needBinsUpdate] + 1])
+    set(pkgArchive, which(needBinsUpdate), "binOrSrc", binOrSrc(bins[needBinsUpdate]))
   hasVoR <- which(!is.na(pkgArchive[["VersionOnRepos"]]))
   set(pkgArchive, hasVoR, "Version", pkgArchive[["VersionOnRepos"]][hasVoR])
   pkgArchive <- unique(pkgArchive, by = c("Package", "repo", "availableVersionOK"))
