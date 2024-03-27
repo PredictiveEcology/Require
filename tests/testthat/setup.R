@@ -36,7 +36,9 @@ if (Sys.info()["user"] %in% "emcintir") {
 }
 
 
-if (Require:::.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
+getCRANrepos(ind = 1)
+
+if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
 

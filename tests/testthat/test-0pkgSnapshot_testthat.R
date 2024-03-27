@@ -7,8 +7,8 @@ test_that("test 1", {
 
   quiet <- !(getOption("Require.verbose") >= 1)
 
-  tmpdir <- tempdir2(Require:::.rndstr(1))
-  tmpdir2 <- tempdir2(Require:::.rndstr(1))
+  tmpdir <- tempdir2(.rndstr(1))
+  tmpdir2 <- tempdir2(.rndstr(1))
   created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
   setLibPaths(tmpdir, standAlone = TRUE)
@@ -34,7 +34,7 @@ test_that("test 1", {
   for (lp in unique(aa$LibPath)) {
     pack <- aa$Package[aa$LibPath == lp]
     pack <- sample(pack, size = min(10, length(pack)))
-    if (!all(pack %in% Require:::.basePkgs)) {
+    if (!all(pack %in% .basePkgs)) {
       deps <- pkgDep(pack, recursive = TRUE)
       lens <- lengths(deps)
       haveFewDeps <- order(lens)
@@ -59,7 +59,7 @@ test_that("test 1", {
     #
     #   origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
     #
-    #   theDir <- Require:::rpackageFolder(getOptionRPackageCache())
+    #   theDir <- rpackageFolder(getOptionRPackageCache())
     #   if (!is.null(theDir)) {
     #     localBins <- dir(theDir, pattern = "data.table")
     #     localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table")
@@ -90,7 +90,7 @@ test_that("test 1", {
     #   ## There might be more than one version
     #   Rpath <- Sys.which("Rscript")
     #   if (length(localBinsFull) == 1) { # already have the binary in the Cache
-    #     if (Require:::isWindows()) {
+    #     if (isWindows()) {
     #       system(paste0(
     #         Rpath, " -e \"install.packages(c('", localBinsFull[1],
     #         "'), quiet = ", quiet, ", type = 'binary', lib = '", .libPaths()[1], "', repos = NULL)\""
@@ -120,7 +120,7 @@ test_that("test 1", {
     #   }
     #
     #   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
-    #   Require:::installRequire(getOption("Require.Home"))
+    #   installRequire(getOption("Require.Home"))
 
     out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
 
@@ -133,7 +133,7 @@ test_that("test 1", {
     anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
     anyMissing <- anyMissing[GithubUsername != "PredictiveEcology"] # even though they have GitHub info,
     # they are likely missing because of the previous line of local installs
-    if (Require:::isWindows()) {
+    if (isWindows()) {
       anyMissing <- anyMissing[!Package %in% "littler"]
     }
     # here[!there, on = "Package"]

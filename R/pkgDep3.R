@@ -1,7 +1,9 @@
 utils::globalVariables(
   c("Additional_repositories", "githubPkgName",
     "localBranch", "localFiles", "localRepo", "installedSha", "localUsername",
-    "newPackageFullName")
+    "newPackageFullName", "DESCFileFull", "correctVersionInCache", "descFiles",
+    "..keep", "..keepShort", "..onlyKeep", "..keep", "..keepCols", "..keepColsOuter",
+    "shas")
 )
 
 #' Determine package dependencies
@@ -103,7 +105,7 @@ pkgDep <- function(packages,
   purge <- dealWithCache(purge)
   checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
 
-  deps <- list(packages)
+  # deps <- packages
   if (!includeBase) {
     packages <- packages[!packages %in% .basePkgs]
   }
@@ -173,7 +175,8 @@ pkgDep <- function(packages,
       names(deps) <- pfn
     }
   } else {
-    names(deps) <- unlist(deps)
+    deps <- toPkgDepDT(packages)
+    # names(deps) <- unlist(deps)
   }
 
   return(deps)
@@ -667,37 +670,37 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
   out1 <- out$lis
   names(out1) <- out$packageFullName
   return(out1)
-  neededV <-
-    try(DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = which, purge = purge))
-  if (is(neededV, "try-error")) {
-    unlink(pkgDT$DESCFile)
-    unlink(pkgDT$destFile)
-    set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
-    browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
-                            "\nTo confirm whether it exists, try browsing to ",
-                            file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
-                            "\nIf it does exist, try rerunning with `purge = TRUE`",
-                            "\nIf this error is inaccurate, and the problem persists, ",
-                            "please contact developers with error code 949"))
-  }
-
-  neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
-
-  neededRemotesV <-
-    DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
-  names(neededV) <- pkgDT$packageFullName
-
-  Map(
-    needed = neededV, neededRemotes = neededRemotesV,
-    localVersionOK = pkgDT$installedVersionOK,
-    neededAdditionalRepos = neededAdditionalReposV,
-    localPackageName = pkgDT$Package,
-    packageFullName = pkgDT$packageFullName,
-    sha = pkgDT$shas,
-    MoreArgs = list(includeBase = includeBase, verbose = verbose,
-                    pkgDT = pkgDT),
-    uwrnar
-  )
+  # neededV <-
+  #   try(DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = which, purge = purge))
+  # if (is(neededV, "try-error")) {
+  #   unlink(pkgDT$DESCFile)
+  #   unlink(pkgDT$destFile)
+  #   set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
+  #   browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
+  #                           "\nTo confirm whether it exists, try browsing to ",
+  #                           file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
+  #                           "\nIf it does exist, try rerunning with `purge = TRUE`",
+  #                           "\nIf this error is inaccurate, and the problem persists, ",
+  #                           "please contact developers with error code 949"))
+  # }
+  #
+  # neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
+  #
+  # neededRemotesV <-
+  #   DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
+  # names(neededV) <- pkgDT$packageFullName
+  #
+  # Map(
+  #   needed = neededV, neededRemotes = neededRemotesV,
+  #   localVersionOK = pkgDT$installedVersionOK,
+  #   neededAdditionalRepos = neededAdditionalReposV,
+  #   localPackageName = pkgDT$Package,
+  #   packageFullName = pkgDT$packageFullName,
+  #   sha = pkgDT$shas,
+  #   MoreArgs = list(includeBase = includeBase, verbose = verbose,
+  #                   pkgDT = pkgDT),
+  #   uwrnar
+  # )
 }
 
 
@@ -848,13 +851,14 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 
 
+#' @importFrom utils download.file untar
 getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose = getOption("Require.cloneFrom")) {
   pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge, verbose = verbose)
 
   tmpdir <- Require::tempdir2(.rndstr())
   if (any(!is.na(pkgDTList$Archive$PackageUrl))) {
     pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {
-      tf <- file.path(Require:::RequirePkgCacheDir(), basename(PackageUrl))
+      tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
       out <- if (file.exists(tf)) { NULL } else {
         try(download.file(quiet = verbose <= 0 || verbose >= 5,
           url = file.path(Repository, basename(PackageUrl)),

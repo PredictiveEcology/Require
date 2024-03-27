@@ -8,9 +8,9 @@ utils::globalVariables(c(
   "haveLocal", "ineq", "i.VersionOnRepos", "installSafeGroups", "installed",
   "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
   "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall",
-  "PackageUrl", "repo",
+  "PackageUrl", "repo", "oppositeInequals", "violationsDoubleInequals",
   "verbose", "VersionOK", "versionSpec", "versionToKeep",
-  "violation", "violation2"
+  "violation", "violation2", "..keep", "..colsToKeep"
 ))
 
 #' Repeatability-safe install and load packages, optionally with specific
@@ -360,9 +360,9 @@ Require <- function(packages,
       if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
         pkgDT <-
           doInstalls(pkgDT,
-            repos = repos, purge = purge, libPaths = libPaths, verbose = verbose,
+            repos = repos, purge = purge, libPaths = libPaths,
             install.packagesArgs = install.packagesArgs,
-            type = type
+            type = type, returnDetails = returnDetails, verbose = verbose
           )
       }
     }
@@ -439,7 +439,8 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
 
 
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
-                       numPackages, numGroups, startTime, type = type, verbose = getOption("Require.verbose")) {
+                       numPackages, numGroups, startTime, type = type, returnDetails,
+                       verbose = getOption("Require.verbose")) {
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
     # "binary"
@@ -486,8 +487,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   toInstall
 }
 
-doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.packagesArgs,
-                       type = getOption("pkgType")) {
+doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesArgs,
+                       type = getOption("pkgType"), returnDetails, verbose) {
   tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
   origDir <- setwd(tmpdir)
   on.exit(setwd(origDir))
@@ -545,7 +546,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, verbose, install.p
         MoreArgs = list(
           repos = repos, purge = purge,
           install.packagesArgs = install.packagesArgs, numPackages = numPackages,
-          numGroups = maxGroup, startTime = startTime, type = type, verbose = verbose
+          numGroups = maxGroup, startTime = startTime, type = type,
+          returnDetails = returnDetails, verbose = verbose
         ),
         installAll
       )
@@ -1160,7 +1162,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
       if (any(hasPackageUrl)) {
         pkgArchiveHasPU <- split(pkgArchive, f = hasPackageUrl)
 
-        tf <- file.path(Require:::RequirePkgCacheDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
+        tf <- file.path(RequirePkgCacheDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
         fe <- file.exists(tf)
         if (any(fe)) {
           messageVerbose(
@@ -2987,7 +2989,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                        verboseLevel = 2
         )
         if (is.na(correctVersions[2])) { # if 2nd one is NA, it means it an archived package
-          tf <- file.path(Require:::RequirePkgCacheDir(), basename(ret$PackageUrl))
+          tf <- file.path(RequirePkgCacheDir(), basename(ret$PackageUrl))
           fe <- file.exists(tf)
           if (fe) {
             dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]

@@ -1,7 +1,7 @@
 utils::globalVariables(
   c("Additional_repositories", "githubPkgName",
     "localBranch", "localFiles", "localRepo", "installedSha", "localUsername",
-    "newPackageFullName")
+    "newPackageFullName", "..keepNames")
 )
 
 
@@ -256,47 +256,47 @@ pkgDepTopoSort <-
   )
 
 
-#' @inheritParams Require
-pkgDepCRANInner <-
-  function(ap,
-           which,
-           pkgDT,
-           repos,
-           purge,
-           type,
-           # pkgsNoVersion,
-           # keepVersionNumber,
-           # keepSeparate = FALSE,
-           verbose = getOption("Require.verbose")) {
-
-    if (is.null(pkgDT$Depends)) {
-      if (missing(ap))
-        ap <- getAvailablePackagesIfNeeded(pkgDT$Package, repos = repos, purge = purge, verbose = verbose, type = type)
-      keepNames <- c("Package", setdiff(colnames(pkgDT), colnames(ap)))
-      pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
-    }
-
-    pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
-    pkgDT[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
-    for (co in which)
-      set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
-
-    pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
-
-    # remove trailing and initial commas
-    set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
-    set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
-
-    deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
-      out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
-      out <- out[!is.na(out)]
-      out <-
-        grep(.grepR, out, value = TRUE, invert = TRUE)
-      out
-    })
-    depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
-    depsAll
-  }
+# @inheritParams Require
+# pkgDepCRANInner <-
+#   function(ap,
+#            which,
+#            pkgDT,
+#            repos,
+#            purge,
+#            type,
+#            # pkgsNoVersion,
+#            # keepVersionNumber,
+#            # keepSeparate = FALSE,
+#            verbose = getOption("Require.verbose")) {
+#
+#     if (is.null(pkgDT$Depends)) {
+#       if (missing(ap))
+#         ap <- getAvailablePackagesIfNeeded(pkgDT$Package, repos = repos, purge = purge, verbose = verbose, type = type)
+#       keepNames <- c("Package", setdiff(colnames(pkgDT), colnames(ap)))
+#       pkgDT <- ap[pkgDT[, ..keepNames], on = "Package"]
+#     }
+#
+#     pkgDT[is.na(versionSpec), availableVersionOK := TRUE]
+#     pkgDT[!is.na(versionSpec), availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
+#     for (co in which)
+#       set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
+#
+#     pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+#
+#     # remove trailing and initial commas
+#     set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
+#     set(pkgDT, NULL, "deps", gsub("^(, )+", "", pkgDT$deps))
+#
+#     deps <- Map(pkgFN = pkgDT$packageFullName, x = pkgDT$deps, function(pkgFN, x) {
+#       out <- strsplit(x, split = "(, {0,1})|(,\n)")[[1]]
+#       out <- out[!is.na(out)]
+#       out <-
+#         grep(.grepR, out, value = TRUE, invert = TRUE)
+#       out
+#     })
+#     depsAll <- Map(toPkgDepDT, deps, verbose = verbose)
+#     depsAll
+#   }
 
 DESCRIPTIONFileDeps <-
   function(desc_path,
@@ -695,70 +695,70 @@ checkCircular <- function(aa) {
   aa
 }
 
-#' @inheritParams Require
-getGitHubDeps <-
-  function(pkg,
-           pkgDT,
-           which,
-           purge,
-           verbose = getOption("Require.verbose"),
-           includeBase = FALSE) {
-    pkg <- masterMainToHead(pkgDT$packageFullName)
-
-    localVersionOK <- pkgDT$installedVersionOK
-    pkgDepDTOuter <- data.table(packageFullName = character())
-
-    if (any(!localVersionOK %in% TRUE)) {
-      pkgDTNotLocal <- dlGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
-    }
-    if (any(localVersionOK %in% TRUE)) {
-      pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
-      if (exists("pkgDTNotLocal", inherits = FALSE))
-        pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)
-    } else {
-      pkgDT <- pkgDTNotLocal
-    }
-
-    hasVersionNum <- pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
-    set(pkgDT, NULL, "availableVersionOK", NA)
-    if (any(hasVersionNum)) {
-      if (!isTRUE(getOption("Require.offlineMode"))) {
-        pkgDT[hasVersionNum, VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile, purge = purge)]
-        if (is.null(pkgDT$versionSpec)) {
-          pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
-          pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
-        }
-        pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, versionSpec, inequality)]
-      }
-    }
-
-
-    if (any(!pkgDT$availableVersionOK %in% FALSE)) {
-      neededV <-
-        try(DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = which, purge = purge))
-      if (is(neededV, "try-error")) {
-        unlink(pkgDT$DESCFile)
-        unlink(pkgDT$destFile)
-        set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
-        browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
-                                "\nTo confirm whether it exists, try browsing to ",
-                                file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
-                                "\nIf it does exist, try rerunning with `purge = TRUE`",
-                                "\nIf this error is inaccurate, and the problem persists, ",
-                                "please contact developers with error code 949"))
-      }
-
-      neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
-
-      neededRemotesV <-
-        DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
-      names(neededV) <- pkgDT$packageFullName
-
-      pkgDepDTOuter <- updateWithRemotesNamespaceAddRepos(neededV, neededRemotesV, pkgDT, neededAdditionalReposV, includeBase, verbose)
-    }
-
-    pkgDepDTOuter
-  }
+# @inheritParams Require
+# getGitHubDeps <-
+#   function(pkg,
+#            pkgDT,
+#            which,
+#            purge,
+#            verbose = getOption("Require.verbose"),
+#            includeBase = FALSE) {
+#     pkg <- masterMainToHead(pkgDT$packageFullName)
+#
+#     localVersionOK <- pkgDT$installedVersionOK
+#     pkgDepDTOuter <- data.table(packageFullName = character())
+#
+#     if (any(!localVersionOK %in% TRUE)) {
+#       pkgDTNotLocal <- dlGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = purge)
+#     }
+#     if (any(localVersionOK %in% TRUE)) {
+#       pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
+#       if (exists("pkgDTNotLocal", inherits = FALSE))
+#         pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)
+#     } else {
+#       pkgDT <- pkgDTNotLocal
+#     }
+#
+#     hasVersionNum <- pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
+#     set(pkgDT, NULL, "availableVersionOK", NA)
+#     if (any(hasVersionNum)) {
+#       if (!isTRUE(getOption("Require.offlineMode"))) {
+#         pkgDT[hasVersionNum, VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile, purge = purge)]
+#         if (is.null(pkgDT$versionSpec)) {
+#           pkgDT[hasVersionNum, versionSpec := extractVersionNumber(packageFullName)]
+#           pkgDT[hasVersionNum, inequality := extractInequality(packageFullName)]
+#         }
+#         pkgDT[hasVersionNum, availableVersionOK := compareVersion2(VersionOnRepos, versionSpec, inequality)]
+#       }
+#     }
+#
+#
+#     if (any(!pkgDT$availableVersionOK %in% FALSE)) {
+#       neededV <-
+#         try(DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = which, purge = purge))
+#       if (is(neededV, "try-error")) {
+#         unlink(pkgDT$DESCFile)
+#         unlink(pkgDT$destFile)
+#         set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
+#         browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
+#                                 "\nTo confirm whether it exists, try browsing to ",
+#                                 file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
+#                                 "\nIf it does exist, try rerunning with `purge = TRUE`",
+#                                 "\nIf this error is inaccurate, and the problem persists, ",
+#                                 "please contact developers with error code 949"))
+#       }
+#
+#       neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
+#
+#       neededRemotesV <-
+#         DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
+#       names(neededV) <- pkgDT$packageFullName
+#
+#       pkgDepDTOuter <- updateWithRemotesNamespaceAddRepos(neededV, neededRemotesV, pkgDT, neededAdditionalReposV, includeBase, verbose)
+#     }
+#
+#     pkgDepDTOuter
+#   }
 
 purgeBasedOnTimeSinceCached <- function(savedTime) {
   purgeDiff <-

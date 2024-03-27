@@ -10,10 +10,11 @@ test_that("test 1", {
   Sys.unsetenv("CRAN_REPO")
   isInteractive <- function() FALSE
   assignInNamespace("isInteractive", isInteractive, ns = "Require")
-  out <- Require:::getCRANrepos("")
+  # browser()
+  out <- getCRANrepos("")
   Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
-  repos <- Require:::getCRANrepos("")
+  repos <- getCRANrepos("")
   testthat::expect_true({
     is.character(repos)
   })

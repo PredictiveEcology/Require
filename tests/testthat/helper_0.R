@@ -1,5 +1,8 @@
 setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.frame()) {
   opts <- options()
+
+  # getCRANrepos(ind = 1)
+
   # print(paste("googledrive is loaded: ", "googledrive" %in% loadedNamespaces()))
   # requireNamespace("waldo")
 
@@ -34,11 +37,11 @@ setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.fra
   #   "---------------------------"),
   #   verbose = verbose, verboseLevel = 0
   # )
-  Require:::messageVerbose(Require:::blue(" getOption('Require.verbose'): ",
+  messageVerbose(blue(" getOption('Require.verbose'): ",
     getOption("Require.verbose")),
     verboseLevel = 0
   )
-  Require:::messageVerbose(Require:::blue(" getOption('repos'): ",
+  messageVerbose(blue(" getOption('repos'): ",
     paste(getOption("repos"), collapse = ", ")),
     verboseLevel = 0
   )
