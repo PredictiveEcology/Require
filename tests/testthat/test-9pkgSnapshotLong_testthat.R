@@ -56,7 +56,7 @@ test_that("test 5", {
 
       }
       # remove some specifics for tests that are not expected to work
-      skips <- c("rJava", "Require", "testit", "SpaDES.install")
+      skips <- c("rJava", "Require", "SpaDES.install")
       pkgs <- pkgs[!(Package %in% skips)]
 
       # stringfish can't be installed in Eliot's system from binaries

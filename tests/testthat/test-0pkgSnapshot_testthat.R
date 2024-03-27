@@ -4,11 +4,6 @@ test_that("test 1", {
   on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
-  # srch <- search()
-  # anyNamespaces <- srch[!gsub("package:", "", srch) %in%
-  #                         c("Require", "data.table", Require:::.basePkgs, ".GlobalEnv", "tools:rstudio", "Autoloads", "testit")]
-  # if (length(anyNamespaces) > 0) stop("Please restart R before running this test")
-  # library(testit)
 
   quiet <- !(getOption("Require.verbose") >= 1)
 
@@ -18,7 +13,7 @@ test_that("test 1", {
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
   setLibPaths(tmpdir, standAlone = TRUE)
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
-  suppressWarnings(Require(c("remotes", "testit"), require = FALSE, quiet = quiet))
+  suppressWarnings(Require(c("remotes"), require = FALSE, quiet = quiet))
 
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version

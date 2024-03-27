@@ -26,8 +26,6 @@ test_that("test 1", {
   # Sys.setenv("R_TESTS" = "")
   # Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
-  # library(testit)
-
   dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
   out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
@@ -56,7 +54,6 @@ test_that("test 1", {
       dontTry = dontDetach()),
     silent = TRUE) |>
     suppressWarnings()
-  out <- out[names(out) != "testit"]
   expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
   keep <- intersect(names(expectedPkgs), names(out))
   out <- out[keep]
