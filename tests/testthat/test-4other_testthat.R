@@ -147,9 +147,11 @@ test_that("test 3", {
   if (isDev) {
     # this was a bug created a warning when there was a package not on CRAN, but there
     #   were multiple repos; ffbase is no longer on CRAN
+    # can't quiet this down on linux because ffbase is not binary but rest are ...
+    #  install.packages won't do both types quiet = TRUE for some reason
     withCallingHandlers(
-      Install("ffbase",
-              repos = c(RSPM = "https://packagemanager.posit.co/cran/latest", CRAN = "https://cloud.r-project.org"
+      Install("ffbase", verbose = 5,
+              repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
               ))
       , warning = function(w) {
         testthat::expect_true(

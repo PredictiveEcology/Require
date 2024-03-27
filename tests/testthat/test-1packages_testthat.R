@@ -297,9 +297,18 @@ test_that("test 1", {
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
 
     # The warning is about "package ‘Require’ is in use and will not be installed"
-    suppressWarnings(out2 <- Require::Install(c("quickPlot (< 1.0.0)", "NetLogoR", "SpaDES"),
-                                              repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))
-    )
+
+    out2 <- Require::Install(
+      c("quickPlot (< 1.0.0)", "NetLogoR",
+        "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)",  # This is needed b/c .unwrap is not exported from reproducible on CRAN
+        "SpaDES")#,
+      # repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
+      ) |>
+      capture_warnings() -> warns
+    if (length(warns))
+      expect_true(all(grepl("in use", warns)))
+
+
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
     try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core"))) |> suppressMessages()
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
