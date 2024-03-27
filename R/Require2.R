@@ -2860,7 +2860,7 @@ clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
   if (length(canClone)) {
     messageVerbose(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
                          ") instead of Installing (don't need compiling): ",
-                         paste(canClone, collapse = ", ")), verbose = verbose)
+                         paste(sort(canClone), collapse = ", ")), verbose = verbose)
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1], ip = ip)
     ipa$pkgs <- names(cantClone)
@@ -2888,7 +2888,7 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
     if (length(fromFull) > 0) {
       dirs <- unique(dirname(to))
       checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
-      outs <- linkOrCopy(fromFull, to)
+      outs <- linkOrCopy(fromFull, to, allowSymlink = FALSE)
     }
   })
 }
@@ -2954,9 +2954,9 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                 )
                 messageDF(data.frame(Version = Version2,
                                      ava[[Package]][, c("repo", "PackageUrl", "mtime")]), verbose = verbose)
-                if (verbose > 1)
-                warning("Please change required version e.g., ",
-                     paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
+                if (verbose >= 1)
+                  warning("Please change required version e.g., ",
+                          paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
 
               }
               # correctVersions <- altVersion
@@ -3137,4 +3137,31 @@ appendInstallResult <- function(pkgDT, rowsToUpdate, installResult, sep = "; ") 
     }}
   pkgDT
 
+}
+
+packageHasError <- function(libs = .libPaths(), packages = NULL) {
+  problems <- Map(lib = libs, function(lib) {
+    pkgs <- dir(lib)
+
+    # need to intersect packages with pkgs
+    if (!is.null(packages))
+      pkgs <- intersect(packages, pkgs)
+
+    suppressWarnings(
+      out <- Map(pkg = pkgs, function(pkg) {
+        f <- system.file('Meta', 'package.rds', package = pkg, lib.loc = lib)
+        tryCatch({readRDS(f); FALSE}, error = function(e) TRUE)
+      })
+    )
+    out <- out[unlist(out)]
+    names(out)
+  })
+  if (!is.null(packages)) {
+    problems <- Map(p = problems, function(p) p[p %in% packages])
+  }
+  problems
+}
+
+binOrSrc <- function(areBinary) {
+  c("src", "bin")[areBinary + 1]
 }
