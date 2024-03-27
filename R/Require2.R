@@ -1731,6 +1731,15 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     if (i %in% c("Local", .txtGitHub)) {
       localFile2 <- toInstallList[[i]]$localFile
       fnBase <- basename(localFile2)
+
+      # This is necessary for `clonePackages` ... install.packages doesn't care if Version in "Version" column
+      #   doesn't match "File" in `available`
+      versionFromFn <- extractVersionNumber(filenames = fnBase)
+      needVersionUpdateFromLocalFile <- versionFromFn != ap[, "Version"]
+      if (any(needVersionUpdateFromLocalFile %in% TRUE)) {
+        ap[needVersionUpdateFromLocalFile, "Version"] <- versionFromFn[needVersionUpdateFromLocalFile]
+      }
+
       file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
       newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
       fileRenameOrMove(fnBase, newNameWithoutSHA)
@@ -2827,11 +2836,23 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 }
 
 clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
-  ip <- installed.packages(lib.loc = rcf)
+  oo <- capture.output(type = "message", ip <- installed.packages(lib.loc = rcf))
+  ignorePackages <- character()
   ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
   alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][alreadyInstalledCanClone]
   alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% sourcePkgs()]
+
+  if (length(grep("Error in readRDS", oo))) {
+    # This means that the packages in rcf are broken
+    aa <- packageHasError(rcf)
+    igns <- unlist(unname(aa))
+    if (length(igns))
+      ignorePackages <- names(alreadyInstalledCanClone)[names(alreadyInstalledCanClone) %in% igns]
+  }
+
+  if (length(ignorePackages))
+    alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% ignorePackages]
   wantToInstall <- ipa$available[, "Version"]
   cantClone <- setdiffNamed(wantToInstall, alreadyInstalledCanClone)# if (isWindows()) {
   canClone <- setdiffNamed(wantToInstall, cantClone)
