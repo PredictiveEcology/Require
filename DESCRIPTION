@@ -44,7 +44,6 @@ Suggests:
     googledrive,
     parallel,
     remotes,
-    testit,
     testthat (>= 3.0.0),
     waldo,
     withr
