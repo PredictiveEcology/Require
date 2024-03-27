@@ -12,6 +12,15 @@ getDeps(pkgDT, which, recursive, type = type, repos, verbose)
 \arguments{
 \item{pkgDT}{A \code{pkgDT} object e.g., from \code{toPkgDT}}
 
+\item{which}{a character vector listing the types of dependencies, a subset
+of \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
+Character string \code{"all"} is shorthand for that vector, character string
+\code{"most"} for the same vector without \code{"Enhances"}.}
+
+\item{recursive}{Logical. Should dependencies of dependencies be searched,
+recursively. NOTE: Dependencies of suggests will not be recursive. Default
+\code{TRUE}.}
+
 \item{type}{See \code{utils::install.packages}}
 
 \item{repos}{is used for \code{ap}.}

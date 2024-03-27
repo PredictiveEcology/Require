@@ -2583,6 +2583,7 @@ updateReposForSrcPkgs <- function(pkgInstall) {
 
 messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOption("Require.verbose")) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
+
   pkgName <- extractPkgNameFromWarning(w$message)
   outcome <- FALSE
   needWarning <- TRUE

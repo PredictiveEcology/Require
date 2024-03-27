@@ -53,6 +53,13 @@ utils::globalVariables(
 #' @param includeSelf Logical. If `TRUE`, the default, then the dependencies
 #'   will include the package itself in the returned list elements, otherwise,
 #'   only the "dependencies"
+#' @param simplify Logical. If `TRUE`, the default, the return object is "just" a
+#'   character vector of package names (with version requirements). If `FALSE`,
+#'   then a `data.table` will be returned with 4 columns,
+#'   `Package`, `packageFullName`, `parentPackage` (the package name for which the
+#'   given line entry is a dependency; will be "user" if it was user supplied)
+#'   and `deps`, which is a list of `data.table`s
+#'   of all dependencies.
 #' @param Additional_repositories Logical. If `TRUE`, then `pkgDep` will return
 #'   a list of `data.table` objects (instead of character vectors)
 #'   with a column `packageFullName` and possibly a second column `Additional_repositories`,
@@ -306,7 +313,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #' The function will find it in the `ap` or on `github.com`. For github packages,
 #' this is obviously a slow step, which can be accelerated if user supplies a sha
 #' or a version e.g., getDeps("PredictiveEcology/LandR@development (==1.0.2)")
-#' @inheritParams Require
+#' @inheritParams pkgDep
 #' @param pkgDT A `pkgDT` object e.g., from `toPkgDT`
 #' @return
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
@@ -1205,7 +1212,7 @@ splitKeepOrderAndDTIntegrity <- function(pkgDT, splitOn) {
 getFromCache <- function(pkgDT, which, recursive) {
 
   curCache <- names(envPkgDepDeps())
-  # must be correctx which & recursive too
+  # must be correct which & recursive too
   curCache <- grep(whichCatRecursive(which, ""), curCache, value = TRUE)
   maybeHaveCache <- Map(nam = pkgDT$packageFullName, sw = paste0(pkgDT$Package, sepForSaveNames),
                         function(nam, sw) which(startsWith(prefix = sw, curCache)))

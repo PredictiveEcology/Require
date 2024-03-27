@@ -13,6 +13,11 @@ joinToAvailablePackages(pkgDT, repos, type, which, verbose)
 
 \item{type}{See \code{utils::install.packages}}
 
+\item{which}{a character vector listing the types of dependencies, a subset
+of \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
+Character string \code{"all"} is shorthand for that vector, character string
+\code{"most"} for the same vector without \code{"Enhances"}.}
+
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in

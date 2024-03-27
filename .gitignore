@@ -1,7 +1,6 @@
 .Rhistory
 .Rprofile
 .Rproj.user
-inst/doc
 /revdep/.cache.rds
 .cacheAvailablePackages.rda
 packageVersions*.txt
