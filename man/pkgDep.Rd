@@ -151,9 +151,6 @@ a list of \code{data.table} objects (instead of character vectors)
 with a column \code{packageFullName} and possibly a second column \code{Additional_repositories},
 which may have been specified in a \code{DESCRIPTION} file. NOTE: THIS ALTERS
 THE OUTPUT CLASS}
-
-\item{sorted}{Logical. If \code{TRUE}, the default, the packages will be sorted in
-the returned list from most number of dependencies to least.}
 }
 \value{
 A possibly ordered, named (with packages as names) list where list elements
@@ -161,7 +158,7 @@ are either full reverse depends.
 }
 \description{
 This is a wrapper around \code{tools::dependsOnPkgs},
-but with the added option of \code{sorted}, which
+but with the added option of \code{topoSort}, which
 will sort them such that the packages at the top will have
 the least number of dependencies that are in \code{pkgs}.
 This is essentially a topological sort, but it is done

@@ -13,6 +13,7 @@
 #' `R_USER_CACHE_DIR = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
 #' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
 #' @inheritParams checkPath
+#' @inheritParams Require
 #' @export
 #' @rdname RequireCacheDir
 RequireCacheDir <- function(create, verbose = getOption("Require.verbose")) {

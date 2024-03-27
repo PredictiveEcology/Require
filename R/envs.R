@@ -3,6 +3,8 @@ newEmptyEnv <- function() {
 }
 
 #' 1st level --> create the .pkgEnv object in Require
+#' @param parentEnv The parent environment in which to make the new environment.
+#'   Defaults to `asNamespace("Require")`
 envPkgCreate <- function(parentEnv = asNamespace("Require")) {
   assign(.envPkgName, newEmptyEnv(), envir = parentEnv)
 }

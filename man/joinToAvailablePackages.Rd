@@ -6,6 +6,19 @@
 \usage{
 joinToAvailablePackages(pkgDT, repos, type, which, verbose)
 }
+\arguments{
+\item{pkgDT}{A \code{pkgDT} object e.g., from \code{toPkgDT}}
+
+\item{repos}{is used for \code{ap}.}
+
+\item{type}{See \code{utils::install.packages}}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, also returns details as if
+\code{returnDetails = TRUE} (for backwards compatibility).}
+}
 \value{
 The returned \code{data.table} will have most of the columns from
 \code{available.packages} appended to the \code{pkgDT}, including \code{Depends}, \code{Imports},

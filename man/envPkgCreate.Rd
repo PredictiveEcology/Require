@@ -6,6 +6,10 @@
 \usage{
 envPkgCreate(parentEnv = asNamespace("Require"))
 }
+\arguments{
+\item{parentEnv}{The parent environment in which to make the new environment.
+Defaults to \code{asNamespace("Require")}}
+}
 \description{
 1st level --> create the .pkgEnv object in Require
 }

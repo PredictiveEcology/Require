@@ -6,6 +6,11 @@
 \usage{
 splitKeepOrderAndDTIntegrity(pkgDT, splitOn)
 }
+\arguments{
+\item{pkgDT}{A \code{pkgDT} object e.g., from \code{toPkgDT}}
+
+\item{splitOn}{Character vector passed to \code{data.table::split(..., f = splitOn)}}
+}
 \value{
 A list of \code{data.table} objects of \code{length(unique(splitOn))}.
 }

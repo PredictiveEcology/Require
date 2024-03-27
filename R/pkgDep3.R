@@ -298,8 +298,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #' be 2 pieces: name, version. There can also be an inequality or equality, if
 #' there is a version.
 #'
-#' @param packages A vector of GitHub or CRAN-alike packages. These can include
-#'   package name (required) and optionally repository, branch/sha and/or version.
 #' @param repos is used for `ap`.
 #'
 #' @details
@@ -308,7 +306,8 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #' The function will find it in the `ap` or on `github.com`. For github packages,
 #' this is obviously a slow step, which can be accelerated if user supplies a sha
 #' or a version e.g., getDeps("PredictiveEcology/LandR@development (==1.0.2)")
-#'
+#' @inheritParams Require
+#' @param pkgDT A `pkgDT` object e.g., from `toPkgDT`
 #' @return
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
 #' above, plus the `which` and the `recursive`.
@@ -1004,6 +1003,7 @@ depsListToPkgDTWithWhichCol <- function(deps2) {
 #' Will join `available.packages()` with `pkgDT`, if `pkgDT` doesn't already have
 #' a column named `Depends`, which would be an indicator that this had already
 #' happened.
+#' @inheritParams getDeps
 #'
 #' @return
 #' The returned `data.table` will have most of the columns from
@@ -1184,12 +1184,14 @@ toPkgDTFull <- function(pkgDT) {
 #'  1. reorders if using `f`
 #'  2. destroys the integrity of a column that is a list of data.tables, when using `by`
 #' So, to keep order, need `by`, but to keep integrity, need `f`. This function
+#' @inheritParams getDeps
+#' @param splitOn Character vector passed to `data.table::split(..., f = splitOn)`
 #' @return
 #' A list of `data.table` objects of `length(unique(splitOn))`.
 splitKeepOrderAndDTIntegrity <- function(pkgDT, splitOn) {
   # keeps order and integrity.
   # split reorders!! careful
-  # The data.table "by" doesn't work -- the list of data.tables doesn't work
+  # The data.table "by" doesn't work -- the list of data.tables in the deps*** column doesn't work
   # pkgDTHaveDeps <- pkgDT[whHasDeps]
   # pkgDTHaveDeps <- split(pkgDTHaveDeps, by = "packageFullName", sorted = FALSE)
   # splitOn -- using the split.data.table with `f` treats as a factor, which can get reordered inadvertently

@@ -479,7 +479,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstallOut <- withCallingHandlers(
       installPackagesWithQuiet(ipa),
       warning = function(w) {
-        messagesAboutWarnings(w, toInstall, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
+        messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
     )
@@ -2581,7 +2581,7 @@ updateReposForSrcPkgs <- function(pkgInstall) {
   pkgInstall
 }
 
-messagesAboutWarnings <- function(w, toInstall, verbose = getOption("Require.verbose")) {
+messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOption("Require.verbose")) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
   pkgName <- extractPkgNameFromWarning(w$message)
   outcome <- FALSE
@@ -3030,28 +3030,28 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
 }
 
 
-#' If a list of dependencies includes Remotes from DESCRIPTION file
-mergeRemotes <- function(depsList) {
-  lapply(depsList, function(dep) {
-    pkgDT <- parseGitHub(dep)
-    isGH <- !is.na(pkgDT$githubPkgName)
-    ver <- extractVersionNumber(pkgDT[["packageFullName"]])
-    verNotGH <- ver[!isGH]
-    hasVerNotGH <- !is.na(verNotGH)
-    verGH <- ver[isGH]
-    wh1 <- which(!isGH)[hasVerNotGH]
-    ma1 <- match(pkgDT[["Package"]][!isGH], pkgDT[["Package"]][isGH]) |> na.omit()
-    ma2 <- match(pkgDT[["Package"]][isGH], pkgDT[["Package"]][!isGH]) |> na.omit()
-    wh <- which(!is.na(ma2))
-    hasVer2 <- hasVerNotGH[ma2]#[wh]
-    ineq <- extractInequality(pkgDT[["packageFullName"]][ma2][hasVer2])#[!isGH])
-    # ma[!is.na(ver)]
-    newPFN <- paste0(pkgDT[["packageFullName"]][isGH][ma1][hasVer2], " (", ineq, verNotGH[ma2][hasVer2], ")")
-    pkgDT[which(!isGH)[ma2][hasVer2], packageFullName := newPFN]
-    pkgDT <- pkgDT[-which(isGH)[hasVer2]]
-    pkgDT[["packageFullName"]]
-  })
-}
+# If a list of dependencies includes Remotes from DESCRIPTION file
+# mergeRemotes <- function(depsList) {
+#   lapply(depsList, function(dep) {
+#     pkgDT <- parseGitHub(dep)
+#     isGH <- !is.na(pkgDT$githubPkgName)
+#     ver <- extractVersionNumber(pkgDT[["packageFullName"]])
+#     verNotGH <- ver[!isGH]
+#     hasVerNotGH <- !is.na(verNotGH)
+#     verGH <- ver[isGH]
+#     wh1 <- which(!isGH)[hasVerNotGH]
+#     ma1 <- match(pkgDT[["Package"]][!isGH], pkgDT[["Package"]][isGH]) |> na.omit()
+#     ma2 <- match(pkgDT[["Package"]][isGH], pkgDT[["Package"]][!isGH]) |> na.omit()
+#     wh <- which(!is.na(ma2))
+#     hasVer2 <- hasVerNotGH[ma2]#[wh]
+#     ineq <- extractInequality(pkgDT[["packageFullName"]][ma2][hasVer2])#[!isGH])
+#     # ma[!is.na(ver)]
+#     newPFN <- paste0(pkgDT[["packageFullName"]][isGH][ma1][hasVer2], " (", ineq, verNotGH[ma2][hasVer2], ")")
+#     pkgDT[which(!isGH)[ma2][hasVer2], packageFullName := newPFN]
+#     pkgDT <- pkgDT[-which(isGH)[hasVer2]]
+#     pkgDT[["packageFullName"]]
+#   })
+# }
 
 canClone <- function(ip) {
   RversionDot <- RversionDot()

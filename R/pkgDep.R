@@ -8,7 +8,7 @@ utils::globalVariables(
 #' Reverse package depends
 #'
 #' This is a wrapper around `tools::dependsOnPkgs`,
-#' but with the added option of `sorted`, which
+#' but with the added option of `topoSort`, which
 #' will sort them such that the packages at the top will have
 #' the least number of dependencies that are in `pkgs`.
 #' This is essentially a topological sort, but it is done
@@ -1429,8 +1429,6 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 #' i.e., the first order dependencies, and runs the `pkgDep` on those.
 #' @rdname pkgDep
 #' @export
-#' @param sorted Logical. If `TRUE`, the default, the packages will be sorted in
-#'   the returned list from most number of dependencies to least.
 #' @examples
 #' \dontrun{
 #' if (Require:::.runLongExamples()) {

@@ -10,10 +10,17 @@ there is a version.}
 getDeps(pkgDT, which, recursive, type = type, repos, verbose)
 }
 \arguments{
+\item{pkgDT}{A \code{pkgDT} object e.g., from \code{toPkgDT}}
+
+\item{type}{See \code{utils::install.packages}}
+
 \item{repos}{is used for \code{ap}.}
 
-\item{packages}{A vector of GitHub or CRAN-alike packages. These can include
-package name (required) and optionally repository, branch/sha and/or version.}
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, also returns details as if
+\code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \value{
 A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
