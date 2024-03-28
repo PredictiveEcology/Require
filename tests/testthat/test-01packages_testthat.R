@@ -130,7 +130,7 @@ test_that("test 1", {
 
     # Check for packageVersionFile = FALSE
     mess11 <- capture.output(type = "message", {
-      outInner <- Require(packageVersionFile = FALSE, verbose = 1, quiet = TRUE)
+      outInner <- Require(packageVersionFile = FALSE, verbose = 5, quiet = TRUE)
     })
     testthat::expect_true(any(grepl(NoPkgsSupplied, mess11)))
     testthat::expect_true(isFALSE(outInner))
@@ -173,7 +173,7 @@ test_that("test 1", {
     mess <- utils::capture.output(
       {
         inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
-                                 verbose = 1,
+                                 verbose = 5,
                                  quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
         )
       },

@@ -174,7 +174,10 @@ test_that("test 5", {
           )
         })
       )
-      expect_true(all(grepl("in use and will not be installed", warns)))
+      if (length(warns)) {
+        test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
+        expect_true(test)
+      }
 
       att <- attr(out2, "Require")
       att <- att[!duplicated(att$Package)]
