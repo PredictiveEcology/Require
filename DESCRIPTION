@@ -41,10 +41,15 @@ Imports:
     utils
 Suggests:
     covr,
+    curl,
+    diffobj,
     gitcreds,
     googledrive,
     httr,
+    openssl,
     parallel,
+    rappdirs, 
+    rematch2, 
     remotes,
     testthat (>= 3.0.0),
     waldo,
