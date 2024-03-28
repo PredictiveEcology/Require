@@ -27,7 +27,7 @@ withr::local_package("diffobj", .local_envir = teardown_env())
 withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = teardown_env())
 
 if (Sys.info()["user"] %in% "emcintir") {
-  secretPath <- if (isWindows()) "c:/Eliot/.secret" else "~/.secret"
+  secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
   options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
           Require.origLibPathForTests = .libPaths()[1],
           gargle_oauth_email = "eliotmcintire@gmail.com",
