@@ -21,7 +21,11 @@ test_that("test 5", {
               'terra',
               'themis',
               'tidymodels')
-    Install(pkgs)
+    Install(pkgs) |>
+      capture_warnings() -> warns
+    if (length(warns))
+      expect_true(all(grepl("in use", warns)))
+
     ins <- installed.packages() |> as.data.table()
     expect_true(all(extractPkgName(pkgs) %in% ins$Package))
     # setLibPaths(origLibPaths)
