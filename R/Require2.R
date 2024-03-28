@@ -424,10 +424,48 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
     Rpath1 <- Sys.getenv("R_HOME")
     Rpath <- file.path(Rpath1, "bin/R") # need to use Path https://stat.ethz.ch/pipermail/r-devel/2018-February/075507.html
     filePat <- paste0(Package, "_", VersionOnRepos, ".tar.gz")
+    logFile <- tempfile2(fileext = ".log")
     out1 <- Map(pack = Package, function(pack) {
-      system(paste(Rpath, "CMD build ", pack, paste(extras, collapse = " ")),
-        intern = internal, ignore.stdout = quiet, ignore.stderr = quiet
-      )
+      cmdLine <- paste("CMD build ", pack, paste(extras, collapse = " "))
+      if (getOption("Require.installPackagesSystem", FALSE)) {
+
+        pid <- sys::exec_wait(
+          Rpath, I(cmdLine), # std_out = con, std_err = con
+          std_out = function(x) {
+            mess <- rawToChar(x)
+            pkg <- extractPkgNameFromWarning(mess)
+            cat(blue(mess), file = logFile, append = TRUE)
+            appendLF <- endsWith(mess, "\n") %in% FALSE
+            if (verbose >= 2) {
+              messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
+            } else {
+              if (grepl("building", mess)) {
+                mess <- gsub(".+(building.+)", "\\1", mess)
+                messageVerbose(blue(mess), appendLF = appendLF)
+              }
+            }
+
+            #
+            invisible()
+          },
+          std_err = function(x){
+            mess <- rawToChar(x)
+            cat(greyLight(mess), file = logFile, append = TRUE)
+            appendLF <- endsWith(mess, "\n") %in% FALSE
+            if (verbose <= 1) {
+              appendLF <- endsWith(mess, "\n") %in% FALSE
+              messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+            } else {
+              messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+            }
+
+            invisible()
+          }
+        )
+        tools::pskill(pid)
+      } else {
+        system2(Rpath, cmdLine)
+      }
     })
     messageVerbose("  ... Built!",
       verbose = verbose, verboseLevel = 1
@@ -455,7 +493,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstall <- rmPackageFirst(toInstall, verbose)
   }
 
-  ap <- availablePackagesOverride(toInstall, repos, purge, type = type) |> try()
+  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type) ) |>
+    try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
   }
@@ -476,12 +516,21 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   }
 
   if (NROW(ipa$available)) {
+    # debug(utils:::.install.winbinary)
+    # on.exit(undebug(utils:::.install.winbinary))
+    tryCatch(
     toInstallOut <- withCallingHandlers(
-      installPackagesWithQuiet(ipa),
+      installPackagesWithQuiet(ipa, verbose = verbose),
       warning = function(w) {
         messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
+    ),
+    error = function(e) {
+      # If this is erroring here, it is possible that the cached version should be deleted,
+      #   but it is hard to know which package it is that breaks
+      browser()
+    }
     )
   }
   toInstall

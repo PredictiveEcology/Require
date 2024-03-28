@@ -1253,32 +1253,121 @@ stripHTTPAddress <- function(addr) {
 # }
 
 
-installPackagesSystem <- function(pkg, args, libPath) {
-  opts2 <- append(args, list(lib = normalizePath(libPath, winslash = "/")))
-  opts2 <- modifyList2(list(Ncpus = getOption("Ncpus")), opts2, keep.null = TRUE)
-  opts2 <- append(list(pkg), opts2)
-  opts2 <- append(opts2, list(repos = NULL))
-  theCharacters <- unlist(lapply(opts2, is.character))
-  theCharactersAsVector <- lengths(opts2[theCharacters]) > 1
-  inner <- unlist(lapply(opts2[theCharacters][theCharactersAsVector], function(x) paste(x, collapse = "', '")))
-  aa <- paste0("c('", inner, "')")
-  opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
-  opts2[theCharacters][theCharactersAsVector] <- aa
-  hasName <- names(opts2) != ""
-  Rpath <- Sys.which("Rscript")
-  out2 <- paste(
-    Rpath, "-e \"do.call(install.packages, list(",
-    paste(
-      opts2[!hasName], ", ",
-      paste(names(opts2)[hasName],
-        sep = " = ", opts2[hasName],
-        collapse = ", "
-      ), "))\""
-    )
+installPackagesSystem <- function(args, verbose = getOption("Require.verbose")) {
+  libPaths <- args$libPaths
+  args$libPaths <- NULL
+  fn <- tempfile(fileext = ".rds")
+  fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+  saveRDS(args, file = fn)
+  ar <- paste0("\"{.libPaths('",libPaths,"'); args <- readRDS('", fn, "'); do.call(install.packages, args)}\"")
+  cmdLine <- paste0(" -e ", ar)
+  logFile <- tempfile2(fileext = ".log")
+  # cmdLine <- paste0(" -e \"{.libPaths('", libPaths, "'); ", localCall2, "}\"")
+  pid <- sys::exec_wait(
+    Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
+    std_out = function(x) {
+      mess <- rawToChar(x)
+      msgStdOut(mess, logFile, verbose)
+      invisible()
+    },
+    std_err = function(x) {
+      mess <- rawToChar(x)
+      msgStdErr(mess, logFile, verbose)
+      invisible()
+    }
   )
-  out <- system(out2, intern = TRUE)
-  return(out)
+  tools::pskill(pid)
 }
+
+
+# installPackagesSystem <- function(pkg, args, libPath, repos = getOption("repos"), envir = parent.frame()) {
+#   browser()
+#
+#   ff <- file.path(getwd(), "ipa.rds")
+#   saveRDS(ipa, file = ff)
+#
+#   ff <- formals(install.packages)
+#   keep <- suppressWarnings(
+#     sapply(ff, function(f) sum(nchar(f)) > 0 | any(is.na(f)))
+#   )
+#
+#   opts2 <- ff[which(keep)]
+#   type <- eval(opts2$type)
+#   type <- "binary"
+#   opts2 <- lapply(opts2, function(o) try(eval(o)))
+#
+#   opts2 <- modifyList(opts2, args)
+#   opts2 <- modifyList(opts2, list(lib = normalizePath(libPath, winslash = "/")))
+#   opts2 <- modifyList(list(Ncpus = getOption("Ncpus")), opts2, keep.null = TRUE)
+#   opts2 <- modifyList(list(pkg), opts2)
+#   opts2 <- modifyList(opts2, list(repos = repos))
+#
+#
+#
+#   theCharacters <- unlist(lapply(opts2, is.character))
+#   theCharactersAsVector <- lengths(opts2[theCharacters]) > 1
+#   inner <- unlist(lapply(opts2[theCharacters][theCharactersAsVector], function(x) paste(x, collapse = "', '")))
+#   aa <- paste0("c('", inner, "')")
+#   opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
+#   opts2[theCharacters][theCharactersAsVector] <- aa
+#   hasName <- names(opts2) != ""
+#   Rpath <- Sys.which("Rscript")
+#   # localCall <- paste("do.call(install.packages, list(",
+#   #                    paste(
+#   #                      opts2[!hasName], ", ",
+#   #                      paste(names(opts2)[hasName],
+#   #                            sep = " = ", opts2[hasName],
+#   #                            collapse = ", "
+#   #                      ), "))"
+#   #                    ))
+#   localCall2 <- paste("install.packages(",
+#                      paste(
+#                        opts2[!hasName], ", ",
+#                        paste(names(opts2)[hasName],
+#                              sep = " = ", opts2[hasName],
+#                              collapse = ", "
+#                        ), ")"
+#                      ))
+#   # remoteCall <- paste0(Rpath, " -e \"", localCall2, "\"")
+#   cmdLine <- paste0(" -e \"{.libPaths('", .libPaths()[1], "'); ", localCall2, "}\"")
+#   # remoteCall <- paste0(Rpath, cmdLine)
+#   # out <- system(remoteCall, intern = FALSE, wait = TRUE, show.output.on.console = TRUE)
+#
+#   # out <- system(remoteCall, intern = FALSE, wait = FALSE, show.output.on.console = FALSE)
+#
+#   origDir <- setwd(dirname(.libPaths()[1]))
+#   on.exit(setwd(origDir))
+#   fn <- "test7.out"
+#   # con <- file( "test3.out", open = "w+b", blocking = FALSE)
+#
+#
+#   # con <- file(fn, open = "w+", blocking = FALSE)
+#   # on.exit(close(con), add = TRUE)
+#   # sink(con)
+#   browser()
+#   pid <- sys::exec_wait(
+#     Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
+#     std_out = function(x){
+#       cat(blue(rawToChar(x)), file = fn, append = TRUE)
+#       cat(blue(rawToChar(x)))
+#
+#     },
+#     std_err = function(x){
+#       cat(red(rawToChar(x)), file = fn, append = TRUE)
+#       cat(red(rawToChar(x)))
+#
+#     }
+#   )
+#   cat("\n", file = fn, append = TRUE)
+#   tools::pskill(pid)
+#   return(file.path(getwd(), fn))
+#   # out <- system2(Rpath, cmdLine)
+#   # out <- system2(Rpath, cmdLine, stdout = "test2.out", wait = FALSE)
+#
+#   # readLines(con)
+#
+#   # return(out)
+# }
 
 
 
@@ -1483,15 +1572,20 @@ availablePackagesCachedPath <- function(repos, type) {
   file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, "availablePackages.rds")
 }
 
-installPackagesWithQuiet <- function(ipa) {
-  if (isTRUE(ipa$quiet)) {
-    messSupp2 <- capture.output({
-      messSupp <- capture.output(type = "message", {
-        do.call(install.packages, ipa)
-      })
-    })
+installPackagesWithQuiet <- function(ipa, verbose) {
+  if (getOption("Require.installPackagesSystem", FALSE)) {
+    ipa$libPaths <- .libPaths()[1]
+    installPackagesSystem(ipa, verbose = verbose)
   } else {
-    do.call(install.packages, ipa)
+    if (isTRUE(ipa$quiet)) {
+      messSupp2 <- capture.output({
+        messSupp <- capture.output(type = "message", {
+          do.call(install.packages, ipa)
+        })
+      })
+    } else {
+      do.call(install.packages, ipa)
+    }
   }
 }
 
@@ -1558,3 +1652,75 @@ messageCantInstallNoVersion <- function(packagesFullName) {
   )
 }
 
+
+msgStdOut <- function(mess, logFile, verbose) {
+  pkg <- extractPkgNameFromWarning(mess)
+  justPackage <- !identical(mess, pkg)
+  cat(blue(mess), file = logFile, append = TRUE)
+  appendLF <- endsWith(mess, "\n") %in% FALSE
+
+  # if (grepl("binary packages", mess)) browser()
+  mod <- "^\\r\\n"
+  while (grepl(mod, mess)) {
+    mess <- gsub(mod, "  ", mess)
+  }
+
+  omit <- "^.+downloaded binary packages.+$"
+  while (grepl(omit, mess)) {
+    mess <- gsub(omit, "", mess)
+  }
+  if (nchar(mess))
+    if (!justPackage || verbose >= 2) {
+      messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
+    } else {
+      messageVerbose(blue("Installed: ", pkg), verbose = verbose, appendLF = TRUE)
+    }
+}
+
+msgStdErr <- function(mess, logFile, verbose) {
+  cat(greyLight(mess), file = logFile, append = TRUE)
+  appendLF <- endsWith(mess, "\n") %in% FALSE
+  if (verbose <= 1) {
+
+    omit <- "\\(as 'lib' is unspecified\\)"
+    if (grepl(omit, mess))
+      mess <- gsub(paste0("\\r\\n", omit), "", mess)
+
+    omit <- "(^.+\\*source\\*.+.\\.{3,3}).+"
+    if (grepl(omit, mess))
+      mess <- gsub(omit, "\\1", mess)
+
+    omit <- "(.+)The downloaded source packages.+"
+    if (grepl(omit, mess))
+      mess <- gsub(omit, "\\1", mess)
+    omit <- ".+(packaged installation.+)$"
+    if (grepl(omit, mess))
+      mess <- gsub(omit, "\\1", mess)
+
+    omit <- "^(.+)+Content.+=+(\\r\\n)*(.*)$"
+    while (grepl(omit, mess)) {
+      mess <- gsub(omit, "\\1\\3", mess)
+    }
+
+    omit <- "=+(\r\n)*"
+    while (grepl(omit, mess)) {
+      mess <- gsub(omit, "", mess)
+    }
+
+    mod <- "\\r\\n\\r\\n"
+    while (grepl(mod, mess)) {
+      mess <- gsub(mod, "\r\n", mess)
+    }
+    # omit <- "^(.+)\\r\\n(downloaded.+)$"
+    # while (grepl(omit, mess)) {
+    #   mess <- gsub(omit, "\\1 ... \\2", mess)
+    # }
+
+    appendLF <- endsWith(mess, "\n") %in% FALSE && nchar(mess) != 0
+    if (grepl("nstalling.+package", mess) | grepl("ERROR|halted|DONE|downloaded|trying", mess)) {
+      messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+    }
+  } else {
+    messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+  }
+}

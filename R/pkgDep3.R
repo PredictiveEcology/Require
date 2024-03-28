@@ -200,7 +200,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
   if (isNotNULLAnd(.depth, .depth <= lim))
     messageVerbose(get(cols[.depth + 1])(paste(rep("  ", .depth), collapse = ""),
                                          cleanPkgs(parentPackage)),
-                   verbose = .depth <= (lim ) && verbose >= 2)
+                   verbose = .depth <= (lim ) && verbose >= 3)
   deps <- NULL
   snTr <- sn(TRUE)
   snFa <- sn(FALSE)

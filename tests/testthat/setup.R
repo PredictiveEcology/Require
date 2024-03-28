@@ -18,7 +18,7 @@ suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
   extractPkgName()
 # pkgsToLoad <- c("curl", "gitcreds", "httr", "openssl", "googledrive", "rappdirs", "waldo", "rematch2", "diffobj")
 for (pk in suggests)
-  withr::local_package(pk, .local_envir = teardown_env())
+  suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE))
 
 if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
