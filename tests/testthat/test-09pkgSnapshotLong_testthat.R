@@ -90,9 +90,9 @@ test_that("test 5", {
       NLMRandVisualTestWarn <- grepl("Please change required version", warns)
       expect_identical(sum(NLMRandVisualTestWarn), 2L)
       warns <- warns[-which(NLMRandVisualTestWarn)]
-      if (length(warns)) {
-        expect_true(all(grepl("in use", warns)))
-      }
+
+      test <- testWarnsInUsePleaseChange(warns)
+      expect_true(test)
 
       out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
 
@@ -174,7 +174,9 @@ test_that("test 5", {
           )
         })
       )
-      expect_true(all(grepl("in use and will not be installed", warns)))
+
+      test <- testWarnsInUsePleaseChange(warns)
+      expect_true(test)
 
       att <- attr(out2, "Require")
       att <- att[!duplicated(att$Package)]

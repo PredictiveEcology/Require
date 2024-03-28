@@ -189,25 +189,16 @@ test_that("test 5", {
       (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |>
         capture_warnings() -> warns
 
-      # warns <- capture_warnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
-      if (length(warns)) {
-        test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
-        expect_true(test)
-      }
+      test <- testWarnsInUsePleaseChange(warns)
+      expect_true(test)
 
       # Rerun it to get output table, but capture messages for quiet; should be no installs
-      #silent <- capture.output(type = "message", {
-      # suppressMessages(# This is "packages 'testthat', 'Require' are in use and will not be installed"
       (out <- Require(pkg, standAlone = FALSE, require = FALSE, returnDetails = TRUE)) |>
         capture_warnings() -> warns
-      # )
-      if (length(warns)) {
-        # test <- all(grepl("in use", warns))
-        test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
-        expect_true(test)
-      }
 
-      #})
+      test <- testWarnsInUsePleaseChange(warns)
+      expect_true(test)
+
       testthat::expect_true(
         all.equal(out, outFromRequire, check.attributes = FALSE)
       )

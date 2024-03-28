@@ -27,12 +27,12 @@ test_that("test 5", {
     # }
     Install(pkgs) |>
       capture_warnings() -> warns
-    if (length(warns))
-      expect_true(all(grepl("in use", warns)))
+
+    test <- testWarnsInUsePleaseChange(warns)
+    expect_true(test)
 
     ins <- installed.packages() |> as.data.table()
     expect_true(all(extractPkgName(pkgs) %in% ins$Package))
-    # setLibPaths(origLibPaths)
   }
 
 

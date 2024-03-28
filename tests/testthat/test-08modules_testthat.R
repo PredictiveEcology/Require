@@ -16,10 +16,12 @@ test_that("test 5", {
     modulePath <- file.path(pkgDir, "m")
 
     # Install 3 packages that are needed for subsequent module and package installations
-    suppressWarnings( # "Require" is in use
-      Require("PredictiveEcology/SpaDES.project@transition",
+    (Require("PredictiveEcology/SpaDES.project@transition",
               upgrade = FALSE, require = FALSE
-      ))
+      )) |>
+      capture_warnings() -> warns
+    test <- testWarnsInUsePleaseChange(warns)
+    expect_true(test)
 
     # Install modules
     getFromNamespace("getModule", "SpaDES.project")(modulePath = modulePath,
@@ -48,9 +50,12 @@ test_that("test 5", {
     # THE INSTALL
     pkgs <- omitPkgsTemporarily(pkgs)
 
-    suppressWarnings( # "Require" is in use
+    (
       outFull <- Require::Require(pkgs, require = FALSE, standAlone = TRUE)
-    )
+    ) |>
+      capture_warnings() -> warns
+    test <- testWarnsInUsePleaseChange(warns)
+    expect_true(test)# "Require" is in use
 
     # THE POST INSTALL COMPARISON
     ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))

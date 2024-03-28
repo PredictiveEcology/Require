@@ -201,14 +201,15 @@ test_that("test 1", {
 
     Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
     Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
-    # detach("package:reproducible", unload = TRUE)    # Apparnetly linux can handle this
-    # aaa <<- 1
-    # on.exit(rm(aaa, envir = .GlobalEnv), add = TRUE)
-    # suppressWarnings( # this warning is "package ‘reproducible’ is in use and will not be installed"
+
     (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
       capture_warnings() -> warns
-    if (length(warns))
-      expect_true(all(grepl("in use", warns)))
+
+    test <- testWarnsInUsePleaseChange(warns)
+    expect_true(test)
+
+    # if (length(warns))
+    #   expect_true(all(grepl("in use", warns)))
 
 
     # )
@@ -304,11 +305,15 @@ test_that("test 1", {
       # repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
       ) |>
       capture_warnings() -> warns
-    if (length(warns)) {
-      test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
-      expect_true(test)
-      # expect_true(all(grepl("in use", warns)))
-    }
+
+    test <- testWarnsInUsePleaseChange(warns)
+    expect_true(test)
+
+    # if (length(warns)) {
+    #   test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
+    #   expect_true(test)
+    #   # expect_true(all(grepl("in use", warns)))
+    # }
 
 
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
