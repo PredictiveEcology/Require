@@ -1401,10 +1401,10 @@ masterMainHEAD <- function(url, need) {
               outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
             } else {
               outMasterMain <- try({
-                a <- httr::GET(url, httr::add_headers(Authorization = token))
+                a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
                 data <- httr::content(a, "raw")
                 writeBin(data, destfile)
-              }, silent = TRUE)
+              })
             }
           }
 
