@@ -1821,8 +1821,9 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
       set(pkgGitHub, hasDFile, "VersionOnRepos",  DESCRIPTIONFileVersionV(dFile))
       mayNeedPackageNameChange <- DESCRIPTIONFileOtherV(dFile, other = "Package")
       alreadyCorrect <- pkgGitHub[["Package"]][hasDFile] == mayNeedPackageNameChange
-      if (any(!alreadyCorrect)) {
-        set(pkgGitHub, hasDFile[!alreadyCorrect], "Package",  mayNeedPackageNameChange[!alreadyCorrect])
+      notAlreadyCorrect <- alreadyCorrect %in% FALSE
+      if (any(notAlreadyCorrect)) {
+        set(pkgGitHub, hasDFile[notAlreadyCorrect], "Package",  mayNeedPackageNameChange[notAlreadyCorrect])
       }
       # pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
     }

@@ -186,7 +186,8 @@ test_that("test 5", {
       # if (i == 11) ._Require_0 <<- 1
       pkg <- omitPkgsTemporarily(pkg)
 
-      (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |> capture_warnings() -> warns
+      (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |>
+        capture_warnings() -> warns
 
       # warns <- capture_warnings(# This is "packages 'testthat', 'Require' are in use and will not be installed"
       if (length(warns)) {

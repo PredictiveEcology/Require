@@ -13,7 +13,7 @@ test_that("test 3", {
     is.character(out)
   })
   testthat::expect_true({
-    is.numeric(as.numeric(gsub(".*: ", "", out)[2]))
+    is.numeric(as.numeric(tail(gsub(".*: ", "", out), 1)))
   })
 
   # don't use checkPath here because we are testing normPath!

@@ -195,8 +195,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         )
       },
       by = "Package"
-    ] |>
-    try() -> abab; if (is(abab, "try-error")) {rm(abab); browser()}
+    ]
     theDir <- RequireGitHubCacheDir(create = TRUE)
     # checkPath(theDir, create = TRUE)
     destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
@@ -1335,10 +1334,26 @@ masterMainHEAD <- function(url, need) {
   url <- masterMainHEAD(url, need) # makes 2
 
   # Authentication
-  ghp <- Sys.getenv("GITHUB_PAT")
-  messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
-  if (nzchar(ghp)) {
-    url <- sprintf(paste0("https://%s:@", gsub("https*://", "", url)), ghp)
+  token <- NULL
+  usesGitCreds <- requireNamespace("gitcreds") && requireNamespace("httr")
+  if (usesGitCreds) {
+    token <- tryCatch(
+      gitcreds::gitcreds_get(),#use_cache = FALSE),
+      error = function(e) NULL
+    )
+    if (!is.null(token))
+      token <- paste0("token ", token$password)
+  }
+  if (is.null(token)) {
+    messageVerbose("For better security, user should use the newer way to store git credentials.",
+                   "\nUsing a GITHUB_PAT environment variable will continue to work, but see: ",
+                   "https://usethis.r-lib.org/articles/git-credentials.html", verbose = verbose + GitHubMessage)
+    assignInMyNamespace("GitHubMessage", -10)
+    ghp <- Sys.getenv("GITHUB_PAT")
+    messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
+    if (nzchar(ghp)) {
+      url <- sprintf(paste0("https://%s:@", gsub("https*://", "", url)), ghp)
+    }
   }
 
   urls <- url
@@ -1352,13 +1367,20 @@ masterMainHEAD <- function(url, need) {
         outNotMasterMain <-
           Map(URL = urls[["FALSE"]], MoreArgs = list(df = destfile), function(URL, df) {
             if (!isTRUE(getOption("Require.offlineMode"))) {
+
               for (tryNum in 1:2) {
-                tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
-                         error = function(e) {
-                           e$message <- stripGHP(ghp, e$message)
-                           if (tryNum > 1)
-                             messageVerbose(e$message, verbose = verbose)
+                if (is.null(token)) {
+                  tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
+                           error = function(e) {
+                             e$message <- stripGHP(ghp, e$message)
+                             if (tryNum > 1)
+                               messageVerbose(e$message, verbose = verbose)
                            })
+                } else {
+                  a <- httr::GET(url, httr::add_headers(Authorization = token))
+                  data <- httr::content(a, "raw")
+                  writeBin(data, df)
+                }
                 if (file.exists(df))
                   break
                 URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
@@ -1369,7 +1391,15 @@ masterMainHEAD <- function(url, need) {
       if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
         for (wh in seq(urls[["TRUE"]])) {
           if (!isTRUE(getOption("Require.offlineMode"))) {
-            outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
+            if (is.null(token)) {
+              outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
+            } else {
+              outMasterMain <- try({
+                a <- httr::GET(url, httr::add_headers(Authorization = token))
+                data <- httr::content(a, "raw")
+                writeBin(data, destfile)
+              }, silent = TRUE)
+            }
           }
 
           if (!is(outMasterMain, "try-error")) {

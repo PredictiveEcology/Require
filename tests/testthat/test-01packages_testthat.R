@@ -305,7 +305,9 @@ test_that("test 1", {
       ) |>
       capture_warnings() -> warns
     if (length(warns)) {
-      expect_true(all(grepl("in use", warns)))
+      test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
+      expect_true(test)
+      # expect_true(all(grepl("in use", warns)))
     }
 
 

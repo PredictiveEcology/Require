@@ -41,7 +41,9 @@ Imports:
     utils
 Suggests:
     covr,
+    gitcreds,
     googledrive,
+    httr,
     parallel,
     remotes,
     testthat (>= 3.0.0),
