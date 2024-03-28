@@ -21,7 +21,8 @@ test_that("test 5", {
               'terra',
               'themis',
               'tidymodels')
-    Install(pkgs) |> capture_warnings() -> warns
+    Install(pkgs) |>
+      capture_warnings() -> warns
     if (length(warns))
       expect_true(all(grepl("in use", warns)))
 

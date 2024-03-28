@@ -198,7 +198,8 @@ test_that("test 5", {
       # Rerun it to get output table, but capture messages for quiet; should be no installs
       #silent <- capture.output(type = "message", {
       # suppressMessages(# This is "packages 'testthat', 'Require' are in use and will not be installed"
-        (out <- Require(pkg, standAlone = FALSE, require = FALSE, returnDetails = TRUE)) |> capture_warnings() -> warns
+      (out <- Require(pkg, standAlone = FALSE, require = FALSE, returnDetails = TRUE)) |>
+        capture_warnings() -> warns
       # )
       if (length(warns)) {
         # test <- all(grepl("in use", warns))
