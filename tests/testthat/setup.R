@@ -14,21 +14,11 @@ if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
 }
 
-pkgsToLoad <- c("curl", "gitcreds", "httr", "openssl", "googledrive", "rappdirs", "waldo", "rematch2", "diffobj")
-for (pk in pkgsToLoad)
+suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
+  extractPkgName()
+# pkgsToLoad <- c("curl", "gitcreds", "httr", "openssl", "googledrive", "rappdirs", "waldo", "rematch2", "diffobj")
+for (pk in suggests)
   withr::local_package(pk, .local_envir = teardown_env())
-# withr::local_package("curl", .local_envir = teardown_env())#,
-# #                      lib.loc = getOption("Require.origLibPathForTests"))
-#
-# withr::local_package("gitcreds", .local_envir = teardown_env())
-# withr::local_package("openssl", .local_envir = teardown_env())
-# withr::local_package("googledrive", .local_envir = teardown_env())
-# withr::local_package("rappdirs", .local_envir = teardown_env())
-# withr::local_package("httr", .local_envir = teardown_env())
-# withr::local_package("waldo", .local_envir = teardown_env())
-# withr::local_package("rematch2", .local_envir = teardown_env())
-# withr::local_package("diffobj", .local_envir = teardown_env())
-# withr::local_options(Require.RPackageCache = RequirePkgCacheDir(), .local_envir = teardown_env())
 
 if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
