@@ -688,6 +688,10 @@ isMacOSX <- function() {
   isMac <- tolower(SysInfo["sysname"]) == "darwin"
 }
 
+isLinux <- function() {
+  isMac <- tolower(SysInfo["sysname"]) == "linux"
+}
+
 warningCantInstall <- function(pkgs) {
   warning(
     "Can't install ", pkgs, "; you will likely need to restart R and run:\n",

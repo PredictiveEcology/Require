@@ -21,6 +21,10 @@ test_that("test 5", {
               'terra',
               'themis',
               'tidymodels')
+    # if (isLinux()) {
+    #   origRepos2 <- setLinuxBinaryRepo()
+    #   on.exit(options(origRepos2))
+    # }
     Install(pkgs) |>
       capture_warnings() -> warns
     if (length(warns))
