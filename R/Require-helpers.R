@@ -1335,7 +1335,8 @@ masterMainHEAD <- function(url, need) {
 
   # Authentication
   token <- NULL
-  usesGitCreds <- requireNamespace("gitcreds") && requireNamespace("httr")
+  usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
+    requireNamespace("httr", quietly = TRUE)
   if (usesGitCreds) {
     token <- tryCatch(
       gitcreds::gitcreds_get(),#use_cache = FALSE),
@@ -1348,7 +1349,8 @@ masterMainHEAD <- function(url, need) {
     messageVerbose("For better security, user should use the newer way to store git credentials.",
                    "\nUsing a GITHUB_PAT environment variable will continue to work, but see: ",
                    "https://usethis.r-lib.org/articles/git-credentials.html", verbose = verbose + GitHubMessage)
-    assignInMyNamespace("GitHubMessage", -10)
+    if (GitHubMessage > 0)
+      assignInMyNamespace("GitHubMessage", -10)
     ghp <- Sys.getenv("GITHUB_PAT")
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
     if (nzchar(ghp)) {
