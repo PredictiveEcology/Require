@@ -17,6 +17,8 @@ withr::local_package("curl", lib.loc = getOption("Require.origLibPathForTests"))
 # withr::local_package("httr", lib.loc = getOption("Require.origLibPathForTests"))
 # withr::local_package("rappdirs", lib.loc = getOption("Require.origLibPathForTests"))
 
+withr::local_package("gitcreds", .local_envir = teardown_env())
+withr::local_package("httr", .local_envir = teardown_env())
 withr::local_package("openssl", .local_envir = teardown_env())
 withr::local_package("googledrive", .local_envir = teardown_env())
 withr::local_package("rappdirs", .local_envir = teardown_env())
