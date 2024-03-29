@@ -533,7 +533,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     error = function(e) {
       # If this is erroring here, it is possible that the cached version should be deleted,
       #   but it is hard to know which package it is that breaks
-      browser()
+      if (identical(Sys.info()[["user"]], "emcintir"))
+        browser()
     }
     )
   }

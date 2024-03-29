@@ -81,8 +81,8 @@ test_that("test 5", {
 
       # remove.packages(pks)
       # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-      (out <- Require(packageVersionFile = snf, require = FALSE, # dependencies = FALSE,
-                      verbose = 2)) |>
+      (out <- Require(packageVersionFile = snf, require = FALSE)) |> #, # dependencies = FALSE,
+      #                verbose = 2)) |>
         #    capture_messages() -> mess |>
         capture_warnings() -> warns
 
