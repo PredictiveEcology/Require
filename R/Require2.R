@@ -1249,11 +1249,12 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
         # Check RSPM
         pkgArchiveHasPU$`TRUE` <- downloadRSPM(pkgArchiveHasPU$`TRUE`, install.packagesArgs, verbose)
 
-        if (any(pkgArchiveHasPU$`TRUE`$repoLocation %in% "Archive" & pkgArchiveHasPU$`TRUE`$availableVersionOK %in% TRUE)) {
+        if (any(pkgArchiveHasPU$`TRUE`$repoLocation %in% "Archive" &
+                pkgArchiveHasPU$`TRUE`$availableVersionOK %in% TRUE)) {
           pkgArchiveHasPU$`TRUE` <- split(pkgArchiveHasPU$`TRUE`, pkgArchiveHasPU$`TRUE`[["repoLocation"]])
           pkgArchOnly <- pkgArchiveHasPU$`TRUE`[["Archive"]]
-          pkgArchOnly[!fe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
-          pkgArchOnly[!fe, localFile := useRepository]
+          pkgArchOnly[which(!fe), Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
+          pkgArchOnly[which(!fe), localFile := useRepository]
         }
         pkgArchiveHasPU$`TRUE` <- rbindlistRecursive(pkgArchiveHasPU$`TRUE`)
         pkgArchive <- rbindlist(pkgArchiveHasPU, fill = TRUE, use.names = TRUE)
@@ -1836,7 +1837,7 @@ keepOnlyBinary <- function(fn, keepSourceIfOnlyOne = TRUE) {
       N <- table(pkgVer)
       pkgVerKeep <- names(N)[N == 1]
       pkgVerDups <- names(N)[N > 1]
-      if ((length(pkgVerDups) == 0) || keepSourceIfOnlyOne %in% FALSE) {
+      if (keepSourceIfOnlyOne %in% FALSE) {
         fn <- fn[isBin]
       } else {
         fnKeepSingles <- fn[match(pkgVerKeep, pkgVer)]
