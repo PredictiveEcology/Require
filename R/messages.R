@@ -64,6 +64,7 @@ msgStdErr <- function(mess, logFile, verbose) {
                "(.+)The downloaded source packages.+",
                "Content",
                "=+",
+               "g++",
                "^$",
                "^\\*{2,5}",
                "MD5 sums",

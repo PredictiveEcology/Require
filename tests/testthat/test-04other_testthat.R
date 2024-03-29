@@ -150,17 +150,16 @@ test_that("test 3", {
     # can't quiet this down on linux because ffbase is not binary but rest are ...
     #  install.packages won't do both types quiet = TRUE for some reason
     mess <- capture_messages(
-    withCallingHandlers(
-      Install("ffbase", verbose = 5,
-              repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
-              ))
-      , warning = function(w) {
-        testthat::expect_true(
-          !grepl("number of items to replace is not a multiple of replacement length",
-                 w$message))
-        invokeRestart("muffleWarning")
-      }
-    ))
+      warns <- capture_warnings(
+        #withCallingHandlers(
+        Install("ffbase", verbose = 5,
+                repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
+                ))))
+    testthat::expect_true(
+      !grepl("number of items to replace is not a multiple of replacement length",
+             warns))
+
+
   }
 
   ooo <- options(Require.RPackageCache = NULL)
