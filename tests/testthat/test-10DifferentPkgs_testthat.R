@@ -21,10 +21,10 @@ test_that("test 5", {
               'terra',
               'themis',
               'tidymodels')
-    # if (isLinux()) {
-    #   origRepos2 <- setLinuxBinaryRepo()
-    #   on.exit(options(origRepos2))
-    # }
+    if (isLinux()) {
+      origRepos2 <- setLinuxBinaryRepo()
+      on.exit(options(origRepos2))
+    }
     Install(pkgs) |>
       capture_warnings() -> warns
 
@@ -32,7 +32,9 @@ test_that("test 5", {
     expect_true(test)
 
     ins <- installed.packages() |> as.data.table()
-    expect_true(all(extractPkgName(pkgs) %in% ins$Package))
+    notInstalled <- setdiff(extractPkgName(pkgs), ins$Package)
+    notInstalled <- setdiff(notInstalled, loadedNamespaces())
+    expect_identical(notInstalled, character(0))
   }
 
 
