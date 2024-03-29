@@ -13,6 +13,8 @@ version 0.3.2
 
 ## major changes
 * All internals for `pkgDep` have been changed. The new algorithms are faster and more reliable, with far fewer lines of code.
+* All testing has been converted from using `testit` to using `testthat`. This change adds many dependencies to `Suggests`, but the benefits, e.g., using `withr` to control loading and unloading of options, packages etc., outweigh the drawbacks.
+* Experimental use of `sys` to run `install.packages` and `R CMD build` in a different process from the main process. This allows control of messaging and reduces conflicts during package installation. This is turned on with `option(Require.installPackagesSystem = TRUE)`.
 
 ## enhancements
 * If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87).

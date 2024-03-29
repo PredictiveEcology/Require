@@ -3010,10 +3010,10 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                 messageVerbose("Package ",
                      Package, " (", inequality[ind], "", versionSpec2,
                      ") is not on CRAN archives. ",
-                     "Available versions are:", verbose = verbose
+                     "The recent available versions are:", verbose = verbose
                 )
-                messageDF(data.frame(Version = Version2,
-                                     ava[[Package]][, c("repo", "PackageUrl", "mtime")]), verbose = verbose)
+                messageDF(tail(n = 10, data.frame(Version = Version2,
+                                     ava[[Package]][, c("repo", "PackageUrl", "mtime")])), verbose = verbose)
                 if (verbose >= 1)
                   warning("Please change required version e.g., ",
                           paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
