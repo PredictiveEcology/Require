@@ -1442,7 +1442,7 @@ masterMainHEAD <- function(url, need) {
     messageVerbose("For better security, user should use the newer way to store git credentials.",
                    "\nUsing a GITHUB_PAT environment variable will continue to work, but see: ",
                    "https://usethis.r-lib.org/articles/git-credentials.html", verbose = verbose + GitHubMessage)
-    if (GitHubMessage > 0)
+    if (GitHubMessage >= 0)
       assignInMyNamespace("GitHubMessage", -10)
     ghp <- Sys.getenv("GITHUB_PAT")
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
@@ -1467,7 +1467,8 @@ masterMainHEAD <- function(url, need) {
                 if (is.null(token)) {
                   tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
                            error = function(e) {
-                             e$message <- stripGHP(ghp, e$message)
+                             if (is.null(token))
+                              e$message <- stripGHP(ghp, e$message)
                              if (tryNum > 1)
                                messageVerbose(e$message, verbose = verbose)
                            })
@@ -1478,7 +1479,8 @@ masterMainHEAD <- function(url, need) {
                 }
                 if (file.exists(df))
                   break
-                URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
+                if (is.null(token))
+                  URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
               }
             }
           })
@@ -1489,16 +1491,24 @@ masterMainHEAD <- function(url, need) {
             if (is.null(token)) {
               outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
             } else {
-              outMasterMain <- try({
+              outMasterMain <- try(silent = TRUE, {
                 a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
+                if (grepl("404", httr::http_status(a)$message))
+                  stop()
                 data <- httr::content(a, "raw")
                 writeBin(data, destfile)
               })
+              if (is.null(outMasterMain)) outMasterMain <- 0
             }
           }
 
           if (!is(outMasterMain, "try-error")) {
-            names(outMasterMain) <- stripGHP(ghp, urls[["TRUE"]][wh])
+            namForOut <- if (is.null(token)) {
+              stripGHP(ghp, urls[["TRUE"]][wh])
+            } else {
+              urls[["TRUE"]][wh]
+            }
+            names(outMasterMain) <- namForOut
             break
           }
         }
@@ -1514,12 +1524,14 @@ masterMainHEAD <- function(url, need) {
   warning = function(w) {
     setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
-    w$message <- stripGHP(ghp, w$message)
+    if (is.null(token))
+      w$message <- stripGHP(ghp, w$message)
     invokeRestart("muffleWarning")
   },
   error = function(e) {
     # strip the ghp from the message
-    e$message <- stripGHP(ghp, e$message)
+    if (is.null(token))
+      e$message <- stripGHP(ghp, e$message)
     stop(e)
   })
 
@@ -1527,7 +1539,9 @@ masterMainHEAD <- function(url, need) {
 }
 
 stripGHP <- function(ghp, mess) {
-  gsub(paste0(ghp, ".*@"), "", mess)
+  if (!missing(ghp))
+    mess <- gsub(paste0(ghp, ".*@"), "", mess)
+  mess
 }
 
 messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
@@ -1645,82 +1659,3 @@ checkAutomaticOfflineMode <- function() {
   }
 }
 
-messageCantInstallNoVersion <- function(packagesFullName) {
-  turquoise(
-    paste(unique(packagesFullName), collapse = ", "),
-    " could not be installed; package doesn't exist or the version specification cannot be met"
-  )
-}
-
-
-msgStdOut <- function(mess, logFile, verbose) {
-  pkg <- extractPkgNameFromWarning(mess)
-  justPackage <- !identical(mess, pkg)
-  cat(blue(mess), file = logFile, append = TRUE)
-  appendLF <- endsWith(mess, "\n") %in% FALSE
-
-  # if (grepl("binary packages", mess)) browser()
-  mod <- "^\\r\\n"
-  while (grepl(mod, mess)) {
-    mess <- gsub(mod, "  ", mess)
-  }
-
-  omit <- "^.+downloaded binary packages.+$"
-  while (grepl(omit, mess)) {
-    mess <- gsub(omit, "", mess)
-  }
-  if (nchar(mess))
-    if (!justPackage || verbose >= 2) {
-      messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
-    } else {
-      messageVerbose(blue("Installed: ", pkg), verbose = verbose, appendLF = TRUE)
-    }
-}
-
-msgStdErr <- function(mess, logFile, verbose) {
-  cat(greyLight(mess), file = logFile, append = TRUE)
-  appendLF <- endsWith(mess, "\n") %in% FALSE
-  if (verbose <= 1) {
-
-    omit <- "\\(as 'lib' is unspecified\\)"
-    if (grepl(omit, mess))
-      mess <- gsub(paste0("\\r\\n", omit), "", mess)
-
-    omit <- "(^.+\\*source\\*.+.\\.{3,3}).+"
-    if (grepl(omit, mess))
-      mess <- gsub(omit, "\\1", mess)
-
-    omit <- "(.+)The downloaded source packages.+"
-    if (grepl(omit, mess))
-      mess <- gsub(omit, "\\1", mess)
-    omit <- ".+(packaged installation.+)$"
-    if (grepl(omit, mess))
-      mess <- gsub(omit, "\\1", mess)
-
-    omit <- "^(.+)+Content.+=+(\\r\\n)*(.*)$"
-    while (grepl(omit, mess)) {
-      mess <- gsub(omit, "\\1\\3", mess)
-    }
-
-    omit <- "=+(\r\n)*"
-    while (grepl(omit, mess)) {
-      mess <- gsub(omit, "", mess)
-    }
-
-    mod <- "\\r\\n\\r\\n"
-    while (grepl(mod, mess)) {
-      mess <- gsub(mod, "\r\n", mess)
-    }
-    # omit <- "^(.+)\\r\\n(downloaded.+)$"
-    # while (grepl(omit, mess)) {
-    #   mess <- gsub(omit, "\\1 ... \\2", mess)
-    # }
-
-    appendLF <- endsWith(mess, "\n") %in% FALSE && nchar(mess) != 0
-    if (grepl("nstalling.+package", mess) | grepl("ERROR|halted|DONE|downloaded|trying", mess)) {
-      messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
-    }
-  } else {
-    messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
-  }
-}

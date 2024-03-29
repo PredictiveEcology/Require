@@ -414,7 +414,7 @@ rbindlistNULL <- function(ll, ...) {
 build <- function(Package, VersionOnRepos, verbose, quiet) {
   if (nchar(Sys.which("R")) > 0) {
     messageVerbose("building package (R CMD build)",
-      verbose = verbose, verboseLevel = 1
+      verbose = verbose, verboseLevel = 2
     )
     internal <- !interactive()
     extras <- c(
@@ -433,31 +433,34 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
           Rpath, I(cmdLine), # std_out = con, std_err = con
           std_out = function(x) {
             mess <- rawToChar(x)
-            pkg <- extractPkgNameFromWarning(mess)
-            cat(blue(mess), file = logFile, append = TRUE)
-            appendLF <- endsWith(mess, "\n") %in% FALSE
-            if (verbose >= 2) {
-              messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
-            } else {
-              if (grepl("building", mess)) {
-                mess <- gsub(".+(building.+)", "\\1", mess)
-                messageVerbose(blue(mess), appendLF = appendLF)
-              }
-            }
+
+            msgStdOutForBuild(mess, logFile, verbose)
+            # pkg <- extractPkgNameFromWarning(mess)
+            # cat(blue(mess), file = logFile, append = TRUE)
+            # appendLF <- endsWith(mess, "\n") %in% FALSE
+            # if (verbose >= 2) {
+            #   messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
+            # } else {
+            #   if (grepl("building", mess)) {
+            #     mess <- gsub(".+(building.+)", "\\1", mess)
+            #     messageVerbose(blue(mess), appendLF = appendLF)
+            #   }
+            # }
 
             #
             invisible()
           },
           std_err = function(x){
             mess <- rawToChar(x)
-            cat(greyLight(mess), file = logFile, append = TRUE)
-            appendLF <- endsWith(mess, "\n") %in% FALSE
-            if (verbose <= 1) {
-              appendLF <- endsWith(mess, "\n") %in% FALSE
-              messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
-            } else {
-              messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
-            }
+            msgStdErrForBuild(mess, logFile, verbose)
+            # cat(greyLight(mess), file = logFile, append = TRUE)
+            # appendLF <- endsWith(mess, "\n") %in% FALSE
+            # if (verbose <= 1) {
+            #   appendLF <- endsWith(mess, "\n") %in% FALSE
+            #   messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+            # } else {
+            #   messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+            # }
 
             invisible()
           }
@@ -467,7 +470,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
         system2(Rpath, cmdLine)
       }
     })
-    messageVerbose("  ... Built!",
+    messageVerbose("\b\b ... Built!",
       verbose = verbose, verboseLevel = 1
     )
   } else {

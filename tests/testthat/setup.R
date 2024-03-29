@@ -8,7 +8,7 @@ isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
-withr::local_options(Require.verbose = ifelse(isDev, -2, -2), .local_envir = teardown_env())
+withr::local_options(Require.verbose = ifelse(isDev, 1, -2), .local_envir = teardown_env())
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
@@ -24,6 +24,7 @@ if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
   options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
           Require.origLibPathForTests = .libPaths()[1],
+          Require.installPackagesSystem = TRUE,
           gargle_oauth_email = "eliotmcintire@gmail.com",
           gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
