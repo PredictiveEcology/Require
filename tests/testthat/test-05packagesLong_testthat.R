@@ -222,8 +222,14 @@ test_that("test 5", {
         out22 <- Require(pkgs, require = FALSE, returnDetails = TRUE)
       )
       ip <- installed.packages() ## silly1 won't be installed
-      testthat::expect_true(sum(pkgsClean %in% ip[, "Package"]) ==
-                              length(pkgsClean) - length(acceptableFails)) ## TODO: fails on macOS
+
+      # depending on whether SpaDES.core gets installed... could be poss1 or poss2
+      poss1 <- identical(setdiff(pkgsClean, ip[, "Package"]), pkgs[[4]])  # installs SpaDES.core anyway
+
+      # This one fails to install SpaDES.core because already loaded
+      poss2 <- sum(pkgsClean %in% ip[, "Package"]) ==
+        length(pkgsClean) - length(acceptableFails) ## TODO: fails on macOS
+      expect_true(poss1 || poss2)
     }
 
     ## Test Install and also (HEAD)

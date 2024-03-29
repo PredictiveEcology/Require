@@ -1274,7 +1274,7 @@ installPackagesSystem <- function(args, verbose = getOption("Require.verbose")) 
 
   # cmdLine <- paste0(" -e \"{.libPaths('", libPaths, "'); ", localCall2, "}\"")
   pid <- sys::exec_wait(
-    Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
+    Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
     std_out = function(x) {
       mess <- rawToChar(x)
       msgStdOut(mess, logFile, verbose)
