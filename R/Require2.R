@@ -2533,16 +2533,18 @@ updateReposForSrcPkgs <- function(pkgInstall) {
     ]
     needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
     if (any(needSwitchToSrc %in% TRUE)) {
-      if (any(isBinaryCRANRepo(getOption("repos")[1]))) {
-        nams <- pkgInstall[needSwitchToSrc][["Package"]]
-        warning(
-          paste(nams, collapse = ", "), isAre(nams), " identified in `sourcePkgs()`, ",
-          "indicating installation from source; if these source installs fail, try changing ",
-          "to\noptions(Require.otherPkgs = c('",
-          paste(setdiff(getOption("Require.otherPkgs"), nams), collapse = "', '"), "'))",
-          "\nremoving ", paste(nams, collapse = ", ")
-        )
-      }
+      # Eliot commented this March 28, 2024 -- posit Package Manager can handle this now
+      # if (any(isBinaryCRANRepo(getOption("repos")[1]))) {
+      #   nams <- pkgInstall[needSwitchToSrc][["Package"]]
+      #   warning(
+      #     "The CRAN repository is a binary repository. However, ",
+      #     paste(nams, collapse = ", "), isAre(nams), " identified in `sourcePkgs()`, ",
+      #     " indicating installation from source; if these source installs fail, try changing ",
+      #     "to set \noptions(Require.otherPkgs = c('",
+      #     paste(setdiff(getOption("Require.otherPkgs"), nams), collapse = "', '"), "'))",
+      #     "\nremoving ", paste(nams, collapse = ", ")
+      #   )
+      # }
       if (all(isBinaryCRANRepo(getOption("repos")))) {
         warning(
           paste(pkgInstall[needSwitchToSrc][["Package"]], collapse = ", "), " is identified in `sourcePkgs()`, ",
