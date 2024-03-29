@@ -84,7 +84,7 @@ msgStdErr <- function(mess, logFile, verbose) {
         mess <- mess[whKeep]
     }
 
-    rmEOL <- c("downloaded", "DONE \\(")
+    rmEOL <- c("downloaded", "* DONE \\(")
     dots <- c(" ... ", "")
 
     for (ind in seq(rmEOL)) {
