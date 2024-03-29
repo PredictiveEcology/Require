@@ -58,7 +58,7 @@ msgStdErr <- function(mess, logFile, verbose) {
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose <= 1) {
 
-    mess <- unlist(strsplit(mess, "\r\n"))
+    mess <- unlist(strsplit(mess, "\r*\n"))
 
     omits <- c("\\(as 'lib' is unspecified\\)",
                "(.+)The downloaded source packages.+",
@@ -66,7 +66,10 @@ msgStdErr <- function(mess, logFile, verbose) {
                "=+",
                "^$",
                "^\\*{2,5}",
-               "MD5 sums")
+               "MD5 sums",
+               "was already a binary package and will not be rebuilt",
+               "creating tarball",
+               "packaged installation of")
     for (om in omits)
       mess <- grep(om, mess, invert = TRUE, value = TRUE)
 
@@ -81,19 +84,18 @@ msgStdErr <- function(mess, logFile, verbose) {
         mess <- mess[whKeep]
     }
 
-    rmEOL <- c("downloaded")
+    rmEOL <- c("downloaded", "DONE \\(")
+    dots <- c(" ... ", "")
 
-
-    for (rmeol in rmEOL) {
+    for (ind in seq(rmEOL)) {
       # first check if it is first mess ... if yes, then \b it
-      if (identical(grep(rmeol, mess), 1L) ) {
-        mess[1] <- paste0("\b ... ", mess[1])
+      if (identical(grep(rmEOL[ind], mess), 1L) ) {
+        mess[1] <- paste0("\b", dots[ind], mess[1])
       }
-      rm <- grep(paste0("^", rmeol), mess)
+      rm <- grep(paste0("^", rmEOL[ind]), mess)
       if (length(rm)) {
         pre <- rm - 1
-        browser()
-        mess[pre] <- paste0(mess[pre], " ... ", mess[rm], sep = "\r\n")
+        mess[pre] <- paste0(mess[pre], "...", mess[rm], sep = "\r\n")
         mess[rm] <- ""
         mess <- grep("^$", mess, invert = TRUE, value = TRUE)
       }

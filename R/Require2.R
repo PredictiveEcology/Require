@@ -426,7 +426,8 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
     filePat <- paste0(Package, "_", VersionOnRepos, ".tar.gz")
     logFile <- tempfile2(fileext = ".log")
     out1 <- Map(pack = Package, function(pack) {
-      cmdLine <- paste("CMD build ", pack, paste(extras, collapse = " "))
+      # cmdLine <- paste("CMD build ", pack, paste(extras, collapse = " "))
+      cmdLine <- c("CMD", "build", pack, extras)
       if (getOption("Require.installPackagesSystem", FALSE)) {
 
         pid <- sys::exec_wait(

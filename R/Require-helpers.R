@@ -1259,9 +1259,19 @@ installPackagesSystem <- function(args, verbose = getOption("Require.verbose")) 
   fn <- tempfile(fileext = ".rds")
   fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
   saveRDS(args, file = fn)
-  ar <- paste0("\"{.libPaths('",libPaths,"'); args <- readRDS('", fn, "'); do.call(install.packages, args)}\"")
-  cmdLine <- paste0(" -e ", ar)
+  ar <- c(paste0(".libPaths('",libPaths,"')"),
+          paste0("args <- readRDS('", fn, "')"),
+          "do.call(install.packages, args)")
+  cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+  # cmdLine <- paste0(" -e ", ar)
   logFile <- tempfile2(fileext = ".log")
+  # browser()
+
+  # exec_wait(Sys.which("Rscript"), c("-e", ".libPaths('/tmp/RtmpKYB0DJ/Require/3F1qldyR/4.3')",
+  #                                   "-e", "args <- readRDS('/tmp/RtmpKYB0DJ/file55171e2880c1.rds')",
+  #                                   "-e", "do.call(install.packages, args)"))
+  #
+
   # cmdLine <- paste0(" -e \"{.libPaths('", libPaths, "'); ", localCall2, "}\"")
   pid <- sys::exec_wait(
     Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
