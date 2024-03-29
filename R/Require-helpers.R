@@ -1253,7 +1253,7 @@ stripHTTPAddress <- function(addr) {
 # }
 
 
-installPackagesSystem <- function(args, verbose = getOption("Require.verbose")) {
+installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   libPaths <- args$libPaths
   args$libPaths <- NULL
   fn <- tempfile(fileext = ".rds")
@@ -1290,7 +1290,7 @@ installPackagesSystem <- function(args, verbose = getOption("Require.verbose")) 
 }
 
 
-# installPackagesSystem <- function(pkg, args, libPath, repos = getOption("repos"), envir = parent.frame()) {
+# installPackagesSys <- function(pkg, args, libPath, repos = getOption("repos"), envir = parent.frame()) {
 #   browser()
 #
 #   ff <- file.path(getwd(), "ipa.rds")
@@ -1597,9 +1597,9 @@ availablePackagesCachedPath <- function(repos, type) {
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {
-  if (getOption("Require.installPackagesSystem", FALSE)) {
+  if (getOption("Require.installPackagesSys", FALSE)) {
     ipa$libPaths <- .libPaths()[1]
-    installPackagesSystem(ipa, verbose = verbose)
+    installPackagesSys(ipa, verbose = verbose)
   } else {
     if (isTRUE(ipa$quiet)) {
       messSupp2 <- capture.output({

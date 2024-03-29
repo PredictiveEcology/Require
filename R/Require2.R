@@ -428,7 +428,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
     out1 <- Map(pack = Package, function(pack) {
       # cmdLine <- paste("CMD build ", pack, paste(extras, collapse = " "))
       cmdLine <- c("CMD", "build", pack, extras)
-      if (getOption("Require.installPackagesSystem", FALSE)) {
+      if (getOption("Require.installPackagesSys", FALSE)) {
 
         pid <- sys::exec_wait(
           Rpath, I(cmdLine), # std_out = con, std_err = con

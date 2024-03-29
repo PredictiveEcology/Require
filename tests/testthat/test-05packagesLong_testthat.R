@@ -248,7 +248,7 @@ test_that("test 5", {
 
     # two sources, where both are OK; use CRAN by preference
     if (!isMacOSX()) {
-      out <- capture.output(remove.packages("SpaDES.core")) ## TODO: fails on macOS
+      lala <- suppressWarnings(capture.output(remove.packages("SpaDES.core"))) ## TODO: fails on macOS
       suppressWarnings(
         out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
                          "SpaDES.core (>=1.0.0)"),
