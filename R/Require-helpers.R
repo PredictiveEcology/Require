@@ -1253,32 +1253,121 @@ stripHTTPAddress <- function(addr) {
 # }
 
 
-installPackagesSystem <- function(pkg, args, libPath) {
-  opts2 <- append(args, list(lib = normalizePath(libPath, winslash = "/")))
-  opts2 <- modifyList2(list(Ncpus = getOption("Ncpus")), opts2, keep.null = TRUE)
-  opts2 <- append(list(pkg), opts2)
-  opts2 <- append(opts2, list(repos = NULL))
-  theCharacters <- unlist(lapply(opts2, is.character))
-  theCharactersAsVector <- lengths(opts2[theCharacters]) > 1
-  inner <- unlist(lapply(opts2[theCharacters][theCharactersAsVector], function(x) paste(x, collapse = "', '")))
-  aa <- paste0("c('", inner, "')")
-  opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
-  opts2[theCharacters][theCharactersAsVector] <- aa
-  hasName <- names(opts2) != ""
-  Rpath <- Sys.which("Rscript")
-  out2 <- paste(
-    Rpath, "-e \"do.call(install.packages, list(",
-    paste(
-      opts2[!hasName], ", ",
-      paste(names(opts2)[hasName],
-        sep = " = ", opts2[hasName],
-        collapse = ", "
-      ), "))\""
-    )
+installPackagesSystem <- function(args, verbose = getOption("Require.verbose")) {
+  libPaths <- args$libPaths
+  args$libPaths <- NULL
+  fn <- tempfile(fileext = ".rds")
+  fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+  saveRDS(args, file = fn)
+  ar <- paste0("\"{.libPaths('",libPaths,"'); args <- readRDS('", fn, "'); do.call(install.packages, args)}\"")
+  cmdLine <- paste0(" -e ", ar)
+  logFile <- tempfile2(fileext = ".log")
+  # cmdLine <- paste0(" -e \"{.libPaths('", libPaths, "'); ", localCall2, "}\"")
+  pid <- sys::exec_wait(
+    Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
+    std_out = function(x) {
+      mess <- rawToChar(x)
+      msgStdOut(mess, logFile, verbose)
+      invisible()
+    },
+    std_err = function(x) {
+      mess <- rawToChar(x)
+      msgStdErr(mess, logFile, verbose)
+      invisible()
+    }
   )
-  out <- system(out2, intern = TRUE)
-  return(out)
+  tools::pskill(pid)
 }
+
+
+# installPackagesSystem <- function(pkg, args, libPath, repos = getOption("repos"), envir = parent.frame()) {
+#   browser()
+#
+#   ff <- file.path(getwd(), "ipa.rds")
+#   saveRDS(ipa, file = ff)
+#
+#   ff <- formals(install.packages)
+#   keep <- suppressWarnings(
+#     sapply(ff, function(f) sum(nchar(f)) > 0 | any(is.na(f)))
+#   )
+#
+#   opts2 <- ff[which(keep)]
+#   type <- eval(opts2$type)
+#   type <- "binary"
+#   opts2 <- lapply(opts2, function(o) try(eval(o)))
+#
+#   opts2 <- modifyList(opts2, args)
+#   opts2 <- modifyList(opts2, list(lib = normalizePath(libPath, winslash = "/")))
+#   opts2 <- modifyList(list(Ncpus = getOption("Ncpus")), opts2, keep.null = TRUE)
+#   opts2 <- modifyList(list(pkg), opts2)
+#   opts2 <- modifyList(opts2, list(repos = repos))
+#
+#
+#
+#   theCharacters <- unlist(lapply(opts2, is.character))
+#   theCharactersAsVector <- lengths(opts2[theCharacters]) > 1
+#   inner <- unlist(lapply(opts2[theCharacters][theCharactersAsVector], function(x) paste(x, collapse = "', '")))
+#   aa <- paste0("c('", inner, "')")
+#   opts2[theCharacters][!theCharactersAsVector] <- paste0("'", opts2[theCharacters][!theCharactersAsVector], "'")
+#   opts2[theCharacters][theCharactersAsVector] <- aa
+#   hasName <- names(opts2) != ""
+#   Rpath <- Sys.which("Rscript")
+#   # localCall <- paste("do.call(install.packages, list(",
+#   #                    paste(
+#   #                      opts2[!hasName], ", ",
+#   #                      paste(names(opts2)[hasName],
+#   #                            sep = " = ", opts2[hasName],
+#   #                            collapse = ", "
+#   #                      ), "))"
+#   #                    ))
+#   localCall2 <- paste("install.packages(",
+#                      paste(
+#                        opts2[!hasName], ", ",
+#                        paste(names(opts2)[hasName],
+#                              sep = " = ", opts2[hasName],
+#                              collapse = ", "
+#                        ), ")"
+#                      ))
+#   # remoteCall <- paste0(Rpath, " -e \"", localCall2, "\"")
+#   cmdLine <- paste0(" -e \"{.libPaths('", .libPaths()[1], "'); ", localCall2, "}\"")
+#   # remoteCall <- paste0(Rpath, cmdLine)
+#   # out <- system(remoteCall, intern = FALSE, wait = TRUE, show.output.on.console = TRUE)
+#
+#   # out <- system(remoteCall, intern = FALSE, wait = FALSE, show.output.on.console = FALSE)
+#
+#   origDir <- setwd(dirname(.libPaths()[1]))
+#   on.exit(setwd(origDir))
+#   fn <- "test7.out"
+#   # con <- file( "test3.out", open = "w+b", blocking = FALSE)
+#
+#
+#   # con <- file(fn, open = "w+", blocking = FALSE)
+#   # on.exit(close(con), add = TRUE)
+#   # sink(con)
+#   browser()
+#   pid <- sys::exec_wait(
+#     Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
+#     std_out = function(x){
+#       cat(blue(rawToChar(x)), file = fn, append = TRUE)
+#       cat(blue(rawToChar(x)))
+#
+#     },
+#     std_err = function(x){
+#       cat(red(rawToChar(x)), file = fn, append = TRUE)
+#       cat(red(rawToChar(x)))
+#
+#     }
+#   )
+#   cat("\n", file = fn, append = TRUE)
+#   tools::pskill(pid)
+#   return(file.path(getwd(), fn))
+#   # out <- system2(Rpath, cmdLine)
+#   # out <- system2(Rpath, cmdLine, stdout = "test2.out", wait = FALSE)
+#
+#   # readLines(con)
+#
+#   # return(out)
+# }
 
 
 
@@ -1353,7 +1442,7 @@ masterMainHEAD <- function(url, need) {
     messageVerbose("For better security, user should use the newer way to store git credentials.",
                    "\nUsing a GITHUB_PAT environment variable will continue to work, but see: ",
                    "https://usethis.r-lib.org/articles/git-credentials.html", verbose = verbose + GitHubMessage)
-    if (GitHubMessage > 0)
+    if (GitHubMessage >= 0)
       assignInMyNamespace("GitHubMessage", -10)
     ghp <- Sys.getenv("GITHUB_PAT")
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
@@ -1378,7 +1467,8 @@ masterMainHEAD <- function(url, need) {
                 if (is.null(token)) {
                   tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
                            error = function(e) {
-                             e$message <- stripGHP(ghp, e$message)
+                             if (is.null(token))
+                              e$message <- stripGHP(ghp, e$message)
                              if (tryNum > 1)
                                messageVerbose(e$message, verbose = verbose)
                            })
@@ -1389,7 +1479,8 @@ masterMainHEAD <- function(url, need) {
                 }
                 if (file.exists(df))
                   break
-                URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
+                if (is.null(token))
+                  URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
               }
             }
           })
@@ -1400,16 +1491,24 @@ masterMainHEAD <- function(url, need) {
             if (is.null(token)) {
               outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
             } else {
-              outMasterMain <- try({
+              outMasterMain <- try(silent = TRUE, {
                 a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
+                if (grepl("404", httr::http_status(a)$message))
+                  stop()
                 data <- httr::content(a, "raw")
                 writeBin(data, destfile)
               })
+              if (is.null(outMasterMain)) outMasterMain <- 0
             }
           }
 
           if (!is(outMasterMain, "try-error")) {
-            names(outMasterMain) <- stripGHP(ghp, urls[["TRUE"]][wh])
+            namForOut <- if (is.null(token)) {
+              stripGHP(ghp, urls[["TRUE"]][wh])
+            } else {
+              urls[["TRUE"]][wh]
+            }
+            names(outMasterMain) <- namForOut
             break
           }
         }
@@ -1425,12 +1524,14 @@ masterMainHEAD <- function(url, need) {
   warning = function(w) {
     setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
-    w$message <- stripGHP(ghp, w$message)
+    if (is.null(token))
+      w$message <- stripGHP(ghp, w$message)
     invokeRestart("muffleWarning")
   },
   error = function(e) {
     # strip the ghp from the message
-    e$message <- stripGHP(ghp, e$message)
+    if (is.null(token))
+      e$message <- stripGHP(ghp, e$message)
     stop(e)
   })
 
@@ -1438,7 +1539,9 @@ masterMainHEAD <- function(url, need) {
 }
 
 stripGHP <- function(ghp, mess) {
-  gsub(paste0(ghp, ".*@"), "", mess)
+  if (!missing(ghp))
+    mess <- gsub(paste0(ghp, ".*@"), "", mess)
+  mess
 }
 
 messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
@@ -1483,15 +1586,20 @@ availablePackagesCachedPath <- function(repos, type) {
   file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, "availablePackages.rds")
 }
 
-installPackagesWithQuiet <- function(ipa) {
-  if (isTRUE(ipa$quiet)) {
-    messSupp2 <- capture.output({
-      messSupp <- capture.output(type = "message", {
-        do.call(install.packages, ipa)
-      })
-    })
+installPackagesWithQuiet <- function(ipa, verbose) {
+  if (getOption("Require.installPackagesSystem", FALSE)) {
+    ipa$libPaths <- .libPaths()[1]
+    installPackagesSystem(ipa, verbose = verbose)
   } else {
-    do.call(install.packages, ipa)
+    if (isTRUE(ipa$quiet)) {
+      messSupp2 <- capture.output({
+        messSupp <- capture.output(type = "message", {
+          do.call(install.packages, ipa)
+        })
+      })
+    } else {
+      do.call(install.packages, ipa)
+    }
   }
 }
 
@@ -1549,12 +1657,5 @@ checkAutomaticOfflineMode <- function() {
       Require.offlineMode = FALSE
     )
   }
-}
-
-messageCantInstallNoVersion <- function(packagesFullName) {
-  turquoise(
-    paste(unique(packagesFullName), collapse = ", "),
-    " could not be installed; package doesn't exist or the version specification cannot be met"
-  )
 }
 

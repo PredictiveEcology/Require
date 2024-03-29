@@ -681,5 +681,5 @@ green <- function(...) colr(..., digit = 32)
 yellow <- function(...) colr(..., digit = 33)
 blue <- function(...) colr(..., digit = 34)
 turquoise <- function(...) colr(..., digit = 36)
-greyLight <- function(...) colr(..., digit = 37)
+greyLight <- function(...) colr(..., digit = 90)
 

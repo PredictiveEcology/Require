@@ -29,10 +29,13 @@ test_that("test 1", {
 
   dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
-  out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
+  (out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
                                            standAlone = TRUE, libPaths = dir1,
                                            quiet = TRUE, returnDetails = TRUE
-  ))
+  ))) |> capture_warnings() -> warns
+  if (length(warns))
+    expect_true(all(grepl("was built under", warns)))
+
   testthat::expect_true({
     data.table::is.data.table(attr(out, "Require"))
   })
@@ -208,11 +211,6 @@ test_that("test 1", {
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 
-    # if (length(warns))
-    #   expect_true(all(grepl("in use", warns)))
-
-
-    # )
     on.exit({
       try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
                            dontTry = dontDetach())
