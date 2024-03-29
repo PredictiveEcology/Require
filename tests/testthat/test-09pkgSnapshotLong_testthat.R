@@ -81,9 +81,9 @@ test_that("test 5", {
 
       # remove.packages(pks)
       # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-      (out <- Require(packageVersionFile = snf, require = FALSE)) |> #, # dependencies = FALSE,
-      #                verbose = 2)) |>
-        #    capture_messages() -> mess |>
+      (out <- Require(packageVersionFile = snf, require = FALSE, # dependencies = FALSE,
+                      verbose = 2)) |>
+            capture_messages() -> mess |>
         capture_warnings() -> warns
 
       # NLMR specification is for a version that doesn't exist
