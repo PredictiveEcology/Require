@@ -69,7 +69,9 @@ msgStdErr <- function(mess, logFile, verbose) {
                "MD5 sums",
                "was already a binary package and will not be rebuilt",
                "creating tarball",
-               "packaged installation of")
+               "packaged installation of",
+               "using .+ compiler",
+               "gcc")
     for (om in omits)
       mess <- grep(om, mess, invert = TRUE, value = TRUE)
 
@@ -84,7 +86,7 @@ msgStdErr <- function(mess, logFile, verbose) {
         mess <- mess[whKeep]
     }
 
-    rmEOL <- c("downloaded", "* DONE \\(")
+    rmEOL <- c("downloaded", "DONE \\(") # DONE already has dots
     dots <- c(" ... ", "")
 
     for (ind in seq(rmEOL)) {
@@ -101,8 +103,8 @@ msgStdErr <- function(mess, logFile, verbose) {
       }
     }
 
-    converts <- c("\\r\\n\\r\\n")
-    converts2 <- c("\r\n")
+    converts <- c("\\r\\n\\r\\n", "* DONE")
+    converts2 <- c("\r\n", "DONE")
     for (i in seq(converts)) {
       while (any(grepl(converts[i], mess))) {
         mess <- gsub(converts[i], converts2[i], mess)
