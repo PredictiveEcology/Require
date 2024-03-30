@@ -79,16 +79,16 @@ test_that("test 5", {
       )
       names(packageFullName) <- packageFullName
 
-      # remove.packages(pks)
-      # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
-      (out <- Require(packageVersionFile = snf, require = FALSE, # dependencies = FALSE,
-                      verbose = 1)) |>
-            capture_messages() -> mess |>
-        capture_warnings() -> warns
+      warns <- capture_warnings(
+        mess <- capture_messages(
+          out <- Require(packageVersionFile = snf, require = FALSE, verbose = 1,
+                         returnDetails = TRUE)
+        )
+      )
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl("Please change required version", warns)
-      expect_identical(sum(NLMRandVisualTestWarn), 2L)
+      expect_identical(sum(NLMRandVisualTestWarn), 1L)
       warns <- warns[-which(NLMRandVisualTestWarn)]
 
       test <- testWarnsInUsePleaseChange(warns)

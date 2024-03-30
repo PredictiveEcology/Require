@@ -64,7 +64,7 @@ msgStdErr <- function(mess, logFile, verbose) {
                "(.+)The downloaded source packages.+",
                "Content",
                "=+",
-               "g++",
+               "g\\+\\+",
                "^$",
                "^\\*{2,5}",
                "MD5 sums",
@@ -73,8 +73,10 @@ msgStdErr <- function(mess, logFile, verbose) {
                "packaged installation of",
                "using .+ compiler",
                "gcc")
-    for (om in omits)
+    for (om in omits) {
       mess <- grep(om, mess, invert = TRUE, value = TRUE)
+    }
+
 
     # if (grepl(omit, mess))
     #   mess <- gsub(paste0("\\r\\n", omit), "", mess)
@@ -104,8 +106,8 @@ msgStdErr <- function(mess, logFile, verbose) {
       }
     }
 
-    converts <- c("\\r\\n\\r\\n", "* DONE")
-    converts2 <- c("\r\n", "DONE")
+    converts <- c("\\r\\n\\r\\n", "\\* DONE (.+)")
+    converts2 <- c("\r\n", " DONE")
     for (i in seq(converts)) {
       while (any(grepl(converts[i], mess))) {
         mess <- gsub(converts[i], converts2[i], mess)

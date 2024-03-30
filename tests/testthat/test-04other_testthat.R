@@ -155,9 +155,10 @@ test_that("test 3", {
         Install("ffbase", verbose = 5,
                 repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
                 ))))
-    testthat::expect_true(
-      !grepl("number of items to replace is not a multiple of replacement length",
-             warns))
+    expect_identical(character(0), warns)
+    # testthat::expect_true(
+    #   !grepl("number of items to replace is not a multiple of replacement length",
+    #          warns))
 
 
   }
