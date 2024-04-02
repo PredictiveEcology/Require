@@ -376,7 +376,7 @@ Require <- function(packages,
     }
 
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
-    out <- doLoads(require, pkgDT)
+    out <- doLoads(require, pkgDT, verbose = verbose)
 
     packagesDT <- matchWithOriginalPackages(pkgDT, packages)
     out <- packagesDT$require
@@ -523,19 +523,19 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     # debug(utils:::.install.winbinary)
     # on.exit(undebug(utils:::.install.winbinary))
     tryCatch(
-    toInstallOut <- withCallingHandlers(
-      installPackagesWithQuiet(ipa, verbose = verbose),
-      warning = function(w) {
-        messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
-        invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
+      toInstallOut <- withCallingHandlers(
+        installPackagesWithQuiet(ipa, verbose = verbose),
+        warning = function(w) {
+          messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
+          invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
+        }
+      ),
+      error = function(e) {
+        # If this is erroring here, it is possible that the cached version should be deleted,
+        #   but it is hard to know which package it is that breaks
+        if (identical(Sys.info()[["user"]], "emcintir"))
+          browser()
       }
-    ),
-    error = function(e) {
-      # If this is erroring here, it is possible that the cached version should be deleted,
-      #   but it is hard to know which package it is that breaks
-      if (identical(Sys.info()[["user"]], "emcintir"))
-        browser()
-    }
     )
   }
   toInstall
@@ -944,7 +944,7 @@ whichToInstall <- function(pkgDT, install, verbose) {
 }
 
 
-doLoads <- function(require, pkgDT) {
+doLoads <- function(require, pkgDT, verbose = getOption("Require.verbose")) {
   needRequire <- require
   if (is.character(require)) {
     pkgDT[Package %in% require, require := TRUE]
@@ -966,7 +966,7 @@ doLoads <- function(require, pkgDT) {
     setorderv(pkgDT, "loadOrder", na.last = TRUE)
     # rstudio intercepts `require` and doesn't work internally
     out[[1]] <- mapply(x = unique(pkgDT[["Package"]][pkgDT$require %in% TRUE]), function(x) {
-      base::require(x, character.only = TRUE)
+      base::require(x, character.only = TRUE, quietly = verbose <= 0)
     }, USE.NAMES = TRUE)
   }
 
