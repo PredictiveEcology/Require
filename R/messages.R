@@ -92,11 +92,13 @@ msgStdOut <- function(mess, logFile, verbose) {
 
   if (length(mess))
     if (nchar(mess)) {
-      if (!justPackage || verbose >= 2 || grepl("Warning", mess)) {
-        messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
-      } else {
-        messageVerbose(blue("Installed: ", pkg), verbose = verbose, appendLF = TRUE)
+      if (!(!justPackage || verbose >= 2 || grepl("Warning", mess))) {
+        mess <- paste0("Installed: ", pkg)
       }
+      messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
+      # } else {
+      #   messageVerbose(blue("Installed: ", pkg), verbose = verbose, appendLF = TRUE)
+      # }
     }
 }
 
@@ -196,11 +198,8 @@ msgStdErr <- function(mess, logFile, verbose) {
 
     mess <- paste(mess, collapse = "\r\n")
     appendLF <- endsWith(mess, "\n") %in% FALSE && nchar(mess) != 0
-    if (length(mess)) {
-        messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
-      # }
-    }
-  } else {
+  }
+  if (length(mess)) {
     messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
   }
 }
@@ -210,13 +209,11 @@ msgStdOutForBuild <- function(mess, logFile, verbose) {
   pkg <- extractPkgNameFromWarning(mess)
   # cat(blue(mess), file = logFile, append = TRUE)
   appendLF <- endsWith(mess, "\n") %in% FALSE
+  if (grepl("building", mess)) {
+    mess <- gsub(".+(building.+)", "\\1", mess)
+  }
   if (verbose >= 2) {
     messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
-  } else {
-    if (grepl("building", mess)) {
-      mess <- gsub(".+(building.+)", "\\1", mess)
-      messageVerbose(blue(mess), appendLF = appendLF)
-    }
   }
 }
 
@@ -226,9 +223,7 @@ msgStdErrForBuild <- function(mess, logFile, verbose) {
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose <= 1) {
     appendLF <- endsWith(mess, "\n") %in% FALSE
-    messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
-  } else {
-    messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
   }
+  messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
 }
 

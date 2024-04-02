@@ -1278,12 +1278,10 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
     std_out = function(x) {
       mess <- rawToChar(x)
       msgStdOut(mess, logFile, verbose)
-      invisible()
     },
     std_err = function(x) {
       mess <- rawToChar(x)
       msgStdErr(mess, logFile, verbose)
-      invisible()
     }
   )
   tools::pskill(pid)

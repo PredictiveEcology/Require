@@ -80,10 +80,10 @@ test_that("test 5", {
       names(packageFullName) <- packageFullName
 
       warns <- capture_warnings(
-        mess <- capture_messages(
-          out <- Require(packageVersionFile = snf, require = FALSE, verbose = 1,
+        # mess <- capture_messages(
+          out <- Require(packageVersionFile = snf, require = FALSE,
                          returnDetails = TRUE)
-        )
+        # )
       )
 
       # NLMR specification is for a version that doesn't exist
