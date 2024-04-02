@@ -1231,15 +1231,17 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
                  " not on CRAN; have local cached copy"),
             verbose = verbose, verboseLevel = 1
           )
-          pkgArchiveHasPU$`TRUE`[fe, haveLocal := "Local"]
-          pkgArchiveHasPU$`TRUE`[fe, localFile := tf[fe]]
+          whfe <- which(fe)
+          pkgArchiveHasPU$`TRUE`[whfe, haveLocal := "Local"]
+          pkgArchiveHasPU$`TRUE`[whfe, localFile := tf[whfe]]
 
 
         }
+        whNotfe <- which(fe %in% FALSE)
         if (any(!fe)) {
           messageVerbose(
-            blue("  -- ", unique(paste(pkgArchiveHasPU$`TRUE`[["packageFullName"]][!fe], collapse = ", ")), " ",
-                 isAre(l = pkgArchiveHasPU$`TRUE`[["packageFullName"]][!fe]),
+            blue("  -- ", unique(paste(pkgArchiveHasPU$`TRUE`[["packageFullName"]][whNotfe], collapse = ", ")), " ",
+                 isAre(l = pkgArchiveHasPU$`TRUE`[["packageFullName"]][whNotfe]),
                  " not on CRAN; trying Archives"),
             verbose = verbose, verboseLevel = 1
           )
@@ -1260,15 +1262,17 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
                 pkgArchiveHasPU$`TRUE`$availableVersionOK %in% TRUE)) {
           pkgArchiveHasPU$`TRUE` <- split(pkgArchiveHasPU$`TRUE`, pkgArchiveHasPU$`TRUE`[["repoLocation"]])
           pkgArchOnly <- pkgArchiveHasPU$`TRUE`[["Archive"]]
-          pkgArchOnly[which(!fe), Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
-          pkgArchOnly[which(!fe), localFile := useRepository]
+          pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
+          pkgArchOnly[whNotfe, localFile := useRepository]
         }
         pkgArchiveHasPU$`TRUE` <- rbindlistRecursive(pkgArchiveHasPU$`TRUE`)
         pkgArchive <- rbindlist(pkgArchiveHasPU, fill = TRUE, use.names = TRUE)
       }
     }
   }
+
   pkgNonLocal[["Archive"]] <- pkgArchive
+
   pkgNonLocal
 }
 
