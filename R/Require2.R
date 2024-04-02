@@ -202,9 +202,11 @@ utils::globalVariables(c(
 #'   #####################################################################################
 #'   # GitHub packages
 #'   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
-#'   Require("PredictiveEcology/fpCompare@development",
-#'     libPaths = ProjectPackageFolder, standAlone = FALSE
-#'   )
+#'   if (requireNamespace("curl")) {
+#'     Require("PredictiveEcology/fpCompare@development",
+#'       libPaths = ProjectPackageFolder, standAlone = FALSE
+#'     )
+#'   }
 #'
 #'   Install("PredictiveEcology/fpCompare@development",
 #'     libPaths = ProjectPackageFolder,
@@ -1617,7 +1619,8 @@ compareVersion2 <- function(version, versionSpec, inequality) {
     vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
     function(ineq, vers, verSpec) {
       if (!is.na(ineq) && !is.na(vers) && !is.na(verSpec)) {
-        a <- compareVersion(verSpec, vers)
+        a <- compareVersion(verSpec, vers) |>
+        try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
         out <- do.call(ineq, list(0, a))
         # out <- do.call(ineq, list(package_version(vers), verSpec))
       } else {
@@ -2539,6 +2542,25 @@ packageFullNameFromSnapshot <- function(snapshot) {
   out
 }
 
+updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE) {
+
+  libPaths <- doLibPaths(libPaths, standAlone = FALSE)
+
+  ip <- doInstalledPackages(libPaths, purge, includeBase = FALSE)
+
+  ref <- ip$GithubRef
+  ineq <- "HEAD"
+  head <- paste0(" (", ineq, ")")
+  pkgs <- paste0(ifelse(
+    !is.na(ip$GithubRepo),
+    paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref, head),
+    # github
+    paste0(ip$Package, head) # cran
+  ))
+  pkgs
+  Install(pkgs)
+}
+
 getVersionOnReposLocal <- function(pkgDT) {
   if (!is.null(getOptionRPackageCache())) {
     set(pkgDT, NULL, "tmpOrder", seq(NROW(pkgDT)))
@@ -3008,7 +3030,14 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
             correctVersions <- correctVersions[ava[[Package]][correctVersions]$repo %in% Repository[ind]]
           }
         } else {
-          correctVersions <- compareVersion2(Version2, versionSpec2, inequality[ind])
+          if (identical(versionSpec2, "HEAD")) {
+            correctVersions <- rep(FALSE, length(Version2))
+            correctVersions[length(correctVersions)] <- TRUE
+            names(correctVersions) <- Version2
+          } else {
+            # creates a named logical, where name is version2
+            correctVersions <- compareVersion2(Version2, versionSpec2, inequality[ind])
+          }
 
           if (all(correctVersions %in% FALSE)) {
             # This is case where the inequality cannot be fulfilled... check why:
