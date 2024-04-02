@@ -14,9 +14,35 @@ messageCantInstallNoVersion <- function(packagesFullName) {
 
 msgStdOut <- function(mess, logFile, verbose) {
   pkg <- extractPkgNameFromWarning(mess)
-  justPackage <- !identical(mess, pkg)
-  cat(blue(mess), file = logFile, append = TRUE)
+  justPackage <- !identical(mess, pkg) && !grepl("\\/|\\\\", pkg)
+  # cat(blue(mess), file = logFile, append = TRUE)
   appendLF <- endsWith(mess, "\n") %in% FALSE
+
+  omitPreSplitMess <- c("configure script", "configure", "config.status",
+                        "compilation", "lpcre2",
+                        "checking for pkg-config")
+  for (om in omitPreSplitMess) {
+    if (grepl(om, mess)) {
+      mess <- grep(om, mess, invert = TRUE, value = TRUE)
+      # spinner |\-/-
+      if (FALSE) {
+        pe <- pkgEnv()
+        if (is.null(pe[["spinner"]])) assign("spinner", "|", envir = pe)
+
+        spinner <- get("spinner", envir = pe)
+        spinner <- ifelse (spinner == "|", "\\",
+                           ifelse(spinner == "\\", "-",
+                                  ifelse(spinner == "-", "/",
+                                         ifelse(spinner == "/", "|"))))
+        assign("spinner", spinner, envir = pe)
+        # mess <- paste0("\b\b", spinner)
+      }
+      if (length(mess) == 0) mess <- ""
+      # mess <- ""
+    }
+  }
+
+
 
   mod <- "^\\r\\n"
   while (grepl(mod, mess)) {
@@ -43,7 +69,8 @@ msgStdOut <- function(mess, logFile, verbose) {
              "creating tarball",
              "packaged installation of",
              "using .+ compiler",
-             "gcc")
+             "gcc",
+             "\\.o")
   for (om in omits) {
     mess <- grep(om, mess, invert = TRUE, value = TRUE)
   }
@@ -76,9 +103,10 @@ msgStdOut <- function(mess, logFile, verbose) {
 
 msgStdErr <- function(mess, logFile, verbose) {
   messOrig <- mess # used for debugging -- not necessary in production
-  cat(greyLight(mess), file = logFile, append = TRUE)
+  # cat(greyLight(mess), file = logFile, append = TRUE)
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose <= 1) {
+
     omitPreSplitMess <- c("using C\\+\\+ compiler")
     for (om in omitPreSplitMess) {
       if (grepl(om, mess)) {
@@ -112,7 +140,7 @@ msgStdErr <- function(mess, logFile, verbose) {
 
     mess <- unlist(strsplit(mess, "\r*\n"))
 
-    omits <- c("\\(as 'lib' is unspecified\\)",
+    omits <- c("\\(as .lib. is unspecified\\)",
                "(.+)The downloaded source packages.+",
                "Content",
                "=+",
@@ -166,48 +194,9 @@ msgStdErr <- function(mess, logFile, verbose) {
       }
     }
 
-
-#
-#     if (FALSE) {
-#       omit <- "\\(as 'lib' is unspecified\\)"
-#       if (grepl(omit, mess))
-#         mess <- gsub(paste0("\\r\\n", omit), "", mess)
-#
-#       omit <- "(^.+\\*source\\*.+.\\.{3,3}).+"
-#       if (grepl(omit, mess))
-#         mess <- gsub(omit, "\\1", mess)
-#
-#       omit <- "(.+)The downloaded source packages.+"
-#       if (grepl(omit, mess))
-#         mess <- gsub(omit, "\\1", mess)
-#       omit <- ".+(packaged installation.+)$"
-#       if (grepl(omit, mess))
-#         mess <- gsub(omit, "\\1", mess)
-#
-#       omit <- "^(.+)+Content.+=+(\\r\\n)*(.*)$"
-#       while (grepl(omit, mess)) {
-#         mess <- gsub(omit, "\\1\\3", mess)
-#       }
-#
-#       omit <- "=+(\r\n)*"
-#       while (grepl(omit, mess)) {
-#         mess <- gsub(omit, "", mess)
-#       }
-#
-#       mod <- "\\r\\n\\r\\n"
-#       while (grepl(mod, mess)) {
-#         mess <- gsub(mod, "\r\n", mess)
-#       }
-#       # omit <- "^(.+)\\r\\n(downloaded.+)$"
-#       # while (grepl(omit, mess)) {
-#       #   mess <- gsub(omit, "\\1 ... \\2", mess)
-#       # }
-#     }
-#
     mess <- paste(mess, collapse = "\r\n")
     appendLF <- endsWith(mess, "\n") %in% FALSE && nchar(mess) != 0
     if (length(mess)) {
-      # if (grepl("nstalling.+package", mess) | grepl("ERROR|halted|DONE|downloaded|trying", mess)) {
         messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
       # }
     }
@@ -219,7 +208,7 @@ msgStdErr <- function(mess, logFile, verbose) {
 
 msgStdOutForBuild <- function(mess, logFile, verbose) {
   pkg <- extractPkgNameFromWarning(mess)
-  cat(blue(mess), file = logFile, append = TRUE)
+  # cat(blue(mess), file = logFile, append = TRUE)
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose >= 2) {
     messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
@@ -233,7 +222,7 @@ msgStdOutForBuild <- function(mess, logFile, verbose) {
 
 
 msgStdErrForBuild <- function(mess, logFile, verbose) {
-  cat(greyLight(mess), file = logFile, append = TRUE)
+  # cat(greyLight(mess), file = logFile, append = TRUE)
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose <= 1) {
     appendLF <- endsWith(mess, "\n") %in% FALSE
