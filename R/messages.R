@@ -95,7 +95,6 @@ msgStdOut <- function(mess, logFile, verbose) {
       if (!justPackage || verbose >= 2 || grepl("Warning", mess)) {
         messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
       } else {
-        browser()
         messageVerbose(blue("Installed: ", pkg), verbose = verbose, appendLF = TRUE)
       }
     }
@@ -146,6 +145,7 @@ msgStdErr <- function(mess, logFile, verbose) {
                "=+",
                "g\\+\\+",
                "^$",
+               "installing to",
                "^\\*{2,5}",
                "MD5 sums",
                "was already a binary package and will not be rebuilt",

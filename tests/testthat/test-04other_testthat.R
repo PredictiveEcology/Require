@@ -171,7 +171,7 @@ test_that("test 3", {
     warns <- capture_warnings(Require("fpCompare (>=0.2.4)", install = "force"))
     packageVersion("fpCompare")
     withr::local_options(Require.installPackagesSys = TRUE)
-    Require("fpCompare (>=0.2.4)", install = "force")
+    mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force"))
     warnsAfter <- capture_warnings(packageVersion("fpCompare"))
     expect_true(grepl(msgIsInUse, warns))
     expect_false(isTRUE(grepl(msgIsInUse, warnsAfter)))
