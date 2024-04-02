@@ -1071,7 +1071,8 @@ clearRequirePackageCache <- function(packages,
   } else {
     if (length(indivFiles)) {
       pkgNamesInFiles <- extractPkgName(filenames = basename(indivFiles))
-      toDelete <- indivFiles[pkgNamesInFiles %in% packages]
+      # toDelete <- indivFiles[pkgNamesInFiles %in% packages]
+      toDelete <- unlist(grepV(packages, indivFiles, value = TRUE))
       forMess <- paste(sort(basename(toDelete)), collapse = ",\n")
     } else {
       toDelete <- character()
