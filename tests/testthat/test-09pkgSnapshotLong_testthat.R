@@ -147,7 +147,8 @@ test_that("test 5", {
       # NLMR because the version number doesn't exist on CRAn archives
       # and visualTest which is missing GitHub info for some reason --
 
-      expect_true(NROW(missingPackages) == length(knownFails))
+      expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
+      # expect_true(NROW(missingPackages) == length(knownFails))
 
       # installedPkgs <- setdiff(packagesBasedOnPackageFullNames, installedNotInIP)
       # allInpkgDTareInIP <- all(installedPkgs %in% ip$Package)

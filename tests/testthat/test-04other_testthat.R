@@ -163,6 +163,21 @@ test_that("test 3", {
 
   }
 
+  if (isWindows()) {
+    # test the new approach that installs outside R session -- is fine on Linux-alikes
+    withr::local_options(Require.installPackagesSys = FALSE)
+    Require("fpCompare (<0.2.4)", install = "force")
+    packageVersion("fpCompare")
+    warns <- capture_warnings(Require("fpCompare (>=0.2.4)", install = "force"))
+    packageVersion("fpCompare")
+    withr::local_options(Require.installPackagesSys = TRUE)
+    Require("fpCompare (>=0.2.4)", install = "force")
+    warnsAfter <- capture_warnings(packageVersion("fpCompare"))
+    expect_true(grepl(msgIsInUse, warns))
+    expect_false(isTRUE(grepl(msgIsInUse, warnsAfter)))
+    detach("package:fpCompare", unload = TRUE)
+  }
+
   ooo <- options(Require.RPackageCache = NULL)
   testthat::expect_true(identical(getOptionRPackageCache(), NULL))
   options(ooo)
