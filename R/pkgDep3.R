@@ -1222,7 +1222,6 @@ getFromCache <- function(pkgDT, which, recursive) {
                            rowNum = maybeHaveCacheCurCache) |> setDT()
 
   if (any(maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName)) {
-    if (any(isTRUE(pkgDT$Package %in% .basePkgs))) browser()
     lst <- sapply(maybeHaveCacheDT, is.list)
     keep <- setdiff(colnames(maybeHaveCacheDT), names(lst)[which(lst)])
     dups <- duplicated(maybeHaveCacheDT[, ..keep])
