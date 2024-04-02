@@ -250,9 +250,11 @@ if (Require:::.runLongExamples()) {
   #####################################################################################
   # GitHub packages
   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
-  Require("PredictiveEcology/fpCompare@development",
-    libPaths = ProjectPackageFolder, standAlone = FALSE
-  )
+  if (requireNamespace("curl")) {
+    Require("PredictiveEcology/fpCompare@development",
+      libPaths = ProjectPackageFolder, standAlone = FALSE
+    )
+  }
 
   Install("PredictiveEcology/fpCompare@development",
     libPaths = ProjectPackageFolder,
