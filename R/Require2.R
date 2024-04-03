@@ -360,6 +360,9 @@ Require <- function(packages,
       }
       pkgDT <- dealWithStandAlone(pkgDT, standAlone)
       pkgDT <- whichToInstall(pkgDT, install, verbose)
+
+      pkgDT <- removeRequireDeps(pkgDT, verbose)
+
       if ((any(pkgDT$needInstall %in% "install") && (isTRUE(install))) || install %in% "force") {
         pkgDT <-
           doInstalls(pkgDT,
@@ -486,6 +489,8 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
                        numPackages, numGroups, startTime, type = type, returnDetails,
                        verbose = getOption("Require.verbose")) {
+  # toInstall <- removeRequireDeps(toInstall, verbose = verbose)
+
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
     # "binary"
@@ -506,7 +511,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     browserDeveloper("Error 9566")
   }
 
-  toInstall <- removeRequireDeps(toInstall)
+  # toInstall <- removeRequireDeps(toInstall, verbose = verbose)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -1107,6 +1112,20 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   }
 
   pkgInstall <- rbindlistRecursive(pkgInstallList)
+  # This will potentially do Archive (HEAD)
+  pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall)
+
+  # if (any(pkgInstall$hasHEAD)) {
+  #   whHasHead <- which(pkgInstall$hasHEAD)
+  #   pkgInstall[whHasHead, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<")]
+  #   # The next logical has 2 options:
+  #   #    NAs include packages that were not "HEAD", but are needed by the "HEAD", but aren't already installed
+  #   #    TRUE is needs installing
+  #   #    FALSE is no need installing
+  #   pkgInstall <- pkgInstall[!keepForUpdate %in% FALSE]
+  #
+  # }
+
   pkgInstall[nchar(localFile) == 0, needInstall := noneAvailable]
   pkgInstall
 }
@@ -1569,23 +1588,25 @@ availableVersionOK <- function(pkgDT) {
       }
     }
 
-    out <- try(pkgDT[whToUpdate, (availableOKcols) := {
-      isHEAD <- versionSpec == "HEAD"
-      if (isTRUE(any(isHEAD %in% TRUE))) {
-        avok <- rep(TRUE, length(versionSpec))
-        avokto <- avok
-      }
-      if (isTRUE(any(isHEAD %in% FALSE))) {
-        out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
-        avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
-        avok <- any(unlist(out))
-      }
+    if (length(whToUpdate)) {
+      out <- try(pkgDT[whToUpdate, (availableOKcols) := {
+        isHEAD <- versionSpec == "HEAD"
+        if (isTRUE(any(isHEAD %in% TRUE))) {
+          avok <- rep(TRUE, length(versionSpec))
+          avokto <- avok
+        }
+        if (isTRUE(any(isHEAD %in% FALSE))) {
+          out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
+          avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
+          avok <- any(unlist(out))
+        }
 
-      list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
-    }, by = "Package"])
+        list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
+      }, by = "Package"])
 
-    if (is(out, "try-error")) {
-      browserDeveloper("Error 553; please contact developer")
+      if (is(out, "try-error")) {
+        browserDeveloper("Error 553; please contact developer")
+      }
     }
   } else {
     pkgDT[!is.na(VersionOnRepos), #  | is.na(versionSpec),
@@ -1672,47 +1693,49 @@ messageDownload <- function(pkgDT, numToDownload, fromWhere) {
 
 messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGroups) {
   # currentTime <- Sys.time()
-  # dft <- difftime(currentTime, startTime, units = "secs")
-  installRange <- unique(c(toInstall$installOrder[1], tail(toInstall$installOrder, 1)))
-  # timeLeft <- dft / installRange[1] * (numPackages - installRange[1] + 1)
+  if (NROW(toInstall)) {
+    # dft <- difftime(currentTime, startTime, units = "secs")
+    installRange <- unique(c(toInstall$installOrder[1], tail(toInstall$installOrder, 1)))
+    # timeLeft <- dft / installRange[1] * (numPackages - installRange[1] + 1)
 
-  # lotsOfTimeLeft <- dft > 10
-  # timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
-  # estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
-  pkgToReport <- paste(preparePkgNameToReport(toInstall[["Package"]], toInstall[["packageFullName"]]),
-                       collapse = ", ")
-  Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
-  pkgToReportBySource <- split(toInstall[["Package"]], Source)
-  pkgFullNameToReportBySource <- split(toInstall[["packageFullName"]], Source)
-  installRangeCh <- paste(installRange, collapse = ":")
+    # lotsOfTimeLeft <- dft > 10
+    # timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
+    # estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
+    pkgToReport <- paste(preparePkgNameToReport(toInstall[["Package"]], toInstall[["packageFullName"]]),
+                         collapse = ", ")
+    Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
+    pkgToReportBySource <- split(toInstall[["Package"]], Source)
+    pkgFullNameToReportBySource <- split(toInstall[["packageFullName"]], Source)
+    installRangeCh <- paste(installRange, collapse = ":")
 
-  srces <- names(pkgToReportBySource)
-  messageVerbose("-- Installing from:", verbose = verbose)
-  nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
-  Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
-    pp <- pkgToReportBySource[[type]]
-    if (type %in% srces) {
-      if (type %in% .txtGitHub) {
-        pp <- pkgFullNameToReportBySource[[type]]
+    srces <- names(pkgToReportBySource)
+    messageVerbose("-- Installing from:", verbose = verbose)
+    nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
+    Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
+      pp <- pkgToReportBySource[[type]]
+      if (type %in% srces) {
+        if (type %in% .txtGitHub) {
+          pp <- pkgFullNameToReportBySource[[type]]
+        }
+        messageVerbose(get(colr)("  -- ", type, ": ", paste(pp, collapse = ", ")),
+                       verbose = verbose
+        )
       }
-      messageVerbose(get(colr)("  -- ", type, ": ", paste(pp, collapse = ", ")),
-                     verbose = verbose
-      )
-    }
-  })
-  messageVerbose(
-    blue(
-      "-- ", installRangeCh, " of ", numPackages,
-      if (numGroups > 1) {
-        paste0(" (grp ", unique(toInstall$installSafeGroups), " of ", numGroups, ")")
-      } else {
-        ""
-      }#,
-      #". Estimated time left: ",
-      #timeLeftAlt, "; est. finish: ", estTimeFinish
-    ),
-    verbose = verbose, verboseLevel = 0
-  )
+    })
+    messageVerbose(
+      blue(
+        "-- ", installRangeCh, " of ", numPackages,
+        if (numGroups > 1) {
+          paste0(" (grp ", unique(toInstall$installSafeGroups), " of ", numGroups, ")")
+        } else {
+          ""
+        }#,
+        #". Estimated time left: ",
+        #timeLeftAlt, "; est. finish: ", estTimeFinish
+      ),
+      verbose = verbose, verboseLevel = 0
+    )
+  }
 }
 
 #' Create a custom "available.packages" object
@@ -2350,6 +2373,8 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   }, by = c("Package")]
   pkgInstall <- pkgInstall[unique(keep)]
 
+  pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall)
+
   pkgInstallTmp <- pkgInstall
   if (any(!pkgInstallTmp$availableVersionOK)) {
     if (!is.null(pkgInstallTmp$Additional_repositories)) {
@@ -2533,7 +2558,21 @@ packageFullNameFromSnapshot <- function(snapshot) {
   out
 }
 
-updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE) {
+#' Update installed packages with latest available versions
+#'
+#' Similar to `update.packages`, but works for archived, non-archived,
+#' and Github packages.
+#'
+#' @param libPaths The library to update; defaults to `.libPaths()[1]`
+#' @param purge Logical. Should the assessment of `installed.packages` purge the cached
+#'   version. Default is `FALSE`
+#' @inheritParams Require
+#' @return Run for its side effect, namely, updating installed packages to their latest
+#' possible state, whether they are on CRAN currently, archived, or on GitHub.
+#' @export
+#'
+updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
+                           verbose = getOption("Require.verbose")) {
 
   libPaths <- doLibPaths(libPaths, standAlone = FALSE)
 
@@ -2544,12 +2583,13 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE) {
   head <- paste0(" (", ineq, ")")
   pkgs <- paste0(ifelse(
     !is.na(ip$GithubRepo),
-    paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref, head),
+    paste0(ip$GithubUsername, "/", ip$GithubRepo,
+           ifelse(is.na(ip$GithubSubFolder), "", paste0("/", ip$GithubSubFolder)),
+           "@", ref, head),
     # github
     paste0(ip$Package, head) # cran
   ))
-  pkgs
-  Install(pkgs)
+  Install(pkgs, purge = purge, verbose = verbose)
 }
 
 getVersionOnReposLocal <- function(pkgDT) {
@@ -3182,7 +3222,7 @@ colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
 
 
 # Get Require dependencies to omit them: it has to exist locally unless this is first install
-removeRequireDeps <- function(pkgDT) {
+removeRequireDeps <- function(pkgDT, verbose) {
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT)
   localRequireDir <- file.path(.libPaths(), "Require")
@@ -3202,7 +3242,14 @@ removeRequireDeps <- function(pkgDT) {
 
   }
 
-  pkgDT <- pkgDT[!Package %in% extractPkgName(RequireDeps[[1]])]
+  toRm <- pkgDT$Package %in% extractPkgName(RequireDeps[[1]])
+  if (any(toRm)) {
+    messageVerbose("Can't install/update data.table because it is a dependency of Require; use e.g.:\n",
+                   "install.packages(\"data.table\")", verbose = verbose)
+    set(pkgDT, which(toRm), "needInstall", "dontInstall")
+    set(pkgDT, which(toRm), "installResult", "Can't install Require dependency")
+  }
+  pkgDT
 }
 
 
@@ -3261,4 +3308,19 @@ packageHasError <- function(libs = .libPaths(), packages = NULL) {
 
 binOrSrc <- function(areBinary) {
   c("src", "bin")[areBinary + 1]
+}
+
+removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall) {
+  # needs both Version and VersionOnRepos
+  if (any(pkgInstall$hasHEAD)) {
+    whHasHead <- which(pkgInstall$hasHEAD)
+    pkgInstall[whHasHead, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<")]
+    # The next logical has 2 options:
+    #    NAs include packages that were not "HEAD", but are needed by the "HEAD", but aren't already installed
+    #    TRUE is needs installing
+    #    FALSE is no need installing
+    pkgInstall <- pkgInstall[!keepForUpdate %in% FALSE]
+
+  }
+  pkgInstall
 }

@@ -442,7 +442,8 @@ whichToDILES <- function(which) {
       hasGit <- grepl("github", tolower(other))
       if (any(hasGit)) {
         other <- c(
-          c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1"),
+          c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1",
+            "GithubSubFolder"),
           other[!hasGit])
       }
     }

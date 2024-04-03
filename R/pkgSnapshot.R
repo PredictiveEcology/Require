@@ -156,7 +156,7 @@ doInstalledPackages <- function(libPaths, purge, includeBase) {
   ip <-
     as.data.table(
       .installed.pkgs(lib.loc = libPaths, which = c("Depends", "Imports", "LinkingTo", "Remotes"),
-        other = c("GitHubSha", "Repository"), purge = purge
+        other = c("GitHubSha", "Repository", "GitSubFolder"), purge = purge
       )
     )
   if (isFALSE(includeBase)) {

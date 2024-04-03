@@ -554,7 +554,14 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
         # if (any(needVersion)) {
           descs <- dlGitHubDESCRIPTION(pkgDT$packageFullName)
           pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
-          pkgDT[!is.na(descFiles), Version := DESCRIPTIONFileVersionV(descFiles)]
+          wh <- which(!is.na(pkgDT$descFiles))
+          pkgDT[wh, Version := DESCRIPTIONFileVersionV(descFiles)]
+          possPkgUpdate <- DESCRIPTIONFileOtherV(pkgDT$descFiles[wh], other = "Package")
+          correctPkgName <- possPkgUpdate == pkgDT$Package[wh]
+          if (any(correctPkgName %in% FALSE)) {
+            set(pkgDT, wh, "Package", possPkgUpdate)
+            set(pkgDT, wh, "githubPkgName", possPkgUpdate)
+          }
         # }
         break
 
