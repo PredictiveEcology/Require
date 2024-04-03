@@ -836,6 +836,7 @@ RemoteUsername: ", Account, "
 RemoteRef: ", Branch, "
 RemoteSha: ", sha, "
 GithubRepo: ", Repo, "
+GithubSubFolder: ", GitSubFolder, "
 GithubUsername: ", Account, "
 GithubRef: ", Branch, "
 GithubSHA1: ", sha, "")

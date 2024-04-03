@@ -2581,12 +2581,13 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
   head <- paste0(" (", ineq, ")")
   pkgs <- paste0(ifelse(
     !is.na(ip$GithubRepo),
-    paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref, head),
+    paste0(ip$GithubUsername, "/", ip$GithubRepo,
+           ifelse(is.na(ip$GithubSubFolder), "", paste0("/", ip$GithubSubFolder)),
+           "@", ref, head),
     # github
     paste0(ip$Package, head) # cran
   ))
-  pkgs
-  Install(pkgs)
+  Install(pkgs, purge = purge, verbose = verbose)
 }
 
 getVersionOnReposLocal <- function(pkgDT) {
