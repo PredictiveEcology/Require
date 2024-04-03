@@ -10,7 +10,8 @@ utils::globalVariables(c(
   "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall",
   "PackageUrl", "repo", "oppositeInequals", "violationsDoubleInequals",
   "verbose", "VersionOK", "versionSpec", "versionToKeep",
-  "violation", "violation2", "..keep", "..colsToKeep"
+  "violation", "violation2", "..keep", "..colsToKeep",
+  "forceInstall", "keepForUpdate"
 ))
 
 #' Repeatability-safe install and load packages, optionally with specific
