@@ -574,6 +574,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
     add = TRUE
   )
 
+  # if (identical(pkgDT$packageFullName, "achubaty/fpCompare (>=2.0.0)")) browser()
+
   # needInstall can switch from "install" to "dontInstall" inside because of "HEAD", which gets compared to current
   pkgInstall <- doDownloads(pkgInstall,
     repos = repos, purge = purge, verbose = verbose,
@@ -581,7 +583,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
     type = type
   )
   pkgInstallList <- split(pkgInstall, by = c("needInstall"))
-  pkgDTList[[.txtInstall]] <- pkgInstallList[[.txtInstall]]
+  for (i in setdiff(names(pkgInstallList), .txtDontInstall))
+    pkgDTList[[i]] <- pkgInstallList[[i]]
   if (!is.null(pkgInstallList[[.txtDontInstall]]))
     pkgDTList[[.txtDontInstall]] <- rbindlist(list(pkgDTList[[.txtDontInstall]], pkgInstallList[[.txtDontInstall]]),
                                               fill = TRUE, use.names = TRUE)
