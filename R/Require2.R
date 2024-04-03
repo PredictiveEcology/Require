@@ -2542,7 +2542,21 @@ packageFullNameFromSnapshot <- function(snapshot) {
   out
 }
 
-updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE) {
+#' Update installed packages with latest available versions
+#'
+#' Similar to `update.packages`, but works for archived, non-archived,
+#' and Github packages.
+#'
+#' @param libPaths The library to update; defaults to `.libPaths()[1]`
+#' @param purge Logical. Should the assessment of `installed.packages` purge the cached
+#'   version. Default is `FALSE`
+#' @inheritParams Require
+#' @return Run for its side effect, namely, updating installed packages to their latest
+#' possible state, whether they are on CRAN currently, archived, or on GitHub.
+#' @export
+#'
+updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
+                           verbose = getOption("Require.verbose")) {
 
   libPaths <- doLibPaths(libPaths, standAlone = FALSE)
 
