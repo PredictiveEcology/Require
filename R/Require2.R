@@ -486,7 +486,6 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
                        numPackages, numGroups, startTime, type = type, returnDetails,
                        verbose = getOption("Require.verbose")) {
-  # browser()
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
     # "binary"
@@ -501,8 +500,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstall <- rmPackageFirst(toInstall, verbose)
   }
 
-  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type) ) |>
-    try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type) )
 
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -1074,7 +1072,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       pkgInstall[naRepository, Repository := Additional_repositories]
   }
 
-  # browser()
   # Will set `haveLocal = "Local"` and `installFrom = "Local"`
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -1095,7 +1092,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     )
 
     # Archive
-    # browser()
     pkgNeedInternet <- downloadArchive(
       pkgNeedInternet, repos, purge = purge, install.packagesArgs,
       numToDownload, verbose = verbose - 1
@@ -1125,7 +1121,6 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     purge = TRUE
   }
 
-  # browser()
   setnames(ap, old = "Version", new = "VersionOnReposCurrent")
 
   # if both have a column, this creates i.XXX columns
@@ -1236,7 +1231,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
           whfe <- which(fe)
           pkgArchiveHasPU$`TRUE`[whfe, haveLocal := "Local"]
           pkgArchiveHasPU$`TRUE`[whfe, localFile := tf[whfe]]
-
+          pkgArchiveHasPU$`TRUE`[whfe, installFrom := haveLocal]
 
         }
         whNotfe <- which(fe %in% FALSE)
@@ -1544,7 +1539,6 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     pkgInstall <- rbindlistRecursive(pkgWhere)
   }
 
-  # browser()
   pkgInstall[, localFile := localFileID(
     Package, localFiles, repoLocation, SHAonGH,
     inequality, VersionOnRepos, versionSpec, verbose = verbose
@@ -1619,8 +1613,7 @@ compareVersion2 <- function(version, versionSpec, inequality) {
     vers = version, ineq = inequality, verSpec = versionSpec, # this will recycle, which may be bad
     function(ineq, vers, verSpec) {
       if (!is.na(ineq) && !is.na(vers) && !is.na(verSpec)) {
-        a <- compareVersion(verSpec, vers) |>
-        try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+        a <- compareVersion(verSpec, vers)
         out <- do.call(ineq, list(0, a))
         # out <- do.call(ineq, list(package_version(vers), verSpec))
       } else {
@@ -1947,7 +1940,6 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
         }
       } else {
         isHEAD <- identical(versionSpec, "HEAD")
-        # browser()
         if (isHEAD) {
           keepLoc <- FALSE
         } else {
@@ -2003,7 +1995,6 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
     # check for crancache copies
     localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
     localFiles <- doCranCacheCheck(localFiles, verbose)
-    # browser()
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
     if (isTRUE(getOption("Require.offlineMode"))) {
       noneFound <- nchar(pkgInstall$localFile) == 0
