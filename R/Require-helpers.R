@@ -205,11 +205,13 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 
     if (!isTRUE(getOption("Require.offlineMode"))) {
       alreadyExists <- file.exists(pkgDT$destFile)
-      fs <- file.size(pkgDT$destFile)
-      tooSmall <- fs < 100
-      if (any(tooSmall)) {
-        unlink(pkgDT$destFile[which(tooSmall)])
-        alreadyExists <- tooSmall %in% FALSE
+      if (any(alreadyExists)) {
+        fs <- file.size(pkgDT$destFile)
+        tooSmall <- fs < 100
+        if (any(tooSmall)) {
+          unlink(pkgDT$destFile[which(tooSmall)])
+          alreadyExists <- tooSmall %in% FALSE
+        }
       }
       if (any(!alreadyExists)) {
         pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
