@@ -227,3 +227,7 @@ msgStdErrForBuild <- function(mess, logFile, verbose) {
   messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
 }
 
+msgShaNotChanged <- function(Account, Repo, Branch) {
+  paste0("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
+         ", the SHA1 has not changed from last install")
+}

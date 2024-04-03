@@ -15,8 +15,8 @@ Description: A single key function, 'Require' that makes rerun-tolerant
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2024-04-02
-Version: 0.3.1.9060
+Date: 2024-04-03
+Version: 0.3.1.9061
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -66,12 +66,12 @@ Collate:
     'CRAN.R'
     'Require-helpers.R'
     'Require-package.R'
+    'messages.R'
     'Require2.R'
     'RequireOptions.R'
     'envs.R'
     'extract.R'
     'helpers.R'
-    'messages.R'
     'pkgDep.R'
     'pkgDep3.R'
     'pkgSnapshot.R'

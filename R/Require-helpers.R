@@ -808,6 +808,8 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
   if (length(whGitHub)) {
     pkgGitHub <- pkgInstall[whGitHub]
     for (pk in pkgGitHub[installed %in% TRUE]$Package) {
+      if (is.null(pkgGitHub[["GitSubFolder"]]))
+        set(pkgGitHub, NULL, "GitSubFolder", "")
       pkgGitHub[Package %in% pk, {
         file <- file.path(libPaths[1], Package, "DESCRIPTION")
         txt <- readLines(file)

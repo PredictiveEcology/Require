@@ -120,6 +120,10 @@ envPkgDepArchiveDetailsInner <- function() {
 .txtGitHubParsedCols <- unname(unlist(.txtGitHubCols))
 # .txtGitHubParsedCols <- c(.txt, "Repo", "Branch", "Account")
 
+.txtDontInstall <- "dontInstall"
+.txtInstall <- "install"
+
+
 envPkgDepDepsFilename <- "pkgDepCache.rds"
 
 archiveFile <- function(repo)
