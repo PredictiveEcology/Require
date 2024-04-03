@@ -562,104 +562,106 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
   on.exit(setwd(origDir))
 
   pkgDTList <- split(pkgDT, by = c("needInstall"))
-  pkgInstall <- pkgDTList[[.txtInstall]] # pointer
-
-  on.exit(
-    {
-      # this copies any tar.gz files to the package cache; works even if partial install.packages
-      tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
-      copyBuiltToCache(pkgInstall, tmpdirs = c(tmpdir, tmpdirPkgs))
-      suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
-    },
-    add = TRUE
-  )
-
-  # if (identical(pkgDT$packageFullName, "achubaty/fpCompare (>=2.0.0)")) browser()
-
-  # needInstall can switch from "install" to "dontInstall" inside because of "HEAD", which gets compared to current
-  pkgInstall <- doDownloads(pkgInstall,
-    repos = repos, purge = purge, verbose = verbose,
-    install.packagesArgs = install.packagesArgs, libPaths = libPaths,
-    type = type
-  )
-  pkgInstallList <- split(pkgInstall, by = c("needInstall"))
-  for (i in setdiff(names(pkgInstallList), .txtDontInstall))
-    pkgDTList[[i]] <- pkgInstallList[[i]]
-  if (!is.null(pkgInstallList[[.txtDontInstall]]))
-    pkgDTList[[.txtDontInstall]] <- rbindlist(list(pkgDTList[[.txtDontInstall]], pkgInstallList[[.txtDontInstall]]),
-                                              fill = TRUE, use.names = TRUE)
   if (NROW(pkgDTList[[.txtInstall]])) {
-    pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
-    pkgInstall <- pkgInstallList[[.txtInstall]]
-    if (!is.null(pkgInstallList[[noneAvailable]])) {
-      messageVerbose(messageCantInstallNoVersion(pkgInstallList[[noneAvailable]][["packageFullName"]]),
-                     verbose = verbose, verboseLevel = 1)
-    }
+    pkgInstall <- pkgDTList[[.txtInstall]] # pointer
 
-    if (!is.null(pkgInstall)) {
-      pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
-      pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
-      pkgInstall <- updateReposForSrcPkgs(pkgInstall)
+    on.exit(
+      {
+        # this copies any tar.gz files to the package cache; works even if partial install.packages
+        tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
+        copyBuiltToCache(pkgInstall, tmpdirs = c(tmpdir, tmpdirPkgs))
+        suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
+      },
+      add = TRUE
+    )
 
-      startTime <- Sys.time()
+    # if (identical(pkgDT$packageFullName, "achubaty/fpCompare (>=2.0.0)")) browser()
 
-      # The install
-      pkgInstall[, installSafeGroups := 1L]
-      if (isWindows() || isMacOSX()) {
-        pkgInstall[, installSafeGroups := (isBinaryInstall %in% FALSE) + 1L]
-        pkgInstall <- updateInstallSafeGroups(pkgInstall)
+    # needInstall can switch from "install" to "dontInstall" inside because of "HEAD", which gets compared to current
+    pkgInstall <- doDownloads(pkgInstall,
+                              repos = repos, purge = purge, verbose = verbose,
+                              install.packagesArgs = install.packagesArgs, libPaths = libPaths,
+                              type = type
+    )
+    pkgInstallList <- split(pkgInstall, by = c("needInstall"))
+    for (i in setdiff(names(pkgInstallList), .txtDontInstall))
+      pkgDTList[[i]] <- pkgInstallList[[i]]
+    if (!is.null(pkgInstallList[[.txtDontInstall]]))
+      pkgDTList[[.txtDontInstall]] <- rbindlist(list(pkgDTList[[.txtDontInstall]], pkgInstallList[[.txtDontInstall]]),
+                                                fill = TRUE, use.names = TRUE)
+    if (NROW(pkgDTList[[.txtInstall]])) {
+      pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c noneAvailable
+      pkgInstall <- pkgInstallList[[.txtInstall]]
+      if (!is.null(pkgInstallList[[noneAvailable]])) {
+        messageVerbose(messageCantInstallNoVersion(pkgInstallList[[noneAvailable]][["packageFullName"]]),
+                       verbose = verbose, verboseLevel = 1)
       }
-      # pkgInstall <- updateInstallSafeGroups(pkgInstall)
 
-      maxGroup <- max(pkgInstall[["installSafeGroups"]])
-      numPackages <- NROW(pkgInstall)
-      setorderv(pkgInstall, c("installSafeGroups", "Package"))
-      pkgInstall[, installOrder := seq(.N)]
+      if (!is.null(pkgInstall)) {
+        pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
+        pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
+        pkgInstall <- updateReposForSrcPkgs(pkgInstall)
 
-      toInstallList <- split(pkgInstall, by = "installSafeGroups")
-      toInstallList <-
-        Map(
-          toInstall = toInstallList,
-          MoreArgs = list(
-            repos = repos, purge = purge,
-            install.packagesArgs = install.packagesArgs, numPackages = numPackages,
-            numGroups = maxGroup, startTime = startTime, type = type,
-            returnDetails = returnDetails, verbose = verbose
-          ),
-          installAll
+        startTime <- Sys.time()
+
+        # The install
+        pkgInstall[, installSafeGroups := 1L]
+        if (isWindows() || isMacOSX()) {
+          pkgInstall[, installSafeGroups := (isBinaryInstall %in% FALSE) + 1L]
+          pkgInstall <- updateInstallSafeGroups(pkgInstall)
+        }
+        # pkgInstall <- updateInstallSafeGroups(pkgInstall)
+
+        maxGroup <- max(pkgInstall[["installSafeGroups"]])
+        numPackages <- NROW(pkgInstall)
+        setorderv(pkgInstall, c("installSafeGroups", "Package"))
+        pkgInstall[, installOrder := seq(.N)]
+
+        toInstallList <- split(pkgInstall, by = "installSafeGroups")
+        toInstallList <-
+          Map(
+            toInstall = toInstallList,
+            MoreArgs = list(
+              repos = repos, purge = purge,
+              install.packagesArgs = install.packagesArgs, numPackages = numPackages,
+              numGroups = maxGroup, startTime = startTime, type = type,
+              returnDetails = returnDetails, verbose = verbose
+            ),
+            installAll
+          )
+        pkgInstallTmp <- rbindlistRecursive(toInstallList)
+        needRebuild <- startsWith(basename(pkgInstall$localFile), "NeedRebuild")
+        if (any(needRebuild)) {
+          pkgInstall <- needRebuildAndInstall(needRebuild = needRebuild, pkgInstall = pkgInstall,
+                                              libPaths = libPaths,
+                                              install.packagesArgs = install.packagesArgs,
+                                              repos = repos, purge = purge, startTime = startTime, type = type,
+                                              pkgInstallTmp = pkgInstallTmp, verbose = verbose)
+        } else {
+          pkgInstall <- pkgInstallTmp
+        }
+
+        addOK <- if (!is.null(pkgInstall[["installResult"]])) {
+          which(is.na(pkgInstall[["installResult"]]))
+        } else {
+          seq_len(NROW(pkgInstall)) # was NULL, but that is "all rows" in data.table
+        }
+
+        set(pkgInstall, addOK,
+            c("installed", "Version", "LibPath"),
+            list(TRUE, pkgInstall[["VersionOnRepos"]][addOK], .libPaths()[1])
         )
-      pkgInstallTmp <- rbindlistRecursive(toInstallList)
-      needRebuild <- startsWith(basename(pkgInstall$localFile), "NeedRebuild")
-      if (any(needRebuild)) {
-        pkgInstall <- needRebuildAndInstall(needRebuild = needRebuild, pkgInstall = pkgInstall,
-                                            libPaths = libPaths,
-                                            install.packagesArgs = install.packagesArgs,
-                                            repos = repos, purge = purge, startTime = startTime, type = type,
-                                            pkgInstallTmp = pkgInstallTmp, verbose = verbose)
-      } else {
-        pkgInstall <- pkgInstallTmp
+        pkgInstall <- appendInstallResult(pkgInstall, addOK, installResult = "OK")
+        pkgInstallList[[.txtInstall]] <- pkgInstall
       }
-
-      addOK <- if (!is.null(pkgInstall[["installResult"]])) {
-        which(is.na(pkgInstall[["installResult"]]))
-      } else {
-        seq_len(NROW(pkgInstall)) # was NULL, but that is "all rows" in data.table
+      if (!is.null(pkgInstallList[[noneAvailable]])) {
+        pkgInstallList[[noneAvailable]] <-
+          appendInstallResult(pkgInstallList[[noneAvailable]], seq_len(NROW(pkgInstallList[[noneAvailable]])),
+                              pkgInstallList[[noneAvailable]]$needInstall)
+        set(pkgInstallList[[noneAvailable]], NULL, "installed", FALSE)
       }
-
-      set(pkgInstall, addOK,
-          c("installed", "Version", "LibPath"),
-          list(TRUE, pkgInstall[["VersionOnRepos"]][addOK], .libPaths()[1])
-      )
-      pkgInstall <- appendInstallResult(pkgInstall, addOK, installResult = "OK")
-      pkgInstallList[[.txtInstall]] <- pkgInstall
+      pkgDTList[[.txtInstall]] <- rbindlistRecursive(pkgInstallList)
     }
-    if (!is.null(pkgInstallList[[noneAvailable]])) {
-      pkgInstallList[[noneAvailable]] <-
-        appendInstallResult(pkgInstallList[[noneAvailable]], seq_len(NROW(pkgInstallList[[noneAvailable]])),
-                            pkgInstallList[[noneAvailable]]$needInstall)
-      set(pkgInstallList[[noneAvailable]], NULL, "installed", FALSE)
-    }
-    pkgDTList[[.txtInstall]] <- rbindlistRecursive(pkgInstallList)
   }
   pkgDT <- rbindlistRecursive(pkgDTList)
 }
@@ -1055,6 +1057,7 @@ dealWithStandAlone <- function(pkgDT, standAlone) {
 doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, type = getOption("pkgType")) {
   pkgInstall[, installSafeGroups := 1L]
+
   # this is a placeholder; set noLocal by default
   set(pkgInstall, NULL, "haveLocal", "noLocal")
 
