@@ -208,7 +208,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
       if (any(alreadyExists)) {
         fs <- file.size(pkgDT$destFile)
         tooSmall <- fs < 100
-        if (any(tooSmall)) {
+        if (any(tooSmall %in% TRUE)) {
           unlink(pkgDT$destFile[which(tooSmall)])
           alreadyExists <- tooSmall %in% FALSE
         }
