@@ -1074,7 +1074,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       pkgInstall[naRepository, Repository := Additional_repositories]
   }
 
-  # browser()
   # Will set `haveLocal = "Local"` and `installFrom = "Local"`
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
@@ -1095,7 +1094,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     )
 
     # Archive
-    # browser()
     pkgNeedInternet <- downloadArchive(
       pkgNeedInternet, repos, purge = purge, install.packagesArgs,
       numToDownload, verbose = verbose - 1
@@ -1111,6 +1109,20 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   }
 
   pkgInstall <- rbindlistRecursive(pkgInstallList)
+  # This will potentially do Archive (HEAD)
+  pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall)
+
+  # if (any(pkgInstall$hasHEAD)) {
+  #   whHasHead <- which(pkgInstall$hasHEAD)
+  #   pkgInstall[whHasHead, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<")]
+  #   # The next logical has 2 options:
+  #   #    NAs include packages that were not "HEAD", but are needed by the "HEAD", but aren't already installed
+  #   #    TRUE is needs installing
+  #   #    FALSE is no need installing
+  #   pkgInstall <- pkgInstall[!keepForUpdate %in% FALSE]
+  #
+  # }
+
   pkgInstall[nchar(localFile) == 0, needInstall := noneAvailable]
   pkgInstall
 }
@@ -2359,6 +2371,8 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   }, by = c("Package")]
   pkgInstall <- pkgInstall[unique(keep)]
 
+  pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall)
+
   pkgInstallTmp <- pkgInstall
   if (any(!pkgInstallTmp$availableVersionOK)) {
     if (!is.null(pkgInstallTmp$Additional_repositories)) {
@@ -3284,4 +3298,19 @@ packageHasError <- function(libs = .libPaths(), packages = NULL) {
 
 binOrSrc <- function(areBinary) {
   c("src", "bin")[areBinary + 1]
+}
+
+removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall) {
+  # needs both Version and VersionOnRepos
+  if (any(pkgInstall$hasHEAD)) {
+    whHasHead <- which(pkgInstall$hasHEAD)
+    pkgInstall[whHasHead, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<")]
+    # The next logical has 2 options:
+    #    NAs include packages that were not "HEAD", but are needed by the "HEAD", but aren't already installed
+    #    TRUE is needs installing
+    #    FALSE is no need installing
+    pkgInstall <- pkgInstall[!keepForUpdate %in% FALSE]
+
+  }
+  pkgInstall
 }
