@@ -60,7 +60,7 @@ msgStdOut <- function(mess, logFile, verbose) {
                "Content",
                "^.+downloaded binary packages.+$",
                "^.+\\.dll.+$",
-               "=+",
+               "^=+", # we want the ones that say `>=` because they are errors
                "g\\+\\+",
                "^$",
                "^\\*{2,5}",
@@ -76,16 +76,6 @@ msgStdOut <- function(mess, logFile, verbose) {
       mess <- grep(om, mess, invert = TRUE, value = TRUE)
     }
 
-
-    # omit <- "^.+\\.dll.+$"
-    # if (grepl(omit, mess)) {
-    #   mess <- gsub(omit, "", mess)
-    # }
-
-    # omit <- "^.+rtools.+$"
-    # if (grepl(omit, mess)) {
-    #   mess <- gsub(omit, "", mess)
-    # }
     mess1 <- unlist(strsplit(mess, "\\r\\n"))
     mess2 <- unique(mess1)
     if (!identical(mess1, mess2))
