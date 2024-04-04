@@ -1264,6 +1264,10 @@ stripHTTPAddress <- function(addr) {
 # }
 
 
+#' `install.packages` alternative that uses `sys` in new process
+#'
+#' @param args The arguments to pass to `do.call(install.packages, args)`
+#' @inheritParams Require
 installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   libPaths <- args$libPaths
   args$libPaths <- NULL
@@ -1302,7 +1306,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
       }
       on.exit(sapply(pids, tools::pskill))
       for (pid in pids)
-        exec_status(pid, wait = TRUE)
+        sys::exec_status(pid, wait = TRUE)
       allDone <- argsOrig$pkgs %in%
         rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
       if (all(allDone))
@@ -1644,7 +1648,8 @@ availablePackagesCachedPath <- function(repos, type) {
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {
-  if (getOption("Require.installPackagesSys", 0L)) {
+  if (getOption("Require.installPackagesSys", 0L) &&
+      requireNamespace("sys", quietly = TRUE)) {
     ipa$libPaths <- .libPaths()[1]
     installPackagesSys(ipa, verbose = verbose)
   } else {
