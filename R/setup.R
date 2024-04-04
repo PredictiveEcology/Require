@@ -230,6 +230,20 @@ setup <- function(newLibPaths,
 #'        the .libPaths()
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   updateRprofile <- checkTRUERprofile(TRUE)
+  if (!file.exists(updateRprofile)) { # not in current dir
+    # 1. Check project
+    possDirs <- c(rprojroot::find_root(rprojroot::is_rstudio_project),
+                 "~")
+    for (i in 1:2) {
+      possDir <- possDirs[i]
+      possFile <- file.path(possDir, updateRprofile)
+      if (file.exists(possFile)) {
+        updateRprofile <- possFile
+        break
+      }
+    }
+  }
+
   if (file.exists(updateRprofile)) {
     rproflines <- readLines(updateRprofile)
     start <- grep(setLibPathsStartText, rproflines)
