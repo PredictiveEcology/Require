@@ -50,7 +50,7 @@ Suggests:
     parallel,
     rappdirs, 
     rematch2, 
-    remotes,
+    rprojroot,
     sys,
     testthat (>= 3.0.0),
     waldo,
