@@ -183,6 +183,20 @@ test_that("test 3", {
     detach("package:fpCompare", unload = TRUE)
   }
 
+  if (FALSE) {
+    pkgs <- c("fpCompare", "rlang", "cli", "crayon", "stringr", "lobstr")
+    a <- unique(extractPkgName(unlist(unname(pkgDep(pkgs)))))
+    clearRequirePackageCache(a, ask = F)
+    library(sys); library(waldo)
+    setLibPaths(tempdir2(.rndstr(1)))
+    try(remove.packages(a))
+    options(Require.installPackagesSys = 1L)
+    ipBefore <- installed.packages(lib.loc = .libPaths()[1], noCache = TRUE)
+    system.time(Install(pkgs, verbose = 1))
+    # system.time(install.packages(pkgs))
+    ipAfter <- installed.packages(lib.loc = .libPaths()[1], noCache = TRUE)
+  }
+
   ooo <- options(Require.RPackageCache = NULL)
   testthat::expect_true(identical(getOptionRPackageCache(), NULL))
   options(ooo)

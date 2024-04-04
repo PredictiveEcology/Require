@@ -10,14 +10,15 @@ test_that("test 5", {
     projectDir <- Require:::tempdir2(Require:::.rndstr(1))
     setLinuxBinaryRepo()
     pkgDir <- file.path(projectDir, "R")
-    setLibPaths(pkgDir, standAlone = TRUE)
-    dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
-    origDir <- setwd(projectDir)
+    # setLibPaths(pkgDir, standAlone = TRUE)
+    # dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
+    # origDir <- setwd(projectDir)
     modulePath <- file.path(pkgDir, "m")
 
     # Install 3 packages that are needed for subsequent module and package installations
-    (Require("PredictiveEcology/SpaDES.project@transition",
-              upgrade = FALSE, require = FALSE
+    (a <- Require(c("PredictiveEcology/SpaDES.project@transition",
+                  "PredictiveEcology/Require@simplify2 (HEAD)"),
+              upgrade = FALSE, returnDetails = TRUE
       )) |>
       capture_warnings() -> warns
     test <- testWarnsInUsePleaseChange(warns)
@@ -155,7 +156,7 @@ test_that("test 5", {
 
     ip <- installed.packages(noCache = TRUE) |> as.data.table()
 
-    allInstalled <- setdiff(setdiff(trimRedundancies(pkgs)$Package, "Require"),
+    allInstalled <- setdiff(setdiff(trimRedundancies(pkgs)$Package, c("Require", "data.table")),
                             ip$Package)
     a <- attr(out[[i]], "Require")
     expect_true(length(allInstalled) == 0)
