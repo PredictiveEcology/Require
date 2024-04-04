@@ -1267,7 +1267,7 @@ stripHTTPAddress <- function(addr) {
 installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   libPaths <- args$libPaths
   args$libPaths <- NULL
-  if (getOption("Require.installPackagesSys", FALSE) == 2L) {
+  if (getOption("Require.installPackagesSys", FALSE) == 2L && isWindows()) {
     argsOrig <- args
 
     for (i in 1:10) {
@@ -1278,7 +1278,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
         else
           split(x, cut(seq_along(x), n, labels = FALSE))
       }
-      vecList <- chunk2(vec, min(length(args$pkgs), getOption("Ncpus")))
+      vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
 
       pids <- numeric(length(vecList))
       for (j in seq_along(vecList)) {
@@ -1300,6 +1300,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
           std_err = verbose >= 1
         )
       }
+      on.exit(sapply(pids, tools::pskill))
       for (pid in pids)
         exec_status(pid, wait = TRUE)
       allDone <- argsOrig$pkgs %in%
