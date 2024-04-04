@@ -374,7 +374,8 @@ Require <- function(packages,
           doInstalls(pkgDT,
             repos = repos, purge = purge, libPaths = libPaths,
             install.packagesArgs = install.packagesArgs,
-            type = type, returnDetails = returnDetails, verbose = verbose
+            type = type, returnDetails = returnDetails,
+            tmpdir = tmpdir, verbose = verbose
           )
       } else {
         messageVerbose("No packages to install/update", verbose = verbose)
@@ -442,7 +443,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
     out1 <- Map(pack = Package, function(pack) {
       # cmdLine <- paste("CMD build ", pack, paste(extras, collapse = " "))
       cmdLine <- c("CMD", "build", pack, extras)
-      if (getOption("Require.installPackagesSys", FALSE)) {
+      if (getOption("Require.installPackagesSys", 0L)) {
 
         pid <- sys::exec_wait(
           Rpath, I(cmdLine), # std_out = con, std_err = con
@@ -496,6 +497,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
 
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
                        numPackages, numGroups, startTime, type = type, returnDetails,
+                       tmpdir = tempdir(),
                        verbose = getOption("Require.verbose")) {
   # toInstall <- removeRequireDeps(toInstall, verbose = verbose)
 
@@ -535,6 +537,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   }
 
   if (NROW(ipa$available)) {
+
+    ipa$destdir <- tmpdir
     # debug(utils:::.install.winbinary)
     # on.exit(undebug(utils:::.install.winbinary))
     tryCatch(
@@ -584,6 +588,7 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
                               install.packagesArgs = install.packagesArgs, libPaths = libPaths,
                               type = type
     )
+
     pkgInstallList <- split(pkgInstall, by = c("needInstall"))
     for (i in setdiff(names(pkgInstallList), .txtDontInstall))
       pkgDTList[[i]] <- pkgInstallList[[i]]
@@ -626,7 +631,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
               repos = repos, purge = purge,
               install.packagesArgs = install.packagesArgs, numPackages = numPackages,
               numGroups = maxGroup, startTime = startTime, type = type,
-              returnDetails = returnDetails, verbose = verbose
+              returnDetails = returnDetails,
+              tmpdir = tmpdir, verbose = verbose
             ),
             installAll
           )
@@ -637,7 +643,8 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
                                               libPaths = libPaths,
                                               install.packagesArgs = install.packagesArgs,
                                               repos = repos, purge = purge, startTime = startTime, type = type,
-                                              pkgInstallTmp = pkgInstallTmp, verbose = verbose)
+                                              pkgInstallTmp = pkgInstallTmp,
+                                              tmpdir = tmpdir, verbose = verbose)
         } else {
           pkgInstall <- pkgInstallTmp
         }
@@ -661,7 +668,9 @@ doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesAr
                               pkgInstallList[[noneAvailable]]$needInstall)
         set(pkgInstallList[[noneAvailable]], NULL, "installed", FALSE)
       }
-      pkgDTList[[.txtInstall]] <- rbindlistRecursive(pkgInstallList)
+
+      # pkgInstallList can have install and noneAvailable
+      pkgDTList <- append(pkgDTList[.txtDontInstall], pkgInstallList)
     }
   }
   pkgDT <- rbindlistRecursive(pkgDTList)
@@ -2903,7 +2912,7 @@ downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFo
 
 needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.packagesArgs,
                                   repos, purge, startTime, type,
-                                  pkgInstallTmp, verbose = getOption("Require.verbose")) {
+                                  pkgInstallTmp, tmpdir, verbose = getOption("Require.verbose")) {
   if (any(needRebuild)) {
     messageVerbose("Trying to rebuild and install GitHub build fails... ", verbose = verbose)
     pkgInstall[which(needRebuild), needRebuild := repoLocation]
@@ -2919,7 +2928,8 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
       MoreArgs = list(
         repos = repos, purge = purge,
         install.packagesArgs = install.packagesArgs, numPackages = numPackages,
-        numGroups = maxGroup, startTime = startTime, type = type, verbose = verbose
+        numGroups = maxGroup, startTime = startTime, type = type,
+        tmpdir = tmpdir, verbose = verbose
       ),
       installAll
     )
@@ -3269,12 +3279,14 @@ removeRequireDeps <- function(pkgDT, verbose) {
 
   }
 
-  toRm <- pkgDT$Package[pkgDT[["needInstall"]] %in% .txtInstall] %in% extractPkgName(RequireDeps[[1]])
+  whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
+  toRm <- pkgDT$Package[whNeedInstall] %in% extractPkgName(RequireDeps[[1]])
   if (any(toRm)) {
-    messageVerbose("Can't install/update data.table because it is a dependency of Require; use e.g.:\n",
-                   "install.packages(\"data.table\")", verbose = verbose)
-    set(pkgDT, which(toRm), "needInstall", .txtDontInstall)
-    set(pkgDT, which(toRm), "installResult", "Can't install Require dependency")
+    # messageVerbose("Can't install/update data.table because it is a dependency of Require; use e.g.:\n",
+    #                "install.packages(\"data.table\")", verbose = verbose)
+    whRm <- which(whNeedInstall)[toRm]
+    set(pkgDT, whRm, "needInstall", .txtDontInstall)
+    set(pkgDT, whRm, "installResult", "Can't install Require dependency")
   }
   pkgDT
 }

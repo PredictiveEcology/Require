@@ -1267,35 +1267,72 @@ stripHTTPAddress <- function(addr) {
 installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   libPaths <- args$libPaths
   args$libPaths <- NULL
-  fn <- tempfile(fileext = ".rds")
-  fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
-  saveRDS(args, file = fn)
-  ar <- c(paste0(".libPaths('",libPaths,"')"),
-          paste0("args <- readRDS('", fn, "')"),
-          "do.call(install.packages, args)")
-  cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-  # cmdLine <- paste0(" -e ", ar)
-  logFile <- tempfile2(fileext = ".log")
-  # browser()
+  if (getOption("Require.installPackagesSys", FALSE) == 2L) {
+    argsOrig <- args
 
-  # exec_wait(Sys.which("Rscript"), c("-e", ".libPaths('/tmp/RtmpKYB0DJ/Require/3F1qldyR/4.3')",
-  #                                   "-e", "args <- readRDS('/tmp/RtmpKYB0DJ/file55171e2880c1.rds')",
-  #                                   "-e", "do.call(install.packages, args)"))
-  #
+    for (i in 1:10) {
+      vec <- seq_along(argsOrig$pkgs)
+      chunk2 <- function(x,n) {
+        if (n == 1)
+          list(1)
+        else
+          split(x, cut(seq_along(x), n, labels = FALSE))
+      }
+      vecList <- chunk2(vec, min(length(args$pkgs), getOption("Ncpus")))
 
-  # cmdLine <- paste0(" -e \"{.libPaths('", libPaths, "'); ", localCall2, "}\"")
-  pid <- sys::exec_wait(
-    Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-    std_out = function(x) {
-      mess <- rawToChar(x)
-      msgStdOut(mess, logFile, verbose)
-    },
-    std_err = function(x) {
-      mess <- rawToChar(x)
-      msgStdErr(mess, logFile, verbose)
+      pids <- numeric(length(vecList))
+      for (j in seq_along(vecList)) {
+        i <- vecList[[j]]
+        fn <- tempfile(fileext = ".rds")
+        fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+
+        args$pkgs <- argsOrig$pkgs[i]
+        args$available <- argsOrig$available[i, , drop = FALSE]
+        saveRDS(args, file = fn)
+        ar <- c(paste0(".libPaths('",libPaths,"')"),
+                paste0("args <- readRDS('", fn, "')"),
+                "do.call(install.packages, args)")
+        cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+        logFile <- tempfile2(fileext = ".log")
+        pids[j] <- sys::exec_background(
+          Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+          std_out = verbose >= 1,
+          std_err = verbose >= 1
+        )
+      }
+      for (pid in pids)
+        exec_status(pid, wait = TRUE)
+      allDone <- argsOrig$pkgs %in%
+        rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+      if (all(allDone))
+        break
+      argsOrig$pkgs <- argsOrig$pkgs[!allDone]
+      argsOrig$available <- argsOrig$available[!allDone, , drop = FALSE]
+      messageVerbose("trying again", verbose = verbose)
     }
-  )
-  tools::pskill(pid)
+  } else {
+    fn <- tempfile(fileext = ".rds")
+    fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+    saveRDS(args, file = fn)
+    ar <- c(paste0(".libPaths('",libPaths,"')"),
+            paste0("args <- readRDS('", fn, "')"),
+            "do.call(install.packages, args)")
+    cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+    logFile <- tempfile2(fileext = ".log")
+    pid <- sys::exec_wait(
+      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+      std_out = function(x) {
+        mess <- rawToChar(x)
+        msgStdOut(mess, logFile, verbose)
+      },
+      std_err = function(x) {
+        mess <- rawToChar(x)
+        msgStdErr(mess, logFile, verbose)
+      }
+    )
+    tools::pskill(pid)
+  }
+
 }
 
 
@@ -1606,7 +1643,7 @@ availablePackagesCachedPath <- function(repos, type) {
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {
-  if (getOption("Require.installPackagesSys", FALSE)) {
+  if (getOption("Require.installPackagesSys", 0L)) {
     ipa$libPaths <- .libPaths()[1]
     installPackagesSys(ipa, verbose = verbose)
   } else {

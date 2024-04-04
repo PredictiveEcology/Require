@@ -16,96 +16,97 @@ msgStdOut <- function(mess, logFile, verbose) {
   pkg <- extractPkgNameFromWarning(mess)
   justPackage <- !identical(mess, pkg) && !grepl("\\/|\\\\", pkg)
   # cat(blue(mess), file = logFile, append = TRUE)
+
   appendLF <- endsWith(mess, "\n") %in% FALSE
+  if (verbose <= 1) {
+    omitPreSplitMess <- c("configure script", "configure", "config.status",
+                          "compilation", "lpcre2",
+                          "checking for pkg-config")
+    for (om in omitPreSplitMess) {
+      if (grepl(om, mess)) {
+        mess <- grep(om, mess, invert = TRUE, value = TRUE)
+        # spinner |\-/-
+        if (FALSE) {
+          pe <- pkgEnv()
+          if (is.null(pe[["spinner"]])) assign("spinner", "|", envir = pe)
 
-  omitPreSplitMess <- c("configure script", "configure", "config.status",
-                        "compilation", "lpcre2",
-                        "checking for pkg-config")
-  for (om in omitPreSplitMess) {
-    if (grepl(om, mess)) {
+          spinner <- get("spinner", envir = pe)
+          spinner <- ifelse (spinner == "|", "\\",
+                             ifelse(spinner == "\\", "-",
+                                    ifelse(spinner == "-", "/",
+                                           ifelse(spinner == "/", "|"))))
+          assign("spinner", spinner, envir = pe)
+          # mess <- paste0("\b\b", spinner)
+        }
+        if (length(mess) == 0) mess <- ""
+        # mess <- ""
+      }
+    }
+
+
+
+    mod <- "^\\r\\n"
+    while (grepl(mod, mess)) {
+      mess <- gsub(mod, "  ", mess)
+    }
+
+    # omit <- "^.+downloaded binary packages.+$"
+    # while (grepl(omit, mess)) {
+    #   mess <- gsub(omit, "", mess)
+    # }
+
+    omits <- c("\\(as 'lib' is unspecified\\)",
+               "(.+)The downloaded source packages.+",
+               "Content",
+               "^.+downloaded binary packages.+$",
+               "^.+\\.dll.+$",
+               "=+",
+               "g\\+\\+",
+               "^$",
+               "^\\*{2,5}",
+               "^.+rtools.+$",
+               # "MD5 sums",
+               "was already a binary package and will not be rebuilt",
+               "creating tarball",
+               "packaged installation of",
+               "using .+ compiler",
+               "gcc",
+               "\\.o")
+    for (om in omits) {
       mess <- grep(om, mess, invert = TRUE, value = TRUE)
-      # spinner |\-/-
-      if (FALSE) {
-        pe <- pkgEnv()
-        if (is.null(pe[["spinner"]])) assign("spinner", "|", envir = pe)
-
-        spinner <- get("spinner", envir = pe)
-        spinner <- ifelse (spinner == "|", "\\",
-                           ifelse(spinner == "\\", "-",
-                                  ifelse(spinner == "-", "/",
-                                         ifelse(spinner == "/", "|"))))
-        assign("spinner", spinner, envir = pe)
-        # mess <- paste0("\b\b", spinner)
-      }
-      if (length(mess) == 0) mess <- ""
-      # mess <- ""
     }
+
+
+    # omit <- "^.+\\.dll.+$"
+    # if (grepl(omit, mess)) {
+    #   mess <- gsub(omit, "", mess)
+    # }
+
+    # omit <- "^.+rtools.+$"
+    # if (grepl(omit, mess)) {
+    #   mess <- gsub(omit, "", mess)
+    # }
+    mess1 <- unlist(strsplit(mess, "\\r\\n"))
+    mess2 <- unique(mess1)
+    if (!identical(mess1, mess2))
+      mess <- paste(mess2, sep = "\\r\\n")
+    if (length(mess))
+      if (nchar(mess)) {
+        if (!(!justPackage || verbose >= 2 || grepl("Warning", mess))) {
+          mess <- paste0("Installed: ", pkg, "\r\n")
+        }
+      }
   }
-
-
-
-  mod <- "^\\r\\n"
-  while (grepl(mod, mess)) {
-    mess <- gsub(mod, "  ", mess)
-  }
-
-  # omit <- "^.+downloaded binary packages.+$"
-  # while (grepl(omit, mess)) {
-  #   mess <- gsub(omit, "", mess)
-  # }
-
-  omits <- c("\\(as 'lib' is unspecified\\)",
-             "(.+)The downloaded source packages.+",
-             "Content",
-             "^.+downloaded binary packages.+$",
-             "^.+\\.dll.+$",
-             "=+",
-             "g\\+\\+",
-             "^$",
-             "^\\*{2,5}",
-             "^.+rtools.+$",
-             "MD5 sums",
-             "was already a binary package and will not be rebuilt",
-             "creating tarball",
-             "packaged installation of",
-             "using .+ compiler",
-             "gcc",
-             "\\.o")
-  for (om in omits) {
-    mess <- grep(om, mess, invert = TRUE, value = TRUE)
-  }
-
-
-  # omit <- "^.+\\.dll.+$"
-  # if (grepl(omit, mess)) {
-  #   mess <- gsub(omit, "", mess)
-  # }
-
-  # omit <- "^.+rtools.+$"
-  # if (grepl(omit, mess)) {
-  #   mess <- gsub(omit, "", mess)
-  # }
-  mess1 <- unlist(strsplit(mess, "\\r\\n"))
-  mess2 <- unique(mess1)
-  if (!identical(mess1, mess2))
-    mess <- paste(mess2, sep = "\\r\\n")
-
   if (length(mess))
-    if (nchar(mess)) {
-      if (!(!justPackage || verbose >= 2 || grepl("Warning", mess))) {
-        mess <- paste0("Installed: ", pkg)
-      }
       messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
-      # } else {
-      #   messageVerbose(blue("Installed: ", pkg), verbose = verbose, appendLF = TRUE)
-      # }
-    }
+
 }
 
 msgStdErr <- function(mess, logFile, verbose) {
   messOrig <- mess # used for debugging -- not necessary in production
   # cat(greyLight(mess), file = logFile, append = TRUE)
-  appendLF <- endsWith(mess, "\n") %in% FALSE
+  # appendLF <- endsWith(mess, "\n") %in% FALSE
+  appendLF <- FALSE
   if (verbose <= 1) {
 
     omitPreSplitMess <- c("using C\\+\\+ compiler")

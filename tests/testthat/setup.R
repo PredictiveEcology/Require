@@ -24,7 +24,7 @@ if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
   options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
           Require.origLibPathForTests = .libPaths()[1],
-          Require.installPackagesSys = TRUE,
+          Require.installPackagesSys = 2L,
           gargle_oauth_email = "eliotmcintire@gmail.com",
           gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
