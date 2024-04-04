@@ -1649,7 +1649,7 @@ availablePackagesCachedPath <- function(repos, type) {
 
 installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys", 0L) &&
-      requireNamespace("sys", quietly = TRUE)) {
+      requireNamespace("sys", quietly = TRUE) && !isRstudioServer()) {
     ipa$libPaths <- .libPaths()[1]
     installPackagesSys(ipa, verbose = verbose)
   } else {
@@ -1721,3 +1721,14 @@ checkAutomaticOfflineMode <- function() {
   }
 }
 
+isRstudioServer <- function () {
+  isRstudioServer <- FALSE
+  if (isTRUE("tools:rstudio" %in% search())) {
+    rsAPIFn <- get(".rs.api.versionInfo", as.environment("tools:rstudio"))
+    versionInfo <- rsAPIFn()
+    if (!is.null(versionInfo)) {
+      isRstudioServer <- identical("server", versionInfo$mode)
+    }
+  }
+  isRstudioServer
+}
