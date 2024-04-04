@@ -375,7 +375,7 @@ Require <- function(packages,
             repos = repos, purge = purge, libPaths = libPaths,
             install.packagesArgs = install.packagesArgs,
             type = type, returnDetails = returnDetails,
-            tmpdir = tmpdir, verbose = verbose
+            verbose = verbose
           )
       } else {
         messageVerbose("No packages to install/update", verbose = verbose)
@@ -560,7 +560,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   toInstall
 }
 
-doInstalls <- function(pkgDT, repos, purge, tmpdir, libPaths, install.packagesArgs,
+doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        type = getOption("pkgType"), returnDetails, verbose) {
   tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
   origDir <- setwd(tmpdir)
