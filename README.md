@@ -137,14 +137,6 @@ This is a development version of the package:
 install.packages("Require", repose = "https://predictiveecology.r-universe.dev") 
 ```
 
-**Install from GitHub:**
-
-```r
-if (!require("remotes")) install.packages("remotes")
-remotes::install_github("PredictiveEcology/Require@development") 
-```
-
-
 ## Basic usage
 
 `Require` is a wrapper around functions `utils::install packages` and one of the main function to load packages, `base::require`. Like `install.packages`, it is vectorized on package names.

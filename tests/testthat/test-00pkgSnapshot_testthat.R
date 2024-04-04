@@ -13,7 +13,7 @@ test_that("test 1", {
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
   setLibPaths(tmpdir, standAlone = TRUE)
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
-  suppressWarnings(Require(c("remotes"), require = FALSE, quiet = quiet))
+  suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version

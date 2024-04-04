@@ -192,7 +192,7 @@ utils::globalVariables(c(
 #'
 #'   # Mutual dependencies, only installs once -- e.g., curl
 #'   tempPkgFolder <- file.path(tempdir(), "Packages")
-#'   Install(c("remotes", "testthat"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install(c("rlang", "testthat"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   # Mutual dependencies, only installs once -- e.g., curl
 #'   tempPkgFolder <- file.path(tempdir(), "Packages")

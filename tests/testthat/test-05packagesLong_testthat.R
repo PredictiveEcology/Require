@@ -105,7 +105,7 @@ test_that("test 5", {
       "data.table", "utils", "callr", "cli", "covr",
       "crayon", "desc", "digest", "DT", "ellipsis", "BH", "units",
       "git2r", "glue", "httr", "jsonlite", "memoise", "pkgbuild", "pkgload",
-      "rcmdcheck", "remotes", "rlang", "roxygen2", "rstudioapi", "rversions",
+      "rcmdcheck", "rlang", "roxygen2", "rstudioapi", "rversions",
       "sessioninfo", "stats", "testthat", "tools", "usethis", "utils", "withr", "Require"
     )
     pkgsToRm <- setdiff(
@@ -248,7 +248,8 @@ test_that("test 5", {
 
     # two sources, where both are OK; use CRAN by preference
     if (!isMacOSX()) {
-      lala <- suppressWarnings(capture.output(remove.packages("SpaDES.core"))) ## TODO: fails on macOS
+      lala <- suppressWarnings(capture.output(suppressMessages(
+        remove.packages("SpaDES.core")))) ## TODO: fails on macOS
       suppressWarnings(
         out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
                          "SpaDES.core (>=1.0.0)"),
