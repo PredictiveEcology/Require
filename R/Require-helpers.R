@@ -1321,7 +1321,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
     saveRDS(args, file = fn)
 
     # needed to get binary on Posit PM
-    o <- options()['HTTPUserAgent']
+    o <- options()[c('HTTPUserAgent', 'Ncpus')]
     tf <- tempfile(fileext = ".rds")
     tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
     saveRDS(o, file = tf)
