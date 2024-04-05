@@ -8,7 +8,8 @@ isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
-withr::local_options(Require.verbose = ifelse(isDev, 2, -2), .local_envir = teardown_env())
+withr::local_options(.local_envir = teardown_env(),
+                     Require.verbose = ifelse(isDev, 2, -2))
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
@@ -20,22 +21,41 @@ suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
 for (pk in suggests)
   suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE))
 
-if (Sys.info()["user"] %in% "emcintir") {
-  secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
-  options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
-          Require.origLibPathForTests = .libPaths()[1],
-          Require.installPackagesSys = isDevAndInteractive * 2,
-          gargle_oauth_email = "eliotmcintire@gmail.com",
-          gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
-  googledrive::drive_auth()
+withr::local_options(.local_envir = teardown_env(),
+                     repos = getCRANrepos(ind = 1),
+                     Ncpus = 2,
+                     Require.isDev = isDev,
+                     Require.isDevAndInteractive = isDevAndInteractive,
+                     install.packages.check.source = "never",
+                     install.packages.compile.from.source = "never",
+                     Require.unloadNamespaces = TRUE,
+                     Require.Home = "~/GitHub/Require")
+
+withr::local_envvar(.local_envir = teardown_env(),
+                    "R_TESTS" = "",
+                    "R_REMOTES_UPGRADE" = "never",
+                    "CRANCACHE_DISABLE" = TRUE
+)
+
+if (Sys.info()["user"] == "achubaty") {
+  withr::local_options(.local_envir = teardown_env(),
+                       "Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
-getCRANrepos(ind = 1)
-
-withr::local_options(
-  list(Require.isDev = isDev, Require.isDevAndInteractive = isDevAndInteractive),
-  .local_envir = teardown_env()
-)
+if (Sys.info()["user"] %in% "emcintir") {
+  secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
+  repos <- c(PPM = positBinaryRepos(), getOption("repos"))
+  repos <- repos[!duplicated(repos)] # keep names
+  withr::local_options(
+    .local_envir = teardown_env(), #Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
+    Ncpus = 1,
+    # repos = repos,
+    Require.origLibPathForTests = .libPaths()[1],
+    Require.installPackagesSys = isDevAndInteractive * 2,
+    gargle_oauth_email = "eliotmcintire@gmail.com",
+    gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
+  googledrive::drive_auth()
+}
 
 
 runTests <- function(have, pkgs) {

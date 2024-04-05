@@ -3,7 +3,7 @@ test_that("test 6", {
   setupInitial <- setupTest()
   tmpdir <- tempdir2(.rndstr())
   .libPaths(tmpdir)
-  on.exit(endTest(setupInitial))
+  # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")

@@ -1,7 +1,7 @@
 test_that("test 1", {
 
   setupInitial <- setupTest()
-  on.exit(endTest(setupInitial))
+  # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
 

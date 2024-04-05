@@ -1,5 +1,5 @@
 setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.frame()) {
-  opts <- options()
+  # opts <- options()
 
   # getCRANrepos(ind = 1)
 
@@ -8,30 +8,39 @@ setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.fra
 
   # cannot open file 'startup.Rs': No such file or directory
   # suggested solution https://stackoverflow.com/a/27994299/3890027
-  Sys.setenv("R_TESTS" = "")
+  # withr::local_envvar(list("R_TESTS" = "",
+  #                          "R_REMOTES_UPGRADE" = "never",
+  #                          "CRANCACHE_DISABLE" = TRUE),
+  #                     .local_envir = envir)
+  # Sys.setenv("R_TESTS" = "")
+  # Sys.setenv("R_REMOTES_UPGRADE" = "never")
+  # Sys.setenv("CRANCACHE_DISABLE" = TRUE)
+  # withr::local_options(.local_envir = envir,
+  # # outOpts <- options(
+  #   # "Require.persistentPkgEnv" = TRUE,
+  #   install.packages.check.source = "never",
+  #   install.packages.compile.from.source = "never",
+  #   # Ncpus = 2L,
+  #   Require.unloadNamespaces = TRUE
+  # )
 
-  Sys.setenv("R_REMOTES_UPGRADE" = "never")
-  Sys.setenv("CRANCACHE_DISABLE" = TRUE)
-  outOpts <- options(
-    # "Require.persistentPkgEnv" = TRUE,
-    install.packages.check.source = "never",
-    install.packages.compile.from.source = "never",
-    Ncpus = 2L,
-    Require.unloadNamespaces = TRUE
-  )
+  # if (Sys.info()["user"] == "achubaty") {
+  #   withr::local_options(.local_envir = envir,
+  #                        "Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  #   # outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
+  # } else {
+  #   withr::local_options(.local_envir = envir,
+  #                        "Require.Home" = "~/GitHub/Require")
+  #   # outOpts2 <- options("Require.Home" = "~/GitHub/Require")
+  # }
 
-  if (Sys.info()["user"] == "achubaty") {
-    outOpts2 <- options("Require.Home" = "~/GitHub/PredictiveEcology/Require")
-  } else {
-    outOpts2 <- options("Require.Home" = "~/GitHub/Require")
-  }
-
-  libPath <- .libPaths()
-  setLibPaths(tempdir2(.rndstr()))
-  origWd <- getwd()
+  #   libPath <- .libPaths()
+  withr::local_libpaths(tempdir2(.rndstr()), .local_envir = envir)
+  # setLibPaths(tempdir2(.rndstr()))
+  # origWd <- getwd()
   # thisFilename <- Require:::getInStack("r")
   # env <- Require:::whereInStack("ee")
-  startTime <- Sys.time()
+  # startTime <- Sys.time()
   # Require:::messageVerbose(Require:::green(" --------------------------------- Starting ",
   #   thisFilename, "  at: ", format(startTime, digits = 2),
   #   "---------------------------"),
@@ -45,30 +54,33 @@ setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.fra
     paste(getOption("repos"), collapse = ", ")),
     verboseLevel = 0
   )
-  return(list(startTime = startTime, # thisFilename = thisFilename,
-              libPath = libPath, origWd = origWd, opts = opts))
+  return(#list(startTime = startTime, # thisFilename = thisFilename,
+              # libPath = libPath,
+          #    origWd = origWd,
+           #   opts = opts)
+    )
 }
 
-endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
-  currOptions <- options()
-  changedOptions <- setdiff(currOptions, setupInitial$opts)
-  toRevert <- setupInitial$opts[names(changedOptions)]
-  names(toRevert) <- names(changedOptions)
-  if (any(grepl("datatable.alloccol", names(toRevert)))) browser()
-  options(toRevert)
-
-
-  # thisFilename <- setupInitial$thisFilename
-  endTime <- Sys.time()
-  # ee <- Require:::getInStack("ee")
-  # ee[[thisFilename]] <- format(endTime - setupInitial$startTime, digits = 2)
-  # Require:::messageVerbose("\033[32m ----------------------------------",
-  #   thisFilename, ": ", ee[[thisFilename]], " \033[39m",
-  #   verboseLevel = -1, verbose = verbose
-  # )
-  .libPaths(setupInitial$libPath)
-  setwd(setupInitial$origWd)
-}
+# endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
+#   currOptions <- options()
+#   changedOptions <- setdiff(currOptions, setupInitial$opts)
+#   toRevert <- setupInitial$opts[names(changedOptions)]
+#   names(toRevert) <- names(changedOptions)
+#   if (any(grepl("datatable.alloccol", names(toRevert)))) browser()
+#   options(toRevert)
+#
+#
+#   # thisFilename <- setupInitial$thisFilename
+#   endTime <- Sys.time()
+#   # ee <- Require:::getInStack("ee")
+#   # ee[[thisFilename]] <- format(endTime - setupInitial$startTime, digits = 2)
+#   # Require:::messageVerbose("\033[32m ----------------------------------",
+#   #   thisFilename, ": ", ee[[thisFilename]], " \033[39m",
+#   #   verboseLevel = -1, verbose = verbose
+#   # )
+#   .libPaths(setupInitial$libPath)
+#   setwd(setupInitial$origWd)
+# }
 
 
 omitPkgsTemporarily <- function(pkgs) {
