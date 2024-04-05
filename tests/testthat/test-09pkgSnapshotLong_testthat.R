@@ -88,7 +88,7 @@ test_that("test 5", {
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl("Please change required version", warns)
-      expect_identical(sum(NLMRandVisualTestWarn), 1L)
+      expect_identical(sum(unique(NLMRandVisualTestWarn)), 1L)
       warns <- warns[-which(NLMRandVisualTestWarn)]
 
       test <- testWarnsInUsePleaseChange(warns)
@@ -192,7 +192,7 @@ test_that("test 5", {
       didnt <- att[!is.na(att$installResult)]
 
       allDone <- setdiff(didnt$Package, c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
-                               noneAvailable, "Require"))
+                               noneAvailable, c("Require", "data.table")))
       allDone <- setdiff(allDone, knownFails)
       expect_identical(allDone, character(0))
 

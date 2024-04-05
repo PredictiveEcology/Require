@@ -3128,8 +3128,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                 )
                 messageDF(tail(n = 10, data.frame(Version = Version2,
                                      ava[[Package]][, c("repo", "PackageUrl", "mtime")])), verbose = verbose)
-                if (verbose >= 1)
-                  warning("Please change required version e.g., ",
+                warning("Please change required version e.g., ",
                           paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
 
               }
