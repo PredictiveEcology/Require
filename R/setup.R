@@ -288,7 +288,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
       repo <- c(
         CRAN =
           # paste0(binaryLinux, "all/__linux__/", linuxRelease(), "/latest")
-          paste0(binaryLinux, "__linux__/", linuxRelease(), "/latest")
+          positBinaryRepos()
       )
       if (!is.null(getOption("repos"))) {
         backupCRAN <- getOption("repos")
@@ -300,6 +300,9 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
     }
   }
 }
+
+positBinaryRepos <- function(binaryLinux = urlForArchivedPkgs)
+  paste0(binaryLinux, "__linux__/", linuxRelease(), "/latest")
 
 linuxRelease <- function() {
   system("lsb_release -cs", intern = TRUE)
