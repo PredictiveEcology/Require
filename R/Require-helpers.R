@@ -406,7 +406,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
                                      returnDataTable = TRUE, type) {
   fillDefaults(pkgDep)
   if (!isTRUE(getOption("Require.offlineMode"))) {
-    repos <- getCRANrepos(repos)
+    repos <- getCRANrepos(repos, ind = 1)
     purge <- dealWithCache(purge = purge)
   } else {
     purge <- FALSE
