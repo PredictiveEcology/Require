@@ -10,13 +10,24 @@ It its core, `Require` is intended to be used in continuous workflow, from data-
 
 ## How `Require` differs from other approaches
 
+### Default behaviours different
+
+#### Not yet installed 
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ------------------------------------------ |
 | `Install("data.table")`          | `data.table` installed *if not installed*  |
 | `install.packages("data.table")` | `data.table` installed; package NOT loaded |
 | `pak::pkg_install("data.table")` | `data.table` installed; package NOT loaded |
-| `remotes::install("data.table")` | error; not for CRAN packages               |
+
+#### Already installed, but old
+
+| Description                      |  Outcome                                   |
+| -------------------------------- | ----------------------------------------------------------------- |
+| `Install("data.table")`          | `data.table` installed *if not installed*, regardless of version  |
+| `install.packages("data.table")` | `data.table` installed, always, regardless of version             |
+| `pak::pkg_install("data.table")` | `data.table` installed, asks user if wants to update if available |
+
 
 ## Version requirements determine package installation
 
@@ -48,9 +59,11 @@ Require(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
 it is not clear why ... are their dependencies conflicting or is it just the package
 - can't write version numbers at the command line, though they can exist in a DESCRIPTION file
 ```{r}
-pak::pkg_install(
+
+## FAILS
+try(pak::pkg_install(
   c("PredictiveEcology/reproducible@development", 
-    "PredictiveEcology/reproducible"))
+    "PredictiveEcology/reproducible")))
 # Error:                                                                                 
 # ! error in pak subprocess
 # Caused by error: 
@@ -60,18 +73,18 @@ pak::pkg_install(
 # Type .Last.error to see the more details.
 
 
-# FAILS
-pak::pkg_install(
+## FAILS
+try(pak::pkg_install(
   c("PredictiveEcology/reproducible@development", 
-    "PredictiveEcology/reproducible"))
+    "PredictiveEcology/reproducible")))
 
-# FAILS
-pak::pkg_install(
+## FAILS
+try(pak::pkg_install(
     c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)", 
-      "PredictiveEcology/reproducible (>= 2.0.10)"))
+      "PredictiveEcology/reproducible (>= 2.0.10)")))
 
-# FAILS
-pak::pkg_install("local://~/GitHub/Edehzhie/DESCRIPTION")
+## FAILS
+try(pak::pkg_install("local://~/GitHub/Edehzhie/DESCRIPTION"))
 
 # Installs or does nothing is `reproducible` already installed
 Require::Install(
@@ -101,7 +114,7 @@ DESC <- c("Package: temp", "Type: Package", "Title: Temp", "Version: 0.0.1",
           "License: GPL-3", "VignetteBuilder: knitr, rmarkdown", "ByteCompile: yes", 
           "Roxygen: list(markdown = TRUE)")
 cat(DESC, file = "DESCRIPTION")
-pak::local_install_deps("~/GitHub/Edehzhie/")
+try(pak::local_install_deps("~/GitHub/Edehzhie/"))
                                                                                        
 # → Will update 1 package.
 # → All 2 packages (0 B) are cached.
@@ -118,7 +131,7 @@ DESC <- c("Package: temp", "Type: Package", "Title: Temp", "Version: 0.0.1",
           "License: GPL-3", "VignetteBuilder: knitr, rmarkdown", "ByteCompile: yes", 
           "Roxygen: list(markdown = TRUE)")
 cat(DESC, file = "DESCRIPTION")
-pak::local_install_deps("~/GitHub/Edehzhie/")
+try(pak::local_install_deps("~/GitHub/Edehzhie/"))
 # Error:                                                                      
 # ! error in pak subprocess
 # Caused by error: 
@@ -305,7 +318,7 @@ cat(DESC, file = "DESCRIPTION", append = FALSE)
 ```
 
 # example fail using 
-```{r}
+```{r,eval=FALSE}
 options(renv.config.pak.enabled = FALSE)
 renv::install(exclude = c("SpaDES.docs", "SpaDES"), upgrade = FALSE)
 - Installing SpaDES.tools ...                   FAILED
@@ -340,7 +353,7 @@ Consider installing it with `install.packages("yaml")`.
 
 
 # example fail with pak via renv
-```{r}
+```{r,eval=FALSE}
 > options(renv.config.pak.enabled = TRUE)
 > renv::install()
 ✔ Loading metadata database ... done                                       
@@ -356,7 +369,7 @@ Type .Last.error to see the more details.
 
 # installing packages that have been archived
 
-```{r}
+```{r,eval=FALSE}
 Require::Install("RandomFields")
 # packaged installation of 'RandomFields' as RandomFields_3.3.14.zip
 # * DONE (RandomFields)
@@ -380,7 +393,7 @@ pak::pkg_install(c("RandomFields", "RandomFieldsUtils"))
 
 
 
-```{r}
+```{r,eval=FALSE}
 
 tf <- tempfile()
 download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR/LandWeb/DESCRIPTION", tf)
@@ -414,7 +427,7 @@ If there is no version specification, `pkgDep` prefers CRAN packages when there 
 
 ### `pak` fails for packages on GitHub that are not same name as Git Repo in Remotes
 
-```{r}
+```{r,eval=FALSE}
 gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE)
 # Error:                                                                                  
 # ! error in pak subprocess
