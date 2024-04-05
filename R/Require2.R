@@ -541,21 +541,21 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     ipa$destdir <- tmpdir
     # debug(utils:::.install.winbinary)
     # on.exit(undebug(utils:::.install.winbinary))
-    tryCatch(
+    # tryCatch(
       toInstallOut <- withCallingHandlers(
         installPackagesWithQuiet(ipa, verbose = verbose),
         warning = function(w) {
           messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
           invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
         }
-      ),
-      error = function(e) {
-        # If this is erroring here, it is possible that the cached version should be deleted,
-        #   but it is hard to know which package it is that breaks
-        if (identical(Sys.info()[["user"]], "emcintir"))
-          browser()
-      }
-    )
+      )#,
+    #   error = function(e) {
+    #     # If this is erroring here, it is possible that the cached version should be deleted,
+    #     #   but it is hard to know which package it is that breaks
+    #     if (identical(Sys.info()[["user"]], "emcintir"))
+    #       browser()
+    #   }
+    # )
   }
   toInstall
 }
@@ -752,7 +752,6 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
         } else {
           ".tar.gz"
         }
-        browser()
         osNameOnRSPM <- if (isWindows()) {
           "windows"
         } else if (isMacOSX()) {
@@ -2245,10 +2244,10 @@ compareVersion3 <- function(.N, isGT, versionSpec, inequality) {
     out[wh] <- # try(
       unlist(
         Map(verSpec = versionSpec[wh], function(verSpec) {
-          withCallingHandlers(
+          #withCallingHandlers(
             all(compareVersion2(versionSpec[whNot], verSpec, inequality[whNot]))
-            , warning = function(w) browser()#stop()
-          )
+           # , warning = function(w) browser()#stop()
+          #)
         })
       )
     # )
@@ -2803,7 +2802,7 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
   if (length(rowsInPkgDT) && any(isInUse)) {
     if (!all(toInstall$installed[rowsInPkgDT] %in% FALSE) &&
         !all(toInstall$installResult[rowsInPkgDT] %in% w$message)) {
-      browser()
+      # browser()
       set(toInstall, rowsInPkgDT, "installed", FALSE)
       # toInstall[rowsInPkgDT, installed := FALSE]
       set(toInstall, rowsInPkgDT, "installResult", w$message)
@@ -2917,7 +2916,7 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
     messageVerbose("Trying to rebuild and install GitHub build fails... ", verbose = verbose)
     pkgInstall[which(needRebuild), needRebuild := repoLocation]
     pkgInstallList <- split(pkgInstall, by = "needRebuild")
-    browser()
+    # browser()
     # names(pkgInstallList) <- c("No", .txtGitHub)
     pkgInstallList <- downloadGitHub(pkgInstallList, libPaths, verbose, install.packagesArgs)
     maxGroup <- 1
@@ -2952,7 +2951,7 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
   if (isName) {
     packagesTmp2 <- get0(packages2, envir = envir)
     if (is(packagesTmp2, "list")) {
-      browser()
+      # browser()
       kk <- lapply(packagesTmp2, substitutePackages, envir = envir)
     }
     if (is.character(packagesTmp2))
