@@ -1319,11 +1319,26 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
     fn <- tempfile(fileext = ".rds")
     fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
     saveRDS(args, file = fn)
-    ar <- c(paste0(".libPaths('",libPaths,"')"),
+
+    # needed to get binary on Posit PM
+    o <- options()['HTTPUserAgent']
+    tf <- tempfile(fileext = ".rds")
+    tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
+    saveRDS(o, file = tf)
+
+    ar <- c(paste0("o <- readRDS('",tf,"')"),
+            "options(o)",
+            paste0(".libPaths('",libPaths,"')"),
             paste0("args <- readRDS('", fn, "')"),
             "do.call(install.packages, args)")
+
     cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
     logFile <- tempfile2(fileext = ".log")
+    # browser()
+    # tmp <- tempfile()
+    # writeLines(cmdLine[c(2,4,6)], con = tmp)
+    # r_wait(std_in = tmp)
+    # pid <- sys::r_wait(std_in = tmp,
     pid <- sys::exec_wait(
       Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
       std_out = function(x) {
@@ -1649,7 +1664,7 @@ availablePackagesCachedPath <- function(repos, type) {
 
 installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys", 0L) &&
-      requireNamespace("sys", quietly = TRUE) && !isRstudioServer()) {
+      requireNamespace("sys", quietly = TRUE)){#} && !isRstudioServer()) {
     ipa$libPaths <- .libPaths()[1]
     installPackagesSys(ipa, verbose = verbose)
   } else {

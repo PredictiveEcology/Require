@@ -8,7 +8,7 @@ isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
 isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
-withr::local_options(Require.verbose = ifelse(isDev, -2, -2), .local_envir = teardown_env())
+withr::local_options(Require.verbose = ifelse(isDev, 2, -2), .local_envir = teardown_env())
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
@@ -24,7 +24,7 @@ if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
   options(Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
           Require.origLibPathForTests = .libPaths()[1],
-          Require.installPackagesSys = 2L,
+          Require.installPackagesSys = isDevAndInteractive * 2,
           gargle_oauth_email = "eliotmcintire@gmail.com",
           gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
@@ -57,4 +57,28 @@ testWarnsInUsePleaseChange <- function(warns) {
     test <- all(grepl(paste0(msgIsInUse, "|Please change required"), warns)) # "Please change" comes with verbose >= 1
   }
   test
+}
+
+
+
+rcmdDebug <- function(counterName = "a", envir = parent.frame(), envirAssign = .GlobalEnv,
+                      path = "/home/emcintir/tmp/") {
+  # objNam <- deparse(substitute(...))
+  if (!exists(counterName, envir = envirAssign))
+    assign(counterName, 0, envir = envirAssign) # m <<- 0
+  m <- get(counterName, envir = envirAssign)
+  m <- m + 1
+  assign(counterName, m, envir = envirAssign)
+  save(list = ls(envir), envir = envir, file = paste0(path, counterName, "_", interactive(), "_", m,".rda"))
+}
+
+rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = "/home/emcintir/tmp") {
+  if (identical(num, "max")) {
+    poss <- dir(path, pattern = paste0("^", counterName, "_", interactive))
+    num <- as.numeric(max(sapply(strsplit(poss, "_|\\."), function(x) x[[3]])))
+  }
+  int <- new.env();
+  load(dir(path, pattern = paste0(counterName, "_", interactive, "_", num), full.names = T),
+       envir = int)
+  as.list(int)
 }

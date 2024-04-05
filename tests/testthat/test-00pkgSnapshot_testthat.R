@@ -27,13 +27,13 @@ test_that("test 1", {
 
   .libPaths(c(tmpdirActual, tmpdir2Actual))
   # .libPaths(c(tmpdir, tmpdir2))
-  aa <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths()[1:2])
-  aa <- aa[!Package %in% "R"]
+  aa1 <- pkgSnapshot(packageVersionFile = pkgVF, libPaths = .libPaths())
+  aa <- aa1[!Package %in% "R"]
 
   bb <- list()
   for (lp in unique(aa$LibPath)) {
-    pack <- aa$Package[aa$LibPath == lp]
-    pack <- sample(pack, size = min(10, length(pack)))
+    pack1 <- aa$Package[aa$LibPath == lp]
+    pack <- sample(pack1, size = min(10, length(pack1)))
     if (!all(pack %in% .basePkgs)) {
       deps <- pkgDep(pack, recursive = TRUE)
       lens <- lengths(deps)
@@ -45,8 +45,9 @@ test_that("test 1", {
       bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
     }
   }
-  bb <- data.table::rbindlist(bb)
-  data.table::fwrite(x = bb, file = pkgVF)
+
+  bb1 <- data.table::rbindlist(bb)
+  data.table::fwrite(x = bb1, file = pkgVF)
 
   if (file.exists(pkgVF)) {
     fileNames <- list()

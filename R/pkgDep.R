@@ -470,7 +470,8 @@ whichToDILES <- function(which) {
               paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = ", ")
             )
           })
-          invertList(deps)
+          invertList(deps) |>
+          try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
         } else {
           NULL
         }
