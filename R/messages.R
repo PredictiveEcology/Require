@@ -13,8 +13,8 @@ messageCantInstallNoVersion <- function(packagesFullName) {
 
 
 msgStdOut <- function(mess, logFile, verbose) {
-  pkg <- extractPkgNameFromWarning(mess)
-  justPackage <- !identical(mess, pkg) && !grepl("\\/|\\\\", pkg)
+  # pkg <- extractPkgNameFromWarning(mess)
+  # justPackage <- !identical(mess, pkg) && !grepl("\\/|\\\\", pkg)
   # cat(blue(mess), file = logFile, append = TRUE)
 
   appendLF <- endsWith(mess, "\n") %in% FALSE
@@ -55,6 +55,11 @@ msgStdOut <- function(mess, logFile, verbose) {
     #   mess <- gsub(omit, "", mess)
     # }
 
+    mess <- unlist(strsplit(mess, "\\r\\n|\\n"))
+    mess2 <- unique(mess)
+    if (!identical(mess, mess2))
+      mess <- paste(mess2, sep = "\\r\\n")
+
     omits <- c("\\(as 'lib' is unspecified\\)",
                "(.+)The downloaded source packages.+",
                "Content",
@@ -72,20 +77,37 @@ msgStdOut <- function(mess, logFile, verbose) {
                "using .+ compiler",
                "gcc",
                "\\.o")
+
     for (om in omits) {
       mess <- grep(om, mess, invert = TRUE, value = TRUE)
     }
 
-    mess1 <- unlist(strsplit(mess, "\\r\\n"))
-    mess2 <- unique(mess1)
-    if (!identical(mess1, mess2))
-      mess <- paste(mess2, sep = "\\r\\n")
-    if (length(mess))
-      if (nchar(mess)) {
-        if (!(!justPackage || verbose >= 2 || grepl("Warning", mess))) {
-          mess <- paste0("Installed: ", pkg, "\r\n")
-        }
-      }
+    messOrig <- mess
+    keeps <- c(
+      "begin installing package",
+      "\\* installing \\*.+\\* package",
+      "\\* DONE \\(")
+    keepsInds <- lapply(keeps, function(ke) grep(ke, messOrig))
+    mess <- messOrig[sort(unlist(keepsInds))]
+
+    anyErrors <- c("ERROR", "error")
+    anyErrs <- lapply(anyErrors, function(ae) grep(ae, messOrig))
+
+    if (length(anyErrs))
+      mess <- messOrig[sort(c(unlist(keepsInds), unlist(anyErrs)))]
+
+    if (length(mess) > 1)
+      mess <- paste(mess, collapse = "\r\n")
+
+    if (length(mess) == 1)
+      appendLF <- TRUE
+
+    # if (length(mess))
+    #   if (nchar(mess)) {
+    #     # if (!(!justPackage || verbose >= 2 || grepl("Warning", mess))) {
+    #       mess <- paste0("Installed: ", pkg, "\r\n")
+    #     # }
+    #   }
   }
   if (length(mess))
       messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)

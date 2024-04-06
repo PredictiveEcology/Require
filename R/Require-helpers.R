@@ -1274,7 +1274,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   if (getOption("Require.installPackagesSys", FALSE) == 2L && isWindows()) {
     argsOrig <- args
 
-    for (i in 1:10) {
+    # for (i in 1:10) {
       vec <- seq_along(argsOrig$pkgs)
       chunk2 <- function(x,n) {
         if (n == 1)
@@ -1314,7 +1314,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
       argsOrig$pkgs <- argsOrig$pkgs[!allDone]
       argsOrig$available <- argsOrig$available[!allDone, , drop = FALSE]
       messageVerbose("trying again", verbose = verbose)
-    }
+    #}
   } else {
     fn <- tempfile(fileext = ".rds")
     fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)

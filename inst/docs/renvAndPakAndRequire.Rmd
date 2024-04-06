@@ -1,4 +1,5 @@
 ---
+title: Comparing `pak` and `Require`
 output: html_document
 editor_options: 
   chunk_output_type: console
@@ -29,6 +30,53 @@ It its core, `Require` is intended to be used in continuous workflow, from data-
 | `pak::pkg_install("data.table")` | `data.table` installed, asks user if wants to update if available |
 
 
+## Differences and similarities between `pak` and `Require`
+
+* Indicates that there is an example below.
+
+| Description                      |  `Require`    |   `pak`                               |
+| -------------------------------- | :------------------------------: | :-----------------------------------: |
+| Archived package*                 | Automatic                                        | Not an option  | 
+| Multiple requests of same package | Resolves by version number specification, or most recent version | Error |
+| Control individual package updates | With `HEAD`   |   No   |
+| Dependency conflicts*   | Yes   |  No (see example below)  |  
+| Parallel downloads   |   with `options(Require.installPackagesSys = 2)`    |   Yes    |
+| Parallel installs    |   with `options(Require.installPackagesSys = 2)`    |   Yes    |
+| Very clean messaging   |   somewhat, with `options(Require.installPackagesSys = 1)`  | Yes    |  
+| Package dependencies     |  0   |   `data.table` |
+| Uses local cache   |   Yes   |   Yes   |
+| Package updates (default)    | No, unless needed by version number | Yes  |     
+| Package install by version    | Yes | No (only if declared in a `DESCRIPTION` file)  |   
+| Package conflict (CRAN & GitHub) | Prefers CRAN, if version requirements met  |  Error  |
+
+### Archived packages
+
+```{r,eval=TRUE,message=FALSE}
+Require::Install("fastdigest")
+
+try(pak::pkg_install(c("fastdigest")))
+```
+
+
+### Dependency conflict
+
+```{r, eval=TRUE,message=FALSE}
+
+# Fails because of a) packages taken off CRAN & multiple GitHub branches requested
+try(pk <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb"))
+
+# Fine
+Require::pkgDep("PredictiveEcology/LandR@LandWeb")
+
+```
+
+```{r,eval=FALSE}
+try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
+pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+```
+
+
+
 ## Version requirements determine package installation
 
 1. **Version number requirements** drive package updates. If a user doesn't need an update because version numbers are sufficient, no update will occur.
@@ -37,27 +85,28 @@ It its core, `Require` is intended to be used in continuous workflow, from data-
 
 3. Multiple simultaneous requests to install a package will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence.
 
-```
+```{r,eval=TRUE}
 # The following has no version specifications, 
 #   so CRAN version will be installed or none installed if already installed
-Require(c("PredictiveEcology/reproducible@development", "reproducible"))
+Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
 
 # The following specifies "HEAD" after the Github package name. This means the 
 #   tip of the development branch of reproducible will be installed if not already installed
-Require(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
+Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
 
 # The following specifies "HEAD" after the package name. This means the 
 #   tip of the development branch of reproducible
-Require(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
+Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
 
 ```
 
 
 ## pak
-- when it fails due to "dependency conflict", there is no way to diagnose
+- when it fails due to "dependency conflict", it may be difficult to diagnose
 - seems to work if there is only one "branch" for each given package, but not multiple branches e.g., `c("PredictiveEcology/reproducible@development", "PredictiveEcology/reproducible")`, but 
 it is not clear why ... are their dependencies conflicting or is it just the package
 - can't write version numbers at the command line, though they can exist in a DESCRIPTION file
+
 ```{r}
 
 ## FAILS
@@ -73,14 +122,10 @@ try(pak::pkg_install(
 # Type .Last.error to see the more details.
 
 
-## FAILS
-try(pak::pkg_install(
-  c("PredictiveEcology/reproducible@development", 
-    "PredictiveEcology/reproducible")))
 
 ## FAILS
 try(pak::pkg_install(
-    c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)", 
+    c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
       "PredictiveEcology/reproducible (>= 2.0.10)")))
 
 ## FAILS
@@ -367,30 +412,6 @@ Type .Last.error to see the more details.
 
 
 
-# installing packages that have been archived
-
-```{r,eval=FALSE}
-Require::Install("RandomFields")
-# packaged installation of 'RandomFields' as RandomFields_3.3.14.zip
-# * DONE (RandomFields)
-# .....
-# packaged installation of 'RandomFieldsUtils' as RandomFieldsUtils_1.2.5.zip
-# * DONE (RandomFieldsUtils)
-# 
-# The downloaded source packages are in
-# 	‘C:\Users\emcintir\AppData\Local\Temp\RtmpSqWkiA\downloaded_packages’
-
-pak::pkg_install(c("RandomFields", "RandomFieldsUtils"))
-# ✔ Updated metadata database: 5.18 MB in 9 files.                          
-# ✔ Updating metadata database ... done                                     
-# Error:                                                                     
-# ! error in pak subprocess
-# Caused by error: 
-# ! Could not solve package dependencies:
-# * RandomFields: Can't find package called RandomFields.
-# * RandomFieldsUtils: Can't find package called RandomFieldsUtils.
-```
-
 
 
 ```{r,eval=FALSE}
@@ -401,6 +422,7 @@ readLines(tf)
 strsplit(read.dcf(tf, fields = "Remotes"), ",|,\n")[[1]]
 
 pk <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb")
+pkgDep("PredictiveEcology/LandR@LandWeb")
 
 pk2 <- pkgDep("PredictiveEcology/LandR@LandWeb", recursive = TRUE, Additional_repositories = T, purge = TRUE,
               which = c("Depends", "Imports"), includeBase = FALSE)[[1]]
@@ -443,4 +465,39 @@ ff <- pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 #  [5] "Formula"                                               "Hmisc"
 #  [7] "PredictiveEcology/LandR@development"                   "MatrixModels"
 #  ...
+```
+
+
+
+
+```{r,eval=FALSE}
+## minor errors of version number updating -- purrr 1.0.2 already installed
+pak::pkg_install(pkgs)
+                                                                          
+→ Will install 16 packages.
+→ Will update 1 package.
+→ Will download 17 packages with unknown size.
++ colorspace           2.1-0 [dl]
++ fansi                1.0.6 [dl]
++ farver               2.1.1 [dl]
++ fpCompare            0.2.4 [bld][cmp][dl] (GitHub: a0260b8)
++ ggplot2              3.5.0 [dl]
++ gtable               0.3.4 [dl]
++ isoband              0.2.7 [dl]
++ labeling             0.4.3 [dl]
++ munsell              0.5.1 [dl]
++ pillar               1.9.0 [dl]
++ pkgconfig            2.0.3 [dl]
++ purrr        1.0.2 → 1.0.2 [dl]
++ RColorBrewer         1.1-3 [dl]
++ scales               1.3.0 [dl]
++ tibble               3.2.1 [dl]
++ utf8                 1.2.4 [dl]
++ viridisLite          0.4.2 [dl]
+
+! purrr is loaded in the current R session, you probably need to restart R
+after the installation.
+
+? Do you want to continue (Y/n) 
+
 ```

@@ -11,7 +11,7 @@
 
 
 
-<title>renvAndPakAndRequire.knit</title>
+<title>Comparing pak and Require</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -348,6 +348,8 @@ display: none;
 
 
 
+<h1 class="title toc-ignore">Comparing <code>pak</code> and
+<code>Require</code></h1>
 
 </div>
 
@@ -367,6 +369,10 @@ fills this gap.</p>
 </div>
 <div id="how-require-differs-from-other-approaches" class="section level2">
 <h2>How <code>Require</code> differs from other approaches</h2>
+<div id="default-behaviours-different" class="section level3">
+<h3>Default behaviours different</h3>
+<div id="not-yet-installed" class="section level4">
+<h4>Not yet installed</h4>
 <table>
 <colgroup>
 <col width="43%" />
@@ -391,14 +397,11 @@ fills this gap.</p>
 <td><code>pak::pkg_install(&quot;data.table&quot;)</code></td>
 <td><code>data.table</code> installed; package NOT loaded</td>
 </tr>
-<tr class="even">
-<td><code>remotes::install(&quot;data.table&quot;)</code></td>
-<td>error; not for CRAN packages</td>
-</tr>
 </tbody>
 </table>
-<div id="defaults-are-different" class="section level3">
-<h3>Defaults are different</h3>
+</div>
+<div id="already-installed-but-old" class="section level4">
+<h4>Already installed, but old</h4>
 <table>
 <colgroup>
 <col width="32%" />
@@ -430,6 +433,242 @@ available</td>
 </table>
 </div>
 </div>
+</div>
+<div id="differences-and-similarities-between-pak-and-require" class="section level2">
+<h2>Differences and similarities between <code>pak</code> and
+<code>Require</code></h2>
+<ul>
+<li>Indicates that there is an example below.</li>
+</ul>
+<table>
+<colgroup>
+<col width="31%" />
+<col width="31%" />
+<col width="36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Description</th>
+<th align="center"><code>Require</code></th>
+<th align="center"><code>pak</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Archived package*</td>
+<td align="center">Automatic</td>
+<td align="center">Not an option</td>
+</tr>
+<tr class="even">
+<td>Multiple requests of same package</td>
+<td align="center">Resolves by version number specification, or most
+recent version</td>
+<td align="center">Error</td>
+</tr>
+<tr class="odd">
+<td>Control individual package updates</td>
+<td align="center">With <code>HEAD</code></td>
+<td align="center">No</td>
+</tr>
+<tr class="even">
+<td>Dependency conflicts*</td>
+<td align="center">Yes</td>
+<td align="center">No (see example below)</td>
+</tr>
+<tr class="odd">
+<td>Parallel downloads</td>
+<td align="center">with
+<code>options(Require.installPackagesSys = 2)</code></td>
+<td align="center">Yes</td>
+</tr>
+<tr class="even">
+<td>Parallel installs</td>
+<td align="center">with
+<code>options(Require.installPackagesSys = 2)</code></td>
+<td align="center">Yes</td>
+</tr>
+<tr class="odd">
+<td>Very clean messaging</td>
+<td align="center">somewhat, with
+<code>options(Require.installPackagesSys = 1)</code></td>
+<td align="center">Yes</td>
+</tr>
+<tr class="even">
+<td>Package dependencies</td>
+<td align="center">0</td>
+<td align="center"><code>data.table</code></td>
+</tr>
+<tr class="odd">
+<td>Uses local cache</td>
+<td align="center">Yes</td>
+<td align="center">Yes</td>
+</tr>
+<tr class="even">
+<td>Package updates (default)</td>
+<td align="center">No, unless needed by version number</td>
+<td align="center">Yes</td>
+</tr>
+<tr class="odd">
+<td>Package install by version</td>
+<td align="center">Yes</td>
+<td align="center">No (only if declared in a <code>DESCRIPTION</code>
+file)</td>
+</tr>
+<tr class="even">
+<td>Package conflict (CRAN &amp; GitHub)</td>
+<td align="center">Prefers CRAN, if version requirements met</td>
+<td align="center">Error</td>
+</tr>
+</tbody>
+</table>
+<div id="archived-packages" class="section level3">
+<h3>Archived packages</h3>
+<pre class="r"><code>Require::Install(&quot;fastdigest&quot;)
+
+try(pak::pkg_install(c(&quot;fastdigest&quot;)))</code></pre>
+<pre><code>## Error : ! error in pak subprocess
+## Caused by error: 
+## ! invalid version specification ‘NA’</code></pre>
+</div>
+<div id="dependency-conflict" class="section level3">
+<h3>Dependency conflict</h3>
+<pre class="r"><code># Fails because of a) packages taken off CRAN &amp; multiple GitHub branches requested
+try(pk &lt;- pak::pkg_deps(&quot;PredictiveEcology/LandR@LandWeb&quot;))</code></pre>
+<pre><code>## Error : ! error in pak subprocess
+## Caused by error: 
+## ! Could not solve package dependencies:
+## * PredictiveEcology/LandR@LandWeb: Can&#39;t install dependency PredictiveEcology/map@development
+## * PredictiveEcology/map@development: Can&#39;t install dependency fastdigest
+## * fastdigest: Can&#39;t find package called fastdigest.</code></pre>
+<pre class="r"><code># Fine
+Require::pkgDep(&quot;PredictiveEcology/LandR@LandWeb&quot;)</code></pre>
+<pre><code>## $`PredictiveEcology/LandR@LandWeb`
+##   [1] &quot;DBI (&gt;= 0.8)&quot;                                               
+##   [2] &quot;PredictiveEcology/LandR@LandWeb&quot;                            
+##   [3] &quot;MatrixModels&quot;                                               
+##   [4] &quot;MuMIn (&gt;= 1.42.5)&quot;                                          
+##   [5] &quot;R6&quot;                                                         
+##   [6] &quot;RColorBrewer&quot;                                               
+##   [7] &quot;RCurl&quot;                                                      
+##   [8] &quot;Rcpp&quot;                                                       
+##   [9] &quot;RcppArmadillo&quot;                                              
+##  [10] &quot;RcppEigen (&gt;= 0.3.3.9.4)&quot;                                   
+##  [11] &quot;Require&quot;                                                    
+##  [12] &quot;PredictiveEcology/SpaDES.tools@development (&gt;= 1.0.0.9001)&quot; 
+##  [13] &quot;SparseM&quot;                                                    
+##  [14] &quot;abind&quot;                                                      
+##  [15] &quot;achubaty/amc@development (&gt;= 0.1.6.9000)&quot;                   
+##  [16] &quot;askpass&quot;                                                    
+##  [17] &quot;backports&quot;                                                  
+##  [18] &quot;base64enc&quot;                                                  
+##  [19] &quot;bitops&quot;                                                     
+##  [20] &quot;brio (&gt;= 1.1.3)&quot;                                            
+##  [21] &quot;broom (&gt;= 0.7.4)&quot;                                           
+##  [22] &quot;callr (&gt;= 3.7.3)&quot;                                           
+##  [23] &quot;car&quot;                                                        
+##  [24] &quot;carData (&gt;= 3.0-0)&quot;                                         
+##  [25] &quot;checkmate (&gt;= 1.8.2)&quot;                                       
+##  [26] &quot;classInt (&gt;= 0.4-1)&quot;                                        
+##  [27] &quot;cli&quot;                                                        
+##  [28] &quot;colorspace&quot;                                                 
+##  [29] &quot;corrplot&quot;                                                   
+##  [30] &quot;cowplot (&gt;= 1.1.1)&quot;                                         
+##  [31] &quot;cpp11 (&gt;= 0.4.2)&quot;                                           
+##  [32] &quot;crayon&quot;                                                     
+##  [33] &quot;curl (&gt;= 5.0.2)&quot;                                            
+##  [34] &quot;data.table&quot;                                                 
+##  [35] &quot;desc (&gt;= 1.4.2)&quot;                                            
+##  [36] &quot;diffobj (&gt;= 0.3.4)&quot;                                         
+##  [37] &quot;digest&quot;                                                     
+##  [38] &quot;dismo&quot;                                                      
+##  [39] &quot;dplyr (&gt;= 0.7.1)&quot;                                           
+##  [40] &quot;e1071&quot;                                                      
+##  [41] &quot;ellipsis&quot;                                                   
+##  [42] &quot;evaluate (&gt;= 0.21)&quot;                                         
+##  [43] &quot;fansi (&gt;= 0.4.0)&quot;                                           
+##  [44] &quot;farver (&gt;= 2.0.3)&quot;                                          
+##  [45] &quot;fastdigest&quot;                                                 
+##  [46] &quot;fasterize&quot;                                                  
+##  [47] &quot;filelock&quot;                                                   
+##  [48] &quot;fpCompare&quot;                                                  
+##  [49] &quot;fs&quot;                                                         
+##  [50] &quot;generics&quot;                                                   
+##  [51] &quot;ggplot2&quot;                                                    
+##  [52] &quot;ggpubr&quot;                                                     
+##  [53] &quot;ggrepel (&gt;= 0.9.2)&quot;                                         
+##  [54] &quot;ggsci&quot;                                                      
+##  [55] &quot;ggsignif&quot;                                                   
+##  [56] &quot;ggspatial&quot;                                                  
+##  [57] &quot;glue&quot;                                                       
+##  [58] &quot;gridExtra&quot;                                                  
+##  [59] &quot;gtable (&gt;= 0.1.1)&quot;                                          
+##  [60] &quot;hms&quot;                                                        
+##  [61] &quot;httr&quot;                                                       
+##  [62] &quot;insight&quot;                                                    
+##  [63] &quot;isoband&quot;                                                    
+##  [64] &quot;jpeg&quot;                                                       
+##  [65] &quot;jsonlite&quot;                                                   
+##  [66] &quot;labeling&quot;                                                   
+##  [67] &quot;lifecycle (&gt; 1.0.1)&quot;                                        
+##  [68] &quot;lme4&quot;                                                       
+##  [69] &quot;lobstr&quot;                                                     
+##  [70] &quot;magrittr&quot;                                                   
+##  [71] &quot;PredictiveEcology/map@development&quot;                          
+##  [72] &quot;mime&quot;                                                       
+##  [73] &quot;minqa (&gt;= 1.1.15)&quot;                                          
+##  [74] &quot;munsell (&gt;= 0.5)&quot;                                           
+##  [75] &quot;nloptr (&gt;= 1.0.4)&quot;                                          
+##  [76] &quot;numDeriv&quot;                                                   
+##  [77] &quot;openssl (&gt;= 0.8)&quot;                                           
+##  [78] &quot;parallelly&quot;                                                 
+##  [79] &quot;pbkrtest (&gt;= 0.4-4)&quot;                                        
+##  [80] &quot;PredictiveEcology/pemisc@development (&gt;= 0.0.4.9007)&quot;       
+##  [81] &quot;PredictiveEcology/peutils@development&quot;                      
+##  [82] &quot;pillar (&gt;= 1.8.1)&quot;                                          
+##  [83] &quot;pkgbuild&quot;                                                   
+##  [84] &quot;pkgconfig&quot;                                                  
+##  [85] &quot;pkgload (&gt;= 1.3.2.1)&quot;                                       
+##  [86] &quot;png&quot;                                                        
+##  [87] &quot;polynom&quot;                                                    
+##  [88] &quot;praise (&gt;= 1.0.0)&quot;                                          
+##  [89] &quot;prettyunits&quot;                                                
+##  [90] &quot;processx (&gt;= 3.8.2)&quot;                                        
+##  [91] &quot;progress&quot;                                                   
+##  [92] &quot;proxy&quot;                                                      
+##  [93] &quot;ps (&gt;= 1.7.5)&quot;                                              
+##  [94] &quot;purrr&quot;                                                      
+##  [95] &quot;quantreg&quot;                                                   
+##  [96] &quot;PredictiveEcology/quickPlot@development&quot;                    
+##  [97] &quot;raster&quot;                                                     
+##  [98] &quot;rematch2&quot;                                                   
+##  [99] &quot;PredictiveEcology/reproducible@development (&gt;= 1.2.16.9018)&quot;
+## [100] &quot;cran/rgeos&quot;                                                 
+## [101] &quot;rlang (&gt;= 1.0.0)&quot;                                           
+## [102] &quot;rosm (&gt;= 0.2)&quot;                                              
+## [103] &quot;rprojroot&quot;                                                  
+## [104] &quot;rstatix (&gt;= 0.7.2)&quot;                                         
+## [105] &quot;s2 (&gt;= 1.1.0)&quot;                                              
+## [106] &quot;scales (&gt;= 1.3.0)&quot;                                          
+## [107] &quot;r-spatial/sf&quot;                                               
+## [108] &quot;sp&quot;                                                         
+## [109] &quot;stringi (&gt;= 1.5.3)&quot;                                         
+## [110] &quot;stringr (&gt;= 1.5.0)&quot;                                         
+## [111] &quot;sys (&gt;= 2.1)&quot;                                               
+## [112] &quot;terra&quot;                                                      
+## [113] &quot;testthat&quot;                                                   
+## [114] &quot;tibble&quot;                                                     
+## [115] &quot;tidyr (&gt;= 1.3.0)&quot;                                           
+## [116] &quot;tidyselect (&gt;= 1.2.0)&quot;                                      
+## [117] &quot;ropensci/tiler (&gt;= 0.2.6)&quot;                                  
+## [118] &quot;units (&gt;= 0.7-0)&quot;                                           
+## [119] &quot;utf8 (&gt;= 1.1.0)&quot;                                            
+## [120] &quot;vctrs (&gt;= 0.5.0)&quot;                                           
+## [121] &quot;viridisLite&quot;                                                
+## [122] &quot;waldo (&gt;= 0.5.1)&quot;                                           
+## [123] &quot;withr (&gt;= 2.5.0)&quot;                                           
+## [124] &quot;wk (&gt;= 0.6.0)&quot;</code></pre>
+</div>
+</div>
 <div id="version-requirements-determine-package-installation" class="section level2">
 <h2>Version requirements determine package installation</h2>
 <ol style="list-style-type: decimal">
@@ -443,23 +682,23 @@ create a conflict unless version requirements cause the conflict. If
 version number requirements are not specified, CRAN versions will take
 precedence.</p></li>
 </ol>
-<pre><code># The following has no version specifications, 
+<pre class="r"><code># The following has no version specifications, 
 #   so CRAN version will be installed or none installed if already installed
-Require(c(&quot;PredictiveEcology/reproducible@development&quot;, &quot;reproducible&quot;))
-
-# The following specifies &quot;HEAD&quot; after the Github package name. This means the 
+Require::Install(c(&quot;PredictiveEcology/reproducible@development&quot;, &quot;reproducible&quot;))</code></pre>
+<pre><code>## No packages to install/update</code></pre>
+<pre class="r"><code># The following specifies &quot;HEAD&quot; after the Github package name. This means the 
 #   tip of the development branch of reproducible will be installed if not already installed
-Require(c(&quot;PredictiveEcology/reproducible@development (HEAD)&quot;, &quot;reproducible&quot;))
-
-# The following specifies &quot;HEAD&quot; after the package name. This means the 
+Require::Install(c(&quot;PredictiveEcology/reproducible@development (HEAD)&quot;, &quot;reproducible&quot;))</code></pre>
+<pre><code>##   1 packages on GitHub</code></pre>
+<pre><code>## Skipping install of PredictiveEcology/reproducible@development, the SHA1 has not changed from last install</code></pre>
+<pre class="r"><code># The following specifies &quot;HEAD&quot; after the package name. This means the 
 #   tip of the development branch of reproducible
-Require(c(&quot;PredictiveEcology/reproducible@development&quot;, &quot;reproducible (HEAD)&quot;))
-</code></pre>
+Require::Install(c(&quot;PredictiveEcology/reproducible@development&quot;, &quot;reproducible (HEAD)&quot;))</code></pre>
 </div>
 <div id="pak" class="section level2">
 <h2>pak</h2>
 <ul>
-<li>when it fails due to “dependency conflict”, there is no way to
+<li>when it fails due to “dependency conflict”, it may be difficult to
 diagnose</li>
 <li>seems to work if there is only one “branch” for each given package,
 but not multiple branches e.g.,
@@ -473,10 +712,6 @@ exist in a DESCRIPTION file</li>
 try(pak::pkg_install(
   c(&quot;PredictiveEcology/reproducible@development&quot;, 
     &quot;PredictiveEcology/reproducible&quot;)))</code></pre>
-<pre><code>## 
-ℹ Loading metadata database
-
-✔ Loading metadata database ... done</code></pre>
 <pre><code>## Error : ! error in pak subprocess
 ## Caused by error: 
 ## ! Could not solve package dependencies:
@@ -491,18 +726,10 @@ try(pak::pkg_install(
 # Type .Last.error to see the more details.
 
 
+
 ## FAILS
 try(pak::pkg_install(
-  c(&quot;PredictiveEcology/reproducible@development&quot;, 
-    &quot;PredictiveEcology/reproducible&quot;)))</code></pre>
-<pre><code>## Error : ! error in pak subprocess
-## Caused by error: 
-## ! Could not solve package dependencies:
-## * PredictiveEcology/reproducible: Conflicts with PredictiveEcology/reproducible@development
-## * PredictiveEcology/reproducible@development: Conflicts with PredictiveEcology/reproducible</code></pre>
-<pre class="r"><code>## FAILS
-try(pak::pkg_install(
-    c(&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;, 
+    c(&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;,
       &quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;)))</code></pre>
 <pre><code>## Error : ! error in pak subprocess
 ## Caused by error: 
@@ -525,8 +752,7 @@ try(pak::pkg_install(&quot;local://~/GitHub/Edehzhie/DESCRIPTION&quot;))</code><
 Require::Install(
   c(&quot;PredictiveEcology/reproducible@development&quot;, 
     &quot;PredictiveEcology/reproducible&quot;))</code></pre>
-<pre><code>##   2 packages on GitHub
-## No packages to install/update</code></pre>
+<pre><code>## No packages to install/update</code></pre>
 <pre class="r"><code># Fine -- picks the more recent version number and installs
 Require::Install(
     c(&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;, 
@@ -786,34 +1012,13 @@ Caused by error:
 ! Could not solve package dependencies:
 * deps::C:/Eliot/GitHub/Edehzhie: dependency conflict
 Type .Last.error to see the more details.</code></pre>
-</div>
-<div id="installing-packages-that-have-been-archived" class="section level1">
-<h1>installing packages that have been archived</h1>
-<pre class="r"><code>Require::Install(&quot;RandomFields&quot;)
-# packaged installation of &#39;RandomFields&#39; as RandomFields_3.3.14.zip
-# * DONE (RandomFields)
-# .....
-# packaged installation of &#39;RandomFieldsUtils&#39; as RandomFieldsUtils_1.2.5.zip
-# * DONE (RandomFieldsUtils)
-# 
-# The downloaded source packages are in
-#   ‘C:\Users\emcintir\AppData\Local\Temp\RtmpSqWkiA\downloaded_packages’
-
-pak::pkg_install(c(&quot;RandomFields&quot;, &quot;RandomFieldsUtils&quot;))
-# ✔ Updated metadata database: 5.18 MB in 9 files.                          
-# ✔ Updating metadata database ... done                                     
-# Error:                                                                     
-# ! error in pak subprocess
-# Caused by error: 
-# ! Could not solve package dependencies:
-# * RandomFields: Can&#39;t find package called RandomFields.
-# * RandomFieldsUtils: Can&#39;t find package called RandomFieldsUtils.</code></pre>
 <pre class="r"><code>tf &lt;- tempfile()
 download.file(&quot;https://raw.githubusercontent.com/PredictiveEcology/LandR/LandWeb/DESCRIPTION&quot;, tf)
 readLines(tf)
 strsplit(read.dcf(tf, fields = &quot;Remotes&quot;), &quot;,|,\n&quot;)[[1]]
 
 pk &lt;- pak::pkg_deps(&quot;PredictiveEcology/LandR@LandWeb&quot;)
+pkgDep(&quot;PredictiveEcology/LandR@LandWeb&quot;)
 
 pk2 &lt;- pkgDep(&quot;PredictiveEcology/LandR@LandWeb&quot;, recursive = TRUE, Additional_repositories = T, purge = TRUE,
               which = c(&quot;Depends&quot;, &quot;Imports&quot;), includeBase = FALSE)[[1]]
@@ -865,6 +1070,34 @@ ff &lt;- pkgDep(&quot;PredictiveEcology/LandR@development&quot;, dependencies = 
 #  [5] &quot;Formula&quot;                                               &quot;Hmisc&quot;
 #  [7] &quot;PredictiveEcology/LandR@development&quot;                   &quot;MatrixModels&quot;
 #  ...</code></pre>
+<pre class="r"><code>## minor errors of version number updating -- purrr 1.0.2 already installed
+pak::pkg_install(pkgs)
+                                                                          
+→ Will install 16 packages.
+→ Will update 1 package.
+→ Will download 17 packages with unknown size.
++ colorspace           2.1-0 [dl]
++ fansi                1.0.6 [dl]
++ farver               2.1.1 [dl]
++ fpCompare            0.2.4 [bld][cmp][dl] (GitHub: a0260b8)
++ ggplot2              3.5.0 [dl]
++ gtable               0.3.4 [dl]
++ isoband              0.2.7 [dl]
++ labeling             0.4.3 [dl]
++ munsell              0.5.1 [dl]
++ pillar               1.9.0 [dl]
++ pkgconfig            2.0.3 [dl]
++ purrr        1.0.2 → 1.0.2 [dl]
++ RColorBrewer         1.1-3 [dl]
++ scales               1.3.0 [dl]
++ tibble               3.2.1 [dl]
++ utf8                 1.2.4 [dl]
++ viridisLite          0.4.2 [dl]
+
+! purrr is loaded in the current R session, you probably need to restart R
+after the installation.
+
+? Do you want to continue (Y/n) </code></pre>
 </div>
 </div>
 </div>
