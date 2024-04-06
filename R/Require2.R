@@ -623,7 +623,10 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
         setorderv(pkgInstall, c("installSafeGroups", "Package"))
         pkgInstall[, installOrder := seq(.N)]
 
-        toInstallList <- split(pkgInstall, by = "installSafeGroups")
+        if (isWindows())
+          toInstallList <- split(pkgInstall, by = "installSafeGroups")
+        else
+          toInstallList <- list(pkgInstall)
         toInstallList <-
           Map(
             toInstall = toInstallList,
@@ -702,7 +705,7 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
     packageVersionOnRSPM <- earliestDateOnRSPM > .earliestRSPMDate
     if (any(packageVersionTooOldForThisR)) {
       messageVerbose(
-        paste(toInstall[["packageFullName"]][packageVersionTooOldForThisR], collapse = ", "),
+        paste(toInstall[["packageFullName"]][packageVersionTooOldForThisR], collapse = comma),
         " will not have binary versions on RSPM because this version of R",
         " was not yet available"
       )
@@ -836,12 +839,12 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
           hasNoVersion <- cantGet[["packageFullName"]] == cantGet[["Package"]]
           toReport <- list()
           if (any(hasNoVersion)) {
-            toReport[[1]] <- paste("latest of", paste0(cantGet[["Package"]][hasNoVersion], collapse = ", "))
+            toReport[[1]] <- paste("latest of", paste0(cantGet[["Package"]][hasNoVersion], collapse = comma))
           }
           if (any(!hasNoVersion)) {
-            toReport[[2]] <- paste(cantGet[["packageFullName"]], collapse = ", ")
+            toReport[[2]] <- paste(cantGet[["packageFullName"]], collapse = comma)
           }
-          messageVerbose("Could not find a binary of ", # paste(cantGet, collapse = ", "),
+          messageVerbose("Could not find a binary of ", # paste(cantGet, collapse = comma),
                          unlist(toReport, recursive = FALSE),
                          "\nfor R ", rver, " on RSPM; ",
                          "trying source archives",
@@ -1115,6 +1118,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 
   pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
   numToDownload <- NROW(pkgInstallList[["noLocal"]])
+
   if (NROW(pkgNeedInternet)) {
     pkgNeedInternet <- split(pkgNeedInternet, by = "repoLocation")
 
@@ -1243,8 +1247,22 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       pkgCRAN <- pkgNoLocal[["CRAN"]]
     }
     if (NROW(pkgCRAN)) {
-      pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
-      pkgCRAN[, localFile := useRepository]
+
+      if (getOption("Require.installPackagesSys") == 2) {
+        args <- list(repos = repos, type = type,
+                                 pkgs = pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE],
+                                 destdir = RequirePkgCacheDir())
+        if (isWindows() && identical(args$type, "both"))
+          args$type <- "binary"
+        dt <- downloadSys(args, verbose = verbose)
+
+        pkgCRAN[dt, localFile := i.localFile, on = "Package"]
+        pkgCRAN[availableVersionOK %in% TRUE, installFrom := "Local"]
+      } else {
+        pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
+        pkgCRAN[, localFile := useRepository]
+      }
+
     }
   }
   pkgNoLocal # pkgCRAN is already in this because it was a pointer
@@ -1271,7 +1289,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
         fe <- file.exists(tf)
         if (any(fe)) {
           messageVerbose(
-            blue("  -- ", unique(paste(pkgArchiveHasPU$`TRUE`[["packageFullName"]][fe], collapse = ", ")), " ",
+            blue("  -- ", unique(paste(pkgArchiveHasPU$`TRUE`[["packageFullName"]][fe], collapse = comma)), " ",
                  isAre(l = pkgArchiveHasPU$`TRUE`[["packageFullName"]][fe]),
                  " not on CRAN; have local cached copy"),
             verbose = verbose, verboseLevel = 1
@@ -1285,30 +1303,56 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
         whNotfe <- which(fe %in% FALSE)
         if (any(!fe)) {
           messageVerbose(
-            blue("  -- ", unique(paste(pkgArchiveHasPU$`TRUE`[["packageFullName"]][whNotfe], collapse = ", ")), " ",
+            blue("  -- ", unique(paste(pkgArchiveHasPU$`TRUE`[["packageFullName"]][whNotfe], collapse = comma)), " ",
                  isAre(l = pkgArchiveHasPU$`TRUE`[["packageFullName"]][whNotfe]),
                  " not on CRAN; trying Archives"),
             verbose = verbose, verboseLevel = 1
           )
-        }
+          #}
 
-        if (any(pkgArchiveHasPU$`TRUE`[, .N, by = "Package"]$N > 1)) {
-          # keep user supplied repos order, in case there are multiple repos that have the package
-          set(pkgArchiveHasPU$`TRUE`, NULL, "repoOrder", match(pkgArchiveHasPU$`TRUE`$repo, repos))
-          # The na.last are the repositories that didn't have the package in archives; get rid of it
-          setorderv(pkgArchiveHasPU$`TRUE`, c("Package", "repoOrder"), order = c(1L, 1L), na.last = TRUE)
-          pkgArchiveHasPU$`TRUE` <- pkgArchiveHasPU$`TRUE`[, .SD[1], by = "Package"]
-          set(pkgArchiveHasPU$`TRUE`, NULL, "repoOrder", NULL)
-        }
-        # Check RSPM
-        pkgArchiveHasPU$`TRUE` <- downloadRSPM(pkgArchiveHasPU$`TRUE`, install.packagesArgs, verbose)
+          if (any(pkgArchiveHasPU$`TRUE`[, .N, by = "Package"]$N > 1)) {
+            # keep user supplied repos order, in case there are multiple repos that have the package
+            set(pkgArchiveHasPU$`TRUE`, NULL, "repoOrder", match(pkgArchiveHasPU$`TRUE`$repo, repos))
+            # The na.last are the repositories that didn't have the package in archives; get rid of it
+            setorderv(pkgArchiveHasPU$`TRUE`, c("Package", "repoOrder"), order = c(1L, 1L), na.last = TRUE)
+            pkgArchiveHasPU$`TRUE` <- pkgArchiveHasPU$`TRUE`[, .SD[1], by = "Package"]
+            set(pkgArchiveHasPU$`TRUE`, NULL, "repoOrder", NULL)
+          }
+          # Check RSPM
+          pkgArchiveHasPU$`TRUE` <- downloadRSPM(pkgArchiveHasPU$`TRUE`, install.packagesArgs, verbose)
 
-        if (any(pkgArchiveHasPU$`TRUE`$repoLocation %in% "Archive" &
-                pkgArchiveHasPU$`TRUE`$availableVersionOK %in% TRUE)) {
-          pkgArchiveHasPU$`TRUE` <- split(pkgArchiveHasPU$`TRUE`, pkgArchiveHasPU$`TRUE`[["repoLocation"]])
-          pkgArchOnly <- pkgArchiveHasPU$`TRUE`[["Archive"]]
-          pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
-          pkgArchOnly[whNotfe, localFile := useRepository]
+          if (any(pkgArchiveHasPU$`TRUE`$repoLocation %in% "Archive" &
+                  pkgArchiveHasPU$`TRUE`$availableVersionOK %in% TRUE)) {
+            pkgArchiveHasPU$`TRUE` <- split(pkgArchiveHasPU$`TRUE`, pkgArchiveHasPU$`TRUE`[["repoLocation"]])
+            pkgArchOnly <- pkgArchiveHasPU$`TRUE`[["Archive"]]
+
+            if (getOption("Require.installPackagesSys") == 2) {
+              # args <- argsOrig <- list(repos = repos, type = type,
+              #                          pkgs = pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE],
+              #                          destdir = RequirePkgCacheDir())
+
+              # "outfile <- do.call(download.file, args)"
+              # whNotfe <- which(fe %in% FALSE)
+              pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive")]
+              url <- if (any(grepl(pkgArchOnly$repo, pkgArchOnly$PackageUrl)))
+                pkgArchOnly$PackageUrl
+              else
+                file.path(pkgArchOnly$Repository, pkgArchOnly$PackageUrl)
+              args <- list(url = url, destfile = file.path(RequirePkgCacheDir(), basename(url)))
+
+              dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
+                                doLine = "outfiles <- do.call(download.file, args)",
+                                verbose = verbose)
+              pkgArchOnly[dt, localFile := i.localFile, on = "Package"]
+              pkgArchOnly[whNotfe, installFrom := "Local"]
+
+            } else {
+              pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
+              pkgArchOnly[whNotfe, localFile := useRepository]
+
+            }
+
+          }
         }
         pkgArchiveHasPU$`TRUE` <- rbindlistRecursive(pkgArchiveHasPU$`TRUE`)
         pkgArchive <- rbindlist(pkgArchiveHasPU, fill = TRUE, use.names = TRUE)
@@ -1357,10 +1401,22 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           set(pkgGHtoDL, NULL, "GitSubFolder", NA_character_)
           needRmGSF <- TRUE
         }
-        pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
-          #  toDL <- .SD[!SHAonGH %in% FALSE]
-          downloadAndBuildToLocalFile(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos)
-        }, by = "Package"]
+
+        if (getOption("Require.installPackagesSys") == 2) {
+          aa <- pkgGHtoDL[!SHAonGH %in% FALSE]
+          args <- list(Account = aa$Account, Repo = aa$Repo, Branch = aa$Branch,
+                       GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa$Package,
+                       VersionOnRepos = aa$VersionOnRepos)
+          splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
+          dt <- downloadSys(args, splitOn = splitOn,
+                      "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
+          pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
+          pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := "Local"]
+        } else {
+          pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
+            downloadAndBuildToLocalFile(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos)
+          }, by = "Package"]
+        }
 
         empty <- !nzchar(pkgGHtoDL[!SHAonGH %in% FALSE]$localFile)
         if (any(empty))
@@ -1717,7 +1773,7 @@ addNamesToPackageFullName <- function(packageFullName, Package) {
 messageDownload <- function(pkgDT, numToDownload, fromWhere) {
   paste0(blue(
     " -- downloading ", numToDownload, " packages from ", fromWhere,
-    ": ", paste(pkgDT[["Package"]], collapse = ", "), " --"
+    ": ", paste(pkgDT[["Package"]], collapse = comma), " --"
   ))
 }
 
@@ -1732,7 +1788,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     # timeLeftAlt <- if (lotsOfTimeLeft) format(timeLeft, units = "auto", digits = 1) else "..."
     # estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
     pkgToReport <- paste(preparePkgNameToReport(toInstall[["Package"]], toInstall[["packageFullName"]]),
-                         collapse = ", ")
+                         collapse = comma)
     Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
     pkgToReportBySource <- split(toInstall[["Package"]], Source)
     pkgFullNameToReportBySource <- split(toInstall[["packageFullName"]], Source)
@@ -1747,7 +1803,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
         if (type %in% .txtGitHub) {
           pp <- pkgFullNameToReportBySource[[type]]
         }
-        messageVerbose(get(colr)("  -- ", type, ": ", paste(pp, collapse = ", ")),
+        messageVerbose(get(colr)("  -- ", type, ": ", paste(pp, collapse = comma)),
                        verbose = verbose
         )
       }
@@ -1811,7 +1867,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       names(deps)[pkgHasNameDiffrntThanRepo] <- toInstall[Package %in% pkgsNotInAP][["Package"]][pkgHasNameDiffrntThanRepo]
     }
     deps2 <- unlist(Map(dep = deps, nam = names(deps), function(dep, nam) {
-      paste(setdiff(extractPkgName(dep), extractPkgName(nam)), collapse = ", ")
+      paste(setdiff(extractPkgName(dep), extractPkgName(nam)), collapse = comma)
     })) # -1 is "drop self"
     ap3[match(extractPkgName(names(deps2)), ap3[, "Package"]), "Imports"] <- deps2
     ap3[, "Suggests"] <- NA
@@ -2697,16 +2753,16 @@ updateReposForSrcPkgs <- function(pkgInstall) {
       #   nams <- pkgInstall[needSwitchToSrc][["Package"]]
       #   warning(
       #     "The CRAN repository is a binary repository. However, ",
-      #     paste(nams, collapse = ", "), isAre(nams), " identified in `sourcePkgs()`, ",
+      #     paste(nams, collapse = comma), isAre(nams), " identified in `sourcePkgs()`, ",
       #     " indicating installation from source; if these source installs fail, try changing ",
       #     "to set \noptions(Require.otherPkgs = c('",
       #     paste(setdiff(getOption("Require.otherPkgs"), nams), collapse = "', '"), "'))",
-      #     "\nremoving ", paste(nams, collapse = ", ")
+      #     "\nremoving ", paste(nams, collapse = comma)
       #   )
       # }
       if (all(isBinaryCRANRepo(getOption("repos")))) {
         warning(
-          paste(pkgInstall[needSwitchToSrc][["Package"]], collapse = ", "), " is identified in `sourcePkgs()`, ",
+          paste(pkgInstall[needSwitchToSrc][["Package"]], collapse = comma), " is identified in `sourcePkgs()`, ",
           "indicating it should normally be installed from source; however, there is no source CRAN repository.",
           "Please add one to the `options(repos)`, e.g., with ",
           "options(repos = c(getOption('repos'), CRAN = 'https://cloud.r-project.org')).",
@@ -3026,7 +3082,7 @@ clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
   if (length(canClone)) {
     messageVerbose(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
                          ") instead of Installing (don't need compiling): ",
-                         paste(sort(canClone), collapse = ", ")), verbose = verbose)
+                         paste(sort(canClone), collapse = comma)), verbose = verbose)
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1], ip = ip)
     ipa$pkgs <- names(cantClone)
@@ -3376,4 +3432,99 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 
   }
   pkgInstall
+}
+
+
+
+
+downloadSys <- function(args, splitOn = "pkgs",
+                                doLine = "outfiles <- do.call(download.packages, args)",
+                                returnOutfile = FALSE, verbose) {
+  downPack <- grepl("download.packages", doLine)
+  downFile <- grepl("download.file", doLine)
+  downOther <- downPack %in% FALSE & downFile %in% FALSE
+  argsOrig <- args
+  vec <- seq_along(argsOrig[[splitOn[1]]])
+  chunk2 <- function(x,n) {
+    if (n == 1)
+      list(1)
+    else
+      split(x, cut(seq_along(x), n, labels = FALSE))
+  }
+  vecList <- chunk2(vec, min(length(args[[splitOn[1]]]), min(8, getOption("Ncpus"))))
+
+  pids <- numeric(length(vecList))
+  outfiles <- lapply(pids, function(i) {
+    fn1 <- tempfile(fileext = ".rds")
+    normalizePath(fn1, winslash = "/", mustWork = FALSE)
+  })
+
+  for (j in seq_along(vecList)) {
+    i <- vecList[[j]]
+    fn <- tempfile(fileext = ".rds")
+    fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+
+    for (jjj in splitOn)
+    args[[jjj]] <- argsOrig[[jjj]][i]
+    # args$available <- argsOrig$available[i, , drop = FALSE]
+    saveRDS(args, file = fn)
+
+    o <- options()[c('HTTPUserAgent', 'Ncpus')]
+    tf <- tempfile(fileext = ".rds")
+    tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
+    saveRDS(o, file = tf)
+
+    ar <- c(paste0("o <- readRDS('",tf,"')"),
+            "options(o)",
+            # ar <- c(
+            paste0("args <- readRDS('", fn, "')"),
+            doLine,
+            # "outfiles <- do.call(download.packages, args)",
+            paste0("saveRDS(outfiles, '",outfiles[j],"')"))
+
+    cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+    if (downPack) {
+      mess <- paste(args$pkgs, collapse = comma)
+    } else if (downFile) {
+      mess <- paste(extractPkgName(filenames = basename(args$url)), collapse = comma)
+    } else {
+      mess <- paste0(args$Account, "/", args$Repo, "@", args$Branch)
+    }
+    messageVerbose(greyLight(paste0("Downloading: ", mess)), verbose = verbose)
+    pids[j] <- sys::exec_background(
+      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+      std_out = verbose >= 2,
+      std_err = verbose >= 2
+    )
+  }
+
+  on.exit(sapply(pids, tools::pskill))
+  for (pid in pids) {
+    sys::exec_status(pid, wait = TRUE)
+    whPid <- match(pid, pids)
+    if (downPack) {
+      mess <- paste(argsOrig$pkgs[vecList[[whPid]]], collapse = comma)
+    } else if (downFile) {
+      mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
+    } else {
+      w <- vecList[[whPid]]
+      mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch, collapse = comma)
+    }
+    messageVerbose(paste0("  Downloaded: ", mess), verbose = verbose)
+
+  }
+
+  if (downPack || !downFile) {
+    ll <- lapply(outfiles, readRDS)
+    if (downPack)
+      dt <- as.data.table(do.call(rbind, ll))
+    else
+      dt <- as.data.table(cbind(Package = argsOrig$Package, do.call(rbind, ll)))
+    setnames(dt, new = c("Package", "localFile"))
+  } else if (downFile) {
+    dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
+         localFile = argsOrig$destfile) |> setDT()
+  }
+
+  dt
 }

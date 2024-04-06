@@ -197,6 +197,29 @@ test_that("test 3", {
     ipAfter <- installed.packages(lib.loc = .libPaths()[1], noCache = TRUE)
   }
 
+  if (FALSE) { # benchmark pak and Require
+    setLinuxBinaryRepo()
+    #clearRequirePackageCache(ask = F)
+    options(Require.installPackagesSys = 2, Require.cloneFrom = Sys.getenv("R_LIBS_USER"))
+    pkgsKeep <- c('rlang', "R6", "cli", "withr", "magrittr")
+    Install(pkgsKeep)
+    pkgload::load_all()
+    pkgs <- c("PredictiveEcology/fpCompare", "rlang", "purrr", "ggplot2")
+    a <- pkgDep(pkgs)
+    microbenchmark::microbenchmark(Require = {
+      try(remove.packages(setdiff(extractPkgName(unname(unlist(a))), pkgsKeep)))
+      clearRequirePackageCache(ask = F)
+      Install(pkgs)
+    }, pak = {
+      try(remove.packages(setdiff(extractPkgName(unname(unlist(a))), pkgsKeep)))
+      pak::cache_clean()
+      pak::pkg_install(pkgs)
+    }, times = 4)
+    #      min        lq      mean   median       uq      max neval
+    #13.759182 13.873962 13.999130 13.98874 14.11910 14.24947     3
+    # 7.367775  8.914831  9.495963 10.46189 10.56006 10.65823     3
+  }
+
   ooo <- options(Require.RPackageCache = NULL)
   testthat::expect_true(identical(getOptionRPackageCache(), NULL))
   options(ooo)

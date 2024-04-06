@@ -337,7 +337,7 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
     recursiveHere <- FALSE
     set(pkgDT, NULL, "ord", seq(NROW(pkgDT)))
     pkgDTCached <- splitKeepOrderAndDTIntegrity(pkgDT, pkgDT[[cached(recursiveHere)]])
-    messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = ", "),
+    messageVerbose("Not in Cache: ", paste(unique(pkgDTCached[["FALSE"]]$Package), collapse = comma),
                    verbose = verbose, verboseLevel = 3)
     whichCatRecursive <- whichCatRecursive(which, recursiveHere)
     isGH <- !is.na(pkgDTCached[["FALSE"]]$githubPkgName)
@@ -406,7 +406,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
     dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
     pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
     num <- NROW(pkgDTList$Archive$Package)
-    messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = ", "), " ",
+    messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
                    hasHave(v = num), " been archived ... ", verbose = verbose)
     pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, verbose, purge = FALSE)
     wcr <- whichCatRecursive(which, recursive = FALSE)
@@ -415,7 +415,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
     didntFindOnArchives <- is.na(pkgDTList[["Archive"]]$DESCFileFull)
     if (any(didntFindOnArchives)) {
       messageVerbose(red("   Did not find archives of: ",
-                     paste(pkgDTList[["Archive"]]$packageFullName[didntFindOnArchives], collapse = ", "),
+                     paste(pkgDTList[["Archive"]]$packageFullName[didntFindOnArchives], collapse = comma),
                      "\n   --> Maybe version misspecified or were they installed locally?"))
 
     }
@@ -894,7 +894,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
       which = which, keepSeparate = TRUE)
     names(deps) <- pkgDTList$Archive$packageFullName[gotDESC]
     deps <- lapply(deps, function(x) {
-      unlist(lapply(x, function(y) paste(y, collapse = ", ")))
+      unlist(lapply(x, function(y) paste(y, collapse = comma)))
     })
     deps <- do.call(rbind, deps)
     # deps <- invertList(deps)
@@ -908,12 +908,13 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
 
 installed.packagesDeps <- function(ip, which) {
   if (missing(ip))
-    ip <- .installed.pkgs()
+    ip <- .installed.pkgs(which = which)
 
   if (!is.data.table(ip))
     ip <- as.data.table(ip)
 
-  ip[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+  ip[, deps := do.call(paste, append(.SD, list(sep = comma))), .SDcols=which] |>
+    try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
 
   # remove trailing and initial commas
   set(ip, NULL, "deps", gsub("(, )+$", "", ip$deps))

@@ -51,7 +51,7 @@ setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.fra
     verboseLevel = 0
   )
   messageVerbose(blue(" getOption('repos'): ",
-    paste(getOption("repos"), collapse = ", ")),
+    paste(getOption("repos"), collapse = comma)),
     verboseLevel = 0
   )
   return(#list(startTime = startTime, # thisFilename = thisFilename,

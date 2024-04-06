@@ -99,7 +99,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
 
   environment(shim_fun) <- shim_env
   shim_fun(unique(libPaths))
-  message(".libPaths() is now: ", paste(.libPaths(), collapse = ", "))
+  message(".libPaths() is now: ", paste(.libPaths(), collapse = comma))
   return(invisible(oldLibPaths))
 }
 
@@ -143,7 +143,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
           " # DO NOT EDIT BETWEEN THESE LINES"
         ),
         "### DELETE THESE LINES BELOW TO RESTORE STANDARD R Package LIBRARY",
-        paste0("### ", prevLibPathsText, paste(.libPaths(), collapse = ", ")),
+        paste0("### ", prevLibPathsText, paste(.libPaths(), collapse = comma)),
         paste0("._libPaths <- c('", paste(libPaths, collapse = "', '"), "')"),
         paste0("._standAlone <- ", standAlone),
         bodyFn,

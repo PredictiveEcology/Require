@@ -19,7 +19,7 @@ test_that("test 1", {
     is.character(repos)
   })
   testthat::expect_true({
-    nchar(repos) > 0
+    all(nchar(repos) > 0) # may have binary also
   })
 
   # # cannot open file 'startup.Rs': No such file or directory
