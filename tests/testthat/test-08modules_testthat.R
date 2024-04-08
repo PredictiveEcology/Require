@@ -96,7 +96,7 @@ test_that("test 5", {
 
 
     modulePkgs <- c("archive", "assertthat", "compiler", "crayon", "data.table",
-                    "DEoptim", "dplyr", "fastdigest", "fastDummies", "fasterize",
+                    "DEoptim", "dplyr", "fastdigest", "fastDummies", # "fasterize",
                     "fpCompare", "future", "gamlss", "gdalUtilities", "ggforce",
                     "ggplot2", "ggpubr", "ggspatial", "glmm", "grid", "gridExtra",
                     "ianmseddy/LandR.CS@development", "ianmseddy/LandR.CS@master (>= 0.0.2.0002)",

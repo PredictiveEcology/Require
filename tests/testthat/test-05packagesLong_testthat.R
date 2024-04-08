@@ -117,6 +117,7 @@ test_that("test 5", {
         pkgs <- list(
       c(
         "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.4.3)",
+        "SpaDES.tools (>=2.0.5)", "terra (>=1.7-71)",
         "reproducible (>=2.0.2)", "PredictiveEcology/reproducible@development (>=2.0.0)", # Until reproducible 2.0.2 is on CRAN
         "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
         "PredictiveEcology/LandR@development (>=0.0.2)", "ianmseddy/LandR.CS (<=0.0.1)"
@@ -186,6 +187,7 @@ test_that("test 5", {
       # if (i == 11) ._Require_0 <<- 1
       pkg <- omitPkgsTemporarily(pkg)
 
+      browser()
       (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |>
         capture_warnings() -> warns
 

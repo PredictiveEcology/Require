@@ -284,6 +284,7 @@ Require <- function(packages,
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   suppressMessages({
     origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
+    on.exit(setLibPaths(origLibPaths), add = TRUE)
   })
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
@@ -515,6 +516,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstall <- rmPackageFirst(toInstall, verbose)
   }
 
+  # for (i in 1:2) {
   (ap <- availablePackagesOverride(toInstall, repos, purge, type = type) )
 
   if (is(ap, "try-error")) {
@@ -527,8 +529,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   #  This means that we can't get parallel installs for GitHub or Cache
   install.packagesArgs <- modifyList2(install.packagesArgs, list(destdir = NULL), keep.null = TRUE)
   ipa <- modifyList2(install.packagesArgs,
-    list(pkgs = toInstall[["Package"]], available = ap, type = type, dependencies = FALSE),
-    keep.null = TRUE
+                     list(pkgs = toInstall[["Package"]], available = ap, type = type, dependencies = FALSE),
+                     keep.null = TRUE
   )
 
   rcf <- getOption("Require.cloneFrom")
@@ -537,25 +539,19 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   }
 
   if (NROW(ipa$available)) {
-
     ipa$destdir <- tmpdir
-    # debug(utils:::.install.winbinary)
-    # on.exit(undebug(utils:::.install.winbinary))
-    # tryCatch(
-      toInstallOut <- withCallingHandlers(
-        installPackagesWithQuiet(ipa, verbose = verbose),
-        warning = function(w) {
-          messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
-          invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
-        }
-      )#,
-    #   error = function(e) {
-    #     # If this is erroring here, it is possible that the cached version should be deleted,
-    #     #   but it is hard to know which package it is that breaks
-    #     if (identical(Sys.info()[["user"]], "emcintir"))
-    #       browser()
-    #   }
-    # )
+    on.exit({
+      logFile <- if (exists("toInstallOut", inherits = FALSE)) toInstallOut else NULL
+      rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
+    },
+    add = TRUE)
+    toInstallOut <- withCallingHandlers(
+      installPackagesWithQuiet(ipa, verbose = verbose),
+      warning = function(w) {
+        messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
+        invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
+      }
+    )
   }
   toInstall
 }
@@ -563,8 +559,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        type = getOption("pkgType"), returnDetails, verbose) {
   tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
-  origDir <- setwd(tmpdir)
-  on.exit(setwd(origDir))
 
   pkgDTList <- split(pkgDT, by = c("needInstall"))
   if (NROW(pkgDTList[[.txtInstall]])) {
@@ -579,6 +573,8 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       },
       add = TRUE
     )
+    origDir <- setwd(tmpdir)
+    on.exit(setwd(origDir), add = TRUE)
 
     # if (identical(pkgDT$packageFullName, "achubaty/fpCompare (>=2.0.0)")) browser()
 
@@ -600,6 +596,10 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       pkgInstall <- pkgInstallList[[.txtInstall]]
       if (!is.null(pkgInstallList[[noneAvailable]])) {
         messageVerbose(messageCantInstallNoVersion(pkgInstallList[[noneAvailable]][["packageFullName"]]),
+                       verbose = verbose, verboseLevel = 1)
+      }
+      if (!is.null(pkgInstallList[[.txtShaUnchangedNoInstall]])) {
+        messageVerbose(.txtShaUnchangedNoInstall, ": ", pkgInstallList[[.txtShaUnchangedNoInstall]][["packageFullName"]],
                        verbose = verbose, verboseLevel = 1)
       }
 
@@ -694,9 +694,6 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
     earliestDateOnRSPM <- as.Date(gsub(" .*", "", toIn$dayAfterPutOnCRAN))
     latestDateOnRSPM <- pmin(.latestRSPMDate, as.Date(gsub(" .*", "", toIn$dayBeforeTakenOffCRAN)))
 
-    # isWinOrMac <- unname(isWindows() | isMacOSX())
-    # if (isWinOrMac) {
-    # Get rversions that were live at that time
     packageVersionTooOldForThisR <- unlist(lapply(latestDateOnRSPM, function(ldom) {
       a <- rversionHistory[(as.Date(date) - 200) <= ldom][.N] # CRAN builds packages for R-devel which is before release; picked 200 days here.
       isTRUE(package_version(a$version) <= rver) # if latestDateOnRSPM is NA because asking for a "future" version of package
@@ -704,11 +701,12 @@ downloadRSPM <- function(toInstall, install.packagesArgs, verbose) {
 
     packageVersionOnRSPM <- earliestDateOnRSPM > .earliestRSPMDate
     if (any(packageVersionTooOldForThisR)) {
-      messageVerbose(
-        paste(toInstall[["packageFullName"]][packageVersionTooOldForThisR], collapse = comma),
-        " will not have binary versions on RSPM because this version of R",
-        " was not yet available"
-      )
+      if (isTRUE(any(isBinaryCRANRepo(getOption("repos")))))
+        messageVerbose(
+          paste(toInstall[["packageFullName"]][packageVersionTooOldForThisR], collapse = comma),
+          " *may* not have binary versions on binary CRAN mirror because this version of R",
+          " was not yet available"
+        )
     }
     earliestDateOnRSPM[!packageVersionOnRSPM] <- as.Date(.earliestRSPMDate) + 10
     onRSPM <- earliestDateOnRSPM > .earliestRSPMDate # & isWinOrMac
@@ -1133,12 +1131,25 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       pkgNeedInternet, repos, purge = purge, install.packagesArgs,
       numToDownload, verbose = verbose - 1
     )
+    if (!is.null(pkgNeedInternet$Archive))
+      pkgNeedInternet$Archive[nchar(localFile) == 0 | is.na(localFile), needInstall := noneAvailable]
+
+
+    # notInArchiveEither <- is.na(pkgNeedInternet$Archive$PackageUrl)
+    # if (isTRUE(any(notInArchiveEither))) {
+    #   pkgNeedInternet$Archive[notInArchiveEither] # noneAvailable
+    # }
+
 
     # GitHub
     pkgNeedInternet <- downloadGitHub(
       pkgNeedInternet, libPaths, verbose, install.packagesArgs,
       numToDownload
     )
+    if (!is.null(pkgNeedInternet$GitHub)) {
+      pkgNeedInternet$GitHub[SHAonGH == SHAonLocal, needInstall := .txtShaUnchangedNoInstall]
+      pkgNeedInternet$GitHub[(nchar(localFile) == 0 | is.na(localFile)), needInstall := noneAvailable]
+    }
 
     pkgInstallList[["noLocal"]] <- pkgNeedInternet # pointer
   }
@@ -1159,7 +1170,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   #
   # }
 
-  pkgInstall[nchar(localFile) == 0, needInstall := noneAvailable]
+  # browser()
+  # pkgInstall[nchar(localFile) == 0, needInstall := noneAvailable]
   pkgInstall
 }
 
@@ -1258,6 +1270,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
 
         pkgCRAN[dt, localFile := i.localFile, on = "Package"]
         pkgCRAN[availableVersionOK %in% TRUE, installFrom := "Local"]
+        pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
       } else {
         pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
         pkgCRAN[, localFile := useRepository]
@@ -1334,7 +1347,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
               # "outfile <- do.call(download.file, args)"
               # whNotfe <- which(fe %in% FALSE)
               pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive")]
-              url <- if (any(grepl(pkgArchOnly$repo, pkgArchOnly$PackageUrl)))
+              url <- if (any(grepl(unique(pkgArchOnly$repo), pkgArchOnly$PackageUrl)))
                 pkgArchOnly$PackageUrl
               else
                 file.path(pkgArchOnly$Repository, pkgArchOnly$PackageUrl)
@@ -1345,6 +1358,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
                                 verbose = verbose)
               pkgArchOnly[dt, localFile := i.localFile, on = "Package"]
               pkgArchOnly[whNotfe, installFrom := "Local"]
+              pkgArchOnly[whNotfe, newLocalFile := TRUE]
 
             } else {
               pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
@@ -1412,6 +1426,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                       "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := "Local"]
+          pkgGHtoDL[!SHAonGH %in% FALSE, newLocalFile := TRUE]
         } else {
           pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
             downloadAndBuildToLocalFile(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos)
@@ -1790,6 +1805,9 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     pkgToReport <- paste(preparePkgNameToReport(toInstall[["Package"]], toInstall[["packageFullName"]]),
                          collapse = comma)
     Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
+    if (!is.null(toInstall[["newLocalFile"]])) {
+      Source <- ifelse(toInstall[["newLocalFile"]] %in% TRUE, toInstall$repoLocation, toInstall[["installFrom"]])
+    }
     pkgToReportBySource <- split(toInstall[["Package"]], Source)
     pkgFullNameToReportBySource <- split(toInstall[["packageFullName"]], Source)
     installRangeCh <- paste(installRange, collapse = ":")
@@ -1890,9 +1908,12 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     ap <- apOrig[whUpdate, , drop = FALSE]
     isNA <- is.na(toInstallList[[i]][["VersionOnRepos"]])
     if (any(isNA)) {
-      whUseRepository <- !toInstallList[[i]][isNA]$localFile %in% useRepository
+      whUseRepository <- !toInstallList[[i]][isNA]$localFile %in% useRepository &
+        !is.na(toInstallList[[i]][isNA]$localFile)
       if (any(whUseRepository)) {
-        ap[isNA, "Version"] <- extractVersionNumber(filenames = toInstallList[[i]][isNA][whUseRepository]$localFile)
+        evn <- extractVersionNumber(filenames = toInstallList[[i]][isNA][whUseRepository]$localFile) #|>
+        # try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+        ap[isNA, "Version"] <- evn
       }
     }
     if (any(!isNA)) {
@@ -2972,7 +2993,6 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
     messageVerbose("Trying to rebuild and install GitHub build fails... ", verbose = verbose)
     pkgInstall[which(needRebuild), needRebuild := repoLocation]
     pkgInstallList <- split(pkgInstall, by = "needRebuild")
-    # browser()
     # names(pkgInstallList) <- c("No", .txtGitHub)
     pkgInstallList <- downloadGitHub(pkgInstallList, libPaths, verbose, install.packagesArgs)
     maxGroup <- 1
@@ -3007,7 +3027,6 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
   if (isName) {
     packagesTmp2 <- get0(packages2, envir = envir)
     if (is(packagesTmp2, "list")) {
-      # browser()
       kk <- lapply(packagesTmp2, substitutePackages, envir = envir)
     }
     if (is.character(packagesTmp2))
@@ -3022,7 +3041,6 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
       # if (length(packages2) > 1) {
       #   packagesTmp2 <- packages2
       # } else {
-      #   browser()
       #   # packagesTmp2 <- get0(packages2, envir = envir)
       #   # if (is.character(packagesTmp2))
       #   #   packages <- packagesTmp2
@@ -3420,7 +3438,6 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
       #    FALSE is no need installing
       whDontInstall <- which(pkgInstall$keepForUpdate %in% FALSE)
       if (length(whDontInstall)) {
-        # browser()
         # messageVerbose(msgShaNotChanged(pkgInstall$Account, pkgInstall$Repo, pkgInstall$Branch),
         #                # messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
         #                #                ", the SHA1 has not changed from last install",
@@ -3510,7 +3527,8 @@ downloadSys <- function(args, splitOn = "pkgs",
       w <- vecList[[whPid]]
       mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch, collapse = comma)
     }
-    messageVerbose(paste0("  Downloaded: ", mess), verbose = verbose)
+    if (!identical(unique(mess), mess)) browser()
+    messageVerbose(blue(paste0("  Downloaded: ", mess)), verbose = verbose)
 
   }
 
@@ -3523,8 +3541,46 @@ downloadSys <- function(args, splitOn = "pkgs",
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
     dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
-         localFile = argsOrig$destfile) |> setDT()
+               localFile = argsOrig$destfile) |> setDT()
   }
 
   dt
+}
+
+rmErroredPkgInstalls <- function(logFile, toInstall, verbose) {
+  if (is.null(logFile))
+    logFile <- dir(pattern = "\\.log")
+  if (!is.null(logFile)) {
+    if (isTRUE(file.exists(logFile))) {
+      rl <- readLines(logFile)
+      errs <- c("Makefile.+Error 1", "ERROR:")
+      errsGrep <- paste(errs, collapse = "|")
+      anyErrors <- grep(paste("Execution halted", errsGrep, sep = "|"), rl)
+      if (length(anyErrors)) {
+        ERRORLine <- lapply(errs, grep, x = rl, value = TRUE)
+        if (length(unlist(ERRORLine))) {
+          pkgFail1 <- extractPkgNameFromWarning(ERRORLine[[2]])
+          rmFiles <- character()
+          if (length(pkgFail1)) {
+            DONELines <- grep("\\* DONE \\(", rl, value = TRUE)
+            pkgSucceed <- gsub("\\* DONE \\((.+)\\)", "\\1", DONELines)
+            # ipa$pkgs <- setdiff(ipa$pkgs, pkgSucceed)
+            # ipa$available <- ipa$available[!ipa$available[, "Package"] %in% pkgSucceed, , drop = FALSE]
+            toInstall2 <- toInstall[!toInstall[["Package"]] %in% pkgSucceed]
+            rmFiles <- c(rmFiles, toInstall2[["localFile"]], basename(toInstall2[["localFile"]]))
+          }
+          pkgFail2 <- gsub("^.+[[:digit:]]: (.+).ts.+$", "\\1", ERRORLine[[1]])
+          pkgFail2 <- setdiff(pkgFail2, pkgFail1)
+          if (length(pkgFail2)) {
+            toInstall2 <- toInstall[toInstall[["Package"]] %in% pkgFail2]
+            rmFiles <- c(rmFiles, toInstall2[["localFile"]], basename(toInstall2[["localFile"]]))
+          }
+
+          messageVerbose("Because of ERROR, removing Cached copy of ", paste(toInstall2[["packageFullName"]], collapse = ", "),
+                         verbose = verbose)
+          unlink(rmFiles)
+        }
+      }
+    }
+  }
 }

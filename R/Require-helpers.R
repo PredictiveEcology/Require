@@ -1297,7 +1297,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
                 paste0("args <- readRDS('", fn, "')"),
                 "do.call(install.packages, args)")
         cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-        logFile <- tempfile2(fileext = ".log")
+        logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
         pids[j] <- sys::exec_background(
           Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
           std_out = verbose >= 1,
@@ -1333,12 +1333,8 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
             "do.call(install.packages, args)")
 
     cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-    logFile <- tempfile2(fileext = ".log")
-    # browser()
-    # tmp <- tempfile()
-    # writeLines(cmdLine[c(2,4,6)], con = tmp)
-    # r_wait(std_in = tmp)
-    # pid <- sys::r_wait(std_in = tmp,
+    logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+
     pid <- sys::exec_wait(
       Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
       std_out = function(x) {
@@ -1352,7 +1348,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
     )
     tools::pskill(pid)
   }
-
+  return(logFile)
 }
 
 
@@ -1651,7 +1647,8 @@ extractPkgNameFromWarning <- function(x) {
     })
     out <- unlist(out)
   } else {
-    out <- gsub(".+\u2018(.+)_.+\u2019.+", "\\1", x) # those two escape characters are the inverted commas
+    out <- gsub(".+\u2018(.+)_.+\u2019.*", "\\1", x) # those two escape characters are the inverted commas
+    out <- gsub(".+\u2018(.+)\u2019.*", "\\1", out)
     out <- gsub("^.+\\'(.+)\\'.+$", "\\1", out)
     out <- gsub(".+\u2018(.+)\u2019.+", "\\1", out) # package XXX is in use and will not be installed
   }
@@ -1663,7 +1660,7 @@ availablePackagesCachedPath <- function(repos, type) {
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {
-  if (getOption("Require.installPackagesSys", 0L) &&
+  if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){#} && !isRstudioServer()) {
     ipa$libPaths <- .libPaths()[1]
     installPackagesSys(ipa, verbose = verbose)
