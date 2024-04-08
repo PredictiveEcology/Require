@@ -53,7 +53,7 @@ if (Sys.info()["user"] %in% "emcintir") {
     Ncpus = 8,
     repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
-    Require.installPackagesSys = isDevAndInteractive * 0,
+    Require.installPackagesSys = isDevAndInteractive * 2,
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
