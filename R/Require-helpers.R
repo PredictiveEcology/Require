@@ -649,7 +649,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
 
   if (length(dontTryExtra)) {
     messageVerbose("some packages don't seem to unload their dlls correctly. ",
-      "These will not be unloaded: ", paste(dontTryExtra, collapse = ", "),
+      "These will not be unloaded: ", paste(dontTryExtra, collapse = comma),
       verbose = verbose, verboseLevel = 2
     )
     dontTry <- c(dontTry, dontTryExtra)
@@ -704,7 +704,7 @@ warningCantInstall <- function(pkgs) {
   warning(
     "Can't install ", pkgs, "; you will likely need to restart R and run:\n",
     "-----\n",
-    "install.packages(c('", paste(pkgs, collapse = ", "), "'), lib = '", .libPaths()[1], "')",
+    "install.packages(c('", paste(pkgs, collapse = comma), "'), lib = '", .libPaths()[1], "')",
     "\n-----\n...before any other packages get loaded"
   )
 }
@@ -1271,7 +1271,7 @@ stripHTTPAddress <- function(addr) {
 installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   libPaths <- args$libPaths
   args$libPaths <- NULL
-  if (getOption("Require.installPackagesSys", FALSE) == 2L && isWindows()) {
+  if (getOption("Require.installPackagesSys", FALSE) == 3L && isWindows()) {
     argsOrig <- args
 
     # for (i in 1:10) {
@@ -1393,7 +1393,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
 #   #                      opts2[!hasName], ", ",
 #   #                      paste(names(opts2)[hasName],
 #   #                            sep = " = ", opts2[hasName],
-#   #                            collapse = ", "
+#   #                            collapse = comma
 #   #                      ), "))"
 #   #                    ))
 #   localCall2 <- paste("install.packages(",
@@ -1401,7 +1401,7 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
 #                        opts2[!hasName], ", ",
 #                        paste(names(opts2)[hasName],
 #                              sep = " = ", opts2[hasName],
-#                              collapse = ", "
+#                              collapse = comma
 #                        ), ")"
 #                      ))
 #   # remoteCall <- paste0(Rpath, " -e \"", localCall2, "\"")

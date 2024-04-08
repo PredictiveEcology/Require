@@ -180,7 +180,7 @@ test_that("test 5", {
     for (pkg in pkgs) {
       # out <- unloadNSRecursive(n = 1)
       i <- i + 1
-      Require:::messageVerbose(paste0("\033[32m", i, ": ", paste0(Require::extractPkgName(pkg), collapse = ", "), "\033[39m"),
+      Require:::messageVerbose(paste0("\033[32m", i, ": ", paste0(Require::extractPkgName(pkg), collapse = comma), "\033[39m"),
                                verboseLevel = 0
       )
       # if (i == 11) ._Require_0 <<- 1
@@ -190,6 +190,7 @@ test_that("test 5", {
         capture_warnings() -> warns
 
       test <- testWarnsInUsePleaseChange(warns)
+      browser()
       expect_true(test)
 
       # Rerun it to get output table, but capture messages for quiet; should be no installs

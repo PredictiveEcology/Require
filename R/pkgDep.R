@@ -84,7 +84,7 @@ pkgDepTopoSort <- function(pkgs,
     names(pkgs) <- pkgs
     if (missing(deps)) {
       aa <- if (isTRUE(reverse)) {
-        ip <- .installed.pkgs()
+        ip <- .installed.pkgs(lib.loc = libPath, which = which)
         ip <- installed.packagesDeps(ip, which)
         deps <- depsWithCommasToVector(ip$Package, ip$deps)
          deps <- lapply(deps, extractPkgName)
@@ -280,7 +280,7 @@ pkgDepTopoSort <- function(pkgs,
 #     for (co in which)
 #       set(pkgDT, which(is.na(pkgDT[[co]])), co, "")
 #
-#     pkgDT[, deps := do.call(paste, append(.SD, list(sep = ", "))), .SDcols=which]
+#     pkgDT[, deps := do.call(paste, append(.SD, list(sep = comma))), .SDcols=which]
 #
 #     # remove trailing and initial commas
 #     set(pkgDT, NULL, "deps", gsub("(, )+$", "", pkgDT$deps))
@@ -467,11 +467,10 @@ whichToDILES <- function(which) {
           names(which) <- which
           deps <- lapply(desc_lines, function(lines) {
             lapply(which, function(wh)
-              paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = ", ")
+              paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = comma)
             )
           })
-          invertList(deps) |>
-          try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+          invertList(deps)
         } else {
           NULL
         }
@@ -1269,7 +1268,7 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
         " (-- The DESCRIPTION file for ",
         pkg,
         " is incomplete; there are missing imports: ",
-        paste(differences, collapse = ", "),
+        paste(differences, collapse = comma),
         " --) ",
         verbose = verbose,
         verboseLevel = 1

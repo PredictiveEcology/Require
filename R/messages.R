@@ -1,12 +1,13 @@
 msgPackageViolation <- "Package version violation detected; installing this"
 msgIsInUse <- "in use and will not be installed"
+comma <- ", "
 
 GitHubMessage <- 0
 
 
 messageCantInstallNoVersion <- function(packagesFullName) {
   turquoise(
-    paste(unique(packagesFullName), collapse = ", "),
+    paste(unique(packagesFullName), collapse = comma),
     " could not be installed; package doesn't exist or the version specification cannot be met"
   )
 }

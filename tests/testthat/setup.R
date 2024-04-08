@@ -9,7 +9,7 @@ isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_I
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
 withr::local_options(.local_envir = teardown_env(),
-                     Require.verbose = ifelse(isDev, 1, -2))
+                     Require.verbose = ifelse(isDev, -2, -2))
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
@@ -44,7 +44,9 @@ if (Sys.info()["user"] == "achubaty") {
 
 if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
-  repos <- c(PPM = positBinaryRepos(), getOption("repos"))
+  repos <- getOption("repos")
+  if (isLinux())
+    repos <- c(PPM = positBinaryRepos(), repos)
   repos <- repos[!duplicated(repos)] # keep names
   withr::local_options(
     .local_envir = teardown_env(), #Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
@@ -55,6 +57,7 @@ if (Sys.info()["user"] %in% "emcintir") {
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
+  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "verbose")])
 }
 
 
