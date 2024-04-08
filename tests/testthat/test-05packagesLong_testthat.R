@@ -187,12 +187,10 @@ test_that("test 5", {
       # if (i == 11) ._Require_0 <<- 1
       pkg <- omitPkgsTemporarily(pkg)
 
-      browser()
       (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |>
         capture_warnings() -> warns
 
       test <- testWarnsInUsePleaseChange(warns)
-      browser()
       expect_true(test)
 
       # Rerun it to get output table, but capture messages for quiet; should be no installs
