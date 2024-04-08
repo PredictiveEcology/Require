@@ -1805,9 +1805,8 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     pkgToReport <- paste(preparePkgNameToReport(toInstall[["Package"]], toInstall[["packageFullName"]]),
                          collapse = comma)
     Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
-    if (!is.null(toInstall[["newCache"]])) {
-      browser()
-      toInstall[["newCache"]] %in% TRUE
+    if (!is.null(toInstall[["newLocalFile"]])) {
+      Source <- ifelse(toInstall[["newLocalFile"]] %in% TRUE, toInstall$repoLocation, toInstall[["installFrom"]])
     }
     pkgToReportBySource <- split(toInstall[["Package"]], Source)
     pkgFullNameToReportBySource <- split(toInstall[["packageFullName"]], Source)

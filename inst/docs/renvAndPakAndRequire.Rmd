@@ -185,6 +185,58 @@ try(pak::local_install_deps("~/GitHub/Edehzhie/"))
 # Type .Last.error to see the more details.
 ```
 
+### Error handling
+
+`pak` uses a different approach to error handling. Sometimes this can be effective. Other times it limits the ability to diagnose errors:
+```{r,eval=FALSE}
+
+# This package is not compiling correctly
+> pak::pkg_install("fasterize")
+✔ Loading metadata database ... done
+                                                                           
+→ Will update 1 package.
+→ Will download 1 CRAN package (732.71 kB).
++ fasterize 1.0.4 → 1.0.5 [bld][cmp][dl] (732.71 kB)
+✔ All system requirements are already installed.
+  
+? Do you want to continue (Y/n) Y
+ℹ Getting 1 pkg (732.71 kB)
+✔ Got fasterize 1.0.5 (source) (732.71 kB)                                
+✔ Downloaded 1 package (732.71 kB) in 726ms                               
+ℹ Building fasterize 1.0.5
+✖ Failed to build fasterize 1.0.5 (30.1s)                        
+Error:                                                           
+! error in pak subprocess
+Caused by error in `stop_task_build(state, worker)`:
+! Failed to build source package fasterize.
+Type .Last.error to see the more details.
+> .Last.error
+<callr_error/rlib_error_3_0/rlib_error/error>
+Error: 
+! error in pak subprocess
+Caused by error in `stop_task_build(state, worker)`:
+! Failed to build source package fasterize.
+---
+Backtrace:
+1. pak::pkg_install("fasterize")
+2. pak:::remote(function(...) get("pkg_install_do_plan", asNamespace("pak"))(...), …
+3. err$throw(res$error)
+---
+Subprocess backtrace:
+ 1. base::withCallingHandlers(cli_message = function(msg) { …
+ 2. get("pkg_install_do_plan", asNamespace("pak"))(...)
+ 3. proposal$install()
+ 4. pkgdepends::install_package_plan(plan, lib = private$library, num_workers = nw, …
+ 5. base::withCallingHandlers({ …
+ 6. pkgdepends:::handle_events(state, events)
+ 7. pkgdepends:::handle_event(state, i)
+ 8. pkgdepends:::stop_task(state, worker)
+ 9. pkgdepends:::stop_task_build(state, worker)
+10. base::throw(pkg_error("Failed to build source package {.pkg {pkg}}.", …
+11. | base::signalCondition(cond)
+12. global (function (e) …
+```
+
 ## renv
 - doesn't install packages that have been removed from CRAN (SpaDES)
 - finds packages that other package dependencies don't find (SpaDES.docs)
