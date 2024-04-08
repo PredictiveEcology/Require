@@ -5,9 +5,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-## Top level principles used in `Require`
+## Principles used in `Require`
 
-It its core, `Require` is intended to be used in continuous workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are so fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
+`Require` is desinged with features that facilitate running R code that is part of a continuous workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
 
 ## How `Require` differs from other approaches
 

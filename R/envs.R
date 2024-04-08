@@ -103,26 +103,6 @@ envPkgDepArchiveDetailsInner <- function() {
 .envPkgName <- ".Require.pkgEnv"
 .envPkgStartTimeName <- "startTime"
 
-.txtGetArchiveDetailsInner <- "getArchiveDetailsInner"
-.txtGetSHAfromGitHub <- "getSHAfromGitHub"
-.txtPkgHasGHP <- "hasGHP"
-.txtInternetExistsTime <- "internetExistsTime"
-
-.txtGitHub <- "GitHub"
-
-.txtGitHubCols <- list()
-.txtGitHubCols$Br <- "Branch"
-.txtGitHubCols$Repo <- "Repo"
-.txtGitHubHasSubFolder <- "hasSubFolder"
-.txtGitHubCols$GSF <- "GitSubFolder"
-.txtGitHubCols$Acct <- "Account"
-
-.txtGitHubParsedCols <- unname(unlist(.txtGitHubCols))
-# .txtGitHubParsedCols <- c(.txt, "Repo", "Branch", "Account")
-
-.txtDontInstall <- "dontInstall"
-.txtInstall <- "install"
-
 
 envPkgDepDepsFilename <- "pkgDepCache.rds"
 

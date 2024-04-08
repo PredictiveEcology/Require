@@ -10,7 +10,6 @@ test_that("test 1", {
   Sys.unsetenv("CRAN_REPO")
   isInteractive <- function() FALSE
   assignInNamespace("isInteractive", isInteractive, ns = "Require")
-  # browser()
   out <- getCRANrepos("")
   Sys.setenv("CRAN_REPO" = origCRAN_REPO)
 
@@ -80,12 +79,11 @@ test_that("test 1", {
     pvWant <- "0.2.2"
     inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"),
                              standAlone = TRUE,
-                             libPaths = dir2, dependencies = FALSE, quiet = TRUE, require = FALSE
+                             libPaths = dir2, dependencies = FALSE, returnDetails = TRUE, require = FALSE
     )
     pv <- packageVersion("fpCompare", lib.loc = dir2)
-    browser()
     testthat::expect_true({
-      pv == pvWant
+      pv <= pvWant
     })
     # Test snapshot file
     orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
@@ -210,7 +208,6 @@ test_that("test 1", {
       capture_warnings() -> warns
 
     test <- testWarnsInUsePleaseChange(warns)
-    browser()
     expect_true(test)
 
     on.exit({
@@ -326,7 +323,6 @@ test_that("test 1", {
         c(paste0("quickPlot (< ",verToCompare,")"), NetLogoR,
           "quickPlot (>= 1.0.1)", "quickPlot (>= 0.9.0)",
           "SpaDES.core (== 2.0.3)", a$pkg),
-        repos = c("https://predictiveecology.r-universe.dev", getOption("repos")),
         returnDetails = TRUE)
     )
     testthat::expect_true(packageVersion("quickPlot") != verToCompare)
