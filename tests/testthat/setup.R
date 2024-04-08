@@ -49,7 +49,8 @@ if (Sys.info()["user"] %in% "emcintir") {
     repos <- c(PPM = positBinaryRepos(), repos)
   repos <- repos[!duplicated(repos)] # keep names
   withr::local_options(
-    .local_envir = teardown_env(), #Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
+    .local_envir = teardown_env(),
+    Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
     Ncpus = 8,
     repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
@@ -57,7 +58,7 @@ if (Sys.info()["user"] %in% "emcintir") {
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
-  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "verbose")])
+  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom")])
 }
 
 
