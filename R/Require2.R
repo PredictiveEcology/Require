@@ -284,6 +284,7 @@ Require <- function(packages,
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   suppressMessages({
     origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
+    on.exit(setLibPaths(origLibPaths), add = TRUE)
   })
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
