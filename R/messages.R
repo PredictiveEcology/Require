@@ -139,7 +139,7 @@ msgStdOut <- function(mess, logFile, verbose) {
     }
   }
   if (length(mess))
-      messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
+      messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
 
 }
 
@@ -245,7 +245,7 @@ msgStdErr <- function(mess, logFile, verbose) {
     }
   }
   if (length(mess)) {
-    messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+    messageVerbose(greyLight(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
   }
 }
 
@@ -258,7 +258,7 @@ msgStdOutForBuild <- function(mess, logFile, verbose) {
     mess <- gsub(".+(building.+)", "\\1", mess)
   }
   if (verbose >= 2) {
-    messageVerbose(blue(mess), verbose = verbose, appendLF = appendLF)
+    messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
   }
 }
 
@@ -269,7 +269,7 @@ msgStdErrForBuild <- function(mess, logFile, verbose) {
   if (verbose <= 1) {
     appendLF <- endsWith(mess, "\n") %in% FALSE
   }
-  messageVerbose(greyLight(mess), verbose = verbose, appendLF = appendLF)
+  messageVerbose(greyLight(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
 }
 
 msgShaNotChanged <- function(Account, Repo, Branch) {

@@ -1300,8 +1300,8 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
         logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
         pids[j] <- sys::exec_background(
           Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-          std_out = verbose >= 1,
-          std_err = verbose >= 1
+          std_out = installPackageVerbose(verbose),
+          std_err = installPackageVerbose(verbose)
         )
       }
       on.exit(sapply(pids, tools::pskill))
@@ -1661,7 +1661,7 @@ availablePackagesCachedPath <- function(repos, type) {
 
 installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys") &&
-      requireNamespace("sys", quietly = TRUE)){#} && !isRstudioServer()) {
+      requireNamespace("sys", quietly = TRUE)){
     ipa$libPaths <- .libPaths()[1]
     installPackagesSys(ipa, verbose = verbose)
   } else {
@@ -1743,4 +1743,8 @@ isRstudioServer <- function () {
     }
   }
   isRstudioServer
+}
+
+installPackageVerbose <- function(verbose) {
+  verbose > 0 && verbose < 5
 }
