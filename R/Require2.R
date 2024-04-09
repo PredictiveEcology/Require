@@ -1269,13 +1269,20 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     if (NROW(pkgCRAN)) {
 
       if (getOption("Require.installPackagesSys") == 2) {
-        args <- list(repos = repos, type = type,
-                     pkgs = pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE],
-                     destdir = RequirePkgCacheDir())
+        ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
+        args <- list(repos = repos, type = type)
+        args$url <- file.path(ap$Repository, ap$Package,
+                         paste0(ap$Package, "_",
+                                ap$VersionOnRepos, ".tar.gz"))
+        args$destfile <- file.path(tmpdir, basename(args$url))
         if (isWindows() && identical(args$type, "both"))
           args$type <- "binary"
-        dt <- downloadSys(args, verbose = verbose)
-
+        if (isWindows() && identical(args$type, "both"))
+          args$type <- "binary"
+        dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
+                          doLine = "outfiles <- do.call(download.file, args)",
+                          tmpdir = tmpdir,
+                          verbose = verbose)
         pkgCRAN[dt, localFile := i.localFile, on = "Package"]
         pkgCRAN[availableVersionOK %in% TRUE, installFrom := "Local"]
         pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
@@ -1436,7 +1443,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                        GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa$Package,
                        VersionOnRepos = aa$VersionOnRepos)
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
-          dt <- downloadSys(args, splitOn = splitOn,
+          dt <- downloadSys(args, splitOn = splitOn, tmpdir = tmpdir,
                             "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := "Local"]
@@ -3469,21 +3476,26 @@ downloadSys <- function(args, splitOn = "pkgs",
   downFile <- grepl("download.file", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
-  vec <- seq_along(argsOrig[[splitOn[1]]])
-  chunk2 <- function(x,n) {
-    if (n == 1)
-      list(1)
-    else
-      split(x, cut(seq_along(x), n, labels = FALSE))
+  args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
+  if (identical(args$method, "libcurl")) {
+    vecList <- list(seq_along(args[[splitOn[1]]]))
+  } else {
+    vec <- seq_along(argsOrig[[splitOn[1]]])
+    chunk2 <- function(x,n) {
+      if (n == 1)
+        list(1)
+      else
+        split(x, cut(seq_along(x), n, labels = FALSE))
+    }
+    vecList <- chunk2(vec, min(length(args[[splitOn[1]]]), min(8, getOption("Ncpus"))))
   }
-  vecList <- chunk2(vec, min(length(args[[splitOn[1]]]), min(8, getOption("Ncpus"))))
+
 
   pids <- numeric(length(vecList))
   outfiles <- lapply(pids, function(i) {
     fn1 <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
     normalizePath(fn1, winslash = "/", mustWork = FALSE)
   })
-  args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
 
   for (j in seq_along(vecList)) {
     i <- vecList[[j]]
@@ -3614,6 +3626,7 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, verbose) {
 
     dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
                       doLine = "outfiles <- do.call(download.file, args)",
+                      tmpdir = tmpdir,
                       verbose = verbose)
     p[dt, localFile := i.localFile, on = "Package"]
     p[, installFrom := "Local"]

@@ -170,8 +170,7 @@ pkgDep <- function(packages,
             }))
 
     keepColsOuter <- c("Package", "packageFullName", "parentPackage", depsCol, localInfo)
-    browser()
-    setdiff(colnames(deps), keepColsOuter)
+    keepColsOuter <- intersect(colnames(deps), keepColsOuter)
     deps <- deps[, ..keepColsOuter]
     # trimRedundancies is better for following the deps, but it will fail to keep original
     #   user request. Use only duplicated instead ... to keep user order
