@@ -144,8 +144,8 @@ setMethod(
           if (create == TRUE) {
             lapply(path[!dirsThatExist[!isExistingFile]], function(pth) {
               dir.create(file.path(pth),
-                recursive = TRUE,
-                showWarnings = FALSE
+                         recursive = TRUE,
+                         showWarnings = FALSE
               )
             })
           } else {
@@ -203,12 +203,15 @@ setMethod(
 #' @keywords internal
 .rndstr <- function(n = 1, len = 8) {
   unlist(lapply(character(n), function(x) {
-    x <-
-      paste0(sample(
-        c(0:9, letters, LETTERS),
-        size = len,
-        replace = TRUE
-      ), collapse = "")
+    a <- c(0:9, letters, LETTERS)
+    b <- sample(a, size = len, replace = TRUE)
+    paste0(b, collapse = "")
+    # x <-
+    #   paste0(sample(
+    #     c(0:9, letters, LETTERS),
+    #     size = len,
+    #     replace = TRUE
+    #   ), collapse = "")
   }))
 }
 
@@ -269,6 +272,12 @@ tempdir2 <- function(sub = "",
     checkPath(np, create = TRUE)
   }
   np
+}
+
+tempdir3 <- function(sub = "Require") {
+  nd <- tempdir() |> file.path(sub, basename(tempfile("tmpdir")))
+  made <- dir.create(nd, showWarnings = FALSE, recursive = TRUE)
+  nd
 }
 
 #' Make a temporary subfile in a temporary (sub-)directory
@@ -477,8 +486,8 @@ messageVerboseCounter <-
     messWithPrePost <- paste0(pre, mess, post)
     if (counter == minCounter) {
       messageVerbose(rep(" ", numCharsNeeded),
-        verbose = verbose,
-        verboseLevel = verboseLevel
+                     verbose = verbose,
+                     verboseLevel = verboseLevel
       )
     }
     messageVerbose(
@@ -637,7 +646,7 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
           toFiles <- file.path(getOptionRPackageCache(), basename(ccFiles))
           linked <- linkOrCopy(ccFiles, toFiles)
           messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
-            verbose = verbose, verboseLevel = 1
+                         verbose = verbose, verboseLevel = 1
           )
           localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
         }

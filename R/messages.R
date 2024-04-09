@@ -139,7 +139,7 @@ msgStdOut <- function(mess, logFile, verbose) {
     }
   }
   if (length(mess))
-      messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
+    messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
 
 }
 

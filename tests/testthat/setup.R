@@ -9,7 +9,7 @@ isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_I
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
 withr::local_options(.local_envir = teardown_env(),
-                     Require.verbose = ifelse(isDev, -1, -2))
+                     Require.verbose = ifelse(isDev, 1, -2))
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")

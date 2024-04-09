@@ -17,9 +17,9 @@ test_that("test 5", {
 
     # Install 3 packages that are needed for subsequent module and package installations
     (a <- Require(c("PredictiveEcology/SpaDES.project@transition",
-                  "PredictiveEcology/Require@simplify2 (HEAD)"),
-              upgrade = FALSE, returnDetails = TRUE
-      )) |>
+                    "PredictiveEcology/Require@simplify2 (HEAD)"),
+                  upgrade = FALSE, returnDetails = TRUE
+    )) |>
       capture_warnings() -> warns
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)

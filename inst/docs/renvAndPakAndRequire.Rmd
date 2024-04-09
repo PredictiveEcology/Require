@@ -5,41 +5,61 @@ editor_options:
   chunk_output_type: console
 ---
 
-## Principles used in `Require`
+# Principles used in `Require`
 
 `Require` is desinged with features that facilitate running R code that is part of a continuous workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
 
-## How `Require` differs from other approaches
+## Managing pacakges during code development
 
-### Default behaviours different
+It is common during code development to work in teams, and to be updating package code. 
 
-#### Packages that aren't yet installed 
+### All working on same project
+
+If the whole team is working on the same "whole" project, then `renv` provides a mechanism for each team member to update code, then snapshot the project, commit the snapshot and push to the cloud for the team to share. 
+
+### Diverse projects
+
+However, if a team is more diversified and they are actually sharing the new code, but not the whole project, then project snapshots will be very inefficient. Instead, the code developer can work on their package, and the team members will have 2 options of what they might want to do: keep at the bleeding edge or update only if necessary for dependencies. More likely, they will want to have a mixture of these strategies, i.e., bleeding edge with some code, but only if necessary with others. `renv` does not easily allow this as it is an "project-level" approach. `pak` offers the ability at install time for a user to decide. `Require` on the other hand offers programmatic control for this. For example 
+
+```{r,eval}
+Install(c("PredictiveEcology/reproducible@development (HEAD)", 
+          "PredictiveEcology/SpaDES.core@development (>=2.0.5.9004)")) 
+```
+will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the in) for the development branch of `SpaDES.core`. The user doesn't have to make decisions at run time as to whether an update should be made, and for which packages.
+
+# How `Require` differs from other approaches
+
+## Default behaviours different
+
+### Packages that aren't yet installed 
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ------------------------------------------ |
 | `Install("data.table")`          | `data.table` installed *if not installed*  |
-| `install.packages("data.table")` | `data.table` installed; package NOT loaded |
-| `pak::pkg_install("data.table")` | `data.table` installed; package NOT loaded |
+| `install.packages("data.table")` | `data.table` installed                     |
+| `pak::pkg_install("data.table")` | `data.table` installed *if not installed*  |
+| `renv::install("data.table")`    | `data.table` installed                     |
 
-#### Already installed, but old
+### Already installed, but old
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ----------------------------------------------------------------- |
 | `Install("data.table")`          | `data.table` not installed                                        |
 | `install.packages("data.table")` | `data.table` installed, always, regardless of version             |
 | `pak::pkg_install("data.table")` | `data.table` installed, asks user if wants to update if available |
+| `renv::install("data.table")`    | `data.table` installed, asks user if wants to update if available |
 
 
-## Differences and similarities between `pak` and `Require`
+# Differences and similarities between `pak` and `Require`
 
-* Indicates that there is an example below.
+\\* Indicates that there is an example below.
 
 | Description                      |  `Require`    |   `pak`                               |
 | -------------------------------- | :------------------------------: | :-----------------------------------: |
 | Archived package*                 | Automatic                                        | Not an option  | 
+| Dependency conflicts*   | Yes   |  No (see example below)  |  
 | Multiple requests of same package | Resolves by version number specification, or most recent version | Error |
 | Control individual package updates | With `HEAD`   |   No   |
-| Dependency conflicts*   | Yes   |  No (see example below)  |  
 | Parallel downloads   |   with `options(Require.installPackagesSys = 2)`    |   Yes    |
 | Parallel installs    |   with `options(Require.installPackagesSys = 2)`    |   Yes    |
 | Very clean messaging   |   somewhat, with `options(Require.installPackagesSys = 1)`  | Yes    |  
@@ -49,7 +69,9 @@ editor_options:
 | Package install by version    | Yes | No (only if declared in a `DESCRIPTION` file)  |   
 | Package conflict (CRAN & GitHub) | Prefers CRAN, if version requirements met  |  Error  |
 
-### Archived packages
+## Archived packages
+
+`fastdigest` has been taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice. `Require` will just get the most recent archived copy and the work can continue.
 
 ```{r,eval=TRUE,message=FALSE}
 Require::Install("fastdigest")
@@ -57,9 +79,9 @@ Require::Install("fastdigest")
 try(pak::pkg_install(c("fastdigest")))
 ```
 
+## Dependency conflict
 
-### Dependency conflict
-
+When doing code development, it is common to use many `GitHub` packages. Each of these may point to one or more `Remotes`, i.e., *other* GitHub packages. 
 ```{r, eval=TRUE,message=FALSE}
 
 # Fails because of a) packages taken off CRAN & multiple GitHub branches requested

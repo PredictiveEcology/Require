@@ -81,8 +81,8 @@ test_that("test 5", {
 
       warns <- capture_warnings(
         # mess <- capture_messages(
-          out <- Require(packageVersionFile = snf, require = FALSE,
-                         returnDetails = TRUE)
+        out <- Require(packageVersionFile = snf, require = FALSE,
+                       returnDetails = TRUE)
         # )
       )
 
@@ -192,7 +192,7 @@ test_that("test 5", {
       didnt <- att[!is.na(att$installResult)]
 
       allDone <- setdiff(didnt$Package, c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
-                               noneAvailable, c("Require", "data.table")))
+                                          noneAvailable, c("Require", "data.table")))
       allDone <- setdiff(allDone, knownFails)
       expect_identical(allDone, character(0))
 

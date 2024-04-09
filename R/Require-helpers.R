@@ -150,13 +150,13 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
 #' @inheritParams pkgDep
 #' @inheritParams Require
 dlGitHubDESCRIPTION <- function(pkg, purge = getOption("Require.purge", FALSE),
-                                 verbose = getOption("Require.verbose")) {
+                                verbose = getOption("Require.verbose")) {
   dlGitHubFile(pkg, "DESCRIPTION", purge = purge, verbose = verbose)
 }
 
 #' @inheritParams Require
 dlGitHubNamespace <- function(pkg, purge = getOption("Require.purge", FALSE),
-                               verbose = getOption("Require.verbose")) {
+                              verbose = getOption("Require.verbose")) {
   dlGitHubFile(pkg, "NAMESPACE", purge = purge, verbose = verbose)
 }
 
@@ -173,8 +173,8 @@ pkgDTtoPackageFullName <- function(pkg) {
 
 #' @inheritParams Require
 dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
-                          purge = getOption("Require.purge", FALSE),
-                          verbose = getOption("Require.verbose")) {
+                         purge = getOption("Require.purge", FALSE),
+                         verbose = getOption("Require.verbose")) {
   ret <- if (NROW(pkg) > 0) {
     needsParse <- TRUE
     cn <- colnames(pkg)
@@ -188,13 +188,13 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
       pkgDT <- pkg
     }
     pkgDT[repoLocation == .txtGitHub,
-      url := {
-        gitHubFileUrl(
-          hasSubFolder = hasSubFolder, Branch = Branch, GitSubFolder = GitSubFolder,
-          Account = Account, Repo = Repo, filename = filename
-        )
-      },
-      by = "Package"
+          url := {
+            gitHubFileUrl(
+              hasSubFolder = hasSubFolder, Branch = Branch, GitSubFolder = GitSubFolder,
+              Account = Account, Repo = Repo, filename = filename
+            )
+          },
+          by = "Package"
     ]
     theDir <- RequireGitHubCacheDir(create = TRUE)
     # checkPath(theDir, create = TRUE)
@@ -454,10 +454,10 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       } else {
         caps <- lapply(repos, function(repo) {
           tryCatch(available.packages(repos = repo, type = type),
-            error = function(x) {
-              # browserDeveloper("Error 7531; please see developer")
-              available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
-            }
+                   error = function(x) {
+                     # browserDeveloper("Error 7531; please see developer")
+                     available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
+                   }
           )
         })
         caps <- lapply(caps, as.data.table)
@@ -544,10 +544,10 @@ installRequire <- function(requireHome = getOption("Require.Home"),
             origDir <- setwd(dirname(dirname(dFile)))
             on.exit(setwd(origDir), add = TRUE)
             messageVerbose("Installing Require ver: ", pkgVersionAtRequireHome, " from source at ", requireHome,
-              verbose = verbose, verboseLevel = 2
+                           verbose = verbose, verboseLevel = 2
             )
             out <- system(paste0(Rpath, " CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
-              wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE
+                          wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE
             )
           }
         }
@@ -555,7 +555,7 @@ installRequire <- function(requireHome = getOption("Require.Home"),
       } else {
         if (!is.null(requireHome)) {
           messageVerbose(pkgNameAtRequireHome, " did not contain Require source code",
-            verbose = verbose, verboseLevel = 2
+                         verbose = verbose, verboseLevel = 2
           )
         }
       }
@@ -619,8 +619,8 @@ toDT <- function(...) {
 #'
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("Require.verbose")) {
   messageVerbose("Detaching is fraught with many potential problems; you may have to",
-    "restart your session if things aren't working",
-    verbose = verbose, verboseLevel = 2
+                 "restart your session if things aren't working",
+                 verbose = verbose, verboseLevel = 2
   )
   srch <- search()
   pkgsOrig <- pkgs
@@ -649,8 +649,8 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
 
   if (length(dontTryExtra)) {
     messageVerbose("some packages don't seem to unload their dlls correctly. ",
-      "These will not be unloaded: ", paste(dontTryExtra, collapse = comma),
-      verbose = verbose, verboseLevel = 2
+                   "These will not be unloaded: ", paste(dontTryExtra, collapse = comma),
+                   verbose = verbose, verboseLevel = 2
     )
     dontTry <- c(dontTry, dontTryExtra)
   }
@@ -956,7 +956,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   unlink(zipFileName)
   messageVerbose(paste0(gitRepo, " downloaded and placed in ",
                         normalizePath(repoFull, winslash = "/"), collapse = "\n"),
-    verbose = verbose, verboseLevel = 2
+                 verbose = verbose, verboseLevel = 2
   )
   return(normalizePath(repoFull))
 }
@@ -1024,7 +1024,7 @@ getSHAfromGitHubMemoise <- function(...) {
     dots <- list(...)
     if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE)) {
       loadGitHubSHAsFromDisk(verbose = dots$verbose) # puts it into the Memoise-expected location
-    if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE))
+      if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE))
         pe[[.txtGetSHAfromGitHub]] <- new.env()
     }
     ret <- NULL
@@ -1200,7 +1200,7 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
           internetMightExist <- FALSE
 
           messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
-            verbose = verbose, verboseLevel = 2
+                         verbose = verbose, verboseLevel = 2
           )
         }
         assign(.txtInternetExistsTime, Sys.time(), envir = pkgEnv())
@@ -1275,45 +1275,45 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
     argsOrig <- args
 
     # for (i in 1:10) {
-      vec <- seq_along(argsOrig$pkgs)
-      chunk2 <- function(x,n) {
-        if (n == 1)
-          list(1)
-        else
-          split(x, cut(seq_along(x), n, labels = FALSE))
-      }
-      vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
+    vec <- seq_along(argsOrig$pkgs)
+    chunk2 <- function(x,n) {
+      if (n == 1)
+        list(1)
+      else
+        split(x, cut(seq_along(x), n, labels = FALSE))
+    }
+    vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
 
-      pids <- numeric(length(vecList))
-      for (j in seq_along(vecList)) {
-        i <- vecList[[j]]
-        fn <- tempfile(fileext = ".rds")
-        fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+    pids <- numeric(length(vecList))
+    for (j in seq_along(vecList)) {
+      i <- vecList[[j]]
+      fn <- tempfile(fileext = ".rds")
+      fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
 
-        args$pkgs <- argsOrig$pkgs[i]
-        args$available <- argsOrig$available[i, , drop = FALSE]
-        saveRDS(args, file = fn)
-        ar <- c(paste0(".libPaths('",libPaths,"')"),
-                paste0("args <- readRDS('", fn, "')"),
-                "do.call(install.packages, args)")
-        cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-        logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
-        pids[j] <- sys::exec_background(
-          Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-          std_out = installPackageVerbose(verbose),
-          std_err = installPackageVerbose(verbose)
-        )
-      }
-      on.exit(sapply(pids, tools::pskill))
-      for (pid in pids)
-        sys::exec_status(pid, wait = TRUE)
-      allDone <- argsOrig$pkgs %in%
-        rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
-      if (all(allDone))
-        break
-      argsOrig$pkgs <- argsOrig$pkgs[!allDone]
-      argsOrig$available <- argsOrig$available[!allDone, , drop = FALSE]
-      messageVerbose("trying again", verbose = verbose)
+      args$pkgs <- argsOrig$pkgs[i]
+      args$available <- argsOrig$available[i, , drop = FALSE]
+      saveRDS(args, file = fn)
+      ar <- c(paste0(".libPaths('",libPaths,"')"),
+              paste0("args <- readRDS('", fn, "')"),
+              "do.call(install.packages, args)")
+      cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+      logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+      pids[j] <- sys::exec_background(
+        Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+        std_out = installPackageVerbose(verbose),
+        std_err = installPackageVerbose(verbose)
+      )
+    }
+    on.exit(sapply(pids, tools::pskill))
+    for (pid in pids)
+      sys::exec_status(pid, wait = TRUE)
+    allDone <- argsOrig$pkgs %in%
+      rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+    if (all(allDone))
+      break
+    argsOrig$pkgs <- argsOrig$pkgs[!allDone]
+    argsOrig$available <- argsOrig$available[!allDone, , drop = FALSE]
+    messageVerbose("trying again", verbose = verbose)
     #}
   } else {
     fn <- tempfile(fileext = ".rds")
@@ -1353,7 +1353,6 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
 
 
 # installPackagesSys <- function(pkg, args, libPath, repos = getOption("repos"), envir = parent.frame()) {
-#   browser()
 #
 #   ff <- file.path(getwd(), "ipa.rds")
 #   saveRDS(ipa, file = ff)
@@ -1489,7 +1488,7 @@ masterMainHEAD <- function(url, need) {
 #' `main` if the actual `url` specifies either `master` or `main` and it does not exist.
 #' @export
 .downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
-                                       verbose = getOption("Require.verbose"), verboseLevel = 2) {
+                                        verbose = getOption("Require.verbose"), verboseLevel = 2) {
   hasMasterMain <- grepl(masterMainGrep, url)
   if (!all(hasMasterMain)) {
     if (length(url) > 1) stop("This function is not vectorized")
@@ -1540,7 +1539,7 @@ masterMainHEAD <- function(url, need) {
                   tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
                            error = function(e) {
                              if (is.null(token))
-                              e$message <- stripGHP(ghp, e$message)
+                               e$message <- stripGHP(ghp, e$message)
                              if (tryNum > 1)
                                messageVerbose(e$message, verbose = verbose)
                            })
@@ -1621,7 +1620,7 @@ messageGithubPAT <- function(ghp, verbose = verbose, verboseLevel = 0) {
     if (is.null(get0(.txtPkgHasGHP, envir = pkgEnv()))) {
       assign(.txtPkgHasGHP, TRUE, envir = pkgEnv())
       messageVerbose("Using GITHUB_PAT to access files on GitHub",
-        verboseLevel = 0, verbose = verbose
+                     verboseLevel = 0, verbose = verbose
       )
     }
   }
@@ -1688,17 +1687,17 @@ packageFullName <- function(pkgDT) {
   inequality <- if (is.null(pkgDT[["inequality"]])) "==" else pkgDT[["inequality"]]
   if (all(colnames(pkgDT) %in% c("GithubRepo", "GithubUsername"))) {
     ifelse(!is.na(pkgDT$GithubRepo) & nzchar(pkgDT$GithubRepo),
-      paste0(pkgDT$GithubUsername, "/", pkgDT$Package, "@", pkgDT$GithubSHA1),
-      paste0(pkgDT$Package, ifelse(is.na(pkgDT$Version) | is.na(pkgDT$inequality),
-        "", paste0(" (", inequality, pkgDT$Version, ")")
-      ))
+           paste0(pkgDT$GithubUsername, "/", pkgDT$Package, "@", pkgDT$GithubSHA1),
+           paste0(pkgDT$Package, ifelse(is.na(pkgDT$Version) | is.na(pkgDT$inequality),
+                                        "", paste0(" (", inequality, pkgDT$Version, ")")
+           ))
     )
   } else {
     ifelse(!is.na(pkgDT$Repo) & nzchar(pkgDT$Repo),
-      paste0(pkgDT$Account, "/", pkgDT$Package, "@", pkgDT$SHAonGH),
-      paste0(pkgDT$Package, ifelse(is.na(pkgDT$Version) | is.na(pkgDT$inequality),
-        "", paste0(" (", inequality, pkgDT$Version, ")")
-      ))
+           paste0(pkgDT$Account, "/", pkgDT$Package, "@", pkgDT$SHAonGH),
+           paste0(pkgDT$Package, ifelse(is.na(pkgDT$Version) | is.na(pkgDT$inequality),
+                                        "", paste0(" (", inequality, pkgDT$Version, ")")
+           ))
     )
   }
 }
@@ -1745,6 +1744,6 @@ isRstudioServer <- function () {
   isRstudioServer
 }
 
-installPackageVerbose <- function(verbose) {
-  verbose > 0 && verbose < 5
+installPackageVerbose <- function(verbose, verboseLevel = 1) {
+  verbose >= verboseLevel && verbose < 5
 }

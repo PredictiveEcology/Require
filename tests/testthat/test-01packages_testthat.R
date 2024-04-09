@@ -29,8 +29,8 @@ test_that("test 1", {
   dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
   (out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
-                                           standAlone = TRUE, libPaths = dir1,
-                                           quiet = TRUE, returnDetails = TRUE
+                                            standAlone = TRUE, libPaths = dir1,
+                                            quiet = TRUE, returnDetails = TRUE
   ))) |> capture_warnings() -> warns
   if (length(warns))
     expect_true(all(grepl("was built under", warns)))
@@ -213,7 +213,7 @@ test_that("test 1", {
     on.exit({
       try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
                            dontTry = dontDetach())
-      , silent = TRUE) |>
+          , silent = TRUE) |>
         suppressWarnings() |> suppressMessages()
       # unloadNamespace("package:fpCompare")
       # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
@@ -300,7 +300,7 @@ test_that("test 1", {
         ifelse(isWindows(), "reproducible", "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)"),
         "SpaDES")#,
       # repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
-      ) |>
+    ) |>
       capture_warnings() -> warns
 
     test <- testWarnsInUsePleaseChange(warns)
