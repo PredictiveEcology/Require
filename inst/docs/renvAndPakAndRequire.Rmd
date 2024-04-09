@@ -13,7 +13,7 @@ editor_options:
 
 ### Default behaviours different
 
-#### Not yet installed 
+#### Packages that aren't yet installed 
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ------------------------------------------ |
@@ -25,7 +25,7 @@ editor_options:
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ----------------------------------------------------------------- |
-| `Install("data.table")`          | `data.table` installed *if not installed*, regardless of version  |
+| `Install("data.table")`          | `data.table` not installed                                        |
 | `install.packages("data.table")` | `data.table` installed, always, regardless of version             |
 | `pak::pkg_install("data.table")` | `data.table` installed, asks user if wants to update if available |
 
@@ -45,7 +45,7 @@ editor_options:
 | Very clean messaging   |   somewhat, with `options(Require.installPackagesSys = 1)`  | Yes    |  
 | Package dependencies     |  0   |   `data.table` |
 | Uses local cache   |   Yes   |   Yes   |
-| Package updates (default)    | No, unless needed by version number | Yes  |     
+| Package updates (default)    | No, unless needed by version number | Yes, prompt user |     
 | Package install by version    | Yes | No (only if declared in a `DESCRIPTION` file)  |   
 | Package conflict (CRAN & GitHub) | Prefers CRAN, if version requirements met  |  Error  |
 
