@@ -3510,8 +3510,8 @@ downloadSys <- function(args, splitOn = "pkgs",
     messageVerbose(greyLight(paste0("Downloading: ", mess)), verbose = verbose)
     pids[j] <- sys::exec_background(
       Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-      std_out = verbose >= 2,
-      std_err = verbose >= 2
+      std_out = installPackageVerbose(verbose),
+      std_err = installPackageVerbose(verbose)
     )
   }
 
