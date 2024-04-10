@@ -1437,7 +1437,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                        GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa$Package,
                        VersionOnRepos = aa$VersionOnRepos)
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
-          dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir,
+          dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
                             "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := .txtLocal]
@@ -3473,28 +3473,16 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 
 sysInstallAndDownload <- function(args, splitOn = "pkgs",
                         doLine = "outfiles <- do.call(download.packages, args)",
-                        returnOutfile = FALSE, tmpdir, verbose) {
+                        returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, verbose) {
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
   installPackages <- grepl("install.packages", doLine)
+  downAndBuildLocal <- grepl("downloadAndBuildToLocalFile", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
-  if (!downOther %in% TRUE)
+  if (downPack %in% TRUE || downFile %in% TRUE || installPackages %in% TRUE)
     args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
   vecList <- splitVectors(args, splitOn, method = args$method, installPackages)
-  # if (identical(args$method, "libcurl")) {
-  #   vecList <- list(seq_along(args[[splitOn[1]]]))
-  # } else {
-  #   vec <- seq_along(argsOrig[[splitOn[1]]])
-  #   chunk2 <- function(x,n) {
-  #     if (n == 1)
-  #       list(1)
-  #     else
-  #       split(x, cut(seq_along(x), n, labels = FALSE))
-  #   }
-  #   vecList <- chunk2(vec, min(length(args[[splitOn[1]]]), min(8, getOption("Ncpus"))))
-  # }
-
 
   pids <- numeric(length(vecList))
   outfiles <- lapply(pids, function(i) {
@@ -3509,7 +3497,20 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     for (jjj in splitOn)
       args[[jjj]] <- argsOrig[[jjj]][i]
-    # args$available <- argsOrig$available[i, , drop = FALSE]
+
+    if (doLineVectorized %in% FALSE && length(args[[splitOn[1]]]) > 1) {
+      doLineOrig <- doLine
+      tf3 <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
+      tf3 <- normalizePath(tf3, winslash = "/", mustWork = FALSE)
+      saveRDS(splitOn, file = tf3)
+      doLine <-
+        paste0("splitOn <- readRDS('",tf3,"')
+        a <- try(lapply(seq_along(args[[splitOn[1]]]), function(ind) lapply(args[splitOn], '[[', ind)))
+      extraArgs <- setdiff(names(args), splitOn)
+      for (ii in seq_along(a)) for (ea in extraArgs) a[[ii]][[ea]] <- args[[ea]]
+      try(outfiles <- lapply(a, function(args) ", doLineOrig, "))")
+      doLine <- strsplit(doLine, "\n")[[1]]
+    }
     saveRDS(args, file = fn)
 
     o <- options()[c('HTTPUserAgent', 'Ncpus')]
@@ -3578,17 +3579,22 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     messageVerbose(blue(paste0("  ", preMess, mess)), verbose = verbose)
   }
 
-  if ((downPack || !downFile) && !installPackages) {
-    ll <- lapply(outfiles, readRDS)
+  ll <- try(lapply(outfiles, readRDS), silent = TRUE)
+  if (downPack && !downFile && !installPackages) {
+    browser()
     if (downPack)
       dt <- as.data.table(do.call(rbind, ll))
     else
       dt <- as.data.table(cbind(Package = argsOrig$Package, do.call(rbind, ll)))
+    # if (isTRUE(any(grepl("downloadAndBuildToLocalFile", doLine))) ) browser()
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
     dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> setDT()
-  } else {
+  } else if (downAndBuildLocal) {
+    dt <- list(Package = argsOrig$Package,
+               localFile = unlist(ll)) |> setDT()
+  } else  { # installPackages and Other
     dt <- logFile
   }
 
