@@ -1,6 +1,8 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
+verboseForDev <- -1
+installPackageSys <- 2
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
@@ -9,7 +11,7 @@ isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_I
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
 withr::local_options(.local_envir = teardown_env(),
-                     Require.verbose = ifelse(isDev, 1, -2))
+                     Require.verbose = ifelse(isDev, verboseForDev, -2))
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
@@ -54,7 +56,7 @@ if (Sys.info()["user"] %in% "emcintir") {
     Ncpus = 8,
     repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
-    Require.installPackagesSys = isDevAndInteractive * 2,
+    Require.installPackagesSys = isDevAndInteractive * installPackageSys,
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
