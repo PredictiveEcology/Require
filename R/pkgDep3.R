@@ -865,10 +865,33 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 
 #' @importFrom utils download.file untar
+#' @include messages.R
 getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose = getOption("Require.cloneFrom")) {
-  tmpdir <- tempdir3()
-  pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
-                               tmpdir = tmpdir, verbose = verbose)
+
+  tmpdir <- tempdir3() # faster than tempdir2
+  pkgDTList$Archive <- identifyLocalFiles(pkgDTList$Archive, repos = repos, purge = purge, verbose = verbose)
+  haveLocal <- pkgDTList$Archive$haveLocal %in% .txtLocal
+  if (any(haveLocal))
+    pkgDTList$Archive[, PackageUrl := file.path(Package, basename(localFile))]
+  if (!all(haveLocal)) {
+    # downloadArchive takes a list with an element called "Archive" so can't split on "Archive" here
+    pkgDTList$ArchiveHaveLocal <- pkgDTList$Archive[pkgDTList$Archive$haveLocal %in% TRUE]
+    pkgDTList$Archive <- pkgDTList$Archive[!pkgDTList$Archive$haveLocal %in% TRUE]
+    if (!is.null(pkgDTList$Archive)) {
+      pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
+                                   tmpdir = tmpdir, verbose = verbose)
+    }
+    on.exit({
+      browser()
+      # something about copying from tmpdir
+    })
+
+    pkgDTList$Archive <- rbindlist(pkgDTList2, use.names = TRUE, fill = TRUE)
+  }
+
+  # tmpdir <- tempdir3()
+  # pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
+  #                              tmpdir = tmpdir, verbose = verbose)
 
   if (any(!is.na(pkgDTList$Archive$PackageUrl))) {
     pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {

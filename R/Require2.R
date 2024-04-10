@@ -3379,6 +3379,7 @@ removeRequireDeps <- function(pkgDT, verbose) {
     #                "install.packages(\"data.table\")", verbose = verbose)
     whRm <- which(whNeedInstall)[toRm]
     set(pkgDT, whRm, "needInstall", .txtDontInstall)
+    set(pkgDT, whRm, "installed", TRUE)
     set(pkgDT, whRm, "installResult", "Can't install Require dependency")
   }
   pkgDT
