@@ -188,7 +188,7 @@ test_that("test 3", {
     a <- unique(extractPkgName(unlist(unname(pkgDep(pkgs)))))
     clearRequirePackageCache(a, ask = F)
     library(sys); library(waldo)
-    setLibPaths(tempdir2(.rndstr(1)))
+    setLibPaths(tempdir3())
     try(remove.packages(a))
     options(Require.installPackagesSys = 1L)
     ipBefore <- installed.packages(lib.loc = .libPaths()[1], noCache = TRUE)

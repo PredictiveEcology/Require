@@ -139,7 +139,7 @@ test_that("test 5", {
 
     pkgs <- omitPkgsTemporarily(pkgs)
 
-    dirForInstall <- tempdir2(.rndstr(1))
+    dirForInstall <- tempdir3()
 
     warns <- out <- mess <- st <- list()
     for (i in 1:2) {

@@ -7,8 +7,8 @@ test_that("test 1", {
 
   quiet <- !(getOption("Require.verbose") >= 1)
 
-  tmpdir <- tempdir2(.rndstr(1))
-  tmpdir2 <- tempdir2(.rndstr(1))
+  tmpdir <- tempdir3()
+  tmpdir2 <- tempdir3()
   created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
   setLibPaths(tmpdir, standAlone = TRUE)

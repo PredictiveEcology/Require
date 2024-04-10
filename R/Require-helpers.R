@@ -196,11 +196,12 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
           },
           by = "Package"
     ]
-    theDir <- RequireGitHubCacheDir(create = TRUE)
-    # checkPath(theDir, create = TRUE)
-    destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
-    destFile <- paste0(pkgDT$Account, "_", pkgDT$Package, "_", destFile)
-    destFile <- file.path(theDir, paste0(destFile, "_", filename))
+    destFile <- RequireGitHubCacheFile(pkgDT, filename = filename)
+    # theDir <- RequireGitHubCacheDir(create = TRUE)
+    # # checkPath(theDir, create = TRUE)
+    # destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
+    # destFile <- paste0(pkgDT$Account, "_", pkgDT$Package, "_", destFile)
+    # destFile <- file.path(theDir, paste0(destFile, "_", filename))
     set(pkgDT, NULL, "destFile", destFile)
 
     if (!isTRUE(getOption("Require.offlineMode"))) {
@@ -1264,96 +1265,95 @@ stripHTTPAddress <- function(addr) {
 # }
 
 
-#' `install.packages` alternative that uses `sys` in new process
+#' #' `install.packages` alternative that uses `sys` in new process
+#' #'
+#' #' @param args The arguments to pass to `do.call(install.packages, args)`
+#' #' @inheritParams Require
+#' installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
+#'   libPaths <- args$libPaths
+#'   args$libPaths <- NULL
+#'   if (getOption("Require.installPackagesSys", FALSE) == 2L && isWindows()) {
+#'     argsOrig <- args
+#'     vecList <- splitVectors(args, splitOn = "pkgs", method = args$method)
 #'
-#' @param args The arguments to pass to `do.call(install.packages, args)`
-#' @inheritParams Require
-installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
-  libPaths <- args$libPaths
-  args$libPaths <- NULL
-  if (getOption("Require.installPackagesSys", FALSE) == 2L && isWindows()) {
-    argsOrig <- args
-    browser()
-    vecList <- splitVectors(args, splitOn = "pkgs", method = args$method)
-
-    # for (i in 1:10) {
-    # vec <- seq_along(argsOrig$pkgs)
-    # chunk2 <- function(x,n) {
-    #   if (n == 1)
-    #     list(1)
-    #   else
-    #     split(x, cut(seq_along(x), n, labels = FALSE))
-    # }
-    # vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
-
-    pids <- numeric(length(vecList))
-    for (j in seq_along(vecList)) {
-      i <- vecList[[j]]
-      fn <- tempfile(fileext = ".rds")
-      fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
-
-      args$pkgs <- argsOrig$pkgs[i]
-      args$available <- argsOrig$available[i, , drop = FALSE]
-      saveRDS(args, file = fn)
-      ar <- c(paste0(".libPaths('",libPaths,"')"),
-              paste0("args <- readRDS('", fn, "')"),
-              "do.call(install.packages, args)")
-      cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-      logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
-      pids[j] <- sys::exec_background(
-        Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-        std_out = installPackageVerbose(verbose),
-        std_err = installPackageVerbose(verbose)
-      )
-    }
-    on.exit(sapply(pids, tools::pskill))
-    for (pid in pids) {
-      spinnerOnPid(pid, verbose)
-    }
-      # sys::exec_status(pid, wait = TRUE)
-    allDone <- argsOrig$pkgs %in%
-      rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
-    if (all(allDone))
-      break
-    argsOrig$pkgs <- argsOrig$pkgs[!allDone]
-    argsOrig$available <- argsOrig$available[!allDone, , drop = FALSE]
-    messageVerbose("trying again", verbose = verbose)
-    #}
-  } else {
-    fn <- tempfile(fileext = ".rds")
-    fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
-    saveRDS(args, file = fn)
-
-    # needed to get binary on Posit PM
-    o <- options()[c('HTTPUserAgent', 'Ncpus')]
-    tf <- tempfile(fileext = ".rds")
-    tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
-    saveRDS(o, file = tf)
-
-    ar <- c(paste0("o <- readRDS('",tf,"')"),
-            "options(o)",
-            paste0(".libPaths('",libPaths,"')"),
-            paste0("args <- readRDS('", fn, "')"),
-            "do.call(install.packages, args)")
-
-    cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-    logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
-
-    pid <- sys::exec_wait(
-      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-      std_out = function(x) {
-        mess <- rawToChar(x)
-        msgStdOut(mess, logFile, verbose)
-      },
-      std_err = function(x) {
-        mess <- rawToChar(x)
-        msgStdErr(mess, logFile, verbose)
-      }
-    )
-    tools::pskill(pid)
-  }
-  return(logFile)
-}
+#'     # for (i in 1:10) {
+#'     # vec <- seq_along(argsOrig$pkgs)
+#'     # chunk2 <- function(x,n) {
+#'     #   if (n == 1)
+#'     #     list(1)
+#'     #   else
+#'     #     split(x, cut(seq_along(x), n, labels = FALSE))
+#'     # }
+#'     # vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
+#'
+#'     pids <- numeric(length(vecList))
+#'     for (j in seq_along(vecList)) {
+#'       i <- vecList[[j]]
+#'       fn <- tempfile(fileext = ".rds")
+#'       fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+#'
+#'       args$pkgs <- argsOrig$pkgs[i]
+#'       args$available <- argsOrig$available[i, , drop = FALSE]
+#'       saveRDS(args, file = fn)
+#'       ar <- c(paste0(".libPaths('",libPaths,"')"),
+#'               paste0("args <- readRDS('", fn, "')"),
+#'               "do.call(install.packages, args)")
+#'       cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+#'       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+#'       pids[j] <- sys::exec_background(
+#'         Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+#'         std_out = installPackageVerbose(verbose),
+#'         std_err = installPackageVerbose(verbose)
+#'       )
+#'     }
+#'     on.exit(sapply(pids, tools::pskill))
+#'     for (pid in pids) {
+#'       spinnerOnPid(pid, verbose)
+#'     }
+#'       # sys::exec_status(pid, wait = TRUE)
+#'     allDone <- argsOrig$pkgs %in%
+#'       rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+#'     if (all(allDone))
+#'       break
+#'     argsOrig$pkgs <- argsOrig$pkgs[!allDone]
+#'     argsOrig$available <- argsOrig$available[!allDone, , drop = FALSE]
+#'     messageVerbose("trying again", verbose = verbose)
+#'     #}
+#'   } else {
+#'     fn <- tempfile(fileext = ".rds")
+#'     fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
+#'     saveRDS(args, file = fn)
+#'
+#'     # needed to get binary on Posit PM
+#'     o <- options()[c('HTTPUserAgent', 'Ncpus')]
+#'     tf <- tempfile(fileext = ".rds")
+#'     tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
+#'     saveRDS(o, file = tf)
+#'
+#'     ar <- c(paste0("o <- readRDS('",tf,"')"),
+#'             "options(o)",
+#'             paste0(".libPaths('",libPaths,"')"),
+#'             paste0("args <- readRDS('", fn, "')"),
+#'             "do.call(install.packages, args)")
+#'
+#'     cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+#'     logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+#'
+#'     pid <- sys::exec_wait(
+#'       Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+#'       std_out = function(x) {
+#'         mess <- rawToChar(x)
+#'         msgStdOut(mess, logFile, verbose)
+#'       },
+#'       std_err = function(x) {
+#'         mess <- rawToChar(x)
+#'         msgStdErr(mess, logFile, verbose)
+#'       }
+#'     )
+#'     tools::pskill(pid)
+#'   }
+#'   return(logFile)
+#' }
 
 
 # installPackagesSys <- function(pkg, args, libPath, repos = getOption("repos"), envir = parent.frame()) {
@@ -1419,7 +1419,6 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
 #   # con <- file(fn, open = "w+", blocking = FALSE)
 #   # on.exit(close(con), add = TRUE)
 #   # sink(con)
-#   browser()
 #   pid <- sys::exec_wait(
 #     Sys.which("Rscript"), I(cmdLine), # std_out = con, std_err = con
 #     std_out = function(x){
@@ -1665,7 +1664,7 @@ availablePackagesCachedPath <- function(repos, type) {
 installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
-    ipa$libPaths <- .libPaths()[1]
+    ipa$lib <- .libPaths()[1]
     downloadSys(ipa, splitOn = "pkgs", tmpdir = tempdir3(),
                 doLine = "outfiles <- do.call(install.packages, args)",
                 verbose = verbose)
@@ -1753,4 +1752,12 @@ isRstudioServer <- function () {
 
 installPackageVerbose <- function(verbose, verboseLevel = 1) {
   verbose >= verboseLevel && verbose < 5
+}
+
+RequireGitHubCacheFile <- function(pkgDT, filename) {
+  theDir <- RequireGitHubCacheDir(create = TRUE)
+  # checkPath(theDir, create = TRUE)
+  destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
+  destFile <- paste0(pkgDT$Account, "_", pkgDT$Package, "_", destFile)
+  destFile <- file.path(theDir, paste0(destFile, "_", filename))
 }
