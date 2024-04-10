@@ -259,7 +259,7 @@ test_that("test 5", {
       )
       out2 <- attr(out, "Require")
       # try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
-      testthat::expect_true(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", "Local"))
+      testthat::expect_true(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", .txtLocal))
       # if (isWindows())
       testthat::expect_true(out2[Package == "SpaDES.core"]$installed)
 

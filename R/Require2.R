@@ -1077,7 +1077,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstall[, installSafeGroups := 1L]
 
   # this is a placeholder; set noLocal by default
-  set(pkgInstall, NULL, "haveLocal", "noLocal")
+  set(pkgInstall, NULL, "haveLocal", .txtNoLocal)
 
   # This sequence checks for the many redundancies, i.e., >= 1.0.0 is redundant with >= 0.9.0; so keep just first
   pkgInstall <- trimRedundancies(pkgInstall, repos, purge, libPaths,
@@ -1114,7 +1114,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       pkgInstall[naRepository, Repository := Additional_repositories]
   }
 
-  # Will set `haveLocal = "Local"` and `installFrom = "Local"`
+  # Will set `haveLocal = .txtLocal` and `installFrom = .txtLocal`
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   if (!is.null(pkgInstallList$Local)) {
@@ -1122,8 +1122,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     pkgInstallList$Local <- pkgInstallList$Local[, .SD[availableVersionOK %in% TRUE][1], by = "Package"]
   }
 
-  pkgNeedInternet <- pkgInstallList[["noLocal"]] # pointer
-  numToDownload <- NROW(pkgInstallList[["noLocal"]])
+  pkgNeedInternet <- pkgInstallList[[.txtNoLocal]] # pointer
+  numToDownload <- NROW(pkgInstallList[[.txtNoLocal]])
 
   if (NROW(pkgNeedInternet)) {
     pkgNeedInternet <- split(pkgNeedInternet, by = "repoLocation")
@@ -1159,7 +1159,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       pkgNeedInternet$GitHub[(nchar(localFile) == 0 | is.na(localFile)), needInstall := noneAvailable]
     }
 
-    pkgInstallList[["noLocal"]] <- pkgNeedInternet # pointer
+    pkgInstallList[[.txtNoLocal]] <- pkgNeedInternet # pointer
   }
 
   pkgInstall <- rbindlistRecursive(pkgInstallList)
@@ -1288,7 +1288,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
                           tmpdir = tmpdir,
                           verbose = verbose)
         pkgCRAN[dt, localFile := i.localFile, on = "Package"]
-        pkgCRAN[availableVersionOK %in% TRUE, installFrom := "Local"]
+        pkgCRAN[availableVersionOK %in% TRUE, installFrom := .txtLocal]
         pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
       } else {
         pkgCRAN[availableVersionOK %in% TRUE, installFrom := "CRAN"]
@@ -1327,7 +1327,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
             verbose = verbose, verboseLevel = 1
           )
           whfe <- which(fe)
-          pkgArchiveHasPU$`TRUE`[whfe, haveLocal := "Local"]
+          pkgArchiveHasPU$`TRUE`[whfe, haveLocal := .txtLocal]
           pkgArchiveHasPU$`TRUE`[whfe, localFile := tf[whfe]]
           pkgArchiveHasPU$`TRUE`[whfe, installFrom := haveLocal]
 
@@ -1381,7 +1381,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
               #                   doLine = "outfiles <- do.call(download.file, args)",
               #                   verbose = verbose)
               # pkgArchOnly[dt, localFile := i.localFile, on = "Package"]
-              # pkgArchOnly[whNotfe, installFrom := "Local"]
+              # pkgArchOnly[whNotfe, installFrom := .txtLocal]
               # pkgArchOnly[whNotfe, newLocalFile := TRUE]
               pkgArchiveHasPU$`TRUE`[["Archive"]] <- pkgArchOnly
 
@@ -1450,7 +1450,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           dt <- downloadSys(args, splitOn = splitOn, tmpdir = tmpdir,
                             "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
-          pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := "Local"]
+          pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := .txtLocal]
           pkgGHtoDL[!SHAonGH %in% FALSE, newLocalFile := TRUE]
         } else {
           pkgGHtoDL[!SHAonGH %in% FALSE, localFile := {
@@ -1669,10 +1669,10 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     prevInstallResult <- pkgGitHub$installResult
     rowsToUpdate <- which(pkgGitHub$SHAonLocal == pkgGitHub$SHAonGH)
 
-    pkgGitHub[rowsToUpdate, `:=`(needInstall = FALSE, haveLocal = "Local", installedVersionOK = TRUE)]
+    pkgGitHub[rowsToUpdate, `:=`(needInstall = FALSE, haveLocal = .txtLocal, installedVersionOK = TRUE)]
     pkgGitHub <- appendInstallResult(pkgGitHub, rowsToUpdate, installResult = "OK", sep = "; ")
 
-    # pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = "Local",
+    # pkgGitHub[SHAonLocal == SHAonGH, `:=`(needInstall = FALSE, haveLocal = .txtLocal,
     #                                       installedVersionOK = TRUE, installResult = "OK")]
     # if (!is.null(prevInstallResult)) {
     #   nas <- is.na(prevInstallResult)
@@ -1829,7 +1829,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     # estTimeFinish <- if (lotsOfTimeLeft) Sys.time() + timeLeft else "...calculating"
     pkgToReport <- paste(preparePkgNameToReport(toInstall[["Package"]], toInstall[["packageFullName"]]),
                          collapse = comma)
-    Source <- ifelse(toInstall$installFrom %in% "Local", "Local", toInstall$repoLocation)
+    Source <- ifelse(toInstall$installFrom %in% .txtLocal, .txtLocal, toInstall$repoLocation)
     if (!is.null(toInstall[["newLocalFile"]])) {
       Source <- ifelse(toInstall[["newLocalFile"]] %in% TRUE, toInstall$repoLocation, toInstall[["installFrom"]])
     }
@@ -1839,7 +1839,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 
     srces <- names(pkgToReportBySource)
     messageVerbose("-- Installing from:", verbose = verbose)
-    nxtSrc <- c(yellow = "Local", blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
+    nxtSrc <- c(yellow = .txtLocal, blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
     Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
       pp <- pkgToReportBySource[[type]]
       if (type %in% srces) {
@@ -1946,7 +1946,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     if (i %in% c("Archive", "CRAN")) {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
-    if (i %in% c("Local", .txtGitHub)) {
+    if (i %in% c(.txtLocal, .txtGitHub)) {
       localFile2 <- toInstallList[[i]]$localFile
       fnBase <- basename(localFile2)
 
@@ -2157,8 +2157,8 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
       }
     }
     pkgInstall[, haveLocal :=
-                 unlist(lapply(localFile, function(x) c("noLocal", "Local")[isTRUE(nchar(x) > 0) + 1]))]
-    pkgInstall[haveLocal %in% "Local", `:=`(
+                 unlist(lapply(localFile, function(x) c(.txtNoLocal, .txtLocal)[isTRUE(nchar(x) > 0) + 1]))]
+    pkgInstall[haveLocal %in% .txtLocal, `:=`(
       installFrom = haveLocal,
       availableVersionOK = TRUE,
       Repository = paste0("file:///", getOptionRPackageCache())
@@ -2755,7 +2755,7 @@ getVersionOnReposLocal <- function(pkgDT) {
           hasLocalNow <- (nchar(pkgNoVoR$localFile) > 0) %in% TRUE
           if (any(hasLocalNow %in% TRUE)) {
             pkgNoVoR[hasLocalNow, VersionOnRepos := extractVersionNumber(filenames = pkgNoVoR$localFile)]
-            pkgNoVoR[hasLocalNow, haveLocal := "Local"]
+            pkgNoVoR[hasLocalNow, haveLocal := .txtLocal]
           }
           pkgDT <- rbindlistRecursive(pkgDTList) # the pkgNoVoR was just a pointer
           setorderv(pkgDT, "tmpOrder")
@@ -3660,7 +3660,7 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
                       tmpdir = tmpdir,
                       verbose = verbose)
     p[dt, localFile := i.localFile, on = "Package"]
-    p[, installFrom := "Local"]
+    p[, installFrom := .txtLocal]
     p[, newLocalFile := TRUE]
   }
   pkg[["FALSE"]] <- p
