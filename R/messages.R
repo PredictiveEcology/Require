@@ -22,6 +22,9 @@ comma <- ", "
 .txtDontInstall <- "dontInstall"
 .txtInstall <- "install"
 
+.txtLocal <- "Local"
+.txtNoLocal <- "noLocal"
+
 .txtShaUnchangedNoInstall <- "SHA unchanged; no install"
 
 GitHubMessage <- 0
