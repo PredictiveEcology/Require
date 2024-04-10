@@ -571,7 +571,6 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
     on.exit(
       {
         # this copies any tar.gz files to the package cache; works even if partial install.packages
-        browser()
         tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
         copyBuiltToCache(pkgInstall, tmpdirs = c(tmpdir, tmpdirPkgs))
         suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
@@ -1271,14 +1270,19 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       if (getOption("Require.installPackagesSys") == 2) {
         ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
         args <- list(repos = repos, type = type)
-        args$url <- file.path(ap$Repository, ap$Package,
-                         paste0(ap$Package, "_",
-                                ap$VersionOnRepos, ".tar.gz"))
+        file <- paste0(ap$Package, "_", ap$VersionOnRepos)
+        if (isWindows() && (identical(type, "both") | grepl("bin", type))) {
+          args$type <- "binary"
+          packageUrl <- file
+          fileext <- ".zip"
+        } else {
+          packageUrl <- file.path(ap$Package, file)
+          fileext <- ".tar.gz"
+        }
+        packageUrl <- paste0(packageUrl, fileext)
+        args$url <- file.path(ap$Repository, packageUrl)
         args$destfile <- file.path(tmpdir, basename(args$url))
-        if (isWindows() && identical(args$type, "both"))
-          args$type <- "binary"
-        if (isWindows() && identical(args$type, "both"))
-          args$type <- "binary"
+
         dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
                           doLine = "outfiles <- do.call(download.file, args)",
                           tmpdir = tmpdir,
@@ -1954,7 +1958,9 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
         ap[needVersionUpdateFromLocalFile, "Version"] <- versionFromFn[needVersionUpdateFromLocalFile]
       }
 
-      file.copy(localFile2, fnBase, overwrite = TRUE) # copy it to "here"
+      fe <- file.exists(fnBase)
+      if (any(!fe)) # now the files will be in tmpdir already
+        file.copy(localFile2[!fe], fnBase[!fe], overwrite = TRUE) # copy it to "here"
       newNameWithoutSHA <- gsub("(-[[:alnum:]]{40})_", "_", fnBase)
       fileRenameOrMove(fnBase, newNameWithoutSHA)
       ap[, "File"] <- newNameWithoutSHA
@@ -3476,7 +3482,8 @@ downloadSys <- function(args, splitOn = "pkgs",
   downFile <- grepl("download.file", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
-  args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
+  if (!downOther %in% TRUE)
+    args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
   if (identical(args$method, "libcurl")) {
     vecList <- list(seq_along(args[[splitOn[1]]]))
   } else {
@@ -3538,7 +3545,22 @@ downloadSys <- function(args, splitOn = "pkgs",
 
   on.exit(sapply(pids, tools::pskill))
   for (pid in pids) {
-    sys::exec_status(pid, wait = TRUE)
+    # sys::exec_status(pid, wait = TRUE)
+    aa <- NA
+    spinner <- "|"
+    message("\n")
+    while (is.na(aa)) {
+      aa <- sys::exec_status(pid, wait = FALSE)
+      Sys.sleep(0.05)
+      spinner <- ifelse (spinner == "|", "\\",
+                         ifelse(spinner == "\\", "-",
+                                ifelse(spinner == "-", "/",
+                                       ifelse(spinner == "/", "|"))))
+      mess <- paste0("\b\b", spinner)
+      messageVerbose(mess, verbose = verbose)
+    }
+    messageVerbose("\b", verbose = verbose)
+
     whPid <- match(pid, pids)
     if (downPack) {
       mess <- paste(argsOrig$pkgs[vecList[[whPid]]], collapse = comma)
