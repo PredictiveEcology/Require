@@ -869,24 +869,28 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose = getOption("Require.cloneFrom")) {
 
   tmpdir <- tempdir3() # faster than tempdir2
+  on.exit({
+    unlink(tmpdir, recursive = TRUE)
+  }, add = TRUE)
   pkgDTList$Archive <- identifyLocalFiles(pkgDTList$Archive, repos = repos, purge = purge, verbose = verbose)
-  haveLocal <- pkgDTList$Archive$haveLocal %in% .txtLocal
-  if (any(haveLocal))
+  haveLocal2 <- pkgDTList$Archive[["haveLocal"]] %in% .txtLocal
+  if (any(haveLocal2))
     pkgDTList$Archive[, PackageUrl := file.path(Package, basename(localFile))]
-  if (!all(haveLocal)) {
+  if (!all(haveLocal2)) {
     # downloadArchive takes a list with an element called "Archive" so can't split on "Archive" here
-    pkgDTList$ArchiveHaveLocal <- pkgDTList$Archive[pkgDTList$Archive$haveLocal %in% TRUE]
-    pkgDTList$Archive <- pkgDTList$Archive[!pkgDTList$Archive$haveLocal %in% TRUE]
+    # noLocals <- pkgDTList$Archive$haveLocal2 %in% TRUE
+    txtArchiveHaveLocal <- "ArchiveHaveLocal"
+    if (any(haveLocal2)) {
+      pkgDTList[[txtArchiveHaveLocal]] <- pkgDTList$Archive[which(haveLocal2), ]
+    }
+    pkgDTList$Archive <- pkgDTList$Archive[which(!haveLocal2), ]
     if (!is.null(pkgDTList$Archive)) {
       pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
                                    tmpdir = tmpdir, verbose = verbose)
     }
-    on.exit({
-      browser()
-      # something about copying from tmpdir
-    })
-
-    pkgDTList$Archive <- rbindlist(pkgDTList2, use.names = TRUE, fill = TRUE)
+    if (!is.null(pkgDTList[[txtArchiveHaveLocal]])) {
+      pkgDTList$Archive <- rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)])
+    }
   }
 
   # tmpdir <- tempdir3()
@@ -897,6 +901,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
     pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {
       tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
       out <- if (file.exists(tf)) { NULL } else {
+        # This section should only happen if Require.installPackageSys < 1
         try(download.file(quiet = verbose <= 0 || verbose >= 5,
           url = file.path(Repository, basename(PackageUrl)),
           destfile = tf), silent = TRUE)

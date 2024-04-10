@@ -1665,7 +1665,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
     ipa$lib <- .libPaths()[1]
-    downloadSys(ipa, splitOn = "pkgs", tmpdir = tempdir3(),
+    sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                 doLine = "outfiles <- do.call(install.packages, args)",
                 verbose = verbose)
     # installPackagesSys(ipa, verbose = verbose)

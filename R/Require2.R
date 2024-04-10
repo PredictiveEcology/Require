@@ -504,7 +504,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                        numPackages, numGroups, startTime, type = type, returnDetails,
                        tmpdir = tempdir(),
                        verbose = getOption("Require.verbose")) {
-  # toInstall <- removeRequireDeps(toInstall, verbose = verbose)
 
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
   type <- if (isWindows() || isMacOSX()) {
@@ -563,6 +562,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        type = getOption("pkgType"), returnDetails, verbose) {
   tmpdir <- tempdir3() # do all downloads and installs to here; then copy to Cache, if used
+  on.exit(unlink(tmpdir, recursive = TRUE), add = TRUE)
 
   pkgDTList <- split(pkgDT, by = c("needInstall"))
   if (NROW(pkgDTList[[.txtInstall]])) {
@@ -1283,7 +1283,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         args$url <- file.path(ap$Repository, packageUrl)
         args$destfile <- file.path(tmpdir, basename(args$url))
 
-        dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
+        dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
                           doLine = "outfiles <- do.call(download.file, args)",
                           tmpdir = tmpdir,
                           verbose = verbose)
@@ -1368,21 +1368,11 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
 
               # "outfile <- do.call(download.file, args)"
               # whNotfe <- which(fe %in% FALSE)
+              on.exit({
+                copyBuiltToCache(pkgArchOnly, tmpdir, copyOnly = TRUE)
+              })
+
               pkgArchOnly <- archiveDownloadSys(pkgArchOnly, whNotfe, tmpdir = tmpdir, verbose)
-              # pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive")]
-              # url <- if (any(grepl(unique(pkgArchOnly$repo), pkgArchOnly$PackageUrl))) {
-              #   pkgArchOnly$PackageUrl
-              # } else {
-              #   file.path(pkgArchOnly$Repository, pkgArchOnly$PackageUrl)
-              # }
-              # args <- list(url = url, destfile = file.path(RequirePkgCacheDir(), basename(url)))
-              #
-              # dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
-              #                   doLine = "outfiles <- do.call(download.file, args)",
-              #                   verbose = verbose)
-              # pkgArchOnly[dt, localFile := i.localFile, on = "Package"]
-              # pkgArchOnly[whNotfe, installFrom := .txtLocal]
-              # pkgArchOnly[whNotfe, newLocalFile := TRUE]
               pkgArchiveHasPU$`TRUE`[["Archive"]] <- pkgArchOnly
 
             } else {
@@ -1447,7 +1437,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                        GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa$Package,
                        VersionOnRepos = aa$VersionOnRepos)
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
-          dt <- downloadSys(args, splitOn = splitOn, tmpdir = tmpdir,
+          dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir,
                             "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := .txtLocal]
@@ -2627,12 +2617,12 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 }
 
 #' @importFrom stats na.omit
-copyBuiltToCache <- function(pkgInstall, tmpdirs) {
+copyBuiltToCache <- function(pkgInstall, tmpdirs, copyOnly = FALSE) {
   if (!is.null(pkgInstall)) {
     if (!is.null(getOptionRPackageCache())) {
       cacheFiles <- dir(getOptionRPackageCache())
       out <- try(Map(td = tmpdirs, function(td) {
-        tdPkgs <- dir(td, full.names = TRUE)
+        tdPkgs <- dir(td, full.names = TRUE, pattern = "\\.zip|\\.tar\\.gz")
         if (length(tdPkgs)) {
           pkgs <- Map(td = tdPkgs, function(td) strsplit(basename(td), split = "_")[[1]][1])
           pkgsInstalled <- pkgInstall[match(pkgs, Package)]
@@ -2651,7 +2641,12 @@ copyBuiltToCache <- function(pkgInstall, tmpdirs) {
           }
           if (length(tdPkgs)) {
             newFiles <- file.path(getOptionRPackageCache(), basename(tdPkgs))
-            suppressWarnings(fileRenameOrMove(tdPkgs, newFiles))
+            if (isTRUE(copyOnly)) {
+              suppressWarnings(file.copy(tdPkgs, newFiles))
+            } else {
+              suppressWarnings(fileRenameOrMove(tdPkgs, newFiles))
+            }
+
           }
         }
       }))
@@ -3476,7 +3471,7 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 
 
 
-downloadSys <- function(args, splitOn = "pkgs",
+sysInstallAndDownload <- function(args, splitOn = "pkgs",
                         doLine = "outfiles <- do.call(download.packages, args)",
                         returnOutfile = FALSE, tmpdir, verbose) {
   downPack <- grepl("download.packages", doLine)
@@ -3655,9 +3650,9 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
   nonEmpties <- which(nchar(url) > 0)
   if (length(nonEmpties)) {
     args <- list(url = url[nonEmpties],
-                 destfile = file.path(RequirePkgCacheDir(), basename(url)[nonEmpties]))
+                 destfile = file.path(tmpdir, basename(url)[nonEmpties]))
 
-    dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
+    dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
                       doLine = "outfiles <- do.call(download.file, args)",
                       tmpdir = tmpdir,
                       verbose = verbose)

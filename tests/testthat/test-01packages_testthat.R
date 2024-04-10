@@ -74,10 +74,10 @@ test_that("test 1", {
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
       isDevAndInteractive || # interactive
       identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-    dir2 <- Require:::rpackageFolder(Require::tempdir2("test2"))
-    dir2 <- Require::checkPath(dir2, create = TRUE)
+    dir2 <- rpackageFolder(Require::tempdir2("test2"))
+    dir2 <- checkPath(dir2, create = TRUE)
     pvWant <- "0.2.2"
-    inst <- Require::Require(paste0("fpCompare (<=", pvWant, ")"),
+    inst <- Require(paste0("fpCompare (<=", pvWant, ")"),
                              standAlone = TRUE,
                              libPaths = dir2, dependencies = FALSE, returnDetails = TRUE, require = FALSE
     )

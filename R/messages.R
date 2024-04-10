@@ -141,8 +141,13 @@ msgStdOut <- function(mess, logFile, verbose) {
 
     }
   }
-  if (length(mess))
+  if (length(mess)) {
     messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
+  } else {
+    if (verbose == 1) {
+      messageVerbose(".", verbose = verbose, appendLF = FALSE)
+    }
+  }
 
 }
 
@@ -249,6 +254,8 @@ msgStdErr <- function(mess, logFile, verbose) {
   }
   if (length(mess)) {
     messageVerbose(greyLight(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
+  } else {
+    browser()
   }
 }
 
