@@ -3693,7 +3693,7 @@ spinnerOnPid <- function(pid, verbose) {
   st <- Sys.time()
   aa <- NA
   spinner <- "|"
-  message("  \b\b ...  ")
+  messageVerbose("  \b\b ...  ", verbose = verbose)
   while (is.na(aa)) {
     aa <- sys::exec_status(pid, wait = FALSE)
     Sys.sleep(0.05)
