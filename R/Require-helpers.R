@@ -187,6 +187,9 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
     } else {
       pkgDT <- pkg
     }
+    if (!is.null(pkgDT[["shas"]])) {
+      pkgDT[nchar(pkgDT[["shas"]]) > 0, Branch := shas]
+    }
     pkgDT[repoLocation == .txtGitHub,
           url := {
             gitHubFileUrl(
