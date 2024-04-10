@@ -562,7 +562,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
 doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        type = getOption("pkgType"), returnDetails, verbose) {
-  tmpdir <- tempdir2(.rndstr(1)) # do all downloads and installs to here; then copy to Cache, if used
+  tmpdir <- tempdir3() # do all downloads and installs to here; then copy to Cache, if used
 
   pkgDTList <- split(pkgDT, by = c("needInstall"))
   if (NROW(pkgDTList[[.txtInstall]])) {
@@ -1428,7 +1428,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
       pkgGHtoDL <- pkgGHList[["TRUE"]]
       if (any(!pkgGHtoDL[["installedVersionOK"]])) {
         # download and build in a separate dir; gets difficult to separate this addition from existing files otherwise
-        td <- tempdir2(.rndstr(1))
+        td <- tempdir3()
         prevDir <- setwd(td)
         on.exit({
           cleanUpNewBuilds(pkgGHtoDL, prevDir) # no need to assign this because it is on.exit fail
@@ -2018,7 +2018,7 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
   localFileDir <- if (!is.null(getOptionRPackageCache())) {
     getOptionRPackageCache()
   } else {
-    tempdir2(.rndstr(1))
+    tempdir3()
   }
   fns <- pkgInstall$localFile
   movedFilename <- file.path(localFileDir, basename(fns))
@@ -3651,9 +3651,10 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
   } else {
     file.path(p$Repository, p$PackageUrl)
   }
-  empties <- nchar(url)
-  if (any(empties)) {
-    args <- list(url = url[empties], destfile = file.path(RequirePkgCacheDir(), basename(url)[empties]))
+  nonEmpties <- which(nchar(url) > 0)
+  if (length(nonEmpties)) {
+    args <- list(url = url[nonEmpties],
+                 destfile = file.path(RequirePkgCacheDir(), basename(url)[nonEmpties]))
 
     dt <- downloadSys(args = args, splitOn = c("url", "destfile"),
                       doLine = "outfiles <- do.call(download.file, args)",

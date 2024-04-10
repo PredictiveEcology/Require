@@ -802,7 +802,7 @@ dealWithCache <- function(purge,
     pkgEnvStartTimeCreate()
   }
   if (purge) {
-
+    unlink(dir(RequireGitHubCacheDir(), full.names = TRUE))
     # getSHAFromGItHubMemoise
     SHAfile <- getSHAFromGitHubDBFilename()
     if (isTRUE(file.exists(SHAfile)))

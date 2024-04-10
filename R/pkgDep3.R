@@ -552,7 +552,7 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
         }
         needVersion <- needVersions(pkgDT)
         # if (any(needVersion)) {
-          descs <- dlGitHubDESCRIPTION(pkgDT$packageFullName)
+          descs <- dlGitHubDESCRIPTION(pkgDT)#$packageFullName)
           pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
           wh <- which(!is.na(pkgDT$descFiles))
           pkgDT[wh, Version := DESCRIPTIONFileVersionV(descFiles)]
@@ -866,9 +866,10 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 #' @importFrom utils download.file untar
 getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose = getOption("Require.cloneFrom")) {
-  pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge, verbose = verbose)
+  tmpdir <- tempdir3()
+  pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
+                               tmpdir = tmpdir, verbose = verbose)
 
-  tmpdir <- Require::tempdir2(.rndstr())
   if (any(!is.na(pkgDTList$Archive$PackageUrl))) {
     pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {
       tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
@@ -913,8 +914,7 @@ installed.packagesDeps <- function(ip, which) {
   if (!is.data.table(ip))
     ip <- as.data.table(ip)
 
-  ip[, deps := do.call(paste, append(.SD, list(sep = comma))), .SDcols=which] |>
-    try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+  ip[, deps := do.call(paste, append(.SD, list(sep = comma))), .SDcols=which]
 
   # remove trailing and initial commas
   set(ip, NULL, "deps", gsub("(, )+$", "", ip$deps))
