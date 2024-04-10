@@ -3490,6 +3490,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     normalizePath(fn1, winslash = "/", mustWork = FALSE)
   })
 
+  doLineOrig <- doLine
   for (j in seq_along(vecList)) {
     i <- vecList[[j]]
     fn <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
@@ -3499,7 +3500,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       args[[jjj]] <- argsOrig[[jjj]][i]
 
     if (doLineVectorized %in% FALSE && length(args[[splitOn[1]]]) > 1) {
-      doLineOrig <- doLine
       tf3 <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
       tf3 <- normalizePath(tf3, winslash = "/", mustWork = FALSE)
       saveRDS(splitOn, file = tf3)
