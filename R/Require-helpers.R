@@ -1271,18 +1271,20 @@ stripHTTPAddress <- function(addr) {
 installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
   libPaths <- args$libPaths
   args$libPaths <- NULL
-  if (getOption("Require.installPackagesSys", FALSE) == 3L && isWindows()) {
+  if (getOption("Require.installPackagesSys", FALSE) == 2L && isWindows()) {
     argsOrig <- args
+    browser()
+    vecList <- splitVectors(args, splitOn = "pkgs", method = args$method)
 
     # for (i in 1:10) {
-    vec <- seq_along(argsOrig$pkgs)
-    chunk2 <- function(x,n) {
-      if (n == 1)
-        list(1)
-      else
-        split(x, cut(seq_along(x), n, labels = FALSE))
-    }
-    vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
+    # vec <- seq_along(argsOrig$pkgs)
+    # chunk2 <- function(x,n) {
+    #   if (n == 1)
+    #     list(1)
+    #   else
+    #     split(x, cut(seq_along(x), n, labels = FALSE))
+    # }
+    # vecList <- chunk2(vec, min(length(args$pkgs), min(4, getOption("Ncpus"))))
 
     pids <- numeric(length(vecList))
     for (j in seq_along(vecList)) {
@@ -1305,8 +1307,10 @@ installPackagesSys <- function(args, verbose = getOption("Require.verbose")) {
       )
     }
     on.exit(sapply(pids, tools::pskill))
-    for (pid in pids)
-      sys::exec_status(pid, wait = TRUE)
+    for (pid in pids) {
+      spinnerOnPid(pid, verbose)
+    }
+      # sys::exec_status(pid, wait = TRUE)
     allDone <- argsOrig$pkgs %in%
       rownames(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
     if (all(allDone))
@@ -1662,7 +1666,10 @@ installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
     ipa$libPaths <- .libPaths()[1]
-    installPackagesSys(ipa, verbose = verbose)
+    downloadSys(ipa, splitOn = "pkgs", tmpdir = tempdir3(),
+                doLine = "outfiles <- do.call(install.packages, args)",
+                verbose = verbose)
+    # installPackagesSys(ipa, verbose = verbose)
   } else {
     if (isTRUE(ipa$quiet)) {
       messSupp2 <- capture.output({

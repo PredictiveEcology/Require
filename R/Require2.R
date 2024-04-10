@@ -3480,22 +3480,24 @@ downloadSys <- function(args, splitOn = "pkgs",
                         returnOutfile = FALSE, tmpdir, verbose) {
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
+  installPackages <- grepl("install.packages", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
   if (!downOther %in% TRUE)
     args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
-  if (identical(args$method, "libcurl")) {
-    vecList <- list(seq_along(args[[splitOn[1]]]))
-  } else {
-    vec <- seq_along(argsOrig[[splitOn[1]]])
-    chunk2 <- function(x,n) {
-      if (n == 1)
-        list(1)
-      else
-        split(x, cut(seq_along(x), n, labels = FALSE))
-    }
-    vecList <- chunk2(vec, min(length(args[[splitOn[1]]]), min(8, getOption("Ncpus"))))
-  }
+  vecList <- splitVectors(args, splitOn, method = args$method, installPackages)
+  # if (identical(args$method, "libcurl")) {
+  #   vecList <- list(seq_along(args[[splitOn[1]]]))
+  # } else {
+  #   vec <- seq_along(argsOrig[[splitOn[1]]])
+  #   chunk2 <- function(x,n) {
+  #     if (n == 1)
+  #       list(1)
+  #     else
+  #       split(x, cut(seq_along(x), n, labels = FALSE))
+  #   }
+  #   vecList <- chunk2(vec, min(length(args[[splitOn[1]]]), min(8, getOption("Ncpus"))))
+  # }
 
 
   pids <- numeric(length(vecList))
@@ -3528,54 +3530,59 @@ downloadSys <- function(args, splitOn = "pkgs",
             paste0("saveRDS(outfiles, '",outfiles[j],"')"))
 
     cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-    if (downPack) {
+    if (downPack || installPackages) {
       mess <- paste(args$pkgs, collapse = comma)
     } else if (downFile) {
       mess <- paste(extractPkgName(filenames = basename(args$url)), collapse = comma)
     } else {
       mess <- paste0(args$Account, "/", args$Repo, "@", args$Branch)
     }
-    messageVerbose(greyLight(paste0("Downloading: ", mess)), verbose = verbose)
-    pids[j] <- sys::exec_background(
-      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-      std_out = installPackageVerbose(verbose, verboseLevel = 2),
-      std_err = installPackageVerbose(verbose, verboseLevel = 2)
-    )
+    preMess <-if (installPackages)  "Installing: " else "Downloading: "
+    messageVerbose(greyLight(paste0(preMess, mess)), verbose = verbose)
+
+    if (installPackages) {
+      logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+      pids[j] <- sys::exec_wait(
+        Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+        std_out = function(x) {
+          mess <- rawToChar(x)
+          msgStdOut(mess, logFile, verbose)
+        },
+        std_err = function(x) {
+          mess <- rawToChar(x)
+          msgStdErr(mess, logFile, verbose)
+        }
+      )
+
+    } else {
+
+      pids[j] <- sys::exec_background(
+        Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+        std_out = installPackageVerbose(verbose, verboseLevel = 2),
+        std_err = installPackageVerbose(verbose, verboseLevel = 2)
+      )
+    }
   }
 
   on.exit(sapply(pids, tools::pskill))
   for (pid in pids) {
-    # sys::exec_status(pid, wait = TRUE)
-    aa <- NA
-    spinner <- "|"
-    message("\n")
-    while (is.na(aa)) {
-      aa <- sys::exec_status(pid, wait = FALSE)
-      Sys.sleep(0.05)
-      spinner <- ifelse (spinner == "|", "\\",
-                         ifelse(spinner == "\\", "-",
-                                ifelse(spinner == "-", "/",
-                                       ifelse(spinner == "/", "|"))))
-      mess <- paste0("\b\b", spinner)
-      messageVerbose(mess, verbose = verbose)
-    }
-    messageVerbose("\b", verbose = verbose)
+    if (!installPackages)
+      spinnerOnPid(pid, verbose)
 
     whPid <- match(pid, pids)
-    if (downPack) {
+    if (downPack || installPackages) {
       mess <- paste(argsOrig$pkgs[vecList[[whPid]]], collapse = comma)
     } else if (downFile) {
       mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
     } else {
       w <- vecList[[whPid]]
-      mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch, collapse = comma)
+      mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch[w], collapse = comma)
     }
-    if (!identical(unique(mess), mess)) browser()
-    messageVerbose(blue(paste0("  Downloaded: ", mess)), verbose = verbose)
-
+    preMess <-if (installPackages)  "Installed: " else "Downloaded: "
+    messageVerbose(blue(paste0("  ", preMess, mess)), verbose = verbose)
   }
 
-  if (downPack || !downFile) {
+  if ((downPack || !downFile) && !installPackages) {
     ll <- lapply(outfiles, readRDS)
     if (downPack)
       dt <- as.data.table(do.call(rbind, ll))
@@ -3585,6 +3592,8 @@ downloadSys <- function(args, splitOn = "pkgs",
   } else if (downFile) {
     dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> setDT()
+  } else {
+    dt <- logFile
   }
 
   dt
@@ -3665,4 +3674,40 @@ naToEmpty <- function(vec) {
   naToEmpty <- is.na(vec)
   if (any(naToEmpty)) vec[naToEmpty] <- ""
   vec
+}
+
+
+splitVectors <- function(argsOrig, splitOn, method, installPackages) {
+  if (identical(method, "libcurl") || isTRUE(installPackages)) {
+    vecList <- list(seq_along(argsOrig[[splitOn[1]]]))
+  } else {
+    vec <- seq_along(argsOrig[[splitOn[1]]])
+    chunk2 <- function(x,n) {
+      if (n == 1)
+        list(1)
+      else
+        split(x, cut(seq_along(x), n, labels = FALSE))
+    }
+    vecList <- chunk2(vec, min(length(argsOrig[[splitOn[1]]]), min(8, getOption("Ncpus"))))
+  }
+}
+
+spinnerOnPid <- function(pid, verbose) {
+  st <- Sys.time()
+  aa <- NA
+  spinner <- "|"
+  message("  \b\b ...  ")
+  while (is.na(aa)) {
+    aa <- sys::exec_status(pid, wait = FALSE)
+    Sys.sleep(0.05)
+    spinner <- ifelse (spinner == "|", "/",
+                       ifelse(spinner == "/", "-",
+                              ifelse(spinner == "-", "\\",
+                                     ifelse(spinner == "\\", "|"))))
+    if (Sys.time() - st > 0.3) {
+      mess <- paste0("\b\b", spinner)
+      messageVerbose(mess, verbose = verbose)
+    }
+  }
+  messageVerbose("\b", verbose = verbose)
 }
