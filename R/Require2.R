@@ -1368,7 +1368,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
 
               # "outfile <- do.call(download.file, args)"
               # whNotfe <- which(fe %in% FALSE)
-              pkgArchOnly <- archiveDownloadSys(pkgArchOnly, whNotfe, verbose)
+              pkgArchOnly <- archiveDownloadSys(pkgArchOnly, whNotfe, tmpdir = tmpdir, verbose)
               # pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive")]
               # url <- if (any(grepl(unique(pkgArchOnly$repo), pkgArchOnly$PackageUrl))) {
               #   pkgArchOnly$PackageUrl
@@ -3638,7 +3638,7 @@ rmErroredPkgInstalls <- function(logFile, toInstall, verbose) {
 }
 
 
-archiveDownloadSys <- function(pkgArchOnly, whNotfe, verbose) {
+archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
   set(pkgArchOnly, whNotfe, "fileExists", FALSE)
   pkg <- split(pkgArchOnly, by = "fileExists")
   p <- pkg[["FALSE"]]
