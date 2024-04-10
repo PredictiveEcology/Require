@@ -889,7 +889,9 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
                                    tmpdir = tmpdir, verbose = verbose)
     }
     if (!is.null(pkgDTList[[txtArchiveHaveLocal]])) {
-      pkgDTList$Archive <- rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)])
+      pkgDTList$Archive <-
+        rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)],
+                  fill = TRUE, use.names = TRUE)
     }
   }
 
