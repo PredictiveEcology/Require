@@ -215,7 +215,7 @@ test_that("test 5", {
     if (!isMacOSX()) {
       pkgs <- c("knn", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
       pkgsClean <- extractPkgName(pkgs)
-      lala <- suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean))))
+      lala <- try(suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean)))), silent = TRUE)
 
       # ERROR: dependency 'Require' is not available for package 'SpaDES.core' --> doesn't show up
       acceptableFails <- c("Require", "SpaDES.core")
