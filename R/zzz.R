@@ -19,6 +19,8 @@ envPkgCreate()
   #     list2env(pkgEnvLast, .pkgEnv)
   #   }
   # }
+  .RequireDependencies <<- RequireDependencies()
+
   possCacheDir <- getOptionRPackageCache()
   # if (!is.null(possCacheDir)) {
   #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)

@@ -66,7 +66,8 @@ if (Sys.info()["user"] %in% "emcintir") {
 
 runTests <- function(have, pkgs) {
   # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
-  theTest <- all(!is.na(have[installed == TRUE]$Version))
+  theTest <- all(!is.na(have[installed == TRUE &
+                               !Package %in% extractPkgName(.RequireDependencies)]$Version))
   if (!isTRUE(theTest)) browser()
   testthat::expect_true(isTRUE(theTest))
   if ("installResult" %in% colnames(have)) {

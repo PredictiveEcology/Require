@@ -3350,25 +3350,26 @@ colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
 removeRequireDeps <- function(pkgDT, verbose) {
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT)
-  localRequireDir <- file.path(.libPaths(), "Require")
-  de <- dir.exists(localRequireDir)
-  if (any(de)) {
-    localRequireDir <- localRequireDir[de][1]
-    RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
-  } else {
-    # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
-    #  then the next line will work to find it
-    deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
-    if (nzchar(deps)) {
-      RequireDeps <- depsWithCommasToVector("Require", depsWithCommas = deps)
-    } else {
-      RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
-    }
-
-  }
+  RequireDeps <- .RequireDependencies
+  # localRequireDir <- file.path(.libPaths(), "Require")
+  # de <- dir.exists(localRequireDir)
+  # if (any(de)) {
+  #   localRequireDir <- localRequireDir[de][1]
+  #   RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
+  # } else {
+  #   # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
+  #   #  then the next line will work to find it
+  #   deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
+  #   if (nzchar(deps)) {
+  #     RequireDeps <- depsWithCommasToVector("Require", depsWithCommas = deps)
+  #   } else {
+  #     RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
+  #   }
+  #
+  # }
 
   whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
-  toRm <- pkgDT$Package[whNeedInstall] %in% extractPkgName(RequireDeps[[1]])
+  toRm <- pkgDT$Package[whNeedInstall] %in% extractPkgName(unlist(RequireDeps))
   if (any(toRm)) {
     # messageVerbose("Can't install/update data.table because it is a dependency of Require; use e.g.:\n",
     #                "install.packages(\"data.table\")", verbose = verbose)
@@ -3708,3 +3709,4 @@ spinnerOnPid <- function(pid, verbose) {
   }
   messageVerbose("\b", verbose = verbose)
 }
+

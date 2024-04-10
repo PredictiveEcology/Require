@@ -1481,3 +1481,26 @@ appendRecursiveToDeps <- function(pkgDT, caTr, depFa, caFa, snFa, depTr, snTr) {
     set(pkgDT, NULL, caFa, NULL) # remove non-recursive column for clearning memory
   pkgDT[]
 }
+
+
+#' @include pkgDep.R
+RequireDependencies <- function() {
+  localRequireDir <- file.path(.libPaths(), "Require")
+  de <- dir.exists(localRequireDir)
+  if (any(de)) {
+    localRequireDir <- localRequireDir[de][1]
+    RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
+  } else {
+    # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
+    #  then the next line will work to find it
+    deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
+    if (nzchar(deps)) {
+      RequireDeps <- depsWithCommasToVector("Require", depsWithCommas = deps)
+    } else {
+      RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
+    }
+
+  }
+}
+
+.RequireDependencies <- character()
