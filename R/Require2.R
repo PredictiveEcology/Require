@@ -544,6 +544,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   if (NROW(ipa$available)) {
     ipa$destdir <- tmpdir
     on.exit({
+      browser()
       logFile <- if (exists("toInstallOut", inherits = FALSE)) toInstallOut else NULL
       rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
     },
@@ -555,6 +556,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
     )
+    browser()
   }
   toInstall
 }
@@ -631,6 +633,8 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
           toInstallList <- split(pkgInstall, by = "installSafeGroups")
         else
           toInstallList <- list(pkgInstall)
+        print(tmpdir)
+        browser()
         toInstallList <-
           Map(
             toInstall = toInstallList,
