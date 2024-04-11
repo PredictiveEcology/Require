@@ -571,6 +571,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
     on.exit(
       {
         # this copies any tar.gz files to the package cache; works even if partial install.packages
+        browser()
         tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
         copyBuiltToCache(pkgInstall, tmpdirs = c(tmpdir, tmpdirPkgs))
         suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
@@ -1287,6 +1288,8 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         args$url <- file.path(ap$Repository, packageUrl)
         args$destfile <- file.path(tmpdir, basename(args$url))
 
+        browser()
+        on.exit(copyBuiltToCache(pkgCRAN, tmpdirs = tmpdir, copyOnly = TRUE), add = TRUE)
         dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
                           doLine = "outfiles <- do.call(download.file, args)",
                           tmpdir = tmpdir,
@@ -1372,9 +1375,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
 
               # "outfile <- do.call(download.file, args)"
               # whNotfe <- which(fe %in% FALSE)
-              on.exit({
-                copyBuiltToCache(pkgArchOnly, tmpdir, copyOnly = TRUE)
-              })
+              on.exit(copyBuiltToCache(pkgArchOnly, tmpdir, copyOnly = TRUE))
 
               pkgArchOnly <- archiveDownloadSys(pkgArchOnly, whNotfe, tmpdir = tmpdir, verbose)
               pkgArchiveHasPU$`TRUE`[["Archive"]] <- pkgArchOnly
@@ -3554,6 +3555,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     messageVerbose(greyLight(paste0(preMess, mess)), verbose = verbose)
 
     if (installPackages) {
+      browser()
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
       pids[j] <- sys::exec_wait(
         Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con

@@ -218,24 +218,36 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         }
       }
       if (any(!alreadyExists)) {
-        pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
-              filepath := {
-                messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose)
-                ret <- NA
-                dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
-                                                  need = "master",
-                                                  verbose = verbose, verboseLevel = 2
-                )
-                ret <- if (!is(dl, "try-error")) {
-                  destFile
-                } else {
-                  NA
-                }
+        # if (getOption("Require.installPackagesSys")) {
+        #   isGH <- which(pkgDT$repoLocation == .txtGitHub & alreadyExists %in% FALSE)
+        #   pkgDT[isGH, `:=`(uniqueURL = unique(url)[1], uniqueDestfile = unique(destFile)[1]), by = c("Package", "Branch")]
+        #   args <- list(destfile = unique(pkgDT$uniqueDestfile[isGH]), url = unique(pkgDT$uniqueURL[isGH]),
+        #                need <- "master", verboseLevel = 2)
+        #   sysInstallAndDownload(args, split = c("destfile", "url"),
+        #                         doLine = "outfiles <- do.call(Require:::.downloadFileMasterMainAuth, args)",
+        #                         tmpdir = tempdir3(),
+        #                         verbose = verbose)
+        # } else {
+          pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
+                filepath := {
+                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose)
+                  ret <- NA
+                  dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+                                                    need = "master",
+                                                    verbose = verbose, verboseLevel = 2
+                  )
+                  ret <- if (!is(dl, "try-error")) {
+                    destFile
+                  } else {
+                    NA
+                  }
 
-                ret
-              },
-              by = c("Package", "Branch")
-        ]
+                  ret
+                },
+                by = c("Package", "Branch")
+          ]
+        # }
+
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
       wh <- which(pkgDT$repoLocation == .txtGitHub)
@@ -1668,6 +1680,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
     ipa$lib <- .libPaths()[1]
+    browser()
     sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                 doLine = "outfiles <- do.call(install.packages, args)",
                 verbose = verbose)
