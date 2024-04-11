@@ -609,7 +609,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       if (!is.null(pkgInstall)) {
         pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
         pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
-        pkgInstall <- updateReposForSrcPkgs(pkgInstall)
+        pkgInstall <- updateReposForSrcPkgs(pkgInstall, verbose = verbose)
 
         startTime <- Sys.time()
 
@@ -630,7 +630,6 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
           toInstallList <- split(pkgInstall, by = "installSafeGroups")
         else
           toInstallList <- list(pkgInstall)
-        print(tmpdir)
         toInstallList <-
           Map(
             toInstall = toInstallList,
@@ -1267,7 +1266,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       pkgCRAN <- pkgNoLocal[["CRAN"]]
     }
     if (NROW(pkgCRAN)) {
-      pkgCRAN <- updateReposForSrcPkgs(pkgCRAN)
+      pkgCRAN <- updateReposForSrcPkgs(pkgCRAN, verbose = verbose)
 
       if (getOption("Require.installPackagesSys") == 2) {
         ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
@@ -2779,12 +2778,20 @@ browserDeveloper <- function(mess = "", envir = parent.frame()) {
   }
 }
 
-updateReposForSrcPkgs <- function(pkgInstall) {
+updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbose")) {
 
   if (isLinux()) {
     isBinary <- isBinaryCRANRepo(pkgInstall$Repository)
     dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
     needSrc <- isBinary & dontInstallBecauseForceSrc
+    if ("lme4" %in% pkgInstall[["Package"]]) {
+      if (packageVersion("Matrix") < "1.6.5") {
+        needSrc[pkgInstall[["Package"]] %in% "lme4"] <- TRUE
+        messageVerbose("lme4 is being installed. Matrix version is <1.6.5, which means that lme4 must ",
+                       "be installed from source. Proceeding with installing lme4 from source. Alternatively, ",
+                       "cancel this, Install('Matrix (>=1.6.5)' and try again.", verbose = verbose)
+      }
+    }
 
     # }
     #
