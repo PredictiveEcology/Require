@@ -66,20 +66,25 @@ RequireOptions <- function() {
     Require.cloneFrom = NULL,
     Require.install = TRUE,
     Require.installPackagesSys = 0L,
-    Require.otherPkgs = c("cpp11", "igraph", "Rcpp", "RcppParallel"),
+    Require.otherPkgs = c(
+      # "cpp11"
+      # , "igraph"
+      # , "Rcpp"
+      # , "RcppParallel"
+      ),
     Require.packageVersionFile = "packageVersions.txt",
     Require.purge = FALSE,
     Require.RPackageCache = "default",
     Require.spatialPkgs = c(
-      "lwgeom",
-      "raster",
-      "rgdal",
-      "rgeos",
-      "s2",
-      "sf",
-      "sp",
-      "terra",
-      "units"
+      "terra"
+      #, "lwgeom"
+      #, "raster"
+      #, "rgdal"
+      #, "rgeos"
+      #, "s2"
+      #, "sf"
+      #, "sp"
+      # , "units"
     ),
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,

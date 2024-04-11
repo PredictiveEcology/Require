@@ -1266,6 +1266,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       pkgCRAN <- pkgNoLocal[["CRAN"]]
     }
     if (NROW(pkgCRAN)) {
+      pkgCRAN <- updateReposForSrcPkgs(pkgCRAN)
 
       if (getOption("Require.installPackagesSys") == 2) {
         ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
@@ -1276,7 +1277,10 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
           packageUrl <- file
           fileext <- ".zip"
         } else {
-          packageUrl <- file.path(ap$Package, file)
+          if (any(ap$repoLocation %in% "CRAN"))
+            packageUrl <- file
+          else
+            packageUrl <- file.path(ap$Package, file)
           fileext <- ".tar.gz"
         }
         packageUrl <- paste0(packageUrl, fileext)
@@ -2776,62 +2780,73 @@ browserDeveloper <- function(mess = "", envir = parent.frame()) {
 }
 
 updateReposForSrcPkgs <- function(pkgInstall) {
-  if (!isWindows() && !isMacOSX() &&
-      any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {
+
+  if (isLinux()) {
+    isBinary <- isBinaryCRANRepo(pkgInstall$Repository)
     dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
-    mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
-    pkgInstall[
-      which(mayNeedSwitchToSrc),
-      isBinaryInstall := isWindows() | isMacOSX()
-    ]
-    needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
-    if (any(needSwitchToSrc %in% TRUE)) {
-      # Eliot commented this March 28, 2024 -- posit Package Manager can handle this now
-      # if (any(isBinaryCRANRepo(getOption("repos")[1]))) {
-      #   nams <- pkgInstall[needSwitchToSrc][["Package"]]
-      #   warning(
-      #     "The CRAN repository is a binary repository. However, ",
-      #     paste(nams, collapse = comma), isAre(nams), " identified in `sourcePkgs()`, ",
-      #     " indicating installation from source; if these source installs fail, try changing ",
-      #     "to set \noptions(Require.otherPkgs = c('",
-      #     paste(setdiff(getOption("Require.otherPkgs"), nams), collapse = "', '"), "'))",
-      #     "\nremoving ", paste(nams, collapse = comma)
-      #   )
-      # }
-      if (all(isBinaryCRANRepo(getOption("repos")))) {
-        warning(
-          paste(pkgInstall[needSwitchToSrc][["Package"]], collapse = comma), " is identified in `sourcePkgs()`, ",
-          "indicating it should normally be installed from source; however, there is no source CRAN repository.",
-          "Please add one to the `options(repos)`, e.g., with ",
-          "options(repos = c(getOption('repos'), CRAN = 'https://cloud.r-project.org')).",
-          "Proceeding with the binary repository, which may not work"
-        )
-      } else {
-        nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
-        whArchive <- pkgInstall$installFrom %in% "Archive"
-        pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
+    needSrc <- isBinary & dontInstallBecauseForceSrc
 
-        # if there are multiple non-binary repos
-        if (length(nonBinaryRepos) > 1) {
-          packageExists <- FALSE
-          for (ind in seq(nonBinaryRepos)) {
-            nbrContrib <- contrib.url(nonBinaryRepos)
-            pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
-            apTmp <- available.packages(contriburl = nbrContrib[ind])
-            packageExists <- pkgInstallNeededHere[["Package"]] %in% apTmp[, "Package"]
-            if (any(packageExists)) {
-              pkgInstall[Package %in% pkgInstallNeededHere[["Package"]][packageExists],
-                         `:=`(Repository, nbrContrib[ind])]
-              needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
-            }
-            if (all(packageExists))
-              break
+    # }
+    #
+    # if (!isWindows() && !isMacOSX() &&
+    #     any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {
+    #   dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
+    #   mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
+    #   pkgInstall[
+    #     which(mayNeedSwitchToSrc),
+    #     isBinaryInstall := isWindows() | isMacOSX()
+    #   ]
+    #   needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+    #   if (any(needSwitchToSrc %in% TRUE)) {
+    # Eliot commented this March 28, 2024 -- posit Package Manager can handle this now
+    # if (any(isBinaryCRANRepo(getOption("repos")[1]))) {
+    #   nams <- pkgInstall[needSwitchToSrc][["Package"]]
+    #   warning(
+    #     "The CRAN repository is a binary repository. However, ",
+    #     paste(nams, collapse = comma), isAre(nams), " identified in `sourcePkgs()`, ",
+    #     " indicating installation from source; if these source installs fail, try changing ",
+    #     "to set \noptions(Require.otherPkgs = c('",
+    #     paste(setdiff(getOption("Require.otherPkgs"), nams), collapse = "', '"), "'))",
+    #     "\nremoving ", paste(nams, collapse = comma)
+    #   )
+    # }
+    if (all(isBinaryCRANRepo(getOption("repos")))) {
+      warning(
+        paste(pkgInstall[needSwitchToSrc][["Package"]], collapse = comma), " is identified in `sourcePkgs()`, ",
+        "indicating it should normally be installed from source; however, there is no source CRAN repository.",
+        "Please add one to the `options(repos)`, e.g., with ",
+        "options(repos = c(getOption('repos'), CRAN = 'https://cloud.r-project.org')).",
+        "Proceeding with the binary repository, which may not work"
+      )
+    } else {
+      nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
+      pkgInstall[which(needSrc), Repository := contrib.url(nonBinaryRepos)]
+      # pkgInstall[which(needSrc), Repository := nonBinaryRepos]
+
+      # whArchive <- pkgInstall$installFrom %in% "Archive"
+      # pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
+
+      # if there are multiple non-binary repos
+      if (length(nonBinaryRepos) > 1) {
+        packageExists <- FALSE
+        for (ind in seq(nonBinaryRepos)) {
+          nbrContrib <- contrib.url(nonBinaryRepos)
+          pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
+          apTmp <- available.packages(contriburl = nbrContrib[ind])
+          packageExists <- pkgInstallNeededHere[["Package"]] %in% apTmp[, "Package"]
+          if (any(packageExists)) {
+            pkgInstall[Package %in% pkgInstallNeededHere[["Package"]][packageExists],
+                       `:=`(Repository, nbrContrib[ind])]
+            needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
           }
-        } else {
-          pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
+          if (all(packageExists))
+            break
         }
-
+        # } else {
+        #   pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
       }
+
+      #   }
     }
   }
   pkgInstall

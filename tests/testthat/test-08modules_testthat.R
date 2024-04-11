@@ -154,8 +154,9 @@ test_that("test 5", {
       )
     }
 
-    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    ip <- installed.packages(lib.loc = dirForInstall, noCache = TRUE) |> as.data.table()
 
+    browser()
     allInstalled <- setdiff(setdiff(trimRedundancies(pkgs)$Package, c("Require", "data.table")),
                             ip$Package)
     a <- attr(out[[i]], "Require")
