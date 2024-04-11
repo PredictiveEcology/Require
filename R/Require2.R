@@ -3332,7 +3332,9 @@ canClone <- function(ip) {
   RversionDot <- RversionDot()
   correctBuilt <- correctBuilt(ip, RversionDot)
   # correctBuilt <- Rversion == BuiltVersion # needs to re-add package_version to both those functions
-  ip[ (ip[, "NeedsCompilation"] == "no" & correctBuilt %in% TRUE)  %in% TRUE ,, drop = FALSE]
+  ip[ (#ip[,  "NeedsCompilation"] == "no" &
+         correctBuilt %in% TRUE)
+      %in% TRUE ,, drop = FALSE]
 }
 
 cantClone <- function(ip) {
