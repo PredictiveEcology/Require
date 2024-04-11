@@ -1683,10 +1683,6 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                 doLine = "outfiles <- do.call(install.packages, args)",
                 verbose = verbose)
-    browser()
-
-
-    # installPackagesSys(ipa, verbose = verbose)
   } else {
     if (isTRUE(ipa$quiet)) {
       messSupp2 <- capture.output({

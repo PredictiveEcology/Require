@@ -544,7 +544,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   if (NROW(ipa$available)) {
     ipa$destdir <- tmpdir
     on.exit({
-      browser()
       logFile <- if (exists("toInstallOut", inherits = FALSE)) toInstallOut else NULL
       rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
     },
@@ -556,7 +555,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
     )
-    browser()
   }
   toInstall
 }
@@ -564,7 +562,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        type = getOption("pkgType"), returnDetails, verbose) {
   tmpdir <- tempdir3() # do all downloads and installs to here; then copy to Cache, if used
-  on.exit(unlink(tmpdir, recursive = TRUE), add = TRUE)
 
   pkgDTList <- split(pkgDT, by = c("needInstall"))
   if (NROW(pkgDTList[[.txtInstall]])) {
@@ -573,10 +570,10 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
     on.exit(
       {
         # this copies any tar.gz files to the package cache; works even if partial install.packages
-        browser()
         tmpdirPkgs <- file.path(tempdir(), "downloaded_packages") # from CRAN installs
         copyBuiltToCache(pkgInstall, tmpdirs = c(tmpdir, tmpdirPkgs))
         suppressWarnings(try(postInstallDESCRIPTIONMods(pkgInstall, libPaths), silent = TRUE)) # CRAN is read only after pkgs installed
+        unlink(tmpdir, recursive = TRUE)
       },
       add = TRUE
     )
@@ -634,7 +631,6 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
         else
           toInstallList <- list(pkgInstall)
         print(tmpdir)
-        browser()
         toInstallList <-
           Map(
             toInstall = toInstallList,
@@ -1292,7 +1288,6 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         args$url <- file.path(ap$Repository, packageUrl)
         args$destfile <- file.path(tmpdir, basename(args$url))
 
-        browser()
         on.exit(copyBuiltToCache(pkgCRAN, tmpdirs = tmpdir, copyOnly = TRUE), add = TRUE)
         dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
                           doLine = "outfiles <- do.call(download.file, args)",
@@ -3559,7 +3554,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     messageVerbose(greyLight(paste0(preMess, mess)), verbose = verbose)
 
     if (installPackages) {
-      browser()
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
       pids[j] <- sys::exec_wait(
         Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
@@ -3603,12 +3597,10 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
   ll <- try(lapply(outfiles, readRDS), silent = TRUE)
   if (downPack && !downFile && !installPackages) {
-    browser()
     if (downPack)
       dt <- as.data.table(do.call(rbind, ll))
     else
       dt <- as.data.table(cbind(Package = argsOrig$Package, do.call(rbind, ll)))
-    # if (isTRUE(any(grepl("downloadAndBuildToLocalFile", doLine))) ) browser()
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
     dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
