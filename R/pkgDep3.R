@@ -892,6 +892,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
       pkgDTList$Archive <-
         rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)],
                   fill = TRUE, use.names = TRUE)
+      pkgDTList[[txtArchiveHaveLocal]] <- NULL
     }
   }
 
