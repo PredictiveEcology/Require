@@ -25,13 +25,14 @@ test_that("test 5", {
       origRepos2 <- setLinuxBinaryRepo()
       on.exit(options(origRepos2))
     }
-    Install(pkgs) |>
+
+    Install(pkgs, verbose = 2) |>
       capture_warnings() -> warns
 
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 
-    ins <- installed.packages() |> as.data.table()
+    ins <- installed.packages(noCache = TRUE) |> as.data.table()
     notInstalled <- setdiff(extractPkgName(pkgs), ins$Package)
     notInstalled <- setdiff(notInstalled, loadedNamespaces())
     expect_identical(notInstalled, character(0))

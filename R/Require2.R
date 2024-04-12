@@ -284,7 +284,9 @@ Require <- function(packages,
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   suppressMessages({
     origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
-    on.exit(setLibPaths(origLibPaths), add = TRUE)
+    on.exit({
+      setLibPaths(origLibPaths, standAlone = standAlone, exact = TRUE)
+      }, add = TRUE)
   })
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
@@ -446,6 +448,12 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
     filePat <- paste0(Package, "_", VersionOnRepos, ".tar.gz")
     logFile <- tempfile2(fileext = ".log")
     out1 <- Map(pack = Package, function(pack) {
+      # R CMD build can't handle DESCRIPTION with blank lines -- this is like
+      #   https://github.com/r-lib/devtools/pull/439
+      descFile <- file.path(Package, "DESCRIPTION")
+      a <- readLines(descFile)
+      if (any(nchar(a)))
+        writeLines(a[nzchar(a)], descFile)
       # cmdLine <- paste("CMD build ", pack, paste(extras, collapse = " "))
       cmdLine <- c("CMD", "build", pack, extras)
       if (getOption("Require.installPackagesSys", 0L)) {
@@ -3618,7 +3626,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
                localFile = argsOrig$destfile) |> setDT()
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig$Package,
-               localFile = unlist(ll)) |> setDT()
+               localFile = unlist(ll))
+    setDT(dt) |>
+    try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
   } else  { # installPackages and Other
     dt <- logFile
   }
