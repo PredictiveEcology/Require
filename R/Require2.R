@@ -496,7 +496,10 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
         )
         tools::pskill(pid)
       } else {
-        system2(Rpath, cmdLine)
+        ver <- ifelse(installPackageVerbose(verbose, verboseLevel = 1), "", FALSE)
+        system2(Rpath, cmdLine,
+                stdout = ver,
+                stderr = ver)
       }
     })
     messageVerbose("\b\b ... Built!",

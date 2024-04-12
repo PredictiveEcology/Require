@@ -154,7 +154,7 @@ test_that("test 3", {
     #  mess <- capture_messages(
         warns <- capture_warnings(
           #withCallingHandlers(
-          Install("ffbase", # verbose = 0,
+          Install("ff", # verbose = 0,
                   repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
                   ))
           #)

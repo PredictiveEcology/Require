@@ -921,10 +921,14 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
     }, by = "packageFullName"]
 
     gotDESC <- !is.na(pkgDTList$Archive$DESCFileFull)
+    whGotDESC <- which(gotDESC)
+
+    VoR <- DESCRIPTIONFileOtherV(pkgDTList$Archive[whGotDESC]$DESCFileFull, "Version")
+    pkgDTList$Archive[whGotDESC, VersionOnRepos := VoR]
     deps <- DESCRIPTIONFileDepsV(
-      pkgDTList$Archive[gotDESC]$DESCFileFull,
+      pkgDTList$Archive[whGotDESC]$DESCFileFull,
       which = which, keepSeparate = TRUE)
-    names(deps) <- pkgDTList$Archive$packageFullName[gotDESC]
+    names(deps) <- pkgDTList$Archive$packageFullName[whGotDESC]
     deps <- lapply(deps, function(x) {
       unlist(lapply(x, function(y) paste(y, collapse = comma)))
     })
@@ -932,7 +936,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
     # deps <- invertList(deps)
     # deps <- as.data.table(deps)
     for (co in colnames(deps))
-      set(pkgDTList$Archive, which(gotDESC), co, deps[, co])
+      set(pkgDTList$Archive, whGotDESC, co, deps[, co])
   }
   pkgDTList
 }
