@@ -2574,10 +2574,13 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
   # need to update binary or src because the getArchiveDetailsInner doesn't address this --
   #   it just returns the PackageURL
   bins <- isBinary(pkgArchive$PackageUrl)
-  needBinsUpdate <- !is.na(bins)
-  if (any(needBinsUpdate))
-    # set(pkgArchive, which(needBinsUpdate), "binOrSrc", c("src", "bin")[bins[needBinsUpdate] + 1])
+  bins <- isBinaryCRANRepo(pkgArchive$Repository) %in% TRUE | bins %in% TRUE
+  needBinsUpdate <- !is.na(bins %in% TRUE)
+  if (any(needBinsUpdate)) {
     set(pkgArchive, which(needBinsUpdate), "binOrSrc", binOrSrc(bins[needBinsUpdate]))
+    pkgArchive <- updateReposForSrcPkgs(pkgArchive)
+  }
+
   hasVoR <- which(!is.na(pkgArchive[["VersionOnRepos"]]))
   set(pkgArchive, hasVoR, "Version", pkgArchive[["VersionOnRepos"]][hasVoR])
   pkgArchive <- unique(pkgArchive, by = c("Package", "repo", "availableVersionOK"))
@@ -2838,7 +2841,9 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
       )
     } else {
       nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
-      pkgInstall[which(needSrc), Repository := contrib.url(nonBinaryRepos)]
+      pkgInstall[which(needSrc), `:=`(Repository = contrib.url(nonBinaryRepos),
+                                      repo = nonBinaryRepos,
+                                      binOrSrc = binOrSrc(FALSE))]
       # pkgInstall[which(needSrc), Repository := nonBinaryRepos]
 
       # whArchive <- pkgInstall$installFrom %in% "Archive"
@@ -3630,8 +3635,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig$Package,
                localFile = unlist(ll))
-    setDT(dt) |>
-    try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
+    setDT(dt)
   } else  { # installPackages and Other
     dt <- logFile
   }
