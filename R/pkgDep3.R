@@ -1506,8 +1506,10 @@ RequireDependencies <- function() {
     } else {
       RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
     }
-
   }
+  RequireDeps <- unique(c("Require", RequireDeps))
+  RequireDeps
 }
+
 
 .RequireDependencies <- character()
