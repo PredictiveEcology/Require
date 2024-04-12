@@ -94,7 +94,11 @@ test_that("test 5", {
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
-      out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
+      "Please change required version e.g., NLMR (<=1.1)"
+      warns <- capture_warnings(
+        out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
+      )
+      expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
 
       neededBasedOnPackageFullNames <- rbindlistRecursive(out11$deps)
       dups <- duplicated(neededBasedOnPackageFullNames$Package)
@@ -138,7 +142,8 @@ test_that("test 5", {
       loded <- loadedNamespaces()
       missingPackages <- missingPackages[!Package %in% loded]
 
-      knownFails <- c("SpaDES.config", "NLMR", "visualTest") # can't install because Require is installed, but too old
+      knownFails <- c(extractPkgName(.RequireDependencies),
+                      c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
       if (isLinux())
         knownFails <- c(knownFails, c("sodium", "keyring"))
 
