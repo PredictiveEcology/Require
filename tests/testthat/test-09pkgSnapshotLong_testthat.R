@@ -1,6 +1,6 @@
 test_that("test 5", {
 
-  setupInitial <- setupTest()
+  setupInitial <- setupTest(needRequireInNewLib = TRUE)
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")

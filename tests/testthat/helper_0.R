@@ -1,4 +1,5 @@
-setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.frame()) {
+setupTest <- function(verbose = getOption("Require.verbose"),
+                      needRequireInNewLib = FALSE, envir = parent.frame()) {
   # opts <- options()
 
   # getCRANrepos(ind = 1)
@@ -35,7 +36,10 @@ setupTest <- function(verbose = getOption("Require.verbose"), envir = parent.fra
   # }
 
   #   libPath <- .libPaths()
-  withr::local_libpaths(tempdir2(.rndstr()), .local_envir = envir)
+  newLib <- tempdir3()
+  if (needRequireInNewLib)
+    linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
+  withr::local_libpaths(newLib, .local_envir = envir)
   # setLibPaths(tempdir2(.rndstr()))
   # origWd <- getwd()
   # thisFilename <- Require:::getInStack("r")
