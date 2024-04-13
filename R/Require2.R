@@ -3520,7 +3520,32 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 
 
 
-
+#' download.files or install.packages in a separate process
+#'
+#' This uses `sys` package so that messaging can be controlled. This also provides
+#' the option to parallelize by spawning multiple `background` process to allow
+#' parallel e.g., downloads. Noting that if `libcurl` is installed (and detected
+#' using `capabilities("libcurl")`), then no explicit parallelism will be allowed,
+#' instead `method = "libcurl"` will be passed enabling parallel downloads.
+#'
+#'
+#' @param args A list with all arguments for a do.call to either `download.file,
+#'        `install.packages` or a custom other function e.g., `downloadAndBuildToLocalFile`.
+#' @param splitOn A character vector of the names in `args` to parallelize over.
+#'        Defaults to `pkgs`. All other named elements in `args` will be assumed to
+#'        be length 1 and used for every parallel process.
+#' @param doLine A character string with the `"outfiles <- do.call(..., args)"` line.
+#' @param returnOutfile A logical. If `TRUE`, then the names of the `outfiles` will
+#'        be returned.
+#' @param doLineVectorized A logical. If `TRUE`, and parallism is being used, this
+#'        indicates that the `doLine` is a function that allows for multiple elements
+#'        in `args[[splitOn[[1]]]`. If `FALSE`, the function will make multiple
+#'        sequential calls within each parallel process to the `doLine` call.
+#' @param tmpdir A single path where all downloads will be put
+#' @inheritParams Require
+#' @return Mostly for side effects, namely installed packages or downloaded packages or
+#'        files. However, in the case of `returnOutfile = TRUE`, then a list of
+#'        filenames will be returned with any outputs from the `doLine`.
 sysInstallAndDownload <- function(args, splitOn = "pkgs",
                         doLine = "outfiles <- do.call(download.packages, args)",
                         returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, verbose) {
@@ -3555,10 +3580,10 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       saveRDS(splitOn, file = tf3)
       doLine <-
         paste0("splitOn <- readRDS('",tf3,"')
-        a <- try(lapply(seq_along(args[[splitOn[1]]]), function(ind) lapply(args[splitOn], '[[', ind)))
-      extraArgs <- setdiff(names(args), splitOn)
-      for (ii in seq_along(a)) for (ea in extraArgs) a[[ii]][[ea]] <- args[[ea]]
-      try(outfiles <- lapply(a, function(args) ", doLineOrig, "))")
+               a <- try(lapply(seq_along(args[[splitOn[1]]]), function(ind) lapply(args[splitOn], '[[', ind)))
+               extraArgs <- setdiff(names(args), splitOn)
+               for (ii in seq_along(a)) for (ea in extraArgs) a[[ii]][[ea]] <- args[[ea]]
+               try(outfiles <- lapply(a, function(args) ", doLineOrig, "))")
       doLine <- strsplit(doLine, "\n")[[1]]
     }
     saveRDS(args, file = fn)
@@ -3570,10 +3595,8 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     ar <- c(paste0("o <- readRDS('",tf,"')"),
             "options(o)",
-            # ar <- c(
             paste0("args <- readRDS('", fn, "')"),
             doLine,
-            # "outfiles <- do.call(download.packages, args)",
             paste0("saveRDS(outfiles, '",outfiles[j],"')"))
 
     cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))

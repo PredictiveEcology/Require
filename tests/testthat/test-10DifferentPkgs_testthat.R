@@ -1,6 +1,6 @@
-test_that("test 5", {
+test_that("test 10", {
 
-  setupInitial <- setupTest()
+  setupInitial <- setupTest(needRequireInNewLib = TRUE)
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
@@ -26,7 +26,7 @@ test_that("test 5", {
       on.exit(options(origRepos2))
     }
 
-    Install(pkgs, verbose = 2) |>
+    Install(pkgs) |>
       capture_warnings() -> warns
 
     test <- testWarnsInUsePleaseChange(warns)
