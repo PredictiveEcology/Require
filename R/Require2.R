@@ -3193,8 +3193,14 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                                    secondsInADay, .GRP,
                                    numGroups, verbose, repos, srcPackageURLOnCRAN) {
   if (any(is.na(Repository)) || is.null(Repository)) {
-    Repository <- unique(ava[[Package]]$repo)
+    Repository <- unique(ava[[Package]]$repo) # this can make it longer than other items (Package, versionSpec, inequality)
     Repository <- Repository[match(repos, Repository)]
+    if (length(Repository) > length(Package)) {
+      len <- length(Repository)
+      # Package <- rep(Package, len)
+      versionSpec <- rep(versionSpec, len)
+      inequality <- rep(inequality, len)
+    }
   }
   ret <- mapply(x = cols, USE.NAMES = TRUE, function(x) NA_character_, SIMPLIFY = FALSE)
   ret <- as.data.table(ret)
@@ -3247,6 +3253,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                 ineq <- "<="
                 altVersion <- compareVersion2(Version2, versionSpec2, ineq)
               }
+              correctVersions <- NA
               if (any(altVersion)) {
                 messageVerbose("Package ",
                                Package, " (", inequality[ind], "", versionSpec2,
@@ -3258,10 +3265,10 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                 warning("Please change required version e.g., ",
                         paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
 
+                break
               }
               # correctVersions <- altVersion
               # }
-              correctVersions <- NA
 
             }
 
