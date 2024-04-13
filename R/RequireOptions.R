@@ -81,9 +81,9 @@ RequireOptions <- function() {
       #, "raster"
       #, "rgdal"
       #, "rgeos"
-      #, "s2"
-      #, "sf"
-      #, "sp"
+      # , "s2"
+      , "sf"
+      # , "sp"  # c("raster", "s2", "sf", "sp", "units")
       # , "units"
     ),
     Require.standAlone = TRUE,
