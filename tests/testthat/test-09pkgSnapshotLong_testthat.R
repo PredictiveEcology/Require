@@ -36,7 +36,7 @@ test_that("test 5", {
     }
     ## Long pkgSnapshot -- issue 41
     for (snf in snapshotFiles) {
-      origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
+      # origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
       pkgs <- data.table::fread(snf)
 
       if (FALSE) {
@@ -203,7 +203,7 @@ test_that("test 5", {
 
 
     }
-    setLibPaths(origLibPaths)
+    # setLibPaths(origLibPaths)
   }
 
 
