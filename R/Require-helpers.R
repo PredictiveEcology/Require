@@ -477,7 +477,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
           )
         })
         caps <- lapply(caps, as.data.table)
-        caps <- unique(rbindlist(caps), by = c("Package", "Version"))
+        caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
         if (!is.null(getOptionRPackageCache())) {
@@ -1673,7 +1673,9 @@ extractPkgNameFromWarning <- function(x) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(RequirePkgCacheDir(), gsub("https|[:/]", "", repos[1]), type, "availablePackages.rds")
+  file.path(RequirePkgCacheDir(),
+            paste0(gsub("https|[:/]", "", repos), collapse = "/"),
+            type, "availablePackages.rds")
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {

@@ -2,7 +2,7 @@ if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
 verboseForDev <- -1
-installPackageSys <- 2
+installPackageSys <- 0
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
