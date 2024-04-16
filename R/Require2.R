@@ -3720,7 +3720,7 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
   # p[, Repository := file.path(contrib.url(repo, type = "source"), "Archive")]
   p$repo <- naToEmpty(p$repo)
   p$PackageUrl <- naToEmpty(p$PackageUrl)
-  url <- if (any(grepl(unique(p$repo), p$PackageUrl))) {
+  url <- if (any(greplV(unique(p$repo), p$PackageUrl))) {
     p$PackageUrl
   } else {
     file.path(p$Repository, p$PackageUrl)
