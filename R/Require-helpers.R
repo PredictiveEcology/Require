@@ -208,7 +208,8 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
     set(pkgDT, NULL, "destFile", destFile)
 
     if (!isTRUE(getOption("Require.offlineMode"))) {
-      alreadyExists <- file.exists(pkgDT$destFile)
+      alreadyExists <- rmEmptyFiles(pkgDT$destFile)
+      # alreadyExists <- file.exists(pkgDT$destFile)
       if (any(alreadyExists)) {
         fs <- file.size(pkgDT$destFile)
         tooSmall <- fs < 100
@@ -1774,4 +1775,18 @@ RequireGitHubCacheFile <- function(pkgDT, filename) {
   destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
   destFile <- paste0(pkgDT$Account, "_", pkgDT$Package, "_", destFile)
   destFile <- file.path(theDir, paste0(destFile, "_", filename))
+}
+
+
+rmEmptyFiles <- function(files) {
+  alreadyExists <- file.exists(files)
+  if (any(alreadyExists)) {
+    fs <- file.size(files[alreadyExists])
+    tooSmall <- fs < 100
+    if (any(tooSmall %in% TRUE)) {
+      unlink(files[alreadyExist[which(tooSmall)]])
+      alreadyExists[alreadyExists] <- tooSmall %in% FALSE
+    }
+  }
+  alreadyExists
 }
