@@ -44,6 +44,16 @@ if (Sys.info()["user"] == "achubaty") {
                        "Require.Home" = "~/GitHub/PredictiveEcology/Require")
 }
 
+# This is for cases e.g., linux where there are >2 .libPaths().
+#  The tests use `withr::local_libpaths`, which keeps all site paths. This means that
+#  some of the tests fail because R will load a copy of a package e.g., rlang that is
+#  in one of the site libraries. Essentially, this is fine for a user, but the tests
+#  weren't written to accommodate this.
+lp <- .libPaths()
+lp2 <- c(head(lp, 1), tail(lp, 1))
+orig <- setLibPaths(lp2, standAlone = TRUE)
+withr::defer(.libPaths(lp), envir = teardown_env())
+
 if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
   repos <- getOption("repos")
