@@ -190,43 +190,14 @@ Require::Install(
 
 Fails when there are 2 branches within a DESCRIPTION -- wants to downgrade, regardless of order
 ```{r}
-# Installs or does nothing is `reproducible` already installed
-Require::Install(
-  c("PredictiveEcology/reproducible@development", 
-    "PredictiveEcology/reproducible"))
+# Installs or does nothing if `reproducible` already installed
+twoReproducibles <- c("PredictiveEcology/reproducible@development", 
+                      "PredictiveEcology/reproducible")
+Require::Install(twoReproducibles)
 
-DESC <- c("Package: temp", "Type: Package", "Title: Temp", "Version: 0.0.1", 
-          "Description: Eliot McIntire", "Date: 2024-02-20", "Authors@R:  ", 
-          "  NULL", "Imports:", "    reproducible", "Suggests:", "    knitr,", 
-          "    rmarkdown", "Remotes:", "    PredictiveEcology/reproducible,", 
-          "    PredictiveEcology/reproducible@development", "Encoding: UTF-8", 
-          "License: GPL-3", "VignetteBuilder: knitr, rmarkdown", "ByteCompile: yes", 
-          "Roxygen: list(markdown = TRUE)")
-cat(DESC, file = "DESCRIPTION")
-try(pak::local_install_deps("~/GitHub/Edehzhie/"))
-                                                                                       
-# → Will update 1 package.
-# → All 2 packages (0 B) are cached.
-# + reproducible 2.0.10.9018 → 2.0.10 [bld][cmp] (GitHub: 014d1de)
+# Fails because you can't do this
+try(pak::pkg_install(twoReproducibles))
 
-
-
-# Fails when adding the version number specification because internally trims the branch
-DESC <- c("Package: temp", "Type: Package", "Title: Temp", "Version: 0.0.1", 
-          "Description: Eliot McIntire", "Date: 2024-02-20", "Authors@R:  ", 
-          "  NULL", "Imports:", "    reproducible (>= 2.0.10.9010)", "Suggests:", 
-          "    knitr,", "    rmarkdown", "Remotes:", "    PredictiveEcology/reproducible,", 
-          "    PredictiveEcology/reproducible@modsForLargeArchives", "Encoding: UTF-8", 
-          "License: GPL-3", "VignetteBuilder: knitr, rmarkdown", "ByteCompile: yes", 
-          "Roxygen: list(markdown = TRUE)")
-cat(DESC, file = "DESCRIPTION")
-try(pak::local_install_deps("~/GitHub/Edehzhie/"))
-# Error:                                                                      
-# ! error in pak subprocess
-# Caused by error: 
-# ! Could not solve package dependencies:
-# * deps::C:/Eliot/GitHub/Edehzhie: Can't install dependency PredictiveEcology/reproducible (>= 2.0.10.9010)
-# Type .Last.error to see the more details.
 ```
 
 ### Error handling
@@ -234,424 +205,65 @@ try(pak::local_install_deps("~/GitHub/Edehzhie/"))
 `pak` uses a different approach to error handling. Sometimes this can be effective. Other times it limits the ability to diagnose errors:
 ```{r,eval=FALSE}
 
-# This package is not compiling correctly
-> pak::pkg_install("fasterize")
-✔ Loading metadata database ... done
-                                                                           
-→ Will update 1 package.
-→ Will download 1 CRAN package (732.71 kB).
-+ fasterize 1.0.4 → 1.0.5 [bld][cmp][dl] (732.71 kB)
-✔ All system requirements are already installed.
+```
+
+## Binary on Linux
+
+On Linux, users have the ability to install binary packages that are pre-built e.g., from the Posit Package Manager. Sometimes the binary is incompatible with a user's system, even though it is the correct operating system. This occurs generally for several packages, and thus they must be installed from source. `Require` has a function `sourcePkgs()`, which can be informed by `options("Require.spatialPkgs")` and `options("Require.otherPkgs")` that can be set by a user on a package-by-package basis. By default, some are automatically installed from `"source"` because in our experience, they tend to fail if installed from the binary.
+
+```{r,eval=FALSE}
+# In this example, it is `terra` that must be installed from source on Linux
+if (Require:::isLinux()) {
+  Require::setLinuxBinaryRepo()
+  pkgs <- c("terra", "PSPclean")
+  pkgFullName <- "ianmseddy/PSPclean@development"
+  try(remove.packages(pkgs))
+  pak::cache_delete() # make sure a locally built one is not present in the cache
+  try(pak::pkg_install("ianmseddy/PSPclean@development"))
+  # ✔ Loading metadata database ... done                                       
+  #                                                                            
+  # → Will install 2 packages.
+  # → Will download 2 packages with unknown size.
+  # + PSPclean   0.1.4.9005 [bld][cmp][dl] (GitHub: fed9253)
+  # + terra      1.7-71     [dl] + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev
+  # ✔ All system requirements are already installed.
+  #   
+  # ℹ Getting 2 pkgs with unknown sizes
+  # ✔ Got PSPclean 0.1.4.9005 (source) (43.29 kB)                         
+  # ✔ Got terra 1.7-71 (x86_64-pc-linux-gnu-ubuntu-22.04) (4.24 MB)      
+  # ✔ Downloaded 2 packages (4.28 MB) in 2.9s                
+  # ✔ Installed terra 1.7-71  (61ms)                                   
+  # ℹ Packaging PSPclean 0.1.4.9005                                    
+  # ✔ Packaged PSPclean 0.1.4.9005 (420ms)                              
+  # ℹ Building PSPclean 0.1.4.9005                                      
+  # ✖ Failed to build PSPclean 0.1.4.9005 (3.7s)                        
+  # Error:                                                              
+  # ! error in pak subprocess
+  # Caused by error in `stop_task_build(state, worker)`:
+  # ! Failed to build source package PSPclean.
+  # Type .Last.error to see the more details.
   
-? Do you want to continue (Y/n) Y
-ℹ Getting 1 pkg (732.71 kB)
-✔ Got fasterize 1.0.5 (source) (732.71 kB)                                
-✔ Downloaded 1 package (732.71 kB) in 726ms                               
-ℹ Building fasterize 1.0.5
-✖ Failed to build fasterize 1.0.5 (30.1s)                        
-Error:                                                           
-! error in pak subprocess
-Caused by error in `stop_task_build(state, worker)`:
-! Failed to build source package fasterize.
-Type .Last.error to see the more details.
-> .Last.error
-<callr_error/rlib_error_3_0/rlib_error/error>
-Error: 
-! error in pak subprocess
-Caused by error in `stop_task_build(state, worker)`:
-! Failed to build source package fasterize.
----
-Backtrace:
-1. pak::pkg_install("fasterize")
-2. pak:::remote(function(...) get("pkg_install_do_plan", asNamespace("pak"))(...), …
-3. err$throw(res$error)
----
-Subprocess backtrace:
- 1. base::withCallingHandlers(cli_message = function(msg) { …
- 2. get("pkg_install_do_plan", asNamespace("pak"))(...)
- 3. proposal$install()
- 4. pkgdepends::install_package_plan(plan, lib = private$library, num_workers = nw, …
- 5. base::withCallingHandlers({ …
- 6. pkgdepends:::handle_events(state, events)
- 7. pkgdepends:::handle_event(state, i)
- 8. pkgdepends:::stop_task(state, worker)
- 9. pkgdepends:::stop_task_build(state, worker)
-10. base::throw(pkg_error("Failed to build source package {.pkg {pkg}}.", …
-11. | base::signalCondition(cond)
-12. global (function (e) …
-```
-
-## Incorrectly attempts to install binary packages from Posit Package Manager when these should not be
-
-```{r,eval=FALSE}
-pak::pkg_install("ianmseddy/PSPclean@development")
-✔ Updated metadata database: 6.09 MB in 9 files.                           
-✔ Updating metadata database ... done                                     
-                                                                           
-→ Will install 24 packages.
-→ All 24 packages (0 B) are cached.
-+ classInt       0.4-10     
-+ crayon         1.5.2      
-+ data.table     1.15.4     
-+ DBI            1.2.2      
-+ digest         0.6.35     
-+ e1071          1.7-14     
-+ filelock       1.0.3      
-+ fpCompare      0.2.4      
-+ fs             1.6.3       + ✔ make
-+ lobstr         1.1.2      
-+ magrittr       2.0.3      
-+ prettyunits    1.2.0      
-+ proxy          0.4-27     
-+ PSPclean       0.1.4.9005 [bld][cmp] (GitHub: f12d524)
-+ raster         3.6-26     
-+ Rcpp           1.0.12     
-+ reproducible   2.0.11     
-+ rlang          1.1.3      
-+ s2             1.1.6       + ✔ libssl-dev
-+ sf             1.0-16      + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev
-+ sp             2.1-3      
-+ terra          1.7-71      + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev
-+ units          0.8-5       + ✔ libudunits2-dev
-+ wk             0.9.1      
-✔ All system requirements are already installed.
   
-ℹ No downloads are needed, 24 pkgs are cached
-✔ Got filelock 1.0.3 (x86_64-pc-linux-gnu-ubuntu-22.04) (24.25 kB)
-✔ Got DBI 1.2.2 (x86_64-pc-linux-gnu-ubuntu-22.04) (890.85 kB)
-✔ Got classInt 0.4-10 (x86_64-pc-linux-gnu-ubuntu-22.04) (497.59 kB)
-✔ Got lobstr 1.1.2 (x86_64-pc-linux-gnu-ubuntu-22.04) (132.05 kB)
-✔ Got fs 1.6.3 (x86_64-pc-linux-gnu-ubuntu-22.04) (288.29 kB)
-✔ Got digest 0.6.35 (x86_64-pc-linux-gnu-ubuntu-22.04) (217.34 kB)
-✔ Got PSPclean 0.1.4.9005 (source) (43.21 kB)
-✔ Got prettyunits 1.2.0 (x86_64-pc-linux-gnu-ubuntu-22.04) (154.92 kB)
-✔ Got Rcpp 1.0.12 (x86_64-pc-linux-gnu-ubuntu-22.04) (2.15 MB)
-✔ Got magrittr 2.0.3 (x86_64-pc-linux-gnu-ubuntu-22.04) (221.09 kB)
-✔ Got crayon 1.5.2 (x86_64-pc-linux-gnu-ubuntu-22.04) (159.79 kB)
-✔ Got data.table 1.15.4 (x86_64-pc-linux-gnu-ubuntu-22.04) (2.18 MB)
-✔ Got rlang 1.1.3 (x86_64-pc-linux-gnu-ubuntu-22.04) (1.55 MB)
-✔ Got raster 3.6-26 (x86_64-pc-linux-gnu-ubuntu-22.04) (3.33 MB)
-✔ Got fpCompare 0.2.4 (x86_64-pc-linux-gnu-ubuntu-22.04) (19.92 kB)
-✔ Got e1071 1.7-14 (x86_64-pc-linux-gnu-ubuntu-22.04) (589.71 kB)
-✔ Got s2 1.1.6 (x86_64-pc-linux-gnu-ubuntu-22.04) (2.17 MB)
-✔ Got sp 2.1-3 (x86_64-pc-linux-gnu-ubuntu-22.04) (2.09 MB)
-✔ Got reproducible 2.0.11 (x86_64-pc-linux-gnu-ubuntu-22.04) (947.52 kB)
-✔ Got proxy 0.4-27 (x86_64-pc-linux-gnu-ubuntu-22.04) (174.07 kB)
-✔ Got wk 0.9.1 (x86_64-pc-linux-gnu-ubuntu-22.04) (1.72 MB)
-✔ Got sf 1.0-16 (x86_64-pc-linux-gnu-ubuntu-22.04) (3.56 MB)
-✔ Got terra 1.7-71 (x86_64-pc-linux-gnu-ubuntu-22.04) (4.24 MB)
-✔ Got units 0.8-5 (x86_64-pc-linux-gnu-ubuntu-22.04) (354.95 kB)
-✔ Installed DBI 1.2.2  (102ms)                                                                                               
-✔ Installed classInt 0.4-10  (105ms)                                                                                         
-✔ Installed crayon 1.5.2  (132ms)                                                                                          
-✔ Installed data.table 1.15.4  (146ms)                                                                                
-✔ Installed digest 0.6.35  (176ms)                                                                          
-✔ Installed e1071 1.7-14  (186ms)                                                                   
-✔ Installed filelock 1.0.3  (193ms)                                                     
-✔ Installed Rcpp 1.0.12  (306ms)                                                
-✔ Installed fpCompare 0.2.4  (36ms)                                          
-✔ Installed fs 1.6.3  (23ms)                                               
-✔ Installed lobstr 1.1.2  (13ms)                                    
-✔ Installed magrittr 2.0.3  (38ms)                                    
-✔ Installed prettyunits 1.2.0  (16ms)                                    
-✔ Installed proxy 0.4-27  (27ms)                                       
-✔ Installed raster 3.6-26  (38ms)                                   
-✔ Installed reproducible 2.0.11  (22ms)                                   
-✔ Installed rlang 1.1.3  (26ms)                                         
-✔ Installed s2 1.1.6  (36ms)                                     
-✔ Installed sf 1.0-16  (56ms)                                   
-✔ Installed sp 2.1-3  (40ms)                                    
-✔ Installed terra 1.7-71  (99ms)                                   
-✔ Installed units 0.8-5  (18ms)                                    
-✔ Installed wk 0.9.1  (30ms)                                     
-ℹ Packaging PSPclean 0.1.4.9005                                 
-✔ Packaged PSPclean 0.1.4.9005 (516ms)                              
-ℹ Building PSPclean 0.1.4.9005                                      
-✖ Failed to build PSPclean 0.1.4.9005 (3.8s)                        
-Error:                                                              
-! error in pak subprocess
-Caused by error in `stop_task_build(state, worker)`:
-! Failed to build source package PSPclean.
-Type .Last.error to see the more details.
-Timing stopped at: 3.321 0.093 19.32
-> .Last.error
-<callr_error/rlib_error_3_0/rlib_error/error>
-Error: 
-! error in pak subprocess
-Caused by error in `stop_task_build(state, worker)`:
-! Failed to build source package PSPclean.
----
-Backtrace:
-1. base::system.time(pak::pkg_install("ianmseddy/PSPclean@development"))
-2. pak::pkg_install("ianmseddy/PSPclean@development")
-3. pak:::remote(function(...) get("pkg_install_do_plan", asNamespace("pak"))(...), …
-4. err$throw(res$error)
----
-Subprocess backtrace:
- 1. base::withCallingHandlers(cli_message = function(msg) { …
- 2. get("pkg_install_do_plan", asNamespace("pak"))(...)
- 3. proposal$install()
- 4. pkgdepends::install_package_plan(plan, lib = private$library, num_workers = nw, …
- 5. base::withCallingHandlers({ …
- 6. pkgdepends:::handle_events(state, events)
- 7. pkgdepends:::handle_event(state, i)
- 8. pkgdepends:::stop_task(state, worker)
- 9. pkgdepends:::stop_task_build(state, worker)
-10. base::throw(pkg_error("Failed to build source package {.pkg {pkg}}.", …
-11. | base::signalCondition(cond)
-12. global (function (e) …
-
-            
-Install("ianmseddy/PSPclean@development")
+  # Works fine because the `sourcePkgs()`            
+  
+  try(remove.packages(pkgs))
+  Require::clearRequirePackageCache(pkgs, ask = FALSE)
+  Require::Install(pkgFullName)
+}
 ```
 
+### Package dependencies
 
-## renv
-- doesn't install packages that have been removed from CRAN (SpaDES)
-- finds packages that other package dependencies don't find (SpaDES.docs)
-- slow to download
-- hijack
-- when fails, can't pick up where it left off
-- fails to install e.g., reproducible if it insufficient version, even if nothing is loaded
-- relies so heavily on DESCRIPTION that e.g., `install.packages("reproducible")` will not install
-reproducible from CRAN if there is a `Remotes` pointing to e.g., `PredictiveEcology/reproducible@reproducibleTempCacheDir`
-
-
-# These are not the same ... why?
-bb <- c("DEoptim", "PredictiveEcology/LandR@development (>= 1.1.0.9074)",
-        "ianmseddy/LandR.CS@master (>= 0.0.2.0002)", "MASS", "Matrix",
-        "ianmseddy/PSPclean@development (>= 0.1.3.9003)", "R.utils",
-        "RCurl", "Rcpp", "PredictiveEcology/Require@development (>= 0.3.1)",
-        "RhpcBLASctl", "PredictiveEcology/SpaDES.core@optionsAsArgs (>= 2.0.2.9010)",
-        "PredictiveEcology/SpaDES.project@transition (>= 0.0.8.9026)",
-        "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)",
-        "XML", "archive", "assertthat", "PredictiveEcology/climateData@development (>= 1.0.5)",
-        "compiler", "crayon", "data.table (>= 1.15.0)", "digest", "disk.frame",
-        "dplyr", "fastDummies", "fastdigest", "fasterize", "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9056)",
-        "fpCompare", "future", "geodata", "ggplot2", "ggpubr", "googledrive",
-        "grid", "gridExtra", "kSamples", "logging", "magrittr", "merTools",
-        "methods", "mgcv", "nlme", "numDeriv", "parallel", "parallelly",
-        "PredictiveEcology/pemisc@development (>= 0.0.3.9002)", "plyr",
-        "pryr", "purrr", "quickPlot", "raster", "rasterVis", "PredictiveEcology/reproducible@reproducibleTempCacheDir (>= 2.0.8.9012)",
-        "robustbase", "scales", "sf", "snow", "sp", "spatialEco", "stats",
-        "terra", "tidyr", "viridis")
-a <- pkgDep(bb, recursive = TRUE)
-b <- unlist(lapply(bb, pkgDep, recursive = TRUE), recursive = FALSE)
-all.equal(b$`PredictiveEcology/LandR@development (>= 1.1.0.9074)`, a$`PredictiveEcology/LandR@development (>= 1.1.0.9074)`)
-
-
-
-
-
-
-bbb <- list(canClimateData = c("SpaDES.core", "archive", "digest", "geodata",
-                               "googledrive", "PredictiveEcology/climateData@development (>= 1.0.5)",
-                               "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9046)",
-                               "PredictiveEcology/LandR@development (>= 1.1.0.9064)", "PredictiveEcology/reproducible@development (>= 2.0.8.9001)",
-                               "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)",
-                               "purrr", "R.utils", "sf", "spatialEco", "terra"),
-            fireSense_dataPrepFit = c("data.table (>= 1.15.0)",
-                                      "fastDummies", "ggplot2", "parallel", "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9056)",
-                                      "PredictiveEcology/LandR@development (>= 1.1.0.9073)", "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9006)",
-                                      "PredictiveEcology/SpaDES.project@transition", "PredictiveEcology/SpaDES.tools (>= 2.0.4.9002)",
-                                      "purrr", "raster", "sf", "snow", "sp", "spatialEco", "terra"),
-            Biomass_borealDataPrep = c("assertthat", "crayon", "data.table",
-                                       "dplyr", "fasterize", "ggplot2", "merTools", "plyr", "PredictiveEcology/LandR@development (>= 1.1.0.9054)",
-                                       "PredictiveEcology/pemisc@development", "PredictiveEcology/reproducible@development (>= 2.0.8.9005)",
-                                       "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
-                                       "PredictiveEcology/SpaDES.project@transition (>= 0.0.8.9026)",
-                                       "rasterVis", "sf", "SpaDES.tools (>= 2.0.0)", "terra"),
-            Biomass_core = c("assertthat",
-                             "compiler", "crayon", "data.table", "dplyr", "fpCompare",
-                             "ggplot2", "grid", "ianmseddy/LandR.CS@master (>= 0.0.2.0002)",
-                             "parallel", "PredictiveEcology/LandR@development (>= 1.1.0.9006)",
-                             "PredictiveEcology/pemisc@development", "PredictiveEcology/reproducible@development",
-                             "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
-                             "PredictiveEcology/SpaDES.tools@development (>= 1.0.0.9001)",
-                             "purrr", "quickPlot", "R.utils", "Rcpp", "scales", "terra",
-                             "tidyr"),
-            Biomass_speciesData = c("data.table", "PredictiveEcology/LandR@development (>= 1.1.0.9074)",
-                                    "PredictiveEcology/pemisc@development", "PredictiveEcology/reproducible@reproducibleTempCacheDir (>= 2.0.8.9012)",
-                                    "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
-                                    "PredictiveEcology/SpaDES.tools@development (>= 1.0.2)",
-                                    "pryr", "RCurl", "sf", "terra", "XML"),
-            Biomass_speciesFactorial = c("crayon",
-                                         "ggplot2", "PredictiveEcology/LandR@development (>= 1.0.7.9025)",
-                                         "PredictiveEcology/SpaDES.core@optionsAsArgs (>= 2.0.2.9010)",
-                                         "PredictiveEcology/SpaDES.project (>= 0.0.7.9013)", "terra",
-                                         "viridis"),
-            Biomass_speciesParameters = c("crayon", "data.table",
-                                          "disk.frame", "fpCompare", "ggplot2", "gridExtra", "ianmseddy/PSPclean@development (>= 0.1.3.9003)",
-                                          "magrittr", "mgcv", "nlme", "PredictiveEcology/LandR@development (>= 1.1.0.9054)",
-                                          "PredictiveEcology/pemisc@development (>= 0.0.3.9002)", "PredictiveEcology/reproducible@development (>= 1.2.10.9001)",
-                                          "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9004)",
-                                          "purrr", "robustbase", "sf"),
-            fireSense_IgnitionFit = c("data.table",
-                                      "DEoptim", "dplyr", "ggplot2", "ggpubr", "magrittr", "MASS",
-                                      "numDeriv", "parallel", "parallelly", "PredictiveEcology/fireSenseUtils@terra-migration (>= 0.0.5.9045)",
-                                      "PredictiveEcology/pemisc@development", "PredictiveEcology/reproducible@development (>= 2.0.8.9005)",
-                                      "PredictiveEcology/SpaDES.core@development (>= 2.0.2.9006)",
-                                      "RhpcBLASctl", "terra"),
-            fireSense_EscapeFit = "SpaDES.core",
-            fireSense_SpreadFit = c("SpaDES.core", "data.table", "DEoptim",
-                                    "fastdigest", "future", "ggplot2", "kSamples", "logging",
-                                    "magrittr", "parallel", "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9055)",
-                                    "PredictiveEcology/pemisc@development", "PredictiveEcology/Require@development (>= 0.3.1)",
-                                    "PredictiveEcology/SpaDES.tools@development (>= 2.0.4.9002)",
-                                    "raster", "terra", "tidyr"),
-            fireSense_dataPrepPredict = c("SpaDES.core",
-                                          "data.table", "PredictiveEcology/fireSenseUtils@development (>= 0.0.5.9050)",
-                                          "terra"),
-            fireSense_IgnitionPredict = c("SpaDES.core", "magrittr",
-                                          "PredictiveEcology/fireSenseUtils@development (>=0.0.4.9080)",
-                                          "raster"),
-            fireSense_EscapePredict = c("SpaDES.core", "magrittr",
-                                        "raster", "stats"),
-            fireSense_SpreadPredict = c("ggplot2",
-                                        "magrittr", "Matrix", "methods", "PredictiveEcology/fireSenseUtils@development",
-                                        "SpaDES.core", "stats", "terra", "viridis"))
-
-
-
-
-# renv fails because of an unknown package, SpaDES.doc
-Browse[1]> renv::install()
-# Downloading packages -------------------------------------------------------
-- Downloading Matrix from CRAN ...              OK [file is up to date]
-- Downloading MASS from CRAN ...                OK [file is up to date]
-- Downloading mgcv from CRAN ...                OK [file is up to date]
-- Downloading nlme from CRAN ...                OK [file is up to date]
-- Downloading LandR.CS from GitHub ...          OK [8 Kb in 1.0s]
-- Downloading spatialEco from GitHub ...        OK [10.2 Mb in 3.3s]
-- Downloading XML from CRAN ...                 OK [file is up to date]
-Error: package 'SpaDES.docs' is not available
-
-
-
-Browse[1]>       renv::install(exclude = "SpaDES.docs")
-# Downloading packages -------------------------------------------------------
-- Downloading Matrix from CRAN ...              OK [file is up to date]
-- Downloading MASS from CRAN ...                OK [file is up to date]
-- Downloading mgcv from CRAN ...                OK [file is up to date]
-- Downloading nlme from CRAN ...                OK [file is up to date]
-- Downloading LandR.CS from GitHub ...          OK [8 Kb in 1.0s]
-- Downloading spatialEco from GitHub ...        OK [10.2 Mb in 12s]
-- Downloading XML from CRAN ...                 OK [file is up to date]
-Error: package 'SpaDES' is not available
-
-
-
-### The DESCRIPTION file
-
-```{r}
-DESC = c("Package: simInitPkg", "Type: Package", "Title: simInitPkg", 
-         "Version: 0.0.1", "Description: simInitPkg", "Date: 2024-02-20", 
-         "Authors@R:  ", "  person(c(\"Eliot\", \"J\", \"B\"), \"McIntire\", email = \"eliot.mcintire@nrcan-rncan.gc.ca\", role = c(\"aut\", \"cre\"))", 
-         "Imports:", "    archive,", "    assertthat,", "    compiler,", 
-         "    crayon,", "    data.table (>= 1.15.0),", "    DEoptim,", 
-         "    digest,", "    disk.frame,", "    dplyr,", "    fastdigest,", 
-         "    fastDummies,", "    fasterize,", "    fpCompare,", "    future,", 
-         "    geodata,", "    ggplot2,", "    ggpubr,", "    googledrive,", 
-         "    grid,", "    gridExtra,", "    LandR.CS (>= 0.0.2.0002),", 
-         "    PSPclean (>= 0.1.3.9003),", "    kSamples,", "    logging,", 
-         "    magrittr,", "    MASS,", "    Matrix,", "    merTools,", 
-         "    methods,", "    mgcv,", "    nlme,", "    numDeriv,", "    parallel,", 
-         "    parallelly,", "    plyr,", "    climateData (>= 1.0.5),", 
-         "    fireSenseUtils (>= 0.0.5.9056),", "    LandR (>= 1.1.0.9074),", 
-         "    pemisc (>= 0.0.3.9002),", "    reproducible (>= 2.0.8.9012),", 
-         "    Require (>= 0.3.1),", "    SpaDES.core (>= 2.0.2.9010),", 
-         "    SpaDES.project (>= 0.0.8.9026),", "    SpaDES.tools (>= 2.0.4.9002),", 
-         "    pryr,", "    purrr,", "    quickPlot,", "    R.utils,", 
-         "    raster,", "    rasterVis,", "    Rcpp,", "    RCurl,", "    RhpcBLASctl,", 
-         "    robustbase,", "    scales,", "    sf,", "    snow,", "    sp,", 
-         "    spatialEco,", "    stats,", "    terra,", "    tidyr,", 
-         "    viridis,", "    XML", "Suggests:", "    knitr,", "    rmarkdown", 
-         "Remotes:", 
-         "    PredictiveEcology/LandR@development,", 
-         "    ianmseddy/LandR.CS@master,", 
-         "    ianmseddy/PSPclean@development,", 
-         "    PredictiveEcology/Require@development,", 
-         "    PredictiveEcology/SpaDES.core@optionsAsArgs,", 
-         "    PredictiveEcology/SpaDES.project@transition,", 
-         "    PredictiveEcology/SpaDES.tools@development,", 
-         "    PredictiveEcology/climateData@development,", 
-         "    PredictiveEcology/fireSenseUtils@development,", 
-         "    PredictiveEcology/pemisc@development,", 
-         "    PredictiveEcology/reproducible@reproducibleTempCacheDir", 
-         "Encoding: UTF-8", "License: GPL-3", "VignetteBuilder: knitr, rmarkdown", 
-         "ByteCompile: yes", "Roxygen: list(markdown = TRUE)")
-cat(DESC, file = "DESCRIPTION", append = FALSE)
-```
-
-# example fail using 
+The package dependencies algorithm is slightly different with the default settings. For instance LinkingTo is not used by default in `pak::pkg_dep`
 ```{r,eval=FALSE}
-options(renv.config.pak.enabled = FALSE)
-renv::install(exclude = c("SpaDES.docs", "SpaDES"), upgrade = FALSE)
-- Installing SpaDES.tools ...                   FAILED
-Error: Error installing package 'SpaDES.tools':
-========================================
+depPak <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb")
+depRequire <- Require::pkgDep("PredictiveEcology/LandR@LandWeb") # Slightly different default in Require
 
-Warning in untar2(tarfile, files, list, exdir, restore_times) :
-  skipping pax global extended headers
-* installing *source* package 'SpaDES.tools' ...
-** using staged installation
-** libs
-using C++ compiler: 'G__~1.EXE (GCC) 12.2.0'
-g++ -std=gnu++17  -I"C:/PROGRA~1/R/R-43~1.2/include" -DNDEBUG  -I'C:/Eliot/GitHub/Edehzhie/renv/staging/1/Rcpp/include'   -I"C:/rtools43/x86_64-w64-mingw32.static.posix/include"     -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c RcppExports.cpp -o RcppExports.o
-g++ -std=gnu++17  -I"C:/PROGRA~1/R/R-43~1.2/include" -DNDEBUG  -I'C:/Eliot/GitHub/Edehzhie/renv/staging/1/Rcpp/include'   -I"C:/rtools43/x86_64-w64-mingw32.static.posix/include"     -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c duplicated.cpp -o duplicated.o
-g++ -std=gnu++17  -I"C:/PROGRA~1/R/R-43~1.2/include" -DNDEBUG  -I'C:/Eliot/GitHub/Edehzhie/renv/staging/1/Rcpp/include'   -I"C:/rtools43/x86_64-w64-mingw32.static.posix/include"     -O2 -Wall  -mfpmath=sse -msse2 -mstackrealign  -c runif.cpp -o runif.o
-g++ -std=gnu++17 -shared -s -static-libgcc -o SpaDES.tools.dll tmp.def RcppExports.o duplicated.o runif.o -LC:/rtools43/x86_64-w64-mingw32.static.posix/lib/x64 -LC:/rtools43/x86_64-w64-mingw32.static.posix/lib -LC:/PROGRA~1/R/R-43~1.2/bin/x64 -lR
-installing to C:/Eliot/GitHub/Edehzhie/renv/staging/1/00LOCK-PredictiveEcology-SpaDES.tools-66efb34/00new/SpaDES.tools/libs/x64
-** R
-** inst
-** byte-compile and prepare package for lazy loading
-Error in loadNamespace(j <- i[[1L]], c(lib.loc, .libPaths()), versionCheck = vI[[j]]) : 
-  namespace 'reproducible' 2.0.8.9015 is being loaded, but >= 2.0.9 is required
-Calls: <Anonymous> ... namespaceImportFrom -> asNamespace -> loadNamespace
-Execution halted
-ERROR: lazy loading failed for package 'SpaDES.tools'
-* removing 'C:/Eliot/GitHub/Edehzhie/renv/staging/1/SpaDES.tools'
-install of package 'SpaDES.tools' failed [error code 1]
-Warning message:
-The 'yaml' package is required to parse dependencies within R Markdown files
-Consider installing it with `install.packages("yaml")`. 
-```
-
-
-# example fail with pak via renv
-```{r,eval=FALSE}
-> options(renv.config.pak.enabled = TRUE)
-> renv::install()
-✔ Loading metadata database ... done                                       
-Error:                                                                                                
-! error in pak subprocess
-Caused by error: 
-! Could not solve package dependencies:
-* deps::C:/Eliot/GitHub/Edehzhie: dependency conflict
-Type .Last.error to see the more details.
-```
-
-
-
-
-
-```{r,eval=FALSE}
-
-tf <- tempfile()
-download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR/LandWeb/DESCRIPTION", tf)
-readLines(tf)
-strsplit(read.dcf(tf, fields = "Remotes"), ",|,\n")[[1]]
-
-pk <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb")
-pkgDep("PredictiveEcology/LandR@LandWeb")
-
-pk2 <- pkgDep("PredictiveEcology/LandR@LandWeb", recursive = TRUE, Additional_repositories = T, purge = TRUE,
-              which = c("Depends", "Imports"), includeBase = FALSE)[[1]]
-
-pk3 <- sort(trimRedundancies(pk2$packageFullName)$packageFullName)
-
-setdiff(trimVersionNumber(pk3), pk$ref)
-setdiff(pk$ref, trimVersionNumber(pk3))
+# Same
+pakDepsClean <- setdiff(Require::extractPkgName(depPak$ref), Require:::.basePkgs)
+requireDepsClean <- setdiff(Require::extractPkgName(depRequire[[1]]), Require:::.basePkgs)
+setdiff(pakDepsClean, requireDepsClean)
+setdiff(requireDepsClean, pakDepsClean) # differences are from missing LinkingTo for e.g., fasterize
 
 ```
 
@@ -679,7 +291,7 @@ gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE)
 # * PredictiveEcology/LandR@development: Can't install dependency BioSIM
 # * BioSIM: Can't find package called BioSIM.
 # Type .Last.error to see the more details.
-ff <- pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 # $`PredictiveEcology/LandR@development`
 #  [1] "BIEN"                                                  "RNCan/BioSimClient_R"
 #  [3] "DBI (>= 0.8)"                                          "ENMeval"
@@ -689,36 +301,3 @@ ff <- pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 ```
 
 
-
-
-```{r,eval=FALSE}
-## minor errors of version number updating -- purrr 1.0.2 already installed
-pak::pkg_install(pkgs)
-                                                                          
-→ Will install 16 packages.
-→ Will update 1 package.
-→ Will download 17 packages with unknown size.
-+ colorspace           2.1-0 [dl]
-+ fansi                1.0.6 [dl]
-+ farver               2.1.1 [dl]
-+ fpCompare            0.2.4 [bld][cmp][dl] (GitHub: a0260b8)
-+ ggplot2              3.5.0 [dl]
-+ gtable               0.3.4 [dl]
-+ isoband              0.2.7 [dl]
-+ labeling             0.4.3 [dl]
-+ munsell              0.5.1 [dl]
-+ pillar               1.9.0 [dl]
-+ pkgconfig            2.0.3 [dl]
-+ purrr        1.0.2 → 1.0.2 [dl]
-+ RColorBrewer         1.1-3 [dl]
-+ scales               1.3.0 [dl]
-+ tibble               3.2.1 [dl]
-+ utf8                 1.2.4 [dl]
-+ viridisLite          0.4.2 [dl]
-
-! purrr is loaded in the current R session, you probably need to restart R
-after the installation.
-
-? Do you want to continue (Y/n) 
-
-```
