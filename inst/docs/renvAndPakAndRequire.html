@@ -606,18 +606,15 @@ file)</td>
 </table>
 <div id="archived-packages" class="section level2">
 <h2>Archived packages</h2>
-</div>
-</div>
-<div id="between-mid-march-2024-and-april-5-2024-fastdigest-was-taken-off-cran.-if-this-is-part-of-your-direct-dependencies-you-can-remove-it-and-find-an-alternative.-however-if-it-is-an-indirect-dependency-you-dont-have-that-choice.-require-will-just-get-the-most-recent-archived-copy-and-the-work-can-continue." class="section level1">
-<h1>Between mid March 2024 and April 5, 2024, <code>fastdigest</code>
-was taken off CRAN. If this is part of <em>your</em> direct
-dependencies, you can remove it and find an alternative. However, if it
-is an indirect dependency, you don’t have that choice.
-<code>Require</code> will just get the most recent archived copy and the
-work can continue.</h1>
+<p>Between mid March 2024 and April 5, 2024, <code>fastdigest</code> was
+taken off CRAN. If this is part of <em>your</em> direct dependencies,
+you can remove it and find an alternative. However, if it is an indirect
+dependency, you don’t have that choice. <code>Require</code> will just
+get the most recent archived copy and the work can continue.</p>
 <pre class="r"><code>Require::Install(&quot;fastdigest&quot;)
 
 try(pak::pkg_install(c(&quot;fastdigest&quot;)))</code></pre>
+</div>
 <div id="dependency-conflict" class="section level2">
 <h2>Dependency conflict</h2>
 <p>When doing code development, it is common to use many

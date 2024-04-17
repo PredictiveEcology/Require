@@ -231,11 +231,11 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         # } else {
           pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
                 filepath := {
-                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose)
+                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
                   ret <- NA
                   dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
                                                     need = "master",
-                                                    verbose = verbose, verboseLevel = 2
+                                                    verbose = verbose - 1
                   )
                   ret <- if (!is(dl, "try-error")) {
                     destFile

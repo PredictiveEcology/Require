@@ -92,7 +92,7 @@ For packages that are already installed, but old:
 
 ## Archived packages
 
-# Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice. `Require` will just get the most recent archived copy and the work can continue.
+Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice. `Require` will just get the most recent archived copy and the work can continue.
 
 ```{r,eval=FALSE,message=FALSE}
 Require::Install("fastdigest")
