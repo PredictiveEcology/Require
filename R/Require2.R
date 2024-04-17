@@ -3636,9 +3636,10 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   }
 
   on.exit(sapply(pids, tools::pskill))
+  isRstudio <- isRstudio()
   for (pid in pids) {
     if (!installPackages)
-      spinnerOnPid(pid, verbose)
+      spinnerOnPid(pid, isRstudio, verbose)
 
     whPid <- match(pid, pids)
     if (downPack || installPackages) {
@@ -3649,7 +3650,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       w <- vecList[[whPid]]
       mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch[w], collapse = comma)
     }
-    preMess <-if (installPackages)  "Installed: " else "Downloaded: "
+    preMess <-if (installPackages)  "\nInstalled: " else "\nDownloaded: "
     messageVerbose(blue(paste0("  ", preMess, mess)), verbose = verbose)
   }
 
@@ -3768,23 +3769,28 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
   }
 }
 
-spinnerOnPid <- function(pid, verbose) {
-  st <- Sys.time()
-  aa <- NA
-  spinner <- "|"
-  messageVerbose("  \b\b ...  ", verbose = verbose)
-  while (is.na(aa)) {
-    aa <- sys::exec_status(pid, wait = FALSE)
-    Sys.sleep(0.05)
-    spinner <- ifelse (spinner == "|", "/",
-                       ifelse(spinner == "/", "-",
-                              ifelse(spinner == "-", "\\",
-                                     ifelse(spinner == "\\", "|"))))
-    if (Sys.time() - st > 0.3) {
-      mess <- paste0("\b\b", spinner)
-      messageVerbose(mess, verbose = verbose)
+spinnerOnPid <- function(pid, isRstudio, verbose) {
+  if (isRstudio %in% FALSE) {
+    messageVerbose(".", verbose)
+  } else {
+    st <- Sys.time()
+    aa <- NA
+    spinner <- "|"
+    messageVerbose("  \b\b ...  ", verbose = verbose)
+    while (is.na(aa)) {
+      aa <- sys::exec_status(pid, wait = FALSE)
+      Sys.sleep(0.05)
+      spinner <- ifelse (spinner == "|", "/",
+                         ifelse(spinner == "/", "-",
+                                ifelse(spinner == "-", "\\",
+                                       ifelse(spinner == "\\", "|"))))
+      if (Sys.time() - st > 0.3) {
+        mess <- paste0("\b\b", spinner)
+        messageVerbose(mess, verbose = verbose)
+      }
     }
+    messageVerbose("\b", verbose = verbose)
   }
-  messageVerbose("\b", verbose = verbose)
+
 }
 

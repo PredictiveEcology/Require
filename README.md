@@ -9,7 +9,7 @@
 `Require` is a single package that combines features of `base::install.packages`, `base::library`, `base::require`, as well as `pak::pkg_install`, `remotes::install_github`, and `versions::install_version`, plus the snapshotting capabilities of `renv`. It takes its name from the idea that a user could simply have one line like this:
 
 ```r
-Require(c("dplyr", "data.table", "lmer", "PredictiveEcology/LandR@development"))
+Require(c("dplyr", "lmer", "PredictiveEcology/LandR@development"))
 ```
 named after the `require` function, that would load packages. But with `Require`, it will also install the packages, if necessary. Set it and forget it. This makes if *very clear* what packages are being used in a project. `Require` also continues to work, even if packages are taken off CRAN. This means that even if there is a dependency that is removed from CRAN ("archived"), the line will still work. Because it can be done in one line, it becomes relatively easy to share, it is transparent, and facilitates reproducibility (especially when combined with version specifications). These in turn facilitate, for example, making reprexes for debugging. 
 
@@ -34,15 +34,17 @@ The `Require` package provides two "rerun-tolerant" functions, `Require` and `In
 
 These lines:
 ```r
-if (!require("data.table")) {install.packages("data.table"); require("data.table")}
 if (!require("dplyr")) {install.packages("dplyr"); require("dplyr")}
 if (!require("lme4")) {install.packages("lme4"); require("lme4")}
+if (!require("tidyverse")) {install.packages("tidyverse"); require("tidyverse")}
 ```
 
 become:
 ```r
-Require(c("data.table", "dplyr", "lme4"))
+if (!require("Require")) {install.packages("Require"); require("Require")}
+Require(c("dplyr", "lme4", "tidyverse"))
 ```
+noting that Require is an extra package, so to be fully reproducible, it needs to be installed first.
 
 ## Other packages that also install packages
 
@@ -54,10 +56,10 @@ The below descriptions are necessarily simple; please go see each package for mo
 
 ```r
 # These lines
-pak::pkg_install(c("data.table", "dplyr", "lme4"))
+pak::pkg_install(c("dplyr", "lme4"))
 
 # become
-Require::Install(c("data.table", "dplyr", "lme4"))
+Require::Install(c("dplyr", "lme4"))
 ```
 
 ### `renv`
@@ -162,24 +164,24 @@ Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 
 `Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 3x faster.
 ```r
-# First time run, before cache exists
-> system.time(pak::pkg_install(c("data.table", "dplyr", "lme4")))
+# First time run, 
+> system.time(pak::pkg_install(c("dplyr", "lme4")))
 ✔ Loading metadata database ... done
 ℹ No downloads are needed
 ✔ 3 pkgs + 24 deps: kept 25 [3.5s]
    user  system elapsed 
   1.083   0.029   3.658 
-> system.time(Require::Require(c("data.table", "dplyr", "lme4"), require = FALSE))
+> system.time(Require::Require(c("dplyr", "lme4"), require = FALSE))
    user  system elapsed 
   0.832   0.001   1.363 
 
-# Second time run, using cache
-> system.time(pak::pkg_install(c("data.table", "dplyr", "lme4")))
+# Second time run within same session
+> system.time(pak::pkg_install(c("dplyr", "lme4")))
 ℹ No downloads are needed
 ✔ 3 pkgs + 24 deps: kept 25 [946ms]
    user  system elapsed 
   0.034   0.001   0.961 
-> system.time(Require::Require(c("data.table", "dplyr", "lme4"), require = FALSE))
+> system.time(Require::Require(c("dplyr", "lme4"), require = FALSE))
    user  system elapsed 
   0.099   0.000   0.297 
 ```

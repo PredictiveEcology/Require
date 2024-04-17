@@ -1757,7 +1757,7 @@ checkAutomaticOfflineMode <- function() {
 
 isRstudioServer <- function () {
   isRstudioServer <- FALSE
-  if (isTRUE("tools:rstudio" %in% search())) {
+  if (isRstudio()) {
     rsAPIFn <- get(".rs.api.versionInfo", as.environment("tools:rstudio"))
     versionInfo <- rsAPIFn()
     if (!is.null(versionInfo)) {
@@ -1765,6 +1765,10 @@ isRstudioServer <- function () {
     }
   }
   isRstudioServer
+}
+
+isRstudio <- function() {
+  isTRUE("tools:rstudio" %in% search())
 }
 
 installPackageVerbose <- function(verbose, verboseLevel = 1) {

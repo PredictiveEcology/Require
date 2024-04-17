@@ -1512,6 +1512,7 @@ RequireDependencies <- function() {
     }
   }
   RequireDeps <- unique(c("Require", RequireDeps))
+  RequireDeps <- c(RequireDeps, "sys")
   RequireDeps
 }
 
