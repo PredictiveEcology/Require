@@ -6,42 +6,49 @@
 [![R build status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg)](https://github.com/PredictiveEcology/Require/actions)
 <!-- badges: end -->
 
-A simple package for reproducible package management in R.
-This is different than other approaches to package management such as `pak`, `packrat`, `checkpoint`, and `renv`, by including all-in-one management for packages in R focused around a single function, `Require`. We outline differences with these packages below.
+`Require` is a single package that combines features of `base::install.packages`, `base::library`, `base::require`, as well as `pak::pkg_install`, `remotes::install_github`, and `versions::install_version`, plus the snapshotting capabilities of `renv`. It takes its name from the idea that a user could simply have one line like this:
+
+```r
+Require(c("dplyr", "data.table", "lmer", "PredictiveEcology/LandR@development"))
+```
+named after the `require` function, that would load packages. But with `Require`, it will also install the packages, if necessary. Set it and forget it. This makes if *very clear* what packages are being used in a project. `Require` also continues to work, even if packages are taken off CRAN. This means that even if there is a dependency that is removed from CRAN ("archived"), the line will still work. Because it can be done in one line, it becomes relatively easy to share, it is transparent, and facilitates reproducibility (especially when combined with version specifications). These in turn facilitate, for example, making reprexes for debugging. 
 
 # Objectives
 
-Some packages, including those in our PredictiveEcology repository, have _many_ package dependencies. 
-Some of them are on CRAN, but some are still in development and so are hosted elsewhere. 
+Some packages have _many_ package dependencies. 
+Some of them are on CRAN; some are in development and so are hosted elsewhere. 
 Mixing many package dependencies that are constantly evolving creates challenges with standard R package management.
 For example, what is the best way to move analyses from one machine to another, or set up a series of High Performance Compute nodes? 
 How should we use functions like `install.packages` in a reproducible workflow that are clearly intended to be used once or very few times?
-How do we deal with many packages on GitHub that have many common dependencies?
+How do we deal with many packages on GitHub that have many common dependencies, but that may point to different branches on a GitHub repository?
 How do we deal with packages that have dependencies that are no longer on CRAN ("they have been archived")?
 How do we replicate an analysis 6 months from now when some packages have changed, and their dependencies have changed?
-Finally, how do we do all this for many concurrent projects without installing hundreds of packages in a new directory for every project?
 
 # `Require` & `Install`
 
-The `Require` package provides two "rerun-tolerant" functions, `Require` and `Install` (a recent addition). "rerun-tolerant" means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. "rerun-tolerant" is a requirement for a robust reproducible workflow; for every "manual" break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware. 
+The `Require` package provides two "rerun-tolerant" functions, `Require` and `Install`. "Rerun-tolerant" means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those and continue on. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. "Rerun-tolerant" is a requirement for a robust reproducible workflow; for every "manual" break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware. 
 
 `Install` and `Require` are identical except that `Require` will also call `require` (lower case `r`) on all the named packages with the default setting of `require = TRUE`. 
 
+# Converting to using `Require`
+
+These lines:
 ```r
-# These lines
 if (!require("data.table")) {install.packages("data.table"); require("data.table")}
 if (!require("dplyr")) {install.packages("dplyr"); require("dplyr")}
 if (!require("lme4")) {install.packages("lme4"); require("lme4")}
+```
 
-# become
+become:
+```r
 Require(c("data.table", "dplyr", "lme4"))
 ```
 
-# Other packages that also install packages
+## Other packages that also install packages
 
 The below descriptions are necessarily simple; please go see each package for more details. Below, we highlight some key features that are relevant to this README. `Require` offers a different way to achieve the features from all 5 of these packages that are necessary to build a unified, organic, yet reproducible approach to package management in one or many projects.
 
-## `pak`
+### `pak`
 
 `pak` focuses on fast installations of *current* versions of packages on CRAN-like packages and GitHub.com and other similar code-sharing pages. This works well if the objective is to keep current. It is fast.
 
@@ -53,7 +60,7 @@ pak::pkg_install(c("data.table", "dplyr", "lme4"))
 Require::Install(c("data.table", "dplyr", "lme4"))
 ```
 
-## `renv`
+### `renv`
 
 `renv` is a tool to help with a more static package installation process. While it can handle packages that are updated manually by an individual, the key strength is around keeping track of the versions that exist in a project. `renv` is not intended to expose the code used to install packages. This makes the managing of packages separate from the script that is/are used in the project, i.e., the package script does not contain the necessary information to recreate the package library.
 
@@ -63,11 +70,11 @@ renv::snapshot()
 Require::pkgSnapshot()
 ```
 
-## `packrat` 
+### `packrat` 
 
 This is mostly the predecessor to `renv`. `renv` can do everything `packrat` can do, but better.
 
-## `checkpoint`
+### `checkpoint`
 
 This approach takes a date as an input and will install all the packages a user wants, from that date. This uses the posit.packagemanager.co servers hosted by Posit.
 
@@ -77,9 +84,8 @@ checkpoint("2022-11-09")
 Require("reproducible (==1.2.10)") # which was the version on that date
 ```
 
-## `Require`
 
-### Features
+# Package features
 
 * reproducible workflows -- rerun-tolerant
 * fast (see one example of timings below)
