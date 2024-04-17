@@ -317,6 +317,7 @@ Require <- function(packages,
 
   # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
+    repos <- getCRANrepos(repos, ind = 1)
     # packages <- anyHaveHEAD(packages)
 
     if (length(which)) {

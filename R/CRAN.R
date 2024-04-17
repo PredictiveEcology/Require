@@ -38,7 +38,7 @@ getCRANrepos <- function(repos = NULL, ind) {
     }
     if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
       warning("Please choose a valid CRAN repo")
-      repos <- getCRANrepos(repos)
+      repos <- getCRANrepos(repos, 1)
     }
   }
 
