@@ -289,15 +289,15 @@ test_that("test 1", {
     # Test substitute(packages)
     suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")),
                          silent = TRUE)) |> suppressMessages()
-    verToCompare <- "1.0.0"
+    verToCompare <- "1.0.3"
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
 
     # The warning is about "package ‘Require’ is in use and will not be installed"
 
     out2 <- Require::Install(
-      c("quickPlot (< 1.0.0)", "NetLogoR",
+      c(paste0("quickPlot (<", verToCompare,")"), "NetLogoR",
         # This is needed b/c .unwrap is not exported from reproducible on CRAN
-        ifelse(isWindows(), "reproducible", "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)"),
+        unname(ifelse(isWindows(), "reproducible", "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)")),
         "SpaDES")#,
       # repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
     ) |>
