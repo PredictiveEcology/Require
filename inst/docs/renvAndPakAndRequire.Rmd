@@ -1,37 +1,58 @@
 ---
-title: Comparing `pak` and `Require`
+title: Introduction to `Require`
 output: html_document
 editor_options: 
   chunk_output_type: console
 ---
 
+`Require` is a single package that combines features of `base::install.packages`, `base::library`, `base::require`, as well as `pak::pkg_install`, `remotes::install_github`, and `versions::install_version`, plus the snapshotting capabilities of `renv`. It takes its name from the idea that a user could simply have one line named from the `require` function that would load a package, but in this case it will also install the package if necessary. Set it and forget it. This means that even if a user has a dependency that is removed from CRAN ("archived"), the line will still work. Because it can be done in one line, it becomes relatively easy to share, which facilitates, for example, making reprexes for debugging. 
+
+
 # Principles used in `Require`
 
-`Require` is desinged with features that facilitate running R code that is part of a continuous workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
+`Require` is desinged with features that facilitate running R code that is part of a continuous reproducible workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
 
-## Managing pacakges during code development
+## Key features
 
-It is common during code development to work in teams, and to be updating package code. 
+Features include:
+
+1. Fast, parallel installs and downloads;
+2. Installs CRAN *even if they have been archived.*;
+3. Installs GitHub packages;
+4. User can specify which version to install.
+5. Local package caching and cloning for fast (re-)installs.
+6. Manages (some types of) conflicting package requests, i.e., different GitHub branches.
+7. `options`-level control of which packages should be installed from source (see `RequireOptions()`) even if they are being downloaded from a binary repository.
+
+## How it works
+
+`Require` uses `install.packages` internally to install packages. However, it does not let `install.packages` download the packages. Rather, it identifies dependencies recursively, finds out where they are (CRAN, GitHub, Archives, Local), downloads them (or gets from local cache or clones from an specified package library). If `libcurl` is available (assessed via `capabilities("libcurl")`), it will download them in parallel from CRAN-alike repositories. If `sys` is installed, it will download GitHub packages in parallel also. If a user has not set `options("Ncpus")` manually, then it will set that to a value up to 8 for parallel installs of binary and source packages.
+
+## Why these features help teams 
+
+It is common during code development to work in teams, and to be updating package code. This is beneficial whether the team is very tight, all working on exactly the same project, or looser where they only share certain components across diverse projects.
 
 ### All working on same project
 
-If the whole team is working on the same "whole" project, then `renv` provides a mechanism for each team member to update code, then snapshot the project, commit the snapshot and push to the cloud for the team to share. 
+If the whole team is working on the same "whole" project, then it may be useful to use a "package snapshot" approach, as is used with the `renv` package. `Require` offers similar functionality with the function `pkgSnapshot()`. Using this approach provides a mechanism for each team member to update code, then snapshot the project, commit the snapshot and push to the cloud for the team to share. 
 
 ### Diverse projects
 
-However, if a team is more diversified and they are actually sharing the new code, but not the whole project, then project snapshots will be very inefficient. Instead, the code developer can work on their package, and the team members will have 2 options of what they might want to do: keep at the bleeding edge or update only if necessary for dependencies. More likely, they will want to have a mixture of these strategies, i.e., bleeding edge with some code, but only if necessary with others. `renv` does not easily allow this as it is an "project-level" approach. `pak` offers the ability at install time for a user to decide. `Require` on the other hand offers programmatic control for this. For example 
+However, if a team is more diversified and they are actually sharing the new code, but not the whole project, then project snapshots will be very inefficient and package management must be on a package-by-package case, not the whole project. In other words, the code developer can work on their package, and the various team members will have 2 options of what they might want to do: keep at the bleeding edge or update only if necessary for dependencies. More likely, they will want to have a mixture of these strategies, i.e., bleeding edge with some code, but only if necessary with others. Thus, `Require` offers programmatic control for this. For example 
 
-```{r,eval}
-Install(c("PredictiveEcology/reproducible@development (HEAD)", 
-          "PredictiveEcology/SpaDES.core@development (>=2.0.5.9004)")) 
+```{r,eval=FALSE}
+library(Require)
+Require::Install(
+  c("PredictiveEcology/reproducible@development (HEAD)", 
+    "PredictiveEcology/SpaDES.core@development (>=2.0.5.9004)")) 
 ```
-will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the in) for the development branch of `SpaDES.core`. The user doesn't have to make decisions at run time as to whether an update should be made, and for which packages.
+will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the inequality) for the development branch of `SpaDES.core`. The user doesn't have to make decisions at run time as to whether an update should be made, and for which packages.
 
 # How `Require` differs from other approaches
 
 ## Default behaviours different
 
-### Packages that aren't yet installed 
+For packages that aren't yet installed:
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ------------------------------------------ |
@@ -40,7 +61,7 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 | `pak::pkg_install("data.table")` | `data.table` installed *if not installed*  |
 | `renv::install("data.table")`    | `data.table` installed                     |
 
-### Already installed, but old
+For packages that are already installed, but old:
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ----------------------------------------------------------------- |
@@ -52,7 +73,7 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 
 # Differences and similarities between `pak` and `Require`
 
-\\* Indicates that there is an example below.
+\* Indicates that there is an example below.
 
 | Description                      |  `Require`    |   `pak`                               |
 | -------------------------------- | :------------------------------: | :-----------------------------------: |
@@ -60,10 +81,10 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 | Dependency conflicts*   | Yes   |  No (see example below)  |  
 | Multiple requests of same package | Resolves by version number specification, or most recent version | Error |
 | Control individual package updates | With `HEAD`   |   No   |
-| Parallel downloads   |   with `options(Require.installPackagesSys = 2)`    |   Yes    |
-| Parallel installs    |   with `options(Require.installPackagesSys = 2)`    |   Yes    |
+| Parallel downloads   |   Yes    |   Yes    |
+| Parallel installs    |   Yes    |   Yes    |
 | Very clean messaging   |   somewhat, with `options(Require.installPackagesSys = 1)`  | Yes    |  
-| Package dependencies     |  0   |   `data.table` |
+| Package dependencies     |  `data.table`   |   None |
 | Uses local cache   |   Yes   |   Yes   |
 | Package updates (default)    | No, unless needed by version number | Yes, prompt user |     
 | Package install by version    | Yes | No (only if declared in a `DESCRIPTION` file)  |   
@@ -71,9 +92,9 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 
 ## Archived packages
 
-`fastdigest` has been taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice. `Require` will just get the most recent archived copy and the work can continue.
+# Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice. `Require` will just get the most recent archived copy and the work can continue.
 
-```{r,eval=TRUE,message=FALSE}
+```{r,eval=FALSE,message=FALSE}
 Require::Install("fastdigest")
 
 try(pak::pkg_install(c("fastdigest")))
@@ -81,20 +102,21 @@ try(pak::pkg_install(c("fastdigest")))
 
 ## Dependency conflict
 
-When doing code development, it is common to use many `GitHub` packages. Each of these may point to one or more `Remotes`, i.e., *other* GitHub packages. 
-```{r, eval=TRUE,message=FALSE}
+When doing code development, it is common to use many `GitHub` packages. Each of these (or their dependencies) may point to one or more `Remotes`, i.e., *other* GitHub packages. 
+```{r, eval=FALSE,message=TRUE}
 
 # Fails because of a) packages taken off CRAN & multiple GitHub branches requested
 try(pk <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb"))
 
 # Fine
-Require::pkgDep("PredictiveEcology/LandR@LandWeb")
+rq <- Require::pkgDep("PredictiveEcology/LandR@LandWeb")
 
 ```
 
-```{r,eval=FALSE}
+The following doesn't work with `pak` because BioSIM is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
+```{r,eval=TRUE}
 try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
-pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 ```
 
 

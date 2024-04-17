@@ -46,6 +46,7 @@ Suggests:
     gitcreds,
     googledrive,
     httr,
+    pak,
     parallel,
     rematch2, 
     rprojroot,
