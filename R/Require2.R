@@ -10,7 +10,7 @@ utils::globalVariables(c(
   "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall",
   "PackageUrl", "repo", "oppositeInequals", "violationsDoubleInequals",
   "verbose", "VersionOK", "versionSpec", "versionToKeep",
-  "violation", "violation2", "..keep", "..colsToKeep",
+  "violation", "violation2", "..keepCols1", "..colsToKeep",
   "forceInstall", "keepForUpdate"
 ))
 
@@ -1577,8 +1577,8 @@ dealWithSnapshotViolations <- function(pkgSnapshotObj, install_githubArgs, insta
     "Version", "LibPath", "Depends", "Imports", "LinkingTo",
     "Remotes", "GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1")#,
   # "Repository")
-  keep <- setdiff(colnames(dd), toRm)
-  set(pkgDT, NULL, keep, dd[, ..keep])
+  keepCols1 <- setdiff(colnames(dd), toRm)
+  set(pkgDT, NULL, keepCols1, dd[, ..keepCols1])
 
   pkgDT <- trimRedundancies(pkgDT, repos = repos, purge = purge, libPaths = libPaths,
                             verbose = verbose, type = type)
@@ -2261,9 +2261,9 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
       }, by = "Package"][, ..cols3]
       messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
       if (grepl("remove|rm", ifViolation[1])) {
-        keep <- pkgDT$violation %in% TRUE & !pkgDT[["inequality"]] %in% "==" | pkgDT$violation %in% FALSE
-        rm <- pkgDT[which(!keep)]
-        pkgDT <- pkgDT[which(keep)]
+        keepCols2 <- pkgDT$violation %in% TRUE & !pkgDT[["inequality"]] %in% "==" | pkgDT$violation %in% FALSE
+        rm <- pkgDT[which(!keepCols2)]
+        pkgDT <- pkgDT[which(keepCols2)]
         pkgDT[Package %in% rm[["Package"]], installResult := msgPackageViolation]
       }
     }
@@ -2293,7 +2293,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
       }
     }
 
-    pkgDT[, keep := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE)) {
+    pkgDT[, keepCols3 := if (any(isEquals %in% TRUE) && any(EqualsDoesntViolate %in% TRUE)) {
       .I[isEquals %in% TRUE & EqualsDoesntViolate %in% TRUE][1]
     } else {
       .I
@@ -2301,7 +2301,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
     by = "Package"
     ]
 
-    pkgDT <- pkgDT[unique(keep)]
+    pkgDT <- pkgDT[unique(keepCols3)]
 
     # get rid of the GT if they are TRUE
     pkgDT[, remove := (isGT %in% TRUE & GTDoesntViolate %in% TRUE)]
@@ -2309,7 +2309,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
       pkgDT <- pkgDT[!remove %in% TRUE]
 
 
-    set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keep"), NULL)
+    set(pkgDT, NULL, c("isEquals", "hasEqualsAndInequals", "EqualsDoesntViolate", "keepCols3"), NULL)
   }
 
   if (any(pkgDT$oppositeInequals)) {
@@ -2318,13 +2318,13 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
           violationsDoubleInequals := detectDoubleInequalsViolations(inequality, versionSpec, .N)
           , by = "Package"]
     if (grepl("remove|rm", ifViolation[1]) && any(pkgDT$violationsDoubleInequals[whOppositeInequals])) {
-      set(pkgDT, NULL, "keep", TRUE)
-      pkgDT[whOppositeInequals, keep := !grepl("<", pkgDT[["inequality"]][whOppositeInequals]), by = "Package"]
-      rm <- pkgDT[which(!keep)]
-      pkgDT <- pkgDT[which(keep)]
+      set(pkgDT, NULL, "keepCols4", TRUE)
+      pkgDT[whOppositeInequals, keepCols4 := !grepl("<", pkgDT[["inequality"]][whOppositeInequals]), by = "Package"]
+      rm <- pkgDT[which(!keepCols4)]
+      pkgDT <- pkgDT[which(keepCols4)]
       pkgDT[Package %in% rm[["Package"]], installResult := msgPackageViolation]
+      set(pkgDT, NULL, c("violationsDoubleInequals", "keepCols4"), NULL)
     }
-    set(pkgDT, NULL, c("violationsDoubleInequals", "keep"), NULL)
 
   }
   pkgDT
@@ -2496,14 +2496,14 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   # pkgInstall[, binOrSrc := c("src", "bin")[grepl("\\<bin\\>", Repository) + 1]]
   setorderv(pkgInstall, c("Package", "availableVersionOKthisOne", "binOrSrc"), order = c(1L, -1L, 1L)) # OK = TRUE first, bin before src
 
-  pkgInstall[, keep := {
+  pkgInstall[, keepCols5 := {
     # This will pick the one that is OK, or if they are all NA (meaning no version spec),
     #    or all FALSE (meaning need to try Archive) <-- this was removed because can have 2 repositories, e.g., predictiveecology.r-universe.dev and CRAN MUST TRY BOTH
     #    then also pick first one that OK
     ok <- any(availableVersionOKthisOne %in% TRUE) || all(is.na(availableVersionOKthisOne)) # || all(availableVersionOKthisOne %in% FALSE)
     if (ok) .I[ok][1] else .I
   }, by = c("Package")]
-  pkgInstall <- pkgInstall[unique(keep)]
+  pkgInstall <- pkgInstall[unique(keepCols5)]
 
   # next line can switch a "install" to "dontInstall"
   pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall, verbose = verbose)
@@ -2534,7 +2534,7 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
 
     }
 
-    set(pkgInstallList[[.txtInstall]], NULL, "keep", NULL)
+    set(pkgInstallList[[.txtInstall]], NULL, "keepCols5", NULL)
   }
   pkgInstall <- rbindlist(pkgInstallList, fill = TRUE, use.names = TRUE)
 
@@ -3363,11 +3363,11 @@ canClone <- function(ip) {
   RversionDot <- RversionDot()
   correctBuilt <- correctBuilt(ip, RversionDot)
   # correctBuilt <- Rversion == BuiltVersion # needs to re-add package_version to both those functions
-  keep <- correctBuilt %in% TRUE
+  keepCols6 <- correctBuilt %in% TRUE
   # if (isWindows()) {
-    keep <- keep & ip[,  "NeedsCompilation"] == "no"
+    keepCols6 <- keepCols6 & ip[,  "NeedsCompilation"] == "no"
   # }
-  ip[keep %in% TRUE ,, drop = FALSE]
+  ip[keepCols6 %in% TRUE ,, drop = FALSE]
 }
 
 cantClone <- function(ip) {
