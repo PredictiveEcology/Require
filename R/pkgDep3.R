@@ -53,13 +53,16 @@ utils::globalVariables(
 #' @param includeSelf Logical. If `TRUE`, the default, then the dependencies
 #'   will include the package itself in the returned list elements, otherwise,
 #'   only the "dependencies"
-#' @param simplify Logical. If `TRUE`, the default, the return object is "just" a
-#'   character vector of package names (with version requirements). If `FALSE`,
+#' @param simplify Logical or numeric. If `TRUE` (or > 0), the default,
+#'   the return object is "just" a character vector of package names
+#'   (with version requirements). If `FALSE` (or `0`),
 #'   then a `data.table` will be returned with 4 columns,
 #'   `Package`, `packageFullName`, `parentPackage` (the package name for which the
 #'   given line entry is a dependency; will be "user" if it was user supplied)
 #'   and `deps`, which is a list of `data.table`s
-#'   of all dependencies.
+#'   of all dependencies. If a negative number, then it will return a similar `data.table`
+#'   as with `FALSE`, however, duplications in the recursive package dependencies
+#'   are left intact.
 #' @param Additional_repositories Logical. If `TRUE`, then `pkgDep` will return
 #'   a list of `data.table` objects (instead of character vectors)
 #'   with a column `packageFullName` and possibly a second column `Additional_repositories`,
@@ -155,7 +158,8 @@ pkgDep <- function(packages,
                 # }
 
                 keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
-                dep <- dep[!duplicated(dep[["Package"]])]
+                if (simplify >= 0)
+                  dep <- dep[!duplicated(dep[["Package"]])]
                 set(dep, NULL, c("packageFullName", "parentPackage"),
                     list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
                 dep <- rmBase(includeBase, dep)
