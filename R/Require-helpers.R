@@ -1680,23 +1680,46 @@ availablePackagesCachedPath <- function(repos, type) {
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {
+  if (isWindows() && identical(ipa$type, "source") &&
+      getOption("Require.installPackagesSys") == 0) {
+    op <- options(Ncpus = 1)
+    on.exit(options(op), add = TRUE)
+  }
+
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
     ipa$lib <- .libPaths()[1]
-    sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
-                doLine = "outfiles <- do.call(install.packages, args)",
-                verbose = verbose)
+    for (i in 1:2) {
+      anyFailed <- NULL
+      out <- sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
+                                   doLine = "outfiles <- do.call(install.packages, args)",
+                                   verbose = verbose)
+      if (file.exists(out)) {
+        anyFailed <- grep("installation.+failed", readLines(out), value = TRUE)
+      }
+      if (length(anyFailed) == 0)
+        break
+      pkgName <- extractPkgNameFromWarning(anyFailed)
+      browser()
+      messageVerbose("Failed installation for: ", paste(pkgName, collapse = ", "),
+                     "\nTrying again ... ", verbose = verbose)
+      ipa$pkgs <- pkgName
+      ipa$available <- ipa$available[ipa$available[, "Package"] %in% pkgName, , drop = FALSE]
+    }
   } else {
+    # if (ipa$quiet && ipa$type %in% "source" && isWindows())
+    #   ipa$quiet <- FALSE
     if (isTRUE(ipa$quiet)) {
       messSupp2 <- capture.output({
         messSupp <- capture.output(type = "message", {
-          do.call(install.packages, ipa)
+          out <- do.call(install.packages, ipa)
         })
       })
     } else {
-      do.call(install.packages, ipa)
+      out <- do.call(install.packages, ipa)
     }
   }
+  return(out)
 }
 
 #' @importFrom utils remove.packages
