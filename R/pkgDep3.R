@@ -675,12 +675,15 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
 
   out <- pkgDT[, list(# packageFullName = packageFullName,
                       lis = {
-    needed <- DESCRIPTIONFileDeps(DESCFile, which = which, purge = purge, keepSeparate = TRUE)
+    allDeps <- DESCRIPTIONFileDeps(DESCFile, which = c("Depends", "Imports", "Suggests", "LinkingTo"),
+                                  purge = purge, keepSeparate = TRUE)
+    needed <- allDeps[which]
+    notNeeded <- allDeps[setdiff(names(allDeps), which)]
     neededAdditionalRepos <- DESCRIPTIONFileOtherV(DESCFile, other = "Additional_repositories")
     neededRemotes <- DESCRIPTIONFileDeps(DESCFile, which = "Remotes", purge = purge)
     pfn <- gsub("(@).+( *)", paste0("\\1", shas, "\\2"), packageFullName)
     # Change branch to use sha
-    uwrnar(needed = needed, neededRemotes, installedVersionOK, Package,
+    uwrnar(needed = needed, notNeeded = notNeeded, neededRemotes, installedVersionOK, Package,
            pfn, neededAdditionalRepos, shas = shas, includeBase, verbose)
   }), by = "packageFullName"]
 
@@ -721,7 +724,7 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
 }
 
 
-uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
+uwrnar <- function(needed, notNeeded, neededRemotes, installedVersionOK, Package,
                    # Repo, Account, Branch, hasSubFolder,
                    packageFullName, neededAdditionalRepos, shas,
                    includeBase, verbose) {
@@ -730,29 +733,37 @@ uwrnar <- function(needed, neededRemotes, installedVersionOK, Package,
     needed <- unname(unlist(needed))
     neededRemotesName <- extractPkgName(neededRemotes)
     neededName <- extractPkgName(needed)
-    needSomeRemotes <- neededName %in% neededRemotesName
-    dontMatch <- neededRemotes[!neededRemotesName %in% neededName]
-    if (length(dontMatch)) { # These either are missing from Depends/Imports/Suggests but are in Remotes
-      #  or else the package name doesn't match the GitHub repo name e.g., BioSIM = RNCan/BioSimClient_R
-      #  Need to try to figure out which it is for the dontMatch
-      Packages <- Map(packageFullName = trimVersionNumber(dontMatch), function(packageFullName) {
-        descFiles <- dlGitHubDESCRIPTION(packageFullName)
-        DESCRIPTIONFileOtherV(descFiles$DESCFile, "Package")
-      })
-      whPackages <- match(extractPkgName(needed), unname(unlist(Packages))) |> na.omit()
-      Packages <- Packages[whPackages]
+    notNeededName <- c(extractPkgName(unname(unlist(notNeeded))))
 
-      RepoNotPkgName <- !mapply(pack = Packages, nam = names(Packages), function(pack, nam) {
-        extractPkgGitHub(nam) == pack
-      })
+    needSomeRemotesNames <- setdiff(neededRemotesName, notNeededName)
+    needSomeRemotes <- neededName %in% needSomeRemotesNames
+    notNeededRemotes <- setdiff(neededRemotesName, neededName)
+    if (length(notNeededName)) {
+      somehowMissing <- setdiff(neededRemotesName, c(notNeededRemotes, needSomeRemotes))
+      # needSomeRemotes <- neededName %in% neededRemotesName
+      dontMatch <- neededRemotes[match(somehowMissing, neededRemotesName)]
+      if (length(dontMatch)) { # These either are missing from Depends/Imports/Suggests but are in Remotes
+        #  or else the package name doesn't match the GitHub repo name e.g., BioSIM = RNCan/BioSimClient_R
+        #  Need to try to figure out which it is for the dontMatch
+        Packages <- Map(packageFullName = trimVersionNumber(dontMatch), function(packageFullName) {
+          descFiles <- dlGitHubDESCRIPTION(packageFullName)
+          DESCRIPTIONFileOtherV(descFiles$DESCFile, "Package")
+        })
+        whPackages <- match(extractPkgName(needed), unname(unlist(Packages))) |> na.omit()
+        Packages <- Packages[whPackages]
 
-      if (any(RepoNotPkgName)) {
-        addToNeededName <- neededName %in% unname(Packages[RepoNotPkgName])
-        needSomeRemotes[addToNeededName] <- TRUE
-        neededName <- unique(c(neededName, extractPkgName(names(Packages)[RepoNotPkgName])))
+        RepoNotPkgName <- !mapply(pack = Packages, nam = names(Packages), function(pack, nam) {
+          extractPkgGitHub(nam) == pack
+        })
+
+        if (any(RepoNotPkgName)) {
+          addToNeededName <- neededName %in% unname(Packages[RepoNotPkgName])
+          needSomeRemotes[addToNeededName] <- TRUE
+          neededName <- unique(c(neededName, extractPkgName(names(Packages)[RepoNotPkgName])))
+        }
+
+
       }
-
-
     }
     if (any(needSomeRemotes)) {
       hasVersionNum <- grep(grepExtractPkgs, needed[needSomeRemotes])
