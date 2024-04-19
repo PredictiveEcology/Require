@@ -3443,14 +3443,24 @@ removeRequireDeps <- function(pkgDT, verbose) {
   # }
 
   whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
-  toRm <- pkgDT$Package[whNeedInstall] %in% extractPkgName(unlist(RequireDeps))
+  toRm <- pkgDT[["Package"]][whNeedInstall] %in% extractPkgName(unlist(RequireDeps))
   if (any(toRm)) {
-    # messageVerbose("Can't install/update data.table because it is a dependency of Require; use e.g.:\n",
-    #                "install.packages(\"data.table\")", verbose = verbose)
+    NeedRestart <- if (getOption("Require.installPackagesSys") > 0) {
+      # Can install when in a different process
+      pkgDT[["Package"]][whNeedInstall][toRm] %in% "Require"
+    } else {
+      FALSE
+    }
+
     whRm <- which(whNeedInstall)[toRm]
-    set(pkgDT, whRm, "needInstall", .txtDontInstall)
+
+    # Try to install them anyway, but it will fail and report error
+    # set(pkgDT, whRm, "needInstall", .txtDontInstall)
+
     set(pkgDT, whRm, "installed", TRUE)
     set(pkgDT, whRm, "installResult", "Can't install Require dependency")
+    if (any(NeedRestart))
+      set(pkgDT, whRm, "installResult", "Need to restart R")
   }
   pkgDT
 }
