@@ -42,6 +42,7 @@ test_that("test 5", {
       if (FALSE) {
         # minor corrections
         pkgs[Package %in% "climateData", Version := "1.0.4"]
+        # pkgs[grep("SpaDES.config", Package, invert = TRUE)]
         pkgs[Package %in% "rnaturalearthhires", Version := "1.0.0.9000"]
         #
         data.table::fwrite(pkgs, file = snf)
@@ -73,18 +74,23 @@ test_that("test 5", {
       #                                      GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
       # pks <- c("ymlthis", "SpaDES.tools", "amc")
       # pkgs <- pkgs[Package %in% pks]
+      # "PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c (==0.0.2.9071)"
+      #
+      # pkgs <- pkgs[Package %in% extractPkgName(pkgDep("PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c (==0.0.2.9071)")[[1]])]
+
+      # debug(installAll)
       data.table::fwrite(pkgs, file = snf) # have to get rid of skips in the snf
       packageFullName <- ifelse(!nzchar(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
-
       warns <- capture_warnings(
         # mess <- capture_messages(
-        out <- Require(packageVersionFile = snf, require = FALSE,
+        out <- Require(packageVersionFile = snf, require = FALSE, purge = TRUE,
                        returnDetails = TRUE)
         # )
       )
+
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl("Please change required version", warns)
@@ -195,6 +201,7 @@ test_that("test 5", {
       versionViolation <- att$Package[grep("violation", att$installResult)]
       noneAvailable <- att$Package[grep("noneAvailable", att$installResult)]
       didnt <- att[!is.na(att$installResult)]
+
 
       allDone <- setdiff(didnt$Package, c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
                                           noneAvailable, c("Require", "data.table")))

@@ -1283,16 +1283,16 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       if (getOption("Require.installPackagesSys") == 2) {
         ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
         args <- list(repos = repos, type = type)
-        file <- paste0(ap$Package, "_", ap$VersionOnRepos)
+        file <- paste0(ap[["Package"]], "_", ap$VersionOnRepos)
         if (isWindows() && (identical(type, "both") | grepl("bin", type))) {
-          args$type <- "binary"
+          # args$type <- "binary"
           packageUrl <- file
-          fileext <- ".zip"
+          fileext <- c(".tar.gz", ".zip")[(ap[["binOrSrc"]] %in% "bin") + 1]
         } else {
           if (any(ap$repoLocation %in% "CRAN"))
             packageUrl <- file
           else
-            packageUrl <- file.path(ap$Package, file)
+            packageUrl <- file.path(ap[["Package"]], file)
           fileext <- ".tar.gz"
         }
         packageUrl <- paste0(packageUrl, fileext)
@@ -1380,7 +1380,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
 
             if (getOption("Require.installPackagesSys") >= 1) {
               # args <- argsOrig <- list(repos = repos, type = type,
-              #                          pkgs = pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE],
+              #                          pkgs = pkgCRAN[["Package"]][pkgCRAN$availableVersionOK %in% TRUE],
               #                          destdir = RequirePkgCacheDir())
 
               # "outfile <- do.call(download.file, args)"
@@ -1449,7 +1449,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         if (getOption("Require.installPackagesSys") == 2) {
           aa <- pkgGHtoDL[!SHAonGH %in% FALSE]
           args <- list(Account = aa$Account, Repo = aa$Repo, Branch = aa$Branch,
-                       GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa$Package,
+                       GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa[["Package"]],
                        VersionOnRepos = aa$VersionOnRepos)
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
           dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
@@ -2177,6 +2177,20 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
 confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
                                                          ifViolation = c("removeEquals", "stop"),
                                                          verbose = getOption("Require.verbose")) {
+
+  # Basically, if the package has no version specification, it can take "any version", so don't use it
+  #   at all, unless it is the only description
+  set(pkgDT, NULL, "hasInequality", !is.na(pkgDT[["inequality"]]))
+  pp <- pkgDT[, keep44 := if (any(hasInequality)) ifelse(hasInequality, .I, NA) else .I, by = "Package"]
+  pkgDT <- pp[unique(na.omit(keep44))]
+  # pkgDT <- data.table::copy(pp3)# [!Package %in% "ggplot2" | packageFullName == "ggplot2 (==3.4.4)"]
+  if (!is.null(pkgDT[["parentPackage"]])) {
+    pkgDT[, needKeep := grepl("\\(", parentPackage) | is.na(parentPackage)]
+    pkgDT[, keep55 := if(any(needKeep)) ifelse(needKeep | is.na(parentPackage), .I, NA) else .I, by = "Package"]
+    pkgDT <- pkgDT[unique(na.omit(keep55))]
+  }
+
+
   set(pkgDT, NULL, "isEquals", pkgDT[["inequality"]] == "==")
   pkgDT[,  oppositeInequals := any(grepl("<", inequality)) & any(grepl(">", inequality)), by = "Package"]
   pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
@@ -2734,7 +2748,7 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
            ifelse(is.na(ip$GithubSubFolder), "", paste0("/", ip$GithubSubFolder)),
            "@", ref, head),
     # github
-    paste0(ip$Package, head) # cran
+    paste0(ip[["Package"]], head) # cran
   ))
   Install(pkgs, purge = purge, verbose = verbose)
 }
@@ -2939,6 +2953,7 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
       # toInstall[rowsInPkgDT, installed := FALSE]
       set(toInstall, rowsInPkgDT, "installResult", w$message)
     }
+    messageVerbose(w$message, verbose = verbose)
     if (length(grep("Require", pkgName)))
       needWarning <- FALSE
   }
@@ -3155,7 +3170,7 @@ clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
   if (length(canClone)) {
     messageVerbose(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
                          ") instead of Installing (don't need compiling): ",
-                         paste(sort(canClone), collapse = comma)), verbose = verbose)
+                         paste(canClone, collapse = comma)), verbose = verbose)
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1], ip = ip)
     ipa$pkgs <- names(cantClone)
@@ -3401,6 +3416,7 @@ removeRequireDeps <- function(pkgDT, verbose) {
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT)
   RequireDeps <- .RequireDependencies
+
   # localRequireDir <- file.path(.libPaths(), "Require")
   # de <- dir.exists(localRequireDir)
   # if (any(de)) {
@@ -3659,13 +3675,13 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     if (downPack)
       dt <- as.data.table(do.call(rbind, ll))
     else
-      dt <- as.data.table(cbind(Package = argsOrig$Package, do.call(rbind, ll)))
+      dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
     dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> setDT()
   } else if (downAndBuildLocal) {
-    dt <- list(Package = argsOrig$Package,
+    dt <- list(Package = argsOrig[["Package"]],
                localFile = unlist(ll))
     setDT(dt)
   } else  { # installPackages and Other

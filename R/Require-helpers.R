@@ -1790,7 +1790,7 @@ rmEmptyFiles <- function(files) {
     fs <- file.size(files[alreadyExists])
     tooSmall <- fs < 100
     if (any(tooSmall %in% TRUE)) {
-      unlink(files[alreadyExist[which(tooSmall)]])
+      unlink(files[alreadyExists[which(tooSmall)]])
       alreadyExists[alreadyExists] <- tooSmall %in% FALSE
     }
   }
