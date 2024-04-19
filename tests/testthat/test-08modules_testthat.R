@@ -1,7 +1,6 @@
 test_that("test 5", {
 
   setupInitial <- setupTest()
-  # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
@@ -16,11 +15,11 @@ test_that("test 5", {
     modulePath <- file.path(pkgDir, "m")
 
     # Install 3 packages that are needed for subsequent module and package installations
-    (a <- Require(c("PredictiveEcology/SpaDES.project@transition",
-                    "PredictiveEcology/Require@simplify2 (HEAD)"),
+    (a <- Install(c("PredictiveEcology/SpaDES.project@transition"),
                   upgrade = FALSE, returnDetails = TRUE
     )) |>
       capture_warnings() -> warns
+    on.exit(unloadNamespace("SpaDES.project"))
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 
