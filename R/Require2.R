@@ -2422,7 +2422,6 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
           pkgInstall <- pkgInstall[-whToRM]
       }
 
-      pkgAndInequality <- c("Package", "inequality")
       versionSpecNotNA <- !is.na(pkgInstall$versionSpec)
       if (any(versionSpecNotNA)) {
         verSpec <- pkgInstall$versionSpec[versionSpecNotNA]
@@ -2443,13 +2442,17 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
         pkgInstallTmp[[2]] <- pkgInstall[versionSpecNotNA %in% FALSE]
       }
       pkgInstall <- rbindlist(pkgInstallTmp)
-      set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
-      setOrderOn <- list(colm = c("Package", "versionSpecGroup", "inequality", "repoLocation"),
-                         ordr = c(1L, 1L, -1L, 1L))
+      # set(pkgInstall, NULL, "versionSpecGroup", data.table::rleid(pkgInstall$versionSpec))
+      setOrderOn <- list(colm = c("Package", # "versionSpecGroup",
+                                  "inequality", "repoLocation"),
+                         ordr = c(1L, # 1L,
+                                  -1L, 1L))
       setDT(setOrderOn)
       setOrderOn <- setOrderOn[setOrderOn$colm %in% colnames(pkgInstall)]
       setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
                 order = setOrderOn$ordr, na.last = TRUE)
+
+      pkgAndInequality <- c("Package", "inequality")#, "versionSpecGroup")
 
       pkgInstall[, keepBasedOnRedundantInequalities :=
                    unlist(lapply(.I, function(ind) {
