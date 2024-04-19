@@ -50,7 +50,7 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 
 # How `Require` differs from other approaches
 
-## Default behaviours different
+### Default behaviours different
 
 For packages that aren't yet installed:
 
@@ -71,7 +71,7 @@ For packages that are already installed, but old:
 | `renv::install("data.table")`    | `data.table` installed, asks user if wants to update if available |
 
 
-# Differences and similarities between `pak` and `Require`
+### Differences and similarities between `pak` and `Require`
 
 \* Indicates that there is an example below.
 
@@ -90,7 +90,7 @@ For packages that are already installed, but old:
 | Package install by version    | Yes | No (only if declared in a `DESCRIPTION` file)  |   
 | Package conflict (CRAN & GitHub) | Prefers CRAN, if version requirements met  |  Error  |
 
-## Archived packages
+### Archived packages
 
 Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice. `Require` will just get the most recent archived copy and the work can continue.
 
@@ -100,7 +100,7 @@ Require::Install("fastdigest")
 try(pak::pkg_install(c("fastdigest")))
 ```
 
-## Dependency conflict
+### Dependency conflict
 
 When doing code development, it is common to use many `GitHub` packages. Each of these (or their dependencies) may point to one or more `Remotes`, i.e., *other* GitHub packages. 
 ```{r, eval=FALSE,message=TRUE}
@@ -114,14 +114,14 @@ rq <- Require::pkgDep("PredictiveEcology/LandR@LandWeb")
 ```
 
 The following doesn't work with `pak` because BioSIM is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
-```{r,eval=TRUE}
+```{r,eval=TRUE,message=FALSE}
 try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
 ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 ```
 
 
 
-## Version requirements determine package installation
+### Version requirements determine package installation
 
 1. **Version number requirements** drive package updates. If a user doesn't need an update because version numbers are sufficient, no update will occur.
 
@@ -142,51 +142,22 @@ Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reprodu
 #   tip of the development branch of reproducible
 Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
 
+# Not a problem because version number specifies
+Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
+                   "PredictiveEcology/reproducible (>= 2.0.10)")))
 ```
 
-
-## pak
-- when it fails due to "dependency conflict", it may be difficult to diagnose
-- seems to work if there is only one "branch" for each given package, but not multiple branches e.g., `c("PredictiveEcology/reproducible@development", "PredictiveEcology/reproducible")`, but 
-it is not clear why ... are their dependencies conflicting or is it just the package
-- can't write version numbers at the command line, though they can exist in a DESCRIPTION file
-
-```{r}
-
-## FAILS
+```{r,eval=TRUE}
 try(pak::pkg_install(
   c("PredictiveEcology/reproducible@development", 
     "PredictiveEcology/reproducible")))
-# Error:                                                                                 
-# ! error in pak subprocess
-# Caused by error: 
-# ! Could not solve package dependencies:
-# * PredictiveEcology/reproducible@development: Conflicts with PredictiveEcology/reproducible
-# * PredictiveEcology/reproducible: Conflicts with PredictiveEcology/reproducible@development
-# Type .Last.error to see the more details.
 
 
-
-## FAILS
+## FAILS - can't specify version requirements
 try(pak::pkg_install(
     c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
       "PredictiveEcology/reproducible (>= 2.0.10)")))
-
-## FAILS
-try(pak::pkg_install("local://~/GitHub/Edehzhie/DESCRIPTION"))
-
-# Installs or does nothing is `reproducible` already installed
-Require::Install(
-  c("PredictiveEcology/reproducible@development", 
-    "PredictiveEcology/reproducible"))
-
-# Fine -- picks the more recent version number and installs
-Require::Install(
-    c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)", 
-      "PredictiveEcology/reproducible (>= 2.0.10)"))
 ```
-
-## pak
 
 Fails when there are 2 branches within a DESCRIPTION -- wants to downgrade, regardless of order
 ```{r}

@@ -452,8 +452,8 @@ which packages.</p>
 </div>
 <div id="how-require-differs-from-other-approaches" class="section level1">
 <h1>How <code>Require</code> differs from other approaches</h1>
-<div id="default-behaviours-different" class="section level2">
-<h2>Default behaviours different</h2>
+<div id="default-behaviours-different" class="section level3">
+<h3>Default behaviours different</h3>
 <p>For packages that aren’t yet installed:</p>
 <table>
 <colgroup>
@@ -520,10 +520,9 @@ available</td>
 </tbody>
 </table>
 </div>
-</div>
-<div id="differences-and-similarities-between-pak-and-require" class="section level1">
-<h1>Differences and similarities between <code>pak</code> and
-<code>Require</code></h1>
+<div id="differences-and-similarities-between-pak-and-require" class="section level3">
+<h3>Differences and similarities between <code>pak</code> and
+<code>Require</code></h3>
 <p>* Indicates that there is an example below.</p>
 <table>
 <colgroup>
@@ -604,8 +603,9 @@ file)</td>
 </tr>
 </tbody>
 </table>
-<div id="archived-packages" class="section level2">
-<h2>Archived packages</h2>
+</div>
+<div id="archived-packages" class="section level3">
+<h3>Archived packages</h3>
 <p>Between mid March 2024 and April 5, 2024, <code>fastdigest</code> was
 taken off CRAN. If this is part of <em>your</em> direct dependencies,
 you can remove it and find an alternative. However, if it is an indirect
@@ -615,8 +615,8 @@ get the most recent archived copy and the work can continue.</p>
 
 try(pak::pkg_install(c(&quot;fastdigest&quot;)))</code></pre>
 </div>
-<div id="dependency-conflict" class="section level2">
-<h2>Dependency conflict</h2>
+<div id="dependency-conflict" class="section level3">
+<h3>Dependency conflict</h3>
 <p>When doing code development, it is common to use many
 <code>GitHub</code> packages. Each of these (or their dependencies) may
 point to one or more <code>Remotes</code>, i.e., <em>other</em> GitHub
@@ -630,40 +630,15 @@ rq &lt;- Require::pkgDep(&quot;PredictiveEcology/LandR@LandWeb&quot;)</code></pr
 not found. This may be because the package name is not the repository
 name, but it is not clear from the error message why:</p>
 <pre class="r"><code>try(gg &lt;- pak::pkg_deps(&quot;PredictiveEcology/LandR@development&quot;, dependencies = TRUE))</code></pre>
-<pre><code>## ℹ Loading metadata database✔ Loading metadata database ... done</code></pre>
 <pre><code>## Error : ! error in pak subprocess
 ## Caused by error: 
 ## ! Could not solve package dependencies:
 ## * PredictiveEcology/LandR@development: Can&#39;t install dependency BioSIM
 ## * BioSIM: Can&#39;t find package called BioSIM.</code></pre>
 <pre class="r"><code>ff &lt;- Require::pkgDep(&quot;PredictiveEcology/LandR@development&quot;, dependencies = TRUE)</code></pre>
-<pre><code>## LandR@e20001181a0ab1c2a8d3c636a56b881207033b3d downloading DESCRIPTION
-##   1 packages on GitHub
-## BioSimClient_R@main downloading DESCRIPTION
-## map@development downloading DESCRIPTION
-## SpaDES.core@development downloading DESCRIPTION
-## LandR@e20001181a0ab1c2a8d3c636a56b881207033b3d downloading NAMESPACE
-## pemisc@2988d6a4855dcff40278132c1d93abf3ef62535f downloading DESCRIPTION
-## reproducible@3bba1e0086d6e6d4e3cad21ddc192f16024fc70c downloading DESCRIPTION
-## SpaDES.tools@8a175a5b42125e2c51eb524c266364e62c1a4c1d downloading DESCRIPTION
-## biomod2@c88734fdd66ec831deb6a8e56aecd78f50c17673 downloading DESCRIPTION
-## BioSIM@c94dcd8c967745aa355a9c2d3c5d4098b2fb8123 downloading DESCRIPTION
-## quickPlot@bef568a6c3a37112b252592c0cb111ad6799f84e downloading DESCRIPTION
-##   6 packages on GitHub
-## pemisc@2988d6a4855dcff40278132c1d93abf3ef62535f downloading NAMESPACE
-## NLMR@main downloading DESCRIPTION
-## SpaDES.tools@8a175a5b42125e2c51eb524c266364e62c1a4c1d downloading NAMESPACE
-## biomod2@c88734fdd66ec831deb6a8e56aecd78f50c17673 downloading NAMESPACE
-## J4R@main downloading DESCRIPTION
-## BioSimClient_R@main downloading NAMESPACE
-## quickPlot@bef568a6c3a37112b252592c0cb111ad6799f84e downloading NAMESPACE
-## amc@a3b52f4c79894fd58a838a4a1ab6515fb34918a9 downloading DESCRIPTION
-## peutils@74c1077f4206d4145d0e738ffa5d82a2e94d8891 downloading DESCRIPTION
-##   2 packages on GitHub
-## amc@a3b52f4c79894fd58a838a4a1ab6515fb34918a9 downloading NAMESPACE</code></pre>
 </div>
-<div id="version-requirements-determine-package-installation" class="section level2">
-<h2>Version requirements determine package installation</h2>
+<div id="version-requirements-determine-package-installation" class="section level3">
+<h3>Version requirements determine package installation</h3>
 <ol style="list-style-type: decimal">
 <li><p><strong>Version number requirements</strong> drive package
 updates. If a user doesn’t need an update because version numbers are
@@ -690,8 +665,8 @@ Require::Install(c(&quot;PredictiveEcology/reproducible@development (HEAD)&quot;
 #   tip of the development branch of reproducible
 Require::Install(c(&quot;PredictiveEcology/reproducible@development&quot;, &quot;reproducible (HEAD)&quot;))</code></pre>
 </div>
-<div id="pak" class="section level2">
-<h2>pak</h2>
+<div id="examples-of-that-pak-doesnt-deal-well-with" class="section level3">
+<h3>examples of that <code>pak</code> doesn’t deal well with</h3>
 <ul>
 <li>when it fails due to “dependency conflict”, it may be difficult to
 diagnose</li>
@@ -711,8 +686,8 @@ try(pak::pkg_install(
 <pre><code>## Error : ! error in pak subprocess
 ## Caused by error: 
 ## ! Could not solve package dependencies:
-## * PredictiveEcology/reproducible@development: Conflicts with PredictiveEcology/reproducible
-## * PredictiveEcology/reproducible: Conflicts with PredictiveEcology/reproducible@development</code></pre>
+## * PredictiveEcology/reproducible: Conflicts with PredictiveEcology/reproducible@development
+## * PredictiveEcology/reproducible@development: Conflicts with PredictiveEcology/reproducible</code></pre>
 <pre class="r"><code># Error:                                                                                 
 # ! error in pak subprocess
 # Caused by error: 
@@ -730,20 +705,14 @@ try(pak::pkg_install(
 <pre><code>## Error : ! error in pak subprocess
 ## Caused by error: 
 ## ! Could not solve package dependencies:
-## * PredictiveEcology/reproducible (&gt;= 2.0.10): ! pkgdepends resolution error for PredictiveEcology/reproducible (&gt;=
-## 2.0.10).
-## Caused by error: 
-## ! Can&#39;t find GitHub repo PredictiveEcology/reproducible (&gt;= 2.0.10).
 ## * PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010): ! pkgdepends resolution error for
 ## PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010).
 ## Caused by error: 
-## ! Can&#39;t find reference @modsForLargeArchives (&gt;=2.0.10.9010) in GitHub repo PredictiveEcology/reproducible.</code></pre>
-<pre class="r"><code>## FAILS
-try(pak::pkg_install(&quot;local://~/GitHub/Edehzhie/DESCRIPTION&quot;))</code></pre>
-<pre><code>## Error : ! error in pak subprocess
-## Caused by error in `get_remote_types(refs)`:
-## ! Cannot parse package: local://~/GitHub/Edehzhie/DESCRIPTION.
-## ℹ See `?pkgdepends::pkg_refs()` for supported package sources.</code></pre>
+## ! Can&#39;t find reference @modsForLargeArchives (&gt;=2.0.10.9010) in GitHub repo PredictiveEcology/reproducible.
+## * PredictiveEcology/reproducible (&gt;= 2.0.10): ! pkgdepends resolution error for PredictiveEcology/reproducible (&gt;=
+## 2.0.10).
+## Caused by error: 
+## ! Can&#39;t find GitHub repo PredictiveEcology/reproducible (&gt;= 2.0.10).</code></pre>
 <pre class="r"><code># Installs or does nothing is `reproducible` already installed
 Require::Install(
   c(&quot;PredictiveEcology/reproducible@development&quot;, 
@@ -755,7 +724,7 @@ Require::Install(
       &quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;))</code></pre>
 <pre><code>## No packages to install/update</code></pre>
 </div>
-<div id="pak-1" class="section level2">
+<div id="pak" class="section level2">
 <h2>pak</h2>
 <p>Fails when there are 2 branches within a DESCRIPTION – wants to
 downgrade, regardless of order</p>
@@ -769,8 +738,8 @@ try(pak::pkg_install(twoReproducibles))</code></pre>
 <pre><code>## Error : ! error in pak subprocess
 ## Caused by error: 
 ## ! Could not solve package dependencies:
-## * PredictiveEcology/reproducible@development: Conflicts with PredictiveEcology/reproducible
-## * PredictiveEcology/reproducible: Conflicts with PredictiveEcology/reproducible@development</code></pre>
+## * PredictiveEcology/reproducible: Conflicts with PredictiveEcology/reproducible@development
+## * PredictiveEcology/reproducible@development: Conflicts with PredictiveEcology/reproducible</code></pre>
 <div id="error-handling" class="section level3">
 <h3>Error handling</h3>
 <p><code>pak</code> uses a different approach to error handling.
