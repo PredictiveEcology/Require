@@ -3604,7 +3604,10 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   })
 
   doLineOrig <- doLine
+  preMess <-if (installPackages)  "Installing: " else "Downloading: "
+  fullMess <- character()
   for (j in seq_along(vecList)) {
+    st <- Sys.time()
     i <- vecList[[j]]
     fn <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
     fn <- normalizePath(fn, winslash = "/", mustWork = FALSE)
@@ -3645,8 +3648,12 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     } else {
       mess <- paste0(args$Account, "/", args$Repo, "@", args$Branch)
     }
-    preMess <-if (installPackages)  "Installing: " else "Downloading: "
-    messageVerbose(greyLight(paste0(preMess, mess)), verbose = verbose)
+
+    fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
+    if ( (Sys.time() - st) > 2 ) {
+      messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
+      fullMess <- character()
+    }
 
     if (installPackages) {
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
@@ -3671,12 +3678,21 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       )
     }
   }
+  if (length(fullMess))
+    messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
+
+
 
   on.exit(sapply(pids, tools::pskill))
   isRstudio <- isRstudio()
+
+  fullMess <- character()
+  preMess <- if (installPackages)  "\nInstalled: " else "Downloaded: "
   for (pid in pids) {
-    if (!installPackages)
-      spinnerOnPid(pid, isRstudio, verbose)
+    st <- Sys.time()
+    if (!installPackages) {
+      spinnerOnPid(pid, isRstudio, st, verbose)
+    }
 
     whPid <- match(pid, pids)
     if (downPack || installPackages) {
@@ -3687,9 +3703,14 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       w <- vecList[[whPid]]
       mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch[w], collapse = comma)
     }
-    preMess <-if (installPackages)  "\nInstalled: " else "\nDownloaded: "
-    messageVerbose(blue(paste0("  ", preMess, mess)), verbose = verbose)
+    fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
+    if ( (Sys.time() - st) > 2 ) {
+      messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
+      fullMess <- character()
+    }
   }
+  if (length(fullMess))
+    messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
 
   ll <- try(lapply(outfiles, readRDS), silent = TRUE)
   if (downPack && !downFile && !installPackages) {
@@ -3806,14 +3827,14 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
   }
 }
 
-spinnerOnPid <- function(pid, isRstudio, verbose) {
+spinnerOnPid <- function(pid, isRstudio, st, verbose) {
   if (isRstudio %in% FALSE) {
     messageVerbose(".", verbose)
   } else {
-    st <- Sys.time()
     aa <- NA
     spinner <- "|"
-    messageVerbose("  \b\b ...  ", verbose = verbose)
+    if (Sys.time() - st > 1)
+      messageVerbose("  \b\b ...  ", verbose = verbose)
     while (is.na(aa)) {
       aa <- sys::exec_status(pid, wait = FALSE)
       Sys.sleep(0.05)
@@ -3821,7 +3842,7 @@ spinnerOnPid <- function(pid, isRstudio, verbose) {
                          ifelse(spinner == "/", "-",
                                 ifelse(spinner == "-", "\\",
                                        ifelse(spinner == "\\", "|"))))
-      if (Sys.time() - st > 0.3) {
+      if (Sys.time() - st > 1) {
         mess <- paste0("\b\b", spinner)
         messageVerbose(mess, verbose = verbose)
       }

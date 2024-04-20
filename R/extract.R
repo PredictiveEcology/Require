@@ -56,7 +56,8 @@ extractVersionNumber <- function(pkgs, filenames) {
   } else {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
-      out <- unlist(lapply(fnsSplit, function(x) gsub("\\.zip|\\.tar\\.gz|\\.tgz", "", x[[2]])))
+      out <- unlist(lapply(fnsSplit, function(x) gsub("\\.zip|\\.tar\\.gz|\\.tgz", "", x[[2]]))) |>
+      try() -> abab; if (is(abab, "try-error")) {browser(); rm(abab)}
     } else {
       out <- character()
     }

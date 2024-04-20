@@ -229,24 +229,24 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         #                         tmpdir = tempdir3(),
         #                         verbose = verbose)
         # } else {
-          pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
-                filepath := {
-                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
-                  ret <- NA
-                  dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
-                                                    need = "master",
-                                                    verbose = verbose - 1
-                  )
-                  ret <- if (!is(dl, "try-error")) {
-                    destFile
-                  } else {
-                    NA
-                  }
+        pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
+              filepath := {
+                messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
+                ret <- NA
+                dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+                                                  need = "master",
+                                                  verbose = verbose - 1
+                )
+                ret <- if (!is(dl, "try-error")) {
+                  destFile
+                } else {
+                  NA
+                }
 
-                  ret
-                },
-                by = c("Package", "Branch")
-          ]
+                ret
+              },
+              by = c("Package", "Branch")
+        ]
         # }
 
       }
@@ -892,6 +892,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   pkgName <- if (is.null(names(gitRepo))) gr$repo else names(gitRepo)
 
   repoFull <- file.path(destDir, pkgName)
+  browser()
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   masterMain <- c("main", "master")
   br <- if (any(gr$br %in% masterMain)) {
@@ -1689,18 +1690,21 @@ installPackagesWithQuiet <- function(ipa, verbose) {
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
     ipa$lib <- .libPaths()[1]
-    for (i in 1:2) {
+    for (i in 1:3) {
       anyFailed <- NULL
       out <- sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                                    doLine = "outfiles <- do.call(install.packages, args)",
                                    verbose = verbose)
       if (file.exists(out)) {
-        anyFailed <- grep("installation.+failed", readLines(out), value = TRUE)
+        txt <- readLines(out)
+        anyFailed <- grep("installation.+failed", txt)
       }
       if (length(anyFailed) == 0)
         break
-      pkgName <- extractPkgNameFromWarning(anyFailed)
       browser()
+      pkgName <- extractPkgNameFromWarning(txt[anyFailed])
+      if (is.na(pkgName))
+        pkgName <- extractPkgNameFromWarning(paste(txt[anyFailed:(anyFailed + 1)], collapse = ""))
       messageVerbose("Failed installation for: ", paste(pkgName, collapse = ", "),
                      "\nTrying again ... ", verbose = verbose)
       ipa$pkgs <- pkgName
