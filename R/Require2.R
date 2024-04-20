@@ -3061,7 +3061,8 @@ downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFo
   names(gitRepo) <- Package
   out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
                       overwrite = TRUE, destDir = ".", verbose = verbose)
-  out1 <- try(build(Package, verbose = verbose, quiet = verbose <= 0 || verbose >= 5, VersionOnRepos = VersionOnRepos))
+  out1 <- try(build(Package, verbose = verbose, quiet = verbose <= 0 || verbose >= 5,
+                    VersionOnRepos = VersionOnRepos))
   fn <- dir(pattern = paste0("^", Package, "_.+tar.gz"))
   normPath(fn)
 }
@@ -3604,7 +3605,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   })
 
   doLineOrig <- doLine
-  preMess <-if (installPackages)  "Installing: " else "Downloading: "
+  preMess <-if (installPackages)  "\nInstalling: " else "Downloading: "
   fullMess <- character()
   for (j in seq_along(vecList)) {
     st <- Sys.time()
@@ -3680,8 +3681,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   }
   if (length(fullMess))
     messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
-
-
 
   on.exit(sapply(pids, tools::pskill))
   isRstudio <- isRstudio()

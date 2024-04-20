@@ -892,7 +892,6 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
   pkgName <- if (is.null(names(gitRepo))) gr$repo else names(gitRepo)
 
   repoFull <- file.path(destDir, pkgName)
-  browser()
   zipFileName <- normalizePath(paste0(repoFull, ".zip"), winslash = "/", mustWork = FALSE)
   masterMain <- c("main", "master")
   br <- if (any(gr$br %in% masterMain)) {
@@ -921,6 +920,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
     }
   }
   # Finds the common component i.e., the base directory. This will have the SHA as part fo the filename; needs remving
+
   badDirname <- try(lapply(out, function(d) {
     unlist(lapply(out, function(x) {
       for (n in seq(nchar(x[1]))) {
@@ -1701,9 +1701,8 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       }
       if (length(anyFailed) == 0)
         break
-      browser()
       pkgName <- extractPkgNameFromWarning(txt[anyFailed])
-      if (is.na(pkgName))
+      if (any(is.na(pkgName)))
         pkgName <- extractPkgNameFromWarning(paste(txt[anyFailed:(anyFailed + 1)], collapse = ""))
       messageVerbose("Failed installation for: ", paste(pkgName, collapse = ", "),
                      "\nTrying again ... ", verbose = verbose)

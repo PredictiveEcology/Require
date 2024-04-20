@@ -103,6 +103,7 @@ envPkgDepArchiveDetailsInner <- function() {
 .envPkgName <- ".Require.pkgEnv"
 .envPkgStartTimeName <- "startTime"
 
+.messInstPkgCounter <- 0
 
 envPkgDepDepsFilename <- "pkgDepCache.rds"
 

@@ -123,8 +123,10 @@ msgStdOut <- function(mess, logFile, verbose) {
       anyErrors <- c("ERROR", "error")
       anyErrs <- lapply(anyErrors, function(ae) grep(ae, messOrig))
 
-      if (length(anyErrs))
+      if (length(anyErrs)) {
+        verbose <- min(1, verbose)
         mess <- messOrig[sort(c(unlist(keepsInds), unlist(anyErrs)))]
+      }
 
       if (length(mess) > 1)
         mess <- paste(mess, collapse = "\r\n")
@@ -141,11 +143,20 @@ msgStdOut <- function(mess, logFile, verbose) {
 
     }
   }
+  pe <- pkgEnv()
+  if (is.null(pe$.messInstPkgCounter)) pe$.messInstPkgCounter <- 0
   if (length(mess)) {
     messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
+    pe$.messInstPkgCounter <- 0 # reset
   } else {
     if (verbose == 1) {
-      messageVerbose(".", verbose = verbose, appendLF = FALSE)
+      appendLF <- FALSE
+      pe$.messInstPkgCounter <- pe$.messInstPkgCounter + 1
+      if (pe$.messInstPkgCounter > getOption("width")) {
+        pe$.messInstPkgCounter <- 0 # reset
+        appendLF <- TRUE
+      }
+      messageVerbose(".", verbose = verbose, appendLF = appendLF)
     }
   }
 
@@ -252,8 +263,12 @@ msgStdErr <- function(mess, logFile, verbose) {
       appendLF <- endsWith(mess, "\n") %in% FALSE && nchar(mess) != 0
     }
   }
+
+  pe <- pkgEnv()
+  if (is.null(pe$.messInstPkgCounter)) pe$.messInstPkgCounter <- 0
   if (length(mess)) {
     messageVerbose(greyLight(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
+    pe$.messInstPkgCounter <- 0 # reset
   } else {
     browser()
   }

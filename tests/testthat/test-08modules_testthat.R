@@ -15,7 +15,12 @@ test_that("test 5", {
     modulePath <- file.path(pkgDir, "m")
 
     # Install 3 packages that are needed for subsequent module and package installations
-    (a <- Install(c("PredictiveEcology/SpaDES.project@transition"),
+    # See if Require is already loaded from where#Error in `loadNamespace(name)`: there is no package called 'SpaDES.project'
+    (Install("Require", repos = "https://predictiveecology.r-univierse.dev",
+            install = "force")) |>
+      capture_warnings() -> warns
+    (a <- Install(c(
+      "PredictiveEcology/SpaDES.project@transition"),
                   upgrade = FALSE, returnDetails = TRUE
     )) |>
       capture_warnings() -> warns
