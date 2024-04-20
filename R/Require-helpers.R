@@ -1001,6 +1001,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
   if (!file.exists(tf))
     .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
   sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
+  if (any(grepl("Bad credentials", sha)))
+    stop(sha)
   if (is(sha, "try-error")) {
     return(sha)
   }
