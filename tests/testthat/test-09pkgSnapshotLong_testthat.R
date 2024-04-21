@@ -29,8 +29,8 @@ test_that("test 5", {
       #   `PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c`
 
       fnMissing <- c("tiler", "map", "SpaDES.project")
-      snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
-                                                   overwrite = TRUE)
+      (snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
+                                                   overwrite = TRUE)) |> capture_messages() -> mess
       snapshotFiles <- snapshotFiles$local_path
 
     }

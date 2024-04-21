@@ -30,7 +30,8 @@ test_that("test 1", {
   dir1 <- Require::checkPath(dir1, create = TRUE)
   (out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
                                             standAlone = TRUE, libPaths = dir1,
-                                            quiet = TRUE, returnDetails = TRUE
+                                            # quiet = TRUE,
+                                            returnDetails = TRUE
   ))) |> capture_warnings() -> warns
   if (length(warns))
     expect_true(all(grepl("was built under", warns)))
@@ -142,12 +143,27 @@ test_that("test 1", {
     dir3 <- Require::checkPath(dir3, create = TRUE)
     dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
     # try({
+
+    # This next one is correct version, but it was installed from CRAN, so it fails
+    #   the GH SHA test (i.e., one has the SHA the other does not); so
+    #   installs from source
     inst <- suppressMessages(
       Require::Require("achubaty/fpCompare",
                        install = "force", returnDetails = TRUE,
-                       quiet = TRUE, require = FALSE, standAlone = TRUE, libPaths = dir3
+                       # quiet = TRUE,
+                       require = FALSE, standAlone = TRUE, libPaths = dir3
       )
     )
+
+    inst22 <- suppressMessages(
+      Require::Require("achubaty/fpCompare",
+                       install = "force", returnDetails = TRUE,
+                       # quiet = TRUE,
+                       require = FALSE, standAlone = TRUE, libPaths = dir3
+      )
+    )
+
+
     attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
     # }, silent = TRUE)
     pkgs <- c("fpCompare")

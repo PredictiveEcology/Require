@@ -592,10 +592,22 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       add = TRUE
     )
 
-    if (!getOption("Require.RPackageCache") %in% FALSE)
-      wd <- RequirePkgCacheDir()
-    else
+    #if (!getOption("Require.RPackageCache") %in% FALSE)
+    #  wd <- RequirePkgCacheDir()
+    #else
       wd <- tmpdir
+
+    # problem... building in cache dir has nice feature that zip is there immediately ...
+    #   so when say 100 pkgs are being installed from source, the zips are built along
+    #   the way, so if it crashes after 90 installs, the zips are in the Cache
+    #   BUT -- when a GH package gets built here, it has to get the "simple" name without SHA
+    #   but that means that it will collide with the same package from CRAN with same version
+    #   number ... BUT, we may want to keep them separate e.g.,
+    #  fpCompare-a0260b8476b06628bba0ae73af3430cce9620ca0_0.2.4.tar.gz
+    #  is built to fpCompare_0.2.4.zip ... so GH packages should be build in tmpdir, so they can
+    #  be renamed to fpCompare-a0260b8476b06628bba0ae73af3430cce9620ca0_0.2.4.zip afterwards,
+    #  moved to cache, without colliding with a CRAN package fpCompare_0.2.4.zip ... obviously
+    #  these could be the same, based on version number, but we shouldn't assume that
 
     origDir <- setwd(wd) # this is where zip gets built
     on.exit(setwd(origDir), add = TRUE)
