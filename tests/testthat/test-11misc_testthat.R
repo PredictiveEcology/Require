@@ -29,12 +29,10 @@ test_that("test 5b", {
     }
 
     ## Test Install and also (HEAD)
-    capted1 <- capture.output(
-      type = "message",
+    capted1 <- capture_messages(
       out1 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
     )
-    capted2 <- capture.output(
-      type = "message",
+    capted2 <- capture_messages(
       out2 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
     )
     theGrep1 <- "Installing from"
