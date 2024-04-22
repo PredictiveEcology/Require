@@ -464,6 +464,8 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
   if (!exists(objNam, envir = pkgDepEnv()) || isTRUE(purge)) {
     for (type in types) {
       fn <- availablePackagesCachedPath(repos, type)
+      purgeTime <- purgeBasedOnTimeSinceCached(file.info(fn)[, "mtime"])
+      purge <- purge || purgeTime
       if (isTRUE(purge)) {
         unlink(fn)
       }
