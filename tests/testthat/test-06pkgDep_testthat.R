@@ -115,7 +115,11 @@ test_that("test 6", {
       "SpaDES.experiment", "SpaDES.project"
     )
   )
-  (Require::Install(knownRevDeps$Require,
+  # withr::local_options(Require.verbose = 2)
+  # needs Require or else it will try from predictiveecology.r-universe.dev ... but version is too low
+  Install("PredictiveEcology/Require@simplify2 (>=0.3.1.9021)", install = "force")
+  withr::local_options(warn = 2)
+  (Require::Install(c(knownRevDeps$Require),#, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
                    repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))) |>
     capture_warnings() -> warns
   test <- testWarnsInUsePleaseChange(warns)
