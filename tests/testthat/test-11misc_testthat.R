@@ -29,7 +29,7 @@ test_that("test 5b", {
     }
 
     ## Test Install and also (HEAD)
-    try(remove.packages("fpCompare"), silent = TRUE)
+    messToSilence <- capture_messages(try(remove.packages("fpCompare"), silent = TRUE))
     capted1 <- capture_messages(
       out1 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
     )
