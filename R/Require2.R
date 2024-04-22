@@ -3635,67 +3635,22 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       args[[jjj]] <- argsOrig[[jjj]][i]
 
     if (doLineVectorized %in% FALSE && length(args[[splitOn[1]]]) > 1) {
-      tf3 <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
-      tf3 <- normalizePath(tf3, winslash = "/", mustWork = FALSE)
-      saveRDS(splitOn, file = tf3)
-      doLine <-
-        paste0("splitOn <- readRDS('",tf3,"')
-               a <- try(lapply(seq_along(args[[splitOn[1]]]), function(ind) lapply(args[splitOn], '[[', ind)))
-               extraArgs <- setdiff(names(args), splitOn)
-               for (ii in seq_along(a)) for (ea in extraArgs) a[[ii]][[ea]] <- args[[ea]]
-               try(outfiles <- lapply(a, function(args) ", doLineOrig, "))")
-      doLine <- strsplit(doLine, "\n")[[1]]
+      doLine <- updateDoLine(tmpdir, splitOn, doLineOrig)
     }
     saveRDS(args, file = fn)
 
-    o <- options()[c('HTTPUserAgent', 'Ncpus')]
-    tf <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
-    tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
-    saveRDS(o, file = tf)
+    cmdLine <- buildCmdLine(tmpdir, fn, doLine, outfile = outfiles[j])
 
-    ar <- c(paste0("o <- readRDS('",tf,"')"),
-            "options(o)",
-            paste0("args <- readRDS('", fn, "')"),
-            doLine,
-            paste0("saveRDS(outfiles, '",outfiles[j],"')"))
+    fullMess <- makeFullMessage(fullMess, args, installPackages, downPack, downFile)
 
-    cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
-    if (downPack || installPackages) {
-      mess <- paste(args$pkgs, collapse = comma)
-    } else if (downFile) {
-      mess <- paste(extractPkgName(filenames = basename(args$url)), collapse = comma)
-    } else {
-      mess <- paste0(args$Account, "/", args$Repo, "@", args$Branch)
-    }
-
-    fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
     if ( (Sys.time() - st) > 2 ) {
       messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
       fullMess <- character()
     }
-
-    if (installPackages) {
+    if (installPackages)
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
-      pids[j] <- sys::exec_wait(
-        Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-        std_out = function(x) {
-          mess <- rawToChar(x)
-          msgStdOut(mess, logFile, verbose)
-        },
-        std_err = function(x) {
-          mess <- rawToChar(x)
-          msgStdErr(mess, logFile, verbose)
-        }
-      )
 
-    } else {
-
-      pids[j] <- sys::exec_background(
-        Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
-        std_out = installPackageVerbose(verbose, verboseLevel = 2),
-        std_err = installPackageVerbose(verbose, verboseLevel = 2)
-      )
-    }
+    pids[j] <- sysDo(installPackages, cmdLine, logFile, verbose)
   }
   if (length(fullMess))
     messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
@@ -3869,3 +3824,72 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
 
 }
 
+
+sysDo <- function(installPackages, cmdLine, logFile, verbose) {
+  if (installPackages) {
+    pid <- sys::exec_wait(
+      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+      std_out = function(x) {
+        mess <- rawToChar(x)
+        msgStdOut(mess, logFile, verbose)
+      },
+      std_err = function(x) {
+        mess <- rawToChar(x)
+        msgStdErr(mess, logFile, verbose)
+      }
+    )
+
+  } else {
+
+    pid <- sys::exec_background(
+      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+      std_out = installPackageVerbose(verbose, verboseLevel = 2),
+      std_err = installPackageVerbose(verbose, verboseLevel = 2)
+    )
+  }
+  pid
+}
+
+buildCmdLine <- function(tmpdir, fn, doLine, outfile) {
+  o <- options()[c('HTTPUserAgent', 'Ncpus')]
+  tf <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
+  tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
+  saveRDS(o, file = tf)
+
+  ar <- c(paste0("o <- readRDS('",tf,"')"),
+          "options(o)",
+          paste0("args <- readRDS('", fn, "')"),
+          doLine,
+          paste0("saveRDS(outfiles, '",outfile,"')"))
+
+  cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
+  cmdLine
+}
+
+updateDoLine <- function(tmpdir, splitOn, doLineOrig) {
+  tf3 <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
+  tf3 <- normalizePath(tf3, winslash = "/", mustWork = FALSE)
+  saveRDS(splitOn, file = tf3)
+  doLine <-
+    paste0("splitOn <- readRDS('",tf3,"')
+                   a <- try(lapply(seq_along(args[[splitOn[1]]]), function(ind) lapply(args[splitOn], '[[', ind)))
+                   extraArgs <- setdiff(names(args), splitOn)
+                   for (ii in seq_along(a)) for (ea in extraArgs) a[[ii]][[ea]] <- args[[ea]]
+                   try(outfiles <- lapply(a, function(args) ", doLineOrig, "))")
+  doLine <- strsplit(doLine, "\n")[[1]]
+  doLine
+}
+
+makeFullMessage <- function(fullMess, args, installPackages, downPack, downFile) {
+
+  if (downPack || installPackages) {
+    mess <- paste(args$pkgs, collapse = comma)
+  } else if (downFile) {
+    mess <- paste(extractPkgName(filenames = basename(args$url)), collapse = comma)
+  } else {
+    mess <- paste0(args$Account, "/", args$Repo, "@", args$Branch)
+  }
+
+  fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
+  fullMess
+}
