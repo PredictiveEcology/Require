@@ -39,12 +39,14 @@ Imports:
     methods,
     tools,
     utils
+biocViews:
 Suggests:
     covr,
     curl,
     diffobj,
     gitcreds,
     googledrive,
+    graph,
     httr,
     pak,
     parallel,
