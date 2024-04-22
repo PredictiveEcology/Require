@@ -86,7 +86,7 @@ test_that("test 5", {
       names(packageFullName) <- packageFullName
       warns <- capture_warnings(
         # mess <- capture_messages(
-        out <- Require(packageVersionFile = snf, require = FALSE, purge = TRUE,
+        out <- Require(packageVersionFile = snf, require = FALSE, # purge = TRUE,
                        returnDetails = TRUE)
         # )
       )
@@ -187,7 +187,7 @@ test_that("test 5", {
         lala <- capture.output(type = "message", {
           out2 <- Require(
             packageVersionFile = snf,
-            require = FALSE, returnDetails = TRUE, purge = TRUE
+            require = FALSE, returnDetails = TRUE# , purge = TRUE
           )
         })
       )

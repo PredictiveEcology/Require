@@ -1215,13 +1215,14 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
 }
 
 getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOption("pkgType")) {
+
   for (i in 1:2) {
     ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
     hasRepos <- unlist(lapply(repos, function(xx) any(grepl(pattern = xx, x = ap$Repository))))
     if (all(hasRepos)) {
       break
     }
-    purge = TRUE
+    purgeAvailablePackages(repos, purge = TRUE)
   }
 
   setnames(ap, old = "Version", new = "VersionOnReposCurrent")
@@ -2929,7 +2930,11 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
       url <- gsub(".+(https://.+\\.tgz).+", "\\1", url)
       pkgName <- extractPkgName(filenames = basename(url))
 
-      try(dealWithCache(purge = TRUE, checkAge = FALSE))
+      browser()
+      repos <- unique(toInstall[["repos"]])
+      try(lapply(repos, function(repo) purgeAvailablePackages(repo, purge = TRUE)))
+      # try(purgeAvailablePackages(repos = repos, purge = TRUE))
+      # try(dealWithCache(purge = TRUE, checkAge = FALSE))
       messageVerbose("purging availablePackages; trying to download ", pkgName, " again",
                      verbose = verbose)
       res <- try(Install(pkgName))

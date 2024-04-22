@@ -112,7 +112,8 @@ pkgDep <- function(packages,
   if (!is.null(doDeps))
     which <- whichToDILES(doDeps)
 
-  purge <- dealWithCache(purge)
+  purge <- purgePkgDep(purge)
+  # purge <- dealWithCache(purge)
   checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
 
   # deps <- packages

@@ -791,11 +791,13 @@ dealWithCache <- function(purge,
 
   purgeBasedOnTime <- FALSE
   if (!isTRUE(purge) && isTRUE(checkAge)) {
-    purgeBasedOnTime <- purgeBasedOnTimeSinceCached(pkgEnvStartTime())
+    ee <- pkgEnvStartTime()
+    purgeBasedOnTime <- if (is.null(ee)) FALSE else purgeBasedOnTimeSinceCached(ee)
   }
   purge <- purge || purgeBasedOnTime
 
-  if (is.null(pkgDepEnv()) || purge) {
+  if (is.null(pkgDepEnv()) ) {
+    # if (is.null(pkgDepEnv()) || purge) {
     envPkgDepCreate()
   }
   if (purge) {
@@ -808,29 +810,33 @@ dealWithCache <- function(purge,
     if (isTRUE(file.exists(SHAfile)))
       unlink(SHAfile)
 
-    fn <- availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
-    fExists <- file.exists(fn)
-    if (any(fExists)) {
-      unlink(fn[fExists])
-    }
+    purgeAvailablePackages(repos, purge)
+    # fn <- availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
+    # fExists <- file.exists(fn)
+    # if (any(fExists)) {
+    #   unlink(fn[fExists])
+    # }
 
     # This is for pkgDep
     fn <- pkgDepDBFilename()
     unlink(fn)
   }
 
-  if (is.null(envPkgDepGitHubSHA()) || purge)
+  if (is.null(envPkgDepGitHubSHA()))
     envPkgDepGitHubSHACreate()
 
-  if (is.null(envPkgDepDeps()) || purge)
+  if (is.null(envPkgDepDeps()))
     envPkgDepDepsCreate()
 
-  if (is.null(envPkgDepDESCFile()) || purge)
+  if (is.null(envPkgDepDESCFile()))
     envPkgDepDESCFileCreate()
 
-  if (is.null(envPkgDepArchiveDetailsInner()) || purge)
+  if (is.null(envPkgDepArchiveDetailsInner()))
     envPkgDepArchiveDetailsInnerCreate()
 
+  purgePkgDep(purge)
+
+  # if (length(dir(RequireGitHubCacheDir())) == 0) browser()
   purge
 }
 
@@ -838,6 +844,17 @@ dealWithCache <- function(purge,
 .grepTabCR <- "\n|\t"
 
 
+
+purgePkgDep <- function(purge) {
+  if (isTRUE(purge)) {
+    envPkgDepCreate()
+    envPkgDepGitHubSHACreate()
+    envPkgDepDepsCreate()
+    envPkgDepDESCFileCreate()
+    envPkgDepArchiveDetailsInnerCreate()
+  }
+  purge
+}
 
 masterMainToHead <- function(gitRepo) {
   masterOrMain <- "@(master|main) *"
@@ -1460,3 +1477,15 @@ pkgDep2 <- function(...) {
 }
 
 
+
+
+purgeAvailablePackages <- function(repos, purge = FALSE) {
+  if (isTRUE(purge)) {
+    fn <- availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
+    fExists <- file.exists(fn)
+    if (any(fExists)) {
+      unlink(fn[fExists])
+    }
+  }
+  purge
+}
