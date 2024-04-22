@@ -374,7 +374,7 @@ Require <- function(packages,
       # Deal with "force" installs
       set(pkgDT, NULL, "forceInstall", FALSE)
       if (install %in% "force") {
-        pkgDT[Package %in% extractPkgName(packages), forceInstall := TRUE]
+        pkgDT[Package %in% extractPkgName(packages), `:=`(forceInstall = TRUE, installedVersionOK = FALSE)]
       }
 
       if ((any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force") {
@@ -1188,7 +1188,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     )
     if (!is.null(pkgNeedInternet$GitHub)) {
       pkgNeedInternet$GitHub[SHAonGH == SHAonLocal, needInstall := .txtShaUnchangedNoInstall]
-      pkgNeedInternet$GitHub[(nchar(localFile) == 0 | is.na(localFile)), needInstall := noneAvailable]
+      pkgNeedInternet$GitHub[(nchar(localFile) == 0 | is.na(localFile)) & needInstall != .txtShaUnchangedNoInstall,
+                             needInstall := noneAvailable]
     }
 
     pkgInstallList[[.txtNoLocal]] <- pkgNeedInternet # pointer
