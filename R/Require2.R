@@ -2931,7 +2931,6 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
       url <- gsub(".+(https://.+\\.tgz).+", "\\1", url)
       pkgName <- extractPkgName(filenames = basename(url))
 
-      browser()
       repos <- unique(toInstall[["repos"]])
       try(lapply(repos, function(repo) purgeAvailablePackages(repo, purge = TRUE)))
       # try(purgeAvailablePackages(repos = repos, purge = TRUE))
@@ -2987,6 +2986,11 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
       needWarning <- FALSE
   }
 
+
+  if (any(grepl("installation of package.+had non-zero exit statu", w$message))) {
+    browser()
+    unlink(toInstall[Package %in% pkgName]$localFile)
+  }
 
   if (!is.null(getOptionRPackageCache())) {
     if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache())))) {
