@@ -320,6 +320,8 @@ test_that("test 1", {
       capture_warnings() -> warns
 
     test <- testWarnsInUsePleaseChange(warns)
+    print(test)
+    print(warns)
     expect_true(test)
 
     # if (length(warns)) {
@@ -327,7 +329,6 @@ test_that("test 1", {
     #   expect_true(test)
     #   # expect_true(all(grepl("in use", warns)))
     # }
-
 
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
     try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core"))) |> suppressMessages()
