@@ -198,23 +198,27 @@ test_that("test 3", {
   }
 
   if (FALSE) { # benchmark pak and Require
-    setLinuxBinaryRepo()
-    #clearRequirePackageCache(ask = F)
+    library(Require)
     options(Require.installPackagesSys = 2, Require.cloneFrom = Sys.getenv("R_LIBS_USER"))
-    pkgsKeep <- c('rlang', "R6", "cli", "withr", "magrittr")
+    setLinuxBinaryRepo()
+    pkgsKeep <- c('rlang', "R6", "cli", "withr", "magrittr", "data.table")
     Install(pkgsKeep)
-    pkgload::load_all()
-    pkgs <- c("PredictiveEcology/fpCompare", "rlang", "purrr", "ggplot2")
+    pkgs <- c("PredictiveEcology/fpCompare", "PredictiveEcology/reproducible@modsForLargeArchives",
+              "rlang", "purrr", "ggplot2")
     a <- pkgDep(pkgs)
-    microbenchmark::microbenchmark(Require = {
+    N = 4
+    # st <- list()
+    st[["Require"]] <- system.time(replicate(N, {
       try(remove.packages(setdiff(extractPkgName(unname(unlist(a))), pkgsKeep)))
       clearRequirePackageCache(ask = F)
       Install(pkgs)
-    }, pak = {
+    }))
+    st[["pak"]] <- system.time(replicate(N, {
       try(remove.packages(setdiff(extractPkgName(unname(unlist(a))), pkgsKeep)))
       pak::cache_clean()
-      pak::pkg_install(pkgs)
-    }, times = 4)
+      pak::pkg_install(pkgs, ask = FALSE)
+    }))
+    Map(x = st, function(x) x[[3]]/N)
     #      min        lq      mean   median       uq      max neval
     #13.759182 13.873962 13.999130 13.98874 14.11910 14.24947     3
     # 7.367775  8.914831  9.495963 10.46189 10.56006 10.65823     3

@@ -146,13 +146,16 @@ alphabetically. If \code{FALSE}, the packages will not have a discernible order
 as they will be a concatenation of the possibly recursive package
 dependencies.}
 
-\item{simplify}{Logical. If \code{TRUE}, the default, the return object is "just" a
-character vector of package names (with version requirements). If \code{FALSE},
+\item{simplify}{Logical or numeric. If \code{TRUE} (or > 0), the default,
+the return object is "just" a character vector of package names
+(with version requirements). If \code{FALSE} (or \code{0}),
 then a \code{data.table} will be returned with 4 columns,
 \code{Package}, \code{packageFullName}, \code{parentPackage} (the package name for which the
 given line entry is a dependency; will be "user" if it was user supplied)
 and \code{deps}, which is a list of \code{data.table}s
-of all dependencies.}
+of all dependencies. If a negative number, then it will return a similar \code{data.table}
+as with \code{FALSE}, however, duplications in the recursive package dependencies
+are left intact.}
 
 \item{Additional_repositories}{Logical. If \code{TRUE}, then \code{pkgDep} will return
 a list of \code{data.table} objects (instead of character vectors)

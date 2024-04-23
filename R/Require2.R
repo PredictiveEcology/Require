@@ -11,7 +11,10 @@ utils::globalVariables(c(
   "PackageUrl", "repo", "oppositeInequals", "violationsDoubleInequals",
   "verbose", "VersionOK", "versionSpec", "versionToKeep",
   "violation", "violation2", "..keepCols1", "..colsToKeep",
-  "forceInstall", "keepForUpdate"
+  "forceInstall", "keepForUpdate", "SHAonLocal", "hasInequality",
+  "i.localFile", "keep44", "keep55", "keepCols3",
+  "keepCols4", "keepCols5", "mayNeedSwitchToSrc", "needKeep", "newLocalFile",
+  "parentPackage", "whArchive"
 ))
 
 #' Repeatability-safe install and load packages, optionally with specific
@@ -1187,7 +1190,9 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       numToDownload
     )
     if (!is.null(pkgNeedInternet$GitHub)) {
-      pkgNeedInternet$GitHub[SHAonGH == SHAonLocal, needInstall := .txtShaUnchangedNoInstall]
+      if (!is.null(pkgNeedInternet$GitHub[["SHAonLocal"]])) {
+        pkgNeedInternet$GitHub[SHAonGH == SHAonLocal, needInstall := .txtShaUnchangedNoInstall]
+      }
       pkgNeedInternet$GitHub[(nchar(localFile) == 0 | is.na(localFile)) & needInstall != .txtShaUnchangedNoInstall,
                              needInstall := noneAvailable]
     }
@@ -1200,18 +1205,6 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   # This will potentially do Archive (HEAD)
   pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall, verbose = verbose)
 
-  # if (any(pkgInstall$hasHEAD)) {
-  #   whHasHead <- which(pkgInstall$hasHEAD)
-  #   pkgInstall[whHasHead, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<")]
-  #   # The next logical has 2 options:
-  #   #    NAs include packages that were not "HEAD", but are needed by the "HEAD", but aren't already installed
-  #   #    TRUE is needs installing
-  #   #    FALSE is no need installing
-  #   pkgInstall <- pkgInstall[!keepForUpdate %in% FALSE]
-  #
-  # }
-
-  # pkgInstall[nchar(localFile) == 0, needInstall := noneAvailable]
   pkgInstall
 }
 
@@ -1322,10 +1315,14 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         args$destfile <- file.path(tmpdir, basename(args$url))
 
         on.exit(copyBuiltToCache(pkgCRAN, tmpdirs = tmpdir, copyOnly = TRUE), add = TRUE)
-        dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
-                          doLine = "outfiles <- do.call(download.file, args)",
-                          tmpdir = tmpdir,
-                          verbose = verbose)
+
+        st <- system.time(
+          dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
+                                      doLine = "outfiles <- do.call(download.file, args)",
+                                      tmpdir = tmpdir,
+                                      verbose = verbose)
+        )
+        messageVerbose("CRAN ", downloadedInSeconds(st[[3]]), verbose = verbose)
         pkgCRAN[dt, localFile := i.localFile, on = "Package"]
         pkgCRAN[availableVersionOK %in% TRUE, installFrom := .txtLocal]
         pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
@@ -1474,8 +1471,11 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                        GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa[["Package"]],
                        VersionOnRepos = aa$VersionOnRepos)
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
-          dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
+          st <- system.time(
+            dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
                             "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
+          )
+          messageVerbose("GitHub ", downloadedInSeconds(st[[3]]), verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := .txtLocal]
           pkgGHtoDL[!SHAonGH %in% FALSE, newLocalFile := TRUE]
@@ -3612,8 +3612,11 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   downAndBuildLocal <- grepl("downloadAndBuildToLocalFile", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
-  if (downPack %in% TRUE || downFile %in% TRUE || installPackages %in% TRUE)
+  if (downPack %in% TRUE || downFile %in% TRUE || installPackages %in% TRUE) {
     args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
+    if (!args$method %in% "libcurl")
+      doLineVectorized <- FALSE
+  }
   vecList <- splitVectors(args, splitOn, method = args$method, installPackages)
 
   pids <- numeric(length(vecList))
@@ -3643,17 +3646,21 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     fullMess <- makeFullMessage(fullMess, args, installPackages, downPack, downFile)
 
-    if ( (Sys.time() - st) > 2 ) {
-      messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
-      fullMess <- character()
-    }
     if (installPackages)
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
 
+    if (installPackages)
+      if (length(fullMess)) {
+
+        messageVerbose(messInstallingOrDwnlding(preMess, fullMess), verbose = verbose)
+        fullMess <- character()
+      }
+
     pids[j] <- sysDo(installPackages, cmdLine, logFile, verbose)
   }
-  if (length(fullMess))
-    messageVerbose(greyLight(paste0(preMess, paste(fullMess, collapse = ", "))), verbose = verbose)
+  if (installPackages %in% FALSE)
+    if (length(fullMess))
+      messageVerbose(messInstallingOrDwnlding(preMess, fullMess), verbose = verbose)
 
   on.exit(sapply(pids, tools::pskill))
   isRstudio <- isRstudio()
@@ -3692,7 +3699,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
-    dt <- list(Package = extractPkgName(filename = basename(argsOrig$destfile)),
+    dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> setDT()
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig[["Package"]],
@@ -3805,6 +3812,8 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
   } else {
     aa <- NA
     spinner <- "|"
+    mess <- if (verbose > 1) " \n" else " "
+    messageVerbose(mess, verbose = verbose)
     if (Sys.time() - st > 1)
       messageVerbose("  \b\b ...  ", verbose = verbose)
     while (is.na(aa)) {
@@ -3892,4 +3901,12 @@ makeFullMessage <- function(fullMess, args, installPackages, downPack, downFile)
 
   fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
   fullMess
+}
+
+downloadedInSeconds <- function(et) {
+  paste("packages downloaded in ", format(et, digits = 2), " seconds.")
+}
+
+messInstallingOrDwnlding <- function(preMess, fullMess) {
+  greyLight(paste0(preMess, paste(fullMess, collapse = ", ")))
 }

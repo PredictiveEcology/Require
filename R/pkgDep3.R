@@ -1510,10 +1510,13 @@ appendRecursiveToDeps <- function(pkgDT, caTr, depFa, caFa, snFa, depTr, snTr) {
 RequireDependencies <- function() {
   localRequireDir <- file.path(.libPaths(), "Require")
   de <- dir.exists(localRequireDir)
+  RequireDeps <- character()
   if (any(de)) {
     localRequireDir <- localRequireDir[de][1]
-    RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
-  } else {
+    # The next line is `try` because during R CMD check, the folder is there, but no DESCRIPTION file yet
+    RequireDeps <- try(DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION")), silent = TRUE)
+  }
+  if (is(RequireDeps, "try-error") || all(de %in% FALSE)) {
     # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
     #  then the next line will work to find it
     deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
