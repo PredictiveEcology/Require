@@ -781,6 +781,23 @@ purgeBasedOnTimeSinceCached <- function(savedTime) {
 
 defaultCacheAgeForPurge <- 3600
 
+#' Purge everything in the Require cache
+#'
+#' Require uses caches for local Package saving, local caches of `available.packages`,
+#' local caches of GitHub (e.g., `"DESCRIPTION"`) files, and some function calls
+#' that are cached. This function clears all of them.
+#'
+#' @inheritParams Require
+#' @return Run for its side effect, namely, all cached objects are removed.
+#'
+#' @export
+purgeCache <- function(packages = FALSE,
+                       repos = getOption("repos")) {
+  if (isTRUE(packages))
+    Require::clearRequirePackageCache(ask = F)
+  dealWithCache(TRUE, repos = repos)
+}
+
 dealWithCache <- function(purge,
                           checkAge = TRUE,
                           repos = getOption("repos")) {
