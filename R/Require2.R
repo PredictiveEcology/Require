@@ -2988,7 +2988,6 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
 
 
   if (any(grepl("installation of package.+had non-zero exit statu", w$message))) {
-    browser()
     unlink(toInstall[Package %in% pkgName]$localFile)
   }
 
