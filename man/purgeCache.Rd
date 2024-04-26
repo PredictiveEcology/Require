@@ -4,9 +4,21 @@
 \alias{purgeCache}
 \title{Purge everything in the Require cache}
 \usage{
-purgeCache(repos = getOption("repos"))
+purgeCache(packages = FALSE, repos = getOption("repos"))
 }
 \arguments{
+\item{packages}{Either a character vector of packages to install via
+\code{install.packages}, then load (i.e., with \code{library}), or, for convenience,
+a vector or list (using \code{c} or \code{list}) of unquoted package names to install
+and/or load (as in \code{require}, but vectorized). Passing vectors of names may
+not work in all cases, so user should confirm before relying on this behaviour
+in operational code.
+In the case of a GitHub package, it
+will be assumed that the name of the repository is the name of the package.
+If this is not the case, then pass a \emph{named} character vector here, where the
+names are the package names that could be different than the GitHub
+repository name.}
+
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.}
 }
