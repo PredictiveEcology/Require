@@ -21,7 +21,7 @@ suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
   extractPkgName()
 # pkgsToLoad <- c("curl", "gitcreds", "httr", "openssl", "googledrive", "rappdirs", "waldo", "rematch2", "diffobj")
 for (pk in suggests)
-  suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE))
+  try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE)), silent = TRUE)
 
 withr::local_options(.local_envir = teardown_env(),
                      repos = getCRANrepos(ind = 1),
