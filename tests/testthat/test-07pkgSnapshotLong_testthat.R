@@ -57,8 +57,8 @@ test_that("test 5", {
 
       installedPkgs <- setdiff(allNeeded, installedNotInIP)
       allInpkgDTareInIP <- all(installedPkgs %in% ip$Package)
-      if  (identical(Sys.info()[["user"]], "emcintir")) if (!isTRUE(allInpkgDTareInIP)) browser()
-      if  (identical(Sys.info()[["user"]], "emcintir")) if (!isTRUE(allInIPareInpkgDT)) browser()
+      if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (!isTRUE(allInpkgDTareInIP)) browser()
+      if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (!isTRUE(allInIPareInpkgDT)) browser()
 
       testthat::expect_true(isTRUE(allInIPareInpkgDT))
       testthat::expect_true(isTRUE(allInpkgDTareInIP))
@@ -88,7 +88,7 @@ test_that("test 5", {
       installedPkgs <- setdiff(installedPkgs, "Require")
 
       theTest <- NROW(installedPkgs) == NROW(allNeeded)
-      if  (identical(Sys.info()[["user"]], "emcintir")) if (!isTRUE(theTest)) browser()
+      if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (!isTRUE(theTest)) browser()
       testthat::expect_true(isTRUE(theTest))
 
       theTest2 <- NROW(ip[Package %in% allNeeded]) == NROW(allNeeded)
