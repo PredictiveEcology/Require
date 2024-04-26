@@ -144,60 +144,6 @@ test_that("test 5", {
       endTime <- Sys.time()
     }
 
-    # Use a mixture of different types of "off CRAN"
-    # if (!isMacOSX()) {
-    #   pkgs <- c("knn", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
-    #   pkgsClean <- extractPkgName(pkgs)
-    #   lala <- try(suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean)))), silent = TRUE)
-    #
-    #   # ERROR: dependency 'Require' is not available for package 'SpaDES.core' --> doesn't show up
-    #   acceptableFails <- c("Require", "SpaDES.core")
-    #   warns <- capture_warnings(# package 'Require' is in use and will not be installed
-    #     out22 <- Require(pkgs, require = FALSE, returnDetails = TRUE)
-    #   )
-    #   ip <- installed.packages() ## silly1 won't be installed
-    #
-    #   # depending on whether SpaDES.core gets installed... could be poss1 or poss2
-    #   poss1 <- identical(setdiff(pkgsClean, ip[, "Package"]), pkgs[[4]])  # installs SpaDES.core anyway
-    #
-    #   # This one fails to install SpaDES.core because already loaded
-    #   poss2 <- sum(pkgsClean %in% ip[, "Package"]) ==
-    #     length(pkgsClean) - length(acceptableFails) ## TODO: fails on macOS
-    #   expect_true(poss1 || poss2)
-    # }
-    #
-    # ## Test Install and also (HEAD)
-    # capted1 <- capture.output(
-    #   type = "message",
-    #   out1 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
-    # )
-    # capted2 <- capture.output(
-    #   type = "message",
-    #   out2 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
-    # )
-    # theGrep1 <- "Installing from"
-    # theGrep2 <- "SHA1 has not"
-    # testthat::expect_true(isTRUE(sum(grepl(theGrep1, capted1)) == 1))
-    # testthat::expect_true(isTRUE(sum(grepl(theGrep2, capted2)) == 1))
-    #
-    # # two sources, where both are OK; use CRAN by preference
-    # if (!isMacOSX()) {
-    #   lala <- suppressWarnings(capture.output(suppressMessages(
-    #     remove.packages("SpaDES.core")))) ## TODO: fails on macOS
-    #   suppressWarnings(
-    #     out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
-    #                      "SpaDES.core (>=1.0.0)"),
-    #                    require = FALSE, returnDetails = TRUE
-    #     )
-    #   )
-    #   out2 <- attr(out, "Require")
-    #   browser()
-    #   # try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
-    #   testthat::expect_true(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", .txtLocal))
-    #   # if (isWindows())
-    #   testthat::expect_true(out2[Package == "SpaDES.core"]$installed)
-    #
-    # }
    }
 
 })

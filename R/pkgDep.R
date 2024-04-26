@@ -853,7 +853,6 @@ dealWithCache <- function(purge,
 
   purgePkgDep(purge)
 
-  # if (length(dir(RequireGitHubCacheDir())) == 0) browser()
   purge
 }
 
@@ -1244,41 +1243,11 @@ toPkgDepDT <- function(packageFullName, neededFromDESCRIPTION, pkg, verbose) {
 
 
     # This shouldn't be "Version" but "versionSpec" from here
-    # set(pkgDepDT, NULL, "Version", extractVersionNumber(pkgDepDT$packageFullName))
-    # pkgDepDT[, Version := extractVersionNumber(packageFullName)]
     if (any(!is.na(pkgDepDT[["versionSpec"]]))) {
       whHasVersion <- which(!is.na(pkgDepDT[["versionSpec"]]))
       set(pkgDepDT, whHasVersion, "inequality",
           extractInequality(pkgDepDT$packageFullName[whHasVersion]))
-      # pkgDepDT[!is.na(Version), inequality := extractInequality(packageFullName)]
-      # pkgDepDT[, .N, by = "Package"]
-      # tt <- table(pkgDepDT$Package)
-      # haveMT1 <- names(tt)[tt > 1]
-      # if (length(haveMT1)) {
-      #   keepRows <- which(pkgDepDT$Package %in% haveMT1)
-      #   browser()
-      #   pkgDepDT[keepRows, Version := {
-      #     if (all(is.na(Version))) {
-      #       NA_character_
-      #     } else {
-      #       if (.N == 1) {
-      #         Version
-      #       } else {
-      #         as.character(max(as.package_version(Version[!is.na(Version)])))
-      #       }
-      #
-      #     }
-      #   }, by = "Package"]
-      #   pkgDepDT[keepRows, inequality := {
-      #     if (all(is.na(inequality))) {
-      #       NA_character_
-      #     } else {
-      #       inequality[!is.na(inequality)][[1]]
-      #     }
-      #   }, by = "Package"]
-      # }
       set(pkgDepDT, NULL, "github", extractPkgGitHub(pkgDepDT$packageFullName))
-      # pkgDepDT[, github := extractPkgGitHub(packageFullName)]
       if (any(pkgDepDT$isGitPkg == TRUE &
               !is.na(pkgDepDT[["versionSpec"]]))) {
         pkgDepDT[isGitPkg == TRUE & !is.na(versionSpec), newPackageFullName :=

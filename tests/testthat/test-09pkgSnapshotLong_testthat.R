@@ -159,30 +159,6 @@ test_that("test 5", {
       # and visualTest which is missing GitHub info for some reason --
 
       expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
-      # expect_true(NROW(missingPackages) == length(knownFails))
-
-      # installedPkgs <- setdiff(packagesBasedOnPackageFullNames, installedNotInIP)
-      # allInpkgDTareInIP <- all(installedPkgs %in% ip$Package)
-      # if (!isTRUE(allInpkgDTareInIP)) browser()
-      # if (!isTRUE(allInIPareInpkgDT)) browser()
-      #
-      # testthat::expect_true(isTRUE(allInIPareInpkgDT))
-      # testthat::expect_true(isTRUE(allInpkgDTareInIP))
-      # testthat::expect_true(all(installedNotInIP$installResult == "No available version"))
-
-      # pkgsInOut <- allInpkgDTareInIP
-      # theTest <- NROW(ip) >= NROW(pkgsInOut)
-      # testthat::expect_true(isTRUE(theTest))
-      # browser()
-
-
-      # These are being installed this 2nd time: why? -- looks like because they were not installed
-      #   the first time because they are dependencies of testthat
-      # nos <- c("bslib", "desc", "diffobj", "htmlwidgets", "knitr", "pkgbuild", "pkgload",
-      #   "rprojroot", "scales", "shiny", "testthat", "tinytex", "withr")
-      # nosInd <- nos %in% extractPkgName(pkgDep("testthat", dependencies = TRUE, recursive = TRUE)$testthat)
-      # nos[!nosInd] # scales is attempted to be installed, but isn't --> it is lost somewhere
-
       warns <- capture_warnings(
         lala <- capture.output(type = "message", {
           out2 <- Require(

@@ -123,6 +123,7 @@ test_that("test 6", {
                    repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))) |>
     capture_warnings() -> warns
   test <- testWarnsInUsePleaseChange(warns)
+  if  (identical(Sys.info()[["user"]], "emcintir")) if (isFALSE(test)) browser()
   expect_true(test)
 
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)

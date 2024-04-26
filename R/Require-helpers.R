@@ -1207,7 +1207,6 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
-      browser()
       iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
       if (!is.null(iet)) {
         if ((Sys.time() - getOption("Require.internetExistsTimeout", 30)) < iet) {

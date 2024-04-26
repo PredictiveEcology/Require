@@ -269,8 +269,6 @@ msgStdErr <- function(mess, logFile, verbose) {
   if (length(mess)) {
     messageVerbose(greyLight(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
     pe$.messInstPkgCounter <- 0 # reset
-  } else {
-    browser()
   }
 }
 
