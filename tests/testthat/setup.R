@@ -19,9 +19,10 @@ if (!isDevAndInteractive) { # i.e., CRAN
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
-# pkgsToLoad <- c("curl", "gitcreds", "httr", "openssl", "googledrive", "rappdirs", "waldo", "rematch2", "diffobj")
-for (pk in suggests)
-  suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE))
+suggests <- setdiff(suggests, 'pak') # dpesn't like being local_package'd
+for (pk in suggests) {
+  try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)
+}
 
 withr::local_options(.local_envir = teardown_env(),
                      repos = getCRANrepos(ind = 1),
@@ -78,12 +79,12 @@ runTests <- function(have, pkgs) {
   # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
   theTest <- all(!is.na(have[installed == TRUE &
                                !Package %in% extractPkgName(.RequireDependencies)]$Version))
-  if (!isTRUE(theTest)) browser()
+  if  (identical(Sys.info()[["user"]], "emcintir")) if (!isTRUE(theTest)) browser()
   testthat::expect_true(isTRUE(theTest))
   if ("installResult" %in% colnames(have)) {
     theTest <- NROW(have[is.na(installResult) | installResult %in% "OK" |
                            installResult %in% "Can't install Require dependency"]) == sum(have$installed)
-    if (!isTRUE(theTest)) browser()
+    if  (identical(Sys.info()[["user"]], "emcintir")) if (!isTRUE(theTest)) browser()
     testthat::expect_true(isTRUE(theTest))
   }
 }

@@ -65,28 +65,6 @@ setupTest <- function(verbose = getOption("Require.verbose"),
     )
 }
 
-# endTest <- function(setupInitial, verbose = getOption("Require.verbose")) {
-#   currOptions <- options()
-#   changedOptions <- setdiff(currOptions, setupInitial$opts)
-#   toRevert <- setupInitial$opts[names(changedOptions)]
-#   names(toRevert) <- names(changedOptions)
-#   if (any(grepl("datatable.alloccol", names(toRevert)))) browser()
-#   options(toRevert)
-#
-#
-#   # thisFilename <- setupInitial$thisFilename
-#   endTime <- Sys.time()
-#   # ee <- Require:::getInStack("ee")
-#   # ee[[thisFilename]] <- format(endTime - setupInitial$startTime, digits = 2)
-#   # Require:::messageVerbose("\033[32m ----------------------------------",
-#   #   thisFilename, ": ", ee[[thisFilename]], " \033[39m",
-#   #   verboseLevel = -1, verbose = verbose
-#   # )
-#   .libPaths(setupInitial$libPath)
-#   setwd(setupInitial$origWd)
-# }
-
-
 omitPkgsTemporarily <- function(pkgs) {
   if (getRversion() < "4.2") {
     pkgs <- grep("mumin", pkgs, invert = TRUE, value = TRUE) # MuMIn requires R >= 4.2

@@ -1207,7 +1207,6 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
-      browser()
       iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
       if (!is.null(iet)) {
         if ((Sys.time() - getOption("Require.internetExistsTimeout", 30)) < iet) {
@@ -1661,14 +1660,21 @@ mainGrep <- paste0("/", "main", "(/|\\.)")
 
 extractPkgNameFromWarning <- function(x) {
 
-  if (isWindows() && (any(grepl(msgIsInUse, x)) || # "in use"
-      any(grepl("installation of.+failed", x)))) { # "installation of 2 packages failed:"
-    aa <- strsplit(x, "\\'")
-    out <- lapply(aa, function(y) {
-      wh <- grep(", ", y)
-      wh <- c(1, wh)
-      y[c(wh + 1)]
-    })
+  if (any(grepl(msgIsInUse, x)) || # "in use"
+      any(grepl("installation of.+failed", x))) { # "installation of 2 packages failed:"
+    if (isWindows()) {
+      aa <- strsplit(x, "\\'")
+      out <- lapply(aa, function(y) {
+        wh <- grep(", ", y)
+        wh <- c(1, wh)
+        y[c(wh + 1)]
+      })
+    } else {
+      aa <- strsplit(x, "\u2019|\u2018")[[1]]
+      aa <- grep("installation.+failed", aa, invert = TRUE, value = TRUE)
+      out <- grep(", ", aa, value = TRUE, invert = TRUE)
+    }
+
     out <- unlist(out)
   } else {
     out <- gsub(".+\u2018(.+)_.+\u2019.*", "\\1", x) # those two escape characters are the inverted commas

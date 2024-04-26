@@ -580,7 +580,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
     toInstallOut <- withCallingHandlers(
       installPackagesWithQuiet(ipa, verbose = verbose),
       warning = function(w) {
-        messagesAboutWarnings(w, toInstall, returnDetails = returnDetails, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
+        messagesAboutWarnings(w, toInstall, returnDetails = returnDetails,
+                              tmpdir = tmpdir, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
     )
@@ -2929,7 +2930,7 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
   pkgInstall
 }
 
-messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOption("Require.verbose")) {
+messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose = getOption("Require.verbose")) {
   # This is a key error; cached copy is corrupt; this will intercept, delete it and reinstall all right here
 
   pkgName <- extractPkgNameFromWarning(w$message)
@@ -3000,10 +3001,10 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, verbose = getOpti
       needWarning <- FALSE
   }
 
-
-  if (any(grepl("installation of package.+had non-zero exit statu", w$message))) {
-    browser()
+  # Case where the local file may be corrupt
+  if (any(grepl("(installation of package.+had non-zero exit statu)|(installation of .+ packages failed)", w$message))) {
     unlink(toInstall[Package %in% pkgName]$localFile)
+    unlink(dir(tmpdir, pattern = paste0(pkgName, collapse = "|"), full.names = TRUE))
   }
 
   if (!is.null(getOptionRPackageCache())) {

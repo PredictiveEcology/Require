@@ -310,25 +310,12 @@ test_that("test 1", {
 
     # The warning is about "package ‘Require’ is in use and will not be installed"
 
-    out2 <- Require::Install(
-      c(paste0("quickPlot (<", verToCompare,")"), "NetLogoR",
-        # This is needed b/c .unwrap is not exported from reproducible on CRAN
-        unname(ifelse(isWindows(), "reproducible", "PredictiveEcology/reproducible@modsForLargeArchives (HEAD)")),
-        "SpaDES")#,
-      # repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
-    ) |>
+    pkgsHere <- c("quickPlot", "NetLogoR", "reproducible", "SpaDES")
+    pkgdeps <- pkgDep(pkgsHere)
+    out2 <- Require::Install(pkgsHere) |>
       capture_warnings() -> warns
-
     test <- testWarnsInUsePleaseChange(warns)
-    print(test)
-    print(warns)
     expect_true(test)
-
-    # if (length(warns)) {
-    #   test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
-    #   expect_true(test)
-    #   # expect_true(all(grepl("in use", warns)))
-    # }
 
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
     try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core"))) |> suppressMessages()
@@ -336,19 +323,12 @@ test_that("test 1", {
     a <- list(pkg = "fpCompare")
 
     warns <- capture_warnings(
-      out <- Require::Install(
-        c(paste0("quickPlot (< ",verToCompare,")"), NetLogoR,
-          "quickPlot (>= 1.0.1)", "quickPlot (>= 0.9.0)",
-          "SpaDES.core (== 2.0.3)", a$pkg),
-        returnDetails = TRUE)
+      out <- Require::Install(pkgsHere, returnDetails = TRUE)
     )
     testthat::expect_true(packageVersion("quickPlot") != verToCompare)
 
     warns <- capture_warnings(
-      out <- Require::Install(
-        c(paste0("quickPlot (< ",verToCompare,")")),
-        repos = c("https://predictiveecology.r-universe.dev", getOption("repos")),
-        returnDetails = TRUE)
+      out <- Require::Install(pkgsHere, returnDetails = TRUE)
     )
     testthat::expect_true(packageVersion("quickPlot") < verToCompare)
 
