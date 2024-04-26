@@ -317,12 +317,6 @@ test_that("test 1", {
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 
-    # if (length(warns)) {
-    #   test <- all(grepl("in use|Please change required", warns)) # "Please change" comes with verbose >= 1
-    #   expect_true(test)
-    #   # expect_true(all(grepl("in use", warns)))
-    # }
-
     testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
     try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core"))) |> suppressMessages()
     clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
