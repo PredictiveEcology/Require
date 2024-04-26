@@ -144,7 +144,7 @@ Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (
 
 # Not a problem because version number specifies
 Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
-                   "PredictiveEcology/reproducible (>= 2.0.10)")))
+                   "PredictiveEcology/reproducible (>= 2.0.10)"))
 ```
 
 ```{r,eval=TRUE}
@@ -271,4 +271,16 @@ ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE
 #  ...
 ```
 
+# `renv` and `Require`
 
+## Managing projects during development
+
+`renv` has a concept of a lockfile. This lockfile records a specific version of a package. If the current installed version of a package is different from the lockfile (e.g., I am the developer and I increment the local version), `renv` will attempt to revert the local changes (with prompt to confirm) *unless* the local package is installed from a cloud repository (e.g., GitHub), and a `snapshot` is taken. This sequence is largely incompatible with `pkgload::load_all()` or `devtools::install()`, as these do not record "where" to get the current version from. Thus, the `renv` sequence can be quite time consuming (1-2 minutes, instead of 1 second with `pkgload::load_all()`).
+
+`Require` does not attempt to update anything unless required by a package. Thus, this issue never comes up. If and when it is important to "snapshot", then `pkgSnapshot` or `pkgSnapshot2` can be used. 
+
+## Using `DESCRIPTION` file to maintain minimum versions
+
+During a project, a user can build and maintain and "project-level" DESCRIPTION file, which can be useful for a `renv` managed project. This approach does not, however, automatically detect minimum version changes or GitHub branch changes (`renv::status` does not recognize these). In order for a user to inherit the correct requirements, a manual [`renv::install` must be used](https://github.com/rstudio/renv/issues/233#issuecomment-1530134112). For even moderate sized projects, this can take over 20 seconds. 
+
+`Require` does not need a lockfile; package violations are found on the fly. 
