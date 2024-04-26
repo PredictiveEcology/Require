@@ -412,7 +412,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
     pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
     num <- NROW(pkgDTList$Archive$Package)
     messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
-                   hasHave(v = num), " been archived ... ", verbose = verbose)
+                   "not on CRAN; checking CRAN archives ... ", verbose = verbose)
     pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, verbose, purge = FALSE)
     wcr <- whichCatRecursive(which, recursive = FALSE)
     hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)

@@ -26,19 +26,23 @@ jobs:
           - {os: macOS-latest,   r: 'release'}
           - {os: windows-latest, r: 'devel'}
           - {os: windows-latest, r: 'release'}
-          - {os: windows-latest, r: '4.1'}
-          - {os: windows-latest, r: '4.0'}
+          - {os: windows-latest, r: 'oldrel/1'}
+          - {os: windows-latest, r: 'oldrel/2'}
+          - {os: windows-latest, r: 'oldrel/3'}
+          - {os: windows-latest, r: 'oldrel/4'}
           - {os: ubuntu-20.04,   r: 'devel'}
           - {os: ubuntu-20.04,   r: 'release'}
-          - {os: ubuntu-20.04,   r: 'oldrel'}
-          - {os: ubuntu-20.04,   r: '4.0'}
+          - {os: ubuntu-20.04,   r: 'oldrel/1'}
+          - {os: ubuntu-20.04,   r: 'oldrel/2'}
+          - {os: ubuntu-20.04,   r: 'oldrel/3'}
+          - {os: ubuntu-20.04,   r: 'oldrel/4'}
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -61,15 +65,4 @@ jobs:
       - uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual", "--as-cran", "--run-dontrun", "--run-donttest")'
-
-      - name: Show testthat output
-        if: always()
-        run: find check -name 'testthat.Rout*' -exec cat '{}' \; || true
-        shell: bash
-
-      - name: Upload check results
-        if: failure()
-        uses: actions/upload-artifact@main
-        with:
-          name: ${{ runner.os }}-r${{ matrix.config.r }}-results
-          path: check
+          upload-snapshots: true

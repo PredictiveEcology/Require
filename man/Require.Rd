@@ -2,8 +2,8 @@
 % Please edit documentation in R/Require-package.R, R/Require2.R
 \docType{package}
 \name{Require-package}
-\alias{Require-package}
 \alias{Require}
+\alias{Require-package}
 \alias{Install}
 \title{Require: Installing and Loading R Packages for Reproducible Workflows}
 \usage{

@@ -245,6 +245,20 @@ Require <- function(packages,
                     upgrade = FALSE,
                     returnDetails = FALSE,
                     ...) {
+  if (getOption("Require.usePak", FALSE)) {
+    packages <- gsub(" *\\(>=(.+)\\)", "@>=\\1", packages)
+    packages <- gsub(" *\\(==(.+)\\)", "@\\1", packages)
+    packages <- gsub(" *\\((HEAD)\\)", "", packages)
+    deps <- lapply(packages, function(x) pak::pkg_deps(x))
+    deps3 <- rbindlist(deps)
+    pfn <- paste0(deps3$ref, " (>=", deps3$version, ")")
+    pkgDT <- toPkgDTFull(pfn)
+    pkgDT <- trimRedundancies(pkgDT)
+    pkgDT <- unique(pkgDT, on = "packageFullName")
+    pak::pkg_install(trimVersionNumber(pkgDT$packageFullName), upgrade = FALSE, dependencies = FALSE)
+    return()
+  }
+  #
   if (is.null(require)) require <- FALSE
   assign("hasGHP", NULL, envir = pkgEnv()) # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
@@ -377,7 +391,7 @@ Require <- function(packages,
       # Deal with "force" installs
       set(pkgDT, NULL, "forceInstall", FALSE)
       if (install %in% "force") {
-        pkgDT[Package %in% extractPkgName(packages), `:=`(forceInstall = TRUE, installedVersionOK = FALSE)]
+        pkgDT[Package %in% extractPkgName(packages), forceInstall := TRUE]
       }
 
       if ((any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force") {
@@ -3632,7 +3646,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
   doLineOrig <- doLine
   preMess <-if (installPackages)  "\nInstalling: " else "Downloading: "
-  fullMess <- character()
+  fullMess <- character() # this will accumulate and regularly clear
   for (j in seq_along(vecList)) {
     st <- Sys.time()
     i <- vecList[[j]]
