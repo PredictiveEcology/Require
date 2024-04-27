@@ -1697,6 +1697,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
     colsToUpdate <- c("SHAonLocal", "SHAonGH", "installResult")
     set(pkgGitHub, NULL, colsToUpdate[1:2], list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
+    if (is.null(pkgGitHub[["installResult"]]))
+      set(pkgGitHub, NULL, "installResult", NA_character_)
 
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {

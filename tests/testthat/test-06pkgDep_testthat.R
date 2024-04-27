@@ -117,6 +117,7 @@ test_that("test 6", {
   )
   # withr::local_options(Require.verbose = 2)
   # needs Require or else it will try from predictiveecology.r-universe.dev ... but version is too low
+  warnsReq <- capture_warnings(Require::Install("Require"))
   warns22 <- capture_warnings(
     Install("PredictiveEcology/Require@simplify4 (>=0.3.1.9021)", install = "force")
   )

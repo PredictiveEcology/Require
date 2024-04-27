@@ -161,6 +161,8 @@ test_that("test 5", {
     dirForInstall <- tempdir3()
 
     warns <- out <- mess <- st <- list()
+    warnsReq <- capture_warnings(Require::Install("Require", libPaths = dirForInstall))
+
     for (i in 1:2) {
       warns[[i]] <- capture_warnings( # "Require" is in use
         st[[i]] <- system.time(

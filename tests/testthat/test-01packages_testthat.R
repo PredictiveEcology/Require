@@ -147,6 +147,7 @@ test_that("test 1", {
     # This next one is correct version, but it was installed from CRAN, so it fails
     #   the GH SHA test (i.e., one has the SHA the other does not); so
     #   installs from source
+    warnsReq <- capture_warnings(Require::Install("Require", libPaths = dir3))
     inst <- suppressMessages(
       Require::Require("achubaty/fpCompare",
                        install = "force", returnDetails = TRUE,
@@ -220,6 +221,7 @@ test_that("test 1", {
     Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
     Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
 
+    warnsReq <- capture_warnings(Require::Install("Require"))
     (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
       capture_warnings() -> warns
 

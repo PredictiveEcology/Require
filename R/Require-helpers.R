@@ -190,6 +190,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
     if (!is.null(pkgDT[["shas"]])) {
       pkgDT[nchar(pkgDT[["shas"]]) > 0, Branch := shas]
     }
+    if (is.null(pkgDT[["hasSubFolder"]])) set(pkgDT, NULL, "hasSubFolder", FALSE)
     pkgDT[repoLocation == .txtGitHub,
           url := {
             gitHubFileUrl(
