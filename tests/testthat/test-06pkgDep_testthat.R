@@ -124,8 +124,9 @@ test_that("test 6", {
   (Require::Install(c(knownRevDeps$Require),#, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
                    repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))) |>
     capture_warnings() -> warns
+  # the repos with predictiveecology.r-universe.dev doesn't seem to have the PACKAGES
+  warns <- grep("cannot open URL .+PACKAGES.rds'", warns, invert = TRUE, value = TRUE) #
   test <- testWarnsInUsePleaseChange(warns)
-  save(test, warns, file = "c:/Eliot/tmp/test06.rda")
   if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (isFALSE(test)) browser()
   expect_true(test)
 

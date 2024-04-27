@@ -11,6 +11,7 @@ sysInstallAndDownload(
   returnOutfile = FALSE,
   doLineVectorized = TRUE,
   tmpdir,
+  libPaths,
   verbose
 )
 }
@@ -32,6 +33,14 @@ in \verb{args[[splitOn[[1]]]}. If \code{FALSE}, the function will make multiple
 sequential calls within each parallel process to the \code{doLine} call.}
 
 \item{tmpdir}{A single path where all downloads will be put}
+
+\item{libPaths}{The library path (or libraries) where all packages should be
+installed, and looked for to load (i.e., call \code{library}). This can be used
+to create isolated, stand alone package installations, if used with
+\code{standAlone = TRUE}. Currently, the path supplied here will be prepended to
+\code{.libPaths()} (temporarily during this call) to \code{Require} if
+\code{standAlone = FALSE} or will set (temporarily) \code{.libPaths()} to
+\verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
