@@ -391,7 +391,11 @@ Require <- function(packages,
       # Deal with "force" installs
       set(pkgDT, NULL, "forceInstall", FALSE)
       if (install %in% "force") {
-        pkgDT[Package %in% extractPkgName(packages), forceInstall := TRUE]
+        wh <- which(pkgDT$Package %in% extractPkgName(packages))
+        set(pkgDT, wh, "installedVersionOK", FALSE)
+        set(pkgDT, wh, "forceInstall", FALSE)
+        # pkgDT[Package %in% extractPkgName(packages), installedVersionOK := FALSE]
+        # pkgDT[Package %in% extractPkgName(packages), forceInstall := TRUE]
       }
 
       if ((any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force") {
@@ -415,6 +419,13 @@ Require <- function(packages,
       pkgDT <- pkgDTBase
     }
 
+    whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
+    if  (length(whRestartNeeded)) {
+      warning("Please restart R; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
+              singularPlural(c(" was", " were"), l = whRestartNeeded), " already loaded and ",
+              paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
+              singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
+    }
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT, verbose = verbose)
 
@@ -456,7 +467,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
     messageVerbose("building package (R CMD build)",
                    verbose = verbose, verboseLevel = 2
     )
-    internal <- !interactive()
+    # internal <- !interactive()
     extras <- c(
       "--no-resave-data", "--no-manual",
       "--no-build-vignettes"
@@ -1488,7 +1499,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
           st <- system.time(
             dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
-                            "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)", verbose = verbose)
+                            "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)",
+                            libPaths = libPaths, verbose = verbose)
           )
           messageVerbose("GitHub ", downloadedInSeconds(st[[3]]), verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
@@ -1683,8 +1695,8 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
     pkgGitHub <- getGitHubVersionOnRepos(pkgGitHub)
     pkgGitHub <- availableVersionOK(pkgGitHub)
     avOK <- which(pkgGitHub$availableVersionOK %in% TRUE)
-    colsToUpdate <- c("SHAonLocal", "SHAonGH")
-    set(pkgGitHub, NULL, colsToUpdate, list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
+    colsToUpdate <- c("SHAonLocal", "SHAonGH", "installResult")
+    set(pkgGitHub, NULL, colsToUpdate[1:2], list(NA_character_, NA_character_)) # fast to just do all; then next lines may update
 
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {
@@ -1696,20 +1708,19 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
           # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
           if (identical(SHAonGH, SHAonLocal)) {
             messageVerbose(msgShaNotChanged(Account, Repo, Branch),
-                           # messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
-                           #                ", the SHA1 has not changed from last install",
                            verbose = verbose, verboseLevel = 1
             )
+            installResult <- .txtShaUnchangedNoInstall
           }
         } else {
           SHAonLocal <- ""
         }
-        list(SHAonLocal, SHAonGH)
+        list(SHAonLocal, SHAonGH, installResult)
       }, by = "packageFullName"]
     }
     saveGitHubSHAsToDisk()
     prevInstallResult <- pkgGitHub$installResult
-    rowsToUpdate <- which(pkgGitHub$SHAonLocal == pkgGitHub$SHAonGH)
+    rowsToUpdate <- which(pkgGitHub$SHAonLocal == pkgGitHub$SHAonGH & pkgGitHub[["installResult"]] == .txtShaUnchangedNoInstall)
 
     pkgGitHub[rowsToUpdate, `:=`(needInstall = FALSE, haveLocal = .txtLocal, installedVersionOK = TRUE)]
     pkgGitHub <- appendInstallResult(pkgGitHub, rowsToUpdate, installResult = "OK", sep = "; ")
@@ -2988,7 +2999,11 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
     }
   }
 
-  isInUse <- grepl("in use and will not be installed", w$message)
+  inUse <- "in use and will not be installed"
+  isInUse <- grepl(inUse, w$message)
+  if (isInUse) {
+    toInstall[Package %in% pkgName, installResult := inUse]
+  }
   if (length(rowsInPkgDT) && any(isInUse)) {
     if (!all(toInstall$installed[rowsInPkgDT] %in% FALSE) &&
         !all(toInstall$installResult[rowsInPkgDT] %in% w$message)) {
@@ -3003,6 +3018,7 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
 
   # Case where the local file may be corrupt
   if (any(grepl("(installation of package.+had non-zero exit statu)|(installation of .+ packages failed)", w$message))) {
+    browser()
     unlink(toInstall[Package %in% pkgName]$localFile)
     unlink(dir(tmpdir, pattern = paste0(pkgName, collapse = "|"), full.names = TRUE))
   }
@@ -3572,6 +3588,7 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
     notGH <- !pkgInstall$isGitPkg
     whNoKeep <- which(hasHead & notGH)
     if (length(whNoKeep)) {
+      browser()
       # Only keepForUpdate if it is identical ... a HEAD could be of a different branch and thus a newer or older version
       pkgInstall[whNoKeep, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<") | forceInstall]
       # pkgInstall[whHasHead & whGH, DESCRIPTIONFileVersionV(DESCFile)]
@@ -3581,11 +3598,6 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
       #    FALSE is no need installing
       whDontInstall <- which(pkgInstall$keepForUpdate %in% FALSE)
       if (length(whDontInstall)) {
-        # messageVerbose(msgShaNotChanged(pkgInstall$Account, pkgInstall$Repo, pkgInstall$Branch),
-        #                # messageVerbose("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
-        #                #                ", the SHA1 has not changed from last install",
-        #                verbose = verbose, verboseLevel = 1
-        # )
         set(pkgInstall, whDontInstall, "needInstall", .txtDontInstall)
       }
     }
@@ -3624,7 +3636,7 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 #'        filenames will be returned with any outputs from the `doLine`.
 sysInstallAndDownload <- function(args, splitOn = "pkgs",
                         doLine = "outfiles <- do.call(download.packages, args)",
-                        returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, verbose) {
+                        returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, libPaths, verbose) {
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
   installPackages <- grepl("install.packages", doLine)
@@ -3661,7 +3673,8 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     }
     saveRDS(args, file = fn)
 
-    cmdLine <- buildCmdLine(tmpdir, fn, doLine, outfile = outfiles[j])
+    cmdLine <- buildCmdLine(tmpdir, fn, doLine, downAndBuildLocal = downAndBuildLocal,
+                            outfile = outfiles[j], libPaths = libPaths)
 
     fullMess <- makeFullMessage(fullMess, args, installPackages, downPack, downFile)
 
@@ -3878,7 +3891,7 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   pid
 }
 
-buildCmdLine <- function(tmpdir, fn, doLine, outfile) {
+buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPaths) {
   o <- options()[c('HTTPUserAgent', 'Ncpus')]
   tf <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
   tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
@@ -3889,6 +3902,14 @@ buildCmdLine <- function(tmpdir, fn, doLine, outfile) {
           paste0("args <- readRDS('", fn, "')"),
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
+
+  if (downAndBuildLocal) {
+    hasRequireInstalled <- dir(libPaths, pattern = "Require")
+    if (length(hasRequireInstalled) == 0)
+      stop("Require must be installed in libPaths, not just locally. \n",
+           "Please install manually, then rerun")
+  }
+
 
   cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
   cmdLine

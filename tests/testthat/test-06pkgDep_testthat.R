@@ -117,12 +117,15 @@ test_that("test 6", {
   )
   # withr::local_options(Require.verbose = 2)
   # needs Require or else it will try from predictiveecology.r-universe.dev ... but version is too low
-  Install("PredictiveEcology/Require@simplify4 (>=0.3.1.9021)", install = "force")
+  warns22 <- capture_warnings(
+    Install("PredictiveEcology/Require@simplify4 (>=0.3.1.9021)", install = "force")
+  )
   withr::local_options(warn = 2)
   (Require::Install(c(knownRevDeps$Require),#, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
                    repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))) |>
     capture_warnings() -> warns
   test <- testWarnsInUsePleaseChange(warns)
+  save(test, warns, file = "c:/Eliot/tmp/test06.rda")
   if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (isFALSE(test)) browser()
   expect_true(test)
 

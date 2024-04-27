@@ -827,7 +827,7 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
   whGitHub <- which(pkgInstall$repoLocation %in% .txtGitHub)
   if (length(whGitHub)) {
     pkgGitHub <- pkgInstall[whGitHub]
-    for (pk in pkgGitHub[installed %in% TRUE]$Package) {
+    for (pk in pkgGitHub[installed %in% TRUE & grepl("OK|restart", installResult)]$Package) {
       if (is.null(pkgGitHub[["GitSubFolder"]]))
         set(pkgGitHub, NULL, "GitSubFolder", "")
       pkgGitHub[Package %in% pk, {
@@ -1662,6 +1662,7 @@ extractPkgNameFromWarning <- function(x) {
 
   if (any(grepl(msgIsInUse, x)) || # "in use"
       any(grepl("installation of.+failed", x))) { # "installation of 2 packages failed:"
+    out <- NULL
     if (isWindows()) {
       aa <- strsplit(x, "\\'")
       out <- lapply(aa, function(y) {
@@ -1669,9 +1670,11 @@ extractPkgNameFromWarning <- function(x) {
         wh <- c(1, wh)
         y[c(wh + 1)]
       })
-    } else {
+    }
+    if (is.na(out) || !isWindows()) {
       aa <- strsplit(x, "\u2019|\u2018")[[1]]
       aa <- grep("installation.+failed", aa, invert = TRUE, value = TRUE)
+      aa <- grep("package|is in use", aa, invert = TRUE, value = TRUE)
       out <- grep(", ", aa, value = TRUE, invert = TRUE)
     }
 
