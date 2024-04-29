@@ -6,7 +6,16 @@
 # * https://r-pkgs.org/testing-design.html#sec-tests-files-overview
 # * https://testthat.r-lib.org/articles/special-files.html
 
-library(testthat)
 library(Require)
+library(testthat)
+if (nzchar(Sys.getenv("NOT_CRAN")) && as.logical(Sys.getenv("NOT_CRAN"))) {
+  clearRequirePackageCache(ask = FALSE)
+  test_check("Require")
 
-test_check("Require")
+  # 2nd time should have cache setup up
+  test_check("Require")
+
+} else {
+  test_check("Require")
+}
+
