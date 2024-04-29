@@ -28,6 +28,7 @@ test_that("test 5", {
         capture_warnings() -> warns
 
     } else {
+      warnsReq <- capture_warnings(Require::Install("Require"))
       (a <- Install(c(
         "PredictiveEcology/Require@simplify4",
         "PredictiveEcology/SpaDES.project@transition"),
