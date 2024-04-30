@@ -37,6 +37,7 @@ Depends:
 Imports:
     data.table (>= 1.10.4),
     methods,
+    sys,
     tools,
     utils
 Suggests:
@@ -50,7 +51,6 @@ Suggests:
     parallel,
     rematch2, 
     rprojroot,
-    sys,
     testthat (>= 3.0.0),
     waldo,
     withr
