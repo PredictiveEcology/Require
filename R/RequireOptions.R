@@ -65,7 +65,7 @@ RequireOptions <- function() {
   list(
     Require.cloneFrom = NULL,
     Require.install = TRUE,
-    Require.installPackagesSys = 0L,
+    Require.installPackagesSys = 2L,
     Require.otherPkgs = c(
       "cpp11"
       , "igraph"
