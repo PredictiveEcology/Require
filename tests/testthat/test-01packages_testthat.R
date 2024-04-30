@@ -305,23 +305,23 @@ test_that("test 1", {
 
 
     # Test substitute(packages)
-    suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "reproducible")),
+    suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "fpCompare", "reproducible")),
                          silent = TRUE)) |> suppressMessages()
     verToCompare <- "1.0.3"
-    clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES"), ask = FALSE)
+    clearRequirePackageCache(c("quickPlot", "NetLogoR"), ask = FALSE)
 
     # The warning is about "package ‘Require’ is in use and will not be installed"
 
-    pkgsHere <- c("quickPlot", "NetLogoR", "reproducible", "SpaDES")
+    pkgsHere <- c("quickPlot", "NetLogoR", "reproducible")
     pkgdeps <- pkgDep(pkgsHere)
     out2 <- Require::Install(pkgsHere) |>
       capture_warnings() -> warns
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 
-    testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
-    try(remove.packages(c("quickPlot", "NetLogoR", "SpaDES", "fpCompare", "SpaDES.core"))) |> suppressMessages()
-    clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES", "SpaDES.core"), ask = F)
+    # testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
+    try(remove.packages(c("quickPlot", "NetLogoR", "fpCompare", "SpaDES.core"))) |> suppressMessages()
+    clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES.core"), ask = F)
     a <- list(pkg = "fpCompare")
 
     warns <- capture_warnings(

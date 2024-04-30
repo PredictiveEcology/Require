@@ -462,6 +462,7 @@ rbindlistNULL <- function(ll, ...) {
 }
 
 
+#' @importFrom sys exec_wait exec_background
 build <- function(Package, VersionOnRepos, verbose, quiet) {
   if (nchar(Sys.which("R")) > 0) {
     messageVerbose("building package (R CMD build)",
@@ -3869,7 +3870,6 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   if (installPackages) {
     pid <- sys::exec_wait(
       Rscript, cmdLine,
-      # Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
       std_out = function(x) {
         mess <- rawToChar(x)
         msgStdOut(mess, logFile, verbose)
@@ -3881,11 +3881,9 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
     )
 
   } else {
-
     cmd <- sys::exec_background
     pid <- cmd(
       Rscript, cmdLine,
-      # Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
       std_out = installPackageVerbose(verbose, verboseLevel = 2),
       std_err = installPackageVerbose(verbose, verboseLevel = 2)
     )
