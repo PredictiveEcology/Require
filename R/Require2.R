@@ -3881,7 +3881,6 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
     )
 
   } else {
-
     cmd <- sys::exec_background
     pid <- cmd(
       Rscript, cmdLine,
