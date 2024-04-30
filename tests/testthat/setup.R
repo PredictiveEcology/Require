@@ -1,8 +1,7 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
-verboseForDev <- -2
-installPackageSys <- 2
+verboseForDev <- 2
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
@@ -67,11 +66,11 @@ if (Sys.info()["user"] %in% "emcintir") {
     Ncpus = 8,
     repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
-    Require.installPackagesSys = isDevAndInteractive * installPackageSys,
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   googledrive::drive_auth()
   print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom")])
+  print(paste("Cache size:", length(dir(RequirePkgCacheDir())), "files"))
 }
 
 
