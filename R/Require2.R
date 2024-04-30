@@ -2850,9 +2850,6 @@ getVersionOnReposLocal <- function(pkgDT) {
 
 browserDeveloper <- function(mess = "", envir = parent.frame()) {
   if (identical(SysInfo[["user"]], "emcintir")) {
-    # print(mess)
-    # attach(envir)
-    # on.exit(detach(envir))
     print(mess)
     browser()
   } else {
@@ -3020,7 +3017,6 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
 
   # Case where the local file may be corrupt
   if (any(grepl("(installation of package.+had non-zero exit statu)|(installation of .+ packages failed)", w$message))) {
-    browser()
     unlink(toInstall[Package %in% pkgName]$localFile)
     unlink(dir(tmpdir, pattern = paste0(pkgName, collapse = "|"), full.names = TRUE))
   }
@@ -3725,20 +3721,20 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   if (length(fullMess))
     messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
 
-  ll <- try(lapply(outfiles, readRDS), silent = TRUE)
-  if (downPack && !downFile && !installPackages) {
-    if (downPack)
-      dt <- as.data.table(do.call(rbind, ll))
-    else
-      dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
-    setnames(dt, new = c("Package", "localFile"))
-  } else if (downFile) {
-    dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
-               localFile = argsOrig$destfile) |> setDT()
-  } else if (downAndBuildLocal) {
-    dt <- list(Package = argsOrig[["Package"]],
-               localFile = unlist(ll))
-    setDT(dt)
+    ll <- try(lapply(outfiles, readRDS), silent = TRUE)
+    if (downPack && !downFile && !installPackages) {
+      if (downPack)
+        dt <- as.data.table(do.call(rbind, ll))
+      else
+        dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
+      setnames(dt, new = c("Package", "localFile"))
+    } else if (downFile) {
+      dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
+                 localFile = argsOrig$destfile) |> setDT()
+    } else if (downAndBuildLocal) {
+      dt <- list(Package = argsOrig[["Package"]],
+                 localFile = unlist(ll))
+      setDT(dt)
   } else  { # installPackages and Other
     dt <- logFile
   }
@@ -3841,9 +3837,9 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
 }
 
 spinnerOnPid <- function(pid, isRstudio, st, verbose) {
-  if (isRstudio %in% FALSE) {
-    messageVerbose(".", verbose)
-  } else {
+ # if (isRstudio %in% FALSE) {
+#    messageVerbose(".", verbose)
+#  } else {
     aa <- NA
     spinner <- "|"
     mess <- if (verbose > 1) " \n" else " "
@@ -3863,15 +3859,17 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
       }
     }
     messageVerbose("\b", verbose = verbose)
-  }
+ # }
 
 }
 
 
 sysDo <- function(installPackages, cmdLine, logFile, verbose) {
+  Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
     pid <- sys::exec_wait(
-      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+      Rscript, cmdLine,
+      # Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
       std_out = function(x) {
         mess <- rawToChar(x)
         msgStdOut(mess, logFile, verbose)
@@ -3884,8 +3882,10 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
 
   } else {
 
-    pid <- sys::exec_background(
-      Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
+    cmd <- sys::exec_background
+    pid <- cmd(
+      Rscript, cmdLine,
+      # Sys.which("Rscript"), cmdLine, # std_out = con, std_err = con
       std_out = installPackageVerbose(verbose, verboseLevel = 2),
       std_err = installPackageVerbose(verbose, verboseLevel = 2)
     )
@@ -3911,7 +3911,6 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
       stop("Require must be installed in libPaths, not just locally. \n",
            "Please install manually, then rerun")
   }
-
 
   cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
   cmdLine

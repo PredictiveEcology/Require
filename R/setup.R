@@ -171,9 +171,6 @@ getOptionRPackageCache <- function() {
       }
     }
   }
-  # if (!is.null(curVal)) {
-  #   checkPath(curVal, create = TRUE)
-  # }
   curVal
 }
 
