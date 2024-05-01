@@ -67,7 +67,7 @@ allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
 
 \item{includeBase}{Logical. Should R base packages be included, specifically,
-those in \code{tail(.libPath(), 1)}}
+those in \code{tail(.libPaths(), 1)}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,

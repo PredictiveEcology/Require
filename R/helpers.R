@@ -587,11 +587,12 @@ SysInfo <-
     Ncpus = 2L,
     Require.RequirePkgCache = FALSE
   ) ## TODO: use e.g., `tempdir2("examples")`
-  l$libOrig <- setLibPaths(tempdir3())
+  # l$libOrig <- setLibPaths(tempdir3())
   l
 }
 
 .cleanup <- function(opts = list()) {
+  unlink(file.path(tempdir(), "Require"), recursive = TRUE)
   unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
   clearRequirePackageCache(
     ask = FALSE,
@@ -614,7 +615,7 @@ SysInfo <-
   if (length(filesOuter) == 1 && length(filesOneIn) <= 1) {
     unlink(filesOuter, recursive = TRUE)
   }
-  setLibPaths(opts$libOrig)
+  # setLibPaths(opts$libOrig)
   options(opts$opts)
 }
 

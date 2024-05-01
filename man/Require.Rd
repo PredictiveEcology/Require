@@ -210,7 +210,6 @@ will reuse them if needed. To turn off this feature, set
 
 \examples{
 \dontrun{
-# simple usage, like conditional install.packages then library
 opts <- Require:::.setupExample()
 
 library(Require)
@@ -223,7 +222,7 @@ Require(c(tools, utils))
 
 if (Require:::.runLongExamples()) {
   # Install in a new local library (libPaths)
-  tempPkgFolder <- file.path(tempdir(), "Packages")
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
   # use standAlone, means it will put it in libPaths, even if it already exists
   #   in another local library (e.g., personal library)
   Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
@@ -233,29 +232,30 @@ if (Require:::.runLongExamples()) {
   (pkgSnapshot(tf, libPaths = tempPkgFolder, standAlone = TRUE))
 
   # Change the libPaths to emulate a new computer or project
-  tempPkgFolder <- file.path(tempdir(), "Packages2")
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages2")
   # Reinstall and reload the exact version from previous
   Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
 
   # Mutual dependencies, only installs once -- e.g., curl
-  tempPkgFolder <- file.path(tempdir(), "Packages")
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
   Install(c("rlang", "testthat"), libPaths = tempPkgFolder, standAlone = TRUE)
 
   # Mutual dependencies, only installs once -- e.g., curl
-  tempPkgFolder <- file.path(tempdir(), "Packages")
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
   Install(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 
   #####################################################################################
   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
   #####################################################################################
   # GitHub packages
-  ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+  ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
   if (requireNamespace("curl")) {
-    Require("PredictiveEcology/fpCompare@development",
+    Require(c("curl", "PredictiveEcology/fpCompare@development"),
       libPaths = ProjectPackageFolder, standAlone = FALSE
     )
   }
 
+  # No install because it is there already
   Install("PredictiveEcology/fpCompare@development",
     libPaths = ProjectPackageFolder,
     standAlone = TRUE

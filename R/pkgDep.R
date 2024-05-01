@@ -515,13 +515,17 @@ whichToDILES <- function(which) {
     }))
 
     out <- do.call(rbind, out)
-    out[, "Package"] <- basename(out[, "Package"])
-    out <- cbind(out, "LibPath" = rep(lib.loc, lengths), stringsAsFactors = FALSE)
-
-    dups <- duplicated(out[, "Package"]) # means installed in >1 .libPaths()
-    out <- out[!dups, ]
-
     colNames <- c("Package", "Version", "LibPath", which, other)
+    if (is.null(out)) {
+      out <- matrix(data = character(), ncol = 3 + length(which) + length(other))
+      colnames(out) <- colNames
+    } else {
+      out[, "Package"] <- basename(out[, "Package"])
+      out <- cbind(out, "LibPath" = rep(lib.loc, lengths), stringsAsFactors = FALSE)
+
+      dups <- duplicated(out[, "Package"]) # means installed in >1 .libPaths()
+      out <- out[!dups, ]
+    }
     colNames <- intersect(colNames, colnames(out))
     out <- out[, colNames]
     # ret <-

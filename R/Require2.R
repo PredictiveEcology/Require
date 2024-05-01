@@ -178,7 +178,7 @@ utils::globalVariables(c(
 #'
 #' if (Require:::.runLongExamples()) {
 #'   # Install in a new local library (libPaths)
-#'   tempPkgFolder <- file.path(tempdir(), "Packages")
+#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
 #'   # use standAlone, means it will put it in libPaths, even if it already exists
 #'   #   in another local library (e.g., personal library)
 #'   Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
@@ -188,29 +188,30 @@ utils::globalVariables(c(
 #'   (pkgSnapshot(tf, libPaths = tempPkgFolder, standAlone = TRUE))
 #'
 #'   # Change the libPaths to emulate a new computer or project
-#'   tempPkgFolder <- file.path(tempdir(), "Packages2")
+#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages2")
 #'   # Reinstall and reload the exact version from previous
 #'   Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   # Mutual dependencies, only installs once -- e.g., curl
-#'   tempPkgFolder <- file.path(tempdir(), "Packages")
+#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
 #'   Install(c("rlang", "testthat"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   # Mutual dependencies, only installs once -- e.g., curl
-#'   tempPkgFolder <- file.path(tempdir(), "Packages")
+#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
 #'   Install(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   #####################################################################################
 #'   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
 #'   #####################################################################################
 #'   # GitHub packages
-#'   ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
+#'   ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
 #'   if (requireNamespace("curl")) {
-#'     Require("PredictiveEcology/fpCompare@development",
+#'     Require(c("curl", "PredictiveEcology/fpCompare@development"),
 #'       libPaths = ProjectPackageFolder, standAlone = FALSE
 #'     )
 #'   }
 #'
+#'   # No install because it is there already
 #'   Install("PredictiveEcology/fpCompare@development",
 #'     libPaths = ProjectPackageFolder,
 #'     standAlone = TRUE
@@ -1362,7 +1363,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
                                       tmpdir = tmpdir,
                                       verbose = verbose)
         )
-        messageVerbose("CRAN ", downloadedInSeconds(st[[3]]), verbose = verbose)
+        messageVerbose("  CRAN ", downloadedInSeconds(st[[3]]), verbose = verbose)
         pkgCRAN[dt, localFile := i.localFile, on = "Package"]
         pkgCRAN[availableVersionOK %in% TRUE, installFrom := .txtLocal]
         pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
@@ -1516,7 +1517,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                             "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)",
                             libPaths = libPaths, verbose = verbose)
           )
-          messageVerbose("GitHub ", downloadedInSeconds(st[[3]]), verbose = verbose)
+          messageVerbose("  GitHub ", downloadedInSeconds(st[[3]]), verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := .txtLocal]
           pkgGHtoDL[!SHAonGH %in% FALSE, newLocalFile := TRUE]
@@ -1908,7 +1909,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     installRangeCh <- paste(installRange, collapse = ":")
 
     srces <- names(pkgToReportBySource)
-    messageVerbose("-- Installing from:", verbose = verbose)
+    messageVerbose("  -- Installing from:", verbose = verbose)
     nxtSrc <- c(yellow = .txtLocal, blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
     Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
       pp <- pkgToReportBySource[[type]]
@@ -1923,7 +1924,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     })
     messageVerbose(
       blue(
-        "-- ", installRangeCh, " of ", numPackages,
+        "  -- ", installRangeCh, " of ", numPackages,
         if (numGroups > 1) {
           paste0(" (grp ", unique(toInstall$installSafeGroups), " of ", numGroups, ")")
         } else {
@@ -3302,7 +3303,6 @@ linkOrCopyPackageFilesInner <- function(Packages, fromLib, toLib) {
 }
 
 
-
 getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, inequality,
                                    secondsInADay, .GRP,
                                    numGroups, verbose, repos, srcPackageURLOnCRAN) {
@@ -3755,20 +3755,20 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   if (length(fullMess))
     messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
 
-    ll <- try(lapply(outfiles, readRDS), silent = TRUE)
-    if (downPack && !downFile && !installPackages) {
-      if (downPack)
-        dt <- as.data.table(do.call(rbind, ll))
-      else
-        dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
-      setnames(dt, new = c("Package", "localFile"))
-    } else if (downFile) {
-      dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
-                 localFile = argsOrig$destfile) |> setDT()
-    } else if (downAndBuildLocal) {
-      dt <- list(Package = argsOrig[["Package"]],
-                 localFile = unlist(ll))
-      setDT(dt)
+  ll <- try(lapply(outfiles, readRDS), silent = TRUE)
+  if (downPack && !downFile && !installPackages) {
+    if (downPack)
+      dt <- as.data.table(do.call(rbind, ll))
+    else
+      dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
+    setnames(dt, new = c("Package", "localFile"))
+  } else if (downFile) {
+    dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
+               localFile = argsOrig$destfile) |> setDT()
+  } else if (downAndBuildLocal) {
+    dt <- list(Package = argsOrig[["Package"]],
+               localFile = unlist(ll))
+    setDT(dt)
   } else  { # installPackages and Other
     dt <- logFile
   }

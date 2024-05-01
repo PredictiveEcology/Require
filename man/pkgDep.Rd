@@ -11,21 +11,22 @@ pkgDepTopoSort(
   deps,
   reverse = FALSE,
   topoSort = TRUE,
-  libPath = .libPaths(),
+  libPaths,
   useAllInSearch = FALSE,
   returnFull = TRUE,
   recursive = TRUE,
   purge = getOption("Require.purge", FALSE),
   which = c("Depends", "Imports", "LinkingTo"),
   type = getOption("pkgType"),
-  verbose = getOption("Require.verbose")
+  verbose = getOption("Require.verbose"),
+  ...
 )
 
 pkgDep2(...)
 
 pkgDep(
   packages,
-  libPath = .libPaths(),
+  libPaths,
   which = c("Depends", "Imports", "LinkingTo"),
   recursive = TRUE,
   depends,
@@ -62,7 +63,7 @@ the returned list of packages will be in order with the
 least number of dependencies listed in \code{pkgs} at
 the top of the list.}
 
-\item{libPath}{A path to search for installed packages. Defaults to
+\item{libPaths}{A path to search for installed packages. Defaults to
 \code{.libPaths()}}
 
 \item{useAllInSearch}{Logical. If \code{TRUE}, then all non-core
@@ -135,7 +136,7 @@ repository name.}
 returned will include version number. Default is \code{FALSE}}
 
 \item{includeBase}{Logical. Should R base packages be included, specifically,
-those in \code{tail(.libPath(), 1)}}
+those in \code{tail(.libPaths(), 1)}}
 
 \item{includeSelf}{Logical. If \code{TRUE}, the default, then the dependencies
 will include the package itself in the returned list elements, otherwise,

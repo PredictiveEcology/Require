@@ -7,7 +7,7 @@ packages: name, repository, branch, version. For CRAN-alikes, it will only
 be 2 pieces: name, version. There can also be an inequality or equality, if
 there is a version.}
 \usage{
-getDeps(pkgDT, which, recursive, type = type, repos, verbose)
+getDeps(pkgDT, which, recursive, type = type, repos, libPaths, verbose)
 }
 \arguments{
 \item{pkgDT}{A \code{pkgDT} object e.g., from \code{toPkgDT}}
@@ -24,6 +24,9 @@ recursively. NOTE: Dependencies of suggests will not be recursive. Default
 \item{type}{See \code{utils::install.packages}}
 
 \item{repos}{is used for \code{ap}.}
+
+\item{libPaths}{A path to search for installed packages. Defaults to
+\code{.libPaths()}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
