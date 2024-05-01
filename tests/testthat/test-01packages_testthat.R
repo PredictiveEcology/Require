@@ -79,8 +79,8 @@ test_that("test 1", {
     dir2 <- checkPath(dir2, create = TRUE)
     pvWant <- "0.2.2"
     inst <- Require(paste0("fpCompare (<=", pvWant, ")"),
-                             standAlone = TRUE,
-                             libPaths = dir2, dependencies = FALSE, returnDetails = TRUE, require = FALSE
+                    standAlone = TRUE,
+                    libPaths = dir2, dependencies = FALSE, returnDetails = TRUE, require = FALSE
     )
     pv <- packageVersion("fpCompare", lib.loc = dir2)
     testthat::expect_true({

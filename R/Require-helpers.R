@@ -118,7 +118,11 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   out <- lapply(file, function(f) {
     if (length(f) == 1) {
-      lines <- readLines(f)
+      lines <- try(readLines(f), silent = TRUE)
+      if (is(lines, "try-error")) {
+        warning(lines)
+        lines <- character()
+      }
     } else {
       lines <- f
     }

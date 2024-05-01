@@ -3620,7 +3620,6 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
     notGH <- !pkgInstall$isGitPkg
     whNoKeep <- which(hasHead & notGH)
     if (length(whNoKeep)) {
-      browser()
       # Only keepForUpdate if it is identical ... a HEAD could be of a different branch and thus a newer or older version
       pkgInstall[whNoKeep, keepForUpdate := compareVersion2(Version, VersionOnRepos, "<") | forceInstall]
       # pkgInstall[whHasHead & whGH, DESCRIPTIONFileVersionV(DESCFile)]
