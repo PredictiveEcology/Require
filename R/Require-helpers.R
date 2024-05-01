@@ -366,11 +366,11 @@ dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Requ
 
 
 #' @importFrom utils packageVersion installed.packages
-installedVers <- function(pkgDT) {
+installedVers <- function(pkgDT, libPaths) {
 
   pkgDT <- toPkgDT(pkgDT)
   if (NROW(pkgDT)) {
-    ip <- as.data.table(installed.packages(fields = c("Package", "LibPath", "Version")))
+    ip <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
     # ip <- ip[, c("Package", "LibPath", "Version")]
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
@@ -676,7 +676,7 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
     dontTry <- c(dontTry, dontTryExtra)
   }
 
-  dontTry <- unique(c(c("Require", "data.table", "covr"), dontTry))
+  dontTry <- unique(c(.RequireDependenciesNoBase, "covr", dontTry))
   didntDetach <- intersect(dontTry, pkgs)
   pkgs <- setdiff(pkgs, dontTry)
   dontNeedToUnload <- logical()
@@ -688,8 +688,10 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
     dontNeedToUnload <- rep(NA, sum(!isLoaded))
     names(dontNeedToUnload) <- pkgs[!isLoaded]
     pkgs <- pkgs[isLoaded]
-    detached <- sapply(pkgs, unloadNamespace)
-    detached <- sapply(detached, is.null)
+    detached1 <- sapply(pkgs, unloadNamespace)
+    detached1 <- sapply(detached1, is.null)
+    if (!is.list(detached1))
+      detached <- detached1
   }
   if (length(didntDetach)) {
     notDetached <- rep(FALSE, length(didntDetach))
@@ -1515,7 +1517,6 @@ installPackagesWithQuiet <- function(ipa, verbose) {
 
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
-    ipa$lib <- .libPaths()[1]
     for (i in 1:3) {
       anyFailed <- NULL
       out <- sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,

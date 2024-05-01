@@ -42,14 +42,14 @@ utils::globalVariables(
 #'   `TRUE`.
 #' @param keepVersionNumber Logical. If `TRUE`, then the package dependencies
 #'   returned will include version number. Default is `FALSE`
-#' @param libPath A path to search for installed packages. Defaults to
+#' @param libPaths A path to search for installed packages. Defaults to
 #'   `.libPaths()`
 #' @param sort Logical. If `TRUE`, the default, then the packages will be sorted
 #'   alphabetically. If `FALSE`, the packages will not have a discernible order
 #'   as they will be a concatenation of the possibly recursive package
 #'   dependencies.
 #' @param includeBase Logical. Should R base packages be included, specifically,
-#'   those in `tail(.libPath(), 1)`
+#'   those in `tail(.libPaths(), 1)`
 #' @param includeSelf Logical. If `TRUE`, the default, then the dependencies
 #'   will include the package itself in the returned list elements, otherwise,
 #'   only the "dependencies"
@@ -90,7 +90,7 @@ utils::globalVariables(
 #' }
 #' }
 pkgDep <- function(packages,
-                   libPath = .libPaths(),
+                   libPaths,
                    which = c("Depends", "Imports", "LinkingTo"),
                    recursive = TRUE,
                    depends,
@@ -107,6 +107,8 @@ pkgDep <- function(packages,
                    verbose = getOption("Require.verbose"),
                    type = getOption("pkgType"),
                    Additional_repositories = FALSE, ...) {
+
+  libPaths <- dealWithMissingLibPaths(libPaths, ...)
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NULL
   if (!is.null(doDeps))
@@ -127,7 +129,7 @@ pkgDep <- function(packages,
     if (is.list(which)) which <- which[[1]]
 
     deps <- getPkgDeps(packages, parentPackage = "user", recursive = recursive, repos = repos, verbose = verbose,
-                       type = type, which = which, includeBase = includeBase,
+                       type = type, which = which, includeBase = includeBase, libPaths = libPaths,
                        includeSelf = includeSelf, grandp = "aboveuser")
     depsCol <- "deps"
     set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
@@ -195,7 +197,7 @@ pkgDep <- function(packages,
 }
 
 getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, includeBase,
-                       includeSelf, verbose, .depth = 0, .counter, grandp) {
+                       includeSelf, libPaths, verbose, .depth = 0, .counter, grandp) {
 
   if (is.list(which)) which <- which[[1]]
 
@@ -223,7 +225,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
       pkgDTBase <- splitKeepOrderAndDTIntegrity(pkgDT, splitOn = isInBase)
       if (NROW(pkgDTBase[["FALSE"]])) {
         pkgDTBase[["FALSE"]] <- getDeps(pkgDTBase[["FALSE"]], which, recursive = recursive,
-                                        repos = repos, type = type, verbose = verbose)
+                                        repos = repos, type = type, libPaths = libPaths, verbose = verbose)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
         if (any(hasDeps)) {
           if (recursive %in% TRUE && any(pkgDTBase[["FALSE"]]$cachedTRUE %in% FALSE)) {
@@ -244,6 +246,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
                                recursive = recursive, which = which, repos = repos,
                                type = type, includeBase = includeBase,
                                includeSelf = includeSelf,
+                               libPaths = libPaths,
                                .depth = .depth + 1, verbose = verbose))
 
 
@@ -323,7 +326,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 #' @return
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
 #' above, plus the `which` and the `recursive`.
-getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
+getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbose) {
   fillDefaults(pkgDep)
 
   for (tf in c(TRUE, FALSE))
@@ -350,10 +353,11 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
     if (!all(pkgDTCached[["FALSE"]]$Package %in% .basePkgs)) {
       if (any(!isGH)) {
         pkgDTNonGH <- getDepsNonGH(pkgDTCached[["FALSE"]][!isGH], repos, type = type, verbose,
-                                   which = which, whichCatRecursive)
+                                   which = which, whichCatRecursive, libPaths = libPaths)
       }
       if (any(isGH)) {
-        pkgDTGH <- getDepsGH(pkgDTCached[["FALSE"]][isGH], verbose, which = which, whichCatRecursive)
+        pkgDTGH <- getDepsGH(pkgDTCached[["FALSE"]][isGH], verbose, which = which, whichCatRecursive,
+                             libPaths = libPaths)
       }
       pkgDTCached[["FALSE"]] <- rbindlistNULL(list(pkgDTNonGH, pkgDTGH), use.names = TRUE, fill = TRUE)
     }
@@ -368,7 +372,7 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, verbose) {
 
 
 
-pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
+pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   fillDefaults(pkgDep)
 
   num <- NROW(unique(pkgDT$Package)) # can have src and bin listed
@@ -413,7 +417,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, verbose) {
     num <- NROW(pkgDTList$Archive$Package)
     messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
                    "not on CRAN; checking CRAN archives ... ", verbose = verbose)
-    pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, verbose, purge = FALSE)
+    pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
     wcr <- whichCatRecursive(which, recursive = FALSE)
     hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
     whHadArchive <- which(hadArchive)
@@ -442,7 +446,7 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, verbose = getOption(
 
   localVersionOK <- pkgDT$installedVersionOK
   if (is.null(localVersionOK)) {
-    pkgDT <- installedVersionOKPrecise(pkgDT)
+    pkgDT <- installedVersionOKPrecise(pkgDT, libPaths = libPaths)
     localVersionOK <- pkgDT$installedVersionOK
   }
 
@@ -490,10 +494,10 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, verbose = getOption(
 
 
 getDepsNonGH <- function(pkgDT, repos, verbose, type, which,
-                           whichCatRecursive, doSave = TRUE) {
+                           whichCatRecursive, libPaths, doSave = TRUE) {
   pkgDT <- toPkgDTFull(pkgDT)
 
-  pkgDT <- pkgDepCRAN(pkgDT, which = which, repos = repos, type = type, verbose = verbose)
+  pkgDT <- pkgDepCRAN(pkgDT, which = which, repos = repos, type = type, libPaths = libPaths, verbose = verbose)
 
   if (endsWith(whichCatRecursive, "FALSE")) { # this is joining the ap, so can only be recursive = FALSE
     if (isTRUE(doSave)) {
@@ -509,12 +513,12 @@ getDepsNonGH <- function(pkgDT, repos, verbose, type, which,
   pkgDT[]
 }
 
-getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, doSave = TRUE) {
+getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave = TRUE) {
   if (!is.data.table(pkgDT)) {
     pkgDT <- toPkgDTFull(pkgDT)
   }
 
-  pkgDT <- installedVersionOKPrecise(pkgDT)
+  pkgDT <- installedVersionOKPrecise(pkgDT, libPaths = libPaths)
   pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
   # pkgDT <- whichToInstall(pkgDT, install = TRUE)
 
@@ -882,13 +886,14 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 #' @importFrom utils download.file untar
 #' @include messages.R
-getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbose = getOption("Require.cloneFrom")) {
+getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPaths, verbose = getOption("Require.cloneFrom")) {
 
   tmpdir <- tempdir3() # faster than tempdir2
   on.exit({
     unlink(tmpdir, recursive = TRUE)
   }, add = TRUE)
-  pkgDTList$Archive <- identifyLocalFiles(pkgDTList$Archive, repos = repos, purge = purge, verbose = verbose)
+  pkgDTList$Archive <- identifyLocalFiles(pkgDTList$Archive, repos = repos, purge = purge,
+                                          libPaths = libPaths, verbose = verbose)
   haveLocal2 <- pkgDTList$Archive[["haveLocal"]] %in% .txtLocal
   if (any(haveLocal2))
     pkgDTList$Archive[, PackageUrl := file.path(Package, basename(localFile))]
@@ -958,9 +963,9 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, verbos
 }
 
 
-installed.packagesDeps <- function(ip, which) {
+installed.packagesDeps <- function(ip, libPaths, which) {
   if (missing(ip))
-    ip <- .installed.pkgs(which = which)
+    ip <- .installed.pkgs(lib.loc = libPaths, which = which)
 
   if (!is.data.table(ip))
     ip <- as.data.table(ip)
@@ -1507,8 +1512,8 @@ appendRecursiveToDeps <- function(pkgDT, caTr, depFa, caFa, snFa, depTr, snTr) {
 
 
 #' @include pkgDep.R
-RequireDependencies <- function() {
-  localRequireDir <- file.path(.libPaths(), "Require")
+RequireDependencies <- function(libPaths = .libPaths()) {
+  localRequireDir <- file.path(libPaths, "Require")
   de <- dir.exists(localRequireDir)
   RequireDeps <- character()
   if (any(de)) {
@@ -1526,10 +1531,11 @@ RequireDependencies <- function() {
       RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
     }
   }
-  RequireDeps <- unique(c("Require", RequireDeps))
-  RequireDeps <- c(RequireDeps, "sys")
+  RequireDeps <- unique(c("Require", unlist(RequireDeps)))
+  # RequireDeps <- c(RequireDeps, "sys")
   RequireDeps
 }
 
 
 .RequireDependencies <- character()
+.RequireDependenciesNoBase <- character()

@@ -166,7 +166,6 @@ utils::globalVariables(c(
 #'
 #' @examples
 #' \dontrun{
-#' # simple usage, like conditional install.packages then library
 #' opts <- Require:::.setupExample()
 #'
 #' library(Require)
@@ -295,16 +294,28 @@ Require <- function(packages,
     list(destdir = ".", repos = repos, type = types())
   )
 
-  if (missing(libPaths)) {
-    libPaths <- .libPaths()
-  }
+  libPaths <- dealWithMissingLibPaths(libPaths, ...)
+  # if (missing(libPaths)) {
+  #   libPaths <- .libPaths()
+  # }
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
-  suppressMessages({
-    origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
-    on.exit({
-      setLibPaths(origLibPaths, standAlone = standAlone, exact = TRUE)
-      }, add = TRUE)
-  })
+  if (standAlone) {
+    libPaths <- c(head(libPaths, 1), tail(libPaths, 1))
+  }
+  # suppressMessages({
+  #   if (!identical(libPaths, .libPaths()) && !(install %in% FALSE)) {
+  #     hasRequireInNewLibPaths <- dir(libPaths, pattern = paste(.RequireDependenciesNoBase, collapse = "|"))
+  #     if (length(hasRequireInNewLibPaths) == 0) {
+  #       linkOrCopyPackageFilesInner(setdiff(.RequireDependenciesNoBase, hasRequireInNewLibPaths),
+  #                                   toLib = libPaths,
+  #                                   fromLib = .libPaths()[1])
+  #     }
+  #   }
+  #   origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
+  #   on.exit({
+  #     setLibPaths(origLibPaths, standAlone = standAlone, exact = TRUE)
+  #     }, add = TRUE)
+  # })
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
@@ -335,7 +346,6 @@ Require <- function(packages,
   # Proceed to evaluate install and load need if there are any packages
   if (NROW(packages)) {
     repos <- getCRANrepos(repos, ind = 1)
-    # packages <- anyHaveHEAD(packages)
 
     if (length(which)) {
       deps <- pkgDep(packages, simplify = FALSE,
@@ -372,7 +382,7 @@ Require <- function(packages,
       pkgDT <- recordLoadOrder(packages, pkgDT)
       if (!is.null(pkgDT[["Version"]]))
         setnames(pkgDT, old = "Version", new = "VersionOnRepos")
-      pkgDT <- installedVers(pkgDT)
+      pkgDT <- installedVers(pkgDT, libPaths = libPaths)
       if (isTRUE(upgrade)) {
         pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
         if (any(pkgDT[["VersionOnRepos"]] != pkgDT[["Version"]], na.rm = TRUE)) {
@@ -383,7 +393,7 @@ Require <- function(packages,
           set(pkgDT, NULL, "comp", NULL)
         }
       }
-      pkgDT <- dealWithStandAlone(pkgDT, standAlone)
+      pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
       pkgDT <- whichToInstall(pkgDT, install, verbose)
 
       pkgDT <- removeRequireDeps(pkgDT, verbose)
@@ -427,7 +437,7 @@ Require <- function(packages,
               singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
     }
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
-    out <- doLoads(require, pkgDT, verbose = verbose)
+    out <- doLoads(require, pkgDT, libPaths = libPaths, verbose = verbose)
 
     packagesDT <- matchWithOriginalPackages(pkgDT, packages)
     out <- packagesDT$require
@@ -543,7 +553,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
 
 installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, install.packagesArgs,
                        numPackages, numGroups, startTime, type = type, returnDetails,
-                       tmpdir = tempdir(),
+                       tmpdir = tempdir(), libPaths,
                        verbose = getOption("Require.verbose")) {
 
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
@@ -584,6 +594,8 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   if (NROW(ipa$available)) {
     ipa$destdir <- tmpdir
+    ipa$lib <- libPaths[1]
+
     on.exit({
       logFile <- if (exists("toInstallOut", inherits = FALSE)) toInstallOut else NULL
       rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
@@ -700,6 +712,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
               install.packagesArgs = install.packagesArgs, numPackages = numPackages,
               numGroups = maxGroup, startTime = startTime, type = type,
               returnDetails = returnDetails,
+              libPaths = libPaths,
               tmpdir = tmpdir, verbose = verbose
             ),
             installAll
@@ -1050,7 +1063,7 @@ whichToInstall <- function(pkgDT, install, verbose) {
 }
 
 
-doLoads <- function(require, pkgDT, verbose = getOption("Require.verbose")) {
+doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbose")) {
   needRequire <- require
   if (is.character(require)) {
     pkgDT[Package %in% require, require := TRUE]
@@ -1072,7 +1085,7 @@ doLoads <- function(require, pkgDT, verbose = getOption("Require.verbose")) {
     setorderv(pkgDT, "loadOrder", na.last = TRUE)
     # rstudio intercepts `require` and doesn't work internally
     out[[1]] <- mapply(x = unique(pkgDT[["Package"]][pkgDT$require %in% TRUE]), function(x) {
-      base::require(x, character.only = TRUE, quietly = verbose <= 0)
+      base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0)
     }, USE.NAMES = TRUE)
   }
 
@@ -1108,11 +1121,11 @@ removeDups <- function(pkgDT) {
   pkgDT[!dups]
 }
 
-dealWithStandAlone <- function(pkgDT, standAlone) {
+dealWithStandAlone <- function(pkgDT, libPaths, standAlone) {
   if (isTRUE(standAlone)) {
     # Remove any packages that are not in .libPaths()[1], i.e., the main R library
     notInLibPaths1 <- (!pkgDT[["Package"]] %in% .basePkgs) &
-      (!normPath(pkgDT$LibPath) %in% normPath(.libPaths()[1])) & !is.na(pkgDT$LibPath)
+      (!normPath(pkgDT$LibPath) %in% normPath(libPaths)) & !is.na(pkgDT$LibPath)
     if (any(notInLibPaths1)) {
       notInLP1 <- "notInLibPaths1"
       set(pkgDT, which(notInLibPaths1), notInLP1, TRUE)
@@ -1177,7 +1190,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   }
 
   # Will set `haveLocal = .txtLocal` and `installFrom = .txtLocal`
-  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths, verbose = verbose)
+  pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths = libPaths, verbose = verbose)
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   if (!is.null(pkgInstallList$Local)) {
     # could be duplicated if repos had multiple versions of the package; only need 1 from local installed
@@ -1703,22 +1716,23 @@ localFilename <- function(pkgInstall, localFiles, libPaths, verbose) {
 
     if (length(avOK)) {
       pkgGitHub[avOK, (colsToUpdate) := {
-        alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
-        SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
-        if (file.exists(alreadyExistingDESCRIPTIONFile)) {
-          SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
-          SHAonLocal <- unique(SHAonLocal)[1] # seems like it can be >1, which is an error
-          # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
-          if (identical(SHAonGH, SHAonLocal)) {
-            messageVerbose(msgShaNotChanged(Account, Repo, Branch),
-                           verbose = verbose, verboseLevel = 1
-            )
-            installResult <- .txtShaUnchangedNoInstall
-          }
-        } else {
-          SHAonLocal <- ""
-        }
-        list(SHAonLocal, SHAonGH, installResult)
+        alreadyExistingDESCFile(libPaths = libPaths, Repo, Account, Branch, installResult, verbose)
+        # alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
+        # SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
+        # if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+        #   SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+        #   SHAonLocal <- unique(SHAonLocal)[1] # seems like it can be >1, which is an error
+        #   # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
+        #   if (identical(SHAonGH, SHAonLocal)) {
+        #     messageVerbose(msgShaNotChanged(Account, Repo, Branch),
+        #                    verbose = verbose, verboseLevel = 1
+        #     )
+        #     installResult <- .txtShaUnchangedNoInstall
+        #   }
+        # } else {
+        #   SHAonLocal <- ""
+        # }
+        # list(SHAonLocal, SHAonGH, installResult)
       }, by = "packageFullName"]
     }
     saveGitHubSHAsToDisk()
@@ -3250,6 +3264,26 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
   cant <- cantClone(ip)
   cant <- unique(c(sourcePkgs(), cant[, "Package"]))
   Packages <- setdiff(Packages, cant)
+  linkOrCopyPackageFilesInner(Packages, fromLib, toLib)
+  # ret <- lapply(Packages, function(packToClone) {
+  #   from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
+  #   fromFull <- file.path(fromLib, packToClone, from)
+  #   to <- file.path(toLib, packToClone, from)
+  #   dups <- fromFull %in% to
+  #   if (any(dups)) {
+  #     fromFull <- fromFull[!dups]
+  #     to <- to[!dups]
+  #   }
+  #   if (length(fromFull) > 0) {
+  #     dirs <- unique(dirname(to))
+  #     checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
+  #     outs <- linkOrCopy(fromFull, to, allowSymlink = FALSE)
+  #   }
+  # })
+}
+
+
+linkOrCopyPackageFilesInner <- function(Packages, fromLib, toLib) {
   ret <- lapply(Packages, function(packToClone) {
     from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
     fromFull <- file.path(fromLib, packToClone, from)
@@ -3479,7 +3513,6 @@ colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
 removeRequireDeps <- function(pkgDT, verbose) {
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT)
-  RequireDeps <- .RequireDependencies
 
   # localRequireDir <- file.path(.libPaths(), "Require")
   # de <- dir.exists(localRequireDir)
@@ -3499,7 +3532,7 @@ removeRequireDeps <- function(pkgDT, verbose) {
   # }
 
   whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
-  toRm <- pkgDT[["Package"]][whNeedInstall] %in% extractPkgName(unlist(RequireDeps))
+  toRm <- pkgDT[["Package"]][whNeedInstall] %in% extractPkgName(unlist(.RequireDependencies))
   if (any(toRm)) {
     NeedRestart <- if (getOption("Require.installPackagesSys") > 0) {
       # Can install when in a different process
@@ -3656,7 +3689,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   })
 
   doLineOrig <- doLine
-  preMess <-if (installPackages)  "\nInstalling: " else "Downloading: "
+  preMess <-if (installPackages)  "\n  Installing: " else "  Downloading: "
   fullMess <- character() # this will accumulate and regularly clear
   for (j in seq_along(vecList)) {
     st <- Sys.time()
@@ -3903,12 +3936,13 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
 
-  if (downAndBuildLocal) {
-    hasRequireInstalled <- dir(libPaths, pattern = "Require")
-    if (length(hasRequireInstalled) == 0)
-      stop("Require must be installed in libPaths, not just locally. \n",
-           "Please install manually, then rerun")
-  }
+  # if (downAndBuildLocal) {
+  #   browser()
+  #   hasRequireInstalled <- dir(libPaths, pattern = "Require")
+  #   if (length(hasRequireInstalled) == 0)
+  #     stop("Require must be installed in libPaths, not just locally. \n",
+  #          "Please install manually, then rerun")
+  # }
 
   cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
   cmdLine
@@ -3948,4 +3982,24 @@ downloadedInSeconds <- function(et) {
 
 messInstallingOrDwnlding <- function(preMess, fullMess) {
   greyLight(paste0(preMess, paste(fullMess, collapse = ", ")))
+}
+
+
+alreadyExistingDESCFile <- function(libPaths, Repo, Account, Branch, installResult, verbose) {
+  alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
+  SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
+  if (file.exists(alreadyExistingDESCRIPTIONFile)) {
+    SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+    SHAonLocal <- unique(SHAonLocal)[1] # seems like it can be >1, which is an error
+    # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
+    if (identical(SHAonGH, SHAonLocal)) {
+      messageVerbose(msgShaNotChanged(Account, Repo, Branch),
+                     verbose = verbose, verboseLevel = 1
+      )
+      installResult <- .txtShaUnchangedNoInstall
+    }
+  } else {
+    SHAonLocal <- ""
+  }
+  list(SHAonLocal, SHAonGH, installResult)
 }

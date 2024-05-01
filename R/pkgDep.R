@@ -58,14 +58,17 @@ pkgDepTopoSort <- function(pkgs,
                            deps,
                            reverse = FALSE,
                            topoSort = TRUE,
-                           libPath = .libPaths(),
+                           libPaths,
                            useAllInSearch = FALSE,
                            returnFull = TRUE,
                            recursive = TRUE,
                            purge = getOption("Require.purge", FALSE),
                            which = c("Depends", "Imports", "LinkingTo"),
                            type = getOption("pkgType"),
-                           verbose = getOption("Require.verbose")) {
+                           verbose = getOption("Require.verbose"), ...) {
+
+  libPaths <- dealWithMissingLibPaths(libPaths, ...)
+
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
         a <- search()
@@ -84,8 +87,8 @@ pkgDepTopoSort <- function(pkgs,
     names(pkgs) <- pkgs
     if (missing(deps)) {
       aa <- if (isTRUE(reverse)) {
-        ip <- .installed.pkgs(lib.loc = libPath, which = which)
-        ip <- installed.packagesDeps(ip, which)
+        ip <- .installed.pkgs(lib.loc = libPaths, which = which)
+        ip <- installed.packagesDeps(ip, libPaths = libPaths, which)
         deps <- depsWithCommasToVector(ip$Package, ip$deps)
          deps <- lapply(deps, extractPkgName)
         # names(deps) <- ip[, "Package"]
@@ -143,7 +146,7 @@ pkgDepTopoSort <- function(pkgs,
           pkgs,
           recursive = TRUE,
           purge = purge,
-          libPath = libPath,
+          libPaths = libPaths,
           which = which,
           verbose = verbose,
           includeSelf = FALSE
@@ -544,7 +547,6 @@ whichToDILES <- function(which) {
   }
 
 .basePkgs <-
-  # unlist(.installed.pkgs(tail(.libPaths(), 1))[, "Package"])
   c(
     "base",
     "boot",
@@ -1184,7 +1186,7 @@ depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, whic
 }
 
 
-installedVersionOKPrecise <- function(pkgDT) {
+installedVersionOKPrecise <- function(pkgDT, libPaths) {
   # pkgload steals system.file but fails under some conditions, not sure what...
   pkgDT[, localFiles := base::system.file("DESCRIPTION", package = Package), by = "Package"]
   fe <- nzchar(pkgDT$localFiles)
@@ -1201,7 +1203,7 @@ installedVersionOKPrecise <- function(pkgDT) {
     pkgDT[!fe, installedSha := NA]
   }
 
-  pkgDT <- installedVers(pkgDT)
+  pkgDT <- installedVers(pkgDT, libPaths = libPaths)
 
   if (isTRUE(any(pkgDT$installed %in% TRUE))) {
     brOrSha <- pkgDT$Branch == pkgDT$localBranch |
@@ -1474,4 +1476,16 @@ purgeAvailablePackages <- function(repos, purge = FALSE) {
     }
   }
   purge
+}
+
+dealWithMissingLibPaths <- function(libPaths, ...) {
+  missingLP <- missing(libPaths)
+  if (missingLP) {
+    if (!is.null(list(...)[["libPath"]])) {
+      libPaths <- list(...)[["libPath"]]
+    } else {
+      libPaths <- .libPaths()
+    }
+  }
+  libPaths
 }

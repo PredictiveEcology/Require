@@ -20,6 +20,7 @@ envPkgCreate()
   #   }
   # }
   .RequireDependencies <<- RequireDependencies()
+  .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
   possCacheDir <- getOptionRPackageCache()
   # if (!is.null(possCacheDir)) {
