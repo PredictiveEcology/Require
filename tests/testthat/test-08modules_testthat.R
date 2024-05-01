@@ -28,7 +28,7 @@ test_that("test 8", {
         capture_warnings() -> warns
 
     } else {
-      warnsReq <- capture_warnings(Require::Install("Require"))
+      # warnsReq <- capture_warnings(Require::Install("Require"))
       (a <- Install(c(
         "PredictiveEcology/Require@simplify4",
         "PredictiveEcology/SpaDES.project@transition"),
@@ -162,7 +162,7 @@ test_that("test 8", {
     dirForInstall <- tempdir3()
 
     warns <- out <- mess <- st <- list()
-    warnsReq <- capture_warnings(Require::Install("Require", libPaths = dirForInstall))
+    # warnsReq <- capture_warnings(Require::Install("Require", libPaths = dirForInstall))
 
     for (i in 1:2) {
       warns[[i]] <- capture_warnings( # "Require" is in use

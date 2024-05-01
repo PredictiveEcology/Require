@@ -84,7 +84,7 @@ test_that("test 5", {
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
-      warnsReq <- capture_warnings(Require::Install("Require"))
+      # warnsReq <- capture_warnings(Require::Install("Require"))
       warns <- capture_warnings(
         # mess <- capture_messages(
         out <- Require(packageVersionFile = snf, require = FALSE, # purge = TRUE,
