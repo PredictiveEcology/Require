@@ -127,7 +127,7 @@ ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE
 
 2. If no version number specification, then installs only occur if package is not present.
 
-3. Multiple simultaneous requests to install a package will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence.
+3. Multiple simultaneous requests to install a package from what appear to be incompatible sources, will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence.
 
 ```{r,eval=TRUE}
 # The following has no version specifications, 
@@ -145,6 +145,10 @@ Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (
 # Not a problem because version number specifies
 Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
                    "PredictiveEcology/reproducible (>= 2.0.10)"))
+
+# Even if branch does not exist, if later version requirement specifies a different branch, no error
+Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
+                   "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
 ```
 
 ```{r,eval=TRUE}
