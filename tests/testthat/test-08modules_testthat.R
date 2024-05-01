@@ -1,4 +1,4 @@
-test_that("test 5", {
+test_that("test 8", {
 
   setupInitial <- setupTest()
 

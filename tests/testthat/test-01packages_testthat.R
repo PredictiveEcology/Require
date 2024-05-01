@@ -26,7 +26,7 @@ test_that("test 1", {
   # Sys.setenv("R_TESTS" = "")
   # Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
-  dir1 <- Require:::rpackageFolder(Require::tempdir2("test1"))
+  dir1 <- Require:::rpackageFolder(Require:::tempdir3("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
   (out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
                                             standAlone = TRUE, libPaths = dir1,
@@ -320,8 +320,8 @@ test_that("test 1", {
     expect_true(test)
 
     # testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
-    try(remove.packages(c("quickPlot", "NetLogoR", "fpCompare", "SpaDES.core"))) |> suppressMessages()
-    clearRequirePackageCache(c("quickPlot", "NetLogoR", "SpaDES.core"), ask = F)
+    try(remove.packages(pkgsHere)) |> suppressMessages()
+    clearRequirePackageCache(pkgsHere, ask = F)
     a <- list(pkg = "fpCompare")
 
     warns <- capture_warnings(
