@@ -582,10 +582,13 @@ SysInfo <-
   Sys.info() # do this on load; nothing can change, so repeated calls are a waste
 
 .setupExample <- function() {
-  options(
+  l <- list()
+  l$opts <- options(
     Ncpus = 2L,
     Require.RequirePkgCache = FALSE
   ) ## TODO: use e.g., `tempdir2("examples")`
+  l$libOrig <- setLibPaths(tempdir3())
+  l
 }
 
 .cleanup <- function(opts = list()) {
@@ -611,7 +614,8 @@ SysInfo <-
   if (length(filesOuter) == 1 && length(filesOneIn) <= 1) {
     unlink(filesOuter, recursive = TRUE)
   }
-  options(opts)
+  setLibPaths(opts$libOrig)
+  options(opts$opts)
 }
 
 #' @importFrom utils packageDescription

@@ -186,7 +186,7 @@ utils::globalVariables(c(
 #'
 #'   # make a package version snapshot of installed packages
 #'   tf <- tempfile()
-#'   (pkgSnapshot(tf, standAlone = TRUE))
+#'   (pkgSnapshot(tf, libPaths = tempPkgFolder, standAlone = TRUE))
 #'
 #'   # Change the libPaths to emulate a new computer or project
 #'   tempPkgFolder <- file.path(tempdir(), "Packages2")
