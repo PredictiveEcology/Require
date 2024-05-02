@@ -270,10 +270,10 @@ test_that("test 1", {
       data.table::is.data.table(out)
     })
     testthat::expect_true({
-      !is.null(out$DESCFile)
+      !is.null(out[["DESCFile"]])
     })
     testthat::expect_true({
-      file.exists(out$DESCFile)
+      file.exists(out[["DESCFile"]])
     })
 
     out <- dlGitHubDESCRIPTION(pkg = character())
