@@ -71,6 +71,9 @@ if (Sys.info()["user"] %in% "emcintir") {
   googledrive::drive_auth()
   print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom")])
   print(paste("Cache size:", length(dir(RequirePkgCacheDir())), "files"))
+} else {
+  # clean up cache on GA and other
+  withr::defer(unlink(RequireCacheDir(), recursive = TRUE), envir = teardown_env())
 }
 
 
