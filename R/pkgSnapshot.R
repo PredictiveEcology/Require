@@ -142,13 +142,60 @@ pkgSnapshot2 <-
   }
 
 
-doLibPaths <- function(libPaths, standAlone) {
+#' Only checks for deprecated libPath argument (singular)
+#' @inheritParams Require
+#' @param ... Checks for the incorrect argument `libPath` (no s)
+dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.standAlone", FALSE),
+                                    ...) {
+  missingLP <- missing(libPaths)
+  if (missingLP) {
+    if (!is.null(list(...)[["libPath"]])) {
+      libPaths <- list(...)[["libPath"]]
+    }
+  }
+  libPaths <- doLibPaths(libPaths, standAlone)
+  libPaths
+}
+
+#' Creates the directories, and adds version number
+#' @inheritParams Require
+#' @param ifMissing An alternative path if `libPaths` argument is missing.
+#' @param exact Logical. If `FALSE`, the default, then `checkLibPaths` will
+#'   append the R version number on the `libPaths` supplied. If `TRUE`, `checkLibPaths`
+#'   will return exactly the `libPaths` supplied.
+#' @param ... Not used, but allows other functions to pass through arguments.
+checkLibPaths <- function(libPaths, ifMissing, exact = FALSE, ...) {
+  missLP <- missing(libPaths)
+  if (missLP) {
+    if (missing(ifMissing)) {
+      return(.libPaths())
+    } else {
+      pathsToCheck <- ifMissing
+    }
+  } else {
+    pathsToCheck <- libPaths
+  }
+  unlist(lapply(pathsToCheck, function(lp) {
+    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)
+  }))
+}
+
+#' Deals with missing libPaths arg, and takes first
+#' @inheritParams Require
+#' @importFrom utils head tail
+doLibPaths <- function(libPaths, standAlone = FALSE) {
   if (missing(libPaths)) {
     libPaths <- .libPaths()
   }
-  if (isTRUE(standAlone)) {
-    libPaths <- libPaths[1]
+  if (standAlone) {
+    libPaths <- c(head(libPaths, 1), tail(.libPaths(), 1))
+  } else {
+    libPaths <- unique(c(head(libPaths, 1), .libPaths()))
   }
+
+  # if (isTRUE(standAlone)) {
+  #   libPaths <- libPaths[1]
+  # }
   libPaths
 }
 

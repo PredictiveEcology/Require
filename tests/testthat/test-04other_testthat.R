@@ -58,7 +58,7 @@ test_that("test 3", {
     isTRUE(out["data.table"] == 1)
   })
 
-  warn <- tryCatch(Require:::warningCantInstall("devtolls"), warning = function(w) w$message)
+  warn <- tryCatch(Require:::warningCantInstall("devtools"), warning = function(w) w$message)
   testthat::expect_true({
     grepl("you will likely", warn)
   })

@@ -373,6 +373,7 @@ dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Requ
 installedVers <- function(pkgDT, libPaths) {
 
   pkgDT <- toPkgDT(pkgDT)
+  pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
     ip <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
     # ip <- ip[, c("Package", "LibPath", "Version")]
@@ -404,8 +405,10 @@ installedVers <- function(pkgDT, libPaths) {
     ip <- unique(ip, by = c("Package")) # , "LibPath" # basically, only take the first one if 2 installed in LibPath
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
     if (is(pkgDT, "try-error")) {
+      browser()
       browserDeveloper("Error 123")
     }
+
   } else {
     pkgDT <- cbind(pkgDT, LibPath = NA_character_, "Version" = NA_character_)
   }
@@ -550,54 +553,54 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
 }
 
 
-installRequire <- function(requireHome = getOption("Require.Home"),
-                           verbose = getOption("Require.verbose")) {
-  Rpath <- Sys.which("R")
-  dFileAtInstalledRequire <- file.path(.libPaths()[1], "Require", "DESCRIPTION")
-  haveIt <- file.exists(dFileAtInstalledRequire)
-  installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(dFileAtInstalledRequire) else NULL
-  isGitHub <- if (haveIt) DESCRIPTIONFileOtherV(dFileAtInstalledRequire, other = "github") else NA
-  done <- FALSE
-  if (is.na(isGitHub)) {
-    if (!is.null(requireHome)) {
-      dFile <- dir(requireHome, pattern = "DESCRIPTION", full.names = TRUE)
-      pkgNameAtRequireHome <- DESCRIPTIONFileOtherV(dFile, "Package")
-      pkgVersionAtRequireHome <- DESCRIPTIONFileVersionV(dFile)
-      if (!is.null(pkgNameAtRequireHome)) {
-        if (identical(pkgNameAtRequireHome, "Require")) {
-          if (!identical(installedRequireV, pkgVersionAtRequireHome)) {
-            origDir <- setwd(dirname(dirname(dFile)))
-            on.exit(setwd(origDir), add = TRUE)
-            messageVerbose("Installing Require ver: ", pkgVersionAtRequireHome, " from source at ", requireHome,
-                           verbose = verbose, verboseLevel = 2
-            )
-            out <- system(paste0(Rpath, " CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
-                          wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE
-            )
-          }
-        }
-        done <- TRUE
-      } else {
-        if (!is.null(requireHome)) {
-          messageVerbose(pkgNameAtRequireHome, " did not contain Require source code",
-                         verbose = verbose, verboseLevel = 2
-          )
-        }
-      }
-    }
-
-    if (isFALSE(done)) {
-      Rpath <- Sys.which("Rscript")
-      system(paste0(
-        Rpath, " -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
-        "', quiet = TRUE, repos = '", getOption("repos")[["CRAN"]], "')\""
-      ), wait = TRUE)
-      done <- TRUE
-    }
-  } else {
-    stop("Require will need to be installed manually in", .libPaths()[1])
-  }
-}
+# installRequire <- function(requireHome = getOption("Require.Home"),
+#                            verbose = getOption("Require.verbose")) {
+#   Rpath <- Sys.which("R")
+#   dFileAtInstalledRequire <- file.path(.libPaths()[1], "Require", "DESCRIPTION")
+#   haveIt <- file.exists(dFileAtInstalledRequire)
+#   installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(dFileAtInstalledRequire) else NULL
+#   isGitHub <- if (haveIt) DESCRIPTIONFileOtherV(dFileAtInstalledRequire, other = "github") else NA
+#   done <- FALSE
+#   if (is.na(isGitHub)) {
+#     if (!is.null(requireHome)) {
+#       dFile <- dir(requireHome, pattern = "DESCRIPTION", full.names = TRUE)
+#       pkgNameAtRequireHome <- DESCRIPTIONFileOtherV(dFile, "Package")
+#       pkgVersionAtRequireHome <- DESCRIPTIONFileVersionV(dFile)
+#       if (!is.null(pkgNameAtRequireHome)) {
+#         if (identical(pkgNameAtRequireHome, "Require")) {
+#           if (!identical(installedRequireV, pkgVersionAtRequireHome)) {
+#             origDir <- setwd(dirname(dirname(dFile)))
+#             on.exit(setwd(origDir), add = TRUE)
+#             messageVerbose("Installing Require ver: ", pkgVersionAtRequireHome, " from source at ", requireHome,
+#                            verbose = verbose, verboseLevel = 2
+#             )
+#             out <- system(paste0(Rpath, " CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
+#                           wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE
+#             )
+#           }
+#         }
+#         done <- TRUE
+#       } else {
+#         if (!is.null(requireHome)) {
+#           messageVerbose(pkgNameAtRequireHome, " did not contain Require source code",
+#                          verbose = verbose, verboseLevel = 2
+#           )
+#         }
+#       }
+#     }
+#
+#     if (isFALSE(done)) {
+#       Rpath <- Sys.which("Rscript")
+#       system(paste0(
+#         Rpath, " -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
+#         "', quiet = TRUE, repos = '", getOption("repos")[["CRAN"]], "')\""
+#       ), wait = TRUE)
+#       done <- TRUE
+#     }
+#   } else {
+#     stop("Require will need to be installed manually in", .libPaths()[1])
+#   }
+# }
 
 toPkgDT <- function(pkgDT, deepCopy = FALSE) {
   if (!is.data.table(pkgDT)) {
@@ -727,14 +730,15 @@ isLinux <- function() {
   isMac <- tolower(SysInfo["sysname"]) == "linux"
 }
 
-warningCantInstall <- function(pkgs) {
+warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
   warning(
     "Can't install ", pkgs, "; you will likely need to restart R and run:\n",
     "-----\n",
-    "install.packages(c('", paste(pkgs, collapse = comma), "'), lib = '", .libPaths()[1], "')",
+    "install.packages(c('", paste(pkgs, collapse = comma), "'), lib = '", libPaths[1], "')",
     "\n-----\n...before any other packages get loaded"
   )
 }
+
 
 rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE) {
   if (!is.null(path)) {
@@ -762,20 +766,6 @@ rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE) {
   }
 }
 
-checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
-  if (missing(libPaths)) {
-    if (missing(ifMissing)) {
-      return(.libPaths())
-    } else {
-      pathsToCheck <- ifMissing
-    }
-  } else {
-    pathsToCheck <- libPaths
-  }
-  unlist(lapply(pathsToCheck, function(lp) {
-    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)
-  }))
-}
 
 preparePkgNameToReport <- function(Package, packageFullName) {
   pkgsCleaned <- gsub(.grepTooManySpaces, " ", packageFullName)

@@ -295,14 +295,11 @@ Require <- function(packages,
     list(destdir = ".", repos = repos, type = types())
   )
 
-  libPaths <- dealWithMissingLibPaths(libPaths, ...)
   # if (missing(libPaths)) {
   #   libPaths <- .libPaths()
   # }
-  libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
-  if (standAlone) {
-    libPaths <- c(head(libPaths, 1), tail(libPaths, 1))
-  }
+  libPaths <- doLibPaths(libPaths, standAlone = standAlone)
+  libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
   # suppressMessages({
   #   if (!identical(libPaths, .libPaths()) && !(install %in% FALSE)) {
   #     hasRequireInNewLibPaths <- dir(libPaths, pattern = paste(.RequireDependenciesNoBase, collapse = "|"))
@@ -326,7 +323,7 @@ Require <- function(packages,
       messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     }
 
-    pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths,
+    pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths = libPaths,
                                     install_githubArgs, install.packagesArgs, standAlone,
                                     type = type, verbose = verbose, returnDetails = returnDetails, ...
     )
@@ -350,7 +347,7 @@ Require <- function(packages,
 
     if (length(which)) {
       deps <- pkgDep(packages, simplify = FALSE,
-                     purge = purge, libPath = libPaths, recursive = TRUE,
+                     purge = purge, libPaths = libPaths, recursive = TRUE,
                      which = which, type = type, verbose = verbose, repos = repos,
                      Additional_repositories = TRUE
       )
@@ -590,7 +587,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
   rcf <- getOption("Require.cloneFrom")
   if (isTRUE(is.character(rcf))) {
-    ipa <- clonePackages(rcf, ipa, verbose)
+    ipa <- clonePackages(rcf, ipa, libPaths = libPaths, verbose)
   }
 
   if (NROW(ipa$available)) {
@@ -739,7 +736,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
 
         set(pkgInstall, addOK,
             c("installed", "Version", "LibPath"),
-            list(TRUE, pkgInstall[["VersionOnRepos"]][addOK], .libPaths()[1])
+            list(TRUE, pkgInstall[["VersionOnRepos"]][addOK], libPaths[1])
         )
         pkgInstall <- appendInstallResult(pkgInstall, addOK, installResult = "OK")
         pkgInstallList[[.txtInstall]] <- pkgInstall
@@ -822,7 +819,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
 #
 #         origIgnoreRepoCache <- install.packagesArgs[["ignore_repo_cache"]]
 #         install.packagesArgs["ignore_repo_cache"] <- TRUE
-#         installedPkgs <- file.path(.libPaths()[1], unname(installPkgNames)[onRSPM])
+#         installedPkgs <- file.path(libPaths[1], unname(installPkgNames)[onRSPM])
 #         dirsAlreadyExist <- dir.exists(installedPkgs)
 #         if (any(dirsAlreadyExist)) {
 #           try(unlink(installedPkgs[dirsAlreadyExist], recursive = TRUE))
@@ -1124,7 +1121,7 @@ removeDups <- function(pkgDT) {
 
 dealWithStandAlone <- function(pkgDT, libPaths, standAlone) {
   if (isTRUE(standAlone)) {
-    # Remove any packages that are not in .libPaths()[1], i.e., the main R library
+    # Remove any packages that are not in libPaths[1], i.e., the main R library
     notInLibPaths1 <- (!pkgDT[["Package"]] %in% .basePkgs) &
       (!normPath(pkgDT$LibPath) %in% normPath(libPaths)) & !is.na(pkgDT$LibPath)
     if (any(notInLibPaths1)) {
@@ -3224,7 +3221,7 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
   packages
 }
 
-clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
+clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbose")) {
   oo <- capture.output(type = "message", ip <- installed.packages(lib.loc = rcf))
   ignorePackages <- character()
   ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
@@ -3251,7 +3248,7 @@ clonePackages <- function(rcf, ipa, verbose = getOption("Require.verbose")) {
                          ") instead of Installing (don't need compiling): ",
                          paste(canClone, collapse = comma)), verbose = verbose)
 
-    linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = .libPaths()[1], ip = ip)
+    linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = libPaths[1], ip = ip)
     ipa$pkgs <- names(cantClone)
     messageVerbose(green("... Done!"), verbose = verbose)
     ipa$available <- ipa$available[ipa$pkgs, , drop = FALSE]

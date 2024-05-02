@@ -438,7 +438,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
 
 
 #' @inheritParams Require
-pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, verbose = getOption("Require.verbose")) {
+pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = getOption("Require.verbose")) {
 
   messageVerbose("  ", NROW(pkgDT), " packages on GitHub", verbose = verbose)
 
@@ -522,12 +522,12 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
   pkgDT <- parsePackageFullname(pkgDT, sorted = FALSE) # this sorted previously; now no
   # pkgDT <- whichToInstall(pkgDT, install = TRUE)
 
-  if (isTRUE(any(!pkgDT$installedVersionOK) && any(duplicated(pkgDT[["Package"]])))) {
-    # This is helpful if there are many branches of the same package, this can shorten the time,
-    #   but also, if a package branch is defunct, another branch's min version requirements
-    #   may make that defunct branch obsolete, so don't check it
-    pkgDT <- trimRedundancies(pkgDT) #
-  }
+  # if (isTRUE(any(!pkgDT$installedVersionOK) && any(duplicated(pkgDT[["Package"]])))) {
+  #   # This is helpful if there are many branches of the same package, this can shorten the time,
+  #   #   but also, if a package branch is defunct, another branch's min version requirements
+  #   #   may make that defunct branch obsolete, so don't check it
+  #   pkgDT <- trimRedundancies(pkgDT) #
+  # }
   installedOK <- pkgDT$installedVersionOK
   installedNotOK <- !installedOK
   shas <- character(NROW(pkgDT))
@@ -590,7 +590,7 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
 
   # next changes order
   out <- pkgDepGitHub(pkgDT = pkgDT, which = which,
-                      includeBase = FALSE, verbose = verbose)
+                      includeBase = FALSE, libPaths = libPaths, verbose = verbose)
   rec <- FALSE # this function is only one time through
   set(pkgDT, NULL, deps(FALSE), unname(out))
 

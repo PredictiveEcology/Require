@@ -1482,14 +1482,3 @@ purgeAvailablePackages <- function(repos, purge = FALSE) {
   purge
 }
 
-dealWithMissingLibPaths <- function(libPaths, ...) {
-  missingLP <- missing(libPaths)
-  if (missingLP) {
-    if (!is.null(list(...)[["libPath"]])) {
-      libPaths <- list(...)[["libPath"]]
-    } else {
-      libPaths <- .libPaths()
-    }
-  }
-  libPaths
-}
