@@ -185,7 +185,7 @@ utils::globalVariables(c(
 #'
 #'   # Mutual dependencies, only installs once -- e.g., cli
 #'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-#'   Install(c("cli", "pkgbuild"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install(c("cli", "R6"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   # Mutual dependencies, only installs once -- e.g., rlang
 #'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
