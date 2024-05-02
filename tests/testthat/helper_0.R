@@ -32,3 +32,4 @@ dontTryDetach <- c("devtools", "testthat", "googledrive")
 dontDetach <- function() {
   extractPkgName(unlist(unname(pkgDep(dontTryDetach, recursive = T))))
 }
+

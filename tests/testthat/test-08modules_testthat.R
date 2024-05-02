@@ -28,9 +28,8 @@ test_that("test 8", {
         capture_warnings() -> warns
 
     } else {
-      # warnsReq <- capture_warnings(Require::Install("Require"))
+      warnsReq <- capture_warnings(Require::Install("Require"))
       (a <- Install(c(
-        "PredictiveEcology/Require@simplify4",
         "PredictiveEcology/SpaDES.project@transition"),
         upgrade = FALSE, returnDetails = TRUE
       )) |>
@@ -109,8 +108,8 @@ test_that("test 8", {
     #########################################
     # FROM LandR_CBM
     pkgDir <- tempdir2("test-8_2nd")
-    dir.create(pkgDir, recursive = TRUE, showWarnings = FALSE)
-    .libPaths(pkgDir, include.site = FALSE)
+    # dir.create(pkgDir, recursive = TRUE, showWarnings = FALSE)
+    # .libPaths(pkgDir, include.site = FALSE)
 
     setLinuxBinaryRepo()
 

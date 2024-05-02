@@ -127,7 +127,7 @@ ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE
 
 2. If no version number specification, then installs only occur if package is not present.
 
-3. Multiple simultaneous requests to install a package will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence.
+3. Multiple simultaneous requests to install a package from what appear to be incompatible sources, will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence.
 
 ```{r,eval=TRUE}
 # The following has no version specifications, 
