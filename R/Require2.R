@@ -198,7 +198,7 @@ utils::globalVariables(c(
 #'   if (requireNamespace("gitcreds", quietly = TRUE)) {
 #'     if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
 #'       ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-#'        if (requireNamespace("curl")) {
+#'       if (requireNamespace("curl")) {
 #'         Require("PredictiveEcology/fpCompare@development",
 #'           libPaths = ProjectPackageFolder,
 #'         )
@@ -217,9 +217,9 @@ utils::globalVariables(c(
 #'         "digest (>= 0.6.28)", # recent version
 #'         "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
 #'       )
+#'       Require::Require(pkgs, libPaths = ProjectPackageFolder)
 #'     }
 #'   }
-#'   Require::Require(pkgs, libPaths = ProjectPackageFolder)
 #'   Require:::.cleanup(opts)
 #' }
 #' }
