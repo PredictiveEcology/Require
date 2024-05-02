@@ -142,8 +142,9 @@ pkgSnapshot2 <-
   }
 
 
-# Only checks for deprecated libPath argument (singular)
+#' Only checks for deprecated libPath argument (singular)
 #' @inheritParams Require
+#' @param ... Checks for the incorrect argument `libPath` (no s)
 dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.standAlone", FALSE),
                                     ...) {
   missingLP <- missing(libPaths)
@@ -158,7 +159,8 @@ dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.st
 
 #' Creates the directories, and adds version number
 #' @inheritParams Require
-checkLibPaths <- function(libPaths, ifMissing, exact = FALSE, ...) {
+#' @param ifMissing An alternative path if `libPaths` argument is missing.
+checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
   missLP <- missing(libPaths)
   if (missLP) {
     if (missing(ifMissing)) {

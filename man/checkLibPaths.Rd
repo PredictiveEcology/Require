@@ -4,7 +4,18 @@
 \alias{checkLibPaths}
 \title{Creates the directories, and adds version number}
 \usage{
-checkLibPaths(libPaths, ifMissing, exact = FALSE, ...)
+checkLibPaths(libPaths, ifMissing, exact = FALSE)
+}
+\arguments{
+\item{libPaths}{The library path (or libraries) where all packages should be
+installed, and looked for to load (i.e., call \code{library}). This can be used
+to create isolated, stand alone package installations, if used with
+\code{standAlone = TRUE}. Currently, the path supplied here will be prepended to
+\code{.libPaths()} (temporarily during this call) to \code{Require} if
+\code{standAlone = FALSE} or will set (temporarily) \code{.libPaths()} to
+\verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
+
+\item{ifMissing}{An alternative path if \code{libPaths} argument is missing.}
 }
 \description{
 Creates the directories, and adds version number
