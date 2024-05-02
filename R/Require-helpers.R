@@ -1432,7 +1432,6 @@ masterMainHEAD <- function(url, need) {
     return(ret)
   },
   warning = function(w) {
-    browser()
     setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
     if (is.null(token))
@@ -1440,7 +1439,6 @@ masterMainHEAD <- function(url, need) {
     invokeRestart("muffleWarning")
   },
   error = function(e) {
-    browser()
     # strip the ghp from the message
     if (is.null(token))
       e$message <- stripGHP(ghp, e$message)
