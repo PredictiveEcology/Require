@@ -240,7 +240,7 @@ if (Require:::.runLongExamples()) {
   #####################################################################################
   # GitHub packages
   if (requireNamespace("gitcreds", quietly = TRUE)) {
-    if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+    #if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
       ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
       if (requireNamespace("curl")) {
         Require("PredictiveEcology/fpCompare@development",
@@ -262,7 +262,7 @@ if (Require:::.runLongExamples()) {
         "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
       )
       Require::Require(pkgs, libPaths = ProjectPackageFolder)
-    }
+    #}
   }
   Require:::.cleanup(opts)
 }

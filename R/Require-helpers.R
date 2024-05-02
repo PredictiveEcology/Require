@@ -1321,6 +1321,8 @@ masterMainHEAD <- function(url, need) {
 #' @export
 .downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                         verbose = getOption("Require.verbose"), verboseLevel = 2) {
+  if (!dir.exists(dirname(destfile)))
+    silent <- checkPath(dirname(destfile), create = TRUE)
   hasMasterMain <- grepl(masterMainGrep, url)
   if (!all(hasMasterMain)) {
     if (length(url) > 1) stop("This function is not vectorized")
@@ -1335,21 +1337,22 @@ masterMainHEAD <- function(url, need) {
     requireNamespace("httr", quietly = TRUE)
   if (usesGitCreds) {
     token <- tryCatch(
-      gitcreds::gitcreds_get(),#use_cache = FALSE),
+      gitcreds::gitcreds_get(use_cache = FALSE),
       error = function(e) NULL
     )
-    if (!is.null(token))
+    if (!is.null(token)) {
       token <- paste0("token ", token$password)
+    }
   }
   if (is.null(token)) {
-    messageVerbose("For better security, user should use the newer way to store git credentials.",
-                   "\nUsing a GITHUB_PAT environment variable will continue to work, but see: ",
-                   "https://usethis.r-lib.org/articles/git-credentials.html", verbose = verbose + GitHubMessage)
-    if (GitHubMessage >= 0)
-      assignInMyNamespace("GitHubMessage", -10)
     ghp <- Sys.getenv("GITHUB_PAT")
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
     if (nzchar(ghp)) {
+      messageVerbose("For better security, user should use the newer way to store git credentials.",
+                     "\nUsing a GITHUB_PAT environment variable will continue to work, but see: ",
+                     "https://usethis.r-lib.org/articles/git-credentials.html", verbose = verbose + GitHubMessage)
+      if (GitHubMessage >= 0)
+        assignInMyNamespace("GitHubMessage", -10)
       url <- sprintf(paste0("https://%s:@", gsub("https*://", "", url)), ghp)
     }
   }
@@ -1376,7 +1379,10 @@ masterMainHEAD <- function(url, need) {
                                messageVerbose(e$message, verbose = verbose)
                            })
                 } else {
-                  a <- httr::GET(url, httr::add_headers(Authorization = token))
+                  a <- GETWauthThenNonAuth(url, token, verbose = verbose)
+                  # a <- httr::GET(url, httr::add_headers(Authorization = token))
+                  # if (grepl("Bad credentials", a) || grepl("404", a$status_code))
+                  #   a <- httr::GET(url, httr::add_headers())
                   data <- httr::content(a, "raw")
                   writeBin(data, df)
                 }
@@ -1395,9 +1401,10 @@ masterMainHEAD <- function(url, need) {
               outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
             } else {
               outMasterMain <- try(silent = TRUE, {
-                a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
-                if (grepl("404", httr::http_status(a)$message))
-                  stop()
+                a <- GETWauthThenNonAuth(urls[["TRUE"]][wh], token, verbose = verbose)
+                # a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
+                # if (grepl("404", httr::http_status(a)$message))
+                #   stop()
                 data <- httr::content(a, "raw")
                 writeBin(data, destfile)
               })
@@ -1425,6 +1432,7 @@ masterMainHEAD <- function(url, need) {
     return(ret)
   },
   warning = function(w) {
+    browser()
     setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
     if (is.null(token))
@@ -1432,6 +1440,7 @@ masterMainHEAD <- function(url, need) {
     invokeRestart("muffleWarning")
   },
   error = function(e) {
+    browser()
     # strip the ghp from the message
     if (is.null(token))
       e$message <- stripGHP(ghp, e$message)
@@ -1642,4 +1651,15 @@ rmEmptyFiles <- function(files) {
     }
   }
   alreadyExists
+}
+
+
+GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
+  a <- httr::GET(url, httr::add_headers(Authorization = token))
+  if (grepl("Bad credentials", a) || grepl("404", httr::http_status(a)$message)) {
+    if (grepl("Bad credentials", a)) messageVerbose(red("Git credentials do not work for this url: ", url,
+                                             "\nAre they expired?"), verbose = verbose)
+    a <- httr::GET(url, httr::add_headers())
+  }
+  a
 }
