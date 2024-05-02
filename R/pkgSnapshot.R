@@ -163,7 +163,8 @@ dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.st
 #' @param exact Logical. If `FALSE`, the default, then `checkLibPaths` will
 #'   append the R version number on the `libPaths` supplied. If `TRUE`, `checkLibPaths`
 #'   will return exactly the `libPaths` supplied.
-checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
+#' @param ... Not used, but allows other functions to pass through arguments.
+checkLibPaths <- function(libPaths, ifMissing, exact = FALSE, ...) {
   missLP <- missing(libPaths)
   if (missLP) {
     if (missing(ifMissing)) {
@@ -181,6 +182,7 @@ checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
 
 #' Deals with missing libPaths arg, and takes first
 #' @inheritParams Require
+#' @importFrom utils head tail
 doLibPaths <- function(libPaths, standAlone = FALSE) {
   if (missing(libPaths)) {
     libPaths <- .libPaths()

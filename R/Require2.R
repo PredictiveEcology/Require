@@ -347,7 +347,7 @@ Require <- function(packages,
 
     if (length(which)) {
       deps <- pkgDep(packages, simplify = FALSE,
-                     purge = purge, libPath = libPaths, recursive = TRUE,
+                     purge = purge, libPaths = libPaths, recursive = TRUE,
                      which = which, type = type, verbose = verbose, repos = repos,
                      Additional_repositories = TRUE
       )

@@ -4,7 +4,7 @@
 \alias{checkLibPaths}
 \title{Creates the directories, and adds version number}
 \usage{
-checkLibPaths(libPaths, ifMissing, exact = FALSE)
+checkLibPaths(libPaths, ifMissing, exact = FALSE, ...)
 }
 \arguments{
 \item{libPaths}{The library path (or libraries) where all packages should be
@@ -20,6 +20,8 @@ to create isolated, stand alone package installations, if used with
 \item{exact}{Logical. If \code{FALSE}, the default, then \code{checkLibPaths} will
 append the R version number on the \code{libPaths} supplied. If \code{TRUE}, \code{checkLibPaths}
 will return exactly the \code{libPaths} supplied.}
+
+\item{...}{Not used, but allows other functions to pass through arguments.}
 }
 \description{
 Creates the directories, and adds version number
