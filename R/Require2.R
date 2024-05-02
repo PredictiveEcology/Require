@@ -195,17 +195,21 @@ utils::globalVariables(c(
 #'   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
 #'   #####################################################################################
 #'   # GitHub packages
-#'   ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-#'   if (requireNamespace("curl")) {
-#'     Require(c("curl", "PredictiveEcology/fpCompare@development"),
-#'       libPaths = ProjectPackageFolder,
-#'     )
-#'   }
+#'   if (requireNamespace("gitcreds", quietly = TRUE)) {
+#'     if (a <- try(gitcreds::gitcreds_get(), silent = TRUE)) {
+#'       ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+#'        if (requireNamespace("curl")) {
+#'         Require(c("curl", "PredictiveEcology/fpCompare@development"),
+#'           libPaths = ProjectPackageFolder,
+#'         )
+#'       }
 #'
-#'   # No install because it is there already
-#'   Install("PredictiveEcology/fpCompare@development",
-#'     libPaths = ProjectPackageFolder,
-#'   ) # the latest version on GitHub
+#'       # No install because it is there already
+#'       Install("PredictiveEcology/fpCompare@development",
+#'         libPaths = ProjectPackageFolder,
+#'       ) # the latest version on GitHub
+#'     }
+#'   }
 #'
 #'   ############################################################################
 #'   # Mixing and matching GitHub, CRAN, with and without version numbering
