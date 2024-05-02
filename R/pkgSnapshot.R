@@ -160,6 +160,9 @@ dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.st
 #' Creates the directories, and adds version number
 #' @inheritParams Require
 #' @param ifMissing An alternative path if `libPaths` argument is missing.
+#' @param exact Logical. If `FALSE`, the default, then `checkLibPaths` will
+#'   append the R version number on the `libPaths` supplied. If `TRUE`, `checkLibPaths`
+#'   will return exactly the `libPaths` supplied.
 checkLibPaths <- function(libPaths, ifMissing, exact = FALSE) {
   missLP <- missing(libPaths)
   if (missLP) {

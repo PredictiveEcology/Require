@@ -16,6 +16,10 @@ to create isolated, stand alone package installations, if used with
 \verb{c(libPaths, tail(libPaths(), 1)} to keep base packages.}
 
 \item{ifMissing}{An alternative path if \code{libPaths} argument is missing.}
+
+\item{exact}{Logical. If \code{FALSE}, the default, then \code{checkLibPaths} will
+append the R version number on the \code{libPaths} supplied. If \code{TRUE}, \code{checkLibPaths}
+will return exactly the \code{libPaths} supplied.}
 }
 \description{
 Creates the directories, and adds version number
