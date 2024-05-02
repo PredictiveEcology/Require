@@ -41,8 +41,8 @@
 #' \dontrun{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
-#'   # install one archived version so that below does something interesting
 #'
+#'   # install one archived version so that below does something interesting
 #'   libForThisEx <- tempdir2("Example")
 #'   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
 #'   # Normal use -- using the libForThisEx for example;
@@ -55,7 +55,7 @@
 #'   # of packages with version
 #'   pkgs <- pkgSnapshot(
 #'     packageVersionFile = tf,
-#'     libPaths = libForThisEx
+#'     libPaths = libForThisEx, standAlone = TRUE # only this library
 #'   )
 #'
 #'   # Now move this file to another computer e.g. by committing in git,
@@ -64,15 +64,10 @@
 #'   Require(packageVersionFile = tf, libPaths = libForThisEx)
 #'
 #'   # Using pkgSnapshot2 to get the vector of packages and versions
-#'
-#'   tf <- tempfile()
 #'   pkgs <- pkgSnapshot2(
-#'     packageVersionFile = tf,
-#'     libPaths = libForThisEx
+#'     libPaths = libForThisEx, standAlone = TRUE
 #'   )
-#'   Require(pkgs, require = FALSE) # will install packages from previous line
-#'   # (likely want require = FALSE
-#'   #  and not load them all)
+#'   Install(pkgs) # will install packages from previous line
 #'
 #'   Require:::.cleanup(opts)
 #'   unlink(getOption("Require.packageVersionFile"))

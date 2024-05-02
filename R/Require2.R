@@ -183,22 +183,13 @@ utils::globalVariables(c(
 #'   #   in another local library (e.g., personal library)
 #'   Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#'   # make a package version snapshot of installed packages
-#'   tf <- tempfile()
-#'   (pkgSnapshot(tf, libPaths = tempPkgFolder, standAlone = TRUE))
-#'
-#'   # Change the libPaths to emulate a new computer or project
-#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages2")
-#'   # Reinstall and reload the exact version from previous
-#'   Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
-#'
-#'   # Mutual dependencies, only installs once -- e.g., curl
+#'   # Mutual dependencies, only installs once -- e.g., cli
 #'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-#'   Install(c("rlang", "testthat"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install(c("cli", "pkgbuild"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#'   # Mutual dependencies, only installs once -- e.g., curl
+#'   # Mutual dependencies, only installs once -- e.g., rlang
 #'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-#'   Install(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
+#'   Install(c("rlang", "ellipsis"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
 #'   #####################################################################################
 #'   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
@@ -207,14 +198,13 @@ utils::globalVariables(c(
 #'   ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
 #'   if (requireNamespace("curl")) {
 #'     Require(c("curl", "PredictiveEcology/fpCompare@development"),
-#'       libPaths = ProjectPackageFolder, standAlone = FALSE
+#'       libPaths = ProjectPackageFolder,
 #'     )
 #'   }
 #'
 #'   # No install because it is there already
 #'   Install("PredictiveEcology/fpCompare@development",
 #'     libPaths = ProjectPackageFolder,
-#'     standAlone = TRUE
 #'   ) # the latest version on GitHub
 #'
 #'   ############################################################################
