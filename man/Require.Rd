@@ -239,26 +239,30 @@ if (Require:::.runLongExamples()) {
   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
   #####################################################################################
   # GitHub packages
-  ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-  if (requireNamespace("curl")) {
-    Require(c("curl", "PredictiveEcology/fpCompare@development"),
-      libPaths = ProjectPackageFolder,
-    )
+  if (requireNamespace("gitcreds", quietly = TRUE)) {
+    if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+      ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+       if (requireNamespace("curl")) {
+        Require(c("curl", "PredictiveEcology/fpCompare@development"),
+          libPaths = ProjectPackageFolder,
+        )
+      }
+
+      # No install because it is there already
+      Install("PredictiveEcology/fpCompare@development",
+        libPaths = ProjectPackageFolder,
+      ) # the latest version on GitHub
+
+      ############################################################################
+      # Mixing and matching GitHub, CRAN, with and without version numbering
+      ############################################################################
+      pkgs <- c(
+        "remotes (<=2.4.1)", # old version
+        "digest (>= 0.6.28)", # recent version
+        "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+      )
+    }
   }
-
-  # No install because it is there already
-  Install("PredictiveEcology/fpCompare@development",
-    libPaths = ProjectPackageFolder,
-  ) # the latest version on GitHub
-
-  ############################################################################
-  # Mixing and matching GitHub, CRAN, with and without version numbering
-  ############################################################################
-  pkgs <- c(
-    "remotes (<=2.4.1)", # old version
-    "digest (>= 0.6.28)", # recent version
-    "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
-  )
   Require::Require(pkgs, libPaths = ProjectPackageFolder)
   Require:::.cleanup(opts)
 }
