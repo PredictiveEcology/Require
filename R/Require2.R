@@ -199,7 +199,7 @@ utils::globalVariables(c(
 #'     if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
 #'       ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
 #'        if (requireNamespace("curl")) {
-#'         Require(c("curl", "PredictiveEcology/fpCompare@development"),
+#'         Require("PredictiveEcology/fpCompare@development",
 #'           libPaths = ProjectPackageFolder,
 #'         )
 #'       }
