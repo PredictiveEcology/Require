@@ -702,9 +702,9 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
   names(out1) <- out$packageFullName
   return(out1)
   # neededV <-
-  #   try(DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = which, purge = purge))
+  #   try(DESCRIPTIONFileDepsV(pkgDT[["DESCFile"]], which = which, purge = purge))
   # if (is(neededV, "try-error")) {
-  #   unlink(pkgDT$DESCFile)
+  #   unlink(pkgDT[["DESCFile"]])
   #   unlink(pkgDT$destFile)
   #   set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
   #   browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
@@ -715,10 +715,10 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
   #                           "please contact developers with error code 949"))
   # }
   #
-  # neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT$DESCFile, other = "Additional_repositories")
+  # neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT[["DESCFile"]], other = "Additional_repositories")
   #
   # neededRemotesV <-
-  #   DESCRIPTIONFileDepsV(pkgDT$DESCFile, which = "Remotes", purge = purge)
+  #   DESCRIPTIONFileDepsV(pkgDT[["DESCFile"]], which = "Remotes", purge = purge)
   # names(neededV) <- pkgDT$packageFullName
   #
   # Map(
@@ -758,7 +758,7 @@ uwrnar <- function(needed, notNeeded, neededRemotes, installedVersionOK, Package
         #  Need to try to figure out which it is for the dontMatch
         Packages <- Map(packageFullName = trimVersionNumber(dontMatch), function(packageFullName) {
           descFiles <- dlGitHubDESCRIPTION(packageFullName)
-          DESCRIPTIONFileOtherV(descFiles$DESCFile, "Package")
+          DESCRIPTIONFileOtherV(descFiles[["DESCFile"]], "Package")
         })
         whPackages <- match(extractPkgName(needed), unname(unlist(Packages))) |> na.omit()
         Packages <- Packages[whPackages]

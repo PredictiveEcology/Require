@@ -2092,7 +2092,7 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
     notYet <- is.na(pkgGitHub[["VersionOnRepos"]])
     if (any(notYet)) {
       pkgGitHub <- dlGitHubFile(pkgGitHub)
-      dFile <- pkgGitHub$DESCFile
+      dFile <- pkgGitHub[["DESCFile"]]
       hasDFile <- which(!is.na(dFile))
       set(pkgGitHub, hasDFile, "VersionOnRepos",  DESCRIPTIONFileVersionV(dFile))
       mayNeedPackageNameChange <- DESCRIPTIONFileOtherV(dFile, other = "Package")
