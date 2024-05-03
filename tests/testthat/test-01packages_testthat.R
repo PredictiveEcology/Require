@@ -82,7 +82,10 @@ test_that("test 1", {
                     standAlone = TRUE,
                     libPaths = dir2, dependencies = FALSE, returnDetails = TRUE, require = FALSE
     )
-    pv <- packageVersion("fpCompare", lib.loc = dir2)
+    fpC <- "fpCompare"
+    pv <- packVer(fpC, dir2)
+    # pv <- DESCRIPTIONFileVersionV(file.path(dir2, "fpCompare/DESCRIPTION"))
+    # pv <- packageVersion(vers, lib.loc = dir2)
     testthat::expect_true({
       pv <= pvWant
     })
@@ -97,12 +100,12 @@ test_that("test 1", {
       packageVersionFile = pkgSnapFile, libPaths = dir6,
       quiet = TRUE, install = "force"
     )
-    testthat::expect_true({
-      identical(
-        packageVersion("fpCompare", lib.loc = dir2),
-        packageVersion("fpCompare", lib.loc = dir6)
-      )
-    })
+    vers2 <- packVer(fpC, dir2)
+    vers6 <- packVer(fpC, dir6)
+    #
+    # vers2 <- DESCRIPTIONFileVersionV(file.path(dir2, "fpCompare/DESCRIPTION"))
+    # vers6 <- DESCRIPTIONFileVersionV(file.path(dir6, "fpCompare/DESCRIPTION"))
+    testthat::expect_equal(vers2, vers6)
 
 
     remove.packages("fpCompare", lib = dir2) |> suppressMessages()
@@ -236,12 +239,16 @@ test_that("test 1", {
       # unloadNamespace("package:fpCompare")
       # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
     }, add = TRUE)
-    testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") #
+    vers <- packVer("reproducible", .libPaths()[1])
+    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
+    testthat::expect_equal(vers, "2.0.2.9001") #
     # detach("package:reproducible", unload = TRUE);
     unloadNamespace("package:fpCompare")
     # now installs correct SHA which is 2.0.2.9001
     Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
-    testthat::expect_true(packageVersion("reproducible") == "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
+    vers <- packVer("reproducible", .libPaths()[1])
+    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
+    testthat::expect_equal(vers, "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
     # End issue 87
     out <- try(
       detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
@@ -327,12 +334,16 @@ test_that("test 1", {
     warns <- capture_warnings(
       out <- Require::Install(pkgsHere, returnDetails = TRUE)
     )
-    testthat::expect_true(packageVersion("quickPlot") != verToCompare)
+    vers <- packVer("quickPlot", .libPaths()[1])
+    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "quickPlot/DESCRIPTION"))
+    testthat::expect_true(vers != verToCompare)
 
     warns <- capture_warnings(
       out <- Require::Install(pkgsHere, returnDetails = TRUE)
     )
-    testthat::expect_true(packageVersion("quickPlot") < verToCompare)
+    vers <- packVer("quickPlot", .libPaths()[1])
+    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "quickPlot/DESCRIPTION"))
+    testthat::expect_true(vers < verToCompare)
 
   }
 })
