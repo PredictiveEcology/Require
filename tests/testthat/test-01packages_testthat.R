@@ -231,14 +231,14 @@ test_that("test 1", {
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 
-    on.exit({
-      try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
-                           dontTry = dontDetach())
-          , silent = TRUE) |>
-        suppressWarnings() |> suppressMessages()
-      # unloadNamespace("package:fpCompare")
-      # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
-    }, add = TRUE)
+    # on.exit({
+    #   try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
+    #                        dontTry = dontDetach())
+    #       , silent = TRUE) |>
+    #     suppressWarnings() |> suppressMessages()
+    #   # unloadNamespace("package:fpCompare")
+    #   # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
+    # }, add = TRUE)
     vers <- packVer("reproducible", .libPaths()[1])
     # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
     testthat::expect_equal(vers, "2.0.2.9001") #
@@ -250,9 +250,11 @@ test_that("test 1", {
     # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
     testthat::expect_equal(vers, "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
     # End issue 87
+
+    suggests <- getOption("Require.packagesLeaveAttached")
     out <- try(
       detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                dontTry = dontDetach()),
+                dontTry = unique(c(suggests, dontDetach()))),
       silent = TRUE) |>
       suppressWarnings()
 
@@ -312,14 +314,14 @@ test_that("test 1", {
 
 
     # Test substitute(packages)
-    suppressWarnings(try(remove.packages(c("quickPlot", "NetLogoR", "fpCompare", "reproducible")),
+    suppressWarnings(try(remove.packages(c("magrittr", "crayon", "fpCompare", "lobstr")),
                          silent = TRUE)) |> suppressMessages()
-    verToCompare <- "1.0.3"
-    clearRequirePackageCache(c("quickPlot", "NetLogoR"), ask = FALSE)
+    verToCompare <- "2.0.2"
+    clearRequirePackageCache(c("magrittr", "crayon"), ask = FALSE)
 
     # The warning is about "package ‘Require’ is in use and will not be installed"
 
-    pkgsHere <- c("quickPlot", "NetLogoR", "reproducible")
+    pkgsHere <- c("magrittr", "crayon", "lobstr")
     pkgdeps <- pkgDep(pkgsHere)
     out2 <- Require::Install(pkgsHere) |>
       capture_warnings() -> warns
@@ -334,16 +336,16 @@ test_that("test 1", {
     warns <- capture_warnings(
       out <- Require::Install(pkgsHere, returnDetails = TRUE)
     )
-    vers <- packVer("quickPlot", .libPaths()[1])
-    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "quickPlot/DESCRIPTION"))
+    vers <- packVer("magrittr", .libPaths()[1])
+    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
     testthat::expect_true(vers != verToCompare)
 
     warns <- capture_warnings(
       out <- Require::Install(pkgsHere, returnDetails = TRUE)
     )
-    vers <- packVer("quickPlot", .libPaths()[1])
-    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "quickPlot/DESCRIPTION"))
-    testthat::expect_true(vers < verToCompare)
+    vers <- packVer("magrittr", .libPaths()[1])
+    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
+    testthat::expect_true(vers > verToCompare)
 
   }
 })

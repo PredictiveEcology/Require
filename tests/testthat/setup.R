@@ -139,6 +139,3 @@ rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = 
 }
 
 
-packVer <- function(package, lib.loc = dir2) {
-  DESCRIPTIONFileVersionV(file.path(lib.loc, package, "DESCRIPTION"))
-}

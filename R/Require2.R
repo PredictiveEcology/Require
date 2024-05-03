@@ -3731,20 +3731,22 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     whPid <- match(pid, pids)
     if (downPack || installPackages) {
-      mess <- paste(argsOrig$pkgs[vecList[[whPid]]], collapse = comma)
+      pkgs <- argsOrig$pkgs[vecList[[whPid]]]
+      mess <- paste(pkgs, collapse = comma)
     } else if (downFile) {
       mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
     } else {
       w <- vecList[[whPid]]
       mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch[w], collapse = comma)
     }
+
     fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
-    if ( (Sys.time() - st) > 2 ) {
+    if ( (Sys.time() - st) > 2 && nzchar(fullMess)) {
       messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
       fullMess <- character()
     }
   }
-  if (length(fullMess))
+  if (length(fullMess) && nzchar(fullMess))
     messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
 
   ll <- try(lapply(outfiles, readRDS), silent = TRUE)
@@ -4011,4 +4013,8 @@ avokto <- function(versionSpec, VersionOnRepos, inequality) {
   }
 
   list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
+}
+
+packVer <- function(package, lib.loc = dir2) {
+  DESCRIPTIONFileVersionV(file.path(lib.loc, package, "DESCRIPTION"))
 }
