@@ -3732,6 +3732,18 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     whPid <- match(pid, pids)
     if (downPack || installPackages) {
       pkgs <- argsOrig$pkgs[vecList[[whPid]]]
+      if (installPackages) {
+        # check installations
+        aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
+        dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
+        whFailed <- dt$vers != dt$versionSpec
+        whFailed <- whFailed %in% TRUE
+        if (isTRUE(any(whFailed))) {
+          pkgsFailed <- dt$pkg[whFailed]
+          messageVerbose(red("Failed to install: ", paste(pkgsFailed, collapse = ", ")), verbose = verbose + 1)
+          pkgs <- setdiff(pkgs, pkgsFailed)
+        }
+      }
       mess <- paste(pkgs, collapse = comma)
     } else if (downFile) {
       mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
