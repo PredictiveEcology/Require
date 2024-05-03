@@ -129,6 +129,10 @@ test_that("test 6", {
   warns <- grep("cannot open URL .+PACKAGES.rds'", warns, invert = TRUE, value = TRUE) #
   test <- testWarnsInUsePleaseChange(warns)
   if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (isFALSE(test)) browser()
+  if (isFALSE(test)) {
+    print(warns)
+    print(test)
+  }
   expect_true(test)
 
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)

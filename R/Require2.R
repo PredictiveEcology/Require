@@ -4027,6 +4027,6 @@ avokto <- function(versionSpec, VersionOnRepos, inequality) {
   list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
 }
 
-packVer <- function(package, lib.loc = dir2) {
+packVer <- function(package, lib.loc = .libPaths()[1]) {
   DESCRIPTIONFileVersionV(file.path(lib.loc, package, "DESCRIPTION"))
 }
