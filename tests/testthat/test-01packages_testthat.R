@@ -212,140 +212,141 @@ test_that("test 1", {
   }
 
   # Code coverage
-  if (isDev) { # i.e., GA, R CMD check etc.
+  skip_on_cran()
+  # if (isDev) { # i.e., GA, R CMD check etc.
 
-    # Issue 87
-    try(remove.packages("reproducible"), silent = TRUE) |> suppressMessages()
-    Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
+  # Issue 87
+  try(remove.packages("reproducible"), silent = TRUE) |> suppressMessages()
+  Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
 
-    ap <- available.packagesCached(repos = getOption("repos"), purge = FALSE, type = "both")
-    curVer <- unique(ap[Package %in% "reproducible"]$Version)
+  ap <- available.packagesCached(repos = getOption("repos"), purge = FALSE, type = "both")
+  curVer <- unique(ap[Package %in% "reproducible"]$Version)
 
-    Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
-    Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
+  Require::Install(paste0("reproducible (==", curVer, ")")) # installs current CRAN version, which is older than SHA below
+  Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
 
-    warnsReq <- capture_warnings(Require::Install("Require"))
-    (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
-      capture_warnings() -> warns
+  warnsReq <- capture_warnings(Require::Install("Require"))
+  (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
+    capture_warnings() -> warns
 
-    test <- testWarnsInUsePleaseChange(warns)
-    expect_true(test)
+  test <- testWarnsInUsePleaseChange(warns)
+  expect_true(test)
 
-    # on.exit({
-    #   try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
-    #                        dontTry = dontDetach())
-    #       , silent = TRUE) |>
-    #     suppressWarnings() |> suppressMessages()
-    #   # unloadNamespace("package:fpCompare")
-    #   # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
-    # }, add = TRUE)
-    vers <- packVer("reproducible", .libPaths()[1])
-    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
-    testthat::expect_equal(vers, "2.0.2.9001") #
-    # detach("package:reproducible", unload = TRUE);
-    unloadNamespace("package:fpCompare")
-    # now installs correct SHA which is 2.0.2.9001
-    Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
-    vers <- packVer("reproducible", .libPaths()[1])
-    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
-    testthat::expect_equal(vers, "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
-    # End issue 87
+  # on.exit({
+  #   try(out <- detachAll(c("Require", "fpCompare", "sdfd", "reproducible", "digest"),
+  #                        dontTry = dontDetach())
+  #       , silent = TRUE) |>
+  #     suppressWarnings() |> suppressMessages()
+  #   # unloadNamespace("package:fpCompare")
+  #   # try(detach("package:reproducible", unload = TRUE), silent = TRUE)
+  # }, add = TRUE)
+  vers <- packVer("reproducible", .libPaths()[1])
+  # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
+  testthat::expect_equal(vers, "2.0.2.9001") #
+  # detach("package:reproducible", unload = TRUE);
+  unloadNamespace("package:fpCompare")
+  # now installs correct SHA which is 2.0.2.9001
+  Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
+  vers <- packVer("reproducible", .libPaths()[1])
+  # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
+  testthat::expect_equal(vers, "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
+  # End issue 87
 
-    suggests <- getOption("Require.packagesLeaveAttached")
-    out <- try(
-      detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                dontTry = unique(c(suggests, dontDetach()))),
-      silent = TRUE) |>
-      suppressWarnings()
+  suggests <- getOption("Require.packagesLeaveAttached")
+  out <- try(
+    detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+              dontTry = unique(c(suggests, dontDetach()))),
+    silent = TRUE) |>
+    suppressWarnings()
 
-    # detach("package:reproducible", unload = TRUE)
+  # detach("package:reproducible", unload = TRUE)
 
-    ####
-    pkg <- c("r-forge/mumin/pkg", "Require")
-    names(pkg) <- c("MuMIn", "")
-    out <- Require(pkg, install = FALSE, require = FALSE)
-    testthat::expect_true({
-      isFALSE(all(out))
-    })
+  ####
+  pkg <- c("r-forge/mumin/pkg", "Require")
+  names(pkg) <- c("MuMIn", "")
+  out <- Require(pkg, install = FALSE, require = FALSE)
+  testthat::expect_true({
+    isFALSE(all(out))
+  })
 
-    # Try a package taken off CRAN
-    reallyOldPkg <- "knn"
-    out <- Require(reallyOldPkg, require = FALSE)
-    ip <- data.table::as.data.table(installed.packages())
-    testthat::expect_true(NROW(ip[Package == reallyOldPkg]) == 1)
+  # Try a package taken off CRAN
+  reallyOldPkg <- "knn"
+  out <- Require(reallyOldPkg, require = FALSE)
+  ip <- data.table::as.data.table(installed.packages())
+  testthat::expect_true(NROW(ip[Package == reallyOldPkg]) == 1)
 
-    out <- dlGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
-    testthat::expect_true({
-      data.table::is.data.table(out)
-    })
-    testthat::expect_true({
-      !is.null(out[["DESCFile"]])
-    })
-    testthat::expect_true({
-      file.exists(out[["DESCFile"]])
-    })
+  out <- dlGitHubDESCRIPTION(data.table::data.table(packageFullName = "r-forge/mumin/pkg"))
+  testthat::expect_true({
+    data.table::is.data.table(out)
+  })
+  testthat::expect_true({
+    !is.null(out[["DESCFile"]])
+  })
+  testthat::expect_true({
+    file.exists(out[["DESCFile"]])
+  })
 
-    out <- dlGitHubDESCRIPTION(pkg = character())
-    testthat::expect_true({
-      length(out) == 0
-    })
+  out <- dlGitHubDESCRIPTION(pkg = character())
+  testthat::expect_true({
+    length(out) == 0
+  })
 
-    # Trigger the save available.packages and archiveAvailable
-    # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
-    #                                 install = "force"),
-    #                  error = function(x) x)
-    # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
-    #                                 install = "force"),
-    #                  error = function(x) x)
-    if (isDevAndInteractive) {
-      warn <- tryCatch(
-        {
-          out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
-        },
-        warning = function(x) x
-      )
-      warn <- tryCatch(
-        {
-          out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
-        },
-        warning = function(x) x
-      )
-    }
-
-
-    # Test substitute(packages)
-    suppressWarnings(try(remove.packages(c("magrittr", "crayon", "fpCompare", "lobstr")),
-                         silent = TRUE)) |> suppressMessages()
-    verToCompare <- "2.0.2"
-    clearRequirePackageCache(c("magrittr", "crayon"), ask = FALSE)
-
-    # The warning is about "package ‘Require’ is in use and will not be installed"
-
-    pkgsHere <- c("magrittr", "crayon", "lobstr")
-    pkgdeps <- pkgDep(pkgsHere)
-    out2 <- Require::Install(pkgsHere) |>
-      capture_warnings() -> warns
-    test <- testWarnsInUsePleaseChange(warns)
-    expect_true(test)
-
-    # testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
-    try(remove.packages(pkgsHere)) |> suppressMessages()
-    clearRequirePackageCache(pkgsHere, ask = F)
-    a <- list(pkg = "fpCompare")
-
-    warns <- capture_warnings(
-      out <- Require::Install(pkgsHere, returnDetails = TRUE)
+  # Trigger the save available.packages and archiveAvailable
+  # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+  #                                 install = "force"),
+  #                  error = function(x) x)
+  # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
+  #                                 install = "force"),
+  #                  error = function(x) x)
+  if (isDevAndInteractive) {
+    warn <- tryCatch(
+      {
+        out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
+      },
+      warning = function(x) x
     )
-    vers <- packVer("magrittr", .libPaths()[1])
-    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
-    testthat::expect_true(vers != verToCompare)
-
-    warns <- capture_warnings(
-      out <- Require::Install(pkgsHere, returnDetails = TRUE)
+    warn <- tryCatch(
+      {
+        out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")
+      },
+      warning = function(x) x
     )
-    vers <- packVer("magrittr", .libPaths()[1])
-    # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
-    testthat::expect_true(vers > verToCompare)
-
   }
+
+
+  # Test substitute(packages)
+  suppressWarnings(try(remove.packages(c("magrittr", "crayon", "fpCompare", "lobstr")),
+                       silent = TRUE)) |> suppressMessages()
+  verToCompare <- "2.0.2"
+  clearRequirePackageCache(c("magrittr", "crayon"), ask = FALSE)
+
+  # The warning is about "package ‘Require’ is in use and will not be installed"
+
+  pkgsHere <- c("magrittr", "crayon", "lobstr")
+  pkgdeps <- pkgDep(pkgsHere)
+  out2 <- Require::Install(pkgsHere) |>
+    capture_warnings() -> warns
+  test <- testWarnsInUsePleaseChange(warns)
+  expect_true(test)
+
+  # testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
+  try(remove.packages(pkgsHere)) |> suppressMessages()
+  clearRequirePackageCache(pkgsHere, ask = F)
+  a <- list(pkg = "fpCompare")
+
+  warns <- capture_warnings(
+    out <- Require::Install(pkgsHere, returnDetails = TRUE)
+  )
+  vers <- packVer("magrittr", .libPaths()[1])
+  # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
+  testthat::expect_true(vers != verToCompare)
+
+  warns <- capture_warnings(
+    out <- Require::Install(pkgsHere, returnDetails = TRUE)
+  )
+  vers <- packVer("magrittr", .libPaths()[1])
+  # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
+  testthat::expect_true(vers > verToCompare)
+
+  #   }
 })

@@ -16,7 +16,7 @@ URL:
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2024-05-03
-Version: 0.3.1.9078
+Version: 0.3.1.9079
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -54,10 +54,14 @@ Suggests:
     magrittr,
     pak,
     parallel,
+    quickPlot,
     R6,
     rematch2,
+    reproducible,
     rlang,
     rprojroot,
+    SpaDES,
+    SpaDES.core,
     stringr,
     testthat (>= 3.0.0),
     waldo,

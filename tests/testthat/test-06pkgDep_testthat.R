@@ -1,11 +1,13 @@
 test_that("test 6", {
 
+  skip_on_cran()
+
   setupInitial <- setupTest()
   tmpdir <- tempdir2(.rndstr())
   .libPaths(tmpdir)
 
   isDev <- getOption("Require.isDev")
-  isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
   a <- pkgDep("Require", recursive = TRUE)
   testthat::expect_true({
@@ -107,6 +109,7 @@ test_that("test 6", {
   ### pkgDepTopoSort
 
   # MUST HAVE the "knownRevDeps" installed first
+  skip_on_ci()
   knownRevDeps <- list(
     Require = c(
       # "reproducible",
@@ -147,11 +150,11 @@ test_that("test 6", {
     knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
   }))
 
-  if (isDev) {
-    testthat::expect_true({
-      length(test) == 0
-    })
-  }
+  # if (isDev) {
+  testthat::expect_true({
+    length(test) == 0
+  })
+  # }
 
   repr <- pkgDep2("reproducible", recursive = TRUE)
   reprWRSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
