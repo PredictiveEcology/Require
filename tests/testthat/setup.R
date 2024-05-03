@@ -18,10 +18,24 @@ if (!isDevAndInteractive) { # i.e., CRAN
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
-suggests <- setdiff(suggests, 'pak') # dpesn't like being local_package'd
+suggests <- setdiff(suggests, c('pak', "testthat")) # dpesn't like being local_package'd
+withr::local_options("Require.packagesLeaveAttached" = suggests, .local_envir = teardown_env())
+# for (pk in suggests) {
+#   try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)
+# }
+
+# can't use withr::local_package reliably because if a package gets unloaded in the tests,
+#   then there is a warning on teardown that can't be silenced
 for (pk in suggests) {
-  try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)
+  try(suppressWarnings(
+    requireNamespace(pk, # .local_envir = teardown_env(),
+                     quietly = TRUE)), silent = TRUE)
 }
+
+withr::defer({
+  aa <- rev(names(pkgDepTopoSort(suggests[suggests %in% loadedNamespaces()])))
+  bb <- lapply(aa, function(p) try(unloadNamespace(p), silent = TRUE))
+}, envir = teardown_env())
 
 withr::local_options(.local_envir = teardown_env(),
                      repos = getCRANrepos(ind = 1),
