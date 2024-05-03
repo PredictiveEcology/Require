@@ -17,6 +17,13 @@ test_that("test 3", {
   if (!isDev) {
     pkgDep("data.table", purge = TRUE)
   }
+
+  if (isTRUE(tryCatch(packageVersion("fpCompare"), error = function(e) "0.0.0") < "0.2.5")) {
+    Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
+                     install= "force")
+    expect_true(packageVersion("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
+  }
+
   # pkgDep2("Require")
 
 
