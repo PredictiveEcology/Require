@@ -1403,8 +1403,8 @@ masterMainHEAD <- function(url, need) {
               outMasterMain <- try(silent = TRUE, {
                 a <- GETWauthThenNonAuth(urls[["TRUE"]][wh], token, verbose = verbose)
                 # a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
-                # if (grepl("404", httr::http_status(a)$message))
-                #   stop()
+                if (grepl("404", httr::http_status(a)$message))
+                  stop()
                 data <- httr::content(a, "raw")
                 writeBin(data, destfile)
               })

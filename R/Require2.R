@@ -1778,18 +1778,19 @@ availableVersionOK <- function(pkgDT) {
 
     if (length(whToUpdate)) {
       out <- try(pkgDT[whToUpdate, (availableOKcols) := {
-        isHEAD <- versionSpec == "HEAD"
-        if (isTRUE(any(isHEAD %in% TRUE))) {
-          avok <- rep(TRUE, length(versionSpec))
-          avokto <- avok
-        }
-        if (isTRUE(any(isHEAD %in% FALSE))) {
-          out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
-          avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
-          avok <- any(unlist(out))
-        }
-
-        list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
+        avokto(versionSpec, VersionOnRepos, inequality)
+        # isHEAD <- versionSpec == "HEAD"
+        # if (isTRUE(any(isHEAD %in% TRUE))) {
+        #   avok <- rep(TRUE, length(versionSpec))
+        #   avokto <- avok
+        # }
+        # if (isTRUE(any(isHEAD %in% FALSE))) {
+        #   out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
+        #   avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(compareVersion2(vor, versionSpec, inequality) %in% TRUE))
+        #   avok <- any(unlist(out))
+        # }
+        #
+        # list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
       }, by = "Package"])
 
       if (is(out, "try-error")) {
@@ -2501,7 +2502,8 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
       setorderv(pkgInstall, setOrderOn$colm, #c("Package", "versionSpecGroup", "inequality", "repoLocation"),
                 order = setOrderOn$ordr, na.last = TRUE)
 
-      pkgAndInequality <- c("Package", "inequality")#, "versionSpecGroup")
+      pkgAndInequality <-
+        intersect(colnames(pkgInstall), c("Package", "inequality", "repoLocation"))#, "versionSpecGroup")
 
       pkgInstall[, keepBasedOnRedundantInequalities :=
                    unlist(lapply(.I, function(ind) {
@@ -3992,4 +3994,21 @@ alreadyExistingDESCFile <- function(libPaths, Repo, Account, Branch, installResu
     SHAonLocal <- ""
   }
   list(SHAonLocal, SHAonGH, installResult)
+}
+
+avokto <- function(versionSpec, VersionOnRepos, inequality) {
+  isHEAD <- versionSpec == "HEAD"
+  if (isTRUE(any(isHEAD %in% TRUE))) {
+    avok <- rep(TRUE, length(versionSpec))
+    avokto <- avok
+  }
+  if (isTRUE(any(isHEAD %in% FALSE))) {
+    out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
+    avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) {
+      all(compareVersion2(vor, versionSpec, inequality) %in% TRUE)
+      })
+    avok <- any(unlist(out))
+  }
+
+  list(availableVersionOK = avok, availableVersionOKthisOne = unlist(avokto))
 }
