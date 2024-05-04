@@ -18,7 +18,7 @@ if (!isDevAndInteractive) { # i.e., CRAN
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
-suggests <- setdiff(suggests, c('pak', "testthat")) # dpesn't like being local_package'd
+suggests <- setdiff(suggests, c('pak', "testthat", "SpaDES", "SpaDES.core", "quickPlot")) # dpesn't like being local_package'd
 withr::local_options("Require.packagesLeaveAttached" = suggests, .local_envir = teardown_env())
 # for (pk in suggests) {
 #   try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)

@@ -601,6 +601,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
         invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
       }
     )
+    # toInstall[repoLocation %in% "CRAN", MD5Sums :=
+    #             tools::checkMD5sums(Package, file.path(libPaths[1], Package)), by = "Package"]
+    # if (any(toInstall$MD5Sums %in% FALSE)) browser()
   }
   toInstall
 }
