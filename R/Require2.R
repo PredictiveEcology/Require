@@ -3735,7 +3735,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     whPid <- match(pid, pids)
     if (downPack || installPackages) {
       pkgs <- argsOrig$pkgs[vecList[[whPid]]]
-      if (installPackages) {
+      if (installPackages && getRversion() < "4.4") {
         # check installations
         aa <- Map(p = args$pkgs, function(p) as.character(packageVersion(p, args$lib)))
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
