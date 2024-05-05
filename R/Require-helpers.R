@@ -405,7 +405,6 @@ installedVers <- function(pkgDT, libPaths) {
     ip <- unique(ip, by = c("Package")) # , "LibPath" # basically, only take the first one if 2 installed in LibPath
     pkgDT <- try(ip[pkgDT, on = "Package"], silent = TRUE)
     if (is(pkgDT, "try-error")) {
-      browser()
       browserDeveloper("Error 123")
     }
 
@@ -1515,6 +1514,9 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     op <- options(Ncpus = 1)
     on.exit(options(op), add = TRUE)
   }
+
+  if (isTRUE(!is.character(ipa$type)))
+    ipa$type <- "both"
 
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
