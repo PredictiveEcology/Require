@@ -2653,7 +2653,7 @@ getArchiveDetails <- function(pkgArchive, ava, verbose, repos) {
 
   # need to update binary or src because the getArchiveDetailsInner doesn't address this --
   #   it just returns the PackageURL
-  bins <- isBinary(pkgArchive$PackageUrl)
+  bins <- isBinary(pkgArchive$PackageUrl, needRepoCheck = FALSE)
   bins <- isBinaryCRANRepo(pkgArchive$Repository) %in% TRUE | bins %in% TRUE
   needBinsUpdate <- !is.na(bins %in% TRUE)
   if (any(needBinsUpdate)) {
@@ -3735,7 +3735,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     whPid <- match(pid, pids)
     if (downPack || installPackages) {
       pkgs <- argsOrig$pkgs[vecList[[whPid]]]
-      if (installPackages && getRversion() < "4.4") {
+      if (installPackages) {
         # check installations
         aa <- Map(p = args$pkgs, function(p) as.character(packageVersion(p, args$lib)))
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
