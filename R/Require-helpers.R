@@ -1540,6 +1540,8 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       ipa$available <- ipa$available[ipa$available[, "Package"] %in% pkgName, , drop = FALSE]
     }
   } else {
+    if (isMacOSX() && "covr" %in% ipa$pkgs)
+      print(ipa)
     # if (ipa$quiet && ipa$type %in% "source" && isWindows())
     #   ipa$quiet <- FALSE
     if (isTRUE(ipa$quiet)) {

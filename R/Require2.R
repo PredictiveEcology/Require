@@ -1334,7 +1334,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
         args <- list(repos = repos, type = type)
         file <- paste0(ap[["Package"]], "_", ap$VersionOnRepos)
-        if (isWindows() && (identical(type, "both") | grepl("bin", type))) {
+        if (isWindows() && (identical(type, "both") || grepl("bin", type))) {
           # args$type <- "binary"
           packageUrl <- file
           fileext <- c(".tar.gz", ".zip")[(ap[["binOrSrc"]] %in% "bin") + 1]
