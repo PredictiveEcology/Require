@@ -1343,7 +1343,10 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
             packageUrl <- file
           else
             packageUrl <- file.path(ap[["Package"]], file)
-          fileext <- ".tar.gz"
+          if (isMacOSX())
+            fileext <- "tgz"
+          else
+            fileext <- ".tar.gz"
         }
         packageUrl <- paste0(packageUrl, fileext)
         args$url <- file.path(ap$Repository, packageUrl)
