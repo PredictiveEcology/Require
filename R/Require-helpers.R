@@ -1516,7 +1516,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
   }
 
   if (isTRUE(length(ipa$type) > 1))
-    ipa$type <- ipa$type[1]
+    ipa$type <- ipa$type[2]
 
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
