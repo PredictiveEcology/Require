@@ -675,6 +675,9 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        verbose = verbose, verboseLevel = 1)
       }
 
+      if (isMacOSX() && "covr" %in% pkgInstall$Package)
+        print(pkgInstall)
+
       if (!is.null(pkgInstall)) {
         pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
         pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
