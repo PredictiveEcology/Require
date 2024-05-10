@@ -3746,7 +3746,8 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         aa <- Map(p = args$pkgs, function(p) as.character(packageVersion(p, args$lib)))
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
-        whFailed <- dt$vers != dt$versionSpec
+        # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
+        whFailed <- !compareVersion2(dt$vers, dt$versionSpec, inequality = "==")
         whFailed <- whFailed %in% TRUE
         if (isTRUE(any(whFailed))) {
           pkgsFailed <- dt$pkg[whFailed]
