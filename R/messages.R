@@ -50,30 +50,33 @@ msgStdOut <- function(mess, logFile, verbose) {
   messOrig <- mess
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose <= 1) {
+    # if (grepl("\\<sf\\>|\\<terra\\>|\\<RcppParallel\\>|\\<units\\>", messOrig)) browser()
     errs <- "Error in dyn.load|Execution halted|Aborted"
     if (!any(grepl(errs, mess))) {
 
       omitPreSplitMess <- c("configure script", "configure", "config.status",
                             "compilation", "lpcre2",
                             "checking for pkg-config")
-      for (om in omitPreSplitMess) {
-        if (grepl(om, mess)) {
-          mess <- grep(om, mess, invert = TRUE, value = TRUE)
-          # spinner |\-/-
-          if (FALSE) {
-            pe <- pkgEnv()
-            if (is.null(pe[["spinner"]])) assign("spinner", "|", envir = pe)
+      if (grepl(".+installing \\*source\\*\\spackage", mess) %in% FALSE) {
+        for (om in omitPreSplitMess) {
+          if (grepl(om, mess)) {
+            mess <- grep(om, mess, invert = TRUE, value = TRUE)
+            # spinner |\-/-
+            if (FALSE) {
+              pe <- pkgEnv()
+              if (is.null(pe[["spinner"]])) assign("spinner", "|", envir = pe)
 
-            spinner <- get("spinner", envir = pe)
-            spinner <- ifelse (spinner == "|", "\\",
-                               ifelse(spinner == "\\", "-",
-                                      ifelse(spinner == "-", "/",
-                                             ifelse(spinner == "/", "|"))))
-            assign("spinner", spinner, envir = pe)
-            # mess <- paste0("\b\b", spinner)
+              spinner <- get("spinner", envir = pe)
+              spinner <- ifelse (spinner == "|", "\\",
+                                 ifelse(spinner == "\\", "-",
+                                        ifelse(spinner == "-", "/",
+                                               ifelse(spinner == "/", "|"))))
+              assign("spinner", spinner, envir = pe)
+              # mess <- paste0("\b\b", spinner)
+            }
+            if (length(mess) == 0) mess <- ""
+            # mess <- ""
           }
-          if (length(mess) == 0) mess <- ""
-          # mess <- ""
         }
       }
 
@@ -124,7 +127,7 @@ msgStdOut <- function(mess, logFile, verbose) {
       keepsInds <- lapply(keeps, function(ke) grep(ke, messOrig))
       mess <- messOrig[sort(unlist(keepsInds))]
 
-      anyErrors <- c("ERROR", "error")
+      anyErrors <- c("ERROR", "\\<error\\>")
       anyErrs <- lapply(anyErrors, function(ae) grep(ae, messOrig))
 
       if (length(anyErrs)) {
@@ -148,7 +151,7 @@ msgStdOut <- function(mess, logFile, verbose) {
     }
   }
 
-  if (length(mess)) {
+  if (length(mess) || !isWindows()) {
     msgWithLineFeedIterative(blue(mess), name = ".messInstPkgCounter",
                              verbose = installPackageVerbose(verbose), appendLF = appendLF,
                              reset = TRUE)
@@ -316,12 +319,14 @@ msgWithLineFeedIterative <- function(mess, appendLF = FALSE, pe = pkgEnv(),
 }
 
 
-msgWithLineFeed <- function(mess, lineWidth = getOptionWidthWithBuffer()) {
+paste0WithLineFeed <- function(mess, lineWidth = getOptionWidthWithBuffer()) {
   if (nchar(mess) > lineWidth) {
     nch <- lineWidth
     mess <- gsub(paste0('(.{1,',nch,'})(\\s|$)'), '\\1\n', mess)
   }
-  return(invisible())
+  # remove last one
+  mess <- gsub("\n$", "", mess)
+  mess
 }
 
 getOptionWidthWithBuffer <- function(buff = 10) getOption("width") - 10

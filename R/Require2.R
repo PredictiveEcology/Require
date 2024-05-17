@@ -1917,7 +1917,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
           pp <- pkgFullNameToReportBySource[[type]]
         }
         mess <- paste0("  -- ", type, ": ", paste(pp, collapse = comma))
-        mess <- msgWithLineFeed(mess)
+        mess <- paste0WithLineFeed(mess)
         messageVerbose(get(colr)(mess), verbose = verbose)
       }
     })
@@ -3250,7 +3250,7 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
     mess <- paste0("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
                    ") instead of Installing (don't need compiling): ",
                    paste(canClone, collapse = comma))
-    mess <- msgWithLineFeed(mess)
+    mess <- paste0WithLineFeed(mess)
     messageVerbose(green(mess), verbose = verbose)
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = libPaths[1], ip = ip)
@@ -3690,7 +3690,12 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   })
 
   doLineOrig <- doLine
-  preMess <- if (installPackages)  "\n  -- Installing: " else "  -- Downloading: "
+  repos <- paste(args$repos, collapse = ", ")
+  preMess <- if (installPackages) {
+    "\n  -- Installing: "
+  } else {
+    paste0("  -- Downloading", ifelse(nzchar(repos), paste0(" (from ", repos,")"), ""), ":\n")
+  }
   fullMess <- character() # this will accumulate and regularly clear
   for (j in seq_along(vecList)) {
     st <- Sys.time()
@@ -3714,13 +3719,17 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     if (installPackages)
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
 
-    if (installPackages)
+    if (installPackages) {
       if (length(fullMess)) {
         mess <- messInstallingOrDwnlding(preMess, fullMess)
-        mess <- msgWithLineFeed(mess)
+        mess <- paste0WithLineFeed(mess)
         messageVerbose(mess, verbose = verbose)
         fullMess <- character()
       }
+    } else {
+      # if (!nzchar(repos)) browser()
+      fullMess <- paste0WithLineFeed(gsub("\\s,", ",", gsub("\n", " ", fullMess)))
+    }
 
     pids[j] <- sysDo(installPackages, cmdLine, logFile, verbose)
   }
@@ -3733,6 +3742,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
   fullMess <- character()
   preMess <- if (installPackages)  "" else "Downloaded: "
+  if (identical(preMess, "Downloaded: ")) bbbb <<- 1
   for (pid in pids) {
     st <- Sys.time()
     if (!installPackages) {
@@ -3766,12 +3776,19 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
     if ( (Sys.time() - st) > 2 && nzchar(fullMess)) {
+      fullMess <- paste0WithLineFeed(fullMess)
       messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
       fullMess <- character()
     }
+
   }
-  if (length(fullMess) && nzchar(fullMess))
+
+
+  if (length(fullMess) && nzchar(fullMess)) {
+    fullMess <- gsub("\n", " ", fullMess)
+    fullMess <- paste0WithLineFeed(fullMess)
     messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
+  }
 
   ll <- try(lapply(outfiles, readRDS), silent = TRUE)
   if (downPack && !downFile && !installPackages) {
@@ -3895,6 +3912,7 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
     aa <- NA
     spinner <- "|"
     mess <- if (verbose > 1) " \n" else " "
+
     messageVerbose(mess, verbose = verbose)
     if (Sys.time() - st > 1)
       messageVerbose("  \b\b ...  ", verbose = verbose)
@@ -3910,7 +3928,7 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
         messageVerbose(mess, verbose = verbose)
       }
     }
-    messageVerbose("\b", verbose = verbose)
+    messageVerbose("\b\b\b", verbose = verbose)
  # }
 
 }
@@ -3919,7 +3937,8 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
 sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
-    messageVerbose("  -- Installed:\n", verbose = verbose, appendLF = FALSE)
+    if (isWindows())
+      messageVerbose("  -- Installed:\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
       Rscript, cmdLine,
       std_out = function(x) {
