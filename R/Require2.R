@@ -239,6 +239,8 @@ Require <- function(packages,
                     upgrade = FALSE,
                     returnDetails = FALSE,
                     ...) {
+
+  st <- Sys.time()
   if (getOption("Require.usePak", FALSE)) {
     packages <- gsub(" *\\(>=(.+)\\)", "@>=\\1", packages)
     packages <- gsub(" *\\(==(.+)\\)", "@\\1", packages)
@@ -289,25 +291,8 @@ Require <- function(packages,
     list(destdir = ".", repos = repos, type = types())
   )
 
-  # if (missing(libPaths)) {
-  #   libPaths <- .libPaths()
-  # }
   libPaths <- doLibPaths(libPaths, standAlone = standAlone)
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
-  # suppressMessages({
-  #   if (!identical(libPaths, .libPaths()) && !(install %in% FALSE)) {
-  #     hasRequireInNewLibPaths <- dir(libPaths, pattern = paste(.RequireDependenciesNoBase, collapse = "|"))
-  #     if (length(hasRequireInNewLibPaths) == 0) {
-  #       linkOrCopyPackageFilesInner(setdiff(.RequireDependenciesNoBase, hasRequireInNewLibPaths),
-  #                                   toLib = libPaths,
-  #                                   fromLib = .libPaths()[1])
-  #     }
-  #   }
-  #   origLibPaths <- setLibPaths(libPaths = libPaths, standAlone = standAlone, exact = TRUE)
-  #   on.exit({
-  #     setLibPaths(origLibPaths, standAlone = standAlone, exact = TRUE)
-  #     }, add = TRUE)
-  # })
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
@@ -444,6 +429,19 @@ Require <- function(packages,
   } else {
     out <- logical()
   }
+
+  et <- Sys.time()
+  et <- difftime(et, st)
+  messageVerbose(paste0("Installed ", NROW(pkgDT$installed[pkgDT$installed]),
+                          " packages in "),
+                   round(et, 1), " ", attr(et, "units"), verbose = verbose)
+
+  noneAv <- pkgDT$installResult %in% noneAvailable
+  if (isTRUE(any(noneAv))) {
+    warning(messageCantInstallNoVersion(
+      paste(pkgDT[["packageFullName"]][which(noneAv)], collapse = ", ")))
+  }
+
   return(invisible(out))
 }
 
@@ -1918,9 +1916,9 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
         if (type %in% .txtGitHub) {
           pp <- pkgFullNameToReportBySource[[type]]
         }
-        messageVerbose(get(colr)("  -- ", type, ": ", paste(pp, collapse = comma)),
-                       verbose = verbose
-        )
+        mess <- paste0("  -- ", type, ": ", paste(pp, collapse = comma))
+        mess <- msgWithLineFeed(mess)
+        messageVerbose(get(colr)(mess), verbose = verbose)
       }
     })
     messageVerbose(
@@ -3249,9 +3247,11 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
   canClone <- setdiffNamed(wantToInstall, cantClone)
   canClone <- names(canClone)
   if (length(canClone)) {
-    messageVerbose(green("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
-                         ") instead of Installing (don't need compiling): ",
-                         paste(canClone, collapse = comma)), verbose = verbose)
+    mess <- paste0("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
+                   ") instead of Installing (don't need compiling): ",
+                   paste(canClone, collapse = comma))
+    mess <- msgWithLineFeed(mess)
+    messageVerbose(green(mess), verbose = verbose)
 
     linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = libPaths[1], ip = ip)
     ipa$pkgs <- names(cantClone)
@@ -3690,7 +3690,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   })
 
   doLineOrig <- doLine
-  preMess <-if (installPackages)  "\n  Installing: " else "  Downloading: "
+  preMess <- if (installPackages)  "\n  -- Installing: " else "  -- Downloading: "
   fullMess <- character() # this will accumulate and regularly clear
   for (j in seq_along(vecList)) {
     st <- Sys.time()
@@ -3716,8 +3716,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     if (installPackages)
       if (length(fullMess)) {
-
-        messageVerbose(messInstallingOrDwnlding(preMess, fullMess), verbose = verbose)
+        mess <- messInstallingOrDwnlding(preMess, fullMess)
+        mess <- msgWithLineFeed(mess)
+        messageVerbose(mess, verbose = verbose)
         fullMess <- character()
       }
 
@@ -3731,7 +3732,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   isRstudio <- isRstudio()
 
   fullMess <- character()
-  preMess <- if (installPackages)  "\nInstalled: " else "Downloaded: "
+  preMess <- if (installPackages)  "" else "Downloaded: "
   for (pid in pids) {
     st <- Sys.time()
     if (!installPackages) {
@@ -3755,7 +3756,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
           pkgs <- setdiff(pkgs, pkgsFailed)
         }
       }
-      mess <- paste(pkgs, collapse = comma)
+      mess <- "\n"#paste(pkgs, collapse = comma)
     } else if (downFile) {
       mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
     } else {
@@ -3918,6 +3919,7 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
 sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
+    messageVerbose("  -- Installed:\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
       Rscript, cmdLine,
       std_out = function(x) {
@@ -3994,7 +3996,12 @@ makeFullMessage <- function(fullMess, args, installPackages, downPack, downFile)
 }
 
 downloadedInSeconds <- function(et) {
-  paste("packages downloaded in ", format(et, digits = 2), " seconds.")
+  msgEndsInSeconds("packages downloaded in ", et)
+  # paste("packages downloaded in ", format(et, digits = 2), " seconds.")
+}
+
+msgEndsInSeconds <- function(mess, et) {
+  paste0(mess, format(et, digits = 2), " seconds.")
 }
 
 messInstallingOrDwnlding <- function(preMess, fullMess) {

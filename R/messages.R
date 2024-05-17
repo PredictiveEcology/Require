@@ -31,9 +31,13 @@ GitHubMessage <- 0
 
 
 messageCantInstallNoVersion <- function(packagesFullName) {
+  N <- unique(packagesFullName)
+  dd <- singularPlural(c("doesn't", "don't"), l = N)
+  vv <- singularPlural(c("specification", "specifications"), l = N)
   turquoise(
     paste(unique(packagesFullName), collapse = comma),
-    " could not be installed; package doesn't exist or the version specification cannot be met"
+    " could not be installed; package ", dd ,
+    " exist or the version ", vv," cannot be met"
   )
 }
 
@@ -143,20 +147,15 @@ msgStdOut <- function(mess, logFile, verbose) {
 
     }
   }
-  pe <- pkgEnv()
-  if (is.null(pe$.messInstPkgCounter)) pe$.messInstPkgCounter <- 0
+
   if (length(mess)) {
-    messageVerbose(blue(mess), verbose = installPackageVerbose(verbose), appendLF = appendLF)
-    pe$.messInstPkgCounter <- 0 # reset
+    msgWithLineFeedIterative(blue(mess), name = ".messInstPkgCounter",
+                             verbose = installPackageVerbose(verbose), appendLF = appendLF,
+                             reset = TRUE)
   } else {
     if (verbose == 1) {
-      appendLF <- FALSE
-      pe$.messInstPkgCounter <- pe$.messInstPkgCounter + 1
-      if (pe$.messInstPkgCounter > getOption("width")) {
-        pe$.messInstPkgCounter <- 0 # reset
-        appendLF <- TRUE
-      }
-      messageVerbose(".", verbose = verbose, appendLF = appendLF)
+      mess <- paste(paste0(extractPkgNameFromWarning(messOrig), " "), collapse = "")
+      msgWithLineFeedIterative(mess, appendLF = FALSE, name = ".messInstPkgCounter", verbose = verbose)
     }
   }
 
@@ -165,7 +164,6 @@ msgStdOut <- function(mess, logFile, verbose) {
 msgStdErr <- function(mess, logFile, verbose) {
   messOrig <- mess # used for debugging -- not necessary in production
   cat(greyLight(mess), file = logFile, append = TRUE, fill = TRUE)
-  # appendLF <- endsWith(mess, "\n") %in% FALSE
   appendLF <- FALSE
   if (verbose <= 1) {
     errs <- "ERROR: lazy loading failed for package"
@@ -299,3 +297,31 @@ msgShaNotChanged <- function(Account, Repo, Branch) {
   paste0("Skipping install of ", paste0(Account, "/", Repo, "@", Branch),
          ", the SHA1 has not changed from last install")
 }
+
+
+msgWithLineFeedIterative <- function(mess, appendLF = FALSE, pe = pkgEnv(),
+                                     lineWidth = getOptionWidthWithBuffer(),
+                                     name = ".messInstPkgCounter", reset = FALSE,
+                            verbose) {
+  if (is.null(pe[[name]])) pe[[name]] <- 0
+  if (pe[[name]] > lineWidth) {
+    pe[[name]] <- 0 # reset
+    appendLF <- TRUE
+  }
+  pe[[name]] <- pe[[name]] + nchar(mess) + 1 # The +1 is for the space
+  messageVerbose(mess, verbose = verbose, appendLF = appendLF)
+  if (isTRUE(reset))
+    pe[[name]] <- 0 # reset
+  return(invisible())
+}
+
+
+msgWithLineFeed <- function(mess, lineWidth = getOptionWidthWithBuffer()) {
+  if (nchar(mess) > lineWidth) {
+    nch <- lineWidth
+    mess <- gsub(paste0('(.{1,',nch,'})(\\s|$)'), '\\1\n', mess)
+  }
+  return(invisible())
+}
+
+getOptionWidthWithBuffer <- function(buff = 10) getOption("width") - 10
