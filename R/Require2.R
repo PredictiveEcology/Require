@@ -3728,7 +3728,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
   fullMess <- character()
   preMess <- if (installPackages)  "" else "Downloaded: "
-  if (identical(preMess, "Downloaded: ")) bbbb <<- 1
+
   for (pid in pids) {
     st <- Sys.time()
     if (!installPackages) {
