@@ -1,7 +1,7 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
-verboseForDev <- 2
+verboseForDev <- -2
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
@@ -106,10 +106,26 @@ runTests <- function(have, pkgs) {
 }
 
 
-testWarnsInUsePleaseChange <- function(warns) {
+testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, couldNot = TRUE) {
   test <- TRUE
   if (length(warns)) {
-    test <- all(grepl(paste0(msgIsInUse, "|Please change required"), warns)) # "Please change" comes with verbose >= 1
+    tst <- character()
+    if (isTRUE(please))
+      tst <- "Please change required"
+    if (isTRUE(inUse))
+      tst <- c(tst, .txtMsgIsInUse)
+    if (isTRUE(couldNot))
+      tst <- c(tst, .txtCouldNotBeInstalled)
+    tst <- paste(tst, collapse = "|")
+    test <- all(grepl(tst, warns)) # "Please change" comes with verbose >= 1
+  }
+  test
+}
+
+testCouldNotBeInstalled <- function(warns) {
+  test <- TRUE
+  if (length(warns)) {
+    test <- all(grepl(paste0(.txtCouldNotBeInstalled), warns))
   }
   test
 }

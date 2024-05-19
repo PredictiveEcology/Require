@@ -1,5 +1,5 @@
 msgPackageViolation <- "Package version violation detected; installing this"
-msgIsInUse <- "in use and will not be installed"
+.txtMsgIsInUse <- "in use and will not be installed"
 comma <- ", "
 
 .txtGetArchiveDetailsInner <- "getArchiveDetailsInner"
@@ -36,11 +36,12 @@ messageCantInstallNoVersion <- function(packagesFullName) {
   vv <- singularPlural(c("specification", "specifications"), l = N)
   turquoise(
     paste(unique(packagesFullName), collapse = comma),
-    " could not be installed; package ", dd ,
+    " ", .txtCouldNotBeInstalled, "; package ", dd ,
     " exist or the version ", vv," cannot be met"
   )
 }
 
+.txtCouldNotBeInstalled <- "could not be installed"
 
 msgStdOut <- function(mess, logFile, verbose) {
   # pkg <- extractPkgNameFromWarning(mess)
@@ -320,12 +321,16 @@ msgWithLineFeedIterative <- function(mess, appendLF = FALSE, pe = pkgEnv(),
 
 
 paste0WithLineFeed <- function(mess, lineWidth = getOptionWidthWithBuffer()) {
-  if (nchar(mess) > lineWidth) {
-    nch <- lineWidth
-    mess <- gsub(paste0('(.{1,',nch,'})(\\s|$)'), '\\1\n', mess)
-  }
-  # remove last one
-  mess <- gsub("\n$", "", mess)
+
+  lapply(mess, function(m) {
+    if (nchar(m) > lineWidth) {
+      nch <- lineWidth
+      m <- gsub(paste0('(.{1,',nch,'})(\\s|$)'), '\\1\n', m)
+    }
+    # remove last one
+    m <- gsub("\n$", "", m)
+    m
+  })
   mess
 }
 

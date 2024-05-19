@@ -3754,7 +3754,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       pkgs <- argsOrig$pkgs[vecList[[whPid]]]
       if (installPackages) {
         # check installations
-        aa <- Map(p = args$pkgs, function(p) as.character(packageVersion(p, args$lib)))
+        aa <- Map(p = args$pkgs, function(p) as.character(packVer(p, args$lib)))
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
         # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal

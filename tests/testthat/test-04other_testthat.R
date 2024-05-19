@@ -5,7 +5,14 @@ test_that("test 3", {
 
   isDev <- getOption("Require.isDev")
   # Test misspelled
-  out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
+
+  warns <- capture_warnings(
+    out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
+  )
+  test <- testWarnsInUsePleaseChange(warns)
+
+
+
   testthat::expect_true(any(grepl("could not be installed", out))) # {out, "simpleWarning")})
 
   # for coverages that were missing
@@ -185,8 +192,8 @@ test_that("test 3", {
     withr::local_options(Require.installPackagesSys = TRUE)
     mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force"))
     warnsAfter <- capture_warnings(packageVersion("fpCompare"))
-    expect_true(grepl(msgIsInUse, warns))
-    expect_false(isTRUE(grepl(msgIsInUse, warnsAfter)))
+    expect_true(grepl(.txtMsgIsInUse, warns))
+    expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
     detach("package:fpCompare", unload = TRUE)
   }
 

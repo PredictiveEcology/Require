@@ -186,13 +186,18 @@ test_that("test 1", {
     # Try github with version
     dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
     dir4 <- Require::checkPath(dir4, create = TRUE)
-    inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
-                             quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
+    warns <- capture_warnings(
+      inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+                               quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
+      )
     )
+    test <- testWarnsInUsePleaseChange(warns)
+
     testthat::expect_true({
       isFALSE(inst)
     })
-    mess <- utils::capture.output(
+    warns <- capture_warnings(
+      mess <- utils::capture.output(
       {
         inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
                                  verbose = 5,
@@ -201,6 +206,9 @@ test_that("test 1", {
       },
       type = "message"
     )
+    )
+    test <- testWarnsInUsePleaseChange(warns)
+
     testthat::expect_true({
       length(mess) > 0
     })

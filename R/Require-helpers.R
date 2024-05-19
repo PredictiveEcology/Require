@@ -1474,7 +1474,7 @@ mainGrep <- paste0("/", "main", "(/|\\.)")
 
 extractPkgNameFromWarning <- function(x) {
 
-  if (any(grepl(msgIsInUse, x)) || # "in use"
+  if (any(grepl(.txtMsgIsInUse, x)) || # "in use"
       any(grepl("installation of.+failed", x))) { # "installation of 2 packages failed:"
     out <- NULL
     if (isWindows()) {
