@@ -3247,7 +3247,7 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
   canClone <- setdiffNamed(wantToInstall, cantClone)
   canClone <- names(canClone)
   if (length(canClone)) {
-    mess <- paste0("  -- Cloning (",length(canClone)," of ",length(wantToInstall),
+    mess <- paste0("  -- Cloning (", length(canClone)," of ", length(wantToInstall),
                    ") instead of Installing (don't need compiling): ",
                    paste(canClone, collapse = comma))
     mess <- paste0WithLineFeed(mess)
@@ -3268,21 +3268,7 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
   cant <- unique(c(sourcePkgs(), cant[, "Package"]))
   Packages <- setdiff(Packages, cant)
   linkOrCopyPackageFilesInner(Packages, fromLib, toLib)
-  # ret <- lapply(Packages, function(packToClone) {
-  #   from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
-  #   fromFull <- file.path(fromLib, packToClone, from)
-  #   to <- file.path(toLib, packToClone, from)
-  #   dups <- fromFull %in% to
-  #   if (any(dups)) {
-  #     fromFull <- fromFull[!dups]
-  #     to <- to[!dups]
-  #   }
-  #   if (length(fromFull) > 0) {
-  #     dirs <- unique(dirname(to))
-  #     checkPath(dirs[order(nchar(dirs), decreasing = TRUE)], create = TRUE)
-  #     outs <- linkOrCopy(fromFull, to, allowSymlink = FALSE)
-  #   }
-  # })
+  return(invisible())
 }
 
 
