@@ -124,10 +124,13 @@ test_that("test 6", {
   warns22 <- capture_warnings(
     Install("PredictiveEcology/Require@simplify4 (>=0.3.1.9021)", install = "force")
   )
-  withr::local_options(warn = 2)
-  (Require::Install(c(knownRevDeps$Require),#, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
+  # withr::local_options(warn = 2)
+  # withr::local_options(Require.verbose = 2)
+
+  (outtt <- Require::Install(c(knownRevDeps$Require),#, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
                    repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))) |>
     capture_warnings() -> warns
+
   # the repos with predictiveecology.r-universe.dev doesn't seem to have the PACKAGES
   warns <- grep("cannot open URL .+PACKAGES.rds'", warns, invert = TRUE, value = TRUE) #
   test <- testWarnsInUsePleaseChange(warns)

@@ -1488,7 +1488,7 @@ extractPkgNameFromWarning <- function(x) {
     if (is.na(out) || !isWindows()) {
       aa <- strsplit(x, "\u2019|\u2018")[[1]]
       aa <- grep("installation.+failed", aa, invert = TRUE, value = TRUE)
-      aa <- grep("package|is in use", aa, invert = TRUE, value = TRUE)
+      aa <- grep("package|is in use|failed", aa, invert = TRUE, value = TRUE)
       out <- grep(", ", aa, value = TRUE, invert = TRUE)
     }
 
@@ -1531,6 +1531,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       }
       if (length(anyFailed) == 0)
         break
+
       pkgName <- extractPkgNameFromWarning(txt[anyFailed])
       if (any(is.na(pkgName)))
         pkgName <- extractPkgNameFromWarning(paste(txt[anyFailed:(anyFailed + 1)], collapse = ""))

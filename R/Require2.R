@@ -3715,7 +3715,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         fullMess <- character()
       }
     } else {
-      # if (!nzchar(repos)) browser()
       fullMess <- paste0WithLineFeed(gsub("\\s,", ",", gsub("\n", " ", fullMess)))
     }
 
