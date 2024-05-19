@@ -133,6 +133,9 @@ test_that("test 6", {
 
   # the repos with predictiveecology.r-universe.dev doesn't seem to have the PACKAGES
   warns <- grep("cannot open URL .+PACKAGES.rds'", warns, invert = TRUE, value = TRUE) #
+  # something wrong with SpaDES.addins ... it fails to install at first, but retries and succeeds.
+  #  this isn't a Require problem
+  warns <- grep("SpaDES.addins|cannot open", warns, invert = TRUE, value = TRUE) #
   test <- testWarnsInUsePleaseChange(warns)
   if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (isFALSE(test)) browser()
   if (isFALSE(test)) {
