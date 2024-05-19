@@ -432,9 +432,11 @@ Require <- function(packages,
 
   et <- Sys.time()
   et <- difftime(et, st)
-  messageVerbose(paste0("Installed ", NROW(pkgDT$installed[pkgDT$installed]),
-                          " packages in "),
-                   round(et, 1), " ", attr(et, "units"), verbose = verbose)
+  numPacksInstalled <- NROW(pkgDT$installed[pkgDT$installed & !pkgDT$needInstall %in% .txtDontInstall])
+  if (numPacksInstalled > 0)
+    messageVerbose(paste0("Installed ", numPacksInstalled,
+                            " packages in "),
+                     round(et, 1), " ", attr(et, "units"), verbose = verbose)
 
   noneAv <- pkgDT$installResult %in% noneAvailable
   if (isTRUE(any(noneAv))) {
