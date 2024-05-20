@@ -932,9 +932,14 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPat
       tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
       out <- if (file.exists(tf)) { NULL } else {
         # This section should only happen if Require.installPackageSys < 1
-        try(download.file(quiet = verbose <= 0 || verbose >= 5,
-          url = file.path(Repository, basename(PackageUrl)),
-          destfile = tf), silent = TRUE)
+        for (i in 1:2) { # can be flaky -- try 2x
+          inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
+                            url = file.path(Repository, basename(PackageUrl)),
+                            destfile = tf), silent = TRUE)
+          if (!is(inn, "try-error"))
+            break
+        }
+        inn
       }
       if (is(out, "try-error")) {
         messageVerbose(out, verbose = verbose)
