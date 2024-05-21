@@ -129,7 +129,7 @@ test_that("test 5", {
 
     test <- testWarnsInUsePleaseChange(warns)
     # test <- testCouldNotBeInstalled(warns)
-    if (!isTRUE(test)) browser()
+    # if (!isTRUE(test)) browser()
     expect_true(test)
 
     # Rerun it to get output table, but capture messages for quiet; should be no installs
