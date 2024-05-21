@@ -432,7 +432,7 @@ Require <- function(packages,
 
   et <- Sys.time()
   et <- difftime(et, st)
-  numPacksInstalled <- NROW(pkgDT$installed[pkgDT$installed & !pkgDT$needInstall %in% .txtDontInstall])
+  numPacksInstalled <- NROW(pkgDT$installed[pkgDT$installed & pkgDT$needInstall %in% .txtInstall])
   if (numPacksInstalled > 0)
     messageVerbose(paste0("Installed ", numPacksInstalled,
                             " packages in "),
