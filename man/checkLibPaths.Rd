@@ -6,7 +6,6 @@
 \usage{
 checkLibPaths(libPaths, ifMissing, exact = FALSE, ...)
 }
-<<<<<<< HEAD
 \arguments{
 \item{libPaths}{The library path (or libraries) where all packages should be
 installed, and looked for to load (i.e., call \code{library}). This can be used
@@ -24,8 +23,6 @@ will return exactly the \code{libPaths} supplied.}
 
 \item{...}{Not used, but allows other functions to pass through arguments.}
 }
-=======
->>>>>>> 4b8f23a (doc)
 \description{
 Creates the directories, and adds version number
 }
