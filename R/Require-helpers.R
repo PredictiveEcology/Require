@@ -841,13 +841,18 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
           dups <- duplicated(vapply(strsplit(txt, split = "\\:"),
                                     function(x) x[[1]], FUN.VALUE = character(1)))
           if (any(dups)) {
-            if (all(grepl("Github|Remote", txt[dups]))) {
-              txtOut <- unique(readLines(file))
-              browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
-                                      "the DESCRIPTION file at ", file,
-                                      " has duplicated RemoteHost to GithubSHA1. Try to remove ",
-                                      "the first set"))
-            }
+            # Delete the first version of any duplicated entry -- i.e., take the more recent
+            #   version
+            dupsRev <- duplicated(vapply(strsplit(rev(txt), split = "\\:"),
+                                      function(x) x[[1]], FUN.VALUE = character(1)))
+            txtOut <- rev(rev(txt)[!dupsRev])
+            #if (all(grepl("Github|Remote", txt[dups]))) {
+            #  txtOut <- unique(readLines(file))
+              # browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
+              #                         "the DESCRIPTION file at ", file,
+              #                         " has duplicated RemoteHost to GithubSHA1. Try to remove ",
+              #                         "the first set"))
+            #}
           }
           if (!exists("txtOut", inherits = FALSE)) {
 
