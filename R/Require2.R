@@ -563,7 +563,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   }
 
   # for (i in 1:2) {
-  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type) )
+  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type, verbose = verbose) )
 
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -1946,7 +1946,8 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 #' `repos`, `Package`, `File` for each individual package.
 #' @param toInstall A `pkgDT` object
 #' @inheritParams Require
-availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType")) {
+availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType"),
+                                      verbose = getOption("Require.verbose")) {
   whLocal <- startsWith(unique(dirname(dirname(toInstall$Repository))), "file")
   if (any(whLocal %in% FALSE) && any(toInstall$repoLocation %in% "CRAN") &&
       !any(grepl("contrib", toInstall$Repository))) {
@@ -1976,7 +1977,8 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     }
     ap3[, "Depends"] <- NA
-    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = TRUE)
+    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = TRUE,
+                   verbose = verbose)
     pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP][["Package"]]
     if (any(pkgHasNameDiffrntThanRepo)) {
       names(deps)[pkgHasNameDiffrntThanRepo] <- toInstall[Package %in% pkgsNotInAP][["Package"]][pkgHasNameDiffrntThanRepo]
