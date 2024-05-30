@@ -1910,7 +1910,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     installRangeCh <- paste(installRange, collapse = ":")
 
     srces <- names(pkgToReportBySource)
-    messageVerbose("  -- Installing from:", verbose = verbose)
+    messageVerbose("  -- To install from:", verbose = verbose)
     nxtSrc <- c(yellow = .txtLocal, blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
     Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
       pp <- pkgToReportBySource[[type]]
@@ -3682,7 +3682,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   doLineOrig <- doLine
   repos <- paste(args$repos, collapse = ", ")
   preMess <- if (installPackages) {
-    "\n  -- Installing: "
+    "\n  -- To install: "
   } else {
     paste0("  -- Downloading", ifelse(nzchar(repos), paste0(" (from ", repos,")"), ""), ":\n")
   }
@@ -3936,7 +3936,7 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
     if (isWindows())
-      messageVerbose("  -- Installed:\n", verbose = verbose, appendLF = FALSE)
+      messageVerbose("  -- Installing:\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
       Rscript, cmdLine,
       std_out = function(x) {

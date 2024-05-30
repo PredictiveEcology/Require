@@ -142,13 +142,6 @@ msgStdOut <- function(mess, logFile, verbose) {
       if (length(mess) == 1)
         appendLF <- TRUE
 
-      # if (length(mess))
-      #   if (nchar(mess)) {
-      #     # if (!(!justPackage || verbose >= 2 || grepl("Warning", mess))) {
-      #       mess <- paste0("Installed: ", pkg, "\r\n")
-      #     # }
-      #   }
-
     }
   }
 
