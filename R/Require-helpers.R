@@ -214,7 +214,6 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 
     if (!isTRUE(getOption("Require.offlineMode"))) {
       alreadyExists <- rmEmptyFiles(pkgDT$destFile)
-      # alreadyExists <- file.exists(pkgDT$destFile)
       if (any(alreadyExists)) {
         fs <- file.size(pkgDT$destFile)
         tooSmall <- fs < 100
