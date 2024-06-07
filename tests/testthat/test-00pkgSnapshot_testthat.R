@@ -41,10 +41,12 @@ test_that("test 1", {
       haveFewDeps <- order(lens)
       deps <- deps[haveFewDeps]
       # the `max(1)` is because "Error in seq.default(-Inf) : 'from' must be a finite number" on some GHA
-      wh <- max(4, min(4, max(which(cumsum(lengths(deps) + 1) < 10))))
-      deps <- deps[seq(wh)]
-      pkgs <- c(names(deps), Require::extractPkgName(unname(unlist(deps))))
-      bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
+      wh <- max(0, min(4, max(which(cumsum(lengths(deps) + 1) < 10))))
+      if (wh > 0) {
+        deps <- deps[seq(wh)]
+        pkgs <- c(names(deps), Require::extractPkgName(unname(unlist(deps))))
+        bb[[lp]] <- aa[Package %in% pkgs & LibPath == lp]
+      }
     }
   }
 
