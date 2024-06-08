@@ -3747,16 +3747,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
         # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
-        whFailed <- try(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="))
-        if (is(whFailed, "try-error")) {
-          if (identical(unname(Sys.info()["user"]), "emcintir")) {
-            sc <- sys.calls()
-            dd <- dir("/home/emcintir/tmp/", pattern = "dt.+rda")
-            num <- gsub("dt(.{1,3})\\.rda", "\\1", dd) |> as.numeric() |> tail(n = 1)
-            if (length(num) == 0) num <- 0
-            save(dt, sc, aa, args, installPackages, downPack, file = paste0("/home/emcintir/tmp/dt",num + 1,".rda"))
-          }
-        }
+        whFailed <- !compareVersion2(dt$vers, dt$versionSpec, inequality = "==")
         whFailed <- whFailed %in% TRUE
         if (isTRUE(any(whFailed))) {
           pkgsFailed <- dt$pkg[whFailed]
