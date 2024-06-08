@@ -2931,7 +2931,6 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
                                       binOrSrc = binOrSrc(FALSE))]
       # pkgInstall[which(needSrc), Repository := nonBinaryRepos]
 
-      # whArchive <- pkgInstall$installFrom %in% "Archive"
       # pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
 
       # if there are multiple non-binary repos
@@ -2939,6 +2938,11 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
         packageExists <- FALSE
         for (ind in seq(nonBinaryRepos)) {
           nbrContrib <- contrib.url(nonBinaryRepos)
+          whArchive <- pkgInstall$installFrom %in% "Archive"
+          dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
+          mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
+          needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+
           pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
           apTmp <- available.packages(contriburl = nbrContrib[ind])
           packageExists <- pkgInstallNeededHere[["Package"]] %in% apTmp[, "Package"]
@@ -3748,19 +3752,19 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
         # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
         whFailed <- try(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="))
-        if (is(whFailed, "try-error")) {
-          if (identical(unname(Sys.info()["user"]), "emcintir")) {
-            sc <- sys.calls()
-            dd <- dir("/home/emcintir/tmp/", pattern = "dt.+rda")
-            num <- gsub("dt(.{1,3})\\.rda", "\\1", dd) |> as.numeric() |> tail(n = 1)
-            if (length(num) == 0) num <- 0
-            save(dt, sc, aa, args, installPackages, downPack, file = paste0("/home/emcintir/tmp/dt",num + 1,".rda"))
-          }
-        }
+        # if (is(whFailed, "try-error")) {
+        #   if (identical(unname(Sys.info()["user"]), "emcintir")) {
+        #     sc <- sys.calls()
+        #     dd <- dir("/home/emcintir/tmp/", pattern = "dt.+rda")
+        #     num <- gsub("dt(.{1,3})\\.rda", "\\1", dd) |> as.numeric() |> tail(n = 1)
+        #     if (length(num) == 0) num <- 0
+        #     save(dt, sc, aa, args, installPackages, downPack, file = paste0("/home/emcintir/tmp/dt",num + 1,".rda"))
+        #   }
+        # }
         whFailed <- whFailed %in% TRUE
         if (isTRUE(any(whFailed))) {
           pkgsFailed <- dt$pkg[whFailed]
-          messageVerbose(red("Failed to install: ", paste(pkgsFailed, collapse = ", ")), verbose = verbose + 1)
+          # messageVerbose(red("Failed to install: ", paste(pkgsFailed, collapse = ", ")), verbose = verbose + 1)
           pkgs <- setdiff(pkgs, pkgsFailed)
         }
       }
@@ -3973,7 +3977,6 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
           paste0("saveRDS(outfiles, '",outfile,"')"))
 
   # if (downAndBuildLocal) {
-  #   browser()
   #   hasRequireInstalled <- dir(libPaths, pattern = "Require")
   #   if (length(hasRequireInstalled) == 0)
   #     stop("Require must be installed in libPaths, not just locally. \n",
