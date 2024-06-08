@@ -432,7 +432,7 @@ Require <- function(packages,
 
   et <- Sys.time()
   et <- difftime(et, st)
-  numPacksInstalled <- NROW(pkgDT$installed[pkgDT$installed & !pkgDT$needInstall %in% .txtDontInstall])
+  numPacksInstalled <- NROW(pkgDT$installed[pkgDT$installed & pkgDT$needInstall %in% .txtInstall])
   if (numPacksInstalled > 0)
     messageVerbose(paste0("Installed ", numPacksInstalled,
                             " packages in "),
@@ -563,7 +563,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   }
 
   # for (i in 1:2) {
-  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type) )
+  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type, verbose = verbose) )
 
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -1910,7 +1910,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
     installRangeCh <- paste(installRange, collapse = ":")
 
     srces <- names(pkgToReportBySource)
-    messageVerbose("  -- Installing from:", verbose = verbose)
+    messageVerbose("  -- To install from:", verbose = verbose)
     nxtSrc <- c(yellow = .txtLocal, blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
     Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
       pp <- pkgToReportBySource[[type]]
@@ -1946,7 +1946,8 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 #' `repos`, `Package`, `File` for each individual package.
 #' @param toInstall A `pkgDT` object
 #' @inheritParams Require
-availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType")) {
+availablePackagesOverride <- function(toInstall, repos, purge, type = getOption("pkgType"),
+                                      verbose = getOption("Require.verbose")) {
   whLocal <- startsWith(unique(dirname(dirname(toInstall$Repository))), "file")
   if (any(whLocal %in% FALSE) && any(toInstall$repoLocation %in% "CRAN") &&
       !any(grepl("contrib", toInstall$Repository))) {
@@ -1976,7 +1977,8 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     }
     ap3[, "Depends"] <- NA
-    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = TRUE)
+    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = TRUE,
+                   verbose = verbose)
     pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP][["Package"]]
     if (any(pkgHasNameDiffrntThanRepo)) {
       names(deps)[pkgHasNameDiffrntThanRepo] <- toInstall[Package %in% pkgsNotInAP][["Package"]][pkgHasNameDiffrntThanRepo]
@@ -3680,7 +3682,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   doLineOrig <- doLine
   repos <- paste(args$repos, collapse = ", ")
   preMess <- if (installPackages) {
-    "\n  -- Installing: "
+    "\n  -- To install: "
   } else {
     paste0("  -- Downloading", ifelse(nzchar(repos), paste0(" (from ", repos,")"), ""), ":\n")
   }
@@ -3934,7 +3936,7 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
     if (isWindows())
-      messageVerbose("  -- Installed:\n", verbose = verbose, appendLF = FALSE)
+      messageVerbose("  -- Installing:\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
       Rscript, cmdLine,
       std_out = function(x) {

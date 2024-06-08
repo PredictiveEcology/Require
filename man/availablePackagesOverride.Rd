@@ -4,7 +4,13 @@
 \alias{availablePackagesOverride}
 \title{Create a custom "available.packages" object}
 \usage{
-availablePackagesOverride(toInstall, repos, purge, type = getOption("pkgType"))
+availablePackagesOverride(
+  toInstall,
+  repos,
+  purge,
+  type = getOption("pkgType"),
+  verbose = getOption("Require.verbose")
+)
 }
 \arguments{
 \item{toInstall}{A \code{pkgDT} object}
@@ -24,6 +30,12 @@ This maximum age can be set in seconds with the environment variable
 Internally, there are calls to \code{available.packages}.}
 
 \item{type}{See \code{utils::install.packages}}
+
+\item{verbose}{Numeric or logical indicating how verbose should the function
+be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
+then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
+\code{Require} function, when \code{verbose >= 2}, also returns details as if
+\code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \description{
 This is the mechanism by which \code{install.packages} determines which packages

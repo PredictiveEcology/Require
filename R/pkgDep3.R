@@ -929,28 +929,8 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPat
 
   if (any(!is.na(pkgDTList$Archive$PackageUrl))) {
     pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {
-      tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
-      out <- if (file.exists(tf)) { NULL } else {
-        # This section should only happen if Require.installPackageSys < 1
-        for (i in 1:2) { # can be flaky -- try 2x
-          inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
-                            url = file.path(Repository, basename(PackageUrl)),
-                            destfile = tf), silent = TRUE)
-          if (!is(inn, "try-error"))
-            break
-        }
-        inn
-      }
-      if (is(out, "try-error")) {
-        messageVerbose(out, verbose = verbose)
-        out <- NA
-      } else {
-        DESCFile <- file.path(Package, "DESCRIPTION")
-        untar(tf, files = DESCFile, exdir = tmpdir)
-        out <- file.path(tmpdir, DESCFile)
-      }
-      out
-    }, by = "packageFullName"]
+      .DESCFileFull(PackageUrl, verbose, Repository, Package, tmpdir)
+      }, by = "packageFullName"]
 
     gotDESC <- !is.na(pkgDTList$Archive$DESCFileFull)
     whGotDESC <- which(gotDESC)
@@ -1550,3 +1530,28 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 
 .RequireDependencies <- character()
 .RequireDependenciesNoBase <- character()
+
+.DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
+  tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
+  rmEmptyFiles(tf)
+  out <- if (file.exists(tf)) { NULL } else {
+    # This section should only happen if Require.installPackageSys < 1
+    for (i in 1:2) { # can be flaky -- try 2x
+      inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
+                               url = file.path(Repository, basename(PackageUrl)),
+                               destfile = tf), silent = TRUE)
+      if (!is(inn, "try-error"))
+        break
+    }
+    inn
+  }
+  if (is(out, "try-error")) {
+    messageVerbose(out, verbose = verbose)
+    out <- NA
+  } else {
+    DESCFile <- file.path(Package, "DESCRIPTION")
+    untar(tf, files = DESCFile, exdir = tmpdir)
+    out <- file.path(tmpdir, DESCFile)
+  }
+  out
+}
