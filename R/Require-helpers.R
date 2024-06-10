@@ -1004,8 +1004,13 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
   if (!file.exists(tf))
     .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
   sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-  if (any(grepl("Bad credentials", sha)))
+  notFound <- any(grepl("Not found|404", sha))
+  if (any(grepl("Bad credentials", sha)) || notFound) {
+    if (notFound)
+      stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
     stop(sha)
+  }
+
   if (is(sha, "try-error")) {
     return(sha)
   }
