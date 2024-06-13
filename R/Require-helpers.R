@@ -1000,43 +1000,53 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
   # tf <- tempfile()
-  tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_",acct, "@", repo))
-  if (!file.exists(tf))
-    .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
-  sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-  # notFound <- any(grepl("Not found|404", sha))
-  if (any(grepl("Bad credentials", sha))) {#} || notFound) {
-    if (notFound)
-      stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
-    stop(sha)
-  }
-
-  if (is(sha, "try-error")) {
-    return(sha)
-  }
-  if (length(sha) > 1) {
-    # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
-    #   Was easier to collapse the individual lines, then re-split
-    sha <- paste(sha, collapse = "")
-  }
-  sha1 <- strsplit(sha, "},")[[1]] # this splits onto separate lines
-
-  sha2 <- strsplit(sha1, ":")
-
-  if (any(grepl("master|main|HEAD", unlist(br)))) {
-    br2 <- grep(unlist(sha2), pattern = "api.+heads/(master|main)", value = TRUE)
-    br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
-  }
-  for (branch in br) { # will be length 1 in most cases except master/main
-    whHasBr <- which(vapply(sha2, function(xx) {
-      any(grepl(paste0(".+refs/.+/+", branch, "\""), xx))
-    }, FUN.VALUE = logical(1)))
-    if (length(whHasBr) > 0) {
-      break
+  for (ii in 1:2) {
+    tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_",acct, "@", repo))
+    if (!file.exists(tf))
+      .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
+    sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
+    # notFound <- any(grepl("Not found|404", sha))
+    if (any(grepl("Bad credentials", sha))) {#} || notFound) {
+      if (notFound)
+        stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
+      stop(sha)
     }
-  }
-  if (length(whHasBr) == 0) {
-    stop("Can't find ", br, " on GitHub repo ", paste0(acct, "/", repo), "; \n -- does it exist? --")
+
+    if (is(sha, "try-error")) {
+      return(sha)
+    }
+    if (length(sha) > 1) {
+      # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
+      #   Was easier to collapse the individual lines, then re-split
+      sha <- paste(sha, collapse = "")
+    }
+    sha1 <- strsplit(sha, "},")[[1]] # this splits onto separate lines
+
+    sha2 <- strsplit(sha1, ":")
+
+    if (any(grepl("master|main|HEAD", unlist(br)))) {
+      br2 <- grep(unlist(sha2), pattern = "api.+heads/(master|main)", value = TRUE)
+      br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
+    }
+    for (branch in br) { # will be length 1 in most cases except master/main
+      whHasBr <- which(vapply(sha2, function(xx) {
+        any(grepl(paste0(".+refs/.+/+", branch, "\""), xx))
+      }, FUN.VALUE = logical(1)))
+      if (length(whHasBr) > 0) {
+        break
+      }
+    }
+    # This will catch cases where the RequireGitHubCacheDir() doesn't have it,
+    #    but it is there (e.g., a new branch or new sha)... this will deleted
+    if (length(whHasBr) == 0) {
+      if (ii %in% 1) {
+        unlink(tf)
+        next
+      } else {
+        stop("Can't find ", br, " on GitHub repo ", paste0(acct, "/", repo), "; \n -- does it exist? --")
+      }
+    }
+    break
   }
 
   sha3 <- sha2[[whHasBr]]
