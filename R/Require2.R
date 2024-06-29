@@ -3976,12 +3976,15 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
 
-  # if (downAndBuildLocal) {
-  #   hasRequireInstalled <- dir(libPaths, pattern = "Require")
-  #   if (length(hasRequireInstalled) == 0)
-  #     stop("Require must be installed in libPaths, not just locally. \n",
-  #          "Please install manually, then rerun")
-  # }
+  if (downAndBuildLocal) {
+    #browser()
+    # hasRequireInstalled <- dir(libPaths, pattern = "Require")
+    # if (length(hasRequireInstalled) == 0) {
+    ar <- c(paste0(".libPaths(\"", libPaths[1], "\")"), ar)
+    # stop("Require must be installed in libPaths, not just locally. \n",
+    #      "Please install manually, then rerun")
+    # }
+  }
 
   cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
   cmdLine
