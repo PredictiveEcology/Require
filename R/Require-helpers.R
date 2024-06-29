@@ -205,6 +205,16 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
           by = "Package"
     ]
     destFile <- RequireGitHubCacheFile(pkgDT, filename = filename)
+
+    if (isTRUE(any(file.exists(destFile)))) {
+      versionLocal <- DESCRIPTIONFileVersionV(destFile)
+      versionLocalOK <- compareVersion2(versionLocal, pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub],
+                      inequality = pkgDT$inequality)
+      versionLocalNotOK <- versionLocalOK %in% FALSE
+      if (isTRUE(any(versionLocalNotOK)))
+        file.remove(destFile[versionLocalNotOK])
+    }
+
     # theDir <- RequireGitHubCacheDir(create = TRUE)
     # # checkPath(theDir, create = TRUE)
     # destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas

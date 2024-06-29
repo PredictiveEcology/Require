@@ -3785,7 +3785,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
   }
 
-
   if (length(fullMess) && nzchar(fullMess)) {
     fullMess <- gsub("\n", " ", fullMess)
     fullMess <- paste0WithLineFeed(fullMess)
