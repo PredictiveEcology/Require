@@ -1043,7 +1043,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
         unlink(tf)
         next
       } else {
-        stop("Can't find ", br, " on GitHub repo ", paste0(acct, "/", repo), "; \n -- does it exist? --")
+        stop(messageCantFind(br, acct, repo))
       }
     }
     break

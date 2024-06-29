@@ -27,6 +27,9 @@ comma <- ", "
 
 .txtShaUnchangedNoInstall <- "SHA unchanged; no install"
 
+messageCantFind <- function(br, acct, repo)
+  paste0("Can't find ", paste0(acct, "/", repo, "@", br), "; \n -- does it exist? --")
+
 GitHubMessage <- 0
 
 
