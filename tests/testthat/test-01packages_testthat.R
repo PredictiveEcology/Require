@@ -150,7 +150,8 @@ test_that("test 1", {
     # This next one is correct version, but it was installed from CRAN, so it fails
     #   the GH SHA test (i.e., one has the SHA the other does not); so
     #   installs from source
-    warnsReq <- capture_warnings(Require::Install("Require", libPaths = dir3))
+    Require:::linkOrCopyPackageFiles(c("Require", "sys", "data.table", "gitcreds"),
+                                     Sys.getenv("R_LIBS_USER"),toLib = dir3)
     inst <- suppressMessages(
       Require::Require("achubaty/fpCompare",
                        install = "force", returnDetails = TRUE,
