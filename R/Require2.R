@@ -3804,6 +3804,8 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig[["Package"]],
                localFile = unlist(ll))
+    # if (length(dt$localFile) != length(dt$Package))
+    #   dt$localFile <- rep("", length(dt$Package))
     setDT(dt)
   } else  { # installPackages and Other
     dt <- logFile

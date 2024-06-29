@@ -208,8 +208,11 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 
     if (isTRUE(any(file.exists(destFile)))) {
       versionLocal <- DESCRIPTIONFileVersionV(destFile)
-      versionLocalOK <- compareVersion2(versionLocal, pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub],
-                      inequality = pkgDT$inequality)
+      if (identical(pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub], "HEAD"))
+        versionLocalOK <- FALSE
+      else
+        versionLocalOK <- compareVersion2(versionLocal, pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub],
+                                          inequality = pkgDT$inequality)
       versionLocalNotOK <- versionLocalOK %in% FALSE
       if (isTRUE(any(versionLocalNotOK)))
         file.remove(destFile[versionLocalNotOK])
