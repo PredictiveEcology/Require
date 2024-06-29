@@ -3973,19 +3973,21 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
 
   ar <- c(paste0("o <- readRDS('",tf,"')"),
           "options(o)",
+          paste0("setwd('", normalizePath(getwd(), winslash = "/", mustWork = FALSE),"')"),
           paste0("args <- readRDS('", fn, "')"),
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
 
   if (downAndBuildLocal) { # because only it uses Require in the spawned R system
     hasRequireDepsInstalled <- dir(libPaths)#, pattern = "Require")
-    grp <- paste0("^", .RequireDependenciesNoBase, "$", collapse = "|")
+    grp <- paste0("^", c(.RequireDependenciesNoBase, "gitcreds"), "$", collapse = "|")
     installed <- grep(grp, hasRequireDepsInstalled, value = TRUE)
     notInstalled <- setdiff(.RequireDependenciesNoBase, installed)
     if (length(notInstalled)) {
-      Require::Install(notInstalled, verbose = -2, libPaths = libPaths[1])
+      # warning is about restart R; not relevant here
+      suppressWarnings(Require::Install(notInstalled, verbose = -2, libPaths = libPaths[1]))
     }
-    ar <- c(paste0(".libPaths(\"", libPaths[1], "\")"), ar)
+    ar <- c(paste0(".libPaths('", libPaths[1], "')"), ar)
   }
 
   cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
