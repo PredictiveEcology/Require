@@ -551,7 +551,7 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
         installedNoOKAndNoPkgEnv <- installedNoOKAndNoPkgEnv & !haveLocalSHA
         installedNoOKAndNoPkgEnvWh <- which(installedNoOKAndNoPkgEnv)
         if (length(installedNoOKAndNoPkgEnvWh)) {
-          shaOuts <- try(
+          shaOuts <- #try(
             Map(
               repo = pkgDT$Repo[installedNoOKAndNoPkgEnvWh],
               acct = pkgDT$Account[installedNoOKAndNoPkgEnvWh],
@@ -559,7 +559,10 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
               verbose = verbose,
               getSHAfromGitHubMemoise
             )
-          )
+          # )
+          if (is(shaOuts, "try-error"))
+            if (any(grepl(messageCantFind("|", "|", "|"), shaOuts)))
+              stop(shaOuts)
           pkgDT[installedNoOKAndNoPkgEnvWh, shas := unlist(shaOuts)]
         }
         if (sum(installedNoOKAndNoPkgEnv %in% FALSE)) {
