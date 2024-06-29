@@ -3356,7 +3356,6 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
             # case 1 -- package exists in archive, but not specific version
             # no version on CRAN
             if (length(correctVersions)) {
-              # if (inequality[ind] == "==") {
               ineq <- ">="
               altVersion <- compareVersion2(Version2, versionSpec2, ineq)
               if (!any(altVersion)) {
@@ -3367,7 +3366,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
               if (any(altVersion)) {
                 messageVerbose("Package ",
                                Package, " (", inequality[ind], "", versionSpec2,
-                               ") is not on CRAN archives. ",
+                               ") is not available in `repos` supplied ",
                                "The recent available versions are:", verbose = verbose
                 )
                 messageDF(tail(n = 10, data.frame(Version = Version2,
