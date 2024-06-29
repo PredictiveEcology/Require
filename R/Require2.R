@@ -3976,14 +3976,15 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
 
-  if (downAndBuildLocal) {
-    #browser()
-    # hasRequireInstalled <- dir(libPaths, pattern = "Require")
-    # if (length(hasRequireInstalled) == 0) {
+  if (downAndBuildLocal) { # because only it uses Require in the spawned R system
+    hasRequireDepsInstalled <- dir(libPaths)#, pattern = "Require")
+    grp <- paste0("^", .RequireDependenciesNoBase, "$", collapse = "|")
+    installed <- grep(grp, hasRequireDepsInstalled, value = TRUE)
+    notInstalled <- setdiff(.RequireDependenciesNoBase, installed)
+    if (length(notInstalled)) {
+      Require::Install(notInstalled, verbose = -2, libPaths = libPaths[1])
+    }
     ar <- c(paste0(".libPaths(\"", libPaths[1], "\")"), ar)
-    # stop("Require must be installed in libPaths, not just locally. \n",
-    #      "Please install manually, then rerun")
-    # }
   }
 
   cmdLine <- unlist(lapply(ar, function(x) c("-e", x)))
