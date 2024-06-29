@@ -329,8 +329,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbose) {
   fillDefaults(pkgDep)
 
-  if (any(c("quickPlot", "LandR") %in% pkgDT$Package)) browser()
-
   for (tf in c(TRUE, FALSE))
     if (is.null(pkgDT[[cached(tf)]]))
       set(pkgDT, NULL, cached(tf), FALSE)

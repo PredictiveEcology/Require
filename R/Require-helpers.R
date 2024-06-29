@@ -1012,7 +1012,13 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
   # tf <- tempfile()
   for (ii in 1:2) {
     tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_",acct, "@", repo))
-    if (!file.exists(tf))
+    downloadNow <- TRUE
+    if (file.exists(tf)) {
+      if ((difftime(Sys.time(), file.info(tf)$mtime, units = "sec")) < 60) {
+        downloadNow <- FALSE
+      }
+    }
+    if (downloadNow)
       .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
     sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
     # notFound <- any(grepl("Not found|404", sha))
