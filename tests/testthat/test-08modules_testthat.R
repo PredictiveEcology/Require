@@ -22,7 +22,7 @@ test_that("test 8", {
                install = "force")) |>
         capture_warnings() -> warns1
       (a <- Install(c(
-        "PredictiveEcology/SpaDES.project@transition"),
+        "PredictiveEcology/SpaDES.project@development"),
         upgrade = FALSE, returnDetails = TRUE
       )) |>
         capture_warnings() -> warns
@@ -30,7 +30,7 @@ test_that("test 8", {
     } else {
       warnsReq <- capture_warnings(Require::Install("Require"))
       (a <- Install(c(
-        "PredictiveEcology/SpaDES.project@transition"),
+        "PredictiveEcology/SpaDES.project@development"),
         upgrade = FALSE, returnDetails = TRUE
       )) |>
         capture_warnings() -> warns
@@ -55,14 +55,20 @@ test_that("test 8", {
     pkgs <- c(
       unname(unlist(outs)),
       "PredictiveEcology/SpaDES.experiment@development",
-      "PredictiveEcology/SpaDES.project@transition",
+      "PredictiveEcology/SpaDES.project@development",
       "devtools", "ggspatial", "ggpubr", "cowplot"
     )
     pkgsShort <- unique(sort(pkgs))
-    deps <- pkgDep(pkgsShort, recursive = TRUE)
+    opts <- options(repos = unique(c("https://predictiveecology.r-universe.dev", getOption("repos"))))
+    on.exit(options(opts), add = TRUE)
+
+    warns <- capture_warnings(
+      deps <- pkgDep(pkgsShort, recursive = TRUE)
+    )
 
     if (Sys.info()["user"] == "emcintir") {# source install fails; make sure it is gone
-      options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
+      opts2 <- options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
+      on.exit(options(opts2), add = TRUE)
       Require::clearRequirePackageCache("stringfish", ask = FALSE) # get this from RSPM or CRAN fresh
     }
     # THE INSTALL
