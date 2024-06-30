@@ -206,16 +206,24 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
     ]
     destFile <- RequireGitHubCacheFile(pkgDT, filename = filename)
 
-    if (isTRUE(any(file.exists(destFile)))) {
-      versionLocal <- DESCRIPTIONFileVersionV(destFile)
-      if (identical(pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub], "HEAD"))
-        versionLocalOK <- FALSE
-      else
-        versionLocalOK <- compareVersion2(versionLocal, pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub],
-                                          inequality = pkgDT$inequality)
+    feDF <- file.exists(destFile)
+    if (isTRUE(any(feDF))) {
+      destFile2 <- destFile[feDF]
+      versionLocal <- try(DESCRIPTIONFileVersionV(destFile2))
+      if (is(versionLocal, "try-error")) browser()
+      versionLocalOK <- rep(TRUE, length(versionLocal)) # no versionSpec will give NA next; NA is "keep"
+      anyHEAD <- (pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF] == "HEAD")
+      if (isTRUE(any(anyHEAD %in% TRUE)))
+        versionLocalOK[anyHEAD] <- FALSE
+      if (isTRUE(any(anyHEAD %in% FALSE)))
+        versionLocalOK <- try(compareVersion2(versionLocal, pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF],
+                                          inequality = pkgDT$inequality[feDF]))
+      if (is(versionLocalOK, "try-error")) browser()
       versionLocalNotOK <- versionLocalOK %in% FALSE
-      if (isTRUE(any(versionLocalNotOK)))
-        file.remove(destFile[versionLocalNotOK])
+      if (isTRUE(any(versionLocalNotOK))) {
+        oo <- try(file.remove(unique(destFile2[versionLocalNotOK])))
+        if (is(oo, "try-error")) browser()
+      }
     }
 
     # theDir <- RequireGitHubCacheDir(create = TRUE)
