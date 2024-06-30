@@ -1,4 +1,4 @@
-test_that("test 5", {
+test_that("test 09", {
 
   setupInitial <- setupTest(needRequireInNewLib = TRUE)
   # on.exit(endTest(setupInitial))
@@ -58,7 +58,23 @@ test_that("test 5", {
       }
       # remove some specifics for tests that are not expected to work
       skips <- c("rJava", "Require", "SpaDES.install")
+
+      # Can't compile on R 4.4
+      windowsSkips <- c("XML", "sysfonts", "rgdal", "rgeos",
+                        'RCurl', 'httpuv', 'rgdal', 'rgl', 'sf', 'terra', 'DT',
+                        'SpaDES.core', 'SpaDES.tools', 'biomod2',
+                        'climateData', 'lwgeom', 'raster', 'servr', 'stars',
+                        'geodata', 'shiny', 'tidyterra', 'leaflet', 'prioritizr',
+                        'rpostgis', 'satellite', 'amc', 'merTools', 'rasterVis',
+                        'tmap', 'LandR', 'LandR.CS', 'LandWebUtils') # pkgDep may add these back, but maybe newer versions
+                                      # that can be built
       pkgs <- pkgs[!(Package %in% skips)]
+      if (isWindows()) {
+        # keep the GitHub ones because they have SHA, which should work fine
+        pkgs <- pkgs[!(Package %in% windowsSkips) & GithubSHA1 == ""]
+        # pkgs <- pkgs[!(Package %in% windowsSkips)]
+
+      }
 
       # stringfish can't be installed in Eliot's system from binaries
       if (isWindows())
@@ -119,6 +135,10 @@ test_that("test 5", {
       tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
       loaded <- c("testthat", "Require")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
+      if (isWindows()) {
+        tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
+      }
+
       expect_identical(tooManyInstalled, character(0))
 
       ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
