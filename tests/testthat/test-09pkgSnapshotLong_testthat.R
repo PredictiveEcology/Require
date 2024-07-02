@@ -44,6 +44,12 @@ test_that("test 09", {
         pkgs[Package %in% "climateData", Version := "1.0.4"]
         # pkgs[grep("SpaDES.config", Package, invert = TRUE)]
         pkgs[Package %in% "rnaturalearthhires", Version := "1.0.0.9000"]
+        # tmp <- pkgs[1:3, ]
+        tmps2 <- neededBasedOnPackageFullNames[Package %in% c("modelr", "doBy", "Deriv")][, c("Package", "packageFullName")]
+
+        pkgs <- rbindlist(list(pkgs,
+                               ip[Package %in% c("Deriv", "doBy", "modelr"), mget(intersect(colnames(pkgs), colnames(ip)))]),
+                          fill = TRUE)
         #
         data.table::fwrite(pkgs, file = snf)
         googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
@@ -63,15 +69,18 @@ test_that("test 09", {
       windowsSkips <- c("XML", "sysfonts", "rgdal", "rgeos",
                         'RCurl', 'httpuv', 'rgdal', 'rgl', 'sf', 'terra', 'DT',
                         'SpaDES.core', 'SpaDES.tools', 'biomod2',
-                        'climateData', 'lwgeom', 'raster', 'servr', 'stars',
+                        # 'climateData',
+                        'lwgeom', 'raster', 'servr', 'stars',
                         'geodata', 'shiny', 'tidyterra', 'leaflet', 'prioritizr',
                         'rpostgis', 'satellite', 'amc', 'merTools', 'rasterVis',
-                        'tmap', 'LandR', 'LandR.CS', 'LandWebUtils') # pkgDep may add these back, but maybe newer versions
+                        'tmap'
+                        # , 'LandR', 'LandR.CS', 'LandWebUtils'
+                        ) # pkgDep may add these back, but maybe newer versions
                                       # that can be built
       pkgs <- pkgs[!(Package %in% skips)]
       if (isWindows()) {
         # keep the GitHub ones because they have SHA, which should work fine
-        pkgs <- pkgs[!(Package %in% windowsSkips) & GithubSHA1 == ""]
+        pkgs <- pkgs[!(Package %in% windowsSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
         # pkgs <- pkgs[!(Package %in% windowsSkips)]
 
       }
@@ -101,6 +110,8 @@ test_that("test 09", {
       )
       names(packageFullName) <- packageFullName
       # warnsReq <- capture_warnings(Require::Install("Require"))
+      # aaaa <<- 1
+      # on.exit(rm(aaaa, envir = .GlobalEnv))
       warns <- capture_warnings(
         # mess <- capture_messages(
         out <- Require(packageVersionFile = snf, require = FALSE, # purge = TRUE,
@@ -121,6 +132,7 @@ test_that("test 09", {
       expect_true(test)
 
       "Please change required version e.g., NLMR (<=1.1)"
+      browser()
       warns <- capture_warnings(
         out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
       )

@@ -1577,6 +1577,8 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
       packageVersionFile <- getOption("Require.packageVersionFile")
     }
     packages <- data.table::fread(packageVersionFile)
+    # if (exists("aaaa")) browser()
+
     if (packages[1, "Package"] == "R") {
       Rversion <- packages[["Version"]][1] |> versionMajorMinor()
       if (!compareVersion2(versionMajorMinor(), Rversion, inequality = "=="))
