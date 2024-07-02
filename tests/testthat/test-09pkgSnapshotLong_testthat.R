@@ -144,7 +144,7 @@ test_that("test 09", {
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
 
       tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
-      loaded <- c("testthat", "Require")
+      loaded <- c("testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
       if (isWindows()) {
         tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
