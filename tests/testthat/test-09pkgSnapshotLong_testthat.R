@@ -132,7 +132,6 @@ test_that("test 09", {
       expect_true(test)
 
       "Please change required version e.g., NLMR (<=1.1)"
-      browser()
       warns <- capture_warnings(
         out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
       )
@@ -142,7 +141,7 @@ test_that("test 09", {
       dups <- duplicated(neededBasedOnPackageFullNames$Package)
       neededBasedOnPackageFullNames <- neededBasedOnPackageFullNames[!dups]
       neededBasedOnPackageFullNames[grep("biosim", ignore.case = TRUE, Package), Package := "BioSIM"] |> invisible()
-      packagesBasedOnPackageFullNames <- neededBasedOnPackageFullNames$Package
+      packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
 
       tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
       loaded <- c("testthat", "Require")
