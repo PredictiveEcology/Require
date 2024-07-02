@@ -1967,7 +1967,8 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
 
     # Have to make the ap object be the same length as the number of pkgsNotInAP
     if (NROW(ap) < NumPkgsNotInAP) { # no nough rows; must add
-      ap3 <- rbind(ap, matrix(nrow = NumPkgsNotInAP, rep(rep(NA, NCOL(ap)), NumPkgsNotInAP)))
+      ap3 <- matrix(nrow = NumPkgsNotInAP, rep(rep(NA, NCOL(ap)), NumPkgsNotInAP))
+      colnames(ap3) <- colnames(ap)
     } else { #  too many rows, keep first NumPkgsNotInAP
       ap3 <- ap[seq(NumPkgsNotInAP), , drop = FALSE]
     }

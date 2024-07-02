@@ -238,6 +238,14 @@ test_that("test 3", {
     # 7.367775  8.914831  9.495963 10.46189 10.56006 10.65823     3
   }
 
+  # Mistakenly have a partial repos, i.e., without getOption("repos") -- This failed previously Jul 2, 2024
+  dir44 <- tempdir2(.rndstr(1))
+  silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
+  on.exit(unlink(dir44, recursive = TRUE), add = TRUE)
+  Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
+                   standAlone = TRUE)
+
+
   ooo <- options(Require.RPackageCache = NULL)
   testthat::expect_true(identical(getOptionRPackageCache(), NULL))
   options(ooo)
