@@ -2929,15 +2929,16 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
       )
     } else {
       nonBinaryRepos <- getOption("repos")[!isBinaryCRANRepo(getOption("repos"))]
-      pkgInstall[which(needSrc), `:=`(Repository = contrib.url(nonBinaryRepos),
-                                      repo = nonBinaryRepos,
-                                      binOrSrc = binOrSrc(FALSE))]
+      if (length(nonBinaryRepos) == 1) {
+        pkgInstall[which(needSrc), `:=`(Repository = contrib.url(nonBinaryRepos),
+                                        repo = nonBinaryRepos,
+                                        binOrSrc = binOrSrc(FALSE))]
       # pkgInstall[which(needSrc), Repository := nonBinaryRepos]
 
       # pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
 
       # if there are multiple non-binary repos
-      if (length(nonBinaryRepos) > 1) {
+      } else { # (length(nonBinaryRepos) > 1) {
         packageExists <- FALSE
         for (ind in seq(nonBinaryRepos)) {
           nbrContrib <- contrib.url(nonBinaryRepos)
