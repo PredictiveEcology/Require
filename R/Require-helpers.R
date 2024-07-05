@@ -215,9 +215,11 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
       anyHEAD <- (pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF] == "HEAD")
       if (isTRUE(any(anyHEAD %in% TRUE)))
         versionLocalOK[anyHEAD] <- FALSE
-      if (isTRUE(any(anyHEAD %in% FALSE)))
-        versionLocalOK <- try(compareVersion2(versionLocal, pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF],
-                                          inequality = pkgDT$inequality[feDF]))
+      hasNonHead <- anyHEAD %in% FALSE
+      if (isTRUE(any(hasNonHead)))
+        versionLocalOK <- try(compareVersion2(versionLocal[hasNonHead],
+                                              pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF][hasNonHead],
+                                              inequality = pkgDT$inequality[feDF][hasNonHead]))
       if (is(versionLocalOK, "try-error")) browser()
       versionLocalNotOK <- versionLocalOK %in% FALSE
       if (isTRUE(any(versionLocalNotOK))) {
