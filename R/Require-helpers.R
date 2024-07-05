@@ -566,7 +566,8 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
   } else {
     if (is.name(repoToTest))
       repoToTest <- eval(repoToTest)
-    isBin <- startsWith(prefix = repoToTest, curCRANRepo)
+    isBin <- tryCatch(startsWith(prefix = repoToTest, curCRANRepo),
+                     silent = TRUE, error = function(x) FALSE)
   }
   isBin
 }
