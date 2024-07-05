@@ -1546,6 +1546,11 @@ extractPkgNameFromWarning <- function(x) {
     out <- gsub("^.+\\'(.+)\\'.+$", "\\1", out)
     out <- gsub(".+\u2018(.+)\u2019.+", "\\1", out) # package XXX is in use and will not be installed
   }
+
+  if (isTRUE(any(grepl(.txtCannotOpenFile, x)))) {
+    outs <- strsplit(out, split = "/|\\\\")
+    out <- sapply(outs, function(x) x[length(x) - 1])
+  }
   out
 }
 

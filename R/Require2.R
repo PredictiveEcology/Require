@@ -3044,13 +3044,17 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
   }
 
   # Case where the local file may be corrupt
-  if (any(grepl("(installation of package.+had non-zero exit statu)|(installation of .+ packages failed)", w$message))) {
+  needReInstall <- FALSE
+  if (any(grepl(paste0("(installation of package.+had non-zero exit statu)|",
+                       "(installation of .+ packages failed)|",
+                       .txtCannotOpenFile), w$message))) {
     unlink(toInstall[Package %in% pkgName]$localFile)
     unlink(dir(tmpdir, pattern = paste0(pkgName, collapse = "|"), full.names = TRUE))
+    needReInstall <- TRUE
   }
 
-  if (!is.null(getOptionRPackageCache())) {
-    if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache())))) {
+  if (!is.null(getOptionRPackageCache()) || needReInstall) {
+    if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache()))) || needReInstall) {
       messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
       unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
       retrying <- try(Require(toInstall[Package %in% basename(pkgName)][["packageFullName"]], require = FALSE,

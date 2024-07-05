@@ -1,5 +1,6 @@
 msgPackageViolation <- "Package version violation detected; installing this"
 .txtMsgIsInUse <- "in use and will not be installed"
+.txtCannotOpenFile <- "cannot open file.+DESCRIPTION.+No such file or directory"
 comma <- ", "
 
 .txtGetArchiveDetailsInner <- "getArchiveDetailsInner"
