@@ -3055,12 +3055,16 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
 
   if (!is.null(getOptionRPackageCache()) || needReInstall) {
     if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache()))) || needReInstall) {
-      messageVerbose(verbose = verbose, verboseLevel = 2, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
+      messageVerbose(verbose = verbose, verboseLevel = 1, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
       unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
-      retrying <- try(Require(toInstall[Package %in% basename(pkgName)][["packageFullName"]], require = FALSE,
-                              verbose = verbose, returnDetails = returnDetails))
+      retrying <- try(Require(toInstall[Package %in% basename(pkgName)][["packageFullName"]],
+                              require = FALSE,
+                              verbose = verbose, returnDetails = returnDetails,
+                              dependencies = FALSE)) # dependencies = FALSE b/c it should already have what it needs
       if (is(retrying, "try-error")) {
         needWarning <- TRUE
+      } else {
+        needWarning <- FALSE
       }
     }
   } else {

@@ -1574,7 +1574,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
 
   if (getOption("Require.installPackagesSys") &&
       requireNamespace("sys", quietly = TRUE)){
-    for (i in 1:3) {
+    for (i in 1:1) {
       anyFailed <- NULL
       out <- sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                                    doLine = "outfiles <- do.call(install.packages, args)",
