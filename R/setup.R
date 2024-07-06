@@ -284,16 +284,32 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       repo <- c(
         CRAN =
-          # paste0(binaryLinux, "all/__linux__/", linuxRelease(), "/latest")
           positBinaryRepos()
       )
-      if (!is.null(getOption("repos"))) {
-        backupCRAN <- getOption("repos")
+      currentRepos <- getOption("repos")
+      insertBefore <- 1 # put first, unless otherwise
+      if (!is.null(currentRepos)) {
+        mirrorsLocalFile <- file.path(Require:::RequirePkgCacheDir(), ".mirrors.csv")
+        if (!file.exists(mirrorsLocalFile))
+          download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+                        destfile = mirrorsLocalFile, quiet = TRUE)
+        a <- read.csv(mirrorsLocalFile)
+        isCRAN <- lapply(gsub("https://", "", currentRepos),
+               grep, x = gsub("https://", "", a$URL), value = TRUE)
+        insertBefore <- which(lengths(isCRAN) > 0)
+      } else {
+        if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
+        currentRepos <- backupCRAN
       }
-      if (is.null(names(backupCRAN))) names(backupCRAN) <- "CRAN"
-      repo <- c(repo, backupCRAN)
-      repo <- repo[!duplicated(repo)]
-      options(repos = repo)
+      repos <- c(repo, currentRepos)
+      if (insertBefore > 1) {
+        repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
+          repo,
+          currentRepos[seq(insertBefore, length(currentRepos))])
+      }
+
+      repos <- repos[!duplicated(repos)]
+      options(repos = repos)
     }
   }
 }
