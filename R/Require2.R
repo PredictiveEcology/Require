@@ -389,8 +389,8 @@ Require <- function(packages,
                             repos = repos, purge = purge, libPaths = libPaths,
                             install.packagesArgs = install.packagesArgs,
                             type = type, returnDetails = returnDetails,
-                     verbose = verbose
-          )
+                            verbose = verbose
+        )
       } else {
         messageVerbose("No packages to install/update", verbose = verbose)
       }
@@ -566,8 +566,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
   }
-
-  # toInstall <- removeRequireDeps(toInstall, verbose = verbose)
 
   # "repos" is interesting -- must be NULL, not just unspecified, for Local; must be unspecified or specified for Archive & CRAN
   #  This means that we can't get parallel installs for GitHub or Cache
@@ -3047,12 +3045,18 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
 
   # Case where the local file may be corrupt
   needReInstall <- FALSE
-  if (any(grepl(paste0("(installation of package.+had non-zero exit statu)|",
-                       "(installation of .+ packages failed)|",
-                       .txtCannotOpenFile), w$message))) {
+  failedMsg <- grepl(
+    paste(
+      .txtInstallationNonZeroExit,
+      .txtInstallationPkgFailed,
+      .txtCannotOpenFile, sep = "|"),
+    w$message)
+  if (any(failedMsg)) {
     unlink(toInstall[Package %in% pkgName]$localFile)
-    unlink(dir(tmpdir, pattern = paste0(pkgName, collapse = "|"), full.names = TRUE))
-    needReInstall <- TRUE
+    unlink(dir(tmpdir, pattern = paste0("^", pkgName, "_[[:digit:]]", collapse = "|"), full.names = TRUE))
+    if (isTRUE(any(grepl(.txtCannotOpenFile, w$message)))) {
+      stop(.txtPkgFailed, pkgName, .txtRetrying)
+    }
   }
 
   if (!is.null(getOptionRPackageCache())) {
@@ -3385,8 +3389,8 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                 )
                 messageDF(tail(n = 10, data.frame(Version = Version2,
                                                   ava[[Package]][, c("repo", "PackageUrl", "mtime")])), verbose = verbose)
-                warning("Please change required version e.g., ",
-                        paste0(Package, " (", ineq, tail(Version2[altVersion], 1),")"), call. = FALSE)
+                warnTxt <- msgPleaseChangeRqdVersion(Package, ineq, newVersion = tail(Version2[altVersion], 1))
+                warning(warnTxt, call. = FALSE)
 
                 break
               }
@@ -3760,6 +3764,10 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       pkgs <- argsOrig$pkgs[vecList[[whPid]]]
       if (installPackages) {
         # check installations
+        log <- readLines(logFile)
+        if (any(grepl(paste(.txtInstallationNonZeroExit, .txtInstallationPkgFailed, sep = "|"), log))) {
+          return(logFile)
+        }
         aa <- Map(p = args$pkgs, function(p) as.character(packVer(p, args$lib)))
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])

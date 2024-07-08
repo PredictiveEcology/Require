@@ -111,7 +111,7 @@ testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, could
   if (length(warns)) {
     tst <- character()
     if (isTRUE(please))
-      tst <- "Please change required"
+      tst <- .txtPleaseChangeReqdVers
     if (isTRUE(inUse))
       tst <- c(tst, .txtMsgIsInUse)
     if (isTRUE(couldNot))

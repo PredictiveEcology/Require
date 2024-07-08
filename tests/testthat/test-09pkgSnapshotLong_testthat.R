@@ -121,7 +121,7 @@ test_that("test 09", {
 
 
       # NLMR specification is for a version that doesn't exist
-      NLMRandVisualTestWarn <- grepl("Please change required version", warns)
+      NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
       expect_identical(sum(unique(NLMRandVisualTestWarn)), 1L)
       warns <- warns[-which(NLMRandVisualTestWarn)]
 
@@ -144,7 +144,7 @@ test_that("test 09", {
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
 
       tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
-      loaded <- c("testthat")
+      loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
       if (isWindows()) {
         tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)

@@ -1524,7 +1524,7 @@ mainGrep <- paste0("/", "main", "(/|\\.)")
 extractPkgNameFromWarning <- function(x) {
 
   if (any(grepl(.txtMsgIsInUse, x)) || # "in use"
-      any(grepl("installation of.+failed", x))) { # "installation of 2 packages failed:"
+      any(grepl(.txtInstallationPkgFailed, x))) { # "installation of 2 packages failed:"
     out <- NULL
     if (isWindows()) {
       aa <- strsplit(x, "\\'")
@@ -1536,7 +1536,7 @@ extractPkgNameFromWarning <- function(x) {
     }
     if (is.na(out) || !isWindows()) {
       aa <- strsplit(x, "\u2019|\u2018")[[1]]
-      aa <- grep("installation.+failed", aa, invert = TRUE, value = TRUE)
+      aa <- grep(.txtInstallationPkgFailed, aa, invert = TRUE, value = TRUE)
       aa <- grep("package|is in use|failed", aa, invert = TRUE, value = TRUE)
       out <- grep(", ", aa, value = TRUE, invert = TRUE)
     }
@@ -1576,13 +1576,14 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       requireNamespace("sys", quietly = TRUE)){
     for (i in 1:1) {
       anyFailed <- NULL
-      out <- sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
+      out <- try(sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                                    doLine = "outfiles <- do.call(install.packages, args)",
-                                   verbose = verbose)
+                                   verbose = verbose))
       if (file.exists(out)) {
         txt <- readLines(out)
-        anyFailed <- grep("installation.+failed", txt)
+        anyFailed <- grep(.txtInstallationPkgFailed, txt)
       }
+
       if (length(anyFailed) == 0)
         break
 

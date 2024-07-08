@@ -8,7 +8,7 @@ test_that("test 5b", {
   if (isDevAndInteractive) {
     # Use a mixture of different types of "off CRAN"
     if (!isMacOSX()) {
-      pkgs <- c("knn", "gdalUtils", "ggplot2 (==3.3.4)", "silly1", "SpaDES.core")
+      pkgs <- c("knn", "ggplot2 (==3.4.3)", "silly1", "SpaDES.core")
       pkgsClean <- extractPkgName(pkgs)
       lala <- try(suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean)))), silent = TRUE)
 
@@ -20,7 +20,7 @@ test_that("test 5b", {
       ip <- installed.packages() ## silly1 won't be installed
 
       # depending on whether SpaDES.core gets installed... could be poss1 or poss2
-      poss1 <- identical(setdiff(pkgsClean, ip[, "Package"]), pkgs[[4]])  # installs SpaDES.core anyway
+      poss1 <- identical(setdiff(pkgsClean, ip[, "Package"]), pkgs[[3]])  # installs SpaDES.core anyway
 
       # This one fails to install SpaDES.core because already loaded
       poss2 <- sum(pkgsClean %in% ip[, "Package"]) ==
@@ -36,7 +36,7 @@ test_that("test 5b", {
     capted2 <- capture_messages(
       out2 <- Install("PredictiveEcology/fpCompare@development (HEAD)", verbose = 5, returnDetails = TRUE) # will install
     )
-    theGrep1 <- "Installing from"
+    theGrep1 <- "Installing:"
     theGrep2 <- "SHA1 has not"
     testthat::expect_true(isTRUE(sum(grepl(theGrep1, capted1)) == 1))
     testthat::expect_true(isTRUE(sum(grepl(theGrep2, capted2)) == 1))

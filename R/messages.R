@@ -6,9 +6,20 @@ comma <- ", "
 .txtGetArchiveDetailsInner <- "getArchiveDetailsInner"
 .txtGetSHAfromGitHub <- "getSHAfromGitHub"
 .txtPkgHasGHP <- "hasGHP"
+.txtPkgFailed <- "package failed: "
+.txtPleaseChangeReqdVers <- "Please change required version"
+.txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
 
 .txtGitHub <- "GitHub"
+.txtCouldNotBeInstalled <- "could not be installed"
+
+# "installation of package 'ccissr' had non-zero exit status"
+# "installation of 2 packages failed"
+.txtInstallationNonZeroExit <- "installation of.+had non-zero exit status"
+
+# "installation of.+failed" # "installation of 2 packages failed:"
+.txtInstallationPkgFailed <- "installation of.+failed"
 
 .txtGitHubCols <- list()
 .txtGitHubCols$Br <- "Branch"
@@ -45,7 +56,12 @@ messageCantInstallNoVersion <- function(packagesFullName) {
   )
 }
 
-.txtCouldNotBeInstalled <- "could not be installed"
+
+msgPleaseChangeRqdVersion <- function(Package, ineq, newVersion) {
+  paste0(.txtPleaseChangeReqdVers, " e.g., ",
+         paste0(Package, " (", ineq, newVersion,")"))
+}
+
 
 msgStdOut <- function(mess, logFile, verbose) {
   # pkg <- extractPkgNameFromWarning(mess)
