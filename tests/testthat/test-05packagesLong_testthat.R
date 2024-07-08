@@ -112,9 +112,7 @@ test_that("test 5", {
 
   i <- 0
   pkg <- pkgs[[i + 1]] # redundant, but kept for interactive use
-  # }
   for (pkg in pkgs) {
-    # out <- unloadNSRecursive(n = 1)
     i <- i + 1
     Require:::messageVerbose(paste0("\033[32m", i, ": ", paste0(Require::extractPkgName(pkg), collapse = comma), "\033[39m"),
                              verboseLevel = 0
@@ -128,7 +126,6 @@ test_that("test 5", {
       capture_warnings() -> warns
 
     test <- testWarnsInUsePleaseChange(warns)
-    # test <- testCouldNotBeInstalled(warns)
     if (!isTRUE(test)) browser()
     expect_true(test)
 

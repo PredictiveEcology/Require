@@ -162,16 +162,14 @@ test_that("test 09", {
       whDiff <- (joined$Version != joined$i.Version)
       versionProblems <- joined[which(whDiff)]
       testthatDeps <- extractPkgName(pkgDep("testthat", dependencies = TRUE, recursive = TRUE)$testthat)
-      versionProblems <- versionProblems[which(!versionProblems$Package %in% testthatDeps)]
+      devtoolsDeps <- extractPkgName(pkgDep("devtools", dependencies = TRUE, recursive = TRUE)$devtools)
+      versionProblems <- versionProblems[
+        which(!(versionProblems$Package %in% testthatDeps |
+        versionProblems$Package %in% devtoolsDeps))]
 
       # scales didn't install the "equals" version because a different package needs >= 1.3.0
       versionProblems <- versionProblems[!Package %in% "scales"]
       expect_true(NROW(versionProblems) == 0)
-
-      # attrA <- attr(out, "Require")
-
-
-
 
       # See if any packages are missing
       installedNotInIP <- setdiff(packagesBasedOnPackageFullNames, ip$Package)
@@ -210,7 +208,7 @@ test_that("test 09", {
       att <- att[!duplicated(att$Package)]
 
       versionViolation <- att$Package[grep("violation", att$installResult)]
-      noneAvailable <- att$Package[grep("noneAvailable", att$installResult)]
+      noneAvailable <- att$Package[grep(.txtNoneAvailable, att$installResult)]
       didnt <- att[!is.na(att$installResult)]
 
 

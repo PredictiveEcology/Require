@@ -277,6 +277,7 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @param binaryLinux A CRAN repository serving binary Linux packages.
 #' @param backupCRAN If there is no CRAN repository set
 #'
+#' @importFrom utils read.csv
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {
@@ -289,7 +290,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
       currentRepos <- getOption("repos")
       insertBefore <- 1 # put first, unless otherwise
       if (!is.null(currentRepos)) {
-        mirrorsLocalFile <- file.path(Require:::RequirePkgCacheDir(), ".mirrors.csv")
+        mirrorsLocalFile <- file.path(RequirePkgCacheDir(), ".mirrors.csv")
         if (!file.exists(mirrorsLocalFile))
           download.file("https://cran.r-project.org/CRAN_mirrors.csv",
                         destfile = mirrorsLocalFile, quiet = TRUE)

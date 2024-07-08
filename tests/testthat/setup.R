@@ -134,7 +134,6 @@ testCouldNotBeInstalled <- function(warns) {
 
 rcmdDebug <- function(counterName = "a", envir = parent.frame(), envirAssign = .GlobalEnv,
                       path = "/home/emcintir/tmp/") {
-  # objNam <- deparse(substitute(...))
   if (!exists(counterName, envir = envirAssign))
     assign(counterName, 0, envir = envirAssign) # m <<- 0
   m <- get(counterName, envir = envirAssign)

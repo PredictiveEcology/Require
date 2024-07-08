@@ -39,6 +39,10 @@ comma <- ", "
 
 .txtShaUnchangedNoInstall <- "SHA unchanged; no install"
 
+.txtNoneAvailable <- "noneAvailable"
+
+
+
 messageCantFind <- function(br, acct, repo)
   paste0("Can't find ", paste0(acct, "/", repo, "@", br), "; \n -- does it exist? --")
 

@@ -228,11 +228,6 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
       }
     }
 
-    # theDir <- RequireGitHubCacheDir(create = TRUE)
-    # # checkPath(theDir, create = TRUE)
-    # destFile <- if(is.null(pkgDT$shas)) pkgDT$Branch else pkgDT$shas
-    # destFile <- paste0(pkgDT$Account, "_", pkgDT$Package, "_", destFile)
-    # destFile <- file.path(theDir, paste0(destFile, "_", filename))
     set(pkgDT, NULL, "destFile", destFile)
 
     if (!isTRUE(getOption("Require.offlineMode"))) {
@@ -246,16 +241,6 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         }
       }
       if (any(!alreadyExists)) {
-        # if (getOption("Require.installPackagesSys")) {
-        #   isGH <- which(pkgDT$repoLocation == .txtGitHub & alreadyExists %in% FALSE)
-        #   pkgDT[isGH, `:=`(uniqueURL = unique(url)[1], uniqueDestfile = unique(destFile)[1]), by = c("Package", "Branch")]
-        #   args <- list(destfile = unique(pkgDT$uniqueDestfile[isGH]), url = unique(pkgDT$uniqueURL[isGH]),
-        #                need <- "master", verboseLevel = 2)
-        #   sysInstallAndDownload(args, split = c("destfile", "url"),
-        #                         doLine = "outfiles <- do.call(Require:::.downloadFileMasterMainAuth, args)",
-        #                         tmpdir = tempdir3(),
-        #                         verbose = verbose)
-        # } else {
         pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
               filepath := {
                 messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
@@ -274,17 +259,13 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
               },
               by = c("Package", "Branch")
         ]
-        # }
-
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
       wh <- which(pkgDT$repoLocation == .txtGitHub)
       if (identical("DESCRIPTION", filename)) {
         set(pkgDT, wh, "DESCFile", pkgDT[[old]][wh])
-        # setnames(pkgDT, old = old, new = "DESCFile") # don't do this because might already exist
       } else {
         set(pkgDT, wh, "filename", pkgDT[[old]][wh])
-        # setnames(pkgDT, old = old, new = filename)
       }
 
     }
@@ -357,39 +338,6 @@ dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Requ
   return(info)
 }
 
-# getPkgDeps <- function(packages, which, purge = getOption("Require.purge", FALSE)) {
-#   pkgs <- trimVersionNumber(packages)
-#   out1 <- pkgDep(packages,
-#     recursive = TRUE, which = which, purge = purge,
-#     includeSelf = FALSE
-#   )
-#   out1 <- unique(unname(unlist(out1)))
-#   out2 <- c(out1, pkgs)
-#   out3 <- c(out1, packages)
-#   dt <- data.table(
-#     github = extractPkgGitHub(out2), Package = extractPkgName(out2),
-#     depOrOrig = c(rep("dep", length(out1)), rep("orig", length(packages))),
-#     packageFullName = out3
-#   )
-#   set(dt, NULL, "origOrder", seq_along(dt$github))
-#   dt[, bothDepAndOrig := length(depOrOrig) > 1, by = "Package"]
-#   dt[bothDepAndOrig == TRUE, depOrOrig := "both"]
-#
-#
-#   if ("github" %in% colnames(dt)) {
-#     setorderv(dt, na.last = TRUE, "github")
-#   } # keep github packages up at top -- they take precedence
-#   setorderv(dt, "origOrder")
-#   ret <- dt$packageFullName
-#   if (!is.null(names(packages))) {
-#     dt[depOrOrig == "orig", Names := names(packages)[match(packageFullName, packages)]]
-#     dt[is.na(Names), Names := ""]
-#     names(ret) <- dt$Names
-#   }
-#   ret
-# }
-
-
 
 #' @importFrom utils packageVersion installed.packages
 installedVers <- function(pkgDT, libPaths) {
@@ -398,7 +346,6 @@ installedVers <- function(pkgDT, libPaths) {
   pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
     ip <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
-    # ip <- ip[, c("Package", "LibPath", "Version")]
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -520,8 +467,6 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       }
     }
     cap <- do.call(rbind, cap)
-    # cap <- cap[!duplicated(cap, by = "Package")] # This will keep only one copy if type = "both"
-
     assign(objNam, cap, envir = pkgDepEnv())
     out <- cap
   } else {
@@ -541,10 +486,6 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
   return(out)
 }
 
-
-
-
-
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest <- (endsWith(fn, "zip") & isWindows() ) |
     (grepl("R_x86", fn) & !isWindows() & !isMacOSX()) |
@@ -560,7 +501,6 @@ isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest
 }
 
-
 isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
                              repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
   if (isWindows() || isMacOSX()) {
@@ -573,56 +513,6 @@ isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
   }
   isBin
 }
-
-
-# installRequire <- function(requireHome = getOption("Require.Home"),
-#                            verbose = getOption("Require.verbose")) {
-#   Rpath <- Sys.which("R")
-#   dFileAtInstalledRequire <- file.path(.libPaths()[1], "Require", "DESCRIPTION")
-#   haveIt <- file.exists(dFileAtInstalledRequire)
-#   installedRequireV <- if (haveIt) DESCRIPTIONFileVersionV(dFileAtInstalledRequire) else NULL
-#   isGitHub <- if (haveIt) DESCRIPTIONFileOtherV(dFileAtInstalledRequire, other = "github") else NA
-#   done <- FALSE
-#   if (is.na(isGitHub)) {
-#     if (!is.null(requireHome)) {
-#       dFile <- dir(requireHome, pattern = "DESCRIPTION", full.names = TRUE)
-#       pkgNameAtRequireHome <- DESCRIPTIONFileOtherV(dFile, "Package")
-#       pkgVersionAtRequireHome <- DESCRIPTIONFileVersionV(dFile)
-#       if (!is.null(pkgNameAtRequireHome)) {
-#         if (identical(pkgNameAtRequireHome, "Require")) {
-#           if (!identical(installedRequireV, pkgVersionAtRequireHome)) {
-#             origDir <- setwd(dirname(dirname(dFile)))
-#             on.exit(setwd(origDir), add = TRUE)
-#             messageVerbose("Installing Require ver: ", pkgVersionAtRequireHome, " from source at ", requireHome,
-#                            verbose = verbose, verboseLevel = 2
-#             )
-#             out <- system(paste0(Rpath, " CMD INSTALL --no-multiarch --library=", .libPaths()[1], " Require"),
-#                           wait = TRUE, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE
-#             )
-#           }
-#         }
-#         done <- TRUE
-#       } else {
-#         if (!is.null(requireHome)) {
-#           messageVerbose(pkgNameAtRequireHome, " did not contain Require source code",
-#                          verbose = verbose, verboseLevel = 2
-#           )
-#         }
-#       }
-#     }
-#
-#     if (isFALSE(done)) {
-#       Rpath <- Sys.which("Rscript")
-#       system(paste0(
-#         Rpath, " -e \"install.packages(c('Require'), lib ='", .libPaths()[1],
-#         "', quiet = TRUE, repos = '", getOption("repos")[["CRAN"]], "')\""
-#       ), wait = TRUE)
-#       done <- TRUE
-#     }
-#   } else {
-#     stop("Require will need to be installed manually in", .libPaths()[1])
-#   }
-# }
 
 toPkgDT <- function(pkgDT, deepCopy = FALSE) {
   if (!is.data.table(pkgDT)) {
@@ -869,13 +759,6 @@ postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
             dupsRev <- duplicated(vapply(strsplit(rev(txt), split = "\\:"),
                                       function(x) x[[1]], FUN.VALUE = character(1)))
             txtOut <- rev(rev(txt)[!dupsRev])
-            #if (all(grepl("Github|Remote", txt[dups]))) {
-            #  txtOut <- unique(readLines(file))
-              # browserDeveloper(paste0("Error 7456; Mostly likely this indicates that ",
-              #                         "the DESCRIPTION file at ", file,
-              #                         " has duplicated RemoteHost to GithubSHA1. Try to remove ",
-              #                         "the first set"))
-            #}
           }
           if (!exists("txtOut", inherits = FALSE)) {
 
@@ -957,7 +840,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
         }
       }
       normPath(substr(x[1], 1, n - 1))
-    })) # unique(dirname(d))[1])
+    }))
   }))
   if (is(badDirname, "try-error")) stop("Error 654; something went wrong with downloading & building the package")
   badDirname <- unlist(badDirname)
@@ -985,17 +868,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
         }
         fileRenameOrMove(origOut, outNP) # do the rename
         newFolder
-      } # else {
-      #   badToChange <- if (!isFALSE(subFolder)) {
-      #     file.path(actualFolderName, subFolder)
-      #   } else {
-      #     basename(bad)
-      #   }
-      #   newName <- gsub(badToChange, pkgName, bad)
-      #   fileRenameOrMove(bad, newName) # it was downloaded with a branch suffix
-      #   newName
-      # }
-
+      }
     }
   ))
   unlink(zipFileName)
@@ -1035,7 +908,6 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     if (downloadNow)
       .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
     sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-    # notFound <- any(grepl("Not found|404", sha))
     if (any(grepl("Bad credentials", sha))) {#} || notFound) {
       if (notFound)
         stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
