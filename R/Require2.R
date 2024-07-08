@@ -381,16 +381,14 @@ Require <- function(packages,
         wh <- which(pkgDT$Package %in% extractPkgName(packages))
         set(pkgDT, wh, "installedVersionOK", FALSE)
         set(pkgDT, wh, "forceInstall", FALSE)
-        # pkgDT[Package %in% extractPkgName(packages), installedVersionOK := FALSE]
-        # pkgDT[Package %in% extractPkgName(packages), forceInstall := TRUE]
       }
 
-      if ((any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force") {
-        pkgDT <-
-          doInstalls(pkgDT,
-                     repos = repos, purge = purge, libPaths = libPaths,
-                     install.packagesArgs = install.packagesArgs,
-                     type = type, returnDetails = returnDetails,
+      needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
+      if (needInstalls) {
+        pkgDT <- doInstalls(pkgDT,
+                            repos = repos, purge = purge, libPaths = libPaths,
+                            install.packagesArgs = install.packagesArgs,
+                            type = type, returnDetails = returnDetails,
                      verbose = verbose
           )
       } else {
@@ -593,17 +591,23 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
     },
     add = TRUE)
-    toInstallOut <- withCallingHandlers(
-      installPackagesWithQuiet(ipa, verbose = verbose),
-      warning = function(w) {
-        messagesAboutWarnings(w, toInstall, returnDetails = returnDetails,
-                              tmpdir = tmpdir, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
-        invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
-      }
-    )
-    # toInstall[repoLocation %in% "CRAN", MD5Sums :=
-    #             tools::checkMD5sums(Package, file.path(libPaths[1], Package)), by = "Package"]
-    # if (any(toInstall$MD5Sums %in% FALSE)) browser()
+    tries <- seq(1, 3)
+    for (attempt in tries) {
+      toInstallOut <- try(withCallingHandlers(
+        installPackagesWithQuiet(ipa, verbose = verbose),
+        warning = function(w) {
+          messagesAboutWarnings(w, toInstall, returnDetails = returnDetails,
+                                tmpdir = tmpdir, verbose = verbose) # changes to toInstall are by reference; so they are in the return below
+          invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
+        }
+      ))
+      if (!is(toInstallOut, "try-error"))
+          break
+      ipa <- recoverFromFail(toInstallOut, toInstall, ipa,
+                             attempt = attempt, tries = tries,
+                             repos = repos, tmpdir = tmpdir, libPaths = libPaths,
+                             verbose, returnDetails)
+    }
   }
   toInstall
 }
@@ -1577,7 +1581,6 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
       packageVersionFile <- getOption("Require.packageVersionFile")
     }
     packages <- data.table::fread(packageVersionFile)
-    # if (exists("aaaa")) browser()
 
     if (packages[1, "Package"] == "R") {
       Rversion <- packages[["Version"]][1] |> versionMajorMinor()
@@ -2255,7 +2258,6 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   set(pkgDT, NULL, "hasInequality", !is.na(pkgDT[["inequality"]]))
   pp <- pkgDT[, keep44 := if (any(hasInequality)) ifelse(hasInequality, .I, NA) else .I, by = "Package"]
   pkgDT <- pp[unique(na.omit(keep44))]
-  # pkgDT <- data.table::copy(pp3)# [!Package %in% "ggplot2" | packageFullName == "ggplot2 (==3.4.4)"]
   if (!is.null(pkgDT[["parentPackage"]])) {
     pkgDT[, needKeep := grepl("\\(", parentPackage) | is.na(parentPackage)]
     pkgDT[, keep55 := if(any(needKeep)) ifelse(needKeep | is.na(parentPackage), .I, NA) else .I, by = "Package"]
@@ -3053,7 +3055,7 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
     needReInstall <- TRUE
   }
 
-  if (!is.null(getOptionRPackageCache()) || needReInstall) {
+  if (!is.null(getOptionRPackageCache())) {
     if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache()))) || needReInstall) {
       messageVerbose(verbose = verbose, verboseLevel = 1, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
       unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
@@ -4086,3 +4088,39 @@ avokto <- function(versionSpec, VersionOnRepos, inequality) {
 packVer <- function(package, lib.loc = .libPaths()[1]) {
   DESCRIPTIONFileVersionV(file.path(lib.loc, package, "DESCRIPTION"))
 }
+
+
+recoverFromFail <- function(toInstallOut, toInstall, ipa, attempt, tries, repos,
+                            tmpdir, libPaths, verbose, returnDetails) {
+  if (attempt <= max(tries)) {
+    pkgName <- strsplit(toInstallOut, .txtPkgFailed)[[1]][2]
+    pkgName <- strsplit(pkgName, .txtRetrying)[[1]][1]
+    if (isTRUE(!is.na(pkgName))) { #
+      fileToDelete <- toInstall$localFile[toInstall$Package %in% pkgName]
+      if (isTRUE(file.exists(fileToDelete)))
+        unlink(fileToDelete)
+
+      pkgInstall <- doDownloads(toInstall[Package %in% basename(pkgName)], repos = repos,
+                                purge = FALSE, verbose = verbose,
+
+                                tmpdir = tempdir(), libPaths = libPaths()[1])
+      doneUpTo <- which(rownames(ipa$available) == pkgName)
+      keep <- seq(min(NROW(ipa$available), doneUpTo[1]),
+                  NROW(ipa$available))
+      newAv <- ipa$available[keep, , drop = FALSE]
+      ipa$available <- newAv
+      ipa$pkgs <- ipa$pkgs[keep]
+      # try(Install(toInstall[Package %in% basename(pkgName)][["packageFullName"]],
+      #             verbose = verbose - 1, returnDetails = returnDetails,
+      #             dependencies = FALSE)) # dependencies = FALSE b/c it should already have what it needs
+    } else {
+      stop()
+    }
+  } else {
+    stop("Errors installing packages, likely due to corrupt local cache files; ",
+         "attempts were made to remove the corrupt cache entries. \n",
+         "Try rerunning again.")
+  }
+  ipa
+}
+
