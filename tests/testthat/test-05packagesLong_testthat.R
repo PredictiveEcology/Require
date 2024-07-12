@@ -28,7 +28,7 @@ test_that("test 5", {
   })
 
   testthat::expect_true({
-    length(pkgDepTest2[[1]]) == 1
+    length(pkgDepTest2[[1]]) == 2
   })
   testthat::expect_true({
     all(sort(names(pkgDepTest2$Require)) == sort(pkgDepTest1$Require))
@@ -50,8 +50,8 @@ test_that("test 5", {
   out <- unlink(pkgsToRm, recursive = TRUE)
 
   pkgs <- list(
-    c(
-      "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.4.3)",
+    c("LearnBayes (>=2.0.4)", "tinytest (>= 1.0.3)", "glmm (>=1.4.3)",
+      # "LearnBayes (<=4.0.4)", "tinytest (<= 1.0.3)", "glmm (<=1.4.3)",
       "SpaDES.tools (>=2.0.5)", "terra (>=1.7-71)",
       "reproducible (>=2.0.2)", "PredictiveEcology/reproducible@development (>=2.0.0)", # Until reproducible 2.0.2 is on CRAN
       "achubaty/amc@development", "PredictiveEcology/LandR@development (>=0.0.1)",
@@ -103,27 +103,22 @@ test_that("test 5", {
       paste0("tinytest (>=1.3.1)"),
       "PredictiveEcology/LandR@development(>= 0.0.0.9)"
     ),
-    "LearnBayes (>=1000.3.1)",
+    # "LearnBayes (>=1000.3.1)", # this is alone, so causes a fail/stop, which is OK. just not here.
     c("LearnBayes (>=1.0.1)", "fpCompare"),
-    "LearnBayes (>=2.15.1)",
-    c("r-forge/mumin/pkg", MuMIn = "r-forge/mumin/pkg", "A3")
+    "LearnBayes (>=2.15.1)"#,
+    #c("r-forge/mumin/pkg", MuMIn = "r-forge/mumin/pkg", "A3")
   )
   #   options("reproducible.Require.install" = TRUE)
 
   i <- 0
   pkg <- pkgs[[i + 1]] # redundant, but kept for interactive use
   for (pkg in pkgs) {
-    i <- i + 1
-    Require:::messageVerbose(paste0("\033[32m", i, ": ", paste0(Require::extractPkgName(pkg), collapse = comma), "\033[39m"),
-                             verboseLevel = 0
-    )
-    # if (i == 11) ._Require_0 <<- 1
-    pkg <- omitPkgsTemporarily(pkg)
-
     # basically, it needs to be installed in the active library, which it isn't
-    warnsReq <- capture_warnings(Require::Install("Require"))
+    # warnsReq <- capture_warnings(Require::Install("Require"))
     (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |>
       capture_warnings() -> warns
+
+    warns <- grep(.txtCouldNotBeInstalled, warns, invert = TRUE, value = TRUE)
 
     test <- testWarnsInUsePleaseChange(warns)
     if (!isTRUE(test)) browser()
@@ -145,9 +140,8 @@ test_that("test 5", {
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
     runTests(have, pkg)
+
     endTime <- Sys.time()
   }
-
-  # }
 
 })

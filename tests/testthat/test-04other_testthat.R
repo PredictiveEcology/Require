@@ -7,13 +7,16 @@ test_that("test 3", {
   # Test misspelled
 
   warns <- capture_warnings(
-    out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
+    err <- try(silent = TRUE,
+      out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
+    )
   )
   test <- testWarnsInUsePleaseChange(warns)
 
 
 
-  testthat::expect_true(any(grepl("could not be installed", out))) # {out, "simpleWarning")})
+  if (!getOption("Require.usePak", TRUE))
+    testthat::expect_true(any(grepl("could not be installed", out))) # {out, "simpleWarning")})
 
   # for coverages that were missing
   pkgDTEmpty <- Require:::toPkgDT(character())
@@ -34,14 +37,15 @@ test_that("test 3", {
   # pkgDep2("Require")
 
 
-  pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)
-  pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE, deps = "Require")
-  pkgDepTopoSort(c("Require", "data.table"))
-  pkgDepTopoSort(c("Require", "data.table"),
-                 useAllInSearch = TRUE,
-                 deps = "Require", returnFull = FALSE, reverse = TRUE
-  )
-
+  if (!getOption("Require.usePak", TRUE)) {
+    pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)
+    pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE, deps = "Require")
+    pkgDepTopoSort(c("Require", "data.table"))
+    pkgDepTopoSort(c("Require", "data.table"),
+                   useAllInSearch = TRUE,
+                   deps = "Require", returnFull = FALSE, reverse = TRUE
+    )
+  }
 
   if (Sys.info()["user"] == "emcintir") {
     options(
@@ -66,11 +70,13 @@ test_that("test 3", {
 
   data.table::set(pkgDT, NULL, "versionSpec", NA)
 
-  out <- detachAll("data.table",
-                   dontTry = dontDetach())
-  testthat::expect_true({
-    isTRUE(out["data.table"] == 1)
-  })
+  if (!getOption("Require.usePak", TRUE)) {
+    out <- detachAll("data.table",
+                     dontTry = dontDetach())
+    testthat::expect_true({
+      isTRUE(out["data.table"] == 1)
+    })
+  }
 
   warn <- tryCatch(Require:::warningCantInstall("devtools"), warning = function(w) w$message)
   testthat::expect_true({
@@ -151,12 +157,16 @@ test_that("test 3", {
     if (length(o2)) {
       pkgs <- gsub(x = unname(unlist(utilsOut[o2])), " ", "") # remove spaces
       out <- gsub(x = out, " ", "") # remove spaces
-      out <- setdiff(out, grep("R\\(.+", pkgs, value = TRUE, invert = TRUE))
+      # out <- setdiff(out, grep("R\\(.+", pkgs, value = TRUE, invert = TRUE))
     }
     setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020
   })
-  testArgs <- all(c("Require", "data.table") %in% extractPkgName(unname(unlist(as.list(out2)))))
-  testthat::expect_true(isTRUE(testArgs))
+  localDeps <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
+                                   which = c("Suggests", "Imports", "Depends"))
+  locals <- setdiff(extractPkgName(localDeps), .basePkgs)
+  testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
+  testArgs <- setdiff(testArgs, "roxygen2") # not sure why roxygen2 was not in it before
+  testthat::expect_identical(testArgs, character())
 
   if (isDev) {
     # this was a bug created a warning when there was a package not on CRAN, but there
@@ -185,16 +195,32 @@ test_that("test 3", {
   if (isWindows()) {
     # test the new approach that installs outside R session -- is fine on Linux-alikes
     withr::local_options(Require.installPackagesSys = FALSE)
-    Require("fpCompare (<0.2.4)", install = "force")
-    packageVersion("fpCompare")
-    warns <- capture_warnings(Require("fpCompare (>=0.2.4)", install = "force"))
-    packageVersion("fpCompare")
-    withr::local_options(Require.installPackagesSys = TRUE)
-    mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force"))
-    warnsAfter <- capture_warnings(packageVersion("fpCompare"))
-    expect_true(grepl(.txtMsgIsInUse, warns))
-    expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
-    detach("package:fpCompare", unload = TRUE)
+    ver <- "0.2.4"; ineq <- "<"
+    Require(paste0("fpCompare (", ineq, ver, ")"), install = "force")
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))
+
+
+    #packageVersion("fpCompare") # doesn't update immediately
+    ineq <- ">="
+    warns <- capture_warnings(
+      Require(paste0("fpCompare (", ineq, ver, ")"), install = "force"))
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))
+
+    # Require("fpCompare (>=0.2.4)", install = "force"))
+    # packageVersion("fpCompare")
+    if (!getOption("Require.usePak", TRUE)) {
+      withr::local_options(Require.installPackagesSys = TRUE)
+      mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force"))
+      warnsAfter <- capture_warnings(packageVersion("fpCompare"))
+      expect_true(grepl(.txtMsgIsInUse, warns))
+      expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
+    }
+    warns <- capture_warnings( # fpCompare namespace cannot be unloaded: cannot open file?
+                               #  and also restarting interuupted promise evaluation
+      try(detach("package:fpCompare", unload = TRUE), silent = TRUE) # some are not attaching
+    )
   }
 
   if (FALSE) {

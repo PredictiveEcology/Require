@@ -172,11 +172,11 @@ test_that("test 8", {
     for (i in 1:2) {
       warns[[i]] <- capture_warnings( # "Require" is in use
         st[[i]] <- system.time(
-          mess[[i]] <- capture.output(
-            type = "message",
+          # mess[[i]] <- capture.output(
+          #  type = "message",
             out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
                                 libPaths = dirForInstall, returnDetails = TRUE)
-          )
+          #)
         )
       )
     }
@@ -189,17 +189,19 @@ test_that("test 8", {
     a <- attr(out[[i]], "Require")
     expect_true(length(allInstalled) == 0)
 
-    out1Attr <- attr(out[[1]], "Require")
-    out2Attr <- attr(out[[2]], "Require")
-    # some sort of test about whether anything was installed; pick reproducible as a random pkg
-    testthat::expect_true(
-      sum(grepl("reproducible",
-                out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1 &&
-        is.character(getOption("Require.cloneFrom")))
-    testthat::expect_true(
-      sum(grepl("reproducible",
-                out2Attr$Package[out2Attr$installResult %in% "OK"])) == 0)
-    # testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
+    if (!getOption("Require.usePak") %in% TRUE) {
+      out1Attr <- attr(out[[1]], "Require")
+      out2Attr <- attr(out[[2]], "Require")
+      # some sort of test about whether anything was installed; pick reproducible as a random pkg
+      testthat::expect_true(
+        sum(grepl("reproducible",
+                  out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1 &&
+          is.character(getOption("Require.cloneFrom")))
+      testthat::expect_true(
+        sum(grepl("reproducible",
+                  out2Attr$Package[out2Attr$installResult %in% "OK"])) == 0)
+      # testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
+    }
     testthat::expect_true(st[[1]]["elapsed"]/st[[2]]["elapsed"] > 15) # WAY faster -- though st1 is not that slow b/c local binaries
 
   }

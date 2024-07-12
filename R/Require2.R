@@ -241,20 +241,6 @@ Require <- function(packages,
                     ...) {
 
   st <- Sys.time()
-  if (getOption("Require.usePak", FALSE)) {
-    packages <- gsub(" *\\(>=(.+)\\)", "@>=\\1", packages)
-    packages <- gsub(" *\\(==(.+)\\)", "@\\1", packages)
-    packages <- gsub(" *\\((HEAD)\\)", "", packages)
-    deps <- lapply(packages, function(x) pak::pkg_deps(x))
-    deps3 <- rbindlist(deps)
-    pfn <- paste0(deps3$ref, " (>=", deps3$version, ")")
-    pkgDT <- toPkgDTFull(pfn)
-    pkgDT <- trimRedundancies(pkgDT)
-    pkgDT <- unique(pkgDT, on = "packageFullName")
-    pak::pkg_install(trimVersionNumber(pkgDT$packageFullName), upgrade = FALSE, dependencies = FALSE)
-    return()
-  }
-  #
   if (is.null(require)) require <- FALSE
   assign("hasGHP", NULL, envir = pkgEnv()) # clear GITHUB_PAT message; only once per Require session
   opts <- setNcpus()
@@ -321,88 +307,95 @@ Require <- function(packages,
     packages[hasInitSlash] <- gsub("\\\"", "", packages[hasInitSlash])
 
   # Proceed to evaluate install and load need if there are any packages
+  packagesOrig <- packages
   if (NROW(packages)) {
     repos <- getCRANrepos(repos, ind = 1)
 
-    if (length(which)) {
-      deps <- pkgDep(packages, simplify = FALSE,
-                     purge = purge, libPaths = libPaths, recursive = TRUE,
-                     which = which, type = type, verbose = verbose, repos = repos,
-                     Additional_repositories = TRUE
-      )
-      deps2 <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
-      # If there were archives in pkgDep, it had to go get them, so it has them locally, don't want to waste them
-      if (!is.null(deps[["localFile"]])) {
-        deps2 <- deps2[deps[, c("packageFullName", "newLocalFile", "localFile")], on = "packageFullName"]
-      }
-      deps <- unique(deps2)
-      # allPackages <- sort(unique(unname(unlist(deps[["packageFullName"]]))))
-      pkgDT <- deps
+    if (getOption("Require.usePak", TRUE)) {
+      opts <- options(repos = repos); on.exit(options(opts), add = TRUE)
+      pkgDT <- RequireForPak(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
     } else {
-      pkgDT <- toPkgDTFull(packages)
-    }
-    basePkgsToLoad <- packages[packages %in% .basePkgs]
 
-    if (NROW(pkgDT)) {
-      pkgDT <- checkHEAD(pkgDT)
 
-      pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+      if (length(which)) {
+        deps <- pkgDep(packages, simplify = FALSE,
+                       purge = purge, libPaths = libPaths, recursive = TRUE,
+                       which = which, type = type, verbose = verbose, repos = repos,
+                       Additional_repositories = TRUE
+        )
+        deps2 <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
+        # If there were archives in pkgDep, it had to go get them, so it has them locally, don't want to waste them
+        if (!is.null(deps[["localFile"]])) {
+          deps2 <- deps2[deps[, c("packageFullName", "newLocalFile", "localFile")], on = "packageFullName"]
+        }
+        deps <- unique(deps2)
+        # allPackages <- sort(unique(unname(unlist(deps[["packageFullName"]]))))
+        pkgDT <- deps
+      } else {
+        pkgDT <- toPkgDTFull(packages)
+      }
+      basePkgsToLoad <- packages[packages %in% .basePkgs]
 
-      # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
-      # if (!is.null(deps$Additional_repositories))
-      #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
-      pkgDT <- updatePackagesWithNames(pkgDT, packages)
-      # pkgDT <- parsePackageFullname(pkgDT)
-      # pkgDT <- parseGitHub(pkgDT)
-      # pkgDT <- removeDups(pkgDT)
-      # pkgDT <- removeBasePkgs(pkgDT)
-      pkgDT <- recordLoadOrder(packages, pkgDT)
-      if (!is.null(pkgDT[["Version"]]))
-        setnames(pkgDT, old = "Version", new = "VersionOnRepos")
-      pkgDT <- installedVers(pkgDT, libPaths = libPaths)
-      if (isTRUE(upgrade)) {
-        pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
-        if (any(pkgDT[["VersionOnRepos"]] != pkgDT[["Version"]], na.rm = TRUE)) {
-          sameVersion <- compareVersion2(pkgDT[["VersionOnRepos"]], pkgDT[["Version"]], "==")
-          pkgDT[!sameVersion, comp := compareVersion2(VersionOnRepos, Version, ">=")]
-          pkgDT[!sameVersion & comp %in% TRUE,
-                `:=`(Version = NA, installed = FALSE, versionSpec = VersionOnRepos)]
-          set(pkgDT, NULL, "comp", NULL)
+      if (NROW(pkgDT)) {
+        pkgDT <- checkHEAD(pkgDT)
+
+        pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+
+        # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
+        # if (!is.null(deps$Additional_repositories))
+        #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
+        pkgDT <- updatePackagesWithNames(pkgDT, packages)
+        # pkgDT <- parsePackageFullname(pkgDT)
+        # pkgDT <- parseGitHub(pkgDT)
+        # pkgDT <- removeDups(pkgDT)
+        # pkgDT <- removeBasePkgs(pkgDT)
+        pkgDT <- recordLoadOrder(packages, pkgDT)
+        if (!is.null(pkgDT[["Version"]]))
+          setnames(pkgDT, old = "Version", new = "VersionOnRepos")
+        pkgDT <- installedVers(pkgDT, libPaths = libPaths)
+        if (isTRUE(upgrade)) {
+          pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
+          if (any(pkgDT[["VersionOnRepos"]] != pkgDT[["Version"]], na.rm = TRUE)) {
+            sameVersion <- compareVersion2(pkgDT[["VersionOnRepos"]], pkgDT[["Version"]], "==")
+            pkgDT[!sameVersion, comp := compareVersion2(VersionOnRepos, Version, ">=")]
+            pkgDT[!sameVersion & comp %in% TRUE,
+                  `:=`(Version = NA, installed = FALSE, versionSpec = VersionOnRepos)]
+            set(pkgDT, NULL, "comp", NULL)
+          }
+        }
+        pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
+        pkgDT <- whichToInstall(pkgDT, install, verbose)
+
+        pkgDT <- removeRequireDeps(pkgDT, verbose)
+
+        # Deal with "force" installs
+        set(pkgDT, NULL, "forceInstall", FALSE)
+        if (install %in% "force") {
+          wh <- which(pkgDT$Package %in% extractPkgName(packages))
+          set(pkgDT, wh, "installedVersionOK", FALSE)
+          set(pkgDT, wh, "forceInstall", FALSE)
+        }
+
+        needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
+        if (needInstalls) {
+          pkgDT <- doInstalls(pkgDT,
+                              repos = repos, purge = purge, libPaths = libPaths,
+                              install.packagesArgs = install.packagesArgs,
+                              type = type, returnDetails = returnDetails,
+                              verbose = verbose
+          )
+        } else {
+          messageVerbose("No packages to install/update", verbose = verbose)
         }
       }
-      pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
-      pkgDT <- whichToInstall(pkgDT, install, verbose)
-
-      pkgDT <- removeRequireDeps(pkgDT, verbose)
-
-      # Deal with "force" installs
-      set(pkgDT, NULL, "forceInstall", FALSE)
-      if (install %in% "force") {
-        wh <- which(pkgDT$Package %in% extractPkgName(packages))
-        set(pkgDT, wh, "installedVersionOK", FALSE)
-        set(pkgDT, wh, "forceInstall", FALSE)
+      if (length(basePkgsToLoad)) {
+        pkgDTBase <- toPkgDT(basePkgsToLoad)
+        set(pkgDTBase, NULL, c("loadOrder", "installedVersionOK"), list(1L, TRUE))
+        if (exists("pkgDT", inherits = FALSE)) {
+          pkgDTBase <- rbindlist(list(pkgDT, pkgDTBase), use.names = TRUE, fill = TRUE)
+        }
+        pkgDT <- pkgDTBase
       }
-
-      needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
-      if (needInstalls) {
-        pkgDT <- doInstalls(pkgDT,
-                            repos = repos, purge = purge, libPaths = libPaths,
-                            install.packagesArgs = install.packagesArgs,
-                            type = type, returnDetails = returnDetails,
-                            verbose = verbose
-        )
-      } else {
-        messageVerbose("No packages to install/update", verbose = verbose)
-      }
-    }
-    if (length(basePkgsToLoad)) {
-      pkgDTBase <- toPkgDT(basePkgsToLoad)
-      set(pkgDTBase, NULL, c("loadOrder", "installedVersionOK"), list(1L, TRUE))
-      if (exists("pkgDT", inherits = FALSE)) {
-        pkgDTBase <- rbindlist(list(pkgDT, pkgDTBase), use.names = TRUE, fill = TRUE)
-      }
-      pkgDT <- pkgDTBase
-    }
 
     whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
     if  (length(whRestartNeeded)) {
@@ -430,11 +423,12 @@ Require <- function(packages,
 
   et <- Sys.time()
   et <- difftime(et, st)
-  numPacksInstalled <- NROW(pkgDT$installed[pkgDT$installed & pkgDT$needInstall %in% .txtInstall])
+  numPacksInstalled <- NROW(pkgDT$installed[(pkgDT$installed %in% TRUE | is.na(pkgDT$installed)) &
+                                              (pkgDT$needInstall %in% .txtInstall | is.na(pkgDT$installed)) ])
   if (numPacksInstalled > 0)
     messageVerbose(paste0("Installed ", numPacksInstalled,
-                            " packages in "),
-                     round(et, 1), " ", attr(et, "units"), verbose = verbose)
+                          " packages in "),
+                   round(et, 1), " ", attr(et, "units"), verbose = verbose)
 
   noneAv <- pkgDT$installResult %in% .txtNoneAvailable
   if (isTRUE(any(noneAv))) {
@@ -875,7 +869,7 @@ whichToInstall <- function(pkgDT, install, verbose) {
 
 
 doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbose")) {
-  needRequire <- require
+ needRequire <- require
   if (is.character(require)) {
     pkgDT[Package %in% require, require := TRUE]
   } else if (isTRUE(require)) {

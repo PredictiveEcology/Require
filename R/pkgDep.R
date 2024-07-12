@@ -453,6 +453,8 @@ whichToDILES <- function(which) {
 
     out <- lapply(lib.loc, function(path) {
       dirs <- dir(path, full.names = TRUE)
+      # from pak -- makes a _cache which isn't relevant here
+      dirs <- dirs[!endsWith(dirs, suffix = "_cache")]
       mat <- NULL
       if (length(dirs)) {
         areDirs <- dir.exists(dirs)

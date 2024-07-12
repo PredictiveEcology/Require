@@ -1,7 +1,8 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
 }
-verboseForDev <- 1
+verboseForDev <- 2
+Require.usePak <- TRUE
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
@@ -11,6 +12,8 @@ isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_I
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
 withr::local_options(.local_envir = teardown_env(),
                      Require.verbose = ifelse(isDev, verboseForDev, -2))
+withr::local_options(.local_envir = teardown_env(),
+                     Require.usePak = Require.usePak)
 
 if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
@@ -18,7 +21,7 @@ if (!isDevAndInteractive) { # i.e., CRAN
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
-suggests <- setdiff(suggests, c('pak', "testthat", "SpaDES", "SpaDES.core", "quickPlot")) # dpesn't like being local_package'd
+suggests <- setdiff(suggests, c("testthat", "SpaDES", "SpaDES.core", "quickPlot")) # dpesn't like being local_package'd
 withr::local_options("Require.packagesLeaveAttached" = suggests, .local_envir = teardown_env())
 # for (pk in suggests) {
 #   try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)
@@ -32,10 +35,10 @@ for (pk in suggests) {
                      quietly = TRUE)), silent = TRUE)
 }
 
-withr::defer({
-  aa <- rev(names(pkgDepTopoSort(suggests[suggests %in% loadedNamespaces()])))
-  bb <- lapply(aa, function(p) try(unloadNamespace(p), silent = TRUE))
-}, envir = teardown_env())
+# withr::defer({
+#   aa <- rev(names(pkgDepTopoSort(suggests[suggests %in% loadedNamespaces()])))
+#   bb <- lapply(aa, function(p) try(unloadNamespace(p), silent = TRUE))
+# }, envir = teardown_env())
 
 withr::local_options(.local_envir = teardown_env(),
                      repos = getCRANrepos(ind = 1),
@@ -92,6 +95,9 @@ if (Sys.info()["user"] %in% "emcintir") {
 
 
 runTests <- function(have, pkgs) {
+  # the is.character is for pak -- has a column but it is a path, not logical
+  if (is.null(have$installed) || is.character(have$installed))
+    have[, installed := installResult %in% "OK"]
   # recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
   theTest <- all(!is.na(have[installed == TRUE &
                                !Package %in% extractPkgName(.RequireDependencies)]$Version))

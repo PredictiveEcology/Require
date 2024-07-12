@@ -124,69 +124,73 @@ pkgDep <- function(packages,
   }
   if (length(packages)) {
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
+    if (getOption("Require.usePak", TRUE)) {
+      deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber)
+    } else {
 
-    # Only deal with first one of "which"...
-    if (is.list(which)) which <- which[[1]]
+      # Only deal with first one of "which"...
+      if (is.list(which)) which <- which[[1]]
 
-    deps <- getPkgDeps(packages, parentPackage = "user", recursive = recursive, repos = repos, verbose = verbose,
-                       type = type, which = which, includeBase = includeBase, libPaths = libPaths,
-                       includeSelf = includeSelf, grandp = "aboveuser")
-    depsCol <- "deps"
-    set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
-    # if (!is.null(deps[[deps(recursive)]]))
-    #   set(deps, NULL, deps(recursive), NULL)
+      deps <- getPkgDeps(packages, parentPackage = "user", recursive = recursive, repos = repos, verbose = verbose,
+                         type = type, which = which, includeBase = includeBase, libPaths = libPaths,
+                         includeSelf = includeSelf, grandp = "aboveuser")
+      depsCol <- "deps"
+      set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
+      # if (!is.null(deps[[deps(recursive)]]))
+      #   set(deps, NULL, deps(recursive), NULL)
 
-    keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
-                "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
-    dotDepth <- ".depth"
+      keepCols <- c("Package", "packageFullName", "Version", "versionSpec", "inequality",
+                    "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
+      dotDepth <- ".depth"
 
-    # whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0) + 1 # (self)
-    set(deps, NULL, #whHasDeps,
-        depsCol,
-        Map(dep = deps[[depsCol]], self = deps[["packageFullName"]],
-            # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
-            function(dep, self) {
-              if (!is.null(dep)) {
+      # whHasDeps <- which(sapply(deps[[depsCol]], NROW) > 0) + 1 # (self)
+      set(deps, NULL, #whHasDeps,
+          depsCol,
+          Map(dep = deps[[depsCol]], self = deps[["packageFullName"]],
+              # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
+              function(dep, self) {
+                if (!is.null(dep)) {
 
-                rmCols <- intersect(colnames(dep), c(deps(TRUE), deps(FALSE)))
-                if (length(rmCols))
-                  set(dep, NULL, rmCols, NULL)
-                # if (dotDepth %in% colnames(dep) && !all(diff(dep[[dotDepth]]) >= 0)) {
-                #   if (!exists("sorted")) sorted <<- 0
-                #   sorted <<- sorted + 1
-                #   setorderv(dep, cols = dotDepth)
-                # } else {
-                #   if (!exists("unsorted")) unsorted <<- 0
-                #   unsorted <<- unsorted + 1
-                # }
+                  rmCols <- intersect(colnames(dep), c(deps(TRUE), deps(FALSE)))
+                  if (length(rmCols))
+                    set(dep, NULL, rmCols, NULL)
+                  # if (dotDepth %in% colnames(dep) && !all(diff(dep[[dotDepth]]) >= 0)) {
+                  #   if (!exists("sorted")) sorted <<- 0
+                  #   sorted <<- sorted + 1
+                  #   setorderv(dep, cols = dotDepth)
+                  # } else {
+                  #   if (!exists("unsorted")) unsorted <<- 0
+                  #   unsorted <<- unsorted + 1
+                  # }
 
-                keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
-                if (simplify >= 0)
-                  dep <- dep[!duplicated(dep[["Package"]])]
-                set(dep, NULL, c("packageFullName", "parentPackage"),
-                    list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
-                dep <- rmBase(includeBase, dep)
-                dep <- dep[, ..keepCols] # includeSelf added some cols
-                # setnames(dep, old = depsCol, new = "deps")
-              }
-              dep <- addSelf(includeSelf, dep, self)
-              if (!is.null(dep))
-                setorderv(dep, cols = c("Package", intersect(dotDepth, colnames(dep))))# <- dep[order(dep$Package)]
-              dep
-            }))
+                  keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
+                  if (simplify >= 0)
+                    dep <- dep[!duplicated(dep[["Package"]])]
+                  set(dep, NULL, c("packageFullName", "parentPackage"),
+                      list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
+                  dep <- rmBase(includeBase, dep)
+                  dep <- dep[, ..keepCols] # includeSelf added some cols
+                  # setnames(dep, old = depsCol, new = "deps")
+                }
+                dep <- addSelf(includeSelf, dep, self)
+                if (!is.null(dep))
+                  setorderv(dep, cols = c("Package", intersect(dotDepth, colnames(dep))))# <- dep[order(dep$Package)]
+                dep
+              }))
 
-    keepColsOuter <- c("Package", "packageFullName", "parentPackage", depsCol)
-    deps <- deps[, ..keepColsOuter]
-    # trimRedundancies is better for following the deps, but it will fail to keep original
-    #   user request. Use only duplicated instead ... to keep user order
+      keepColsOuter <- c("Package", "packageFullName", "parentPackage", depsCol)
+      deps <- deps[, ..keepColsOuter]
+      # trimRedundancies is better for following the deps, but it will fail to keep original
+      #   user request. Use only duplicated instead ... to keep user order
 
-    if (keepVersionNumber %in% FALSE) {
-      deps <- Map(pkgFN = deps$deps, function(pkgFN) pkgFN[["Package"]])
-    } else if (simplify %in% TRUE) {
-      # collapse or not to list of character vector
-      pfn <- deps$packageFullName
-      deps <- lapply(deps[[depsCol]], function(x) x[["packageFullName"]])
-      names(deps) <- pfn
+      if (keepVersionNumber %in% FALSE) {
+        deps <- Map(pkgFN = deps$deps, function(pkgFN) pkgFN[["Package"]])
+      } else if (simplify %in% TRUE) {
+        # collapse or not to list of character vector
+        pfn <- deps$packageFullName
+        deps <- lapply(deps[[depsCol]], function(x) x[["packageFullName"]])
+        names(deps) <- pfn
+      }
     }
   } else {
     deps <- toPkgDepDT(packages)

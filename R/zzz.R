@@ -9,6 +9,7 @@ envPkgCreate()
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()
+  deps <- suppressMessages(pak::pkg_deps("Require"))
   opts.Require <- RequireOptions()
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
