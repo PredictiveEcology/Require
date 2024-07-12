@@ -157,3 +157,5 @@ rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = 
 }
 
 
+PEUniverseRepo <- function()
+  unique(c("https://predictiveecology.r-universe.dev", getOption("repos")))
