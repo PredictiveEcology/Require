@@ -151,6 +151,7 @@ test_that("test 3", {
   }
 
 
+  opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
   out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
     out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
     o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])

@@ -50,6 +50,7 @@ Suggests:
     httr,
     parallel,
     rematch2, 
+    roxygen2,
     rprojroot,
     testthat (>= 3.0.0),
     waldo,

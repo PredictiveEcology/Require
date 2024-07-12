@@ -397,12 +397,13 @@ Require <- function(packages,
         pkgDT <- pkgDTBase
       }
 
-    whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
-    if  (length(whRestartNeeded)) {
-      warning("Please restart R; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
-              singularPlural(c(" was", " were"), l = whRestartNeeded), " already loaded and ",
-              paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
-              singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
+      whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
+      if  (length(whRestartNeeded)) {
+        warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
+                singularPlural(c(" was", " were"), l = whRestartNeeded), " already loaded and ",
+                paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
+                singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
+      }
     }
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT, libPaths = libPaths, verbose = verbose)

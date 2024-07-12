@@ -14,7 +14,9 @@ test_that("test 5", {
   dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
   # repo <- chooseCRANmirror(ind = 1)
 
-  pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE)
+  opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
+
+  pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE, includeBase = FALSE)
   pkgDepTest2 <- Require::pkgDep2(c("Require"), # simplify = FALSE,
                                   # which = c("Depends", "Imports"),
                                   includeSelf = FALSE)
