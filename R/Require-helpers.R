@@ -288,7 +288,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' `dlArchiveVersionsAvailable` searches CRAN Archives for available versions.
 #' It has been borrowed from a sub-set of the code in a non-exported function:
 #' `remotes:::download_version_url`
-dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Require.verbose")) {
+dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verbose = getOption("Require.verbose")) {
   info <- list()
   for (repo in repos) {
     archiveFile <- archiveFile(repo) # sprintf("%s/src/contrib/Meta/archive.rds", repo)
