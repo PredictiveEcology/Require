@@ -283,6 +283,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {
   if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
+      if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
       repo <- c(
         CRAN =
           positBinaryRepos()
@@ -290,29 +291,46 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
       currentRepos <- getOption("repos")
       insertBefore <- 1 # put first, unless otherwise
       if (!is.null(currentRepos)) {
-        mirrorsLocalFile <- file.path(RequirePkgCacheDir(), ".mirrors.csv")
-        if (!file.exists(mirrorsLocalFile))
-          download.file("https://cran.r-project.org/CRAN_mirrors.csv",
-                        destfile = mirrorsLocalFile, quiet = TRUE)
-        a <- read.csv(mirrorsLocalFile)
-        isCRAN <- lapply(gsub("https://", "", currentRepos),
-               grep, x = gsub("https://", "", a$URL), value = TRUE)
+        isCRAN <- whIsOfficialCRANrepo(currentRepos, srcPackageURLOnCRAN)
+        # mirrorsLocalFile <- file.path(RequirePkgCacheDir(), ".mirrors.csv")
+        # if (!file.exists(mirrorsLocalFile))
+        #   download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+        #                 destfile = mirrorsLocalFile, quiet = TRUE)
+        # a <- read.csv(mirrorsLocalFile)
+        # b <- a[1,]
+        # b$URL = "https://cran.rstudio.com/"
+        # a <- rbind(a, b)
+        # isCRAN <- lapply(gsub("https://", "", currentRepos),
+        #        grep, x = gsub("https://", "", a$URL), value = TRUE)
         insertBefore <- which(lengths(isCRAN) > 0)
+        repos <- c(repo, currentRepos)
+        if (insertBefore > 1) {
+          repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
+                     repo,
+                     currentRepos[seq(insertBefore, length(currentRepos))])
+        }
       } else {
-        if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
-        currentRepos <- backupCRAN
-      }
-      repos <- c(repo, currentRepos)
-      if (insertBefore > 1) {
-        repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
-          repo,
-          currentRepos[seq(insertBefore, length(currentRepos))])
+        repos <- c(repo, backupCRAN)
       }
 
       repos <- repos[!duplicated(repos)]
       options(repos = repos)
     }
   }
+}
+
+whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
+  mirrorsLocalFile <- file.path(RequirePkgCacheDir(), ".mirrors.csv")
+  if (!file.exists(mirrorsLocalFile))
+    download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+                  destfile = mirrorsLocalFile, quiet = TRUE)
+  a <- read.csv(mirrorsLocalFile)
+  b <- a[1,]
+  b$URL = "https://cran.rstudio.com/"
+  a <- rbind(a, b)
+  isCRAN <- lapply(gsub("https://", "", currentRepos),
+                   grep, x = gsub("https://", "", a$URL), value = TRUE)
+  isCRAN
 }
 
 positBinaryRepos <- function(binaryLinux = urlForArchivedPkgs)

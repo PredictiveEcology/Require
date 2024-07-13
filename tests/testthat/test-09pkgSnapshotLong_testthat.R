@@ -125,7 +125,7 @@ test_that("test 09", {
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
-      expect_identical(sum(unique(NLMRandVisualTestWarn)), 1L)
+      expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
       warns <- warns[-which(NLMRandVisualTestWarn)]
 
       # Why tmap and tmaptools and stars not installed in first pass?

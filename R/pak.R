@@ -18,14 +18,16 @@ pakErrorHandling <- function(err, pkg, packages) {
       pkg2 <- gsub("@.+$", "", d)
       vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
                        error = function(x) "")
-      whRm <- unlist(unname(lapply(paste0(pkg2, ".*", vers), grep, x = pkg)))
+      whRm <- unlist(unname(lapply(paste0("^", pkg2, ".*", vers), grep, x = pkg)))
       if (length(whRm) > 0) {
         if (grp[i] == .txtCantFindPackage) {
           # This is the case when a package is archived
-          his <- try(tail(pkg_history(pkg), 1), silent = TRUE)
+          his <- try(tail(pkg_history(pkg2), 1), silent = TRUE)
           if (!is(his, "try-error")) {
+            isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
             pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
-            pth <- paste0("url::",file.path(contrib.url(getOption("repos")), pth))
+            if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
+            pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))
             packages[whRm] <- pth
           } else {
             stop(err)
@@ -53,6 +55,27 @@ pakPkgSetup <- function(pkgs) {
   # rm spaces
   pkgs <- gsub(" {0,3}(\\()(..{0,1}) {0,4}(.+)(\\))", " \\1\\2\\3\\4", pkgs)
 
+  if (TRUE) {
+    deps <- list()
+    for (pk in pkgs) {
+      pkLabel <- pk
+      for (i in 1:2) {
+        val <- try(pkgDep(pk))
+        if (is(val, "try-error")) {
+          pk <- pakErrorHandling(val, pk, pk)
+        } else {
+          deps[pkLabel] <- val
+          break
+        }
+      }
+    }
+
+    depsFlat <- unlist(unname(deps))
+    pkgDT <- toPkgDTFull(depsFlat)
+    pkgDT <- trimRedundancies(pkgDT)
+    pkgs <- pkgDT$packageFullName
+
+  }
   # Convert equals to @
   whLT <- grep("<", pkgs)
   whEquals <- whEquals(pkgs) # grep("==", pkgs)
@@ -102,6 +125,8 @@ pakPkgSetup <- function(pkgs) {
 
   whNormal <- ind[-sort(c(whEquals, whGT, whLT, whHEAD, whGH))]
 
+  whAlreadyColoned <- grep("::", pkgs)
+
   if (length(whEquals))
     pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
   if (length(whLT))
@@ -148,9 +173,12 @@ RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packages
       log <- tempfile2(fileext = ".txt")
 
       withCallingHandlers(
-        err <- try(outs <- pak::pak(c(paste0("deps::", td3),
-                                      pkgsList$direct), lib = libPaths[1], ask = FALSE,
-                                    dependencies = doDeps, upgrade = upgrade),
+        err <- try(outs <- pak::pak(c(
+          paste0("deps::", td3),
+          pkgsList$direct
+          ), lib = libPaths[1], ask = FALSE,
+                                    dependencies = FALSE, # already done in pakPkgSetup # doDeps,
+                                    upgrade = upgrade),
                    silent = verbose <= 1)
         , message = function(m) {
           cat(m$message, file = log, append = TRUE)
