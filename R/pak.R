@@ -126,7 +126,6 @@ RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packages
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
 
   for (i in 1:5) {
-    browser()
     pkgs <- packages
     if (length(pkgs)) {
       pkgsList <- pakPkgSetup(pkgs)
