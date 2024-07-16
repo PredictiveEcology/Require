@@ -634,11 +634,11 @@ saveNameConcat <- function(pkgDT, whichCatRecursive = NULL, versionCol = c("Vers
                         # saveNameConcatGH(Package, get(versionCol), Account, Repo, Branch, get(shasCol)),
                         # saveNameConcatNonGH(Package, get(versionCol))))
 
-  # out <- with(p, ifelse(isGH,
-  #                       saveNameConcatGH(Package, get(versionCol), Account, Repo, Branch, get(shasCol)),
-  #                       saveNameConcatNonGH(Package, get(versionCol))))
-
-  paste(out, p$repoLocation, whichCatRecursive, sep = sepForSaveNames)
+  isCRAN <- p$repoLocation %in% "CRAN"
+  val <- p$repoLocation
+  if (any(isCRAN))
+    val[isCRAN] <- gsub(":|/", "_", p$Repository[isCRAN])
+  paste(out, val, whichCatRecursive, sep = sepForSaveNames)
 }
 
 saveNameConcat2 <- function(argsCh, envir = parent.frame()) {
