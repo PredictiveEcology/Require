@@ -7,7 +7,7 @@
 \usage{
 dlArchiveVersionsAvailable(
   package,
-  repos,
+  repos = getOption("repos"),
   verbose = getOption("Require.verbose")
 )
 
