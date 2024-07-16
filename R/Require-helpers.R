@@ -1604,7 +1604,6 @@ available.packagesWithCallingHandlers <- function(repo, type) {
         warns <<- w$message
         invokeRestart("muffleWarning")
       })
-    if (any(grepl("cannot open URL", warns))) browser()
     SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
     otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
     if (is(out, "try-error") || any(SSLwarns)) {
@@ -1619,6 +1618,8 @@ available.packagesWithCallingHandlers <- function(repo, type) {
           Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
       }, add = TRUE)
     } else {
+      if (any(grepl("cannot open URL", warns)) && attmpt == 1) # seems to be transient esp with predictiveecology.r-universe.dev
+        next
       if (length(otherwarns)) {
         warning(warns)
       }
