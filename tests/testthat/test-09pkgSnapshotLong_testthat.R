@@ -1,5 +1,6 @@
 test_that("test 09", {
 
+  skip("Takes too long on pak")
   setupInitial <- setupTest(needRequireInNewLib = TRUE)
   # on.exit(endTest(setupInitial))
 

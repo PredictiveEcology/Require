@@ -72,6 +72,7 @@ Collate:
     'envs.R'
     'extract.R'
     'helpers.R'
+    'pak.R'
     'pkgDep.R'
     'pkgDep3.R'
     'pkgSnapshot.R'
