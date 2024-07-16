@@ -135,7 +135,9 @@ pkgDep <- function(packages,
                          type = type, which = which, includeBase = includeBase, libPaths = libPaths,
                          includeSelf = includeSelf, grandp = "aboveuser")
       depsCol <- "deps"
-      set(deps, NULL, depsCol, lapply(deps[[deps(recursive)]], rbindlistRecursive))
+      val <- lapply(deps[[deps(recursive)]], rbindlistRecursive)
+      if (length(val) == 0 || any(lengths(val) > 0)) # when which = character(), results in a NULL list element: [[1]] NULL
+        set(deps, NULL, depsCol, val)
       # if (!is.null(deps[[deps(recursive)]]))
       #   set(deps, NULL, deps(recursive), NULL)
 
