@@ -343,9 +343,10 @@ dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verb
 installedVers <- function(pkgDT, libPaths) {
 
   pkgDT <- toPkgDT(pkgDT)
-  pp <- data.table::copy(pkgDT)
+  # pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
-    ip <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
+    # ip2 <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
+    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = c("Package", "Version")))
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -1448,9 +1449,11 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       requireNamespace("sys", quietly = TRUE)){
     for (i in 1:1) {
       anyFailed <- NULL
-      out <- try(sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
+      out <- #try(
+        sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                                    doLine = "outfiles <- do.call(install.packages, args)",
-                                   verbose = verbose))
+                                   verbose = verbose)
+        #)
       if (file.exists(out)) {
         txt <- readLines(out)
         anyFailed <- grep(.txtInstallationPkgFailed, txt)

@@ -21,7 +21,7 @@ envPkgCreate()
   #   }
   # }
   .RequireDependencies <<- RequireDependencies()
-  if (length(.RequireDependencies) < 3)
+  if (!isTRUE("sys" %in% .RequireDependencies))
     .RequireDependencies <- c("Require", "data.table (>= 1.10.4)", "methods", "sys", "tools",
                               "utils")
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
