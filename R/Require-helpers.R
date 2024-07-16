@@ -450,12 +450,40 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         cap[[type]] <- readRDS(fn)
       } else {
         caps <- lapply(repos, function(repo) {
-          tryCatch(available.packages(repos = repo, type = type),
-                   error = function(x) {
-                     # browserDeveloper("Error 7531; please see developer")
-                     available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
-                   }
-          )
+          available.packagesWithCallingHandlers(repo, type)
+          # ignore_repo_cache <- FALSE
+          # for (attmpt in 1:2) {
+          #   warns <- character()
+          #   withCallingHandlers(
+          #     out <- try(available.packages(repos = repo, type = type,
+          #                                   ignore_repo_cache = ignore_repo_cache)),
+          #     warning = function(w) {
+          #       warns <<- w$message
+          #       invokeRestart("muffleWarning")
+          #     })
+          #   if (any(grepl("cannot open URL", warns))) browser()
+          #   SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
+          #   otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
+          #   if (is(out, "try-error") || any(SSLwarns)) {
+          #     # https://stackoverflow.com/a/76684292/3890027
+          #     prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+          #     Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
+          #     ignore_repo_cache <- TRUE
+          #     on.exit({
+          #       if (nzchar(prevCurlVal))
+          #         Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
+          #       else
+          #         Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+          #       }, add = TRUE)
+          #   } else {
+          #     if (length(otherwarns)) {
+          #       warning(warns)
+          #     }
+          #     break
+          #   }
+          #
+          # }
+          # out
         })
         caps <- lapply(caps, as.data.table)
         caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
@@ -1595,4 +1623,41 @@ GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose
     a <- httr::GET(url, httr::add_headers())
   }
   a
+}
+
+
+
+available.packagesWithCallingHandlers <- function(repo, type) {
+  ignore_repo_cache <- FALSE
+  for (attmpt in 1:2) {
+    warns <- character()
+    withCallingHandlers(
+      out <- try(available.packages(repos = repo, type = type,
+                                    ignore_repo_cache = ignore_repo_cache)),
+      warning = function(w) {
+        warns <<- w$message
+        invokeRestart("muffleWarning")
+      })
+    if (any(grepl("cannot open URL", warns))) browser()
+    SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
+    otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
+    if (is(out, "try-error") || any(SSLwarns)) {
+      # https://stackoverflow.com/a/76684292/3890027
+      prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+      Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
+      ignore_repo_cache <- TRUE
+      on.exit({
+        if (nzchar(prevCurlVal))
+          Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
+        else
+          Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+      }, add = TRUE)
+    } else {
+      if (length(otherwarns)) {
+        warning(warns)
+      }
+      break
+    }
+
+  }
 }

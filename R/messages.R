@@ -12,6 +12,7 @@ comma <- ", "
 .txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
 
+.txtUnableToAccessIndex <- "unable to access index"
 .txtGitHub <- "GitHub"
 .txtCouldNotBeInstalled <- "could not be installed"
 
