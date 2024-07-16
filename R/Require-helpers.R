@@ -1593,7 +1593,6 @@ GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose
 
 
 available.packagesWithCallingHandlers <- function(repo, type) {
-  browser()
   ignore_repo_cache <- FALSE
   for (attmpt in 1:2) {
     warns <- character()
