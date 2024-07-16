@@ -209,22 +209,19 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
     feDF <- file.exists(destFile)
     if (isTRUE(any(feDF))) {
       destFile2 <- destFile[feDF]
-      versionLocal <- try(DESCRIPTIONFileVersionV(destFile2))
-      if (is(versionLocal, "try-error")) browser()
+      versionLocal <- DESCRIPTIONFileVersionV(destFile2)
       versionLocalOK <- rep(TRUE, length(versionLocal)) # no versionSpec will give NA next; NA is "keep"
       anyHEAD <- (pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF] == "HEAD")
       if (isTRUE(any(anyHEAD %in% TRUE)))
         versionLocalOK[anyHEAD] <- FALSE
       hasNonHead <- anyHEAD %in% FALSE
       if (isTRUE(any(hasNonHead)))
-        versionLocalOK <- try(compareVersion2(versionLocal[hasNonHead],
+        versionLocalOK <- compareVersion2(versionLocal[hasNonHead],
                                               pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF][hasNonHead],
-                                              inequality = pkgDT$inequality[feDF][hasNonHead]))
-      if (is(versionLocalOK, "try-error")) browser()
+                                              inequality = pkgDT$inequality[feDF][hasNonHead])
       versionLocalNotOK <- versionLocalOK %in% FALSE
       if (isTRUE(any(versionLocalNotOK))) {
-        oo <- try(file.remove(unique(destFile2[versionLocalNotOK])))
-        if (is(oo, "try-error")) browser()
+        oo <- file.remove(unique(destFile2[versionLocalNotOK]))
       }
     }
 
@@ -446,44 +443,12 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       if (isTRUE(purge)) {
         unlink(fn)
       }
+      rmEmptyFiles(fn, 200)
       if (file.exists(fn)) {
         cap[[type]] <- readRDS(fn)
       } else {
         caps <- lapply(repos, function(repo) {
           available.packagesWithCallingHandlers(repo, type)
-          # ignore_repo_cache <- FALSE
-          # for (attmpt in 1:2) {
-          #   warns <- character()
-          #   withCallingHandlers(
-          #     out <- try(available.packages(repos = repo, type = type,
-          #                                   ignore_repo_cache = ignore_repo_cache)),
-          #     warning = function(w) {
-          #       warns <<- w$message
-          #       invokeRestart("muffleWarning")
-          #     })
-          #   if (any(grepl("cannot open URL", warns))) browser()
-          #   SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
-          #   otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
-          #   if (is(out, "try-error") || any(SSLwarns)) {
-          #     # https://stackoverflow.com/a/76684292/3890027
-          #     prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-          #     Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
-          #     ignore_repo_cache <- TRUE
-          #     on.exit({
-          #       if (nzchar(prevCurlVal))
-          #         Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
-          #       else
-          #         Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-          #       }, add = TRUE)
-          #   } else {
-          #     if (length(otherwarns)) {
-          #       warning(warns)
-          #     }
-          #     break
-          #   }
-          #
-          # }
-          # out
         })
         caps <- lapply(caps, as.data.table)
         caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
@@ -1601,11 +1566,11 @@ RequireGitHubCacheFile <- function(pkgDT, filename) {
 }
 
 
-rmEmptyFiles <- function(files) {
+rmEmptyFiles <- function(files, minSize = 100) {
   alreadyExists <- file.exists(files)
   if (any(alreadyExists)) {
     fs <- file.size(files[alreadyExists])
-    tooSmall <- fs < 100
+    tooSmall <- fs < minSize
     if (any(tooSmall %in% TRUE)) {
       unlink(files[alreadyExists[which(tooSmall)]])
       alreadyExists[alreadyExists] <- tooSmall %in% FALSE
@@ -1628,6 +1593,7 @@ GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose
 
 
 available.packagesWithCallingHandlers <- function(repo, type) {
+  browser()
   ignore_repo_cache <- FALSE
   for (attmpt in 1:2) {
     warns <- character()
@@ -1660,4 +1626,5 @@ available.packagesWithCallingHandlers <- function(repo, type) {
     }
 
   }
+  out
 }
