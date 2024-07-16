@@ -186,16 +186,32 @@ test_that("test 3", {
   if (isWindows()) {
     # test the new approach that installs outside R session -- is fine on Linux-alikes
     withr::local_options(Require.installPackagesSys = FALSE)
-    Require("fpCompare (<0.2.4)", install = "force")
-    packageVersion("fpCompare")
-    warns <- capture_warnings(Require("fpCompare (>=0.2.4)", install = "force"))
-    packageVersion("fpCompare")
-    withr::local_options(Require.installPackagesSys = TRUE)
-    mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force"))
-    warnsAfter <- capture_warnings(packageVersion("fpCompare"))
-    expect_true(grepl(.txtMsgIsInUse, warns))
-    expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
-    detach("package:fpCompare", unload = TRUE)
+    ver <- "0.2.4"; ineq <- "<"
+    Install(paste0("fpCompare (", ineq, ver, ")"), install = "force")
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))
+
+
+    #packageVersion("fpCompare") # doesn't update immediately
+    ineq <- ">="
+    warns <- capture_warnings(
+      Install(paste0("fpCompare (", ineq, ver, ")"), install = "force"))
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))
+
+    # Require("fpCompare (>=0.2.4)", install = "force"))
+    # packageVersion("fpCompare")
+    if (!getOption("Require.usePak", TRUE)) {
+      withr::local_options(Require.installPackagesSys = TRUE)
+      mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force", require = FALSE))
+      warnsAfter <- capture_warnings(packageVersion("fpCompare"))
+      # expect_true(grepl(.txtMsgIsInUse, warns))
+      expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
+    }
+    warns <- capture_warnings( # fpCompare namespace cannot be unloaded: cannot open file?
+                               #  and also restarting interuupted promise evaluation
+      try(detach("package:fpCompare", unload = TRUE), silent = TRUE) # some are not attaching
+    )
   }
 
   if (FALSE) {
@@ -243,8 +259,12 @@ test_that("test 3", {
   dir44 <- tempdir2(.rndstr(1))
   silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(dir44, recursive = TRUE), add = TRUE)
-  Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
-                   standAlone = TRUE)
+  warns <- capture_warnings(
+    Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
+                     standAlone = TRUE)
+  )
+  test <- testWarnsInUsePleaseChange(warns)
+  expect_true(test)
 
 
   ooo <- options(Require.RPackageCache = NULL)

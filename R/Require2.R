@@ -2949,7 +2949,8 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 }
 
 clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbose")) {
-  oo <- capture.output(type = "message", ip <- installed.packages(lib.loc = rcf))
+  oo <- capture.output(type = "message",
+                       ip <- .installed.pkgs(lib.loc = rcf, which = c("Built", "NeedsCompilation")))
   ignorePackages <- character()
   ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
@@ -2987,7 +2988,7 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
 
 linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
   if (missing(ip))
-    ip <- installed.packages(fromLib)
+    ip <- .installed.pkgs(fromLib, which = c("Built", "NeedsCompilation"))
   cant <- cantClone(ip)
   cant <- unique(c(sourcePkgs(), cant[, "Package"]))
   Packages <- setdiff(Packages, cant)
@@ -3462,7 +3463,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       pkgs <- argsOrig$pkgs[vecList[[whPid]]]
       if (installPackages) {
         # check installations
-        log <- readLines(logFile)
+        if (!file.exists(logFile))
+          file.create(logFile)
+        log <- readLines(logFile) # won't exist if `verbose < 1`
         if (any(grepl(paste(.txtInstallationNonZeroExit, .txtInstallationPkgFailed, sep = "|"), log))) {
           return(logFile)
         }
@@ -3809,7 +3812,7 @@ recoverFromFail <- function(toInstallOut, toInstall, ipa, attempt, tries, repos,
       pkgInstall <- doDownloads(toInstall[Package %in% basename(pkgName)], repos = repos,
                                 purge = FALSE, verbose = verbose,
 
-                                tmpdir = tempdir(), libPaths = libPaths()[1])
+                                tmpdir = tempdir(), libPaths = libPaths[1])
       doneUpTo <- which(rownames(ipa$available) == pkgName)
       keep <- seq(min(NROW(ipa$available), doneUpTo[1]),
                   NROW(ipa$available))
