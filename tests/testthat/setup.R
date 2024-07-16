@@ -85,8 +85,8 @@ if (Sys.info()["user"] %in% "emcintir") {
     Require.origLibPathForTests = .libPaths()[1],
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
-  googledrive::drive_auth()
-  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom")])
+  # googledrive::drive_auth()
+  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom", "Require.usePak")])
   print(paste("Cache size:", length(dir(RequirePkgCacheDir())), "files"))
 } else {
   # clean up cache on GA and other

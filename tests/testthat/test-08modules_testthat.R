@@ -174,8 +174,8 @@ test_that("test 8", {
         st[[i]] <- system.time(
           # mess[[i]] <- capture.output(
           #  type = "message",
-            out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
-                                libPaths = dirForInstall, returnDetails = TRUE)
+          out[[i]] <- Install(pkgs, standAlone = TRUE, upgrade = FALSE,
+                              libPaths = dirForInstall, returnDetails = TRUE)
           #)
         )
       )

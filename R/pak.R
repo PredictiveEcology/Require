@@ -57,21 +57,29 @@ pakPkgSetup <- function(pkgs) {
 
   if (TRUE) {
     deps <- list()
-    for (pk in pkgs) {
-      pkLabel <- pk
-      for (i in 1:2) {
-        val <- try(pkgDep(pk))
-        if (is(val, "try-error")) {
-          pk <- pakErrorHandling(val, pk, pk)
-        } else {
-          deps[pkLabel] <- val
-          break
-        }
-      }
-    }
+    deps <- pkgDep(pkgs)
+    # for (pk in pkgs) {
+    #   pkLabel <- pk
+    #   for (i in 1:2) {
+    #     val <- try(pkgDep(pk))
+    #     if (is(val, "try-error")) {
+    #       pk <- pakErrorHandling(val, pk, pk)
+    #     } else {
+    #       deps[pkLabel] <- val
+    #       break
+    #     }
+    #   }
+    # }
 
     depsFlat <- unlist(unname(deps))
+    depsFlat <- unique(depsFlat)
     pkgDT <- toPkgDTFull(depsFlat)
+    if (FALSE) {
+      setorderv(pkgDT, "Package")
+      a <- pkgDT[, any(any(grep("==", inequality)) & any(grep(">=", inequality))), by = "Package"][V1 %in% TRUE]
+      a <- pkgDT[a, on = "Package"]
+      a <- a[!is.na(inequality)]
+    }
     pkgDT <- trimRedundancies(pkgDT)
     pkgs <- pkgDT$packageFullName
 
@@ -123,9 +131,9 @@ pakPkgSetup <- function(pkgs) {
 
   whHEAD <- grep("\\(HEAD\\)", pkgs)
 
-  whNormal <- ind[-sort(c(whEquals, whGT, whLT, whHEAD, whGH))]
-
   whAlreadyColoned <- grep("::", pkgs)
+
+  whNormal <- ind[-sort(c(whEquals, whGT, whLT, whHEAD, whGH, whAlreadyColoned))]
 
   if (length(whEquals))
     pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
@@ -150,7 +158,9 @@ RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packages
   packages <- unique(packages)
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
 
-  for (i in 1:5) {
+  pkgs <- list()
+  for (i in 1:15) {
+  # while(!identical(packages, pkgs) ) {
     pkgs <- packages
     if (length(pkgs)) {
       pkgsList <- pakPkgSetup(pkgs)
@@ -177,7 +187,7 @@ RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packages
           paste0("deps::", td3),
           pkgsList$direct
           ), lib = libPaths[1], ask = FALSE,
-                                    dependencies = FALSE, # already done in pakPkgSetup # doDeps,
+                                    dependencies = doDeps, # already done in pakPkgSetup # doDeps,
                                     upgrade = upgrade),
                    silent = verbose <= 1)
         , message = function(m) {
@@ -220,12 +230,47 @@ isGH <- function(pkgs) {
   grepl("^[[:alpha:]]+/.+", pkgs)
 }
 
-pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase, keepVersionNumber) {
-  deps <- Map(pkg = packages, function(pkg)
-    pak::pkg_deps(trimVersionNumber(pkg), dependencies =
-                    ifelse(any(grepl("suggests", tolower(unlist(which)))), TRUE, NA)))
+pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
+                      keepVersionNumber, verbose = getOption("Require.verbose")) {
+
+  deps <- list()
+  # for (pk in pkgs) {
+  #   pkLabel <- pk
+  #   for (i in 1:2) {
+  #     val <- try(pkgDep(pk))
+  #     if (is(val, "try-error")) {
+  #       pk <- pakErrorHandling(val, pk, pk)
+  #     } else {
+  #       deps[pkLabel] <- val
+  #       break
+  #     }
+  #   }
+  # }
+
+  deps <- Map(pkg = packages, function(pkg) {
+    for (i in 1:2) {
+      withCallingHandlers({
+        val <- try(pak::pkg_deps(trimVersionNumber(pkg), dependencies =
+                                   ifelse(any(grepl("suggests", tolower(unlist(which)))), TRUE, NA)))
+        if (is(val, "try-error")) {
+          pkg <- pakErrorHandling(val, pkg, pkg)
+        } else {
+          break
+        }
+      }, message = function(m) {
+        if (verbose < 1)
+          invokeRestart("muffleMessage")
+      }
+      )
+    }
+    val
+
+  }
+  )
+
   if (simplify %in% TRUE) {
     # deps2 <- lapply(deps, function(x) x$ref)
+
     deps <- Map(dep = deps, nam = names(deps), function(dep, nam) {
       dep$deps <- Map(innerDep = dep$deps, outerPkg = dep$package, function(innerDep, outerPkg) {
         if (!nam %in% outerPkg || !any(tolower(unlist(which)) == "suggests")) {
