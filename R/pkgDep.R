@@ -1202,7 +1202,12 @@ depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, whic
 
 installedVersionOKPrecise <- function(pkgDT, libPaths) {
   # pkgload steals system.file but fails under some conditions, not sure what...
-  pkgDT[, localFiles := base::system.file("DESCRIPTION", package = Package), by = "Package"]
+  withCallingHandlers(
+    pkgDT[, localFiles := base::system.file("DESCRIPTION", package = Package), by = "Package"]
+    , warning = function(w) {
+      if (isTRUE(any(grepl("cannot open compressed file", w$message))))
+        invokeRestart("muffleWarning")
+    })
   fe <- nzchar(pkgDT$localFiles)
   if (any(fe)) {
     pkgDT[fe, localRepo := DESCRIPTIONFileOtherV(localFiles, "RemoteRepo")]

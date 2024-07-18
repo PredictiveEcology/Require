@@ -456,7 +456,10 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = 
     pkgDTNotLocal <- dlGitHubDESCRIPTION(pkgDT[!localVersionOK %in% TRUE], purge = FALSE)
   }
   if (any(localVersionOK %in% TRUE)) {
-    pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
+    # pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
+    pkgDT[localVersionOK %in% TRUE,
+          DESCFile := localFiles, by = "Package"]
+
     if (exists("pkgDTNotLocal", inherits = FALSE)) {
       pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)
       setorderv(pkgDT, "ord")
@@ -700,7 +703,7 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
     pfn <- gsub("(@).+( *)", paste0("\\1", shas, "\\2"), packageFullName)
     # Change branch to use sha
     uwrnar(needed = needed, notNeeded = notNeeded, neededRemotes, installedVersionOK, Package,
-           pfn, neededAdditionalRepos, shas = shas, includeBase, verbose)
+           pfn, neededAdditionalRepos, shas = shas, includeBase, localFiles = localFiles, verbose)
   }), by = "packageFullName"]
 
   out1 <- out$lis
@@ -743,7 +746,7 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
 uwrnar <- function(needed, notNeeded, neededRemotes, installedVersionOK, Package,
                    # Repo, Account, Branch, hasSubFolder,
                    packageFullName, neededAdditionalRepos, shas,
-                   includeBase, verbose) {
+                   includeBase, localFiles, verbose) {
   neededOrig <- needed
   if (!is.null(unlist(neededOrig))) {
     needed <- unname(unlist(needed))
@@ -810,8 +813,8 @@ uwrnar <- function(needed, notNeeded, neededRemotes, installedVersionOK, Package
 
     # Check NAMESPACE too -- because imperfect DESCRIPTION files
     if (isTRUE(installedVersionOK)) {
-      namespaceFile <-
-        base::system.file("NAMESPACE", package = Package)
+      # namespaceFile <- base::system.file("NAMESPACE", package = Package)
+      namespaceFile <- file.path(dirname(localFiles), "NAMESPACE")
     } else {
       namespaceFile <-
         dlGitHubNamespace(packageFullName)[["NAMESPACE"]]
