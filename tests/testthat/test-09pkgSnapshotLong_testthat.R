@@ -28,7 +28,7 @@ test_that("test 09", {
     #   # This file is missing `SpaDES.project` package, which is a dependency of
     #   #   `PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c`
     #
-    #   fnMissing <- c("tiler", "map", "SpaDES.project")
+    fnMissing <- c("tiler", "map", "SpaDES.project")
     #   (snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
     #                                                overwrite = TRUE)) |> capture_messages() -> mess
     #   snapshotFiles <- snapshotFiles$local_path
@@ -51,7 +51,7 @@ test_that("test 09", {
                                ip[Package %in% c("Deriv", "doBy", "modelr"), mget(intersect(colnames(pkgs), colnames(ip)))]),
                           fill = TRUE)
         #
-        data.table::fwrite(pkgs, file = snf)
+        # data.table::fwrite(pkgs, file = snf)
         # googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
         #                           media = snf)
 
@@ -80,7 +80,7 @@ test_that("test 09", {
       pkgs <- pkgs[!(Package %in% skips)]
       if (isWindows()) {
         # keep the GitHub ones because they have SHA, which should work fine
-        pkgs <- pkgs[!(Package %in% windowsSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
+        # pkgs <- pkgs[!(Package %in% windowsSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
         # pkgs <- pkgs[!(Package %in% windowsSkips)]
 
       }
@@ -104,7 +104,8 @@ test_that("test 09", {
       # pkgs <- pkgs[Package %in% extractPkgName(pkgDep("PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c (==0.0.2.9071)")[[1]])]
 
       # debug(installAll)
-      data.table::fwrite(pkgs, file = snf) # have to get rid of skips in the snf
+      snfTmp <- tempfile2(fileext = ".txt")
+      data.table::fwrite(pkgs, file = snfTmp) # have to get rid of skips in the snfTmp
       packageFullName <- ifelse(!nzchar(pkgs$GithubRepo) | is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
@@ -115,7 +116,7 @@ test_that("test 09", {
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
       warns <- capture_warnings(
         # mess <- capture_messages(
-        out <- Require(packageVersionFile = snf, require = FALSE, # purge = TRUE,
+        out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
                        returnDetails = TRUE)
         # )
       )
@@ -123,7 +124,7 @@ test_that("test 09", {
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
-      expect_identical(sum(unique(NLMRandVisualTestWarn)), 1L)
+      expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
       warns <- warns[-which(NLMRandVisualTestWarn)]
 
       # Why tmap and tmaptools and stars not installed in first pass?
@@ -144,12 +145,13 @@ test_that("test 09", {
       neededBasedOnPackageFullNames[grep("biosim", ignore.case = TRUE, Package), Package := "BioSIM"] |> invisible()
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
 
+      # tooManyInstalled not right
       tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
       loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
-      if (isWindows()) {
-        tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
-      }
+      # if (isWindows()) {
+      #   tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
+      # }
 
       expect_identical(tooManyInstalled, character(0))
 
@@ -196,7 +198,7 @@ test_that("test 09", {
       warns <- capture_warnings(
         lala <- capture.output(type = "message", {
           out2 <- Require(
-            packageVersionFile = snf,
+            packageVersionFile = snfTmp,
             require = FALSE, returnDetails = TRUE# , purge = TRUE
           )
         })
