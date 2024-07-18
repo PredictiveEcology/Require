@@ -404,7 +404,7 @@ Require <- function(packages,
               paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
               singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
 
-    }
+
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT, libPaths = libPaths, verbose = verbose)
 
