@@ -30,7 +30,7 @@ pakErrorHandling <- function(err, pkg, packages) {
             pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))
             packages[whRm] <- pth
           } else {
-            stop(err)
+            messageCantInstallNoVersion(pkg2, verbose = verbose)
           }
         } else {
           if (grp[i] == .txtFailedToBuildSrcPkg) {
