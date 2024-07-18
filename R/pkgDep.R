@@ -469,13 +469,6 @@ whichToDILES <- function(which) {
         files <- files[filesExist]
         names(files) <- basename(dirs[filesExist])
 
-        if (FALSE) { ## TODO this will remove packages when there is an
-          # Error in readRDS(file) : error reading from connection
-          dd <- dir(.libPaths()[1], full.names = TRUE)
-          a <- lapply(grep("_cache$", dd, value = TRUE, invert = TRUE), function(d)
-          tryCatch(readRDS(file.path(d, "Meta", "package.rds")), silent = TRUE,
-                   error = function(e) unlink(d, recursive = TRUE)))
-        }
         desc_lines <-
           lapply(files, function(file) {
             DESCRIPTIONFile(file)
