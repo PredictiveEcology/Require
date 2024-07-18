@@ -388,14 +388,15 @@ Require <- function(packages,
           messageVerbose("No packages to install/update", verbose = verbose)
         }
       }
-      if (length(basePkgsToLoad)) {
-        pkgDTBase <- toPkgDT(basePkgsToLoad)
-        set(pkgDTBase, NULL, c("loadOrder", "installedVersionOK"), list(1L, TRUE))
-        if (exists("pkgDT", inherits = FALSE)) {
-          pkgDTBase <- rbindlist(list(pkgDT, pkgDTBase), use.names = TRUE, fill = TRUE)
-        }
-        pkgDT <- pkgDTBase
+    }
+    if (length(basePkgsToLoad)) {
+      pkgDTBase <- toPkgDT(basePkgsToLoad)
+      set(pkgDTBase, NULL, c("loadOrder", "installedVersionOK"), list(1L, TRUE))
+      if (exists("pkgDT", inherits = FALSE)) {
+        pkgDTBase <- rbindlist(list(pkgDT, pkgDTBase), use.names = TRUE, fill = TRUE)
       }
+      pkgDT <- pkgDTBase
+    }
 
     whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
     if  (length(whRestartNeeded)) {
@@ -404,6 +405,7 @@ Require <- function(packages,
               paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
               singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
 
+    }
 
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT, libPaths = libPaths, verbose = verbose)
