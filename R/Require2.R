@@ -311,6 +311,8 @@ Require <- function(packages,
   if (NROW(packages)) {
     repos <- getCRANrepos(repos, ind = 1)
 
+    basePkgsToLoad <- packages[packages %in% .basePkgs]
+
     if (getOption("Require.usePak", TRUE)) {
       opts <- options(repos = repos); on.exit(options(opts), add = TRUE)
       pkgDT <- RequireForPak(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
@@ -334,7 +336,6 @@ Require <- function(packages,
       } else {
         pkgDT <- toPkgDTFull(packages)
       }
-      basePkgsToLoad <- packages[packages %in% .basePkgs]
 
       if (NROW(pkgDT)) {
         pkgDT <- checkHEAD(pkgDT)
