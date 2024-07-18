@@ -3676,7 +3676,7 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
     if (isWindows())
-      messageVerbose("  -- Installing:\n", verbose = verbose, appendLF = FALSE)
+      messageVerbose("  -- ", .txtInstallingColon,"\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
       Rscript, cmdLine,
       std_out = function(x) {
