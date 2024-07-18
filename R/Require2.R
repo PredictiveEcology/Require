@@ -2950,7 +2950,8 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 
 clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbose")) {
   oo <- capture.output(type = "message",
-                       ip <- .installed.pkgs(lib.loc = rcf, which = c("Built", "NeedsCompilation")))
+                       ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation")))
+                       # ip <- .installed.pkgs(lib.loc = rcf, which = c("Built", "NeedsCompilation")))
   ignorePackages <- character()
   ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
