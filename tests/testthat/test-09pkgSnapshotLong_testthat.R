@@ -9,31 +9,31 @@ test_that("test 09", {
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)
-
-    if (getRversion() <= "4.2.3") {
-
-      snapshotFiles <- rev(
-        c("https://raw.githubusercontent.com/PredictiveEcology/WBI_forecasts/development/packageVersions_clean.txt"          ,
-          "https://raw.githubusercontent.com/PredictiveEcology/LandWeb/rework-config/packages_2022-03-22.txt"
-        ))
-      fn <- file.path(pkgPath, "pkgSnapshot.txt")
-      download.file(snapshotFiles[2], destfile = fn)
-
-    } else {
-      withr::local_tempdir(tmpdir = pkgPath)
-      # This file is missing `map` and `tiler` packages, which are dependencies of
-      #   `PredictiveEcology/LandWebUtils@dcb26fe3308d0f572de5036d7f115d8eff5f9887`
-      #   (`tiler` is actually a dep of `PredictiveEcology/map@development`, so it is recursive need
-      #    based on March 12, 2024 version of PredictiveEcology/map@development)
-      # This file is missing `SpaDES.project` package, which is a dependency of
-      #   `PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c`
-
-      fnMissing <- c("tiler", "map", "SpaDES.project")
-      (snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
-                                                   overwrite = TRUE)) |> capture_messages() -> mess
-      snapshotFiles <- snapshotFiles$local_path
-
-    }
+    snapshotFiles <- "../../inst/snapshot.txt"
+    # if (getRversion() <= "4.2.3") {
+    #
+    #   snapshotFiles <- rev(
+    #     c("https://raw.githubusercontent.com/PredictiveEcology/WBI_forecasts/development/packageVersions_clean.txt"          ,
+    #       "https://raw.githubusercontent.com/PredictiveEcology/LandWeb/rework-config/packages_2022-03-22.txt"
+    #     ))
+    #   fn <- file.path(pkgPath, "pkgSnapshot.txt")
+    #   download.file(snapshotFiles[2], destfile = fn)
+    #
+    # } else {
+    #   withr::local_tempdir(tmpdir = pkgPath)
+    #   # This file is missing `map` and `tiler` packages, which are dependencies of
+    #   #   `PredictiveEcology/LandWebUtils@dcb26fe3308d0f572de5036d7f115d8eff5f9887`
+    #   #   (`tiler` is actually a dep of `PredictiveEcology/map@development`, so it is recursive need
+    #   #    based on March 12, 2024 version of PredictiveEcology/map@development)
+    #   # This file is missing `SpaDES.project` package, which is a dependency of
+    #   #   `PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c`
+    #
+    #   fnMissing <- c("tiler", "map", "SpaDES.project")
+    #   (snapshotFiles <- googledrive::drive_download(googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
+    #                                                overwrite = TRUE)) |> capture_messages() -> mess
+    #   snapshotFiles <- snapshotFiles$local_path
+    #
+    # }
     ## Long pkgSnapshot -- issue 41
     for (snf in snapshotFiles) {
       # origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)
@@ -52,8 +52,8 @@ test_that("test 09", {
                           fill = TRUE)
         #
         data.table::fwrite(pkgs, file = snf)
-        googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
-                                  media = snf)
+        # googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
+        #                           media = snf)
 
         pkgs <- pkgs[Package %in% "reproducible", Version := "2.0.9"]
         pkgs <- pkgs[Package %in% "SpaDES.core", Version := "2.0.2"]
@@ -105,13 +105,14 @@ test_that("test 09", {
 
       # debug(installAll)
       data.table::fwrite(pkgs, file = snf) # have to get rid of skips in the snf
-      packageFullName <- ifelse(!nzchar(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
+      packageFullName <- ifelse(!nzchar(pkgs$GithubRepo) | is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
       # warnsReq <- capture_warnings(Require::Install("Require"))
       # aaaa <<- 1
       # on.exit(rm(aaaa, envir = .GlobalEnv))
+      opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
       warns <- capture_warnings(
         # mess <- capture_messages(
         out <- Require(packageVersionFile = snf, require = FALSE, # purge = TRUE,
@@ -133,7 +134,7 @@ test_that("test 09", {
 
       "Please change required version e.g., NLMR (<=1.1)"
       warns <- capture_warnings(
-        out11 <- pkgDep(packageFullName, recursive = TRUE, simplify = FALSE)
+        out11 <- pkgDep(unname(packageFullName)[-1], recursive = TRUE, simplify = FALSE)
       )
       expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
 

@@ -106,12 +106,15 @@ runTests <- function(have, pkgs) {
 }
 
 
-testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, couldNot = TRUE) {
+testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, couldNot = TRUE,
+                                       restart = TRUE) {
   test <- TRUE
   if (length(warns)) {
     tst <- character()
+    if (isTRUE(restart))
+      tst <- .txtPleaseRestart
     if (isTRUE(please))
-      tst <- .txtPleaseChangeReqdVers
+      tst <- c(tst, .txtPleaseChangeReqdVers)
     if (isTRUE(inUse))
       tst <- c(tst, .txtMsgIsInUse)
     if (isTRUE(couldNot))
@@ -154,3 +157,5 @@ rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = 
 }
 
 
+PEUniverseRepo <- function()
+  unique(c("https://predictiveecology.r-universe.dev", getOption("repos")))

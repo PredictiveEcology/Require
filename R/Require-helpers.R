@@ -209,22 +209,19 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
     feDF <- file.exists(destFile)
     if (isTRUE(any(feDF))) {
       destFile2 <- destFile[feDF]
-      versionLocal <- try(DESCRIPTIONFileVersionV(destFile2))
-      if (is(versionLocal, "try-error")) browser()
+      versionLocal <- DESCRIPTIONFileVersionV(destFile2)
       versionLocalOK <- rep(TRUE, length(versionLocal)) # no versionSpec will give NA next; NA is "keep"
       anyHEAD <- (pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF] == "HEAD")
       if (isTRUE(any(anyHEAD %in% TRUE)))
         versionLocalOK[anyHEAD] <- FALSE
       hasNonHead <- anyHEAD %in% FALSE
       if (isTRUE(any(hasNonHead)))
-        versionLocalOK <- try(compareVersion2(versionLocal[hasNonHead],
+        versionLocalOK <- compareVersion2(versionLocal[hasNonHead],
                                               pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF][hasNonHead],
-                                              inequality = pkgDT$inequality[feDF][hasNonHead]))
-      if (is(versionLocalOK, "try-error")) browser()
+                                              inequality = pkgDT$inequality[feDF][hasNonHead])
       versionLocalNotOK <- versionLocalOK %in% FALSE
       if (isTRUE(any(versionLocalNotOK))) {
-        oo <- try(file.remove(unique(destFile2[versionLocalNotOK])))
-        if (is(oo, "try-error")) browser()
+        oo <- file.remove(unique(destFile2[versionLocalNotOK]))
       }
     }
 
@@ -288,7 +285,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' `dlArchiveVersionsAvailable` searches CRAN Archives for available versions.
 #' It has been borrowed from a sub-set of the code in a non-exported function:
 #' `remotes:::download_version_url`
-dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Require.verbose")) {
+dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verbose = getOption("Require.verbose")) {
   info <- list()
   for (repo in repos) {
     archiveFile <- archiveFile(repo) # sprintf("%s/src/contrib/Meta/archive.rds", repo)
@@ -343,9 +340,10 @@ dlArchiveVersionsAvailable <- function(package, repos, verbose = getOption("Requ
 installedVers <- function(pkgDT, libPaths) {
 
   pkgDT <- toPkgDT(pkgDT)
-  pp <- data.table::copy(pkgDT)
+  # pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
-    ip <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
+    # ip2 <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
+    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = c("Package", "Version")))
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -445,16 +443,12 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       if (isTRUE(purge)) {
         unlink(fn)
       }
+      rmEmptyFiles(fn, 200)
       if (file.exists(fn)) {
         cap[[type]] <- readRDS(fn)
       } else {
         caps <- lapply(repos, function(repo) {
-          tryCatch(available.packages(repos = repo, type = type),
-                   error = function(x) {
-                     # browserDeveloper("Error 7531; please see developer")
-                     available.packages(ignore_repo_cache = TRUE, repos = repo, type = type)
-                   }
-          )
+          available.packagesWithCallingHandlers(repo, type)
         })
         caps <- lapply(caps, as.data.table)
         caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
@@ -1448,9 +1442,11 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       requireNamespace("sys", quietly = TRUE)){
     for (i in 1:1) {
       anyFailed <- NULL
-      out <- try(sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
+      out <- #try(
+        sysInstallAndDownload(ipa, splitOn = "pkgs", tmpdir = ipa$destdir,
                                    doLine = "outfiles <- do.call(install.packages, args)",
-                                   verbose = verbose))
+                                   verbose = verbose)
+        #)
       if (file.exists(out)) {
         txt <- readLines(out)
         anyFailed <- grep(.txtInstallationPkgFailed, txt)
@@ -1570,11 +1566,11 @@ RequireGitHubCacheFile <- function(pkgDT, filename) {
 }
 
 
-rmEmptyFiles <- function(files) {
+rmEmptyFiles <- function(files, minSize = 100) {
   alreadyExists <- file.exists(files)
   if (any(alreadyExists)) {
     fs <- file.size(files[alreadyExists])
-    tooSmall <- fs < 100
+    tooSmall <- fs < minSize
     if (any(tooSmall %in% TRUE)) {
       unlink(files[alreadyExists[which(tooSmall)]])
       alreadyExists[alreadyExists] <- tooSmall %in% FALSE
@@ -1592,4 +1588,43 @@ GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose
     a <- httr::GET(url, httr::add_headers())
   }
   a
+}
+
+
+
+available.packagesWithCallingHandlers <- function(repo, type) {
+  ignore_repo_cache <- FALSE
+  for (attmpt in 1:2) {
+    warns <- character()
+    withCallingHandlers(
+      out <- try(available.packages(repos = repo, type = type,
+                                    ignore_repo_cache = ignore_repo_cache)),
+      warning = function(w) {
+        warns <<- w$message
+        invokeRestart("muffleWarning")
+      })
+    SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
+    otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
+    if (is(out, "try-error") || any(SSLwarns)) {
+      # https://stackoverflow.com/a/76684292/3890027
+      prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+      Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
+      ignore_repo_cache <- TRUE
+      on.exit({
+        if (nzchar(prevCurlVal))
+          Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
+        else
+          Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+      }, add = TRUE)
+    } else {
+      if (any(grepl("cannot open URL", warns)) && attmpt == 1) # seems to be transient esp with predictiveecology.r-universe.dev
+        next
+      if (length(otherwarns)) {
+        warning(warns)
+      }
+      break
+    }
+
+  }
+  out
 }

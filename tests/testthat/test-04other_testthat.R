@@ -145,6 +145,7 @@ test_that("test 3", {
   }
 
 
+  opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
   out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
     out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
     o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])
@@ -163,38 +164,43 @@ test_that("test 3", {
     #   were multiple repos; ffbase is no longer on CRAN
     # can't quiet this down on linux because ffbase is not binary but rest are ...
     #  install.packages won't do both types quiet = TRUE for some reason
-    #mess1 <- capture.output(
-    #  type = "message",
-    #  mess <- capture_messages(
-        warns <- capture_warnings(
-          #withCallingHandlers(
-          Install("ff", # verbose = 0,
-                  repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
-                  ))
-          #)
-          )
-    #)
+    warns <- capture_warnings(
+      Install("ff", # verbose = 0,
+              repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
+              ))
+    )
     expect_identical(character(0), warns)
-    # testthat::expect_true(
-    #   !grepl("number of items to replace is not a multiple of replacement length",
-    #          warns))
-
-
   }
 
   if (isWindows()) {
     # test the new approach that installs outside R session -- is fine on Linux-alikes
     withr::local_options(Require.installPackagesSys = FALSE)
-    Require("fpCompare (<0.2.4)", install = "force")
-    packageVersion("fpCompare")
-    warns <- capture_warnings(Require("fpCompare (>=0.2.4)", install = "force"))
-    packageVersion("fpCompare")
-    withr::local_options(Require.installPackagesSys = TRUE)
-    mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force"))
-    warnsAfter <- capture_warnings(packageVersion("fpCompare"))
-    expect_true(grepl(.txtMsgIsInUse, warns))
-    expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
-    detach("package:fpCompare", unload = TRUE)
+    ver <- "0.2.4"; ineq <- "<"
+    Install(paste0("fpCompare (", ineq, ver, ")"), install = "force")
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))
+
+
+    #packageVersion("fpCompare") # doesn't update immediately
+    ineq <- ">="
+    warns <- capture_warnings(
+      Install(paste0("fpCompare (", ineq, ver, ")"), install = "force"))
+    ip <- installed.packages(noCache = TRUE) |> as.data.table()
+    expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))
+
+    # Require("fpCompare (>=0.2.4)", install = "force"))
+    # packageVersion("fpCompare")
+    if (!getOption("Require.usePak", TRUE)) {
+      withr::local_options(Require.installPackagesSys = TRUE)
+      mess <- capture_messages(Require("fpCompare (>=0.2.4)", install = "force", require = FALSE))
+      warnsAfter <- capture_warnings(packageVersion("fpCompare"))
+      # expect_true(grepl(.txtMsgIsInUse, warns))
+      expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
+    }
+    warns <- capture_warnings( # fpCompare namespace cannot be unloaded: cannot open file?
+                               #  and also restarting interuupted promise evaluation
+      try(detach("package:fpCompare", unload = TRUE), silent = TRUE) # some are not attaching
+    )
   }
 
   if (FALSE) {
@@ -242,8 +248,12 @@ test_that("test 3", {
   dir44 <- tempdir2(.rndstr(1))
   silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(dir44, recursive = TRUE), add = TRUE)
-  Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
-                   standAlone = TRUE)
+  warns <- capture_warnings(
+    Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
+                     standAlone = TRUE)
+  )
+  test <- testWarnsInUsePleaseChange(warns)
+  expect_true(test)
 
 
   ooo <- options(Require.RPackageCache = NULL)

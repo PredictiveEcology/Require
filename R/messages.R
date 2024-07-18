@@ -7,10 +7,12 @@ comma <- ", "
 .txtGetSHAfromGitHub <- "getSHAfromGitHub"
 .txtPkgHasGHP <- "hasGHP"
 .txtPkgFailed <- "package failed: "
+.txtPleaseRestart <- "Please restart R"
 .txtPleaseChangeReqdVers <- "Please change required version"
 .txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
 
+.txtUnableToAccessIndex <- "unable to access index"
 .txtGitHub <- "GitHub"
 .txtCouldNotBeInstalled <- "could not be installed"
 
