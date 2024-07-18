@@ -435,6 +435,13 @@ whichToDILES <- function(which) {
   which
 }
 
+#' Partial alternative (faster) to `installed.packages`
+#'
+#' This reads the DESCRIPTION files only, so can only access fields that are
+#' available in the DESCRIPTION file. This is different than `installed.packages`
+#' which has many other fields, like "Built", "NeedsCompilation" etc. If those
+#' fields are needed, then this function will return an empty colum in the returned
+#' character matrix.
 .installed.pkgs <-
   function(lib.loc = .libPaths(),
            which = c("Depends", "Imports", "LinkingTo"),
@@ -464,13 +471,6 @@ whichToDILES <- function(which) {
         files <- files[filesExist]
         names(files) <- basename(dirs[filesExist])
 
-        if (FALSE) { ## TODO this will remove packages when there is an
-          # Error in readRDS(file) : error reading from connection
-          dd <- dir(.libPaths()[1], full.names = TRUE)
-          a <- lapply(grep("_cache$", dd, value = TRUE, invert = TRUE), function(d)
-          tryCatch(readRDS(file.path(d, "Meta", "package.rds")), silent = TRUE,
-                   error = function(e) unlink(d, recursive = TRUE)))
-        }
         desc_lines <-
           lapply(files, function(file) {
             DESCRIPTIONFile(file)

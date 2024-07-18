@@ -2943,17 +2943,24 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 }
 
 clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbose")) {
-  oo <- capture.output(type = "message",
-                       ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation")))
-                       # ip <- .installed.pkgs(lib.loc = rcf, which = c("Built", "NeedsCompilation")))
+  mess <- capture.output(
+    type = "message",
+    ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation"))
+  )
+  clearErrorReadRDSFile(mess, fromLib)
+  #
+  # oo <- capture.output(type = "message",
+  #                      ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation")))
+  #                      # ip <- .installed.pkgs(lib.loc = rcf, which = c("Built", "NeedsCompilation")))
   ignorePackages <- character()
   ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
   alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][alreadyInstalledCanClone]
   alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% sourcePkgs()]
 
-  if (length(grep("Error in readRDS", oo))) {
+  if (length(grep("Error in readRDS", mess))) {
     # This means that the packages in rcf are broken
+    browser()
     aa <- packageHasError(rcf)
     igns <- unlist(unname(aa))
     if (length(igns))
@@ -2982,8 +2989,13 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
 }
 
 linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
-  if (missing(ip))
-    ip <- .installed.pkgs(fromLib, which = c("Built", "NeedsCompilation"))
+  if (missing(ip)) {
+    mess <- capture.output(
+      type = "message",
+      ip <- installed.packages(fromLib, fields = c("Built", "NeedsCompilation"))
+    )
+    clearErrorReadRDSFile(mess, fromLib)
+  }
   cant <- cantClone(ip)
   cant <- unique(c(sourcePkgs(), cant[, "Package"]))
   Packages <- setdiff(Packages, cant)
@@ -3828,3 +3840,15 @@ recoverFromFail <- function(toInstallOut, toInstall, ipa, attempt, tries, repos,
   ipa
 }
 
+
+clearErrorReadRDSFile <- function(mess, libPath = .libPaths()[1]) {
+  if (length(mess)) {
+    if (isTRUE(any(grepl("Error in readRDS", mess)))) {
+      browser()
+      dd <- dir(libPath, full.names = TRUE)
+      a <- lapply(grep("_cache$", dd, value = TRUE, invert = TRUE), function(d)
+        tryCatch(readRDS(file.path(d, "Meta", "package.rds")), silent = TRUE,
+                 error = function(e) {print(d); unlink(d, recursive = TRUE)}))
+    }
+  }
+}
