@@ -44,6 +44,20 @@ envPkgDepCreate <- function() {
 }
 
 
+#' 2nd level
+pakEnv <- function() {
+  if (is.null(pkgEnv()))
+    envPakCreate()
+  get0(.envPakName, envir = pkgEnv())
+}
+
+envPakCreate <- function() {
+  if (is.null(pkgEnv()))
+    envPakCreate()
+  assign(.envPakName, newEmptyEnv(), envir = pkgEnv())
+}
+
+
 
 # 2nd level
 envPkgDepGitHubSHACreate <- function() {
@@ -100,6 +114,7 @@ envPkgDepArchiveDetailsInner <- function() {
 .envPkgDepDESCFileName <- "DESCRIPTIONFile"
 .envPkgDepDepsName <- "deps"
 .envPkgDepName <- "pkgDep"
+.envPakName <- "pak"
 .envPkgName <- ".Require.pkgEnv"
 .envPkgStartTimeName <- "startTime"
 

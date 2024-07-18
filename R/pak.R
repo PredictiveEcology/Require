@@ -36,6 +36,8 @@ pakErrorHandling <- function(err, pkg, packages) {
           if (grp[i] == .txtFailedToBuildSrcPkg) {
             # When this error happens, it seems to be because of corrupt local cache
             cache_delete(package = pkg2)
+            browser()
+            break
           }
 
           packages <- packages[-whRm]
@@ -154,6 +156,7 @@ pakPkgSetup <- function(pkgs) {
 
 RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOrig) {
   requireNamespace("pak")
+  envPakCreate() # this will be used to track which packages failed
 
   packages <- unique(packages)
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]

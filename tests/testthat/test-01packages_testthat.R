@@ -77,7 +77,7 @@ test_that("test 1", {
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
       isDevAndInteractive || # interactive
       identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-    dir2 <- rpackageFolder(Require::tempdir2("test2"))
+    dir2 <- rpackageFolder(tempdir3())
     dir2 <- checkPath(dir2, create = TRUE)
     pvWant <- "0.2.2"
     warns <- capture_warnings(
