@@ -2989,7 +2989,7 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
 
 linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
   if (missing(ip))
-    ip <- .installed.pkgs(fromLib, which = c("Built", "NeedsCompilation"))
+    ip <- installed.packages(fromLib, fields = c("Built", "NeedsCompilation"))
   cant <- cantClone(ip)
   cant <- unique(c(sourcePkgs(), cant[, "Package"]))
   Packages <- setdiff(Packages, cant)
