@@ -397,13 +397,13 @@ Require <- function(packages,
         pkgDT <- pkgDTBase
       }
 
-      whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
-      if  (length(whRestartNeeded)) {
-        warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
-                singularPlural(c(" was", " were"), l = whRestartNeeded), " already loaded and ",
-                paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
-                singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
-      }
+    whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
+    if  (length(whRestartNeeded)) {
+      warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
+              singularPlural(c(" was", " were"), l = whRestartNeeded), " already loaded and ",
+              paste(pkgDT[whRestartNeeded]$packageFullName, collapse = ", "),
+              singularPlural(c(" was", " were"), l = whRestartNeeded), " installed.")
+
     }
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT, libPaths = libPaths, verbose = verbose)
@@ -595,7 +595,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
         }
       ))
       if (!is(toInstallOut, "try-error"))
-          break
+        break
       ipa <- recoverFromFail(toInstallOut, toInstall, ipa,
                              attempt = attempt, tries = tries,
                              repos = repos, tmpdir = tmpdir, libPaths = libPaths,
@@ -629,7 +629,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
     #if (!getOption("Require.RPackageCache") %in% FALSE)
     #  wd <- RequirePkgCacheDir()
     #else
-      wd <- tmpdir
+    wd <- tmpdir
 
     # problem... building in cache dir has nice feature that zip is there immediately ...
     #   so when say 100 pkgs are being installed from source, the zips are built along
@@ -1303,8 +1303,8 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
           st <- system.time(
             dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
-                            "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)",
-                            libPaths = libPaths, verbose = verbose)
+                                        "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)",
+                                        libPaths = libPaths, verbose = verbose)
           )
           messageVerbose("  GitHub ", downloadedInSeconds(st[[3]]), verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
@@ -2625,11 +2625,11 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
         pkgInstall[which(needSrc), `:=`(Repository = contrib.url(nonBinaryRepos),
                                         repo = nonBinaryRepos,
                                         binOrSrc = binOrSrc(FALSE))]
-      # pkgInstall[which(needSrc), Repository := nonBinaryRepos]
+        # pkgInstall[which(needSrc), Repository := nonBinaryRepos]
 
-      # pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
+        # pkgInstall[whArchive %in% TRUE & needSwitchToSrc, Repository := getArchiveURL(nonBinaryRepos, Package)]
 
-      # if there are multiple non-binary repos
+        # if there are multiple non-binary repos
       } else { # (length(nonBinaryRepos) > 1) {
         packageExists <- FALSE
         for (ind in seq(nonBinaryRepos)) {
@@ -3184,7 +3184,7 @@ canClone <- function(ip) {
   # correctBuilt <- Rversion == BuiltVersion # needs to re-add package_version to both those functions
   keepCols6 <- correctBuilt %in% TRUE
   # if (isWindows()) {
-    keepCols6 <- keepCols6 & ip[,  "NeedsCompilation"] == "no"
+  keepCols6 <- keepCols6 & ip[,  "NeedsCompilation"] == "no"
   # }
   ip[keepCols6 %in% TRUE ,, drop = FALSE]
 }
@@ -3372,8 +3372,8 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 #'        files. However, in the case of `returnOutfile = TRUE`, then a list of
 #'        filenames will be returned with any outputs from the `doLine`.
 sysInstallAndDownload <- function(args, splitOn = "pkgs",
-                        doLine = "outfiles <- do.call(download.packages, args)",
-                        returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, libPaths, verbose) {
+                                  doLine = "outfiles <- do.call(download.packages, args)",
+                                  returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, libPaths, verbose) {
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
   installPackages <- grepl("install.packages", doLine)
@@ -3588,9 +3588,9 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
                  destfile = file.path(tmpdir, basename(url)[nonEmpties]))
 
     dt <- sysInstallAndDownload(args = args, splitOn = c("url", "destfile"),
-                      doLine = "outfiles <- do.call(download.file, args)",
-                      tmpdir = tmpdir,
-                      verbose = verbose)
+                                doLine = "outfiles <- do.call(download.file, args)",
+                                tmpdir = tmpdir,
+                                verbose = verbose)
     p[dt, localFile := i.localFile, on = "Package"]
     p[, installFrom := .txtLocal]
     p[, newLocalFile := TRUE]
@@ -3625,30 +3625,30 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
 }
 
 spinnerOnPid <- function(pid, isRstudio, st, verbose) {
- # if (isRstudio %in% FALSE) {
-#    messageVerbose(".", verbose)
-#  } else {
-    aa <- NA
-    spinner <- "|"
-    mess <- if (verbose > 1) " \n" else " "
+  # if (isRstudio %in% FALSE) {
+  #    messageVerbose(".", verbose)
+  #  } else {
+  aa <- NA
+  spinner <- "|"
+  mess <- if (verbose > 1) " \n" else " "
 
-    messageVerbose(mess, verbose = verbose)
-    if (Sys.time() - st > 1)
-      messageVerbose("  \b\b ...  ", verbose = verbose)
-    while (is.na(aa)) {
-      aa <- sys::exec_status(pid, wait = FALSE)
-      Sys.sleep(0.05)
-      spinner <- ifelse (spinner == "|", "/",
-                         ifelse(spinner == "/", "-",
-                                ifelse(spinner == "-", "\\",
-                                       ifelse(spinner == "\\", "|"))))
-      if (Sys.time() - st > 1) {
-        mess <- paste0("\b\b", spinner)
-        messageVerbose(mess, verbose = verbose)
-      }
+  messageVerbose(mess, verbose = verbose)
+  if (Sys.time() - st > 1)
+    messageVerbose("  \b\b ...  ", verbose = verbose)
+  while (is.na(aa)) {
+    aa <- sys::exec_status(pid, wait = FALSE)
+    Sys.sleep(0.05)
+    spinner <- ifelse (spinner == "|", "/",
+                       ifelse(spinner == "/", "-",
+                              ifelse(spinner == "-", "\\",
+                                     ifelse(spinner == "\\", "|"))))
+    if (Sys.time() - st > 1) {
+      mess <- paste0("\b\b", spinner)
+      messageVerbose(mess, verbose = verbose)
     }
-    messageVerbose("\b\b\b", verbose = verbose)
- # }
+  }
+  messageVerbose("\b\b\b", verbose = verbose)
+  # }
 
 }
 
@@ -3781,7 +3781,7 @@ avokto <- function(versionSpec, VersionOnRepos, inequality) {
     out <- Map(vor = VersionOnRepos[!isHEAD], function(vor) any(!compareVersion2(vor, versionSpec, inequality) %in% FALSE))
     avokto <- Map(vor = VersionOnRepos[!isHEAD], function(vor) {
       all(compareVersion2(vor, versionSpec, inequality) %in% TRUE)
-      })
+    })
     avok <- any(unlist(out))
   }
 

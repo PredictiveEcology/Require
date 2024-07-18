@@ -113,9 +113,7 @@ test_that("test 09", {
       # warnsReq <- capture_warnings(Require::Install("Require"))
       # aaaa <<- 1
       # on.exit(rm(aaaa, envir = .GlobalEnv))
-
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
-      browser()
       warns <- capture_warnings(
         # mess <- capture_messages(
         out <- Require(packageVersionFile = snf, require = FALSE, # purge = TRUE,
