@@ -2963,7 +2963,6 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
 
   if (length(grep("Error in readRDS", mess))) {
     # This means that the packages in rcf are broken
-    browser()
     aa <- packageHasError(rcf)
     igns <- unlist(unname(aa))
     if (length(igns))
@@ -3393,15 +3392,19 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
   installPackages <- grepl("install.packages", doLine)
+  # if (isTRUE(installPackages)) browser()
   downAndBuildLocal <- grepl("downloadAndBuildToLocalFile", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
-  if (downPack %in% TRUE || downFile %in% TRUE || installPackages %in% TRUE) {
+  if (downPack %in% TRUE || downFile %in% TRUE) {# || installPackages %in% TRUE) {
     args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
     if (!args$method %in% "libcurl")
       doLineVectorized <- FALSE
   }
   vecList <- splitVectors(args, splitOn, method = args$method, installPackages)
+  if (installPackages)
+    libTemps <- lapply(vecList, function(x) tempdir3())
+
 
   pids <- numeric(length(vecList))
   outfiles <- lapply(pids, function(i) {
@@ -3429,6 +3432,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     if (doLineVectorized %in% FALSE && length(args[[splitOn[1]]]) > 1) {
       doLine <- updateDoLine(tmpdir, splitOn, doLineOrig)
     }
+    if (installPackages) {
+      args$destdir <- args$lib <- libTemps[[j]]
+    }
     saveRDS(args, file = fn)
 
     cmdLine <- buildCmdLine(tmpdir, fn, doLine, downAndBuildLocal = downAndBuildLocal,
@@ -3452,6 +3458,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     pids[j] <- sysDo(installPackages, cmdLine, logFile, verbose)
   }
+
   if (installPackages %in% FALSE)
     if (length(fullMess))
       messageVerbose(messInstallingOrDwnlding(preMess, fullMess), verbose = verbose)
@@ -3514,6 +3521,12 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
       fullMess <- character()
     }
+
+  }
+  if (installPackages) {
+    sup <- Map(libFrom = libTemps, function(libFrom) {
+      linkOrCopyPackageFilesInner(dir(libFrom), fromLib = libFrom, toLib = argsOrig$lib)
+    })
 
   }
 
@@ -3626,7 +3639,7 @@ naToEmpty <- function(vec) {
 
 
 splitVectors <- function(argsOrig, splitOn, method, installPackages) {
-  if (identical(method, "libcurl") || isTRUE(installPackages)) {
+  if (identical(method, "libcurl")){# || isTRUE(installPackages)) {
     vecList <- list(seq_along(argsOrig[[splitOn[1]]]))
   } else {
     vec <- seq_along(argsOrig[[splitOn[1]]])
@@ -3671,7 +3684,7 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
 
 sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
-  if (installPackages) {
+  if (FALSE) {# (installPackages) {
     if (isWindows())
       messageVerbose("  -- ", .txtInstallingColon,"\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
@@ -3705,7 +3718,7 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
 
   ar <- c(paste0("o <- readRDS('",tf,"')"),
           "options(o)",
-          paste0("setwd('", normalizePath(getwd(), winslash = "/", mustWork = FALSE),"')"),
+          paste0("setwd('", normalizePath(tempdir3(), winslash = "/", mustWork = FALSE),"')"),
           paste0("args <- readRDS('", fn, "')"),
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
@@ -3847,7 +3860,6 @@ recoverFromFail <- function(toInstallOut, toInstall, ipa, attempt, tries, repos,
 clearErrorReadRDSFile <- function(mess, libPath = .libPaths()[1]) {
   if (length(mess)) {
     if (isTRUE(any(grepl("Error in readRDS", mess)))) {
-      browser()
       dd <- dir(libPath, full.names = TRUE)
       a <- lapply(grep("_cache$", dd, value = TRUE, invert = TRUE), function(d)
         tryCatch(readRDS(file.path(d, "Meta", "package.rds")), silent = TRUE,
