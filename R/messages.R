@@ -35,6 +35,7 @@ comma <- ", "
 
 .txtDontInstall <- "dontInstall"
 .txtInstall <- "install"
+.txtInstallingColon <- "Installing:"
 
 .txtLocal <- "Local"
 .txtNoLocal <- "noLocal"
