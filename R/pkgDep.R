@@ -442,6 +442,8 @@ whichToDILES <- function(which) {
 #' which has many other fields, like "Built", "NeedsCompilation" etc. If those
 #' fields are needed, then this function will return an empty colum in the returned
 #' character matrix.
+#' @inheritParams utils::installed.packages
+#' @inheritParams pkgDep
 .installed.pkgs <-
   function(lib.loc = .libPaths(),
            which = c("Depends", "Imports", "LinkingTo"),

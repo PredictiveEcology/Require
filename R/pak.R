@@ -1,5 +1,5 @@
 utils::globalVariables(c(
-  "..keepCols"
+  "..keepCols", "ref", "op", "package"
 ))
 
 
@@ -22,7 +22,7 @@ pakErrorHandling <- function(err, pkg, packages) {
       if (length(whRm) > 0) {
         if (grp[i] == .txtCantFindPackage) {
           # This is the case when a package is archived
-          his <- try(tail(pkg_history(pkg2), 1), silent = TRUE)
+          his <- try(tail(pak::pkg_history(pkg2), 1), silent = TRUE)
           if (!is(his, "try-error")) {
             isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
             pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
@@ -30,7 +30,7 @@ pakErrorHandling <- function(err, pkg, packages) {
             pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))
             packages[whRm] <- pth
           } else {
-            messageCantInstallNoVersion(pkg2, verbose = verbose)
+            messageCantInstallNoVersion(pkg2)
           }
         } else {
           if (grp[i] == .txtFailedToBuildSrcPkg) {
@@ -39,7 +39,7 @@ pakErrorHandling <- function(err, pkg, packages) {
             if (pkg2 %in% prevFtbsp)
               stop(err)
             # When this error happens, it seems to be because of corrupt local cache
-            cache_delete(package = pkg2)
+            pak::cache_delete(package = pkg2)
             assign(ftbsp, unique(c(prevFtbsp, pkg2)), envir = pakEnv())
             break
           }
@@ -99,11 +99,11 @@ pakPkgSetup <- function(pkgs) {
     vers <- Map(pkg = pkgs[whLT], isGH = isGH[whLT], function(pkg, isGH) {
       pkgDT <- toPkgDTFull(pkg)
       if (isGH) {
-        his <- pkg_deps(trimVersionNumber(pkg))
+        his <- pak::pkg_deps(trimVersionNumber(pkg))
         his <- his[his$package %in% extractPkgName(pkg), ]
         setnames(his, old = "version", new = "Version")
       } else {
-        his <- pkg_history(trimVersionNumber(pkg))
+        his <- pak::pkg_history(trimVersionNumber(pkg))
       }
       versOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(versOK %in% FALSE)) {
@@ -428,7 +428,7 @@ mergeField <- function(origDESCtxt, field, dFile, fieldName = "Imports") {
   if (fieldName %in% colnames(origDESCtxt))
     fieldVals <- strsplit(origDESCtxt[, fieldName], split = ",+\n")[[1]]
   if (length(field)) {
-    field <- Require:::trimRedundancies(unique(c(field, fieldVals)))
+    field <- trimRedundancies(unique(c(field, fieldVals)))
   }
   cat(c(paste0(fieldName, ":"), paste("   ", sort(field$packageFullName), collapse = ",\n")),
       sep = "\n", file = dFile, append = TRUE)

@@ -2950,7 +2950,7 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
     type = "message",
     ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation"))
   )
-  clearErrorReadRDSFile(mess, fromLib)
+  clearErrorReadRDSFile(mess, rcf)
   #
   # oo <- capture.output(type = "message",
   #                      ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation")))
