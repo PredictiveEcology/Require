@@ -34,9 +34,13 @@ pakErrorHandling <- function(err, pkg, packages) {
           }
         } else {
           if (grp[i] == .txtFailedToBuildSrcPkg) {
+            ftbsp <- "FailedToBuildSrcPkg"
+            prevFtbsp <- get0(ftbsp, envir = pakEnv())
+            if (pkg2 %in% prevFtbsp)
+              stop(err)
             # When this error happens, it seems to be because of corrupt local cache
             cache_delete(package = pkg2)
-            browser()
+            assign(ftbsp, unique(c(prevFtbsp, pkg2)), envir = pakEnv())
             break
           }
 
@@ -406,8 +410,8 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   cat("VignetteBuilder: knitr, rmarkdown", sep = "\n", file = dFile, append = TRUE)
   cat("ByteCompile: yes", sep = "\n", file = dFile, append = TRUE)
   cat("Roxygen: list(markdown = TRUE)", sep = "\n", file = dFile, append = TRUE)
-  cat(paste0("RoxygenNote: ", as.character(packageVersion("roxygen2"))), sep = "\n",
-      file = dFile, append = TRUE)
+  # cat(paste0("RoxygenNote: ", as.character(packageVersion("roxygen2"))), sep = "\n",
+  #     file = dFile, append = TRUE)
 
 
   messageVerbose("New/updated DESCRIPTION file is: ", dFile, verbose = verbose)
