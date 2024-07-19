@@ -111,6 +111,8 @@ trimVersionNumber <- function(pkgs) {
     nas <- is.na(pkgs)
     if (any(!nas)) {
       ew <- endsWith(pkgs[!nas], ")")
+      if (getOption("Require.usePak", TRUE))
+        ew <- ew | grepl("@", pkgs[!nas])
       if (any(ew)) {
         pkgs[!nas][ew] <- gsub(paste0("\n|\t|", .grepVersionNumber), "", pkgs[!nas][ew])
       }
@@ -122,7 +124,7 @@ trimVersionNumber <- function(pkgs) {
 rmExtraSpaces <- function(string) {
   gsub(" {2, }", " ", string)
 }
-.grepVersionNumber <- " *\\(.*"
+.grepVersionNumber <- " *\\(.*| {0,5}@.+$"
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
 grepExtractPkgsFilename <-
