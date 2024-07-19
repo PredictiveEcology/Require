@@ -9,7 +9,11 @@ envPkgCreate()
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()
-  deps <- suppressMessages(pak::pkg_deps("Require"))
+  Sys.setenv("R_USER_CACHE_DIR" = tools::R_user_dir("pkgcache", "cache"))
+  existingCacheDir <- pak::cache_summary()$cachepath
+  if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
+    Sys.setenv("R_USER_CACHE_DIR" = tempdir3())
+  # deps <- suppressMessages(pak::pkg_deps("Require"))
   opts.Require <- RequireOptions()
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])

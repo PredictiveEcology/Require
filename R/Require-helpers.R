@@ -903,8 +903,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
     sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
     if (any(grepl("Bad credentials", sha))) {#} || notFound) {
-      if (notFound)
-        stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
+      # if (notFound)
+       #  stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
       stop(sha)
     }
 

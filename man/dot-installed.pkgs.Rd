@@ -11,6 +11,29 @@
   purge = getOption("Require.purge", FALSE)
 )
 }
+\arguments{
+\item{lib.loc}{
+    character vector describing the location of \R library trees to
+    search through, or \code{NULL} for all known trees
+    (see \code{\link{.libPaths}}).
+  }
+
+\item{which}{a character vector listing the types of dependencies, a subset
+of \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
+Character string \code{"all"} is shorthand for that vector, character string
+\code{"most"} for the same vector without \code{"Enhances"}.}
+
+\item{purge}{Logical. Should all caches be purged? Default is
+\code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
+results throughout the \code{Require} package. These help with speed and reduce
+calls to internet sources. However, sometimes these caches must be purged.
+The cached values are renewed when found to be too old, with the age limit.
+This maximum age can be set in seconds with the environment variable
+\code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE}, or if unset, defaults to 3600
+(one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
+
+Internally, there are calls to \code{available.packages}.}
+}
 \description{
 This reads the DESCRIPTION files only, so can only access fields that are
 available in the DESCRIPTION file. This is different than \code{installed.packages}
