@@ -26,6 +26,7 @@ RequireCacheDir <- function(create, verbose = getOption("Require.verbose")) {
   ## CURRENT: using cache dir following conventions used by tools::R_user_dir
   ##   tools::R_user_dir("appName", "cache")
 
+  # browser()
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
@@ -321,6 +322,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
 
 whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
   mirrorsLocalFile <- file.path(RequirePkgCacheDir(), ".mirrors.csv")
+  dir.create(dirname(mirrorsLocalFile), recursive = TRUE, showWarnings = FALSE)
   if (!file.exists(mirrorsLocalFile))
     download.file("https://cran.r-project.org/CRAN_mirrors.csv",
                   destfile = mirrorsLocalFile, quiet = TRUE)
