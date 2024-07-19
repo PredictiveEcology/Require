@@ -3396,14 +3396,14 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   downAndBuildLocal <- grepl("downloadAndBuildToLocalFile", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args
-  if (downPack %in% TRUE || downFile %in% TRUE) {# || installPackages %in% TRUE) {
+  if (downPack %in% TRUE || downFile %in% TRUE || installPackages %in% TRUE) {
     args$method <- if (isTRUE(capabilities("libcurl"))) "libcurl" else "auto"
     if (!args$method %in% "libcurl")
       doLineVectorized <- FALSE
   }
   vecList <- splitVectors(args, splitOn, method = args$method, installPackages)
-  if (installPackages)
-    libTemps <- lapply(vecList, function(x) tempdir3())
+  # if (installPackages)
+  #   libTemps <- lapply(vecList, function(x) tempdir3())
 
 
   pids <- numeric(length(vecList))
@@ -3432,9 +3432,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     if (doLineVectorized %in% FALSE && length(args[[splitOn[1]]]) > 1) {
       doLine <- updateDoLine(tmpdir, splitOn, doLineOrig)
     }
-    if (installPackages) {
-      args$destdir <- args$lib <- libTemps[[j]]
-    }
+    # if (installPackages) {
+    #   args$destdir <- args$lib <- libTemps[[j]]
+    # }
     saveRDS(args, file = fn)
 
     cmdLine <- buildCmdLine(tmpdir, fn, doLine, downAndBuildLocal = downAndBuildLocal,
@@ -3523,12 +3523,12 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     }
 
   }
-  if (installPackages) {
-    sup <- Map(libFrom = libTemps, function(libFrom) {
-      linkOrCopyPackageFilesInner(dir(libFrom), fromLib = libFrom, toLib = argsOrig$lib)
-    })
-
-  }
+  # if (installPackages) {
+  #   sup <- Map(libFrom = libTemps, function(libFrom) {
+  #     linkOrCopyPackageFilesInner(dir(libFrom), fromLib = libFrom, toLib = argsOrig$lib)
+  #   })
+  #
+  # }
 
   if (length(fullMess) && nzchar(fullMess)) {
     fullMess <- gsub("\n", " ", fullMess)
@@ -3639,7 +3639,7 @@ naToEmpty <- function(vec) {
 
 
 splitVectors <- function(argsOrig, splitOn, method, installPackages) {
-  if (identical(method, "libcurl")){# || isTRUE(installPackages)) {
+  if (identical(method, "libcurl") || isTRUE(installPackages)) {
     vecList <- list(seq_along(argsOrig[[splitOn[1]]]))
   } else {
     vec <- seq_along(argsOrig[[splitOn[1]]])
@@ -3684,7 +3684,7 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
 
 sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
-  if (FALSE) {# (installPackages) {
+  if (installPackages) {
     if (isWindows())
       messageVerbose("  -- ", .txtInstallingColon,"\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
@@ -3718,7 +3718,7 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
 
   ar <- c(paste0("o <- readRDS('",tf,"')"),
           "options(o)",
-          paste0("setwd('", normalizePath(tempdir3(), winslash = "/", mustWork = FALSE),"')"),
+          paste0("setwd('", normalizePath(getwd(), winslash = "/", mustWork = FALSE),"')"),
           paste0("args <- readRDS('", fn, "')"),
           doLine,
           paste0("saveRDS(outfiles, '",outfile,"')"))
