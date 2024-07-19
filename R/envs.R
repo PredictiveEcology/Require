@@ -13,7 +13,10 @@ pkgEnv <- function(envir = .GlobalEnv) {
   memPersist <- isTRUE(getOption("Require.cachePersist", NULL))
   if (!memPersist)
     envir <- asNamespace("Require")
-  get(.envPkgName, envir = envir, inherits = FALSE)
+  env <- get0(.envPkgName, envir = envir, inherits = FALSE)
+  if (is.null(env))
+    env <- envPkgCreate(parentEnv = envir)
+  env
 }
 
 # 2nd level
@@ -52,6 +55,7 @@ pakEnv <- function() {
 }
 
 envPakCreate <- function() {
+  browser()
   if (is.null(pkgEnv()))
     envPakCreate()
   assign(.envPakName, newEmptyEnv(), envir = pkgEnv())
@@ -117,6 +121,8 @@ envPkgDepArchiveDetailsInner <- function() {
 .envPakName <- "pak"
 .envPkgName <- ".Require.pkgEnv"
 .envPkgStartTimeName <- "startTime"
+
+.envftbsp <- "FailedToBuildSrcPkg"
 
 .messInstPkgCounter <- 0
 

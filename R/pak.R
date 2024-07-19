@@ -8,49 +8,70 @@ utils::globalVariables(c(
 
 #' @importFrom pak pkg_history cache_delete
 pakErrorHandling <- function(err, pkg, packages) {
-  grp <- c("Can't install", .txtFailedToBuildSrcPkg, "Conflicts with ", .txtCantFindPackage)
-  spl <- c(" |\\)", "\033\\[..{0,1}m", " |@", " |\\.")
-  pat <- c("dependency", grp[2], "with", "called")
+  grp <- c("Can't install", .txtFailedToBuildSrcPkg, "Conflicts with ", .txtCantFindPackage,
+           .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps)
+  spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\.", "NULL", "NULL")
+  pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL")
   for (i in seq_along(grp)) {
     a <- grep(grp[i], strsplit(err, split = "\n")[[1]], value = TRUE)
     if (length(a)) {
+      if (grp[i] == .txtMissingValueWhereTFNeeded) {
+        pkg2 <- gsub("@.+$", "", pkg)
+        packages <- pakGetArchive(pkg2, packages = packages)
+        break
+      }
+
       b <- strsplit(a, split = spl[i])
       whDeps <- sapply(b, grep, pattern = pat[i])
+      dups <- Map(x = b, function(x) duplicated(x))
+      if (sum(unlist(dups)) >= 2 || grp[i] == .txtCldNotSlvPkgDeps) {
+        # likely a repository that has a 4th version number element,
+        #  e.g., NetLogoR 1.0.5.9001 on e.g., predictiveecology.r-universe.dev
+        repoToUse <- unlist(whIsOfficialCRANrepo(currentRepos = getOption("repos")))
+        options(repos = repoToUse)
+        break
+      }
       d <- Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 1]])
       pkg2 <- gsub("@.+$", "", d)
-      vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
-                       error = function(x) "")
-      whRm <- unlist(unname(lapply(paste0("^", pkg2, ".*", vers), grep, x = pkg)))
-      if (length(whRm) > 0) {
-        if (grp[i] == .txtCantFindPackage) {
-          # This is the case when a package is archived
-          his <- try(tail(pak::pkg_history(pkg2), 1), silent = TRUE)
-          if (!is(his, "try-error")) {
-            isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
-            pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
-            if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
-            pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))
-            packages[whRm] <- pth
+      pkgPossOther <- extractPkgName(filenames = basename(pkg))
+      if (identical(pkg2, pkgPossOther)) {
+        vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
+                         error = function(x) "")
+        whRm <- unlist(unname(lapply(paste0("^", pkg2, ".*", vers), grep, x = pkg)))
+        if (length(whRm) > 0) {
+          if (grp[i] == .txtCantFindPackage) {
+            # This is the case when a package is archived
+            packages <- pakGetArchive(pkg2, packages, whRm)
+            # his <- try(tail(pak::pkg_history(pkg2), 1), silent = TRUE)
+            # if (!is(his, "try-error")) {
+            #   isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
+            #   pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
+            #   if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
+            #   pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))
+            #   packages[whRm] <- pth
+            # } else {
+            #   messageCantInstallNoVersion(pkg2)
+            # }
           } else {
-            messageCantInstallNoVersion(pkg2)
-          }
-        } else {
-          if (grp[i] == .txtFailedToBuildSrcPkg) {
-            ftbsp <- "FailedToBuildSrcPkg"
-            prevFtbsp <- get0(ftbsp, envir = pakEnv())
-            if (pkg2 %in% prevFtbsp)
-              stop(err)
-            # When this error happens, it seems to be because of corrupt local cache
-            pak::cache_delete(package = pkg2)
-            assign(ftbsp, unique(c(prevFtbsp, pkg2)), envir = pakEnv())
+            if (grp[i] == .txtFailedToBuildSrcPkg) {
+              prevFtbsp <- get0(.envftbsp, envir = pakEnv())
+              if (pkg2 %in% prevFtbsp)
+                stop(err)
+              # When this error happens, it seems to be because of corrupt local cache
+              pak::cache_delete(package = pkg2)
+              assign(.envftbsp, unique(c(prevFtbsp, pkg2)), envir = pakEnv())
+              break
+            }
+
+            packages <- packages[-whRm]
             break
           }
-
-          packages <- packages[-whRm]
-          break
+        } else {
+          stop(err)
         }
       } else {
-        stop(err)
+        packages <- c(pkg2, packages)
+        break
       }
     }
   }
@@ -123,7 +144,8 @@ pakPkgSetup <- function(pkgs) {
 
   whGH <- which(isGH)
 
-  whGT <- grep(">", pkgs)
+  isGT <- isGT(pkgs) # grepl(">", pkgs)
+  whGT <- which(isGT)
 
   whHEAD <- grep("\\(HEAD\\)", pkgs)
 
@@ -132,11 +154,14 @@ pakPkgSetup <- function(pkgs) {
   whNormal <- ind[-sort(c(whEquals, whGT, whLT, whHEAD, whGH, whAlreadyColoned))]
 
   if (length(whEquals))
-    pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
+    pkgs[whEquals] <- equalsToAt(pkgs[whEquals])
+    # pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
   if (length(whLT))
-    pkgs[whLT] <- gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs[whLT])
+    pkgs[whLT] <- lessThanToAt(pkgs[whLT])
+    # pkgs[whLT] <- gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs[whLT])
   if (length(whHEAD))
-    pkgs[whHEAD] <- gsub(" {0,3}\\(HEAD\\)", "", pkgs[whHEAD])
+    pkgs[whHEAD] <- HEADtoNone(pkgs[whHEAD])
+    # pkgs[whHEAD] <- gsub(" {0,3}\\(HEAD\\)", "", pkgs[whHEAD])
 
   if (length(whNormal))
     pkgs[whNormal] <- paste0("any::", pkgs[whNormal])
@@ -151,7 +176,7 @@ pakPkgSetup <- function(pkgs) {
 #' @importFrom pak pak
 RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOrig) {
   requireNamespace("pak")
-  envPakCreate() # this will be used to track which packages failed
+  # envPakCreate() # this will be used to track which packages failed
 
   packages <- unique(packages)
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
@@ -180,12 +205,13 @@ RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packages
                                          hasNamespaceFile = FALSE)
       log <- tempfile2(fileext = ".txt")
 
+      browser()
       withCallingHandlers(
         err <- try(outs <- pak::pak(c(
           paste0("deps::", td3),
           pkgsList$direct
           ), lib = libPaths[1], ask = FALSE,
-                                    dependencies = doDeps, # already done in pakPkgSetup # doDeps,
+                                    dependencies = FALSE, # already done in pakPkgSetup # doDeps,
                                     upgrade = upgrade),
                    silent = verbose <= 1)
         , message = function(m) {
@@ -233,31 +259,110 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
 
   deps <- list()
 
-  deps <- Map(pkg = packages, function(pkg) {
-    for (i in 1:2) {
-      withCallingHandlers({
-        val <- try(pak::pkg_deps(trimVersionNumber(pkg), dependencies =
-                                   ifelse(any(grepl("suggests", tolower(unlist(which)))), TRUE, NA)))
-        if (is(val, "try-error")) {
-          pkg <- pakErrorHandling(val, pkg, pkg)
-        } else {
-          break
-        }
-      }, message = function(m) {
-        if (verbose < 1)
-          invokeRestart("muffleMessage")
-      }
-      )
+  packagesOrig <- packages
+
+  useCache <- FALSE
+  if (useCache) {
+    depsList <- get0("depsList", envir = pakEnv())
+    haveAlready <- NULL
+    if (!is.null(depsList)) {
+      haveAlready <- match(packages, names(depsList)) |> na.omit()
+      packages <- packages[-haveAlready]
     }
+
+  }
+  deps <- Map(pkg1 = packages, function(pkg1) {
+    reposOrig <- getOption("repos")
+    on.exit({
+      options(repos = reposOrig)
+    }, add = TRUE)
+    pkgOrig <- pkg1
+    pkg <- pkg1
+    valExtra <- list()
+    wh <- ifelse(any(grepl("suggests", tolower(unlist(which)))), TRUE, NA)
+
+    pkgDone <- character()
+    i <- 0
+    while(length(pkg1) > 0) {
+      i <- i + 1 # counter
+      pkg <- pkg1[1]
+      # for (pkg in pkg1) {
+        #for (i in 1:2) {
+          # for (pkg in pkg1) { # will only be longer than 1 if added with pakErrorHandling below
+          pkg <- equalsToAt(pkg)
+          pkg <- lessThanToAt(pkg)
+          pkg <- HEADtoNone(pkg)
+          isGT <- isGT(pkg) # grep(">", pkgs)
+          isGH <- isGH(pkg) # grepl("^[[:alpha:]]+/.+", pkgs)
+          needRm <- isGH | isGT
+          if (any(needRm))
+            pkg[needRm] <- trimVersionNumber(pkg[needRm])
+
+          # give up for archives of archives
+          if (i > 1 && pkg %in% pkgDone) wh <- FALSE
+
+          withCallingHandlers({
+            val <- try(pak::pkg_deps(pkg, dependencies = wh))
+            if (is(val, "try-error")) {
+              pkgDone <- unique(c(pkg, pkgDone))
+              pkgOrig2 <- pkg
+              pkg <- pakErrorHandling(val, pkg, pkg)
+              if (length(pkg)) {
+                if (length(pkg) > length(pkgOrig2)) {
+                  pkg1 <- pkg
+                  # break
+                  # added a package dep
+                } else {
+                  pkg1[1] <- pkg
+                }
+              }
+            } else {
+              if (length(pkg1) > 1) {
+                valExtra <- append(list(val), valExtra)
+              }
+              pkg1 <- pkg1[-1]
+              # break
+            }
+          }, message = function(m) {
+            if (verbose < 1)
+              invokeRestart("muffleMessage")
+          }
+          )
+       # }
+      #}
+    }
+    if (length(valExtra)) {
+      valExtra <- do.call(rbind, valExtra)
+      newDeps <- append(val$deps, valExtra$deps)
+      newDeps <- do.call(rbind, newDeps)
+      data.table::setDT(newDeps)
+      newDeps <- newDeps[newDeps[, .I[max(version) == version], by = "ref"]$V1,]
+      whOverride <- which(newDeps$ref %in% valExtra$package)
+      newDeps <- newDeps[whOverride, ref := valExtra$ref]
+      newDeps <- tibble::as_tibble(newDeps)
+      val$deps <- list(newDeps)
+    }
+
     val
 
   }
   )
 
-  if (simplify %in% TRUE) {
-    # deps2 <- lapply(deps, function(x) x$ref)
+  if (useCache) {
 
+    if (!is.null(haveAlready)) {
+      newList <- Map(x = packagesOrig, function(x) list())
+      newList[names(depsList)] <- depsList
+      if (NROW(deps))
+        newList[-haveAlready] <- deps
+      deps <- newList
+    }
+    assign("depsList", deps, envir = pakEnv())
+  }
+  if (simplify %in% TRUE) {
     deps <- Map(dep = deps, nam = names(deps), function(dep, nam) {
+      dd <- try(dep$deps)
+      if (is(dd, "try-error")) browser()
       dep$deps <- Map(innerDep = dep$deps, outerPkg = dep$package, function(innerDep, outerPkg) {
         if (!nam %in% outerPkg || !any(tolower(unlist(which)) == "suggests")) {
           innerDep[tolower(innerDep$type) %in%
@@ -267,11 +372,15 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
         }})
       dep
     })
-    deps <- Map(dep = deps, packFullName = packages, function(dep, packFullName) {
+    deps <- Map(dep = deps, packFullName = packagesOrig, function(dep, packFullName) {
       rr <- rbindlist(dep$deps) # only gets 1st order dependencies; still need self
       rr <- unique(rr)
       # rr <- rr[tolower(type) %in%  setdiff(tolower(unlist(which)), "suggests")]
       rr <- packageFullNameFromPkgVers(rr)
+      hasWeirdSource <- grep("^.+::", rr$packageFullName)
+      if (any(hasWeirdSource)) {
+        rr[hasWeirdSource, packageFullName := trimVersionNumber(packageFullName)]
+      }
       # rr[, packageFullName := paste0(ref, ifelse(nzchar(version), paste0(" (", op, " ", version, ")"), ""))]
 
       if (includeSelf) {
@@ -283,6 +392,11 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
         selfPkgs[, ref := trimVersionNumber(packageFullName)]
         keepCols <- colnames(rr)
         rr <- rbindlist(list(rr, selfPkgs[, ..keepCols]))
+        pkg <- extractPkgName(packFullName)
+        if (!identical(dep$ref, pkg)) {
+          rr[package %in% pkg, packageFullName := dep$ref[dep$package %in% pkg]]
+        }
+
       }
 
       setorderv(rr, c("package", "op"), order = c(1L, -1L))
@@ -414,3 +528,32 @@ mergeField <- function(origDESCtxt, field, dFile, fieldName = "Imports") {
 }
 
 
+
+equalsToAt <- function(pkgs) {
+  gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs)
+}
+
+lessThanToAt <- function(pkgs) {
+  gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs)
+}
+
+HEADtoNone <- function(pkgs) {
+  gsub(" {0,3}\\(HEAD\\)", "", pkgs)
+}
+
+isGT <- function(pkgs) grepl(">", pkgs)
+
+pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
+  pkgNoVer <- trimVersionNumber(pkg2)
+  his <- try(tail(pak::pkg_history(pkgNoVer), 1), silent = TRUE)
+  if (!is(his, "try-error")) {
+    isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
+    pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
+    if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
+    pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))
+    packages[whRm] <- pth
+  } else {
+    messageCantInstallNoVersion(pkg2)
+  }
+  packages
+}

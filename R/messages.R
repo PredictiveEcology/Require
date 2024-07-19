@@ -11,10 +11,13 @@ comma <- ", "
 .txtPleaseChangeReqdVers <- "Please change required version"
 .txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
+.txtCntInstllDep <- "Can't install dependency"
 
+.txtMissingValueWhereTFNeeded <- "missing value where TRUE/FALSE needed"
 .txtUnableToAccessIndex <- "unable to access index"
 .txtGitHub <- "GitHub"
 .txtCouldNotBeInstalled <- "could not be installed"
+.txtCldNotSlvPkgDeps <- "Could not solve package dependencies"
 
 # "installation of package 'ccissr' had non-zero exit status"
 # "installation of 2 packages failed"
