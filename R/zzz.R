@@ -9,7 +9,15 @@ envPkgCreate()
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()
-  Sys.setenv("R_USER_CACHE_DIR" = tools::R_user_dir("pkgcache", "cache"))
+  # Have to set this first for pak to work in vanilla session
+  existing <- Sys.getenv("R_USER_CACHE_DIR")
+  if (!nzchar(existing)) {
+    Sys.unsetenv("R_USER_CACHE_DIR")
+    defCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+    Sys.setenv("R_USER_CACHE_DIR" = defCacheDir)
+  }
+  # Sys.setenv("R_USER_CACHE_DIR" = tools::R_user_dir("pkgcache", "cache"))
+  # browser()
   existingCacheDir <- pak::cache_summary()$cachepath
   if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
     Sys.setenv("R_USER_CACHE_DIR" = tempdir3())
