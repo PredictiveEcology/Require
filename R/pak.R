@@ -406,8 +406,8 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   cat("VignetteBuilder: knitr, rmarkdown", sep = "\n", file = dFile, append = TRUE)
   cat("ByteCompile: yes", sep = "\n", file = dFile, append = TRUE)
   cat("Roxygen: list(markdown = TRUE)", sep = "\n", file = dFile, append = TRUE)
-  cat(paste0("RoxygenNote: ", as.character(packageVersion("roxygen2"))), sep = "\n",
-      file = dFile, append = TRUE)
+  # cat(paste0("RoxygenNote: ", as.character(packageVersion("roxygen2"))), sep = "\n",
+  #     file = dFile, append = TRUE)
 
 
   messageVerbose("New/updated DESCRIPTION file is: ", dFile, verbose = verbose)
