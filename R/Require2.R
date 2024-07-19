@@ -3669,7 +3669,7 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
       else
         split(x, cut(seq_along(x), n, labels = FALSE))
     }
-    vecList <- chunk2(vec, min(length(argsOrig[[splitOn[1]]]), min(4, getOption("Ncpus"))))
+    vecList <- chunk2(vec, min(length(argsOrig[[splitOn[1]]]), min(8, getOption("Ncpus"))))
   }
 }
 
