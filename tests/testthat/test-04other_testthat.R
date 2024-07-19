@@ -174,12 +174,12 @@ test_that("test 3", {
     #   were multiple repos; ffbase is no longer on CRAN
     # can't quiet this down on linux because ffbase is not binary but rest are ...
     #  install.packages won't do both types quiet = TRUE for some reason
-    warns <- capture_warnings(
+    warns1 <- capture_warnings(
       Install("ff", # verbose = 0,
               repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
               ))
     )
-    expect_identical(character(0), warns)
+    expect_identical(character(0), warns1)
   }
 
   if (isWindows()) {

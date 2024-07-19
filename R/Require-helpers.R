@@ -444,9 +444,13 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         unlink(fn)
       }
       rmEmptyFiles(fn, 200)
+      needNewFile <- TRUE
       if (file.exists(fn)) {
-        cap[[type]] <- readRDS(fn)
-      } else {
+        # can be interupted and be corrupted
+        cap[[type]] <- try(readRDS(fn), silent = TRUE)
+        if (!is(cap[[type]], "try-error")) needNewFile <- FALSE
+      }
+      if (isTRUE(needNewFile)) {
         caps <- lapply(repos, function(repo) {
           available.packagesWithCallingHandlers(repo, type)
         })
