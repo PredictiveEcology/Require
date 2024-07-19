@@ -3412,6 +3412,13 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     normalizePath(fn1, winslash = "/", mustWork = FALSE)
   })
 
+  logFiles <- lapply(pids, function(i) {
+    logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+    normalizePath(logFile, winslash = "/", mustWork = FALSE)
+  })
+  pids <- list()
+
+
   doLineOrig <- doLine
   repos <- paste(args$repos, collapse = ", ")
   preMess <- if (installPackages) {
@@ -3433,6 +3440,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       doLine <- updateDoLine(tmpdir, splitOn, doLineOrig)
     }
     if (installPackages) {
+      args$available <- argsOrig$available[argsOrig$available[, "Package"] %in% args$pkgs,, drop = FALSE]
       args$destdir <- args$lib <- libTemps[[j]]
     }
     saveRDS(args, file = fn)
@@ -3442,8 +3450,8 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
 
     fullMess <- makeFullMessage(fullMess, args, installPackages, downPack, downFile)
 
-    if (installPackages)
-      logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
+    # if (installPackages)
+    logFile <- logFiles[[j]] # basename(tempfile2(fileext = ".log")) # already in tmpdir
 
     if (installPackages) {
       if (length(fullMess)) {
@@ -3456,78 +3464,90 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       fullMess <- paste0WithLineFeed(gsub("\\s,", ",", gsub("\n", " ", fullMess)))
     }
 
-    pids[j] <- sysDo(installPackages, cmdLine, logFile, verbose)
+    pids[[j]] <- sysDo(installPackages, cmdLine, logFile, verbose)
   }
 
   if (installPackages %in% FALSE)
     if (length(fullMess))
       messageVerbose(messInstallingOrDwnlding(preMess, fullMess), verbose = verbose)
 
-  on.exit(sapply(pids, tools::pskill))
+  # on.exit(sapply(pids, tools::pskill))
   isRstudio <- isRstudio()
 
   fullMess <- character()
   preMess <- if (installPackages)  "" else "Downloaded: "
 
-  for (pid in pids) {
-    st <- Sys.time()
-    if (!installPackages) {
-      spinnerOnPid(pid, isRstudio, st, verbose)
-    }
-
-    whPid <- match(pid, pids)
-    if (downPack || installPackages) {
-      pkgs <- argsOrig$pkgs[vecList[[whPid]]]
-      if (installPackages) {
-        # check installations
-        if (!file.exists(logFile))
-          file.create(logFile)
-        log <- readLines(logFile) # won't exist if `verbose < 1`
-        if (any(grepl(paste(.txtInstallationNonZeroExit, .txtInstallationPkgFailed, sep = "|"), log))) {
-          return(logFile)
-        }
-        aa <- Map(p = args$pkgs, function(p) as.character(packVer(p, args$lib)))
-        # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
-        dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
-        # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
-        whFailed <- try(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="))
-        # if (is(whFailed, "try-error")) {
-        #   if (identical(unname(Sys.info()["user"]), "emcintir")) {
-        #     sc <- sys.calls()
-        #     dd <- dir("/home/emcintir/tmp/", pattern = "dt.+rda")
-        #     num <- gsub("dt(.{1,3})\\.rda", "\\1", dd) |> as.numeric() |> tail(n = 1)
-        #     if (length(num) == 0) num <- 0
-        #     save(dt, sc, aa, args, installPackages, downPack, file = paste0("/home/emcintir/tmp/dt",num + 1,".rda"))
-        #   }
-        # }
-        whFailed <- whFailed %in% TRUE
-        if (isTRUE(any(whFailed))) {
-          pkgsFailed <- dt$pkg[whFailed]
-          # messageVerbose(red("Failed to install: ", paste(pkgsFailed, collapse = ", ")), verbose = verbose + 1)
-          pkgs <- setdiff(pkgs, pkgsFailed)
-        }
-      }
-      mess <- "\n"#paste(pkgs, collapse = comma)
-    } else if (downFile) {
-      mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
-    } else {
-      w <- vecList[[whPid]]
-      mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch[w], collapse = comma)
-    }
-
-    fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
-    if ( (Sys.time() - st) > 2 && nzchar(fullMess)) {
-      fullMess <- paste0WithLineFeed(fullMess)
-      messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
-      fullMess <- character()
-    }
-
-  }
+  # for (pid in pids) {
+  #   st <- Sys.time()
+  #   if (!installPackages) {
+  #     spinnerOnPid(pid, isRstudio, st, verbose)
+  #   }
+  #
+  #   whPid <- match(pid, pids)
+  #   if (downPack || installPackages) {
+  #     pkgs <- argsOrig$pkgs[vecList[[whPid]]]
+  #     if (installPackages) {
+  #       # check installations
+  #       if (!file.exists(logFile))
+  #         file.create(logFile)
+  #       log <- readLines(logFile) # won't exist if `verbose < 1`
+  #       if (any(grepl(paste(.txtInstallationNonZeroExit, .txtInstallationPkgFailed, sep = "|"), log))) {
+  #         return(logFile)
+  #       }
+  #       aa <- Map(p = args$pkgs, function(p) as.character(packVer(p, args$lib)))
+  #       # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
+  #       dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
+  #       # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
+  #       whFailed <- try(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="))
+  #       # if (is(whFailed, "try-error")) {
+  #       #   if (identical(unname(Sys.info()["user"]), "emcintir")) {
+  #       #     sc <- sys.calls()
+  #       #     dd <- dir("/home/emcintir/tmp/", pattern = "dt.+rda")
+  #       #     num <- gsub("dt(.{1,3})\\.rda", "\\1", dd) |> as.numeric() |> tail(n = 1)
+  #       #     if (length(num) == 0) num <- 0
+  #       #     save(dt, sc, aa, args, installPackages, downPack, file = paste0("/home/emcintir/tmp/dt",num + 1,".rda"))
+  #       #   }
+  #       # }
+  #       whFailed <- whFailed %in% TRUE
+  #       if (isTRUE(any(whFailed))) {
+  #         pkgsFailed <- dt$pkg[whFailed]
+  #         # messageVerbose(red("Failed to install: ", paste(pkgsFailed, collapse = ", ")), verbose = verbose + 1)
+  #         pkgs <- setdiff(pkgs, pkgsFailed)
+  #       }
+  #     }
+  #     mess <- "\n"#paste(pkgs, collapse = comma)
+  #   } else if (downFile) {
+  #     mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
+  #   } else {
+  #     w <- vecList[[whPid]]
+  #     mess <- paste0(argsOrig$Account[w], "/", argsOrig$Repo[w], "@", argsOrig$Branch[w], collapse = comma)
+  #   }
+  #
+  #   fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
+  #   if ( (Sys.time() - st) > 2 && nzchar(fullMess)) {
+  #     fullMess <- paste0WithLineFeed(fullMess)
+  #     messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
+  #     fullMess <- character()
+  #   }
+  #
+  # }
   if (installPackages) {
-    sup <- Map(libFrom = libTemps, function(libFrom) {
-      linkOrCopyPackageFilesInner(dir(libFrom), fromLib = libFrom, toLib = argsOrig$lib)
-    })
+    stillSome <- TRUE
+    while(length(pids)) {
+      a <- callr::poll(pids, 100)
+      ready <- sapply(a, function(x) identical(unname(x["process"]), "ready"))
+      if (any(ready)) {
+        whReady <- which(ready)
+        for (i in whReady) {
+          pkgs <- dir(libTemps[[i]])
+          message("Done: ", paste(pkgs, collapse = " "))
+          linkOrCopyPackageFilesInner(pkgs, fromLib = libTemps[[i]], toLib = argsOrig$lib)
+        }
+        libTemps <- libTemps[-whReady]
+        pids <- pids[-whReady]
+      }
 
+    }
   }
 
   if (length(fullMess) && nzchar(fullMess)) {
@@ -3649,7 +3669,7 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
       else
         split(x, cut(seq_along(x), n, labels = FALSE))
     }
-    vecList <- chunk2(vec, min(length(argsOrig[[splitOn[1]]]), min(8, getOption("Ncpus"))))
+    vecList <- chunk2(vec, min(length(argsOrig[[splitOn[1]]]), min(4, getOption("Ncpus"))))
   }
 }
 
@@ -3700,12 +3720,25 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
     )
 
   } else {
-    cmd <- sys::exec_background
-    pid <- cmd(
-      Rscript, cmdLine,
-      std_out = installPackageVerbose(verbose, verboseLevel = 2),
-      std_err = installPackageVerbose(verbose, verboseLevel = 2)
+    #args <- eval(parse(text = cmdLine[8]))
+    #a <- parse(text = cmdLine[10])
+    cmdLine <- cmdLine[1:6*2]
+    pid <- callr::r_bg(function(cmdLine) { eval(parse(text = cmdLine)) },
+                  args = list(cmdLine),
+                  cmdargs = c("--no-save", "--no-restore"),
+                  stdout = logFile, stderr = logFile
+                  # stdout = TRUE, stderr = TRUE
     )
+    # readLines("/tmp/out")
+
+    # pid <- sys::r_background(args = cmdLine)
+    #
+    # cmd <- sys::exec_background
+    # pid <- cmd(
+    #   Rscript, cmdLine,
+    #   std_out = installPackageVerbose(verbose, verboseLevel = 2),
+    #   std_err = installPackageVerbose(verbose, verboseLevel = 2)
+    # )
   }
   pid
 }
