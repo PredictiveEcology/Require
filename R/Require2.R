@@ -3441,7 +3441,8 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     }
     if (installPackages) {
       args$available <- argsOrig$available[argsOrig$available[, "Package"] %in% args$pkgs,, drop = FALSE]
-      args$destdir <- args$lib <- libTemps[[j]]
+
+      # args$destdir <- args$lib <- libTemps[[j]]
     }
     saveRDS(args, file = fn)
 
@@ -3539,11 +3540,13 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       if (any(ready)) {
         whReady <- which(ready)
         for (i in whReady) {
-          pkgs <- dir(libTemps[[i]])
+          # pkgs <- dir(libTemps[[i]])
+          pkgs <- argsOrig$pkgs[vecList[[i]]]
           message("Done: ", paste(pkgs, collapse = " "))
-          linkOrCopyPackageFilesInner(pkgs, fromLib = libTemps[[i]], toLib = argsOrig$lib)
+          # linkOrCopyPackageFilesInner(pkgs, fromLib = libTemps[[i]], toLib = argsOrig$lib)
         }
-        libTemps <- libTemps[-whReady]
+        # libTemps <- libTemps[-whReady]
+        vecList <- vecList[-whReady]
         pids <- pids[-whReady]
       }
 

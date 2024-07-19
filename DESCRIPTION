@@ -36,6 +36,7 @@ Depends:
     R (>= 4.0),
     pak
 Imports:
+    callr,
     data.table (>= 1.10.4),
     methods,
     sys,
