@@ -23,6 +23,11 @@ of \code{c("Depends", "Imports", "LinkingTo", "Suggests", "Enhances")}.
 Character string \code{"all"} is shorthand for that vector, character string
 \code{"most"} for the same vector without \code{"Enhances"}.}
 
+\item{other}{Can supply other fields; the only benefit here is that a user
+can specify \code{"github"} (lower case) and it will automatically add
+c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1",
+"GithubSubFolder") fields}
+
 \item{purge}{Logical. Should all caches be purged? Default is
 \code{getOption("Require.purge", FALSE)}. There is a lot of internal caching of
 results throughout the \code{Require} package. These help with speed and reduce

@@ -88,6 +88,7 @@ RequireOptions <- function() {
     ),
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,
+    Require.usePak = FALSE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
   )

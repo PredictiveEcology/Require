@@ -5,6 +5,8 @@ utils::globalVariables(c(
 
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
 .txtCantFindPackage <- "Can't find package called "
+
+#' @importFrom pak pkg_history cache_delete
 pakErrorHandling <- function(err, pkg, packages) {
   grp <- c("Can't install", .txtFailedToBuildSrcPkg, "Conflicts with ", .txtCantFindPackage)
   spl <- c(" |\\)", "\033\\[..{0,1}m", " |@", " |\\.")
@@ -55,7 +57,7 @@ pakErrorHandling <- function(err, pkg, packages) {
   packages
 }
 
-
+#' @importFrom pak pkg_deps pkg_history
 pakPkgSetup <- function(pkgs) {
 
   # rm spaces
@@ -64,18 +66,6 @@ pakPkgSetup <- function(pkgs) {
   if (TRUE) {
     deps <- list()
     deps <- pkgDep(pkgs)
-    # for (pk in pkgs) {
-    #   pkLabel <- pk
-    #   for (i in 1:2) {
-    #     val <- try(pkgDep(pk))
-    #     if (is(val, "try-error")) {
-    #       pk <- pakErrorHandling(val, pk, pk)
-    #     } else {
-    #       deps[pkLabel] <- val
-    #       break
-    #     }
-    #   }
-    # }
 
     depsFlat <- unlist(unname(deps))
     depsFlat <- unique(depsFlat)
@@ -158,6 +148,7 @@ pakPkgSetup <- function(pkgs) {
 }
 
 
+#' @importFrom pak pak
 RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOrig) {
   requireNamespace("pak")
   envPakCreate() # this will be used to track which packages failed
@@ -241,18 +232,6 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
                       keepVersionNumber, verbose = getOption("Require.verbose")) {
 
   deps <- list()
-  # for (pk in pkgs) {
-  #   pkLabel <- pk
-  #   for (i in 1:2) {
-  #     val <- try(pkgDep(pk))
-  #     if (is(val, "try-error")) {
-  #       pk <- pakErrorHandling(val, pk, pk)
-  #     } else {
-  #       deps[pkLabel] <- val
-  #       break
-  #     }
-  #   }
-  # }
 
   deps <- Map(pkg = packages, function(pkg) {
     for (i in 1:2) {

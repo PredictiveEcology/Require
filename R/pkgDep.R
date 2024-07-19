@@ -444,6 +444,10 @@ whichToDILES <- function(which) {
 #' character matrix.
 #' @inheritParams utils::installed.packages
 #' @inheritParams pkgDep
+#' @param other Can supply other fields; the only benefit here is that a user
+#'   can specify `"github"` (lower case) and it will automatically add
+#'   c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1",
+#'   "GithubSubFolder") fields
 .installed.pkgs <-
   function(lib.loc = .libPaths(),
            which = c("Depends", "Imports", "LinkingTo"),
