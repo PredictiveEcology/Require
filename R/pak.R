@@ -63,9 +63,9 @@ pakErrorHandling <- function(err, pkg, packages) {
               break
             }
 
-            packages <- packages[-whRm]
-            break
-          }
+          packages <- packages[-whRm]
+          break
+        }
         } else {
           stop(err)
         }

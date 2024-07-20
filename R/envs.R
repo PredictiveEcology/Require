@@ -55,7 +55,6 @@ pakEnv <- function() {
 }
 
 envPakCreate <- function() {
-  browser()
   if (is.null(pkgEnv()))
     envPakCreate()
   assign(.envPakName, newEmptyEnv(), envir = pkgEnv())

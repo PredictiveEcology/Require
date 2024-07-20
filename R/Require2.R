@@ -3552,7 +3552,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     # if (length(dt$localFile) != length(dt$Package))
     #   dt$localFile <- rep("", length(dt$Package))
     a <- try(setDT(dt), silent = TRUE)
-    if (is(a, 'try-error')) saveRDS(dt, file = "c:/Eliot/tmp/dt")
+    if (is(a, 'try-error')) saveRDS(dt, file = "c:/Eliot/tmp/dt.rds")
   } else  { # installPackages and Other
     dt <- logFile
   }
