@@ -18,6 +18,7 @@ comma <- ", "
 .txtGitHub <- "GitHub"
 .txtCouldNotBeInstalled <- "could not be installed"
 .txtCldNotSlvPkgDeps <- "Could not solve package dependencies"
+.txtFailedToDLFrom <- "Failed to download.+from"
 
 # "installation of package 'ccissr' had non-zero exit status"
 # "installation of 2 packages failed"

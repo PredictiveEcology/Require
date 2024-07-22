@@ -8,18 +8,24 @@ utils::globalVariables(c(
 
 #' @importFrom pak pkg_history cache_delete
 pakErrorHandling <- function(err, pkg, packages) {
+  # browser() # looking for RandomFields
   grp <- c("Can't install", .txtFailedToBuildSrcPkg, "Conflicts with ", .txtCantFindPackage,
-           .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps)
-  spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\.", "NULL", "NULL")
-  pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL")
+           .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps, .txtFailedToDLFrom)
+  spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\.", "NULL", "NULL", "NULL")
+  pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL", "NULL")
   for (i in seq_along(grp)) {
     a <- grep(grp[i], strsplit(err, split = "\n")[[1]], value = TRUE)
     if (length(a)) {
+      pkg2 <- gsub("@.+$", "", pkg)
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
-        pkg2 <- gsub("@.+$", "", pkg)
+        # browser()
         packages <- pakGetArchive(pkg2, packages = packages)
         break
       }
+      if (grp[i] == .txtFailedToDLFrom) {
+        # browser()
+      }
+
 
       b <- strsplit(a, split = spl[i])
       whDeps <- sapply(b, grep, pattern = pat[i])
@@ -28,7 +34,8 @@ pakErrorHandling <- function(err, pkg, packages) {
         # likely a repository that has a 4th version number element,
         #  e.g., NetLogoR 1.0.5.9001 on e.g., predictiveecology.r-universe.dev
         repoToUse <- unlist(whIsOfficialCRANrepo(currentRepos = getOption("repos")))
-        options(repos = repoToUse)
+        packages <- pakGetArchive(pkg2, packages = packages)
+        # options(repos = repoToUse)
         break
       }
       d <- Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 1]])
@@ -86,7 +93,8 @@ pakPkgSetup <- function(pkgs) {
 
   if (TRUE) {
     deps <- list()
-    deps <- pkgDep(pkgs)
+    # browser()
+    deps <- pkgDep(pkgs) # |> Cache()
 
     depsFlat <- unlist(unname(deps))
     depsFlat <- unique(depsFlat)
@@ -205,7 +213,7 @@ RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packages
                                          hasNamespaceFile = FALSE)
       log <- tempfile2(fileext = ".txt")
 
-      browser()
+      # browser()
       withCallingHandlers(
         err <- try(outs <- pak::pak(c(
           paste0("deps::", td3),
@@ -545,9 +553,22 @@ isGT <- function(pkgs) grepl(">", pkgs)
 
 pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   pkgNoVer <- trimVersionNumber(pkg2)
+  # browser()
+  isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
+  if (grep(pattern = isCRAN, getOption("repos")) != 1) {
+    opt <- options(repos = isCRAN)
+    on.exit(options(opt))
+    ap <- available.packagesWithCallingHandlers(isCRAN, type = "binary") |> as.data.table()
+    onCurrent <- ap[Package %in% pkg2]
+    if (NROW(onCurrent)) {
+      pth <- file.path(paste0(onCurrent$Package, "_", onCurrent$Version, ".zip"))
+      if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
+      pth <- paste0("url::",file.path(contrib.url(isCRAN, type = "binary"), pth))
+    }
+  }
+
   his <- try(tail(pak::pkg_history(pkgNoVer), 1), silent = TRUE)
   if (!is(his, "try-error")) {
-    isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
     pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
     if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
     pth <- paste0("url::",file.path(contrib.url(isCRAN), pth))

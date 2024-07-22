@@ -135,7 +135,6 @@ test_that("test 09", {
       expect_true(test)
 
       "Please change required version e.g., NLMR (<=1.1)"
-      browser()
       warns <- capture_warnings(
         out11 <- pkgDep(unname(packageFullName)[-1], recursive = TRUE, simplify = FALSE)
       )

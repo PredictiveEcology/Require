@@ -124,7 +124,10 @@ trimVersionNumber <- function(pkgs) {
 rmExtraSpaces <- function(string) {
   gsub(" {2, }", " ", string)
 }
-.grepVersionNumber <- " *\\(.*| {0,5}@.+$"
+
+# the @ is both in pak for CRAN and GitHub ... need to disentangle these for grep
+.grepVersionNumber <- " *\\(.*"#| {0,5}@.+$"
+
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
 grepExtractPkgsFilename <-

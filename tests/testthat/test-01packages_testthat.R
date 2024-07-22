@@ -265,7 +265,9 @@ test_that("test 1", {
   # detach("package:reproducible", unload = TRUE);
   unloadNamespace("package:fpCompare")
   # now installs correct SHA which is 2.0.2.9001
-  Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)")) |> suppressWarnings() # "package 'reproducible' was built under ...
+  warnsHere <- capture_warnings(  # "package 'reproducible' was built under ...
+    Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
+  )
   vers <- packVer("reproducible", .libPaths()[1])
   # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "reproducible/DESCRIPTION"))
   testthat::expect_equal(vers, "2.0.2.9001") # was incorrectly 2.0.2 from CRAN prior to PR #87
