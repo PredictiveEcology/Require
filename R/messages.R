@@ -12,6 +12,7 @@ comma <- ", "
 .txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
 .txtCntInstllDep <- "Can't install dependency"
+.txtConflictsWith <- "Conflicts with"
 
 .txtMissingValueWhereTFNeeded <- "missing value where TRUE/FALSE needed"
 .txtUnableToAccessIndex <- "unable to access index"

@@ -274,12 +274,15 @@ test_that("test 1", {
   # End issue 87
 
   suggests <- getOption("Require.packagesLeaveAttached")
-  out <- try(
-    detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-              dontTry = unique(c(suggests, dontDetach()))),
-    silent = TRUE) |>
-    suppressWarnings()
 
+  if (!getOption("Require.usePak")) {
+
+    out <- try(
+      detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
+                dontTry = unique(c(suggests, dontDetach()))),
+      silent = TRUE) |>
+      suppressWarnings()
+  }
   # detach("package:reproducible", unload = TRUE)
 
   #### MuMIn is currently failing to build from source

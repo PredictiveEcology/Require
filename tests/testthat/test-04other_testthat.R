@@ -8,12 +8,12 @@ test_that("test 3", {
 
   warns <- capture_warnings(
     err <- try(silent = TRUE,
-      out <- capture.output(type = "message", lala <- Require("data.tt", verbose = 1))
+               out <- capture.output(type = "message",
+                                     lala <- Require("data.tt")
+               )
     )
   )
   test <- testWarnsInUsePleaseChange(warns)
-
-
 
   if (!getOption("Require.usePak", TRUE))
     testthat::expect_true(any(grepl("could not be installed", out))) # {out, "simpleWarning")})
@@ -29,6 +29,8 @@ test_that("test 3", {
   }
 
   if (isTRUE(tryCatch(packageVersion("fpCompare"), error = function(e) "0.0.0") < "0.2.5")) {
+    # aaaa <<- 1
+    # on.exit(rm(aaaa, envir= .GlobalEnv))
     Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
                      install= "force")
     expect_true(packageVersion("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
@@ -186,6 +188,7 @@ test_that("test 3", {
     # test the new approach that installs outside R session -- is fine on Linux-alikes
     withr::local_options(Require.installPackagesSys = FALSE)
     ver <- "0.2.4"; ineq <- "<"
+
     Install(paste0("fpCompare (", ineq, ver, ")"), install = "force")
     ip <- installed.packages(noCache = TRUE) |> as.data.table()
     expect_true(compareVersion2(ip[Package %in% "fpCompare"]$Version, ver, inequality = ineq))

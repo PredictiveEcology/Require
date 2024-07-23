@@ -1,5 +1,6 @@
 test_that("test 5b", {
 
+  skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
   setupInitial <- setupTest()
 
   isDev <- getOption("Require.isDev")
