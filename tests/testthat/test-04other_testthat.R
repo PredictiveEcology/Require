@@ -153,24 +153,25 @@ test_that("test 3", {
   }
 
 
-  opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
-  out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
-    out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
-    o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])
-    if (length(o2)) {
-      pkgs <- gsub(x = unname(unlist(utilsOut[o2])), " ", "") # remove spaces
-      out <- gsub(x = out, " ", "") # remove spaces
-      # out <- setdiff(out, grep("R\\(.+", pkgs, value = TRUE, invert = TRUE))
-    }
-    setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020
-  })
-  localDeps <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
-                                   which = c("Suggests", "Imports", "Depends"))
-  locals <- setdiff(extractPkgName(localDeps), .basePkgs)
-  testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
-  testArgs <- setdiff(testArgs, "roxygen2") # not sure why roxygen2 was not in it before
-  testthat::expect_identical(testArgs, character())
-
+  if (getRversion() >= "4.3.0") { # R 4.2.X and lower don't exist on PEuniverse so this test fails
+    opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
+    out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
+      out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
+      o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])
+      if (length(o2)) {
+        pkgs <- gsub(x = unname(unlist(utilsOut[o2])), " ", "") # remove spaces
+        out <- gsub(x = out, " ", "") # remove spaces
+        # out <- setdiff(out, grep("R\\(.+", pkgs, value = TRUE, invert = TRUE))
+      }
+      setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020
+    })
+    localDeps <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
+                                     which = c("Suggests", "Imports", "Depends"))
+    locals <- setdiff(extractPkgName(localDeps), .basePkgs)
+    testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
+    testArgs <- setdiff(testArgs, "roxygen2") # not sure why roxygen2 was not in it before
+    testthat::expect_identical(testArgs, character())
+  }
   if (isDev) {
     # this was a bug created a warning when there was a package not on CRAN, but there
     #   were multiple repos; ffbase is no longer on CRAN
@@ -257,16 +258,18 @@ test_that("test 3", {
     # 7.367775  8.914831  9.495963 10.46189 10.56006 10.65823     3
   }
 
-  # Mistakenly have a partial repos, i.e., without getOption("repos") -- This failed previously Jul 2, 2024
-  dir44 <- tempdir2(.rndstr(1))
-  silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
-  on.exit(unlink(dir44, recursive = TRUE), add = TRUE)
-  warns <- capture_warnings(
-    Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
-                     standAlone = TRUE)
-  )
-  test <- testWarnsInUsePleaseChange(warns)
-  expect_true(test)
+  if (getRversion() >= "4.3.0") { # R 4.2.x and below can't seem to build many of the PE ecosystem from src
+    # Mistakenly have a partial repos, i.e., without getOption("repos") -- This failed previously Jul 2, 2024
+    dir44 <- tempdir2(.rndstr(1))
+    silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
+    on.exit(unlink(dir44, recursive = TRUE), add = TRUE)
+    warns <- capture_warnings(
+      Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
+                       standAlone = TRUE)
+    )
+    test <- testWarnsInUsePleaseChange(warns)
+    expect_true(test)
+  }
 
 
   ooo <- options(Require.RPackageCache = NULL)
