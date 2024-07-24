@@ -37,7 +37,6 @@ Depends:
 Imports:
     data.table (>= 1.10.4),
     methods,
-    pak,
     sys,
     tools,
     utils
@@ -47,6 +46,7 @@ Suggests:
     diffobj,
     gitcreds,
     httr,
+    pak,
     parallel,
     rematch2, 
     roxygen2,

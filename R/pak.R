@@ -6,7 +6,6 @@ utils::globalVariables(c(
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
 .txtCantFindPackage <- "Can't find package called "
 
-#' @importFrom pak pkg_history cache_delete
 pakErrorHandling <- function(err, pkg, packages) {
   # browser() # looking for RandomFields
   grp <- c(.txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith, .txtCantFindPackage,
@@ -37,7 +36,7 @@ pakErrorHandling <- function(err, pkg, packages) {
         browser()
       }
 
-      browser() # the pkgNoVersion can be vectorized for large fails of install
+      # browser() # the pkgNoVersion can be vectorized for large fails of install
       if (grp[i] == .txtCntInstllDep && isGH(pkgNoVersion)) { # "achubaty/fpCompare (>=2.0.0)"
         isOK <- pakCheckGHversionOK(pkg)
         # pkgDT <- toPkgDTFull(pkg)
@@ -118,7 +117,6 @@ pakErrorHandling <- function(err, pkg, packages) {
   packages
 }
 
-#' @importFrom pak pkg_deps pkg_history
 pakPkgSetup <- function(pkgs, doDeps) {
 
   # rm spaces
@@ -213,9 +211,8 @@ pakPkgSetup <- function(pkgs, doDeps) {
 }
 
 
-#' @importFrom pak pak
 RequireForPak <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOrig) {
-  requireNamespace("pak")
+  if (!requireNamespace("pak")) stop("Please install pak")
   # envPakCreate() # this will be used to track which packages failed
 
   packages <- unique(packages)
@@ -301,6 +298,7 @@ isGH <- function(pkgs) {
 
 pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
                       keepVersionNumber, verbose = getOption("Require.verbose")) {
+  if (!requireNamespace("pak")) stop("Please install pak")
 
   deps <- list()
 

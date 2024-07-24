@@ -125,6 +125,7 @@ pkgDep <- function(packages,
   if (length(packages)) {
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
     if (getOption("Require.usePak", TRUE)) {
+      if (!requireNamespace("pak")) stop("Please install pak")
       deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber)
     } else {
 
