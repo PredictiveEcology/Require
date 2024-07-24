@@ -16,7 +16,7 @@ test_that("test 3", {
   test <- testWarnsInUsePleaseChange(warns)
 
   if (!getOption("Require.usePak", TRUE))
-    testthat::expect_true(any(grepl("could not be installed", out))) # {out, "simpleWarning")})
+    testthat::expect_true(any(grepl("could not be installed", warns))) # {out, "simpleWarning")})
 
   # for coverages that were missing
   pkgDTEmpty <- Require:::toPkgDT(character())

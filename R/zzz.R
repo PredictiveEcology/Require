@@ -17,9 +17,11 @@ envPkgCreate()
     Sys.setenv("R_USER_CACHE_DIR" = defCacheDir)
   }
 
-  existingCacheDir <- pak::cache_summary()$cachepath
-  if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
-    Sys.setenv("R_USER_CACHE_DIR" = tempdir3())
+  # if (FALSE) {
+  #   existingCacheDir <- pak::cache_summary()$cachepath
+  #   if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
+  #     Sys.setenv("R_USER_CACHE_DIR" = tempdir3())
+  # }
 
 
   opts.Require <- RequireOptions()

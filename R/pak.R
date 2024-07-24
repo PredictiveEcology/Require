@@ -395,6 +395,7 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       #}
     }
     if (length(valExtra)) {
+      if (!requireNamespace("tibble")) stop("Please install tibble")
       valExtra <- do.call(rbind, valExtra)
       newDeps <- append(val$deps, valExtra$deps)
       newDeps <- do.call(rbind, newDeps)
