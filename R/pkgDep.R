@@ -894,6 +894,12 @@ purgePkgDep <- function(purge) {
   purge
 }
 
+#' This converts master or main to HEAD for a git repo
+#'
+#' This will also convert a git repo with nothing after the @ to @HEAD
+#' @param gitRepo A git repository of the form account/repo with optional @branch
+#'    or @sha or @tag
+#' @return The git repository with @HEAD if it had @master, @main or no @.
 masterMainToHead <- function(gitRepo) {
   masterOrMain <- "@(master|main) *"
   areMasterOrMain <- grepl(masterOrMain, gitRepo)
@@ -901,6 +907,11 @@ masterMainToHead <- function(gitRepo) {
     masterOrMainNoSpace <- "@(master|main)"
     gitRepo[areMasterOrMain] <-
       gsub(paste0("(", masterOrMainNoSpace, ")"), "@HEAD", gitRepo[areMasterOrMain])
+  }
+
+  noAt <- !grepl("@", gitRepo)
+  if (any(noAt)) {
+    gitRepo[noAt] <- paste0(gitRepo[noAt], "@HEAD")
   }
   return(gitRepo)
 }
