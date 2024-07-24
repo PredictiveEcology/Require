@@ -882,7 +882,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     return(br)
   }
 
-  shaPath <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
+  gitRefsURL <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
   if (missing(br)) {
     br <- "main"
   }
@@ -904,32 +904,33 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       }
     }
     if (downloadNow)
-      .downloadFileMasterMainAuth(shaPath, destfile = tf, need = "master")
-    sha <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-    if (any(grepl("Bad credentials", sha))) {#} || notFound) {
+      .downloadFileMasterMainAuth(gitRefsURL, destfile = tf, need = "master")
+    gitRefs <- try(suppressWarnings(readLines(tf)), silent = TRUE)
+    if (any(grepl("Bad credentials", gitRefs))) {#} || notFound) {
       # if (notFound)
-       #  stop("Did you spell the GitHub.com repository, package and or branch/sha correctly?")
-      stop(sha)
+       #  stop("Did you spell the GitHub.com repository, package and or branch/gitRefs correctly?")
+      stop(gitRefs)
     }
 
-    if (is(sha, "try-error")) {
-      return(sha)
+    if (is(gitRefs, "try-error")) {
+      return(gitRefs)
     }
-    if (length(sha) > 1) {
+    if (length(gitRefs) > 1) {
       # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
       #   Was easier to collapse the individual lines, then re-split
-      sha <- paste(sha, collapse = "")
+      gitRefs <- paste(gitRefs, collapse = "")
     }
-    sha1 <- strsplit(sha, "},")[[1]] # this splits onto separate lines
+    gitRefsSplit <- strsplit(gitRefs, "},")[[1]] # this splits onto separate lines
 
-    sha2 <- strsplit(sha1, ":")
+    gitRefsSplit2 <- strsplit(gitRefsSplit, ":")
 
     if (any(grepl("master|main|HEAD", unlist(br)))) {
-      br2 <- grep(unlist(sha2), pattern = "api.+heads/(master|main)", value = TRUE)
-      br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
+      br <- masterOrMainFromGitRefs(gitRefsSplit2)
+      # br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
+      # br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
     }
     for (branch in br) { # will be length 1 in most cases except master/main
-      whHasBr <- which(vapply(sha2, function(xx) {
+      whHasBr <- which(vapply(gitRefsSplit2, function(xx) {
         any(grepl(paste0(".+refs/.+/+", branch, "\""), xx))
       }, FUN.VALUE = logical(1)))
       if (length(whHasBr) > 0) {
@@ -937,7 +938,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       }
     }
     # This will catch cases where the RequireGitHubCacheDir() doesn't have it,
-    #    but it is there (e.g., a new branch or new sha)... this will deleted
+    #    but it is there (e.g., a new branch or new gitRefs)... this will deleted
     if (length(whHasBr) == 0) {
       if (ii %in% 1) {
         unlink(tf)
@@ -949,9 +950,9 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     break
   }
 
-  sha3 <- sha2[[whHasBr]]
-  shaLine <- grep("sha", sha3) + 1
-  shaLine <- strsplit(sha3[shaLine], ",")[[1]][1]
+  gitRefsFinal <- gitRefsSplit2[[whHasBr]]
+  shaLine <- grep("sha", gitRefsFinal) + 1
+  shaLine <- strsplit(gitRefsFinal[shaLine], ",")[[1]][1]
   sha <- gsub(" *[[:punct:]]+(.+)[[:punct:]] *", "\\1", shaLine)
   sha
 }
@@ -1631,4 +1632,12 @@ available.packagesWithCallingHandlers <- function(repo, type) {
 
   }
   out
+}
+
+
+
+masterOrMainFromGitRefs <- function(gitRefsSplit2) {
+  br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
+  br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
+  br
 }
