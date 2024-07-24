@@ -458,8 +458,7 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = 
   }
   if (any(localVersionOK %in% TRUE)) {
     # pkgDT[localVersionOK %in% TRUE, DESCFile := base::system.file("DESCRIPTION", package = Package), by = "Package"]
-    pkgDT[localVersionOK %in% TRUE,
-          DESCFile := localFiles, by = "Package"]
+    pkgDT[localVersionOK %in% TRUE, DESCFile := localFiles, by = "Package"]
 
     if (exists("pkgDTNotLocal", inherits = FALSE)) {
       pkgDT <- rbindlist(list(pkgDT[localVersionOK %in% TRUE], pkgDTNotLocal), fill = TRUE, use.names = TRUE)

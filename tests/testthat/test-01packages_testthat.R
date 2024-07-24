@@ -146,9 +146,9 @@ test_that("test 1", {
     testthat::expect_true(isFALSE(outInner))
 
     # Skip on CRAN
-    dir3 <- Require:::rpackageFolder(Require::tempdir2(Require:::.rndstr(1)))
+    dir3 <- Require:::rpackageFolder(tempdir3())
     dir3 <- Require::checkPath(dir3, create = TRUE)
-    dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
+    # dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
     # try({
 
     # This next one is correct version, but it was installed from CRAN, so it fails

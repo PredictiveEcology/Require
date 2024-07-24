@@ -1348,7 +1348,7 @@ masterMainHEAD <- function(url, need) {
       }
       Sys.sleep(0.5)
     }
-    return(ret)
+    ret
   },
   warning = function(w) {
     setOfflineModeTRUE(verbose = verbose)
