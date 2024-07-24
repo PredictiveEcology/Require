@@ -49,9 +49,12 @@ envPkgDepCreate <- function() {
 
 #' 2nd level
 pakEnv <- function() {
-  if (is.null(pkgEnv()))
+  env <- get0(.envPakName, envir = pkgEnv())
+  if (is.null(env)) {
     envPakCreate()
-  get0(.envPakName, envir = pkgEnv())
+    env <- get0(.envPakName, envir = pkgEnv())
+  }
+  env
 }
 
 envPakCreate <- function() {

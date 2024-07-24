@@ -287,6 +287,10 @@ Require <- function(packages,
     if (isFALSE(packageVersionFile)) {
       messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     }
+    opts2 <- getOption("Require.usePak")# ; on.exit(options(opts2), add = TRUE)
+    if (isTRUE(opts2))
+      warning("Currently, pak is unlikely to work for package snapshots; \n",
+              "if problems occur, set `options(Require.usePak = FALSE)`")
 
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths = libPaths,
                                     install_githubArgs, install.packagesArgs, standAlone,

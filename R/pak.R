@@ -16,16 +16,23 @@ pakErrorHandling <- function(err, pkg, packages) {
     a <- grep(grp[i], strsplit(err, split = "\n")[[1]], value = TRUE)
     if (length(a)) {
       a <- gsub("\\.$", "", a)
-      pkg2 <- gsub("@.+$", "", pkg)
-      pkgNoVersion <- trimVersionNumber(pkg2)
       # if (exists("aaaa")) browser()
       # if (any(grepl(pkg2, c("sdfd", "fpCompare")))) browser()
 
       b <- strsplit(a, split = spl[i])
       whDeps <- sapply(b, grep, pattern = pat[i])
+
+      pkg2 <- gsub("@.+$", "", pkg)
+
+      if (length(pkg2) > 1) {
+        d <- Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 1]])
+        pkg2 <- gsub("@.+$", "", d)
+      }
+      pkgNoVersion <- trimVersionNumber(pkg2)
+
       vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
                        error = function(x) "")
-      whRm <- unlist(unname(lapply(paste0("^", pkgNoVersion, ".*", vers), grep, x = pkg)))
+      whRm <- unlist(unname(lapply(paste0("^", pkgNoVersion, ".*", vers, "|/", pkgNoVersion, ".*", vers), grep, x = pkg)))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
         browser()
@@ -61,8 +68,6 @@ pakErrorHandling <- function(err, pkg, packages) {
         # options(repos = repoToUse)
         break
       }
-      d <- Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 1]])
-      pkg2 <- gsub("@.+$", "", d)
       pkgPossOther <- extractPkgName(filenames = basename(pkg))
       if (identical(pkg2, pkgPossOther)) {
         # vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
@@ -106,8 +111,17 @@ pakErrorHandling <- function(err, pkg, packages) {
           stop(err)
         }
       } else {
-        pak::cache_delete(package = pkg2)
-        # browser()
+        prevFail <- get0("failedPkgs", envir = pakEnv())
+        pkg3 <- extractPkgName(pkg2)
+        if (pkg3 %in% prevFail) {
+          nowFails <- setdiff(pkg3, prevFail)
+          assign("failedPkgs", nowFails, envir = pakEnv())
+          packages <- packages[-whRm]
+          break
+        }
+        pak::cache_delete(package = pkg3)
+        nowFails <- c(prevFail, pkg3)
+        assign("failedPkgs", nowFails, envir = pakEnv())
         break
         #packages <- c(pkg2, packages)
         #break
