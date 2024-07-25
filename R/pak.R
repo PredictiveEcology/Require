@@ -66,6 +66,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         whRmAll <- integer()
         for (j in seq_along(pkgNoVersion)) {
           if (isGH(pkgNoVersion[j])) { # "achubaty/fpCompare (>=2.0.0)"
+            if (is.na(pkg[whRm[j]])) browser()
             isOK <- pakCheckGHversionOK(pkg[whRm[j]])
             # pkgDT <- toPkgDTFull(pkg)
             # dl <- pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2())
@@ -105,8 +106,10 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
           if (grp[i] == .txtCantFindPackage) {
             # This is the case when a package is archived
             packages2 <- pakGetArchive(pkg2, packages, whRm)
-            if (identical(packages2, packages)) {
-              stop(err)
+            if (identical(packages2, packages)) { # doesn't exist
+              packages <- packages[-whRm]
+              warning(err)
+              break
             }
             messageVerbose(packages2, " may be archived from CRAN; checking archives... ",
                            verbose = verbose)
@@ -244,7 +247,7 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
       pkgsList <- pakPkgSetup(pkgs, doDeps = doDeps)
       td3 <- tempdir3()
       on.exit({unlink(dirname(td3))}, add = TRUE)
-      if (any(grepl("quickPlot", pkgsList$DESC))) browser()
+      # if (any(grepl("quickPlot", pkgsList$DESC))) browser()
       dfile <- DESCRIPTIONfileFromModule(verbose = -2,
                                          packageFolderName = td3,
                                          .txtDummyPackage,
@@ -460,7 +463,12 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
         rr <- rbindlist(list(rr, selfPkgs[, ..keepCols]))
         pkg <- extractPkgName(packFullName)
         if (!identical(dep$ref, pkg)) {
-          rr[package %in% pkg, packageFullName := packFullName] # dep$ref[dep$package %in% pkg]]
+          replacement <- if (grepl("^url", dep$ref[dep$package %in% pkg])) {
+            dep$ref[dep$package %in% pkg]
+          } else {
+            packFullName
+          }
+          rr[package %in% pkg, packageFullName := replacement]
         }
 
       }
