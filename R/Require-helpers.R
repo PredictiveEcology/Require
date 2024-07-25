@@ -564,8 +564,9 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
   pkgsOrig <- pkgs
   origDeps <- pkgDep(pkgs, recursive = TRUE)
   depsToUnload <- c(pkgs, unname(unlist(origDeps)))
-  si <- sessionInfo()
-  allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
+  allLoaded <- loadedNamespaces()
+  # si <- sessionInfo() # sessionInfo can't handle Require when loaded with load_all, under some conditions
+  # allLoaded <- c(names(si$otherPkgs), names(si$loadedOnly))
   others <- pkgDepTopoSortMemoise(pkgs = pkgs, deps = allLoaded, reverse = TRUE, verbose = verbose, purge = FALSE)
   names(others) <- others
   depsToUnload <- c(others, depsToUnload)
