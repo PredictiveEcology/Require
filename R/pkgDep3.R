@@ -126,7 +126,8 @@ pkgDep <- function(packages,
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
     if (getOption("Require.usePak", TRUE)) {
       if (!requireNamespace("pak")) stop("Please install pak")
-      deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber)
+      deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber,
+                        verbose = verbose)
     } else {
 
       # Only deal with first one of "which"...

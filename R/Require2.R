@@ -289,9 +289,8 @@ Require <- function(packages,
     }
     opts2 <- getOption("Require.usePak")# ; on.exit(options(opts2), add = TRUE)
     if (isTRUE(opts2))
-      warning("Currently, pak is unlikely to work for package snapshots; \n",
+      warning(.txtPakCurrentlyPakNoSnapshots, "; \n",
               "if problems occur, set `options(Require.usePak = FALSE)`")
-
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths = libPaths,
                                     install_githubArgs, install.packagesArgs, standAlone,
                                     type = type, verbose = verbose, returnDetails = returnDetails, ...
@@ -319,7 +318,7 @@ Require <- function(packages,
 
     if (getOption("Require.usePak", TRUE)) {
       opts <- options(repos = repos); on.exit(options(opts), add = TRUE)
-      pkgDT <- RequireForPak(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
+      pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
     } else {
 
 

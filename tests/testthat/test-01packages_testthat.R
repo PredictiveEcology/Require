@@ -100,10 +100,17 @@ test_that("test 1", {
     pkgSnapFileRes <- data.table::fread(pkgSnapFile)
     dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
     dir6 <- Require::checkPath(dir6, create = TRUE)
-    out <- Require::Require(
-      packageVersionFile = pkgSnapFile, libPaths = dir6,
-      quiet = TRUE, install = "force"
+    warns <- capture_warnings(
+      out <- Require::Require(
+        packageVersionFile = pkgSnapFile, libPaths = dir6,
+        quiet = TRUE, install = "force"
+      )
     )
+    if (isTRUE(getOption("Require.usePak"))) {
+      okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
+      expect_true(okWarn)
+    }
+
     vers2 <- packVer(fpC, dir2)
     vers6 <- packVer(fpC, dir6)
     #
@@ -134,14 +141,31 @@ test_that("test 1", {
       isTRUE(all.equal(out1[], pkgSnapFileRes[], check.attributes = FALSE))
     })
 
-    out3 <- pkgSnapshot2()
+    #warns <- capture_warnings(
+      out3 <- pkgSnapshot2()
+    #)
+    #if (isTRUE(getOption("Require.usePak"))) {
+    #  browser()
+    #  okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
+    #  expect_true(okWarn)
+    #}
+
     testthat::expect_true(is(out3, "character"))
     setwd(prevDir)
 
     # Check for packageVersionFile = FALSE
-    mess11 <- capture.output(type = "message", {
-      outInner <- Require(packageVersionFile = FALSE, verbose = 5, quiet = TRUE)
-    })
+    warns <- capture_warnings(
+      mess11 <- capture.output(type = "message", {
+        outInner <- Require(packageVersionFile = FALSE, verbose = 5, quiet = TRUE)
+      })
+    )
+
+    if (isTRUE(getOption("Require.usePak"))) {
+     okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
+     expect_true(okWarn)
+    }
+
+
     testthat::expect_true(any(grepl(NoPkgsSupplied, mess11)))
     testthat::expect_true(isFALSE(outInner))
 
@@ -372,6 +396,7 @@ test_that("test 1", {
   )
   vers <- packVer("magrittr", .libPaths()[1])
   # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
+
   testthat::expect_true(vers > verToCompare)
 
   #   }
