@@ -3699,8 +3699,8 @@ spinnerOnPid <- function(pid, isRstudio, st, verbose) {
 sysDo <- function(installPackages, cmdLine, logFile, verbose) {
   Rscript <- file.path(R.home("bin"), "Rscript")
   if (installPackages) {
-    if (isWindows())
-      messageVerbose("  -- ", .txtInstallingColon,"\n", verbose = verbose, appendLF = FALSE)
+    # if (isWindows())
+    #   messageVerbose("  -- ", .txtInstallingColon,"\n", verbose = verbose, appendLF = FALSE)
     pid <- sys::exec_wait(
       Rscript, cmdLine,
       std_out = function(x) {

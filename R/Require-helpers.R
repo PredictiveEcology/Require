@@ -1435,6 +1435,8 @@ availablePackagesCachedPath <- function(repos, type) {
 }
 
 installPackagesWithQuiet <- function(ipa, verbose) {
+  if (isWindows())
+    messageVerbose("  -- ", .txtInstallingColon,"\n", verbose = verbose, appendLF = FALSE)
   if (isWindows() && identical(ipa$type, "source") &&
       getOption("Require.installPackagesSys") == 0) {
     op <- options(Ncpus = 1)
@@ -1470,6 +1472,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       ipa$available <- ipa$available[ipa$available[, "Package"] %in% pkgName, , drop = FALSE]
     }
   } else {
+
     if (isMacOSX() && "covr" %in% ipa$pkgs)
       print(ipa)
     # if (ipa$quiet && ipa$type %in% "source" && isWindows())
