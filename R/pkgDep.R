@@ -813,12 +813,16 @@ defaultCacheAgeForPurge <- 3600
 #' @return Run for its side effect, namely, all cached objects are removed.
 #'
 #' @export
-purgeCache <- function(packages = FALSE,
+cachePurge <- function(packages = FALSE,
                        repos = getOption("repos")) {
   if (isTRUE(packages))
-    Require::clearRequirePackageCache(ask = F)
+    Require::cacheClearPackages(ask = F)
   dealWithCache(TRUE, repos = repos)
 }
+
+#' @rdname cachePurge
+#' @export
+purgeCache <- cachePurge
 
 dealWithCache <- function(purge,
                           checkAge = TRUE,
@@ -1016,8 +1020,8 @@ pkgDepTopoSortMemoise <- function(...) {
 }
 
 pkgDepDBFilename <- function() {
-  if (!is.null(getOptionRPackageCache())) {
-    file.path(RequirePkgCacheDir(), "pkgDepDB.rds")
+  if (!is.null(cacheGetOptionCachePkgDir())) {
+    file.path(cachePkgDir(), "pkgDepDB.rds")
   } # returns NULL if no Cache used
 }
 
@@ -1094,12 +1098,12 @@ getAvailablePackagesIfNeeded <-
 #' @export
 #' @inheritParams Require
 #' @rdname clearRequire
-clearRequirePackageCache <- function(packages,
+cacheClearPackages <- function(packages,
                                      ask = interactive(),
                                      Rversion = versionMajorMinor(),
                                      clearCranCache = FALSE,
                                      verbose = getOption("Require.verbose")) {
-  out <- RequirePkgCacheDir(create = FALSE)
+  out <- cachePkgDir(create = FALSE)
   if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)
   }
@@ -1175,6 +1179,10 @@ clearRequirePackageCache <- function(packages,
   }
 }
 
+
+#' @export
+#' @rdname clearRequire
+clearRequirePackageCache <- cacheClearPackages
 
 depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, which) {
   if (!missing(depends)) {

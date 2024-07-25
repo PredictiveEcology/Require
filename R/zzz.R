@@ -42,7 +42,7 @@ envPkgCreate()
                               "utils")
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
-  possCacheDir <- getOptionRPackageCache()
+  possCacheDir <- cacheGetOptionCachePkgDir()
   # if (!is.null(possCacheDir)) {
   #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
   # }
@@ -52,13 +52,13 @@ envPkgCreate()
 
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
-    possCacheDir <- getOptionRPackageCache()
+    possCacheDir <- cacheGetOptionCachePkgDir()
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
       if (!is.null(possCacheDir)) {
         paste0(
           "  Using cache directory: ", possCacheDir,
-          "; clear with clearRequirePackageCache().\n"
+          "; clear with cacheClearPackages().\n"
         )
       },
       "  See ?RequireOptions for this and other settings."
@@ -73,5 +73,5 @@ envPkgCreate()
 }
 
 # .thePersistentFile <- function() {
-#   file.path(RequireCacheDir(FALSE), "pkgEnv.Rdata")
+#   file.path(cacheDir(FALSE), "pkgEnv.Rdata")
 # }

@@ -1550,7 +1550,7 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 .RequireDependenciesNoBase <- character()
 
 .DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
-  tf <- file.path(RequirePkgCacheDir(), basename(PackageUrl))
+  tf <- file.path(cachePkgDir(), basename(PackageUrl))
   rmEmptyFiles(tf)
   out <- if (file.exists(tf)) { NULL } else {
     # This section should only happen if Require.installPackageSys < 1

@@ -51,7 +51,7 @@ test_that("test 3", {
 
   if (Sys.info()["user"] == "emcintir") {
     options(
-      "Require.RPackageCache" = TRUE,
+      "Require.cachePkgDir" = TRUE,
       "Require.unloadNamespaces" = FALSE
     )
   }
@@ -99,40 +99,40 @@ test_that("test 3", {
   # setupTestDir <- normPath(tempdir2("setupTests"))
   # ccc <- checkPath(file.path(setupTestDir, ".cache"), create = TRUE)
   # out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
-  # testthat::expect_true(identical(getOption("Require.RPackageCache"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
+  # testthat::expect_true(identical(getOption("Require.cachePkgDir"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
   # out2222 <- capture.output(setupOff())
-  # Require:::messageVerbose("This is getOption('Require.RPackageCache'): ", Require:::getOptionRPackageCache(),
+  # Require:::messageVerbose("This is getOption('Require.cachePkgDir'): ", Require:::cacheGetOptionCachePkgDir(),
   #                verboseLevel = 0)
   # RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
   # if (identical(RPackageCacheSysEnv, "FALSE") ) {
-  #   testthat::expect_true(identical(NULL, getOptionRPackageCache()))
+  #   testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
   # } else {
-  #   if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE"))
-  #     testthat::expect_true(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+  #   if (!(is.null(Require:::cacheGetOptionCachePkgDir()) || Require:::cacheGetOptionCachePkgDir() == "FALSE"))
+  #     testthat::expect_true(identical(normPath(Require:::cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir())))
   # }
 
   # reset options after setupOff()
   # secondTry <- normPath(file.path(setupTestDir, ".cacheSecond"))
-  # opt22 <- options("Require.RPackageCache" = secondTry)
+  # opt22 <- options("Require.cachePkgDir" = secondTry)
   # ccc <- checkPath(secondTry, create = TRUE)
   # out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
-  # testthat::expect_true(identical(Require:::getOptionRPackageCache(), ccc))
+  # testthat::expect_true(identical(Require:::cacheGetOptionCachePkgDir(), ccc))
   # out2222 <- capture.output(setupOff())
-  # testthat::expect_true(identical(Require:::getOptionRPackageCache(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
+  # testthat::expect_true(identical(Require:::cacheGetOptionCachePkgDir(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
 
-  ooo <- options(Require.RPackageCache = TRUE)
-  testthat::expect_true(identical(getOptionRPackageCache(), RequirePkgCacheDir()))
-  ooo <- options(Require.RPackageCache = FALSE)
-  testthat::expect_true(identical(getOptionRPackageCache(), NULL))
-  ooo <- options(Require.RPackageCache = tempdir())
-  testthat::expect_true(identical(getOptionRPackageCache(), tempdir()))
-  ooo <- options(Require.RPackageCache = "default")
+  ooo <- options(Require.cachePkgDir = TRUE)
+  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), cachePkgDir()))
+  ooo <- options(Require.cachePkgDir = FALSE)
+  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  ooo <- options(Require.cachePkgDir = tempdir())
+  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), tempdir()))
+  ooo <- options(Require.cachePkgDir = "default")
   RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
   if (identical(RPackageCacheSysEnv, "FALSE")) {
-    testthat::expect_true(identical(NULL, getOptionRPackageCache()))
+    testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
   } else {
-    if (!(is.null(Require:::getOptionRPackageCache()) || Require:::getOptionRPackageCache() == "FALSE")) {
-      testthat::expect_true(identical(normPath(Require:::getOptionRPackageCache()), normPath(Require::RequirePkgCacheDir())))
+    if (!(is.null(Require:::cacheGetOptionCachePkgDir()) || Require:::cacheGetOptionCachePkgDir() == "FALSE")) {
+      testthat::expect_true(identical(normPath(Require:::cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir())))
     }
   }
 
@@ -220,7 +220,7 @@ test_that("test 3", {
   if (FALSE) {
     pkgs <- c("fpCompare", "rlang", "cli", "crayon", "stringr", "lobstr")
     a <- unique(extractPkgName(unlist(unname(pkgDep(pkgs)))))
-    clearRequirePackageCache(a, ask = F)
+    cacheClearPackages(a, ask = F)
     library(sys); library(waldo)
     setLibPaths(tempdir3())
     try(remove.packages(a))
@@ -244,7 +244,7 @@ test_that("test 3", {
     # st <- list()
     st[["Require"]] <- system.time(replicate(N, {
       try(remove.packages(setdiff(extractPkgName(unname(unlist(a))), pkgsKeep)))
-      clearRequirePackageCache(ask = F)
+      cacheClearPackages(ask = F)
       Install(pkgs)
     }))
     st[["pak"]] <- system.time(replicate(N, {
@@ -272,8 +272,8 @@ test_that("test 3", {
   }
 
 
-  ooo <- options(Require.RPackageCache = NULL)
-  testthat::expect_true(identical(getOptionRPackageCache(), NULL))
+  ooo <- options(Require.cachePkgDir = NULL)
+  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
   options(ooo)
 
 })

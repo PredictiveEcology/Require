@@ -97,7 +97,7 @@ Require("reproducible (==1.2.10)") # which was the version on that date
 * can use hierarchical library paths
 * can take snapshots, keeping version information for reinstallation on another machine/system. See below and `?pkgSnapshot`
 * can use both binary or source installs; yet overrides a user request where this is likely inappropriate, e.g., `Rcpp` often fails when installed on Linux from a binary package manager. Spatial packages are similar. 
-* uses a local cache of packages (defaults outside the project, but inside the user's home) so multiple projects can install packages quickly without re-downloading from the cloud repositories (see `RequireOptions()$Require.RPackageCache`)
+* uses a local cache of packages (defaults outside the project, but inside the user's home) so multiple projects can install packages quickly without re-downloading from the cloud repositories (see `RequireOptions()$Require.cachePkgDir`)
 * puts all package installing into a compact form, so it can be placed within the project source code, enhancing reproducibility and transparency
 * by default, runs `require` on every package, in order, as supplied to `packages` argument
 
@@ -237,7 +237,7 @@ Require(packageVersionFile = "mySnapshot.txt")
 
 ### Using local package cache
 
-When installing on many machines on a network, having a local cache can speed up installations. By default, this is activated, with a message upon package load as to where the cache folder is. Setting `options("Require.RPackageCache" = "somePath")` will move it to that location; or setting  `options("Require.RPackageCache" = NULL)` will turn caching off. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later.
+When installing on many machines on a network, having a local cache can speed up installations. By default, this is activated, with a message upon package load as to where the cache folder is. Setting `options("Require.cachePkgDir" = "somePath")` will move it to that location; or setting  `options("Require.cachePkgDir" = NULL)` will turn caching off. By default, binaries will be saved on Windows. Also by default, binaries will be *built* on the fly on *nix systems and this binary will be cached for even faster installs later.
 
 ### Keeping up to date
 

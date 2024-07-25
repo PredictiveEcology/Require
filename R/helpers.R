@@ -594,7 +594,7 @@ SysInfo <-
 .cleanup <- function(opts = list()) {
   unlink(file.path(tempdir(), "Require"), recursive = TRUE)
   unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
-  clearRequirePackageCache(
+  cacheClearPackages(
     ask = FALSE,
     Rversion = versionMajorMinor(),
     verbose = FALSE
@@ -648,12 +648,12 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
         alreadyThere <- basename(ccFiles) %in% basename(localFiles)
         if (any(!alreadyThere)) {
           ccFiles <- ccFiles[!alreadyThere]
-          toFiles <- file.path(getOptionRPackageCache(), basename(ccFiles))
+          toFiles <- file.path(cacheGetOptionCachePkgDir(), basename(ccFiles))
           linked <- linkOrCopy(ccFiles, toFiles)
           messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
                          verbose = verbose, verboseLevel = 1
           )
-          localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+          localFiles <- dir(cacheGetOptionCachePkgDir(), full.names = TRUE)
         }
       }
     }

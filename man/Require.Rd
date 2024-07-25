@@ -202,10 +202,10 @@ are no conflicts), allowing a call to \code{pkgSnapshot()} to take a snapshot or
 \section{Local Cache of Packages}{
  When installing new packages, \code{Require}
 will put all source and binary files in an R-version specific subfolder of
-\code{getOption("Require.RPackageCache")} whose default is \code{RPackageCache()},
+\code{getOption("Require.cachePkgDir")} whose default is \code{RPackageCache()},
 meaning \emph{cache packages locally in a project-independent location}, and
 will reuse them if needed. To turn off this feature, set
-\code{options("Require.RPackageCache" = FALSE)}.
+\code{options("Require.cachePkgDir" = FALSE)}.
 }
 
 \examples{

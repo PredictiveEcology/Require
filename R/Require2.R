@@ -66,10 +66,10 @@ utils::globalVariables(c(
 #'
 #' @section Local Cache of Packages: When installing new packages, `Require`
 #'   will put all source and binary files in an R-version specific subfolder of
-#'   `getOption("Require.RPackageCache")` whose default is `RPackageCache()`,
+#'   `getOption("Require.cachePkgDir")` whose default is `RPackageCache()`,
 #'   meaning *cache packages locally in a project-independent location*, and
 #'   will reuse them if needed. To turn off this feature, set
-#'   `options("Require.RPackageCache" = FALSE)`.
+#'   `options("Require.cachePkgDir" = FALSE)`.
 #'
 #' @note For advanced use and diagnosis, the user can set `verbose = TRUE` or
 #' `1` or `2` (or via `options("Require.verbose")`). This will attach an
@@ -643,8 +643,8 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       add = TRUE
     )
 
-    #if (!getOption("Require.RPackageCache") %in% FALSE)
-    #  wd <- RequirePkgCacheDir()
+    #if (!getOption("Require.cachePkgDir") %in% FALSE)
+    #  wd <- cachePkgDir()
     #else
     wd <- tmpdir
 
@@ -1209,7 +1209,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
       if (any(hasPackageUrl)) {
         pkgArchiveHasPU <- split(pkgArchive, f = hasPackageUrl)
 
-        tf <- file.path(RequirePkgCacheDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
+        tf <- file.path(cachePkgDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
         fe <- file.exists(tf)
         if (any(fe)) {
           messageVerbose(
@@ -1802,8 +1802,8 @@ keepOnlyBinary <- function(fn, keepSourceIfOnlyOne = TRUE) {
 }
 
 moveFileToCacheOrTmp <- function(pkgInstall) {
-  localFileDir <- if (!is.null(getOptionRPackageCache())) {
-    getOptionRPackageCache()
+  localFileDir <- if (!is.null(cacheGetOptionCachePkgDir())) {
+    cacheGetOptionCachePkgDir()
   } else {
     tempdir3()
   }
@@ -1932,9 +1932,9 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
-  if (!is.null(getOptionRPackageCache())) {
+  if (!is.null(cacheGetOptionCachePkgDir())) {
     # check for crancache copies
-    localFiles <- dir(getOptionRPackageCache(), full.names = TRUE)
+    localFiles <- dir(cacheGetOptionCachePkgDir(), full.names = TRUE)
     localFiles <- doCranCacheCheck(localFiles, verbose)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
     if (isTRUE(getOption("Require.offlineMode"))) {
@@ -1948,7 +1948,7 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
     pkgInstall[haveLocal %in% .txtLocal, `:=`(
       installFrom = haveLocal,
       availableVersionOK = TRUE,
-      Repository = paste0("file:///", getOptionRPackageCache())
+      Repository = paste0("file:///", cacheGetOptionCachePkgDir())
     )]
   } else {
     set(pkgInstall, NULL, c("localFile"), "")
@@ -2436,8 +2436,8 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 #' @importFrom stats na.omit
 copyBuiltToCache <- function(pkgInstall, tmpdirs, copyOnly = FALSE) {
   if (!is.null(pkgInstall)) {
-    if (!is.null(getOptionRPackageCache())) {
-      cacheFiles <- dir(getOptionRPackageCache())
+    if (!is.null(cacheGetOptionCachePkgDir())) {
+      cacheFiles <- dir(cacheGetOptionCachePkgDir())
       out <- try(Map(td = tmpdirs, function(td) {
         tdPkgs <- dir(td, full.names = TRUE, pattern = "\\.zip|\\.tar\\.gz")
         if (length(tdPkgs)) {
@@ -2457,7 +2457,7 @@ copyBuiltToCache <- function(pkgInstall, tmpdirs, copyOnly = FALSE) {
             tdPkgs <- tdPkgs[-whAlreadyInCache]
           }
           if (length(tdPkgs)) {
-            newFiles <- file.path(getOptionRPackageCache(), basename(tdPkgs))
+            newFiles <- file.path(cacheGetOptionCachePkgDir(), basename(tdPkgs))
             if (isTRUE(copyOnly)) {
               suppressWarnings(file.copy(tdPkgs, newFiles))
             } else {
@@ -2539,12 +2539,12 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
 }
 
 getVersionOnReposLocal <- function(pkgDT) {
-  if (!is.null(getOptionRPackageCache())) {
+  if (!is.null(cacheGetOptionCachePkgDir())) {
     set(pkgDT, NULL, "tmpOrder", seq(NROW(pkgDT)))
     if (any(is.na(pkgDT[["VersionOnRepos"]]))) {
       pkgDTList <- split(pkgDT, !is.na(pkgDT[["VersionOnRepos"]]))
       if (!is.null(pkgDTList$`FALSE`)) {
-        localFilesOuter <- dir(getOptionRPackageCache())
+        localFilesOuter <- dir(cacheGetOptionCachePkgDir())
         pkgNoVoR <- pkgDTList$`FALSE`
         wh <- pkgNoVoR[["repoLocation"]] %in% .txtGitHub
         if (any(wh)) {
@@ -2768,10 +2768,10 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
     }
   }
 
-  if (!is.null(getOptionRPackageCache())) {
-    if (isTRUE(unlist(grepV(pkgName, getOptionRPackageCache()))) || needReInstall) {
+  if (!is.null(cacheGetOptionCachePkgDir())) {
+    if (isTRUE(unlist(grepV(pkgName, cacheGetOptionCachePkgDir()))) || needReInstall) {
       messageVerbose(verbose = verbose, verboseLevel = 1, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
-      unlink(dir(getOptionRPackageCache(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
+      unlink(dir(cacheGetOptionCachePkgDir(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
       retrying <- try(Require(toInstall[Package %in% basename(pkgName)][["packageFullName"]],
                               require = FALSE,
                               verbose = verbose, returnDetails = returnDetails,
@@ -3143,7 +3143,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                        verboseLevel = 2
         )
         if (is.na(correctVersions[2])) { # if 2nd one is NA, it means it an archived package
-          tf <- file.path(RequirePkgCacheDir(), basename(ret$PackageUrl))
+          tf <- file.path(cachePkgDir(), basename(ret$PackageUrl))
           fe <- file.exists(tf)
           if (fe) {
             dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]

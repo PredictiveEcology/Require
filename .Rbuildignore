@@ -24,3 +24,4 @@ vignettes/.*\.log$
 R/SpaDES
 ^\.git
 ^CRAN-SUBMISSION$
+inst\timings.csv

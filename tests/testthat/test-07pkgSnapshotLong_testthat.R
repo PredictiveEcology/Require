@@ -40,7 +40,7 @@ test_that("test 5", {
       names(packageFullName) <- packageFullName
 
       # remove.packages(pks)
-      # unlink(dir(RequirePkgCacheDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
+      # unlink(dir(cachePkgDir(), pattern = paste(pks, collapse = "|"), full.names = TRUE))
       out <- Require(packageVersionFile = fn, require = FALSE)
       out11 <- pkgDep(packageFullName, recursive = TRUE)
       allNeeded <- unique(extractPkgName(unname(c(names(out11), unlist(out11)))))

@@ -458,7 +458,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
-        if (!is.null(getOptionRPackageCache())) {
+        if (!is.null(cacheGetOptionCachePkgDir())) {
           checkPath(dirname(fn), create = TRUE)
           saveRDS(cap[[type]], file = fn)
         }
@@ -651,7 +651,7 @@ warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
 }
 
 
-rpackageFolder <- function(path = getOptionRPackageCache(), exact = FALSE) {
+rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
   if (!is.null(path)) {
     if (isTRUE(exact)) {
       return(path)
@@ -1046,7 +1046,7 @@ getSHAFromPkgEnv <- function() {
 
 
 getSHAFromGitHubDBFilename <- function() {
-  go <- getOptionRPackageCache()
+  go <- cacheGetOptionCachePkgDir()
   if (!is.null(go))
     out <- file.path(go, paste0(.txtGetSHAfromGitHub, ".rds")) # returns NULL if no Cache used
   else
@@ -1429,7 +1429,7 @@ extractPkgNameFromWarning <- function(x) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(RequirePkgCacheDir(),
+  file.path(cachePkgDir(),
             paste0(gsub("https|[:/]", "", repos), collapse = "/"),
             type, "availablePackages.rds")
 }
