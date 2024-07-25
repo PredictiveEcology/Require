@@ -1,3 +1,16 @@
+---
+title: Readme
+output: rmarkdown::html_vignette
+author: "Eliot McIntire"
+vignette: >
+  %\VignetteIndexEntry{Readme}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+editor_options: 
+  chunk_output_type: console
+---
+
+
 # Require
 
 <!-- badges start -->
@@ -194,7 +207,7 @@ No packages to install/update
    0.05    0.02    0.06 
 ```
 
-See also [The `Require` approach, comparing `pak` and `renv`](doc/RequireApproach.html)
+See also [The `Require` approach, comparing `pak` and `renv`](articles/Require.html)
 
 ## Other features
 

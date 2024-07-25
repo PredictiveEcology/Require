@@ -1,6 +1,11 @@
 ---
 title: The `Require` approach, comparing `pak` and `renv`
-output: html_document
+output: rmarkdown::html_vignette
+author: "Eliot McIntire"
+vignette: >
+  %\VignetteIndexEntry{The `Require` approach, comparing `pak` and `renv`}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
   chunk_output_type: console
 ---
@@ -54,21 +59,31 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 
 ### Default behaviours different
 
-For packages that aren't yet installed:
+**For packages that aren't yet installed:**
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ------------------------------------------ |
-| `Install("data.table")`          | `data.table` installed *if not installed*  |
+| `Install("data.table")`          | `data.table` installed                     |
 | `install.packages("data.table")` | `data.table` installed                     |
-| `pak::pkg_install("data.table")` | `data.table` installed *if not installed*  |
+| `pak::pkg_install("data.table")` | `data.table` installed                     |
+| `renv::install("data.table")`    | `data.table` installed                     |
+
+
+**For packages that are installed:**
+
+| Description                      |  Outcome                                   |
+| -------------------------------- | ------------------------------------------ |
+| `Install("data.table")`          | No installation                            |
+| `install.packages("data.table")` | `data.table` installed                     |
+| `pak::pkg_install("data.table")` | No installation                            |
 | `renv::install("data.table")`    | `data.table` installed                     |
 
 For packages that are already installed, but not latest on CRAN:
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ----------------------------------------------------------------- |
-| `Install("data.table")`          | `data.table` not installed                                        |
-| `install.packages("data.table")` | `data.table` installed, always, regardless of version             |
+| `Install("data.table")`          | No installation                                        |
+| `install.packages("data.table")` | `data.table` installed                                 |
 | `pak::pkg_install("data.table")` | `data.table` installed, asks user if wants to update if available |
 | `renv::install("data.table")`    | `data.table` installed, asks user if wants to update if available |
 
@@ -77,11 +92,11 @@ For packages that are already installed, but not latest on CRAN:
 
 \* Indicates that there is an example below.
 
-| Description                      |  `Require`    |   `pak`                               |
+| *Description*                      |  `Require`    |   `pak`                               |
 | -------------------------------- | :------------------------------: | :-----------------------------------: |
-| Archived package*                 | Automatic                                        | Not an option  | 
-| Dependency conflicts*   | Yes   |  No (see example below)  |  
-| Multiple requests of same package | Resolves by version number specification, or most recent version | Error |
+| Archived package*                 | Automatic         | Must prefix with `url::` and exact url path  | 
+| Dependency conflicts*   | Yes   |  No (see example below using `any::`)  |  
+| Multiple requests of same package* | Resolves by version number specification, or most recent version | Error |
 | Control individual package updates | With `HEAD`   |   No   |
 | Parallel downloads   |   Yes    |   Yes    |
 | Parallel installs    |   Yes    |   Yes    |
@@ -90,16 +105,16 @@ For packages that are already installed, but not latest on CRAN:
 | Uses local cache   |   Yes   |   Yes   |
 | Package updates (default)    | No, unless needed by version number | Yes, prompt user |     
 | Package install by version    | Yes | Yes, but doesn't deal well with multiple packages with specific versions |   
-| Package conflict (CRAN & GitHub) | Prefers CRAN, if version requirements met  |  Error  |
+| Package conflict (CRAN & GitHub)* | Prefers CRAN, if version requirements met  |  Error  |
 
 ### Archived packages
 
-Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice: your workflow will break. `Require` will just get the most recent archived copy and the work can continue.
+Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice: your workflow will break. `Require` will just get the most recent archived copy and the work can continue. While `fastdigest` is back on CRAN, others are not, e.g., an older `knn` package:
 
 ```{r,eval=FALSE,message=FALSE}
-Require::Install("fastdigest")
+Require::Install("knn")
 
-try(pak::pkg_install(c("fastdigest")))
+try(pak::pkg_install(c("knn")))
 ```
 
 ### Dependency conflict
@@ -131,16 +146,24 @@ Require::Install(pkgs)
 ```
 
 ```{r, eval=FALSE,message=TRUE}
+# Fails
 try(pk <- pak::pak(c("PredictiveEcology/LandR@development", "PredictiveEcology/LandR@main")))
-# Fine -- takes in order, so development first in this example
+# Error : ! error in pak subprocess                                                        
+# Caused by error: 
+# ! Could not solve package dependencies:
+# * PredictiveEcology/LandR@development: Conflicts with PredictiveEcology/LandR@main
+# * PredictiveEcology/LandR@main: Conflicts with PredictiveEcology/LandR@development
+
+# Fine -- takes in order, so main first in this example
 rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/LandR@development"))
 
-# Fine -- takes by version requirement, so takes development, which is the only one that fulfills requirement
+# Fine -- takes by version requirement, so takes development, 
+#    which is the only one that fulfills requirement on Jul 25, 2024
 rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/LandR@development (>=1.1.5)"))
 
 ```
 
-The following doesn't work with `pak` because BioSIM is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
+The following doesn't work with `pak` because BioSIM, a dependency on GitHub is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
 ```{r,eval=TRUE,message=FALSE}
 try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
 ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
@@ -156,7 +179,7 @@ ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE
 
 3. Multiple simultaneous requests to install a package from what appear to be incompatible sources, will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence, and sequence of packages listed at installation will take preference otherwise.
 
-```{r,eval=TRUE}
+```{r,eval=FALSE}
 # The following has no version specifications, 
 #   so CRAN version will be installed or none installed if already installed
 Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
