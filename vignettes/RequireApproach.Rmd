@@ -193,7 +193,7 @@ try(pak::pkg_install(
 
 ## Cloning
 
-`Require` has an option, `options("Require.cloneFrom")`, which, when set, will create a hard link between the current project's package library and the library pointed to by the option. Setting to e.g. `options("Require.cloneFrom" = Sys.getenv("R_USER_LIBS")` will allow packages in the user's personal library to be the source of the "copying" to the project library. This is dramatically faster than installing, even when the installation is a local binary from the local cache.
+`Require` has an option, `options("Require.cloneFrom")`, which, when set, will create a hard link between the current project's package library and the library pointed to by the option. Setting to e.g. `options("Require.cloneFrom" = Sys.getenv("R_LIBS_USER"))` will allow packages in the user's personal library to be the source of the "copying" to the project library. This is dramatically faster than installing, even when the installation is a local binary from the local cache.
 
 ## Binary on Linux
 
