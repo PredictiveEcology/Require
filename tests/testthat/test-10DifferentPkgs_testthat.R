@@ -1,5 +1,4 @@
 test_that("test 10", {
-  skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
   setupInitial <- setupTest(needRequireInNewLib = TRUE)
   # on.exit(endTest(setupInitial))
 

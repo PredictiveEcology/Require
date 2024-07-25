@@ -128,7 +128,13 @@ test_that("test 1", {
     #   if (is.null(getOption("Require.Home"))) stop("Must define options('Require.Home' = 'pathToRequirePkgSrc')")
     #   installRequire(getOption("Require.Home"))
 
+    warns <- capture_warnings(
     out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
+    )
+    if (isTRUE(getOption("Require.usePak"))) {
+      okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
+      expect_true(okWarn)
+    }
 
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])

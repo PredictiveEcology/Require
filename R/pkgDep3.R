@@ -126,7 +126,17 @@ pkgDep <- function(packages,
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
     if (getOption("Require.usePak", TRUE)) {
       if (!requireNamespace("pak")) stop("Please install pak")
-      deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber)
+      log <- tempfile2(fileext = ".txt")
+      withCallingHandlers(
+        deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber,
+                          verbose = verbose)
+        , message = function(m) {
+          if (verbose > 1)
+            cat(m$message, file = log, append = TRUE)
+          if (verbose < 1)
+            invokeRestart("muffleMessage")
+        }
+      )
     } else {
 
       # Only deal with first one of "which"...
