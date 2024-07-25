@@ -8,7 +8,7 @@
 setup(
   newLibPaths,
   RPackageFolders,
-  RPackageCache = getOptionRPackageCache(),
+  RPackageCache = cacheGetOptionCachePkgDir(),
   standAlone = getOption("Require.standAlone", TRUE),
   verbose = getOption("Require.verbose")
 )

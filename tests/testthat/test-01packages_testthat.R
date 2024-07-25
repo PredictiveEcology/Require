@@ -260,7 +260,7 @@ test_that("test 1", {
 
   # Issue 87
   try(remove.packages("reproducible"), silent = TRUE) |> suppressMessages()
-  Require::clearRequirePackageCache("reproducible", ask = FALSE) # just in case some previous one had the bug
+  Require::cacheClearPackages("reproducible", ask = FALSE) # just in case some previous one had the bug
 
   ap <- available.packagesCached(repos = getOption("repos"), purge = FALSE, type = "both")
   curVer <- unique(ap[Package %in% "reproducible"]$Version)
@@ -368,7 +368,7 @@ test_that("test 1", {
   suppressWarnings(try(remove.packages(c("magrittr", "crayon", "fpCompare", "lobstr")),
                        silent = TRUE)) |> suppressMessages()
   verToCompare <- "2.0.2"
-  clearRequirePackageCache(c("magrittr", "crayon"), ask = FALSE)
+  cacheClearPackages(c("magrittr", "crayon"), ask = FALSE)
 
   # The warning is about "package ‘Require’ is in use and will not be installed"
 
@@ -381,7 +381,7 @@ test_that("test 1", {
 
   # testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
   try(remove.packages(pkgsHere)) |> suppressMessages()
-  clearRequirePackageCache(pkgsHere, ask = F)
+  cacheClearPackages(pkgsHere, ask = F)
   a <- list(pkg = "fpCompare")
 
   warns <- capture_warnings(

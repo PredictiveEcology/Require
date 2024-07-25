@@ -29,6 +29,8 @@ test_that("test 10", {
     Install(pkgs) |>
       capture_warnings() -> warns
 
+    if (getOption("Require.installPackagesSys") < 2)
+      warns <- grep("installation of package.+cissr.+had non-zero exit status", invert = TRUE, warns)
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
 

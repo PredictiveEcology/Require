@@ -55,7 +55,7 @@ test_that("test 5b", {
         )
       )
       out2 <- attr(out, "Require")
-      # try(unlink(dir(RequirePkgCacheDir(), pattern = "SpaDES.core", full.names = TRUE)))
+      # try(unlink(dir(cachePkgDir(), pattern = "SpaDES.core", full.names = TRUE)))
 
       if (!isTRUE(getOption("Require.usePak"))) {
         testthat::expect_true(out2[Package == "SpaDES.core"]$installFrom %in% c("CRAN", .txtLocal))

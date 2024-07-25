@@ -3,6 +3,7 @@ if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
 }
 verboseForDev <- -2
 Require.usePak <- FALSE
+Require.installPackageSys <- 2
 
 if (isTRUE(Require.usePak))
   if (requireNamespace("pak"))
@@ -85,6 +86,7 @@ if (Sys.info()["user"] %in% "emcintir") {
   withr::local_options(
     .local_envir = teardown_env(),
     Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
+    "Require.installPackagesSys" = Require.installPackageSys,
     Ncpus = 8,
     repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
@@ -92,10 +94,10 @@ if (Sys.info()["user"] %in% "emcintir") {
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   # googledrive::drive_auth()
   print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom", "Require.usePak")])
-  print(paste("Cache size:", length(dir(RequirePkgCacheDir())), "files"))
+  print(paste("Cache size:", length(dir(cachePkgDir())), "files"))
 } else {
   # clean up cache on GA and other
-  withr::defer(unlink(RequireCacheDir(), recursive = TRUE), envir = teardown_env())
+  withr::defer(unlink(cacheDir(), recursive = TRUE), envir = teardown_env())
 }
 
 

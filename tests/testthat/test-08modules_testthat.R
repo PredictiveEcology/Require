@@ -70,7 +70,7 @@ test_that("test 8", {
     if (Sys.info()["user"] == "emcintir") {# source install fails; make sure it is gone
       opts2 <- options(Require.otherPkgs = setdiff(getOption("Require.otherPkgs"), "stringfish"))
       on.exit(options(opts2), add = TRUE)
-      Require::clearRequirePackageCache("stringfish", ask = FALSE) # get this from RSPM or CRAN fresh
+      Require::cacheClearPackages("stringfish", ask = FALSE) # get this from RSPM or CRAN fresh
     }
     # THE INSTALL
     pkgs <- omitPkgsTemporarily(pkgs)

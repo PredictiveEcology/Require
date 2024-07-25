@@ -7,7 +7,6 @@ utils::globalVariables(c(
 .txtCantFindPackage <- "Can't find package called "
 
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
-  # browser() # looking for RandomFields
 
   grp <- c(.txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith, .txtCantFindPackage,
            .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps, .txtFailedToDLFrom, .txtPakNoPkgCalledPak,
@@ -19,8 +18,6 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
     a <- grep(grp[i], splitStr, value = TRUE)
     if (length(a)) {
       a1 <- gsub("\\.$", "", a)
-      # if (exists("aaaa")) browser()
-      # if (any(grepl(pkg2, c("sdfd", "fpCompare")))) browser()
 
       b <- strsplit(a1, split = spl[i])
       whDeps <- sapply(b, grep, pattern = pat[i])
@@ -60,8 +57,6 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         browser()
       }
 
-      # browser() # the pkgNoVersion can be vectorized for large fails of install
-      # if (length(isGH(pkgNoVersion)) > 1) browser()
       if (grp[i] == .txtCntInstllDep) {
         whRmAll <- integer()
         for (j in seq_along(pkgNoVersion)) {
@@ -262,7 +257,6 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
                                          ),
                                          deps = pkgsList$DESC,
                                          hasNamespaceFile = FALSE)
-
       err <- try(outs <- pak::pak(c(
         paste0("deps::", td3),
         pkgsList$direct
@@ -272,7 +266,7 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
       # FALSE doesn't work when `deps::` is used
       dependencies = doDeps,
       upgrade = upgrade),
-      silent = verbose <= 1)
+      silent = TRUE)
 
       if (!is(err, "try-error"))
         break
@@ -372,7 +366,7 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       # give up for archives of archives
       if (i > 1 && pkg %in% pkgDone) wh <- FALSE
 
-      val <- try(pak::pkg_deps(pkg, dependencies = wh))
+      val <- try(pak::pkg_deps(pkg, dependencies = wh), silent = TRUE)
       if (is(val, "try-error")) {
         pkgDone <- unique(c(pkg, pkgDone))
         pkgOrig2 <- pkg
