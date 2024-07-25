@@ -126,6 +126,7 @@ pkgDep <- function(packages,
     which <- depsImpsSugsLinksToWhich(depends, imports, suggests, linkingTo, which)
     if (getOption("Require.usePak", TRUE)) {
       if (!requireNamespace("pak")) stop("Please install pak")
+      log <- tempfile2(fileext = ".txt")
       withCallingHandlers(
         deps <- pakPkgDep(packages, which, simplify, includeSelf, includeBase, keepVersionNumber,
                           verbose = verbose)

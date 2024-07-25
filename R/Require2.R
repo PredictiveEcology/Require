@@ -321,7 +321,7 @@ Require <- function(packages,
 
       log <- tempfile2(fileext = ".txt")
       withCallingHandlers(
-        pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
+        pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose = verbose, packagesOrig)
         , message = function(m) {
           if (verbose > 1)
             cat(m$message, file = log, append = TRUE)
@@ -3406,7 +3406,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
   installPackages <- grepl("install.packages", doLine)
-  # if (isTRUE(installPackages)) browser()
   downAndBuildLocal <- grepl("downloadAndBuildToLocalFile", doLine)
   downOther <- downPack %in% FALSE & downFile %in% FALSE
   argsOrig <- args

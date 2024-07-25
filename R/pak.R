@@ -232,7 +232,6 @@ pakPkgSetup <- function(pkgs, doDeps) {
 
 pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOrig) {
   if (!requireNamespace("pak")) stop("Please install pak")
-  if (exists("aaaa")) browser()
 
   packages <- unique(packages)
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
@@ -241,12 +240,11 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
   for (i in 1:15) {
   # while(!identical(packages, pkgs) ) {
     pkgs <- packages
-    # if (any(grepl("achubaty/fpCompare \\(>=2.0.0\\)", pkgs))) browser()
     if (length(pkgs)) {
-      # if (any(grepl("fpCompare", pkgs))) browser()
       pkgsList <- pakPkgSetup(pkgs, doDeps = doDeps)
       td3 <- tempdir3()
       on.exit({unlink(dirname(td3))}, add = TRUE)
+      if (any(grepl("quickPlot", pkgsList$DESC))) browser()
       dfile <- DESCRIPTIONfileFromModule(verbose = -2,
                                          packageFolderName = td3,
                                          .txtDummyPackage,
@@ -341,8 +339,6 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
     pkgDone <- character()
     i <- 0
     while(length(pkg1) > 0) {
-      if (exists("aaaa")) browser()
-      # if (any(grepl("fpCompare", pkg1))) browser()
       i <- i + 1 # counter
       pkg <- pkg1[1]
       # for (pkg in pkg1) {
@@ -669,7 +665,6 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   pkg2Orig <- pkg2
   pkgNoVer <- trimVersionNumber(pkg2)
   hasVer <- pkgNoVer != packages[whRm]
-  if (exists("aaaa")) browser()
 
   isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
   his <- try(tail(pak::pkg_history(pkgNoVer), 1), silent = TRUE)
