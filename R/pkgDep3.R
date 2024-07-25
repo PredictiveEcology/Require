@@ -405,8 +405,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   #   save(out, file = "/home/emcintir/tmp/out.rda")
   #   stop()
   # }
-
-  pkgDT <- pkgDT2
+  # pkgDT <- pkgDT2
 
   needsVersionCheck <- !is.na(pkgDT$versionSpec) # | !is.na(pkgDT$VersionOnRepos)
   set(pkgDT, NULL, "availableVersionOK", NA) # default
