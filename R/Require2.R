@@ -318,7 +318,18 @@ Require <- function(packages,
 
     if (getOption("Require.usePak", TRUE)) {
       opts <- options(repos = repos); on.exit(options(opts), add = TRUE)
-      pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
+
+      log <- tempfile2(fileext = ".txt")
+      withCallingHandlers(
+        pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose, packagesOrig)
+        , message = function(m) {
+          if (verbose > 1)
+            cat(m$message, file = log, append = TRUE)
+          if (verbose < 1)
+            invokeRestart("muffleMessage")
+        }
+      )
+
     } else {
 
 

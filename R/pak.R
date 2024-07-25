@@ -53,7 +53,6 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         paste0("^", pkgNoVersion, ".*", vers, "|/", pkgNoVersion, ".*", vers), grep, x = pkg)))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
-        browser()
         packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
         break
       }
@@ -262,25 +261,18 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
                                          ),
                                          deps = pkgsList$DESC,
                                          hasNamespaceFile = FALSE)
-      log <- tempfile2(fileext = ".txt")
 
-      withCallingHandlers(
-        err <- try(outs <- pak::pak(c(
-          paste0("deps::", td3),
-          pkgsList$direct
-        ), lib = libPaths[1], ask = FALSE,
+      err <- try(outs <- pak::pak(c(
+        paste0("deps::", td3),
+        pkgsList$direct
+      ), lib = libPaths[1], ask = FALSE,
 
-        # already done in pakPkgSetup # doDeps,
-        # FALSE doesn't work when `deps::` is used
-        dependencies = doDeps,
-        upgrade = upgrade),
-        silent = verbose <= 1)
-        , message = function(m) {
-          cat(m$message, file = log, append = TRUE)
-          if (verbose < 1)
-            invokeRestart("muffleMessage")
-        }
-      )
+      # already done in pakPkgSetup # doDeps,
+      # FALSE doesn't work when `deps::` is used
+      dependencies = doDeps,
+      upgrade = upgrade),
+      silent = verbose <= 1)
+
       if (!is(err, "try-error"))
         break
 
@@ -381,38 +373,30 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       # give up for archives of archives
       if (i > 1 && pkg %in% pkgDone) wh <- FALSE
 
-      withCallingHandlers({
-        val <- try(pak::pkg_deps(pkg, dependencies = wh))
-        if (is(val, "try-error")) {
-          pkgDone <- unique(c(pkg, pkgDone))
-          pkgOrig2 <- pkg
-          pkg <- pakErrorHandling(val, pkg, pkg, verbose = verbose)
-          if (length(pkg)) {
-            if (length(pkg) > length(pkgOrig2)) {
-              pkg1 <- pkg
-              # break
-              # added a package dep
-            } else {
-              pkg1[1] <- pkg
-            }
-          } else { # fail because of various reasons
+      val <- try(pak::pkg_deps(pkg, dependencies = wh))
+      if (is(val, "try-error")) {
+        pkgDone <- unique(c(pkg, pkgDone))
+        pkgOrig2 <- pkg
+        pkg <- pakErrorHandling(val, pkg, pkg, verbose = verbose)
+        if (length(pkg)) {
+          if (length(pkg) > length(pkgOrig2)) {
             pkg1 <- pkg
-            val <- character()
+            # break
+            # added a package dep
+          } else {
+            pkg1[1] <- pkg
           }
-        } else {
-          if (length(pkg1) > 1) {
-            valExtra <- append(list(val), valExtra)
-          }
-          pkg1 <- pkg1[-1]
-          break
+        } else { # fail because of various reasons
+          pkg1 <- pkg
+          val <- character()
         }
-      }, message = function(m) {
-        if (verbose < 1)
-          invokeRestart("muffleMessage")
+      } else {
+        if (length(pkg1) > 1) {
+          valExtra <- append(list(val), valExtra)
+        }
+        pkg1 <- pkg1[-1]
+        break
       }
-      )
-      # }
-      #}
     }
     if (length(valExtra)) {
       if (!requireNamespace("tibble")) stop("Please install tibble")
@@ -737,7 +721,8 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
 
 pakCheckGHversionOK <- function(pkg) {
   pkgDT <- toPkgDTFull(pkg)
-  dl <- pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2())
+  dl <- try(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()))
+  if (is(dl, "try-error")) browser()
   vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
   isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
   isOK
