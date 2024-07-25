@@ -3491,23 +3491,13 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
         # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
         whFailed <- try(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="))
-        # if (is(whFailed, "try-error")) {
-        #   if (identical(unname(Sys.info()["user"]), "emcintir")) {
-        #     sc <- sys.calls()
-        #     dd <- dir("/home/emcintir/tmp/", pattern = "dt.+rda")
-        #     num <- gsub("dt(.{1,3})\\.rda", "\\1", dd) |> as.numeric() |> tail(n = 1)
-        #     if (length(num) == 0) num <- 0
-        #     save(dt, sc, aa, args, installPackages, downPack, file = paste0("/home/emcintir/tmp/dt",num + 1,".rda"))
-        #   }
-        # }
         whFailed <- whFailed %in% TRUE
         if (isTRUE(any(whFailed))) {
           pkgsFailed <- dt$pkg[whFailed]
-          # messageVerbose(red("Failed to install: ", paste(pkgsFailed, collapse = ", ")), verbose = verbose + 1)
           pkgs <- setdiff(pkgs, pkgsFailed)
         }
       }
-      mess <- "\n"#paste(pkgs, collapse = comma)
+      mess <- "\n"
     } else if (downFile) {
       mess <- paste(extractPkgName(filenames = basename(argsOrig$url[vecList[[whPid]]])), collapse = comma)
     } else {
@@ -3549,10 +3539,20 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig[["Package"]],
                localFile = unlist(ll))
+    setDT(dt)
     # if (length(dt$localFile) != length(dt$Package))
     #   dt$localFile <- rep("", length(dt$Package))
-    a <- try(setDT(dt), silent = TRUE)
-    if (is(a, 'try-error')) saveRDS(dt, file = "c:/Eliot/tmp/dt.rds")
+    # a <- try(setDT(dt), silent = TRUE)
+    # if (is(a, 'try-error')) {
+    #   # out <- mget(ls())
+    #   # out$token <- tryCatch(
+    #   #   gitcreds::gitcreds_get(use_cache = FALSE),
+    #   #   error = function(e) NULL
+    #   # )
+    #   #
+    #   # save(out, file = "/home/emcintir/tmp/dt.rda")
+    #   stop(a)
+    # }
   } else  { # installPackages and Other
     dt <- logFile
   }
