@@ -8,7 +8,9 @@
   lib.loc = .libPaths(),
   which = c("Depends", "Imports", "LinkingTo"),
   other = NULL,
-  purge = getOption("Require.purge", FALSE)
+  purge = getOption("Require.purge", FALSE),
+  packages = NULL,
+  collapse = FALSE
 )
 }
 \arguments{
@@ -38,6 +40,13 @@ This maximum age can be set in seconds with the environment variable
 (one hour -- see \code{\link[utils:available.packages]{utils::available.packages}}).
 
 Internally, there are calls to \code{available.packages}.}
+
+\item{packages}{Character vector. If \code{NULL} (default), then all installed packages
+are searched for. If a character vector is supplied, then it will only return
+information about those packages (and is thus faster to execute).}
+
+\item{collapse}{Logical. If \code{TRUE} then the dependency fields will be collapsed;
+if \code{FALSE} (default) then the \code{which} fields will be kept separate.}
 }
 \description{
 This reads the DESCRIPTION files only, so can only access fields that are

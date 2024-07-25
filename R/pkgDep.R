@@ -87,8 +87,8 @@ pkgDepTopoSort <- function(pkgs,
     names(pkgs) <- pkgs
     if (missing(deps)) {
       aa <- if (isTRUE(reverse)) {
-        ip <- .installed.pkgs(lib.loc = libPaths, which = which)
-        ip <- installed.packagesDeps(ip, libPaths = libPaths, which)
+        ip <- .installed.pkgs(lib.loc = libPaths, which = which, collapse = TRUE) # need all installed packages
+        ip <- installed.packagesDeps(ip, libPaths = libPaths, which = which[1])
         deps <- depsWithCommasToVector(ip$Package, ip$deps)
          deps <- lapply(deps, extractPkgName)
         # names(deps) <- ip[, "Package"]
@@ -448,11 +448,18 @@ whichToDILES <- function(which) {
 #'   can specify `"github"` (lower case) and it will automatically add
 #'   c("GithubRepo", "GithubUsername", "GithubRef", "GithubSHA1",
 #'   "GithubSubFolder") fields
+#' @param collapse Logical. If `TRUE` then the dependency fields will be collapsed;
+#'   if `FALSE` (default) then the `which` fields will be kept separate.
+#' @param packages Character vector. If `NULL` (default), then all installed packages
+#'   are searched for. If a character vector is supplied, then it will only return
+#'   information about those packages (and is thus faster to execute).
 .installed.pkgs <-
   function(lib.loc = .libPaths(),
            which = c("Depends", "Imports", "LinkingTo"),
            other = NULL,
-           purge = getOption("Require.purge", FALSE)) {
+           purge = getOption("Require.purge", FALSE),
+           packages = NULL,
+           collapse = FALSE) {
     purge <- dealWithCache(purge)
     if (!is.null(other)) {
       hasGit <- grepl("github", tolower(other))
@@ -470,6 +477,10 @@ whichToDILES <- function(which) {
       dirs <- dirs[!endsWith(dirs, suffix = "_cache")]
       mat <- NULL
       if (length(dirs)) {
+        if (!is.null(packages)) {
+          keeps <- basename(dirs) %in% packages
+          dirs <- dirs[keeps]
+        }
         areDirs <- dir.exists(dirs)
         dirs <- dirs[areDirs]
         files <- file.path(dirs, "DESCRIPTION")
@@ -485,8 +496,11 @@ whichToDILES <- function(which) {
         deps <- if (length(which)) {
           names(which) <- which
           deps <- lapply(desc_lines, function(lines) {
-            lapply(which, function(wh)
-              paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = comma)
+            if (isTRUE(collapse))
+              Map(a = which[1], function(a) paste(DESCRIPTIONFileDeps(lines, which = which, purge = purge), collapse = comma))
+            else
+              lapply(which, function(wh)
+                paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = comma)
             )
           })
           invertList(deps)

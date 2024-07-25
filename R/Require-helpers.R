@@ -343,7 +343,7 @@ installedVers <- function(pkgDT, libPaths) {
   # pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
     # ip2 <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
-    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, which = c("Package", "Version")))
+    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, other = "LibPath", which = NULL, packages = pkgDT$Package))#, other = c("Package", "Version"))) # these 2 are defaults
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
