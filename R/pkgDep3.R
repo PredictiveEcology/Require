@@ -395,7 +395,18 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT) |> parsePackageFullname()
 
-  pkgDT <- joinToAvailablePackages(pkgDT, repos, type, which, verbose)
+  pkgDT <- #try(
+    joinToAvailablePackages(pkgDT, repos, type, which, verbose)
+    # )
+  # if (is(pkgDT2, "try-error")) {
+  #   o <- options()
+  #   sc <- sys.calls()
+  #   out <- mget(ls())
+  #   save(out, file = "/home/emcintir/tmp/out.rda")
+  #   stop()
+  # }
+
+  pkgDT <- pkgDT2
 
   needsVersionCheck <- !is.na(pkgDT$versionSpec) # | !is.na(pkgDT$VersionOnRepos)
   set(pkgDT, NULL, "availableVersionOK", NA) # default

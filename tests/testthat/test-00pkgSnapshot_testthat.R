@@ -52,6 +52,7 @@ test_that("test 1", {
   }
 
   bb1 <- data.table::rbindlist(bb)
+  bb1 <- bb1[!Package %in% "Require"] # don't try to install Require here; not relevant; failing on covr::coverage()
   data.table::fwrite(x = bb1, file = pkgVF)
 
   if (file.exists(pkgVF)) {
@@ -129,7 +130,7 @@ test_that("test 1", {
     #   installRequire(getOption("Require.Home"))
 
     warns <- capture_warnings(
-    out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
+      out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
     )
     if (isTRUE(getOption("Require.usePak"))) {
       okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
