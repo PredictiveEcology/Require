@@ -25,3 +25,5 @@ R/SpaDES
 ^\.git
 ^CRAN-SUBMISSION$
 inst\timings.csv
+^docs/RequireApproach.html$
+^pkgdown$

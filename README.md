@@ -16,7 +16,7 @@ named after the `require` function, that would load packages. But with `Require`
 # Objectives
 
 Some packages have _many_ package dependencies. 
-Some of them are on CRAN; some are in development and so are hosted elsewhere. 
+Some of them are on CRAN; some are in development and may be hosted elsewhere. 
 Mixing many package dependencies that are constantly evolving creates challenges with standard R package management.
 For example, what is the best way to move analyses from one machine to another, or set up a series of High Performance Compute nodes? 
 How should we use functions like `install.packages` in a reproducible workflow that are clearly intended to be used once or very few times?
@@ -26,7 +26,7 @@ How do we replicate an analysis 6 months from now when some packages have change
 
 # `Require` & `Install`
 
-The `Require` package provides two "rerun-tolerant" functions, `Require` and `Install`. "Rerun-tolerant" means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those and continue on. If no packages are missing, then it will not install anything. This function uses RAM caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. "Rerun-tolerant" is a requirement for a robust reproducible workflow; for every "manual" break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware. 
+The `Require` package provides two "rerun-tolerant" functions, `Require` and `Install`. "Rerun-tolerant" means that the results from running this function (the output) will be identical each time, even when the conditions when run are different. This means that if one or more packages is not installed prior to running the function, then the function will determine which are not installed, install those and continue on. If no packages are missing, then it will not install anything. This function uses both RAM and disk caching, so the first time it is run in a new R session will be slower than subsequent times in which cached copies of e.g., the package dependency tree, can be used. "Rerun-tolerant" is a requirement for a robust reproducible workflow; for every "manual" break in code (i.e., a user runs a bit of code, then skips a few lines, then runs more etc.) provides the potential for sections of code to become stale without the user being aware. 
 
 `Install` and `Require` are identical except that `Require` will also call `require` (lower case `r`) on all the named packages with the default setting of `require = TRUE`. 
 
@@ -160,31 +160,42 @@ Require("data.table (>=1.12.8)")
 # vectorized, mixed github and CRAN, mixed version number and not
 Require(c("data.table (>=1.12.8)", "PredictiveEcology/quickPlot"))
 ```
-## Timings
+## It is fast
 
-`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 3x faster.
+`Require` has been optimized for speed. While `pak` is fast, in many cases `Require` is faster. Below, in cases where all packages are already installed, `Require` is 10x-20x faster, so it can be left in code.  
+
 ```r
 # First time run, 
-> system.time(pak::pkg_install(c("dplyr", "lme4")))
+> pkgs <- c("dplyr", "reproducible", 
++           "PredictiveEcology/SpaDES@development", "terra")
+> system.time(pak::pkg_install(pkgs))
 ✔ Loading metadata database ... done
+                                                                                         
 ℹ No downloads are needed
-✔ 3 pkgs + 24 deps: kept 25 [3.5s]
+✔ 4 pkgs + 39 deps: kept 40 [6.8s]
    user  system elapsed 
-  1.083   0.029   3.658 
-> system.time(Require::Require(c("dplyr", "lme4"), require = FALSE))
+   0.79    0.28    6.86 
+> system.time(Require::Install(pkgs))
+  1 packages on GitHub
+  3 packages on GitHub
+No packages to install/update
    user  system elapsed 
-  0.832   0.001   1.363 
-
+   0.44    0.07    0.51 
+> system.time(pak::pkg_install(pkgs))
+                                                                                          
 # Second time run within same session
-> system.time(pak::pkg_install(c("dplyr", "lme4")))
 ℹ No downloads are needed
-✔ 3 pkgs + 24 deps: kept 25 [946ms]
+✔ 4 pkgs + 39 deps: kept 40 [2.1s]
    user  system elapsed 
-  0.034   0.001   0.961 
-> system.time(Require::Require(c("dplyr", "lme4"), require = FALSE))
+   0.06    0.04    2.12 
+> system.time(Require::Install(pkgs))
+No packages to install/update
    user  system elapsed 
-  0.099   0.000   0.297 
+   0.05    0.02    0.06 
 ```
+
+See also [The `Require` approach, comparing `pak` and `renv`](doc/RequireApproach.html)
+
 ## Other features
 
 ### Keeping it all isolated
@@ -199,11 +210,6 @@ dir.create(projectPackages)
 Require("remotes (>=2.4.0)", standAlone = TRUE)
 ```
 
-Or we can use a hybrid of our main, "personal" library and a project specific one for "extra" packages:
-
-```r
-Require("fpCompare (>=0.2.0)", require = FALSE) # don't load it, just install
-```
 ### Installing old package versions
 
 In the same way as above, we can specify maximum or exact package versions. 
@@ -218,9 +224,8 @@ Require("fpCompare (<=0.1.0)")
 Because it is vectorized, there can be a long list of packages at the top of a project file, with various sources and version specifications.
 
 ```r
-Require(c("data.table (==1.12.8)", "dplyr", "reproducible", 
-          "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"), 
-        standAlone = TRUE)
+Install(c("dplyr (==1.1.4)", "reproducible", 
+          "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"))
 ```
 
 ### Taking a snapshot
@@ -250,8 +255,8 @@ Require("reproducible", update = TRUE) # will update reproducible and all depend
 
 # Conclusion
 
-`Require` package offers a simple, lightweight, package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work.
-The package has one dependencies (`data.table`) and so can be used to install packages without interfering with itself.
+`Require` package offers a simple package focused around a single function that is "rerun-tolerant", i.e., it will take sufficiently little time to execute that it can be left in your script so it is run every time, even for ongoing work.
+The package has two dependencies (`data.table` and `sys`) and so can be used to install packages without interfering with itself.
 
 ## Contributions
 
