@@ -58,6 +58,7 @@ Suggests:
 Encoding: UTF-8
 Language: en-CA
 License: GPL-3
+VignetteBuilder: knitr, rmarkdown
 BugReports: https://github.com/PredictiveEcology/Require/issues
 ByteCompile: yes
 Roxygen: list(markdown = TRUE)
