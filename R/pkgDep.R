@@ -497,13 +497,15 @@ whichToDILES <- function(which) {
           names(which) <- which
           deps <- lapply(desc_lines, function(lines) {
             if (isTRUE(collapse))
-              Map(a = which[1], function(a) paste(DESCRIPTIONFileDeps(lines, which = which, purge = purge), collapse = comma))
+              Map(a = "Depends", function(a) paste(DESCRIPTIONFileDeps(lines, which = which, purge = purge), collapse = comma))
             else
               lapply(which, function(wh)
                 paste(DESCRIPTIONFileDeps(lines, which = wh, purge = purge), collapse = comma)
             )
           })
-          invertList(deps)
+          if (length(deps))
+            deps <- invertList(deps)
+          deps
         } else {
           NULL
         }
