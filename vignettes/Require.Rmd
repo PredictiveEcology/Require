@@ -164,7 +164,7 @@ rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/Land
 ```
 
 The following doesn't work with `pak` because BioSIM, a dependency on GitHub is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
-```{r,eval=TRUE,message=FALSE}
+```{r,eval=FALSE,message=FALSE}
 try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
 ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 ```
@@ -203,7 +203,7 @@ Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.1
 
 `Require` can handle package version specifications at the function call (`pak` can handle them if they are in a `DESCRIPTION` file, if they are `>=`), whereas `pak` cannot (currently).
 
-```{r,eval=TRUE}
+```{r,eval=FALSE}
 ## FAILS - can't specify version requirements
 try(pak::pkg_install(
     c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
