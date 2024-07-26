@@ -12,7 +12,7 @@ compareVersion2(version, versionSpec, inequality)
 \item{versionSpec}{One or more versions to compare to.
 Can be \code{character} or \code{numeric_version}.}
 
-\item{ineqality}{The inequality to use, i.e., \code{>=}.}
+\item{inequality}{The inequality to use, i.e., \code{>=}.}
 }
 \value{
 a logical vector of the length of the longest of the 3 arguments.

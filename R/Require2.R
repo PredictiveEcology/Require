@@ -1541,7 +1541,7 @@ availableVersionOK <- function(pkgDT) {
 #' @param version One or more package versions. Can be `character` or `numeric_version`.
 #' @param versionSpec One or more versions to compare to.
 #'   Can be `character` or `numeric_version`.
-#' @param ineqality The inequality to use, i.e., `>=`.
+#' @param inequality The inequality to use, i.e., `>=`.
 #' @return a logical vector of the length of the longest of the 3 arguments.
 #'
 #' @export
