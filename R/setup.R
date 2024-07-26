@@ -347,7 +347,7 @@ appName <- "R-Require"
 #' The default cache directory for Require Cache
 #'
 #' A wrapper around `tools::R_user_dir("Require", which = "cache")` that
-#' creates the directory, if it doesn't exist.
+#' creates the directory, if it does not exist.
 #'
 #' @return The default cache directory
 #'

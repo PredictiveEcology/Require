@@ -1090,7 +1090,7 @@ depsListToPkgDTWithWhichCol <- function(deps2) {
 
 #' Join a data.table with a `Package` column to `available.packages`
 #'
-#' Will join `available.packages()` with `pkgDT`, if `pkgDT` doesn't already have
+#' Will join `available.packages()` with `pkgDT`, if `pkgDT` does not already have
 #' a column named `Depends`, which would be an indicator that this had already
 #' happened.
 #' @inheritParams getDeps

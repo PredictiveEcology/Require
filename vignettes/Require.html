@@ -414,7 +414,7 @@ up to 8 for parallel installs of binary and source packages.</p>
 <div id="rerun-tolerance" class="section level2">
 <h2>Rerun-tolerance</h2>
 <p>To be functionally reproducible, code must be regularly run and
-tested on many operating systems and computers. When this doesn’t
+tested on many operating systems and computers. When this does not
 happen, a user/developer does not know that certain code chunks no
 longer work until they try to run it later. In other words, code gets
 stale because underlying algorithms and data change. To be
@@ -464,7 +464,7 @@ programmatic control for this. For example</p>
 <p>will keep the project at the bleeding edge of the development branch
 of <code>reproducible</code>, but will only update if necessary (based
 on the version needed, expressed by the inequality) for the development
-branch of <code>SpaDES.core</code>. The user doesn’t have to make
+branch of <code>SpaDES.core</code>. The user does not have to make
 decisions at run time as to whether an update should be made, and for
 which packages.</p>
 </div>
@@ -474,7 +474,7 @@ which packages.</p>
 <h1>How <code>Require</code> differs from other approaches</h1>
 <div id="default-behaviours-different" class="section level3">
 <h3>Default behaviours different</h3>
-<p><strong>For packages that aren’t yet installed:</strong></p>
+<p><strong>For packages that are not yet installed:</strong></p>
 <table>
 <colgroup>
 <col width="43%" />
@@ -653,7 +653,7 @@ recent version</td>
 <tr class="even">
 <td>Package install by version</td>
 <td align="center">Yes</td>
-<td align="center">Yes, but doesn’t deal well with multiple packages
+<td align="center">Yes, but does not deal well with multiple packages
 with specific versions</td>
 </tr>
 <tr class="odd">
@@ -761,7 +761,7 @@ repositories, 3. order.</p>
 <span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co"># Fine -- takes by version requirement, so takes development, </span></span>
 <span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#    which is the only one that fulfills requirement on Jul 25, 2024</span></span>
 <span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>rq <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>, <span class="st">&quot;PredictiveEcology/LandR@development (&gt;=1.1.5)&quot;</span>))</span></code></pre></div>
-<p>The following doesn’t work with <code>pak</code> because BioSIM, a
+<p>The following does not work with <code>pak</code> because BioSIM, a
 dependency on GitHub is not found. This may be because the package name
 is not the repository name, but it is not clear from the error message
 why:</p>
@@ -772,7 +772,7 @@ why:</p>
 <h3>Version requirements determine package installation</h3>
 <ol style="list-style-type: decimal">
 <li><p><strong>Version number requirements</strong> drive package
-updates. If a user doesn’t need an update because version numbers are
+updates. If a user does not need an update because version numbers are
 sufficient, no update will occur.</p></li>
 <li><p>If no version number specification, then installs only occur if
 package is not present.</p></li>
@@ -910,20 +910,20 @@ strictly necessary. <code>pak::pkg_deps</code> does not include
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>pakDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depPak<span class="sc">$</span>ref), Require<span class="sc">:::</span>.basePkgs)</span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>requireDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depRequire[[<span class="dv">1</span>]]), Require<span class="sc">:::</span>.basePkgs)</span>
 <span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">setdiff</span>(pakDepsClean, requireDepsClean)</span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">setdiff</span>(requireDepsClean, pakDepsClean) <span class="co"># doesn&#39;t report &quot;RcppArmadillo&quot;, &quot;RcppEigen&quot;, &quot;cpp11&quot; which are LinkingTo</span></span></code></pre></div>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">setdiff</span>(requireDepsClean, pakDepsClean) <span class="co"># does not report &quot;RcppArmadillo&quot;, &quot;RcppEigen&quot;, &quot;cpp11&quot; which are LinkingTo</span></span></code></pre></div>
 </div>
 </div>
 <div id="cran-preference" class="section level2">
 <h2>CRAN-preference</h2>
 <p>If there is no version specification, <code>Require</code> prefers
 CRAN packages when there are multiple pointers to a package. Thus, even
-though a package may have a <code>Remotes</code> field pointint to e.g.,
+though a package may have a <code>Remotes</code> field pointing to e.g.,
 <code>PredictiveEcology/SpaDES.tools@development</code>, if there is a
 recursive dependency within that package that specifies
 <code>SpaDES.tools</code> without a <code>Remotes</code> field, then
 <code>pkgDep</code> will return the <code>CRAN</code> version. If a user
 wants to override this behaviour, then the user can specify a version
-requirement that can only be satisfited with the <code>Remotes</code>
+requirement that can only be satisfied with the <code>Remotes</code>
 option. Then <code>pkgDep</code> will take that.</p>
 <p><code>pak::pkg_deps</code> prefers the top-level specification, i.e.,
 the non-recursive <code>Remotes</code> field will be returned, even if

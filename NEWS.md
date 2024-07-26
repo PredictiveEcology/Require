@@ -10,7 +10,7 @@ version 1.0.0
 
 ## enhancements
 * `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string, e.g., `Install(ggplot2)`;
-* Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it doesn't find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually;
+* Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it does not find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually;
 * `verbose` now propagates better through all internal functions, so e.g., `verbose = -2` will make installing very silent;
 * Better automatic cleaning of Cached packages that are corrupt;
 * experimental use of `pak` as the backend installer of packages instead of `install.packages`. A user can attempt to use this backend with `options(Require.usePak = TRUE)`. There are a number of cases (specifically when needing exact versions) that do not work; but for "normal" package installations it is widely tested. `pak` backend tends to be similar speed for first installations, but much slower for subsequent calls to `Install`/`Require`;

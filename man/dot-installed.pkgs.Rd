@@ -52,6 +52,6 @@ if \code{FALSE} (default) then the \code{which} fields will be kept separate.}
 This reads the DESCRIPTION files only, so can only access fields that are
 available in the DESCRIPTION file. This is different than \code{installed.packages}
 which has many other fields, like "Built", "NeedsCompilation" etc. If those
-fields are needed, then this function will return an empty colum in the returned
+fields are needed, then this function will return an empty column in the returned
 character matrix.
 }

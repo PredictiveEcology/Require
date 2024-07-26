@@ -440,7 +440,7 @@ whichToDILES <- function(which) {
 #' This reads the DESCRIPTION files only, so can only access fields that are
 #' available in the DESCRIPTION file. This is different than `installed.packages`
 #' which has many other fields, like "Built", "NeedsCompilation" etc. If those
-#' fields are needed, then this function will return an empty colum in the returned
+#' fields are needed, then this function will return an empty column in the returned
 #' character matrix.
 #' @inheritParams utils::installed.packages
 #' @inheritParams pkgDep

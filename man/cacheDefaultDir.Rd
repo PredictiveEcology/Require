@@ -11,5 +11,5 @@ The default cache directory
 }
 \description{
 A wrapper around \code{tools::R_user_dir("Require", which = "cache")} that
-creates the directory, if it doesn't exist.
+creates the directory, if it does not exist.
 }

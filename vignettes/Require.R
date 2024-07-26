@@ -128,7 +128,7 @@
 #  pakDepsClean <- setdiff(Require::extractPkgName(depPak$ref), Require:::.basePkgs)
 #  requireDepsClean <- setdiff(Require::extractPkgName(depRequire[[1]]), Require:::.basePkgs)
 #  setdiff(pakDepsClean, requireDepsClean)
-#  setdiff(requireDepsClean, pakDepsClean) # doesn't report "RcppArmadillo", "RcppEigen", "cpp11" which are LinkingTo
+#  setdiff(requireDepsClean, pakDepsClean) # does not report "RcppArmadillo", "RcppEigen", "cpp11" which are LinkingTo
 #  
 
 ## ----eval=FALSE---------------------------------------------------------------

@@ -37,7 +37,7 @@ Features include:
 
 ## Rerun-tolerance
 
-To be functionally reproducible, code must be regularly run and tested on many operating systems and computers. When this doesn't happen, a user/developer does not know that certain code chunks no longer work until they try to run it later. In other words, code gets stale because underlying algorithms and data change. To be rerun-tolerant, a function must: 
+To be functionally reproducible, code must be regularly run and tested on many operating systems and computers. When this does not happen, a user/developer does not know that certain code chunks no longer work until they try to run it later. In other words, code gets stale because underlying algorithms and data change. To be rerun-tolerant, a function must: 
 
 1. return the same result or outcome every time it is run (first, second or more times later);
 2. be very fast after the first time; when it is not fast, users will skip running it "because we don't need to run it again and it is slow"
@@ -62,13 +62,13 @@ Require::Install(
   c("PredictiveEcology/reproducible@development (HEAD)", 
     "PredictiveEcology/SpaDES.core@development (>=2.0.5.9004)")) 
 ```
-will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the inequality) for the development branch of `SpaDES.core`. The user doesn't have to make decisions at run time as to whether an update should be made, and for which packages.
+will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the inequality) for the development branch of `SpaDES.core`. The user does not have to make decisions at run time as to whether an update should be made, and for which packages.
 
 # How `Require` differs from other approaches
 
 ### Default behaviours different
 
-**For packages that aren't yet installed:**
+**For packages that are not yet installed:**
 
 | Description                      |  Outcome                                   |
 | -------------------------------- | ------------------------------------------ |
@@ -116,7 +116,7 @@ This table is based on `Require v1.0.0` and `pak v0.7.2`.
 | Package dependencies     |  `data.table`, `sys`   |   None (though yes if user wants control, e.g., `pkgcache`) |
 | Uses local cache   |   Yes   |   Yes   |
 | Package updates (default)    | No, unless needed by version number | Yes, prompt user |     
-| Package install by version    | Yes | Yes, but doesn't deal well with multiple packages with specific versions |   
+| Package install by version    | Yes | Yes, but does not deal well with multiple packages with specific versions |   
 | Package conflict (CRAN & GitHub)* | Prefers CRAN, if version requirements met  |  Error  |
 | Version specification by user | Yes e.g., `Require (>=1.0.0)` | Not an option |
 | Exact version specification by user | Uses `DESCRIPTION` file approach e.g., `Require (==1.0.0)` | Uses `@` e.g., `Require@1.0.0` |
@@ -183,7 +183,7 @@ rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/Land
 
 ```
 
-The following doesn't work with `pak` because BioSIM, a dependency on GitHub is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
+The following does not work with `pak` because BioSIM, a dependency on GitHub is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
 ```{r,eval=FALSE,message=FALSE}
 try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
 ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
@@ -193,7 +193,7 @@ ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE
 
 ### Version requirements determine package installation
 
-1. **Version number requirements** drive package updates. If a user doesn't need an update because version numbers are sufficient, no update will occur.
+1. **Version number requirements** drive package updates. If a user does not need an update because version numbers are sufficient, no update will occur.
 
 2. If no version number specification, then installs only occur if package is not present.
 
@@ -302,13 +302,14 @@ depRequire <- Require::pkgDep("PredictiveEcology/LandR@LandWeb") # Slightly diff
 pakDepsClean <- setdiff(Require::extractPkgName(depPak$ref), Require:::.basePkgs)
 requireDepsClean <- setdiff(Require::extractPkgName(depRequire[[1]]), Require:::.basePkgs)
 setdiff(pakDepsClean, requireDepsClean)
-setdiff(requireDepsClean, pakDepsClean) # doesn't report "RcppArmadillo", "RcppEigen", "cpp11" which are LinkingTo
+setdiff(requireDepsClean, pakDepsClean) # does not report "RcppArmadillo", "RcppEigen", "cpp11" which are LinkingTo
 
 ```
 
 ## CRAN-preference
 
-If there is no version specification, `Require` prefers CRAN packages when there are multiple pointers to a package. Thus, even though a package may have a `Remotes` field pointint to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfited with the `Remotes` option. Then `pkgDep` will take that.
+If there is no version specification, `Require` prefers CRAN packages when there are multiple pointers to a package.
+Thus, even though a package may have a `Remotes` field pointing to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfied with the `Remotes` option. Then `pkgDep` will take that.
 
 `pak::pkg_deps` prefers the top-level specification, i.e., the non-recursive `Remotes` field will be returned, even if the same package is also specified within a recursive dependency without a `Remotes` field, i.e, if a recursive dependency points the CRAN package, it will not return that version of the dependency.
 

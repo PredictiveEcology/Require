@@ -31,7 +31,7 @@ The returned \code{data.table} will have most of the columns from
 returned from \code{available.packages} as \code{Version} to \code{VersionOnRepos}.
 }
 \description{
-Will join \code{available.packages()} with \code{pkgDT}, if \code{pkgDT} doesn't already have
+Will join \code{available.packages()} with \code{pkgDT}, if \code{pkgDT} does not already have
 a column named \code{Depends}, which would be an indicator that this had already
 happened.
 }
