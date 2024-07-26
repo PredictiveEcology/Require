@@ -37,7 +37,7 @@ version 0.3.0
 =============
 
 ## enhancements
-* Moved from MRAN archives for binaries to <https://posit.packagemanager.co>
+* Moved from MRAN archives for binaries to <https://packagemanager.posit.co/>
 * because of the move from MRAN to posit package manager, attempts are made to use archived binary packages for Linux also.
 * improved messaging in several places
 * improved error catching in several places

@@ -1532,6 +1532,19 @@ availableVersionOK <- function(pkgDT) {
   pkgDT
 }
 
+#' Compare package versions
+#'
+#' Alternative to `utils::compareVersion` that is vectorized on `version`,
+#' `versionSpec` and/or `inequality`. This will also return an NA element
+#' in the returned vector if one of the arguments has NA for that element.
+#'
+#' @param version One or more package versions. Can be `character` or `numeric_version`.
+#' @param versionSpec One or more versions to compare to.
+#'   Can be `character` or `numeric_version`.
+#' @param inequality The inequality to use, i.e., `>=`.
+#' @return a logical vector of the length of the longest of the 3 arguments.
+#'
+#' @export
 compareVersion2 <- function(version, versionSpec, inequality) {
   if (isTRUE(any(is(version, "numeric_version"))))
     version <- as.character(version)
