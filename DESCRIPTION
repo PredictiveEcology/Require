@@ -44,6 +44,7 @@ Suggests:
     covr,
     curl,
     diffobj,
+    fpCompare,
     gitcreds,
     httr,
     pak,

@@ -33,7 +33,7 @@ test_that("test 3", {
     # on.exit(rm(aaaa, envir= .GlobalEnv))
     Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
                      install= "force")
-    expect_true(packageVersion("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
+    expect_true(packVer("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
   }
 
   # pkgDep2("Require")
@@ -169,7 +169,8 @@ test_that("test 3", {
                                      which = c("Suggests", "Imports", "Depends"))
     locals <- setdiff(extractPkgName(localDeps), .basePkgs)
     testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
-    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown")) # not sure why roxygen2 was not in it before
+    # not sure why roxygen2 was not in it before; fpCompare is new, not yet on PEUniverse
+    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown", "fpCompare"))
     testthat::expect_identical(testArgs, character())
   }
   if (isDev) {
