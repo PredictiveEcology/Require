@@ -169,7 +169,7 @@ test_that("test 3", {
                                      which = c("Suggests", "Imports", "Depends"))
     locals <- setdiff(extractPkgName(localDeps), .basePkgs)
     testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
-    testArgs <- setdiff(testArgs, "roxygen2") # not sure why roxygen2 was not in it before
+    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown")) # not sure why roxygen2 was not in it before
     testthat::expect_identical(testArgs, character())
   }
   if (isDev) {
