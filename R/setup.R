@@ -3,7 +3,7 @@
 #' Sets (if `create = TRUE`) or gets the cache
 #' directory associated with the `Require` package.
 #' @return
-#' If `!is.null(getOptionRPackageCache())`, i.e., a cache path exists,
+#' If `!is.null(cacheGetOptionCachePkgDir())`, i.e., a cache path exists,
 #' the cache directory will be created,
 #'   with a README placed in the folder. Otherwise, this function will just
 #'   return the path of what the cache directory would be.
@@ -13,27 +13,29 @@
 #' `R_USER_CACHE_DIR = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
 #' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
 #' @inheritParams checkPath
+#' @inheritParams Require
 #' @export
-#' @rdname RequireCacheDir
-RequireCacheDir <- function(create) {
+#' @rdname cacheDir
+cacheDir <- function(create, verbose = getOption("Require.verbose")) {
   if (missing(create)) {
     create <- FALSE
-  } # !is.null(getOptionRPackageCache())
+  } # !is.null(cacheGetOptionCachePkgDir())
 
   ## OLD: was using cache dir following OS conventions used by rappdirs package:
   ##   rappdirs::user_cache_dir(appName)
   ## CURRENT: using cache dir following conventions used by tools::R_user_dir
   ##   tools::R_user_dir("appName", "cache")
 
+  # browser()
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
-    defaultCacheDirectory <- defaultCacheDir()
+    defaultCacheDirectory <- cacheDefaultDir()
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
-          message(
+          messageVerbose(
             "Require has changed default package cache folder from\n",
             defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
             "in the old Cache, moving them now..."
@@ -57,7 +59,7 @@ RequireCacheDir <- function(create) {
     readme <- file.path(cacheDir, "README")
     if (!file.exists(readme)) {
       if (isTRUE(create)) {
-        file.copy(system.file("cache-README", package = "Require"), readme)
+        file.copy(base::system.file("cache-README", package = "Require"), readme)
       }
     }
   }
@@ -66,16 +68,18 @@ RequireCacheDir <- function(create) {
 }
 
 normPathMemoise <- function(d) {
+  pe <- pkgEnv()
   if (getOption("Require.useMemoise", TRUE)) {
     fnName <- "normPath"
-    if (!exists(fnName, envir = .pkgEnv, inherits = FALSE)) {
-      .pkgEnv[[fnName]] <- new.env()
+    if (!exists(fnName, envir = pe, inherits = FALSE)) {
+      assign(fnName, newEmptyEnv(), envir = pe)
     }
+    fnEnv <- get(fnName, envir = pe)
     ret <- Map(di = d, function(di) {
-      if (!exists(di, envir = .pkgEnv[[fnName]], inherits = FALSE)) {
-        .pkgEnv[[fnName]][[di]] <- normPath(di)
+      if (!exists(di, envir = fnEnv, inherits = FALSE)) {
+        assign(di, normPath(di), envir = fnEnv)
       }
-      .pkgEnv[[fnName]][[di]]
+      fnEnv[[di]]
     })
     ret <- unlist(ret)
   } else {
@@ -86,22 +90,22 @@ normPathMemoise <- function(d) {
 }
 
 #' @export
-#' @rdname RequireCacheDir
+#' @rdname cacheDir
 #'
 #' @note
 #' Currently, there are 2 different Cache directories used by Require:
-#' `RequireCacheDir` and `RequirePkgCacheDir`. The `RequirePkgCacheDir`
-#'  is intended to be a sub-directory of the `RequireCacheDir`. If you set
+#' `cacheDir` and `cachePkgDir`. The `cachePkgDir`
+#'  is intended to be a sub-directory of the `cacheDir`. If you set
 #'  `Sys.setenv("R_USER_CACHE_DIR" = "somedir")`, then both the package cache
 #'  and cache dirs will be set, with the package cache a sub-directory. You can, however,
 #'  set them independently, if you set `"R_USER_CACHE_DIR"` and `"R_REQUIRE_PKG_CACHE"`
 #'  environment variable. The package cache can also be set with
-#'  `options("Require.RPackageCache" = "somedir")`.
-RequirePkgCacheDir <- function(create) {
+#'  `options("Require.cachePkgDir" = "somedir")`.
+cachePkgDir <- function(create) {
   if (missing(create)) {
-    create <- FALSE # !is.null(getOptionRPackageCache())
+    create <- FALSE
   }
-  pkgCacheDir <- normPathMemoise(file.path(RequireCacheDir(create), "packages", rversion()))
+  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
   if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
   }
@@ -112,22 +116,36 @@ RequirePkgCacheDir <- function(create) {
   return(pkgCacheDir)
 }
 
-#' Get the option for `Require.RPackageCache`
+RequireGitHubCacheDir <- function(create) {
+  if (missing(create)) {
+    create <- FALSE
+  }
+  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), .txtGitHub))
+  if (isTRUE(create)) {
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+  }
+
+  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
+  ##       - remind them how to change this, and make sure it's documented!
+
+  return(pkgCacheDir)
+}
+#' Get the option for `Require.cachePkgDir`
 #'
-#' First checks if an environment variable `Require.RPackageCache`
+#' First checks if an environment variable `Require.cachePkgDir`
 #' is set and defines a path.
-#' If not set, checks whether the `options("Require.RPackageCache")` is set.
+#' If not set, checks whether the `options("Require.cachePkgDir")` is set.
 #' If a character string, then it returns that.
-#' If `TRUE`, then use `RequirePkgCacheDir()`. If `FALSE`
+#' If `TRUE`, then use `cachePkgDir()`. If `FALSE`
 #' then returns `NULL`.
 #'
 #' @export
-getOptionRPackageCache <- function() {
-  curVal <- getOption("Require.RPackageCache")
+cacheGetOptionCachePkgDir <- function() {
+  curVal <- getOption("Require.cachePkgDir")
   try <- 1
   while (try < 3) {
     if (isTRUE(curVal)) {
-      curVal <- RequirePkgCacheDir(FALSE)
+      curVal <- cachePkgDir(FALSE)
       break
     } else if (isFALSE(curVal)) {
       curVal <- NULL
@@ -136,7 +154,7 @@ getOptionRPackageCache <- function() {
       if (identical("default", curVal)) {
         fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
         if (nchar(fromEnvVars) == 0) {
-          curVal <- RequirePkgCacheDir(FALSE)
+          curVal <- cachePkgDir(FALSE)
           break
         } else {
           try <- try + 1
@@ -154,11 +172,9 @@ getOptionRPackageCache <- function() {
       }
     }
   }
-  # if (!is.null(curVal)) {
-  #   checkPath(curVal, create = TRUE)
-  # }
   curVal
 }
+
 #' Setup a project library, cache, options
 #'
 #' `setup` and `setupOff` are currently deprecated.
@@ -184,7 +200,7 @@ getOptionRPackageCache <- function() {
 #'
 setup <- function(newLibPaths,
                   RPackageFolders, # = getOption("Require.RPackageFolders", "R"),
-                  RPackageCache = getOptionRPackageCache(),
+                  RPackageCache = cacheGetOptionCachePkgDir(),
                   standAlone = getOption("Require.standAlone", TRUE),
                   verbose = getOption("Require.verbose")) {
   if (missing(newLibPaths)) {
@@ -212,6 +228,20 @@ setup <- function(newLibPaths,
 #'        the .libPaths()
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   updateRprofile <- checkTRUERprofile(TRUE)
+  if (!file.exists(updateRprofile)) { # not in current dir
+    # 1. Check project
+    possDirs <- c(rprojroot::find_root(rprojroot::is_rstudio_project),
+                 "~")
+    for (i in 1:2) {
+      possDir <- possDirs[i]
+      possFile <- file.path(possDir, updateRprofile)
+      if (file.exists(possFile)) {
+        updateRprofile <- possFile
+        break
+      }
+    }
+  }
+
   if (file.exists(updateRprofile)) {
     rproflines <- readLines(updateRprofile)
     start <- grep(setLibPathsStartText, rproflines)
@@ -248,25 +278,65 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @param binaryLinux A CRAN repository serving binary Linux packages.
 #' @param backupCRAN If there is no CRAN repository set
 #'
+#' @importFrom utils read.csv
 #' @export
-setLinuxBinaryRepo <- function(binaryLinux = "https://packagemanager.posit.co/",
+setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {
   if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
+      if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
       repo <- c(
         CRAN =
-          paste0(binaryLinux, "all/__linux__/", linuxRelease(), "/latest")
+          positBinaryRepos()
       )
-      if (!is.null(getOption("repos"))) {
-        backupCRAN <- getOption("repos")
+      currentRepos <- getOption("repos")
+      insertBefore <- 1 # put first, unless otherwise
+      if (!is.null(currentRepos)) {
+        isCRAN <- whIsOfficialCRANrepo(currentRepos, srcPackageURLOnCRAN)
+        # mirrorsLocalFile <- file.path(cachePkgDir(), ".mirrors.csv")
+        # if (!file.exists(mirrorsLocalFile))
+        #   download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+        #                 destfile = mirrorsLocalFile, quiet = TRUE)
+        # a <- read.csv(mirrorsLocalFile)
+        # b <- a[1,]
+        # b$URL = "https://cran.rstudio.com/"
+        # a <- rbind(a, b)
+        # isCRAN <- lapply(gsub("https://", "", currentRepos),
+        #        grep, x = gsub("https://", "", a$URL), value = TRUE)
+        insertBefore <- which(lengths(isCRAN) > 0)
+        repos <- c(repo, currentRepos)
+        if (insertBefore > 1) {
+          repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
+                     repo,
+                     currentRepos[seq(insertBefore, length(currentRepos))])
+        }
+      } else {
+        repos <- c(repo, backupCRAN)
       }
-      if (is.null(names(backupCRAN))) names(backupCRAN) <- "CRAN"
-      repo <- c(repo, backupCRAN)
-      repo <- repo[!duplicated(repo)]
-      options(repos = repo)
+
+      repos <- repos[!duplicated(repos)]
+      options(repos = repos)
     }
   }
 }
+
+whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
+  mirrorsLocalFile <- file.path(cachePkgDir(), ".mirrors.csv")
+  dir.create(dirname(mirrorsLocalFile), recursive = TRUE, showWarnings = FALSE)
+  if (!file.exists(mirrorsLocalFile))
+    download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+                  destfile = mirrorsLocalFile, quiet = TRUE)
+  a <- read.csv(mirrorsLocalFile)
+  b <- a[1,]
+  b$URL = "https://cran.rstudio.com/"
+  a <- rbind(a, b)
+  isCRAN <- lapply(gsub("https://", "", currentRepos),
+                   grep, x = gsub("https://", "", a$URL), value = TRUE)
+  isCRAN
+}
+
+positBinaryRepos <- function(binaryLinux = urlForArchivedPkgs)
+  paste0(binaryLinux, "__linux__/", linuxRelease(), "/latest")
 
 linuxRelease <- function() {
   system("lsb_release -cs", intern = TRUE)
@@ -274,8 +344,16 @@ linuxRelease <- function() {
 
 appName <- "R-Require"
 
+#' The default cache directory for Require Cache
+#'
+#' A wrapper around `tools::R_user_dir("Require", which = "cache")` that
+#' creates the directory, if it does not exist.
+#'
+#' @return The default cache directory
+#'
 #' @importFrom tools R_user_dir
-defaultCacheDir <- function() {
+#' @export
+cacheDefaultDir <- function() {
   normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 }
 

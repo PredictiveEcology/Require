@@ -22,14 +22,14 @@
 #' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`,
 #' but does not affect `Install`. If this is `FALSE`, then no installations
 #' will be attempted, and missing packages will result in an error. }
-#' \item{`RPackageCache`}{ Default: `getOptionRPackageCache()`, which must be
+#' \item{`RPackageCache`}{ Default: `cacheGetOptionCachePkgDir()`, which must be
 #' either a path or a logical. To turn off package caching, set this to `FALSE`.
 #' This can be set using an environment variable e.g.
 #' `Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")`, or
 #' `Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")`; if that is not set, then an
-#' either a path or logical option (`options(Require.RPackageCache =
-#' "somePath")` or `options(Require.RPackageCache = TRUE)`). If `TRUE`, the
-#' default folder location `RequirePkgCacheDir()` will be used. If this is
+#' either a path or logical option (`options(Require.cachePkgDir =
+#' "somePath")` or `options(Require.cachePkgDir = TRUE)`). If `TRUE`, the
+#' default folder location `cachePkgDir()` will be used. If this is
 #' `TRUE` or a path is provided, then binary and source packages will be cached
 #' here. Subsequent downloads of same package will use local copy. Default is to
 #' have packages not be cached locally so each install of the same version will
@@ -63,24 +63,32 @@
 #' @rdname RequireOptions
 RequireOptions <- function() {
   list(
+    Require.cloneFrom = NULL,
     Require.install = TRUE,
-    Require.otherPkgs = c("cpp11", "igraph", "qs", "Rcpp", "RcppParallel", "stringfish"),
+    Require.installPackagesSys = if (isMacOSX()) 0L else 2L,
+    Require.otherPkgs = c(
+      "cpp11"
+      , "igraph"
+      , "Rcpp"
+      , "RcppParallel"
+      ),
     Require.packageVersionFile = "packageVersions.txt",
     Require.purge = FALSE,
-    Require.RPackageCache = "default",
+    Require.cachePkgDir = "default",
     Require.spatialPkgs = c(
-      "lwgeom",
-      "raster",
-      "rgdal",
-      "rgeos",
-      "s2",
-      "sf",
-      "sp",
-      "terra",
-      "units"
+      "terra"
+      , "lwgeom"
+      , "raster"
+      , "rgdal"
+      , "rgeos"
+      , "s2"
+      , "sf"
+      , "sp"  # c("raster", "s2", "sf", "sp", "units")
+      , "units"
     ),
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,
+    Require.usePak = FALSE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
   )

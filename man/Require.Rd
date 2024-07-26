@@ -2,8 +2,8 @@
 % Please edit documentation in R/Require-package.R, R/Require2.R
 \docType{package}
 \name{Require-package}
-\alias{Require}
 \alias{Require-package}
+\alias{Require}
 \alias{Install}
 \title{Require: Installing and Loading R Packages for Reproducible Workflows}
 \usage{
@@ -21,6 +21,7 @@ Require(
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
   upgrade = FALSE,
+  returnDetails = FALSE,
   ...
 )
 
@@ -41,18 +42,27 @@ Install(
 )
 }
 \arguments{
-\item{packages}{Character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}). If it is one package,
-it can be unquoted (as in \code{require}). In the case of a GitHub package, it
+\item{packages}{Either a character vector of packages to install via
+\code{install.packages}, then load (i.e., with \code{library}), or, for convenience,
+a vector or list (using \code{c} or \code{list}) of unquoted package names to install
+and/or load (as in \code{require}, but vectorized). Passing vectors of names may
+not work in all cases, so user should confirm before relying on this behaviour
+in operational code.
+In the case of a GitHub package, it
 will be assumed that the name of the repository is the name of the package.
-If this is not the case, then pass a named character vector here, where the
+If this is not the case, then pass a \emph{named} character vector here, where the
 names are the package names that could be different than the GitHub
 repository name.}
 
 \item{packageVersionFile}{Character string of a file name or logical. If
 \code{TRUE}, then this function will load the default file,
 \code{getOption("Require.packageVersionFile")}. If this argument is provided,
-then this will override all any packages passed to \code{packages}.}
+then this will override any packages passed to \code{packages}. By default,
+\code{Require} will attempt to resolve dependency violations (i.e., if this
+\code{packageVersionFile} specifies a version of a package that violates
+the dependency specification of another package). If a user wishes to attempt
+to install the \code{packageVersionFile} without assessing the dependencies,
+set \code{dependencies = FALSE}.}
 
 \item{libPaths}{The library path (or libraries) where all packages should be
 installed, and looked for to load (i.e., call \code{library}). This can be used
@@ -109,9 +119,8 @@ Internally, there are calls to \code{available.packages}.}
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
-\code{Require} function, when \code{verbose >= 2}, the return object will have an
-attribute: \code{attr(.., "Require")} which has lots of information about the
-processes of the installs.}
+\code{Require} function, when \code{verbose >= 2}, also returns details as if
+\code{returnDetails = TRUE} (for backwards compatibility).}
 
 \item{type}{See \code{utils::install.packages}}
 
@@ -119,6 +128,10 @@ processes of the installs.}
 version on in the local library is not adequate for the version requirements
 of the \code{packages}. Note: for convenience, \code{update}
 can be used for this argument.}
+
+\item{returnDetails}{Logical. If \code{TRUE} the return object will have an
+attribute: \code{attr(.., "Require")} which has lots of information about the
+processes of the installs.}
 
 \item{...}{Passed to \code{install.packages}. Good candidates are e.g., \code{type} or
 \code{dependencies}. This can be used with \code{install_githubArgs} or
@@ -189,69 +202,68 @@ are no conflicts), allowing a call to \code{pkgSnapshot()} to take a snapshot or
 \section{Local Cache of Packages}{
  When installing new packages, \code{Require}
 will put all source and binary files in an R-version specific subfolder of
-\code{getOption("Require.RPackageCache")} whose default is \code{RPackageCache()},
+\code{getOption("Require.cachePkgDir")} whose default is \code{RPackageCache()},
 meaning \emph{cache packages locally in a project-independent location}, and
 will reuse them if needed. To turn off this feature, set
-\code{options("Require.RPackageCache" = FALSE)}.
+\code{options("Require.cachePkgDir" = FALSE)}.
 }
 
 \examples{
 \dontrun{
-# simple usage, like conditional install.packages then library
 opts <- Require:::.setupExample()
 
 library(Require)
 getCRANrepos(ind = 1)
-Require("stats") # analogous to require(stats), but it checks for
+Require("utils") # analogous to require(stats), but it checks for
 #   pkg dependencies, and installs them, if missing
+
+# unquoted version
+Require(c(tools, utils))
 
 if (Require:::.runLongExamples()) {
   # Install in a new local library (libPaths)
-  tempPkgFolder <- file.path(tempdir(), "Packages")
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
   # use standAlone, means it will put it in libPaths, even if it already exists
   #   in another local library (e.g., personal library)
   Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 
-  # make a package version snapshot of installed packages
-  tf <- tempfile()
-  (pkgSnapshot(tf, standAlone = TRUE))
+  # Mutual dependencies, only installs once -- e.g., cli
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+  Install(c("cli", "R6"), libPaths = tempPkgFolder, standAlone = TRUE)
 
-  # Change the libPaths to emulate a new computer or project
-  tempPkgFolder <- file.path(tempdir(), "Packages2")
-  # Reinstall and reload the exact version from previous
-  Require(packageVersionFile = tf, libPaths = tempPkgFolder, standAlone = TRUE)
-
-  # Mutual dependencies, only installs once -- e.g., curl
-  tempPkgFolder <- file.path(tempdir(), "Packages")
-  Install(c("remotes", "testit"), libPaths = tempPkgFolder, standAlone = TRUE)
-
-  # Mutual dependencies, only installs once -- e.g., curl
-  tempPkgFolder <- file.path(tempdir(), "Packages")
-  Install(c("covr", "httr"), libPaths = tempPkgFolder, standAlone = TRUE)
+  # Mutual dependencies, only installs once -- e.g., rlang
+  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+  Install(c("rlang", "ellipsis"), libPaths = tempPkgFolder, standAlone = TRUE)
 
   #####################################################################################
   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
   #####################################################################################
   # GitHub packages
-  ProjectPackageFolder <- file.path(tempdir(), "ProjectA")
-  Require("PredictiveEcology/fpCompare@development",
-    libPaths = ProjectPackageFolder, standAlone = FALSE
-  )
+  if (requireNamespace("gitcreds", quietly = TRUE)) {
+    #if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+      ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+      if (requireNamespace("curl")) {
+        Require("PredictiveEcology/fpCompare@development",
+          libPaths = ProjectPackageFolder,
+        )
+      }
 
-  Install("PredictiveEcology/fpCompare@development",
-    libPaths = ProjectPackageFolder,
-    standAlone = TRUE
-  ) # the latest version on GitHub
+      # No install because it is there already
+      Install("PredictiveEcology/fpCompare@development",
+        libPaths = ProjectPackageFolder,
+      ) # the latest version on GitHub
 
-  ############################################################################
-  # Mixing and matching GitHub, CRAN, with and without version numbering
-  ############################################################################
-  pkgs <- c(
-    "remotes (<=2.4.1)", # old version
-    "digest (>= 0.6.28)", # recent version
-    "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
-  )
-  Require::Require(pkgs, libPaths = ProjectPackageFolder)
+      ############################################################################
+      # Mixing and matching GitHub, CRAN, with and without version numbering
+      ############################################################################
+      pkgs <- c(
+        "remotes (<=2.4.1)", # old version
+        "digest (>= 0.6.28)", # recent version
+        "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+      )
+      Require::Require(pkgs, libPaths = ProjectPackageFolder)
+    #}
+  }
   Require:::.cleanup(opts)
 }
 }

@@ -11,7 +11,8 @@
 #' @keywords internal
 getCRANrepos <- function(repos = NULL, ind) {
   if (isNonRepo(repos)) {
-    repos <- getOption("repos")["CRAN"]
+    repos <- getOption("repos")
+    # names(repos) %in% "CRAN"
   }
 
   # still might be imprecise repository
@@ -37,7 +38,7 @@ getCRANrepos <- function(repos = NULL, ind) {
     }
     if (isTRUE("" == repos) || isTRUE(is.na(repos))) {
       warning("Please choose a valid CRAN repo")
-      repos <- getCRANrepos(repos)
+      repos <- getCRANrepos(repos, 1)
     }
   }
 

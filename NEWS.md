@@ -1,11 +1,43 @@
-Known issues: <https://github.com/PredictiveEcology/Require/issues>
+# Require
+
+version 1.0.0
+=============
+
+## major changes
+* Installation, package downloading, and package building from source now occur in an external process using `sys` package. This allows for more control over messaging during installations, and it also allows of installation of many packages that are already loaded (with a message that the session will need restarting). This can be turned off with This is turned on with `option(Require.installPackagesSys = FALSE)`.
+* All internals for `pkgDep` have been changed. The new algorithms are faster and more reliable, with far fewer lines of code.
+* All testing has been converted from using `testit` to using `testthat`. This change adds many dependencies to `Suggests`, but the benefits, e.g., using `withr` to control loading and unloading of options, packages etc., outweigh the drawbacks.
+
+## enhancements
+* `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string, e.g., `Install(ggplot2)`;
+* Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it does not find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually;
+* `verbose` now propagates better through all internal functions, so e.g., `verbose = -2` will make installing very silent;
+* Better automatic cleaning of Cached packages that are corrupt;
+* experimental use of `pak` as the backend installer of packages instead of `install.packages`. A user can attempt to use this backend with `options(Require.usePak = TRUE)`. There are a number of cases (specifically when needing exact versions) that do not work; but for "normal" package installations it is widely tested. `pak` backend tends to be similar speed for first installations, but much slower for subsequent calls to `Install`/`Require`;
+* Better recovery from installation failures e.g., if the local cached copy is corrupt, it will be automatically cleaned;
+* `Require.Rmd` vignette for "Getting Started" is new;
+* many speed enhancements in cases where e.g., a download is not necessary;
+* when downloads from `GitHub.com` are done, `Require` now uses `gitcreds` to get `git` credentials and `httr` to download the files with the token;
+
+## Function name changes
+
+* all functions related to `cache` now start with `cache`, e.g., `cacheClearPackages` replaces `clearRequirePackageCache`. Previous names are kept for backwards compatibility.
+
+## bugfixes
+* If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87);
+* Warning occurred if a package was no longer on CRAN and user had supplied multiple `repos` or `getOption('repos')`. The result was unaffected by the warning, but warning is now removed;
+* allow user-specified path in `pkgSnapshot()` (#93);
+* a number of new cases have been added to `tests` that previously would have hit errors;
+* many other small bugs fixed;
+* Some issues specific to MacOS have been fixed.
+* fixes or implemented other issues #91, #96, #97, #102, #105
 
 version 0.3.1
 =============
 
 ## enhancements
 * minor modifications for when internet is not available
-* Issue 81: deal with more edge cases for package snapshots that are not internally consistent, i.e., violate package versions, or skip missing branches on GitHub, if not needed. 
+* deal with more edge cases for package snapshots that are not internally consistent, i.e., violate package versions, or skip missing branches on GitHub, if not needed (#81).
 
 ## bugfixes
 * updates to tests that have begun to fail
@@ -14,7 +46,7 @@ version 0.3.0
 =============
 
 ## enhancements
-* Moved from MRAN archives for binaries to posit.packagemanager.co
+* Moved from MRAN archives for binaries to <https://packagemanager.posit.co/>
 * because of the move from MRAN to posit package manager, attempts are made to use archived binary packages for Linux also.
 * improved messaging in several places
 * improved error catching in several places
@@ -63,7 +95,7 @@ new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and
 * package messaging is not sorted alphabetically during installation
 * all `message` calls now `messageVerbose`, so verbosity can be fully controlled with the argument `verbose` or `options("Require.verbose")`. See `?RequireOptions`.
 * tests clean up more completely after themselves
-* if `options(Require.RPackageCache = FALSE)` (or environment variable `"R_REQUIRE_PKGCACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
+* if `options(Require.cachePkgDir = FALSE)` (or environment variable `"R_REQUIRE_PKGCACHE"`), then no cache folder will be created; previously a nearly empty folder was created by default. See `?RequireOptions`
 * Remove option `Require.persistentPkgEnv` as it was deemed superfluous.
 * numerous enhancements for speed
 * new function `Install`, which is `Require(..., require = FALSE)`
@@ -230,7 +262,7 @@ version 0.0.8
 ## New features
 * GitHub SHA is now stored during `pkgSnapshot`, meaning that a new system can be built with exact versions and SHAs of GitHub packages.
 * For GitHub packages, now uses both DESCRIPTION and NAMESPACE files to determine dependencies. GitHub packages are generally for packages in some state of development. This may include missing declarations in DESCRIPTION. NAMESPACE is what R uses to actually determine package dependencies upon installation.
-* Now keeps the binary/source package locally if `options("Require.RPackageCache" = "someLocalDir")` is set to a local folder. Currently defaults to NULL, meaning no local cache.
+* Now keeps the binary/source package locally if `options("Require.cachePkgDir" = "someLocalDir")` is set to a local folder. Currently defaults to NULL, meaning no local cache.
 * `Require` and `pkgSnapshot` can now understand and work with GitHub SHAs and thus packages installed from GitHub, e.g., `Require("PredictiveEcology/Require@development")` will install the development version. When using `pkgSnapshot`, the exact SHA will be used to restore that package at the exact version with `Require(packageVersionFile = "packageVersions.txt")`.
 * If a package is already loaded prior to changing running `setLibPaths`, it is possible to create a version conflict. `base::require` will error if the version in the `.libPaths()` is older than the version whose namespace is already loaded. To accommodate this, there is a check for this error, and if the newer version (that is already loaded) does not violate the `Require('package (versionSpecification)')`, then it will install the newer version. If it does violate the version specification, it will error cleanly with a message describing the possible solutions.
 * Much better messaging and reporting

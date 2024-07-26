@@ -67,14 +67,13 @@ allowing a subsequent user
 to install with a minimum version number, as opposed to an exact version number.}
 
 \item{includeBase}{Logical. Should R base packages be included, specifically,
-those in \code{tail(.libPath(), 1)}}
+those in \code{tail(.libPaths(), 1)}}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
-\code{Require} function, when \code{verbose >= 2}, the return object will have an
-attribute: \code{attr(.., "Require")} which has lots of information about the
-processes of the installs.}
+\code{Require} function, when \code{verbose >= 2}, also returns details as if
+\code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \value{
 Will both write a file, and (invisibly) return a vector of packages with the
@@ -95,8 +94,8 @@ examples.
 \dontrun{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
-  # install one archived version so that below does something interesting
 
+  # install one archived version so that below does something interesting
   libForThisEx <- tempdir2("Example")
   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
   # Normal use -- using the libForThisEx for example;
@@ -109,7 +108,7 @@ if (Require:::.runLongExamples()) {
   # of packages with version
   pkgs <- pkgSnapshot(
     packageVersionFile = tf,
-    libPaths = libForThisEx
+    libPaths = libForThisEx, standAlone = TRUE # only this library
   )
 
   # Now move this file to another computer e.g. by committing in git,
@@ -118,15 +117,10 @@ if (Require:::.runLongExamples()) {
   Require(packageVersionFile = tf, libPaths = libForThisEx)
 
   # Using pkgSnapshot2 to get the vector of packages and versions
-
-  tf <- tempfile()
   pkgs <- pkgSnapshot2(
-    packageVersionFile = tf,
-    libPaths = libForThisEx
+    libPaths = libForThisEx, standAlone = TRUE
   )
-  Require(pkgs, require = FALSE) # will install packages from previous line
-  # (likely want require = FALSE
-  #  and not load them all)
+  Install(pkgs) # will install packages from previous line
 
   Require:::.cleanup(opts)
   unlink(getOption("Require.packageVersionFile"))

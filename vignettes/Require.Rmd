@@ -1,0 +1,348 @@
+---
+title: The `Require` approach, comparing `pak` and `renv`
+output: rmarkdown::html_vignette
+author: "Eliot McIntire"
+vignette: >
+  %\VignetteIndexEntry{The `Require` approach, comparing `pak` and `renv`}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+`Require` is a single package that combines features of `base::install.packages`, `base::library`, `base::require`, as well as `pak::pkg_install`, `remotes::install_github`, and `versions::install_version`, plus the snapshotting capabilities of `renv`. It takes its name from the idea that a user could simply have one line named from the `require` function that would load a package, but in this case it will also install the package if necessary. Set it and forget it. This means that even if a user has a dependency that is removed from CRAN ("archived"), the line will still work. Because it can be done in one line, it becomes relatively easy to share, which facilitates, for example, making reprexes for debugging. This package can be a key part of a reproducible workflow.
+
+# Principles used in `Require`
+
+`Require` is designed with features that facilitate running R code that is part of a continuous reproducible workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. This is called "rerun-tolerance", i.e., the line can be rerun under identical conditions and very quickly return the original result. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
+
+## Key features
+
+Features include:
+
+1. Fast, parallel installs and downloads.
+2. Installs CRAN and CRAN-alike *even if they have been archived.*.
+3. Installs GitHub packages.
+4. User can specify which version to install using the standard R-version approach (e.g., `==3.5.0` or `>=3.5.0`).
+5. Local package **caching** and **cloning** (see below) for fast (re-)installs.
+6. Manages (some types of) conflicting package requests, i.e., different GitHub branches.
+7. `options`-level control of which packages should be installed from source (see `RequireOptions()`) even if they are being downloaded from a binary repository.
+8. Finds specific versions of packages from an incomplete CRAN-like repository (such as r-universe.dev), even when the *version* is not available, but it *is* available on the main CRAN mirrors.
+9. Handles some errors that are not handled by `install.packages` like "already in use".
+
+
+## How it works
+
+`Require` uses `install.packages` internally to install packages. However, it does not let `install.packages` download the packages. Rather, it identifies dependencies recursively, finds out where they are (CRAN, GitHub, Archives, Local), downloads them (or gets from local cache or clones from an specified package library). If `libcurl` is available (assessed via `capabilities("libcurl")`), it will download them in parallel from CRAN-like repositories. If `sys` is installed, it will download GitHub packages in parallel also. If a user has not set `options("Ncpus")` manually, then it will set that to a value up to 8 for parallel installs of binary and source packages.
+
+## Rerun-tolerance
+
+To be functionally reproducible, code must be regularly run and tested on many operating systems and computers. When this does not happen, a user/developer does not know that certain code chunks no longer work until they try to run it later. In other words, code gets stale because underlying algorithms and data change. To be rerun-tolerant, a function must: 
+
+1. return the same result or outcome every time it is run (first, second or more times later);
+2. be very fast after the first time; when it is not fast, users will skip running it "because we don't need to run it again and it is slow"
+
+`Require` does both of these. See below "why is it fast".
+
+## Why these features help teams 
+
+It is common during code development to work in teams, and to be updating package code. This is beneficial whether the team is very tight, all working on exactly the same project, or looser where they only share certain components across diverse projects.
+
+### All working on same project
+
+If the whole team is working on the same "whole" project, then it may be useful to use a "package snapshot" approach, as is used with the `renv` package. `Require` offers similar functionality with the function `pkgSnapshot()`. Using this approach provides a mechanism for each team member to update code, then snapshot the project, commit the snapshot and push to the cloud for the team to share. 
+
+### Diverse projects
+
+However, if a team is more diversified and they are actually sharing the new code, but not the whole project, then project snapshots will be very inefficient and package management must be on a package-by-package case, not the whole project. In other words, the code developer can work on their package, and the various team members will have 2 options of what they might want to do: keep at the bleeding edge or update only if necessary for dependencies. More likely, they will want to have a mixture of these strategies, i.e., bleeding edge with some code, but only if necessary with others. Thus, `Require` offers programmatic control for this. For example 
+
+```{r,eval=FALSE}
+library(Require)
+Require::Install(
+  c("PredictiveEcology/reproducible@development (HEAD)", 
+    "PredictiveEcology/SpaDES.core@development (>=2.0.5.9004)")) 
+```
+will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the inequality) for the development branch of `SpaDES.core`. The user does not have to make decisions at run time as to whether an update should be made, and for which packages.
+
+# How `Require` differs from other approaches
+
+### Default behaviours different
+
+**For packages that are not yet installed:**
+
+| Description                      |  Outcome                                   |
+| -------------------------------- | ------------------------------------------ |
+| `Install("data.table")`          | `data.table` installed                     |
+| `install.packages("data.table")` | `data.table` installed                     |
+| `pak::pkg_install("data.table")` | `data.table` installed                     |
+| `renv::install("data.table")`    | `data.table` installed                     |
+
+
+**For packages that are installed:**
+
+| Description                      |  Outcome                                   |
+| -------------------------------- | ------------------------------------------ |
+| `Install("data.table")`          | No installation                            |
+| `install.packages("data.table")` | `data.table` installed                     |
+| `pak::pkg_install("data.table")` | No installation                            |
+| `renv::install("data.table")`    | `data.table` installed                     |
+
+For packages that are already installed, but not latest on CRAN:
+
+| Description                      |  Outcome                                   |
+| -------------------------------- | ----------------------------------------------------------------- |
+| `Install("data.table")`          | No installation                                        |
+| `install.packages("data.table")` | `data.table` installed                                 |
+| `pak::pkg_install("data.table")` | `data.table` installed, asks user if wants to update if available |
+| `renv::install("data.table")`    | `data.table` installed, asks user if wants to update if available |
+
+
+### Differences and similarities between `pak` and `Require`
+
+This table is based on `Require v1.0.0` and `pak v0.7.2`.
+
+\* Indicates that there is an example below.
+
+| *Description*                      |  `Require`    |   `pak`                               |
+| -------------------------------- | :------------------------------: | :-----------------------------------: |
+| Parallel downloads   |   Yes    |   Yes    |
+| Parallel installs    |   Yes    |   Yes    |
+| Archived package*  (e.g., `"knn"`)     | Automatic         | Must prefix with `url::` and exact url path  | 
+| Archived package in dependency*  | Automatic         | May not work, even if manually adding `url::` or `any::` | 
+| Dependency conflicts*   | Yes   |  No (see example below using `any::`)  |  
+| Multiple requests of same package* | Resolves by version number specification, or most recent version | Error |
+| Control individual package updates | With `HEAD`   |   No   |
+| Very clean messaging   |   somewhat, with `options(Require.installPackagesSys = 1)`  | Yes    |  
+| Package dependencies     |  `data.table`, `sys`   |   None (though yes if user wants control, e.g., `pkgcache`) |
+| Uses local cache   |   Yes   |   Yes   |
+| Package updates (default)    | No, unless needed by version number | Yes, prompt user |     
+| Package install by version    | Yes | Yes, but does not deal well with multiple packages with specific versions |   
+| Package conflict (CRAN & GitHub)* | Prefers CRAN, if version requirements met  |  Error  |
+| Version specification by user | Yes e.g., `Require (>=1.0.0)` | Not an option |
+| Exact version specification by user | Uses `DESCRIPTION` file approach e.g., `Require (==1.0.0)` | Uses `@` e.g., `Require@1.0.0` |
+| Version conflicts | Require attempts to resolve them, detailing conflict | Reports "dependency conflict" without details |
+| Cache of package dependencies | Yes (internally in `Require::pkgDep`) | No (cache not used in `pak::pkg_dep`) |
+| `Additional_repositories` (in `DESCRIPTION` file of a package)| Uses   | Does not use (like `install.packages`) |
+| Cache of package binaries built locally from source | Yes  | No (`pak` version `0.7.2`) |
+
+
+
+### Archived packages
+
+Between mid March 2024 and April 5, 2024, `fastdigest` was taken off CRAN. If this is part of *your* direct dependencies, you can remove it and find an alternative. However, if it is an indirect dependency, you don't have that choice: your workflow will break. `Require` will just get the most recent archived copy and the work can continue. While `fastdigest` is back on CRAN, others are not, e.g., an older `knn` package:
+
+```{r,eval=FALSE,message=FALSE}
+Require::Install("knn")
+
+try(pak::pkg_install(c("knn")))
+```
+
+### Dependency conflict
+
+When doing code development, it is common to use many `GitHub` packages. Each of these (or their dependencies) may point to one or more branches, either directly by user or in `Remotes` field. In this next example, `pak` errors, while `Require` makes decisions and installs. This is a common occurrence for teams developing packages concurrently. The `pak` approach suggests prepending `any::` to the package(s) that is/are causing the conflict. This may suffice under some situations. The `Require` approach is to assume the equivalent of `any::` which means to prioritize base on (in this order) 1. use package version requirements, 2. CRAN-like repositories, 3. order.
+
+```{r, eval=FALSE,message=TRUE}
+library(Require)
+# Fails because of a) packages taken off CRAN & multiple GitHub branches requested within the nested dependencies
+pkgs <- c("reproducible", "PredictiveEcology/SpaDES@development")
+dirTmp <- tempdir2(sub = "first")
+.libPaths(dirTmp)
+install.packages("pak") # need this in the library; can't use personal library version
+try(pak::pkg_install(pkgs))
+# ✔ Loading metadata database ... done
+# Error : ! error in pak subprocess                                                      
+# Caused by error: 
+# ! Could not solve package dependencies:
+# * reproducible: dependency conflict
+# * PredictiveEcology/SpaDES@development: Can't install dependency PredictiveEcology/reproducible@development (>=  2.0.10)
+# * PredictiveEcology/reproducible@development: Conflicts with reproducible
+pkgsAny <- c("any::reproducible", "PredictiveEcology/SpaDES@development")
+try(pak::pkg_install(pkgsAny))
+
+# Fine
+dirTmp <- tempdir2(sub = "second")
+.libPaths(dirTmp)
+Require::Install(pkgs)
+```
+
+```{r, eval=FALSE,message=TRUE}
+# Fails
+try(pk <- pak::pak(c("PredictiveEcology/LandR@development", "PredictiveEcology/LandR@main")))
+# Error : ! error in pak subprocess                                                        
+# Caused by error: 
+# ! Could not solve package dependencies:
+# * PredictiveEcology/LandR@development: Conflicts with PredictiveEcology/LandR@main
+# * PredictiveEcology/LandR@main: Conflicts with PredictiveEcology/LandR@development
+
+# Fine -- takes in order, so main first in this example
+rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/LandR@development"))
+
+# Fine -- takes by version requirement, so takes development, 
+#    which is the only one that fulfills requirement on Jul 25, 2024
+rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/LandR@development (>=1.1.5)"))
+
+```
+
+The following does not work with `pak` because BioSIM, a dependency on GitHub is not found. This may be because the package name is not the repository name, but it is not clear from the error message why: 
+```{r,eval=FALSE,message=FALSE}
+try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
+ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+```
+
+
+
+### Version requirements determine package installation
+
+1. **Version number requirements** drive package updates. If a user does not need an update because version numbers are sufficient, no update will occur.
+
+2. If no version number specification, then installs only occur if package is not present.
+
+3. Multiple simultaneous requests to install a package from what appear to be incompatible sources, will not create a conflict unless version requirements cause the conflict. If version number requirements are not specified, CRAN versions will take precedence, and sequence of packages listed at installation will take preference otherwise.
+
+```{r,eval=FALSE}
+# The following has no version specifications, 
+#   so CRAN version will be installed or none installed if already installed
+Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
+
+# The following specifies "HEAD" after the Github package name. This means the 
+#   tip of the development branch of reproducible will be installed if not already installed
+Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
+
+# The following specifies "HEAD" after the package name. This means the 
+#   tip of the development branch of reproducible
+Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
+
+# Not a problem because version number specifies
+Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
+                   "PredictiveEcology/reproducible (>= 2.0.10)"))
+
+# Even if branch does not exist, if later version requirement specifies a different branch, no error
+Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
+                   "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
+```
+
+`Require` can handle package version specifications at the function call (`pak` can handle them if they are in a `DESCRIPTION` file, if they are `>=`), whereas `pak` cannot (currently).
+
+```{r,eval=FALSE}
+## FAILS - can't specify version requirements
+try(pak::pkg_install(
+    c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
+      "PredictiveEcology/reproducible (>= 2.0.10)")))
+```
+
+## Why is it fast?
+
+Some of the features make it fast the first time being used on a system, some make it fast the second & subsequent time on a system (which can be first time in a new project). These features are caching, cloning, and parallel downloads. 
+
+### Caching
+
+`Require` creates a local cache of several steps: the packages files (source or binary including locally built binaries); the package dependency tree (only in RAM currently, so only affects the same session); available package matrices for CRAN-like repositories. Together, these speed up the installation of packages on a computer that can access the local cache, e.g., for each new project. `Require` keeps the binary once the `source` package is built, and it can therefore install the binary each subsequent installation. This results in dramatically faster installations of source packages after they have been built locally.
+
+### Cloning (still experimental; do not default)
+
+`Require` has an option, `options("Require.cloneFrom")`, which, when set, will create a hard link between the current project's package library and the library pointed to by the option. Setting to e.g. `options("Require.cloneFrom" = Sys.getenv("R_LIBS_USER"))` will allow packages in the user's personal library to be the source of the "copying" to the project library. This is dramatically faster than installing, even when the installation is a local binary from the local cache.
+
+## Binary on Linux
+
+On Linux, users have the ability to install binary packages that are pre-built e.g., from the Posit Package Manager. Sometimes the binary is incompatible with a user's system, even though it is the correct operating system. This occurs generally for several packages, and thus they must be installed from source. `Require` has a function `sourcePkgs()`, which can be informed by `options("Require.spatialPkgs")` and `options("Require.otherPkgs")` that can be set by a user on a package-by-package basis. By default, some are automatically installed from `"source"` because in our experience, they tend to fail if installed from the binary.
+
+```{r,eval=FALSE}
+# In this example, it is `terra` that must be installed from source on Linux
+if (Require:::isLinux()) {
+  Require::setLinuxBinaryRepo()
+  pkgs <- c("terra", "PSPclean")
+  pkgFullName <- "ianmseddy/PSPclean@development"
+  try(remove.packages(pkgs))
+  pak::cache_delete() # make sure a locally built one is not present in the cache
+  try(pak::pkg_install(pkgFullName))
+  # ✔ Loading metadata database ... done                                       
+  #                                                                            
+  # → Will install 2 packages.
+  # → Will download 2 packages with unknown size.
+  # + PSPclean   0.1.4.9005 [bld][cmp][dl] (GitHub: fed9253)
+  # + terra      1.7-71     [dl] + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev
+  # ✔ All system requirements are already installed.
+  #   
+  # ℹ Getting 2 pkgs with unknown sizes
+  # ✔ Got PSPclean 0.1.4.9005 (source) (43.29 kB)                         
+  # ✔ Got terra 1.7-71 (x86_64-pc-linux-gnu-ubuntu-22.04) (4.24 MB)      
+  # ✔ Downloaded 2 packages (4.28 MB) in 2.9s                
+  # ✔ Installed terra 1.7-71  (61ms)                                   
+  # ℹ Packaging PSPclean 0.1.4.9005                                    
+  # ✔ Packaged PSPclean 0.1.4.9005 (420ms)                              
+  # ℹ Building PSPclean 0.1.4.9005                                      
+  # ✖ Failed to build PSPclean 0.1.4.9005 (3.7s)                        
+  # Error:                                                              
+  # ! error in pak subprocess
+  # Caused by error in `stop_task_build(state, worker)`:
+  # ! Failed to build source package PSPclean.
+  # Type .Last.error to see the more details.
+  
+  
+  # Works fine because the `sourcePkgs()`            
+  
+  try(remove.packages(pkgs)) # uninstall to make sure it is a clean install for this test
+  Require::cacheClearPackages(pkgs, ask = FALSE) # remove any existing local packages
+  Require::Install(pkgFullName)
+}
+```
+
+## Package dependencies
+
+### default arguments -- `pkgDep(..., which = XX)` includes `LinkingTo`
+
+`pkgDep`, by default, includes `LinkingTo` as these are required by `Rcpp` if that is required, and so are strictly necessary.
+`pak::pkg_deps` does not include `LinkingTo` by default.
+
+```{r,eval=FALSE}
+depPak <- pak::pkg_deps("PredictiveEcology/LandR@LandWeb") 
+depRequire <- Require::pkgDep("PredictiveEcology/LandR@LandWeb") # Slightly different default in Require
+
+# Same
+pakDepsClean <- setdiff(Require::extractPkgName(depPak$ref), Require:::.basePkgs)
+requireDepsClean <- setdiff(Require::extractPkgName(depRequire[[1]]), Require:::.basePkgs)
+setdiff(pakDepsClean, requireDepsClean)
+setdiff(requireDepsClean, pakDepsClean) # does not report "RcppArmadillo", "RcppEigen", "cpp11" which are LinkingTo
+
+```
+
+## CRAN-preference
+
+If there is no version specification, `Require` prefers CRAN packages when there are multiple pointers to a package.
+Thus, even though a package may have a `Remotes` field pointing to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfied with the `Remotes` option. Then `pkgDep` will take that.
+
+`pak::pkg_deps` prefers the top-level specification, i.e., the non-recursive `Remotes` field will be returned, even if the same package is also specified within a recursive dependency without a `Remotes` field, i.e, if a recursive dependency points the CRAN package, it will not return that version of the dependency.
+
+
+### `pak` fails for packages on GitHub that are not same name as Git Repo in Remotes
+
+```{r,eval=FALSE}
+gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE)
+# Error:                                                                                  
+# ! error in pak subprocess
+# Caused by error: 
+# ! Could not solve package dependencies:
+# * PredictiveEcology/LandR@development: Can't install dependency BioSIM
+# * BioSIM: Can't find package called BioSIM.
+# Type .Last.error to see the more details.
+ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+# $`PredictiveEcology/LandR@development`
+#  [1] "BH"                                                      "BIEN"                                            
+#  [3] "BioSIM"                                                  "DBI (>= 0.8)"                                 
+#  [5] "Deriv"                                                   "ENMeval"                                          
+#  ...
+```
+
+# `renv` and `Require`
+
+## Managing projects during development
+
+`renv` has a concept of a lockfile. This lockfile records a specific version of a package. If the current installed version of a package is different from the lockfile (e.g., I am the developer and I increment the local version), `renv` will attempt to revert the local changes (with prompt to confirm) *unless* the local package is installed from a cloud repository (e.g., GitHub), and a `snapshot` is taken. This sequence is largely incompatible with `pkgload::load_all()` or `devtools::install()`, as these do not record "where" to get the current version from. Thus, the `renv` sequence can be quite time consuming (1-2 minutes, instead of 1 second with `pkgload::load_all()`).
+
+`Require` does not attempt to update anything unless required by a package. Thus, this issue never comes up. If and when it is important to "snapshot", then `pkgSnapshot` or `pkgSnapshot2` can be used. 
+
+## Using `DESCRIPTION` file to maintain minimum versions
+
+During a project, a user can build and maintain and "project-level" DESCRIPTION file, which can be useful for a `renv` managed project. This approach does not, however, automatically detect minimum version changes or GitHub branch changes (`renv::status` does not recognize these). In order for a user to inherit the correct requirements, a manual [`renv::install` must be used](https://github.com/rstudio/renv/issues/233#issuecomment-1530134112). For even moderate sized projects, this can take over 20 seconds. 
+
+`Require` does not need a lockfile; package violations are found on the fly. 

@@ -41,8 +41,8 @@
 #' \dontrun{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
-#'   # install one archived version so that below does something interesting
 #'
+#'   # install one archived version so that below does something interesting
 #'   libForThisEx <- tempdir2("Example")
 #'   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
 #'   # Normal use -- using the libForThisEx for example;
@@ -55,7 +55,7 @@
 #'   # of packages with version
 #'   pkgs <- pkgSnapshot(
 #'     packageVersionFile = tf,
-#'     libPaths = libForThisEx
+#'     libPaths = libForThisEx, standAlone = TRUE # only this library
 #'   )
 #'
 #'   # Now move this file to another computer e.g. by committing in git,
@@ -64,15 +64,10 @@
 #'   Require(packageVersionFile = tf, libPaths = libForThisEx)
 #'
 #'   # Using pkgSnapshot2 to get the vector of packages and versions
-#'
-#'   tf <- tempfile()
 #'   pkgs <- pkgSnapshot2(
-#'     packageVersionFile = tf,
-#'     libPaths = libForThisEx
+#'     libPaths = libForThisEx, standAlone = TRUE
 #'   )
-#'   Require(pkgs, require = FALSE) # will install packages from previous line
-#'   # (likely want require = FALSE
-#'   #  and not load them all)
+#'   Install(pkgs) # will install packages from previous line
 #'
 #'   Require:::.cleanup(opts)
 #'   unlink(getOption("Require.packageVersionFile"))
@@ -88,10 +83,13 @@ pkgSnapshot <-
            exact = TRUE,
            includeBase = FALSE,
            verbose = getOption("Require.verbose")) {
-    libPaths <- checkLibPaths(libPaths = libPaths)
+    libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
     libPaths <- doLibPaths(libPaths, standAlone)
 
     ip <- doInstalledPackages(libPaths, purge, includeBase)
+    rv <- versionMajorMinor()
+    rv <- cbind(Package = "R", Version = rv)
+    ip <- rbind(rv, ip, fill = TRUE)
 
     fwrite(ip,
       file = packageVersionFile,
@@ -139,24 +137,68 @@ pkgSnapshot2 <-
   }
 
 
-doLibPaths <- function(libPaths, standAlone) {
+#' Only checks for deprecated libPath argument (singular)
+#' @inheritParams Require
+#' @param ... Checks for the incorrect argument `libPath` (no s)
+dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.standAlone", FALSE),
+                                    ...) {
+  missingLP <- missing(libPaths)
+  if (missingLP) {
+    if (!is.null(list(...)[["libPath"]])) {
+      libPaths <- list(...)[["libPath"]]
+    }
+  }
+  libPaths <- doLibPaths(libPaths, standAlone)
+  libPaths
+}
+
+#' Creates the directories, and adds version number
+#' @inheritParams Require
+#' @param ifMissing An alternative path if `libPaths` argument is missing.
+#' @param exact Logical. If `FALSE`, the default, then `checkLibPaths` will
+#'   append the R version number on the `libPaths` supplied. If `TRUE`, `checkLibPaths`
+#'   will return exactly the `libPaths` supplied.
+#' @param ... Not used, but allows other functions to pass through arguments.
+checkLibPaths <- function(libPaths, ifMissing, exact = FALSE, ...) {
+  missLP <- missing(libPaths)
+  if (missLP) {
+    if (missing(ifMissing)) {
+      return(.libPaths())
+    } else {
+      pathsToCheck <- ifMissing
+    }
+  } else {
+    pathsToCheck <- libPaths
+  }
+  unlist(lapply(pathsToCheck, function(lp) {
+    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)
+  }))
+}
+
+#' Deals with missing libPaths arg, and takes first
+#' @inheritParams Require
+#' @importFrom utils head tail
+doLibPaths <- function(libPaths, standAlone = FALSE) {
   if (missing(libPaths)) {
     libPaths <- .libPaths()
   }
-  if (isTRUE(standAlone)) {
-    libPaths <- libPaths[1]
+  if (standAlone) {
+    libPaths <- c(head(libPaths, 1), tail(.libPaths(), 1))
+  } else {
+    libPaths <- unique(c(head(libPaths, 1), .libPaths()))
   }
+
+  # if (isTRUE(standAlone)) {
+  #   libPaths <- libPaths[1]
+  # }
   libPaths
 }
 
 doInstalledPackages <- function(libPaths, purge, includeBase) {
   ip <-
     as.data.table(
-      .installed.pkgs(
-        lib.loc = libPaths,
-        which = character(),
-        other = "GitHubSha",
-        purge = purge
+      .installed.pkgs(lib.loc = libPaths, which = c("Depends", "Imports", "LinkingTo", "Remotes"),
+        other = c("GitHubSha", "Repository", "GitSubFolder"), purge = purge
       )
     )
   if (isFALSE(includeBase)) {

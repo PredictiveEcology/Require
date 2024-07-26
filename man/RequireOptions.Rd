@@ -30,13 +30,13 @@ The following options are likely of interest to most users: \describe{
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
 but does not affect \code{Install}. If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error. }
-\item{\code{RPackageCache}}{ Default: \code{getOptionRPackageCache()}, which must be
+\item{\code{RPackageCache}}{ Default: \code{cacheGetOptionCachePkgDir()}, which must be
 either a path or a logical. To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment variable e.g.
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")}; if that is not set, then an
-either a path or logical option (\code{options(Require.RPackageCache = "somePath")} or \code{options(Require.RPackageCache = TRUE)}). If \code{TRUE}, the
-default folder location \code{RequirePkgCacheDir()} will be used. If this is
+either a path or logical option (\code{options(Require.cachePkgDir = "somePath")} or \code{options(Require.cachePkgDir = TRUE)}). If \code{TRUE}, the
+default folder location \code{cachePkgDir()} will be used. If this is
 \code{TRUE} or a path is provided, then binary and source packages will be cached
 here. Subsequent downloads of same package will use local copy. Default is to
 have packages not be cached locally so each install of the same version will

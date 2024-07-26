@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Eliot McIntire" />
+
+
+<title>The Require approach, comparing pak and renv</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">The <code>Require</code> approach,
+comparing <code>pak</code> and <code>renv</code></h1>
+<h4 class="author">Eliot McIntire</h4>
+
+
+
+<p><code>Require</code> is a single package that combines features of
+<code>base::install.packages</code>, <code>base::library</code>,
+<code>base::require</code>, as well as <code>pak::pkg_install</code>,
+<code>remotes::install_github</code>, and
+<code>versions::install_version</code>, plus the snapshotting
+capabilities of <code>renv</code>. It takes its name from the idea that
+a user could simply have one line named from the <code>require</code>
+function that would load a package, but in this case it will also
+install the package if necessary. Set it and forget it. This means that
+even if a user has a dependency that is removed from CRAN (“archived”),
+the line will still work. Because it can be done in one line, it becomes
+relatively easy to share, which facilitates, for example, making
+reprexes for debugging. This package can be a key part of a reproducible
+workflow.</p>
+<div id="principles-used-in-require" class="section level1">
+<h1>Principles used in <code>Require</code></h1>
+<p><code>Require</code> is designed with features that facilitate
+running R code that is part of a continuous reproducible workflow, from
+data-to-decisions. For this to work, all functions called by a user
+should have a property whereby the initial time they are called does the
+heavy work, and the subsequent times are sufficiently fast that the user
+is not forced to skip over lines of code when re-running code. This is
+called “rerun-tolerance”, i.e., the line can be rerun under identical
+conditions and very quickly return the original result. The package,
+<code>reproducible</code>, has a function <code>Cache</code> which can
+convert many function calls to have this property. It does not work well
+for functions whose objectives are side-effects, like installing and
+loading packages. <code>Require</code> fills this gap.</p>
+<div id="key-features" class="section level2">
+<h2>Key features</h2>
+<p>Features include:</p>
+<ol style="list-style-type: decimal">
+<li>Fast, parallel installs and downloads.</li>
+<li>Installs CRAN and CRAN-alike <em>even if they have been
+archived.</em>.</li>
+<li>Installs GitHub packages.</li>
+<li>User can specify which version to install using the standard
+R-version approach (e.g., <code>==3.5.0</code> or
+<code>&gt;=3.5.0</code>).</li>
+<li>Local package <strong>caching</strong> and <strong>cloning</strong>
+(see below) for fast (re-)installs.</li>
+<li>Manages (some types of) conflicting package requests, i.e.,
+different GitHub branches.</li>
+<li><code>options</code>-level control of which packages should be
+installed from source (see <code>RequireOptions()</code>) even if they
+are being downloaded from a binary repository.</li>
+<li>Finds specific versions of packages from an incomplete CRAN-like
+repository (such as r-universe.dev), even when the <em>version</em> is
+not available, but it <em>is</em> available on the main CRAN
+mirrors.</li>
+<li>Handles some errors that are not handled by
+<code>install.packages</code> like “already in use”.</li>
+</ol>
+</div>
+<div id="how-it-works" class="section level2">
+<h2>How it works</h2>
+<p><code>Require</code> uses <code>install.packages</code> internally to
+install packages. However, it does not let <code>install.packages</code>
+download the packages. Rather, it identifies dependencies recursively,
+finds out where they are (CRAN, GitHub, Archives, Local), downloads them
+(or gets from local cache or clones from an specified package library).
+If <code>libcurl</code> is available (assessed via
+<code>capabilities(&quot;libcurl&quot;)</code>), it will download them in parallel
+from CRAN-like repositories. If <code>sys</code> is installed, it will
+download GitHub packages in parallel also. If a user has not set
+<code>options(&quot;Ncpus&quot;)</code> manually, then it will set that to a value
+up to 8 for parallel installs of binary and source packages.</p>
+</div>
+<div id="rerun-tolerance" class="section level2">
+<h2>Rerun-tolerance</h2>
+<p>To be functionally reproducible, code must be regularly run and
+tested on many operating systems and computers. When this does not
+happen, a user/developer does not know that certain code chunks no
+longer work until they try to run it later. In other words, code gets
+stale because underlying algorithms and data change. To be
+rerun-tolerant, a function must:</p>
+<ol style="list-style-type: decimal">
+<li>return the same result or outcome every time it is run (first,
+second or more times later);</li>
+<li>be very fast after the first time; when it is not fast, users will
+skip running it “because we don’t need to run it again and it is
+slow”</li>
+</ol>
+<p><code>Require</code> does both of these. See below “why is it
+fast”.</p>
+</div>
+<div id="why-these-features-help-teams" class="section level2">
+<h2>Why these features help teams</h2>
+<p>It is common during code development to work in teams, and to be
+updating package code. This is beneficial whether the team is very
+tight, all working on exactly the same project, or looser where they
+only share certain components across diverse projects.</p>
+<div id="all-working-on-same-project" class="section level3">
+<h3>All working on same project</h3>
+<p>If the whole team is working on the same “whole” project, then it may
+be useful to use a “package snapshot” approach, as is used with the
+<code>renv</code> package. <code>Require</code> offers similar
+functionality with the function <code>pkgSnapshot()</code>. Using this
+approach provides a mechanism for each team member to update code, then
+snapshot the project, commit the snapshot and push to the cloud for the
+team to share.</p>
+</div>
+<div id="diverse-projects" class="section level3">
+<h3>Diverse projects</h3>
+<p>However, if a team is more diversified and they are actually sharing
+the new code, but not the whole project, then project snapshots will be
+very inefficient and package management must be on a package-by-package
+case, not the whole project. In other words, the code developer can work
+on their package, and the various team members will have 2 options of
+what they might want to do: keep at the bleeding edge or update only if
+necessary for dependencies. More likely, they will want to have a
+mixture of these strategies, i.e., bleeding edge with some code, but
+only if necessary with others. Thus, <code>Require</code> offers
+programmatic control for this. For example</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(Require)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>, </span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>    <span class="st">&quot;PredictiveEcology/SpaDES.core@development (&gt;=2.0.5.9004)&quot;</span>)) </span></code></pre></div>
+<p>will keep the project at the bleeding edge of the development branch
+of <code>reproducible</code>, but will only update if necessary (based
+on the version needed, expressed by the inequality) for the development
+branch of <code>SpaDES.core</code>. The user does not have to make
+decisions at run time as to whether an update should be made, and for
+which packages.</p>
+</div>
+</div>
+</div>
+<div id="how-require-differs-from-other-approaches" class="section level1">
+<h1>How <code>Require</code> differs from other approaches</h1>
+<div id="default-behaviours-different" class="section level3">
+<h3>Default behaviours different</h3>
+<p><strong>For packages that are not yet installed:</strong></p>
+<table>
+<colgroup>
+<col width="43%" />
+<col width="56%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Description</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Install(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+<tr class="even">
+<td><code>install.packages(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+<tr class="odd">
+<td><code>pak::pkg_install(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+<tr class="even">
+<td><code>renv::install(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+</tbody>
+</table>
+<p><strong>For packages that are installed:</strong></p>
+<table>
+<colgroup>
+<col width="43%" />
+<col width="56%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Description</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Install(&quot;data.table&quot;)</code></td>
+<td>No installation</td>
+</tr>
+<tr class="even">
+<td><code>install.packages(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+<tr class="odd">
+<td><code>pak::pkg_install(&quot;data.table&quot;)</code></td>
+<td>No installation</td>
+</tr>
+<tr class="even">
+<td><code>renv::install(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+</tbody>
+</table>
+<p>For packages that are already installed, but not latest on CRAN:</p>
+<table>
+<colgroup>
+<col width="32%" />
+<col width="67%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Description</th>
+<th>Outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Install(&quot;data.table&quot;)</code></td>
+<td>No installation</td>
+</tr>
+<tr class="even">
+<td><code>install.packages(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed</td>
+</tr>
+<tr class="odd">
+<td><code>pak::pkg_install(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed, asks user if wants to update if
+available</td>
+</tr>
+<tr class="even">
+<td><code>renv::install(&quot;data.table&quot;)</code></td>
+<td><code>data.table</code> installed, asks user if wants to update if
+available</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="differences-and-similarities-between-pak-and-require" class="section level3">
+<h3>Differences and similarities between <code>pak</code> and
+<code>Require</code></h3>
+<p>This table is based on <code>Require v1.0.0</code> and
+<code>pak v0.7.2</code>.</p>
+<p>* Indicates that there is an example below.</p>
+<table>
+<colgroup>
+<col width="31%" />
+<col width="31%" />
+<col width="36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th><em>Description</em></th>
+<th align="center"><code>Require</code></th>
+<th align="center"><code>pak</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Parallel downloads</td>
+<td align="center">Yes</td>
+<td align="center">Yes</td>
+</tr>
+<tr class="even">
+<td>Parallel installs</td>
+<td align="center">Yes</td>
+<td align="center">Yes</td>
+</tr>
+<tr class="odd">
+<td>Archived package* (e.g., <code>&quot;knn&quot;</code>)</td>
+<td align="center">Automatic</td>
+<td align="center">Must prefix with <code>url::</code> and exact url
+path</td>
+</tr>
+<tr class="even">
+<td>Archived package in dependency*</td>
+<td align="center">Automatic</td>
+<td align="center">May not work, even if manually adding
+<code>url::</code> or <code>any::</code></td>
+</tr>
+<tr class="odd">
+<td>Dependency conflicts*</td>
+<td align="center">Yes</td>
+<td align="center">No (see example below using <code>any::</code>)</td>
+</tr>
+<tr class="even">
+<td>Multiple requests of same package*</td>
+<td align="center">Resolves by version number specification, or most
+recent version</td>
+<td align="center">Error</td>
+</tr>
+<tr class="odd">
+<td>Control individual package updates</td>
+<td align="center">With <code>HEAD</code></td>
+<td align="center">No</td>
+</tr>
+<tr class="even">
+<td>Very clean messaging</td>
+<td align="center">somewhat, with
+<code>options(Require.installPackagesSys = 1)</code></td>
+<td align="center">Yes</td>
+</tr>
+<tr class="odd">
+<td>Package dependencies</td>
+<td align="center"><code>data.table</code>, <code>sys</code></td>
+<td align="center">None (though yes if user wants control, e.g.,
+<code>pkgcache</code>)</td>
+</tr>
+<tr class="even">
+<td>Uses local cache</td>
+<td align="center">Yes</td>
+<td align="center">Yes</td>
+</tr>
+<tr class="odd">
+<td>Package updates (default)</td>
+<td align="center">No, unless needed by version number</td>
+<td align="center">Yes, prompt user</td>
+</tr>
+<tr class="even">
+<td>Package install by version</td>
+<td align="center">Yes</td>
+<td align="center">Yes, but does not deal well with multiple packages
+with specific versions</td>
+</tr>
+<tr class="odd">
+<td>Package conflict (CRAN &amp; GitHub)*</td>
+<td align="center">Prefers CRAN, if version requirements met</td>
+<td align="center">Error</td>
+</tr>
+<tr class="even">
+<td>Version specification by user</td>
+<td align="center">Yes e.g., <code>Require (&gt;=1.0.0)</code></td>
+<td align="center">Not an option</td>
+</tr>
+<tr class="odd">
+<td>Exact version specification by user</td>
+<td align="center">Uses <code>DESCRIPTION</code> file approach e.g.,
+<code>Require (==1.0.0)</code></td>
+<td align="center">Uses <code>@</code> e.g.,
+<code>Require@1.0.0</code></td>
+</tr>
+<tr class="even">
+<td>Version conflicts</td>
+<td align="center">Require attempts to resolve them, detailing
+conflict</td>
+<td align="center">Reports “dependency conflict” without details</td>
+</tr>
+<tr class="odd">
+<td>Cache of package dependencies</td>
+<td align="center">Yes (internally in <code>Require::pkgDep</code>)</td>
+<td align="center">No (cache not used in <code>pak::pkg_dep</code>)</td>
+</tr>
+<tr class="even">
+<td><code>Additional_repositories</code> (in <code>DESCRIPTION</code>
+file of a package)</td>
+<td align="center">Uses</td>
+<td align="center">Does not use (like
+<code>install.packages</code>)</td>
+</tr>
+<tr class="odd">
+<td>Cache of package binaries built locally from source</td>
+<td align="center">Yes</td>
+<td align="center">No (<code>pak</code> version <code>0.7.2</code>)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="archived-packages" class="section level3">
+<h3>Archived packages</h3>
+<p>Between mid March 2024 and April 5, 2024, <code>fastdigest</code> was
+taken off CRAN. If this is part of <em>your</em> direct dependencies,
+you can remove it and find an alternative. However, if it is an indirect
+dependency, you don’t have that choice: your workflow will break.
+<code>Require</code> will just get the most recent archived copy and the
+work can continue. While <code>fastdigest</code> is back on CRAN, others
+are not, e.g., an older <code>knn</code> package:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="st">&quot;knn&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="fu">c</span>(<span class="st">&quot;knn&quot;</span>)))</span></code></pre></div>
+</div>
+<div id="dependency-conflict" class="section level3">
+<h3>Dependency conflict</h3>
+<p>When doing code development, it is common to use many
+<code>GitHub</code> packages. Each of these (or their dependencies) may
+point to one or more branches, either directly by user or in
+<code>Remotes</code> field. In this next example, <code>pak</code>
+errors, while <code>Require</code> makes decisions and installs. This is
+a common occurrence for teams developing packages concurrently. The
+<code>pak</code> approach suggests prepending <code>any::</code> to the
+package(s) that is/are causing the conflict. This may suffice under some
+situations. The <code>Require</code> approach is to assume the
+equivalent of <code>any::</code> which means to prioritize base on (in
+this order) 1. use package version requirements, 2. CRAN-like
+repositories, 3. order.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(Require)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># Fails because of a) packages taken off CRAN &amp; multiple GitHub branches requested within the nested dependencies</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>pkgs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;reproducible&quot;</span>, <span class="st">&quot;PredictiveEcology/SpaDES@development&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>dirTmp <span class="ot">&lt;-</span> <span class="fu">tempdir2</span>(<span class="at">sub =</span> <span class="st">&quot;first&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">.libPaths</span>(dirTmp)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">&quot;pak&quot;</span>) <span class="co"># need this in the library; can&#39;t use personal library version</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(pkgs))</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># ✔ Loading metadata database ... done</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co"># Error : ! error in pak subprocess                                                      </span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># Caused by error: </span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co"># ! Could not solve package dependencies:</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co"># * reproducible: dependency conflict</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># * PredictiveEcology/SpaDES@development: Can&#39;t install dependency PredictiveEcology/reproducible@development (&gt;=  2.0.10)</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co"># * PredictiveEcology/reproducible@development: Conflicts with reproducible</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>pkgsAny <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;any::reproducible&quot;</span>, <span class="st">&quot;PredictiveEcology/SpaDES@development&quot;</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(pkgsAny))</span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co"># Fine</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>dirTmp <span class="ot">&lt;-</span> <span class="fu">tempdir2</span>(<span class="at">sub =</span> <span class="st">&quot;second&quot;</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="fu">.libPaths</span>(dirTmp)</span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(pkgs)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Fails</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="fu">try</span>(pk <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pak</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>)))</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co"># Error : ! error in pak subprocess                                                        </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co"># Caused by error: </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co"># ! Could not solve package dependencies:</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co"># * PredictiveEcology/LandR@development: Conflicts with PredictiveEcology/LandR@main</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co"># * PredictiveEcology/LandR@main: Conflicts with PredictiveEcology/LandR@development</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co"># Fine -- takes in order, so main first in this example</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>rq <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>, <span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>))</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co"># Fine -- takes by version requirement, so takes development, </span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#    which is the only one that fulfills requirement on Jul 25, 2024</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>rq <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>, <span class="st">&quot;PredictiveEcology/LandR@development (&gt;=1.1.5)&quot;</span>))</span></code></pre></div>
+<p>The following does not work with <code>pak</code> because BioSIM, a
+dependency on GitHub is not found. This may be because the package name
+is not the repository name, but it is not clear from the error message
+why:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">try</span>(gg <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>ff <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+</div>
+<div id="version-requirements-determine-package-installation" class="section level3">
+<h3>Version requirements determine package installation</h3>
+<ol style="list-style-type: decimal">
+<li><p><strong>Version number requirements</strong> drive package
+updates. If a user does not need an update because version numbers are
+sufficient, no update will occur.</p></li>
+<li><p>If no version number specification, then installs only occur if
+package is not present.</p></li>
+<li><p>Multiple simultaneous requests to install a package from what
+appear to be incompatible sources, will not create a conflict unless
+version requirements cause the conflict. If version number requirements
+are not specified, CRAN versions will take precedence, and sequence of
+packages listed at installation will take preference otherwise.</p></li>
+</ol>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># The following has no version specifications, </span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#   so CRAN version will be installed or none installed if already installed</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co"># The following specifies &quot;HEAD&quot; after the Github package name. This means the </span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#   tip of the development branch of reproducible will be installed if not already installed</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co"># The following specifies &quot;HEAD&quot; after the package name. This means the </span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#   tip of the development branch of reproducible</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible (HEAD)&quot;</span>))</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co"># Not a problem because version number specifies</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>))</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co"># Even if branch does not exist, if later version requirement specifies a different branch, no error</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible@validityTest (&gt;= 2.0.9)&quot;</span>))</span></code></pre></div>
+<p><code>Require</code> can handle package version specifications at the
+function call (<code>pak</code> can handle them if they are in a
+<code>DESCRIPTION</code> file, if they are <code>&gt;=</code>), whereas
+<code>pak</code> cannot (currently).</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="do">## FAILS - can&#39;t specify version requirements</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>      <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>)))</span></code></pre></div>
+</div>
+<div id="why-is-it-fast" class="section level2">
+<h2>Why is it fast?</h2>
+<p>Some of the features make it fast the first time being used on a
+system, some make it fast the second &amp; subsequent time on a system
+(which can be first time in a new project). These features are caching,
+cloning, and parallel downloads.</p>
+<div id="caching" class="section level3">
+<h3>Caching</h3>
+<p><code>Require</code> creates a local cache of several steps: the
+packages files (source or binary including locally built binaries); the
+package dependency tree (only in RAM currently, so only affects the same
+session); available package matrices for CRAN-like repositories.
+Together, these speed up the installation of packages on a computer that
+can access the local cache, e.g., for each new project.
+<code>Require</code> keeps the binary once the <code>source</code>
+package is built, and it can therefore install the binary each
+subsequent installation. This results in dramatically faster
+installations of source packages after they have been built locally.</p>
+</div>
+<div id="cloning-still-experimental-do-not-default" class="section level3">
+<h3>Cloning (still experimental; do not default)</h3>
+<p><code>Require</code> has an option,
+<code>options(&quot;Require.cloneFrom&quot;)</code>, which, when set, will create
+a hard link between the current project’s package library and the
+library pointed to by the option. Setting to
+e.g. <code>options(&quot;Require.cloneFrom&quot; = Sys.getenv(&quot;R_LIBS_USER&quot;))</code>
+will allow packages in the user’s personal library to be the source of
+the “copying” to the project library. This is dramatically faster than
+installing, even when the installation is a local binary from the local
+cache.</p>
+</div>
+</div>
+<div id="binary-on-linux" class="section level2">
+<h2>Binary on Linux</h2>
+<p>On Linux, users have the ability to install binary packages that are
+pre-built e.g., from the Posit Package Manager. Sometimes the binary is
+incompatible with a user’s system, even though it is the correct
+operating system. This occurs generally for several packages, and thus
+they must be installed from source. <code>Require</code> has a function
+<code>sourcePkgs()</code>, which can be informed by
+<code>options(&quot;Require.spatialPkgs&quot;)</code> and
+<code>options(&quot;Require.otherPkgs&quot;)</code> that can be set by a user on a
+package-by-package basis. By default, some are automatically installed
+from <code>&quot;source&quot;</code> because in our experience, they tend to fail
+if installed from the binary.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># In this example, it is `terra` that must be installed from source on Linux</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="cf">if</span> (Require<span class="sc">:::</span><span class="fu">isLinux</span>()) {</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">setLinuxBinaryRepo</span>()</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  pkgs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;terra&quot;</span>, <span class="st">&quot;PSPclean&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  pkgFullName <span class="ot">&lt;-</span> <span class="st">&quot;ianmseddy/PSPclean@development&quot;</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">remove.packages</span>(pkgs))</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  pak<span class="sc">::</span><span class="fu">cache_delete</span>() <span class="co"># make sure a locally built one is not present in the cache</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(pkgFullName))</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="co"># ✔ Loading metadata database ... done                                       </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="co">#                                                                            </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  <span class="co"># → Will install 2 packages.</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="co"># → Will download 2 packages with unknown size.</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  <span class="co"># + PSPclean   0.1.4.9005 [bld][cmp][dl] (GitHub: fed9253)</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  <span class="co"># + terra      1.7-71     [dl] + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  <span class="co"># ✔ All system requirements are already installed.</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="co">#   </span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="co"># ℹ Getting 2 pkgs with unknown sizes</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  <span class="co"># ✔ Got PSPclean 0.1.4.9005 (source) (43.29 kB)                         </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>  <span class="co"># ✔ Got terra 1.7-71 (x86_64-pc-linux-gnu-ubuntu-22.04) (4.24 MB)      </span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>  <span class="co"># ✔ Downloaded 2 packages (4.28 MB) in 2.9s                </span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  <span class="co"># ✔ Installed terra 1.7-71  (61ms)                                   </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>  <span class="co"># ℹ Packaging PSPclean 0.1.4.9005                                    </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>  <span class="co"># ✔ Packaged PSPclean 0.1.4.9005 (420ms)                              </span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>  <span class="co"># ℹ Building PSPclean 0.1.4.9005                                      </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>  <span class="co"># ✖ Failed to build PSPclean 0.1.4.9005 (3.7s)                        </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>  <span class="co"># Error:                                                              </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>  <span class="co"># ! error in pak subprocess</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a>  <span class="co"># Caused by error in `stop_task_build(state, worker)`:</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a>  <span class="co"># ! Failed to build source package PSPclean.</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a>  <span class="co"># Type .Last.error to see the more details.</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a>  </span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a>  </span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a>  <span class="co"># Works fine because the `sourcePkgs()`            </span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a>  </span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">remove.packages</span>(pkgs)) <span class="co"># uninstall to make sure it is a clean install for this test</span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">cacheClearPackages</span>(pkgs, <span class="at">ask =</span> <span class="cn">FALSE</span>) <span class="co"># remove any existing local packages</span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">Install</span>(pkgFullName)</span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="package-dependencies" class="section level2">
+<h2>Package dependencies</h2>
+<div id="default-arguments-pkgdep...-which-xx-includes-linkingto" class="section level3">
+<h3>default arguments – <code>pkgDep(..., which = XX)</code> includes
+<code>LinkingTo</code></h3>
+<p><code>pkgDep</code>, by default, includes <code>LinkingTo</code> as
+these are required by <code>Rcpp</code> if that is required, and so are
+strictly necessary. <code>pak::pkg_deps</code> does not include
+<code>LinkingTo</code> by default.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>depPak <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@LandWeb&quot;</span>) </span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>depRequire <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@LandWeb&quot;</span>) <span class="co"># Slightly different default in Require</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># Same</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>pakDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depPak<span class="sc">$</span>ref), Require<span class="sc">:::</span>.basePkgs)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>requireDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depRequire[[<span class="dv">1</span>]]), Require<span class="sc">:::</span>.basePkgs)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">setdiff</span>(pakDepsClean, requireDepsClean)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">setdiff</span>(requireDepsClean, pakDepsClean) <span class="co"># does not report &quot;RcppArmadillo&quot;, &quot;RcppEigen&quot;, &quot;cpp11&quot; which are LinkingTo</span></span></code></pre></div>
+</div>
+</div>
+<div id="cran-preference" class="section level2">
+<h2>CRAN-preference</h2>
+<p>If there is no version specification, <code>Require</code> prefers
+CRAN packages when there are multiple pointers to a package. Thus, even
+though a package may have a <code>Remotes</code> field pointing to e.g.,
+<code>PredictiveEcology/SpaDES.tools@development</code>, if there is a
+recursive dependency within that package that specifies
+<code>SpaDES.tools</code> without a <code>Remotes</code> field, then
+<code>pkgDep</code> will return the <code>CRAN</code> version. If a user
+wants to override this behaviour, then the user can specify a version
+requirement that can only be satisfied with the <code>Remotes</code>
+option. Then <code>pkgDep</code> will take that.</p>
+<p><code>pak::pkg_deps</code> prefers the top-level specification, i.e.,
+the non-recursive <code>Remotes</code> field will be returned, even if
+the same package is also specified within a recursive dependency without
+a <code>Remotes</code> field, i.e, if a recursive dependency points the
+CRAN package, it will not return that version of the dependency.</p>
+<div id="pak-fails-for-packages-on-github-that-are-not-same-name-as-git-repo-in-remotes" class="section level3">
+<h3><code>pak</code> fails for packages on GitHub that are not same name
+as Git Repo in Remotes</h3>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>gg <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co"># Error:                                                                                  </span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co"># ! error in pak subprocess</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co"># Caused by error: </span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co"># ! Could not solve package dependencies:</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co"># * PredictiveEcology/LandR@development: Can&#39;t install dependency BioSIM</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co"># * BioSIM: Can&#39;t find package called BioSIM.</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co"># Type .Last.error to see the more details.</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>ff <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co"># $`PredictiveEcology/LandR@development`</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#  [1] &quot;BH&quot;                                                      &quot;BIEN&quot;                                            </span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#  [3] &quot;BioSIM&quot;                                                  &quot;DBI (&gt;= 0.8)&quot;                                 </span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#  [5] &quot;Deriv&quot;                                                   &quot;ENMeval&quot;                                          </span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#  ...</span></span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="renv-and-require" class="section level1">
+<h1><code>renv</code> and <code>Require</code></h1>
+<div id="managing-projects-during-development" class="section level2">
+<h2>Managing projects during development</h2>
+<p><code>renv</code> has a concept of a lockfile. This lockfile records
+a specific version of a package. If the current installed version of a
+package is different from the lockfile (e.g., I am the developer and I
+increment the local version), <code>renv</code> will attempt to revert
+the local changes (with prompt to confirm) <em>unless</em> the local
+package is installed from a cloud repository (e.g., GitHub), and a
+<code>snapshot</code> is taken. This sequence is largely incompatible
+with <code>pkgload::load_all()</code> or
+<code>devtools::install()</code>, as these do not record “where” to get
+the current version from. Thus, the <code>renv</code> sequence can be
+quite time consuming (1-2 minutes, instead of 1 second with
+<code>pkgload::load_all()</code>).</p>
+<p><code>Require</code> does not attempt to update anything unless
+required by a package. Thus, this issue never comes up. If and when it
+is important to “snapshot”, then <code>pkgSnapshot</code> or
+<code>pkgSnapshot2</code> can be used.</p>
+</div>
+<div id="using-description-file-to-maintain-minimum-versions" class="section level2">
+<h2>Using <code>DESCRIPTION</code> file to maintain minimum
+versions</h2>
+<p>During a project, a user can build and maintain and “project-level”
+DESCRIPTION file, which can be useful for a <code>renv</code> managed
+project. This approach does not, however, automatically detect minimum
+version changes or GitHub branch changes (<code>renv::status</code> does
+not recognize these). In order for a user to inherit the correct
+requirements, a manual <a href="https://github.com/rstudio/renv/issues/233#issuecomment-1530134112"><code>renv::install</code>
+must be used</a>. For even moderate sized projects, this can take over
+20 seconds.</p>
+<p><code>Require</code> does not need a lockfile; package violations are
+found on the fly.</p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
