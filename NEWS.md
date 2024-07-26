@@ -9,19 +9,28 @@ version 1.0.0
 * All testing has been converted from using `testit` to using `testthat`. This change adds many dependencies to `Suggests`, but the benefits, e.g., using `withr` to control loading and unloading of options, packages etc., outweigh the drawbacks.
 
 ## enhancements
-* If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87).
-* `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string.
-* Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it doesn't find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually
-* `verbose` now propagates better through all internal functions, so e.g., `verbose = -2` will make installing very silent
-* Better automatic cleaning of Cached packages that are corrupt.
+* `packages` argument for `Require` and `Install` can now be unquoted names length == 1 or if length > 1 using `c()` or `list()`, in addition to a character string, e.g., `Install(ggplot2)`;
+* Now, if a `GitHub.com` package has a field `Additional_repositories` in the DESCRIPTION file, `Require` will search there for packages that it doesn't find in the `repos` argument. This does not affect `CRAN` packages, as this information is not contained within the `available.packages()` data base, which is what is used to identify dependencies, rather than reading each `DESCRIPTION` file individually;
+* `verbose` now propagates better through all internal functions, so e.g., `verbose = -2` will make installing very silent;
+* Better automatic cleaning of Cached packages that are corrupt;
+* experimental use of `pak` as the backend installer of packages instead of `install.packages`. A user can attempt to use this backend with `options(Require.usePak = TRUE)`. There are a number of cases (specifically when needing exact versions) that do not work; but for "normal" package installations it is widely tested. `pak` backend tends to be similar speed for first installations, but much slower for subsequent calls to `Install`/`Require`;
+* Better recovery from installation failures e.g., if the local cached copy is corrupt, it will be automatically cleaned;
+* `Require.Rmd` vignette for "Getting Started" is new;
+* many speed enhancements in cases where e.g., a download is not necessary;
+* when downloads from `GitHub.com` are done, `Require` now uses `gitcreds` to get `git` credentials and `httr` to download the files with the token;
 
 ## Function name changes
 
-* all functions related to `cache` now start with `cache`, e.g., `cacheClearPackages` replaces `clearRequirePackageCache`. Previous names are kept for backwards compabitility.
+* all functions related to `cache` now start with `cache`, e.g., `cacheClearPackages` replaces `clearRequirePackageCache`. Previous names are kept for backwards compatibility.
 
 ## bugfixes
-* Warning occurred if a package was no longer on CRAN and user had supplied multiple `repos` or `getOption('repos')`. The result was unaffected by the warning, but warning is now removed.
-* allow user-specified path in `pkgSnapshot()` (#93)
+* If a GitHub packages was attempted to be installed, but failed because the package was already loaded in the session, `Require` would incorrectly think it had successfully installed (#87);
+* Warning occurred if a package was no longer on CRAN and user had supplied multiple `repos` or `getOption('repos')`. The result was unaffected by the warning, but warning is now removed;
+* allow user-specified path in `pkgSnapshot()` (#93);
+* a number of new cases have been added to `tests` that previously would have hit errors;
+* many other small bugs fixed;
+* Some issues specific to MacOS have been fixed.
+* fixes or implemented other issues #91, #96, #97, #102, #105
 
 version 0.3.1
 =============
