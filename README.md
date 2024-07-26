@@ -207,8 +207,6 @@ No packages to install/update
    0.05    0.02    0.06 
 ```
 
-See also [The `Require` approach, comparing `pak` and `renv`](articles/Require.html)
-
 ## Other features
 
 ### Keeping it all isolated
