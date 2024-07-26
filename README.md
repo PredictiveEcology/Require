@@ -112,7 +112,7 @@ Require("reproducible (==1.2.10)") # which was the version on that date
 * can use both binary or source installs; yet overrides a user request where this is likely inappropriate, e.g., `Rcpp` often fails when installed on Linux from a binary package manager. Spatial packages are similar. 
 * uses a local cache of packages (defaults outside the project, but inside the user's home) so multiple projects can install packages quickly without re-downloading from the cloud repositories (see `RequireOptions()$Require.cachePkgDir`)
 * puts all package installing into a compact form, so it can be placed within the project source code, enhancing reproducibility and transparency
-* by default, runs `require` on every package, in order, as supplied to `packages` argument
+* If using the function `Require::Require`, runs `require` on every package, in order, as supplied to `packages` argument
 
 
 # Installing

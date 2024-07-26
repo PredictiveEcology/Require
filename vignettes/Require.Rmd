@@ -14,7 +14,7 @@ editor_options:
 
 # Principles used in `Require`
 
-`Require` is designed with features that facilitate running R code that is part of a continuous reproducible workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
+`Require` is designed with features that facilitate running R code that is part of a continuous reproducible workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. This is called "rerun-tolerance", i.e., the line can be rerun under identical conditions and very quickly return the original result. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
 
 ## Key features
 
@@ -34,6 +34,15 @@ Features include:
 ## How it works
 
 `Require` uses `install.packages` internally to install packages. However, it does not let `install.packages` download the packages. Rather, it identifies dependencies recursively, finds out where they are (CRAN, GitHub, Archives, Local), downloads them (or gets from local cache or clones from an specified package library). If `libcurl` is available (assessed via `capabilities("libcurl")`), it will download them in parallel from CRAN-like repositories. If `sys` is installed, it will download GitHub packages in parallel also. If a user has not set `options("Ncpus")` manually, then it will set that to a value up to 8 for parallel installs of binary and source packages.
+
+## Rerun-tolerance
+
+To be functionally reproducible, code must be regularly run and tested on many operating systems and computers. When this doesn't happen, a user/developer does not know that certain code chunks no longer work until they try to run it later. In other words, code gets stale because underlying algorithms and data change. To be rerun-tolerant, a function must: 
+
+1. return the same result or outcome every time it is run (first, second or more times later);
+2. be very fast after the first time; when it is not fast, users will skip running it "because we don't need to run it again and it is slow"
+
+`Require` does both of these. See below "why is it fast".
 
 ## Why these features help teams 
 
@@ -90,22 +99,33 @@ For packages that are already installed, but not latest on CRAN:
 
 ### Differences and similarities between `pak` and `Require`
 
+This table is based on `Require v1.0.0` and `pak v0.7.2`.
+
 \* Indicates that there is an example below.
 
 | *Description*                      |  `Require`    |   `pak`                               |
 | -------------------------------- | :------------------------------: | :-----------------------------------: |
-| Archived package*                 | Automatic         | Must prefix with `url::` and exact url path  | 
+| Parallel downloads   |   Yes    |   Yes    |
+| Parallel installs    |   Yes    |   Yes    |
+| Archived package*  (e.g., `"knn"`)     | Automatic         | Must prefix with `url::` and exact url path  | 
+| Archived package in dependency*  | Automatic         | May not work, even if manually adding `url::` or `any::` | 
 | Dependency conflicts*   | Yes   |  No (see example below using `any::`)  |  
 | Multiple requests of same package* | Resolves by version number specification, or most recent version | Error |
 | Control individual package updates | With `HEAD`   |   No   |
-| Parallel downloads   |   Yes    |   Yes    |
-| Parallel installs    |   Yes    |   Yes    |
 | Very clean messaging   |   somewhat, with `options(Require.installPackagesSys = 1)`  | Yes    |  
 | Package dependencies     |  `data.table`, `sys`   |   None (though yes if user wants control, e.g., `pkgcache`) |
 | Uses local cache   |   Yes   |   Yes   |
 | Package updates (default)    | No, unless needed by version number | Yes, prompt user |     
 | Package install by version    | Yes | Yes, but doesn't deal well with multiple packages with specific versions |   
 | Package conflict (CRAN & GitHub)* | Prefers CRAN, if version requirements met  |  Error  |
+| Version specification by user | Yes e.g., `Require (>=1.0.0)` | Not an option |
+| Exact version specification by user | Uses `DESCRIPTION` file approach e.g., `Require (==1.0.0)` | Uses `@` e.g., `Require@1.0.0` |
+| Version conflicts | Require attempts to resolve them, detailing conflict | Reports "dependency conflict" without details |
+| Cache of package dependencies | Yes (internally in `Require::pkgDep`) | No (cache not used in `pak::pkg_dep`) |
+| `Additional_repositories` (in `DESCRIPTION` file of a package)| Uses   | Does not use (like `install.packages`) |
+| Cache of package binaries built locally from source | Yes  | No (`pak` version `0.7.2`) |
+
+
 
 ### Archived packages
 
@@ -210,11 +230,15 @@ try(pak::pkg_install(
       "PredictiveEcology/reproducible (>= 2.0.10)")))
 ```
 
-## Caching
+## Why is it fast?
 
-`Require` and `pak` both create local caches that speeds up the installation of packages on a computer that can access the local cache, e.g., for each new project. Currently, the caches of the two packages take slightly different approaches, but the results are similar, with a key exception (currently, in `pak` version `7.2.1`) of packages built from source. `Require` keeps the binary once the `source` package is built, and it can therefore install the binary each subsequent installation. This results in dramatically faster installations using `Require` when source packages are involved.
+Some of the features make it fast the first time being used on a system, some make it fast the second & subsequent time on a system (which can be first time in a new project). These features are caching, cloning, and parallel downloads. 
 
-## Cloning
+### Caching
+
+`Require` creates a local cache of several steps: the packages files (source or binary including locally built binaries); the package dependency tree (only in RAM currently, so only affects the same session); available package matrices for CRAN-like repositories. Together, these speed up the installation of packages on a computer that can access the local cache, e.g., for each new project. `Require` keeps the binary once the `source` package is built, and it can therefore install the binary each subsequent installation. This results in dramatically faster installations of source packages after they have been built locally.
+
+### Cloning (still experimental; do not default)
 
 `Require` has an option, `options("Require.cloneFrom")`, which, when set, will create a hard link between the current project's package library and the library pointed to by the option. Setting to e.g. `options("Require.cloneFrom" = Sys.getenv("R_LIBS_USER"))` will allow packages in the user's personal library to be the source of the "copying" to the project library. This is dramatically faster than installing, even when the installation is a local binary from the local cache.
 
@@ -230,7 +254,7 @@ if (Require:::isLinux()) {
   pkgFullName <- "ianmseddy/PSPclean@development"
   try(remove.packages(pkgs))
   pak::cache_delete() # make sure a locally built one is not present in the cache
-  try(pak::pkg_install("ianmseddy/PSPclean@development"))
+  try(pak::pkg_install(pkgFullName))
   # ✔ Loading metadata database ... done                                       
   #                                                                            
   # → Will install 2 packages.
@@ -257,8 +281,8 @@ if (Require:::isLinux()) {
   
   # Works fine because the `sourcePkgs()`            
   
-  try(remove.packages(pkgs))
-  Require::cacheClearPackages(pkgs, ask = FALSE)
+  try(remove.packages(pkgs)) # uninstall to make sure it is a clean install for this test
+  Require::cacheClearPackages(pkgs, ask = FALSE) # remove any existing local packages
   Require::Install(pkgFullName)
 }
 ```
@@ -282,9 +306,9 @@ setdiff(requireDepsClean, pakDepsClean) # doesn't report "RcppArmadillo", "RcppE
 
 ```
 
-## default behaviour -- CRAN-preference
+## CRAN-preference
 
-If there is no version specification, `pkgDep` prefers CRAN packages when there are multiple pointers to a package. Thus, even though a package may have a `Remotes` field pointint to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfited with the `Remotes` option. Then `pkgDep` will take that.
+If there is no version specification, `Require` prefers CRAN packages when there are multiple pointers to a package. Thus, even though a package may have a `Remotes` field pointint to e.g., `PredictiveEcology/SpaDES.tools@development`, if there is a recursive dependency within that package that specifies `SpaDES.tools` without a `Remotes` field, then `pkgDep` will return the `CRAN` version. If a user wants to override this behaviour, then the user can specify a version requirement that can only be satisfited with the `Remotes` option. Then `pkgDep` will take that.
 
 `pak::pkg_deps` prefers the top-level specification, i.e., the non-recursive `Remotes` field will be returned, even if the same package is also specified within a recursive dependency without a `Remotes` field, i.e, if a recursive dependency points the CRAN package, it will not return that version of the dependency.
 

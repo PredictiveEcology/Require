@@ -49,9 +49,9 @@
 #  rq <- Require::Install(c("PredictiveEcology/LandR@main", "PredictiveEcology/LandR@development (>=1.1.5)"))
 #  
 
-## ----eval=TRUE,message=FALSE--------------------------------------------------
-try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
-ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
+## ----eval=FALSE,message=FALSE-------------------------------------------------
+#  try(gg <- pak::pkg_deps("PredictiveEcology/LandR@development", dependencies = TRUE))
+#  ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE)
 
 ## ----eval=FALSE---------------------------------------------------------------
 #  # The following has no version specifications,
@@ -74,11 +74,11 @@ ff <- Require::pkgDep("PredictiveEcology/LandR@development", dependencies = TRUE
 #  Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
 #                     "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
 
-## ----eval=TRUE----------------------------------------------------------------
-## FAILS - can't specify version requirements
-try(pak::pkg_install(
-    c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
-      "PredictiveEcology/reproducible (>= 2.0.10)")))
+## ----eval=FALSE---------------------------------------------------------------
+#  ## FAILS - can't specify version requirements
+#  try(pak::pkg_install(
+#      c("PredictiveEcology/reproducible@modsForLargeArchives (>=2.0.10.9010)",
+#        "PredictiveEcology/reproducible (>= 2.0.10)")))
 
 ## ----eval=FALSE---------------------------------------------------------------
 #  # In this example, it is `terra` that must be installed from source on Linux
@@ -88,7 +88,7 @@ try(pak::pkg_install(
 #    pkgFullName <- "ianmseddy/PSPclean@development"
 #    try(remove.packages(pkgs))
 #    pak::cache_delete() # make sure a locally built one is not present in the cache
-#    try(pak::pkg_install("ianmseddy/PSPclean@development"))
+#    try(pak::pkg_install(pkgFullName))
 #    # ✔ Loading metadata database ... done
 #    #
 #    # → Will install 2 packages.
@@ -115,8 +115,8 @@ try(pak::pkg_install(
 #  
 #    # Works fine because the `sourcePkgs()`
 #  
-#    try(remove.packages(pkgs))
-#    Require::cacheClearPackages(pkgs, ask = FALSE)
+#    try(remove.packages(pkgs)) # uninstall to make sure it is a clean install for this test
+#    Require::cacheClearPackages(pkgs, ask = FALSE) # remove any existing local packages
 #    Require::Install(pkgFullName)
 #  }
 

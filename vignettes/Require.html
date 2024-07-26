@@ -364,12 +364,13 @@ running R code that is part of a continuous reproducible workflow, from
 data-to-decisions. For this to work, all functions called by a user
 should have a property whereby the initial time they are called does the
 heavy work, and the subsequent times are sufficiently fast that the user
-is not forced to skip over lines of code when re-running code. The
-package, <code>reproducible</code>, has a function <code>Cache</code>
-which can convert many function calls to have this property. It does not
-work well for functions whose objectives are side-effects, like
-installing and loading packages. <code>Require</code> fills this
-gap.</p>
+is not forced to skip over lines of code when re-running code. This is
+called “rerun-tolerance”, i.e., the line can be rerun under identical
+conditions and very quickly return the original result. The package,
+<code>reproducible</code>, has a function <code>Cache</code> which can
+convert many function calls to have this property. It does not work well
+for functions whose objectives are side-effects, like installing and
+loading packages. <code>Require</code> fills this gap.</p>
 <div id="key-features" class="section level2">
 <h2>Key features</h2>
 <p>Features include:</p>
@@ -409,6 +410,24 @@ from CRAN-like repositories. If <code>sys</code> is installed, it will
 download GitHub packages in parallel also. If a user has not set
 <code>options(&quot;Ncpus&quot;)</code> manually, then it will set that to a value
 up to 8 for parallel installs of binary and source packages.</p>
+</div>
+<div id="rerun-tolerance" class="section level2">
+<h2>Rerun-tolerance</h2>
+<p>To be functionally reproducible, code must be regularly run and
+tested on many operating systems and computers. When this doesn’t
+happen, a user/developer does not know that certain code chunks no
+longer work until they try to run it later. In other words, code gets
+stale because underlying algorithms and data change. To be
+rerun-tolerant, a function must:</p>
+<ol style="list-style-type: decimal">
+<li>return the same result or outcome every time it is run (first,
+second or more times later);</li>
+<li>be very fast after the first time; when it is not fast, users will
+skip running it “because we don’t need to run it again and it is
+slow”</li>
+</ol>
+<p><code>Require</code> does both of these. See below “why is it
+fast”.</p>
 </div>
 <div id="why-these-features-help-teams" class="section level2">
 <h2>Why these features help teams</h2>
@@ -554,6 +573,8 @@ available</td>
 <div id="differences-and-similarities-between-pak-and-require" class="section level3">
 <h3>Differences and similarities between <code>pak</code> and
 <code>Require</code></h3>
+<p>This table is based on <code>Require v1.0.0</code> and
+<code>pak v0.7.2</code>.</p>
 <p>* Indicates that there is an example below.</p>
 <table>
 <colgroup>
@@ -570,28 +591,6 @@ available</td>
 </thead>
 <tbody>
 <tr class="odd">
-<td>Archived package*</td>
-<td align="center">Automatic</td>
-<td align="center">Must prefix with <code>url::</code> and exact url
-path</td>
-</tr>
-<tr class="even">
-<td>Dependency conflicts*</td>
-<td align="center">Yes</td>
-<td align="center">No (see example below using <code>any::</code>)</td>
-</tr>
-<tr class="odd">
-<td>Multiple requests of same package*</td>
-<td align="center">Resolves by version number specification, or most
-recent version</td>
-<td align="center">Error</td>
-</tr>
-<tr class="even">
-<td>Control individual package updates</td>
-<td align="center">With <code>HEAD</code></td>
-<td align="center">No</td>
-</tr>
-<tr class="odd">
 <td>Parallel downloads</td>
 <td align="center">Yes</td>
 <td align="center">Yes</td>
@@ -602,37 +601,100 @@ recent version</td>
 <td align="center">Yes</td>
 </tr>
 <tr class="odd">
+<td>Archived package* (e.g., <code>&quot;knn&quot;</code>)</td>
+<td align="center">Automatic</td>
+<td align="center">Must prefix with <code>url::</code> and exact url
+path</td>
+</tr>
+<tr class="even">
+<td>Archived package in dependency*</td>
+<td align="center">Automatic</td>
+<td align="center">May not work, even if manually adding
+<code>url::</code> or <code>any::</code></td>
+</tr>
+<tr class="odd">
+<td>Dependency conflicts*</td>
+<td align="center">Yes</td>
+<td align="center">No (see example below using <code>any::</code>)</td>
+</tr>
+<tr class="even">
+<td>Multiple requests of same package*</td>
+<td align="center">Resolves by version number specification, or most
+recent version</td>
+<td align="center">Error</td>
+</tr>
+<tr class="odd">
+<td>Control individual package updates</td>
+<td align="center">With <code>HEAD</code></td>
+<td align="center">No</td>
+</tr>
+<tr class="even">
 <td>Very clean messaging</td>
 <td align="center">somewhat, with
 <code>options(Require.installPackagesSys = 1)</code></td>
 <td align="center">Yes</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Package dependencies</td>
 <td align="center"><code>data.table</code>, <code>sys</code></td>
 <td align="center">None (though yes if user wants control, e.g.,
 <code>pkgcache</code>)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Uses local cache</td>
 <td align="center">Yes</td>
 <td align="center">Yes</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Package updates (default)</td>
 <td align="center">No, unless needed by version number</td>
 <td align="center">Yes, prompt user</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Package install by version</td>
 <td align="center">Yes</td>
 <td align="center">Yes, but doesn’t deal well with multiple packages
 with specific versions</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Package conflict (CRAN &amp; GitHub)*</td>
 <td align="center">Prefers CRAN, if version requirements met</td>
 <td align="center">Error</td>
+</tr>
+<tr class="even">
+<td>Version specification by user</td>
+<td align="center">Yes e.g., <code>Require (&gt;=1.0.0)</code></td>
+<td align="center">Not an option</td>
+</tr>
+<tr class="odd">
+<td>Exact version specification by user</td>
+<td align="center">Uses <code>DESCRIPTION</code> file approach e.g.,
+<code>Require (==1.0.0)</code></td>
+<td align="center">Uses <code>@</code> e.g.,
+<code>Require@1.0.0</code></td>
+</tr>
+<tr class="even">
+<td>Version conflicts</td>
+<td align="center">Require attempts to resolve them, detailing
+conflict</td>
+<td align="center">Reports “dependency conflict” without details</td>
+</tr>
+<tr class="odd">
+<td>Cache of package dependencies</td>
+<td align="center">Yes (internally in <code>Require::pkgDep</code>)</td>
+<td align="center">No (cache not used in <code>pak::pkg_dep</code>)</td>
+</tr>
+<tr class="even">
+<td><code>Additional_repositories</code> (in <code>DESCRIPTION</code>
+file of a package)</td>
+<td align="center">Uses</td>
+<td align="center">Does not use (like
+<code>install.packages</code>)</td>
+</tr>
+<tr class="odd">
+<td>Cache of package binaries built locally from source</td>
+<td align="center">Yes</td>
+<td align="center">No (<code>pak</code> version <code>0.7.2</code>)</td>
 </tr>
 </tbody>
 </table>
@@ -703,13 +765,8 @@ repositories, 3. order.</p>
 dependency on GitHub is not found. This may be because the package name
 is not the repository name, but it is not clear from the error message
 why:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">try</span>(gg <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>))</span></code></pre></div>
-<pre><code>## Error : ! error in pak subprocess
-## Caused by error: 
-## ! Could not solve package dependencies:
-## * PredictiveEcology/LandR@development: Can&#39;t install dependency BioSIM
-## * BioSIM: Can&#39;t find package called BioSIM.</code></pre>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>ff <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">try</span>(gg <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>ff <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 </div>
 <div id="version-requirements-determine-package-installation" class="section level3">
 <h3>Version requirements determine package installation</h3>
@@ -725,61 +782,55 @@ version requirements cause the conflict. If version number requirements
 are not specified, CRAN versions will take precedence, and sequence of
 packages listed at installation will take preference otherwise.</p></li>
 </ol>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># The following has no version specifications, </span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#   so CRAN version will be installed or none installed if already installed</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co"># The following specifies &quot;HEAD&quot; after the Github package name. This means the </span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#   tip of the development branch of reproducible will be installed if not already installed</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co"># The following specifies &quot;HEAD&quot; after the package name. This means the </span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#   tip of the development branch of reproducible</span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible (HEAD)&quot;</span>))</span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co"># Not a problem because version number specifies</span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>))</span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co"># Even if branch does not exist, if later version requirement specifies a different branch, no error</span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible@validityTest (&gt;= 2.0.9)&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># The following has no version specifications, </span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#   so CRAN version will be installed or none installed if already installed</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co"># The following specifies &quot;HEAD&quot; after the Github package name. This means the </span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#   tip of the development branch of reproducible will be installed if not already installed</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co"># The following specifies &quot;HEAD&quot; after the package name. This means the </span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#   tip of the development branch of reproducible</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible (HEAD)&quot;</span>))</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co"># Not a problem because version number specifies</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>))</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co"># Even if branch does not exist, if later version requirement specifies a different branch, no error</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible@validityTest (&gt;= 2.0.9)&quot;</span>))</span></code></pre></div>
 <p><code>Require</code> can handle package version specifications at the
 function call (<code>pak</code> can handle them if they are in a
 <code>DESCRIPTION</code> file, if they are <code>&gt;=</code>), whereas
 <code>pak</code> cannot (currently).</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="do">## FAILS - can&#39;t specify version requirements</span></span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>      <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>)))</span></code></pre></div>
-<pre><code>## Error : ! error in pak subprocess
-## Caused by error: 
-## ! Could not solve package dependencies:
-## * PredictiveEcology/reproducible (&gt;= 2.0.10): ! pkgdepends resolution error for PredictiveEcology/reproducible (&gt;=
-## 2.0.10).
-## Caused by error: 
-## ! Can&#39;t find GitHub repo PredictiveEcology/reproducible (&gt;= 2.0.10).
-## * PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010): ! pkgdepends resolution error for
-## PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010).
-## Caused by error: 
-## ! Can&#39;t find reference @modsForLargeArchives (&gt;=2.0.10.9010) in GitHub repo PredictiveEcology/reproducible.</code></pre>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="do">## FAILS - can&#39;t specify version requirements</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>    <span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;=2.0.10.9010)&quot;</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>      <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>)))</span></code></pre></div>
 </div>
-<div id="caching" class="section level2">
-<h2>Caching</h2>
-<p><code>Require</code> and <code>pak</code> both create local caches
-that speeds up the installation of packages on a computer that can
-access the local cache, e.g., for each new project. Currently, the
-caches of the two packages take slightly different approaches, but the
-results are similar, with a key exception (currently, in
-<code>pak</code> version <code>7.2.1</code>) of packages built from
-source. <code>Require</code> keeps the binary once the
-<code>source</code> package is built, and it can therefore install the
-binary each subsequent installation. This results in dramatically faster
-installations using <code>Require</code> when source packages are
-involved.</p>
+<div id="why-is-it-fast" class="section level2">
+<h2>Why is it fast?</h2>
+<p>Some of the features make it fast the first time being used on a
+system, some make it fast the second &amp; subsequent time on a system
+(which can be first time in a new project). These features are caching,
+cloning, and parallel downloads.</p>
+<div id="caching" class="section level3">
+<h3>Caching</h3>
+<p><code>Require</code> creates a local cache of several steps: the
+packages files (source or binary including locally built binaries); the
+package dependency tree (only in RAM currently, so only affects the same
+session); available package matrices for CRAN-like repositories.
+Together, these speed up the installation of packages on a computer that
+can access the local cache, e.g., for each new project.
+<code>Require</code> keeps the binary once the <code>source</code>
+package is built, and it can therefore install the binary each
+subsequent installation. This results in dramatically faster
+installations of source packages after they have been built locally.</p>
 </div>
-<div id="cloning" class="section level2">
-<h2>Cloning</h2>
+<div id="cloning-still-experimental-do-not-default" class="section level3">
+<h3>Cloning (still experimental; do not default)</h3>
 <p><code>Require</code> has an option,
 <code>options(&quot;Require.cloneFrom&quot;)</code>, which, when set, will create
 a hard link between the current project’s package library and the
@@ -789,6 +840,7 @@ will allow packages in the user’s personal library to be the source of
 the “copying” to the project library. This is dramatically faster than
 installing, even when the installation is a local binary from the local
 cache.</p>
+</div>
 </div>
 <div id="binary-on-linux" class="section level2">
 <h2>Binary on Linux</h2>
@@ -803,44 +855,44 @@ they must be installed from source. <code>Require</code> has a function
 package-by-package basis. By default, some are automatically installed
 from <code>&quot;source&quot;</code> because in our experience, they tend to fail
 if installed from the binary.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># In this example, it is `terra` that must be installed from source on Linux</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="cf">if</span> (Require<span class="sc">:::</span><span class="fu">isLinux</span>()) {</span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">setLinuxBinaryRepo</span>()</span>
-<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  pkgs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;terra&quot;</span>, <span class="st">&quot;PSPclean&quot;</span>)</span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>  pkgFullName <span class="ot">&lt;-</span> <span class="st">&quot;ianmseddy/PSPclean@development&quot;</span></span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">remove.packages</span>(pkgs))</span>
-<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a>  pak<span class="sc">::</span><span class="fu">cache_delete</span>() <span class="co"># make sure a locally built one is not present in the cache</span></span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>  <span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="st">&quot;ianmseddy/PSPclean@development&quot;</span>))</span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a>  <span class="co"># ✔ Loading metadata database ... done                                       </span></span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a>  <span class="co">#                                                                            </span></span>
-<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>  <span class="co"># → Will install 2 packages.</span></span>
-<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>  <span class="co"># → Will download 2 packages with unknown size.</span></span>
-<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a>  <span class="co"># + PSPclean   0.1.4.9005 [bld][cmp][dl] (GitHub: fed9253)</span></span>
-<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a>  <span class="co"># + terra      1.7-71     [dl] + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev</span></span>
-<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>  <span class="co"># ✔ All system requirements are already installed.</span></span>
-<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>  <span class="co">#   </span></span>
-<span id="cb11-17"><a href="#cb11-17" tabindex="-1"></a>  <span class="co"># ℹ Getting 2 pkgs with unknown sizes</span></span>
-<span id="cb11-18"><a href="#cb11-18" tabindex="-1"></a>  <span class="co"># ✔ Got PSPclean 0.1.4.9005 (source) (43.29 kB)                         </span></span>
-<span id="cb11-19"><a href="#cb11-19" tabindex="-1"></a>  <span class="co"># ✔ Got terra 1.7-71 (x86_64-pc-linux-gnu-ubuntu-22.04) (4.24 MB)      </span></span>
-<span id="cb11-20"><a href="#cb11-20" tabindex="-1"></a>  <span class="co"># ✔ Downloaded 2 packages (4.28 MB) in 2.9s                </span></span>
-<span id="cb11-21"><a href="#cb11-21" tabindex="-1"></a>  <span class="co"># ✔ Installed terra 1.7-71  (61ms)                                   </span></span>
-<span id="cb11-22"><a href="#cb11-22" tabindex="-1"></a>  <span class="co"># ℹ Packaging PSPclean 0.1.4.9005                                    </span></span>
-<span id="cb11-23"><a href="#cb11-23" tabindex="-1"></a>  <span class="co"># ✔ Packaged PSPclean 0.1.4.9005 (420ms)                              </span></span>
-<span id="cb11-24"><a href="#cb11-24" tabindex="-1"></a>  <span class="co"># ℹ Building PSPclean 0.1.4.9005                                      </span></span>
-<span id="cb11-25"><a href="#cb11-25" tabindex="-1"></a>  <span class="co"># ✖ Failed to build PSPclean 0.1.4.9005 (3.7s)                        </span></span>
-<span id="cb11-26"><a href="#cb11-26" tabindex="-1"></a>  <span class="co"># Error:                                                              </span></span>
-<span id="cb11-27"><a href="#cb11-27" tabindex="-1"></a>  <span class="co"># ! error in pak subprocess</span></span>
-<span id="cb11-28"><a href="#cb11-28" tabindex="-1"></a>  <span class="co"># Caused by error in `stop_task_build(state, worker)`:</span></span>
-<span id="cb11-29"><a href="#cb11-29" tabindex="-1"></a>  <span class="co"># ! Failed to build source package PSPclean.</span></span>
-<span id="cb11-30"><a href="#cb11-30" tabindex="-1"></a>  <span class="co"># Type .Last.error to see the more details.</span></span>
-<span id="cb11-31"><a href="#cb11-31" tabindex="-1"></a>  </span>
-<span id="cb11-32"><a href="#cb11-32" tabindex="-1"></a>  </span>
-<span id="cb11-33"><a href="#cb11-33" tabindex="-1"></a>  <span class="co"># Works fine because the `sourcePkgs()`            </span></span>
-<span id="cb11-34"><a href="#cb11-34" tabindex="-1"></a>  </span>
-<span id="cb11-35"><a href="#cb11-35" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">remove.packages</span>(pkgs))</span>
-<span id="cb11-36"><a href="#cb11-36" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">cacheClearPackages</span>(pkgs, <span class="at">ask =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb11-37"><a href="#cb11-37" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">Install</span>(pkgFullName)</span>
-<span id="cb11-38"><a href="#cb11-38" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># In this example, it is `terra` that must be installed from source on Linux</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="cf">if</span> (Require<span class="sc">:::</span><span class="fu">isLinux</span>()) {</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">setLinuxBinaryRepo</span>()</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  pkgs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;terra&quot;</span>, <span class="st">&quot;PSPclean&quot;</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  pkgFullName <span class="ot">&lt;-</span> <span class="st">&quot;ianmseddy/PSPclean@development&quot;</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">remove.packages</span>(pkgs))</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  pak<span class="sc">::</span><span class="fu">cache_delete</span>() <span class="co"># make sure a locally built one is not present in the cache</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(pkgFullName))</span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="co"># ✔ Loading metadata database ... done                                       </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>  <span class="co">#                                                                            </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>  <span class="co"># → Will install 2 packages.</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a>  <span class="co"># → Will download 2 packages with unknown size.</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>  <span class="co"># + PSPclean   0.1.4.9005 [bld][cmp][dl] (GitHub: fed9253)</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a>  <span class="co"># + terra      1.7-71     [dl] + ✔ libgdal-dev, ✔ gdal-bin, ✔ libgeos-dev, ✔ libproj-dev, ✔ libsqlite3-dev</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a>  <span class="co"># ✔ All system requirements are already installed.</span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a>  <span class="co">#   </span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a>  <span class="co"># ℹ Getting 2 pkgs with unknown sizes</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a>  <span class="co"># ✔ Got PSPclean 0.1.4.9005 (source) (43.29 kB)                         </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a>  <span class="co"># ✔ Got terra 1.7-71 (x86_64-pc-linux-gnu-ubuntu-22.04) (4.24 MB)      </span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a>  <span class="co"># ✔ Downloaded 2 packages (4.28 MB) in 2.9s                </span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a>  <span class="co"># ✔ Installed terra 1.7-71  (61ms)                                   </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a>  <span class="co"># ℹ Packaging PSPclean 0.1.4.9005                                    </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a>  <span class="co"># ✔ Packaged PSPclean 0.1.4.9005 (420ms)                              </span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a>  <span class="co"># ℹ Building PSPclean 0.1.4.9005                                      </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a>  <span class="co"># ✖ Failed to build PSPclean 0.1.4.9005 (3.7s)                        </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a>  <span class="co"># Error:                                                              </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a>  <span class="co"># ! error in pak subprocess</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a>  <span class="co"># Caused by error in `stop_task_build(state, worker)`:</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a>  <span class="co"># ! Failed to build source package PSPclean.</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a>  <span class="co"># Type .Last.error to see the more details.</span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a>  </span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a>  </span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a>  <span class="co"># Works fine because the `sourcePkgs()`            </span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a>  </span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">remove.packages</span>(pkgs)) <span class="co"># uninstall to make sure it is a clean install for this test</span></span>
+<span id="cb8-36"><a href="#cb8-36" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">cacheClearPackages</span>(pkgs, <span class="at">ask =</span> <span class="cn">FALSE</span>) <span class="co"># remove any existing local packages</span></span>
+<span id="cb8-37"><a href="#cb8-37" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">Install</span>(pkgFullName)</span>
+<span id="cb8-38"><a href="#cb8-38" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 <div id="package-dependencies" class="section level2">
 <h2>Package dependencies</h2>
@@ -851,19 +903,19 @@ if installed from the binary.</p>
 these are required by <code>Rcpp</code> if that is required, and so are
 strictly necessary. <code>pak::pkg_deps</code> does not include
 <code>LinkingTo</code> by default.</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>depPak <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@LandWeb&quot;</span>) </span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>depRequire <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@LandWeb&quot;</span>) <span class="co"># Slightly different default in Require</span></span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a></span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co"># Same</span></span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>pakDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depPak<span class="sc">$</span>ref), Require<span class="sc">:::</span>.basePkgs)</span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>requireDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depRequire[[<span class="dv">1</span>]]), Require<span class="sc">:::</span>.basePkgs)</span>
-<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a><span class="fu">setdiff</span>(pakDepsClean, requireDepsClean)</span>
-<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="fu">setdiff</span>(requireDepsClean, pakDepsClean) <span class="co"># doesn&#39;t report &quot;RcppArmadillo&quot;, &quot;RcppEigen&quot;, &quot;cpp11&quot; which are LinkingTo</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>depPak <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@LandWeb&quot;</span>) </span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>depRequire <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@LandWeb&quot;</span>) <span class="co"># Slightly different default in Require</span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># Same</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>pakDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depPak<span class="sc">$</span>ref), Require<span class="sc">:::</span>.basePkgs)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>requireDepsClean <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(Require<span class="sc">::</span><span class="fu">extractPkgName</span>(depRequire[[<span class="dv">1</span>]]), Require<span class="sc">:::</span>.basePkgs)</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="fu">setdiff</span>(pakDepsClean, requireDepsClean)</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">setdiff</span>(requireDepsClean, pakDepsClean) <span class="co"># doesn&#39;t report &quot;RcppArmadillo&quot;, &quot;RcppEigen&quot;, &quot;cpp11&quot; which are LinkingTo</span></span></code></pre></div>
 </div>
 </div>
-<div id="default-behaviour-cran-preference" class="section level2">
-<h2>default behaviour – CRAN-preference</h2>
-<p>If there is no version specification, <code>pkgDep</code> prefers
+<div id="cran-preference" class="section level2">
+<h2>CRAN-preference</h2>
+<p>If there is no version specification, <code>Require</code> prefers
 CRAN packages when there are multiple pointers to a package. Thus, even
 though a package may have a <code>Remotes</code> field pointint to e.g.,
 <code>PredictiveEcology/SpaDES.tools@development</code>, if there is a
@@ -881,20 +933,20 @@ CRAN package, it will not return that version of the dependency.</p>
 <div id="pak-fails-for-packages-on-github-that-are-not-same-name-as-git-repo-in-remotes" class="section level3">
 <h3><code>pak</code> fails for packages on GitHub that are not same name
 as Git Repo in Remotes</h3>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>gg <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co"># Error:                                                                                  </span></span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co"># ! error in pak subprocess</span></span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co"># Caused by error: </span></span>
-<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co"># ! Could not solve package dependencies:</span></span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co"># * PredictiveEcology/LandR@development: Can&#39;t install dependency BioSIM</span></span>
-<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co"># * BioSIM: Can&#39;t find package called BioSIM.</span></span>
-<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co"># Type .Last.error to see the more details.</span></span>
-<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>ff <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co"># $`PredictiveEcology/LandR@development`</span></span>
-<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a><span class="co">#  [1] &quot;BH&quot;                                                      &quot;BIEN&quot;                                            </span></span>
-<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co">#  [3] &quot;BioSIM&quot;                                                  &quot;DBI (&gt;= 0.8)&quot;                                 </span></span>
-<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a><span class="co">#  [5] &quot;Deriv&quot;                                                   &quot;ENMeval&quot;                                          </span></span>
-<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a><span class="co">#  ...</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>gg <span class="ot">&lt;-</span> pak<span class="sc">::</span><span class="fu">pkg_deps</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co"># Error:                                                                                  </span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="co"># ! error in pak subprocess</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co"># Caused by error: </span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co"># ! Could not solve package dependencies:</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="co"># * PredictiveEcology/LandR@development: Can&#39;t install dependency BioSIM</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co"># * BioSIM: Can&#39;t find package called BioSIM.</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co"># Type .Last.error to see the more details.</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>ff <span class="ot">&lt;-</span> Require<span class="sc">::</span><span class="fu">pkgDep</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>, <span class="at">dependencies =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="co"># $`PredictiveEcology/LandR@development`</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#  [1] &quot;BH&quot;                                                      &quot;BIEN&quot;                                            </span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#  [3] &quot;BioSIM&quot;                                                  &quot;DBI (&gt;= 0.8)&quot;                                 </span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#  [5] &quot;Deriv&quot;                                                   &quot;ENMeval&quot;                                          </span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#  ...</span></span></code></pre></div>
 </div>
 </div>
 </div>
