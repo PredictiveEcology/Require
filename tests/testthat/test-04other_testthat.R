@@ -29,11 +29,11 @@ test_that("test 3", {
   }
 
   if (isTRUE(tryCatch(packageVersion("fpCompare"), error = function(e) "0.0.0") < "0.2.5")) {
-    # aaaa <<- 1
-    # on.exit(rm(aaaa, envir= .GlobalEnv))
-    Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
-                     install= "force")
-    expect_true(packVer("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
+    if (isDev) {
+      Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
+                       install= "force", libPaths = .libPaths()[1])
+      expect_true(packVer("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
+    }
   }
 
   # pkgDep2("Require")
