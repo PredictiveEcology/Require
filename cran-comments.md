@@ -1,38 +1,43 @@
-## Updated release
+## Release information
 
-This is an update submission that addresses minor bugs, and several enhancements, noted in the NEWS.md
+This is major package update with many new features, new underlying algorithms, and bugfixes. 
+
+See `NEWS.md` for a full list of changes.
 
 ## Test environments
 
-### GitHub Actions
-- os: macOS-latest,   r: 'release'
-- os: windows-latest, r: 'devel'
-- os: windows-latest, r: '4.2'
-- os: windows-latest, r: '4.1'
-- os: windows-latest, r: '4.0'
-- os: ubuntu-20.04,   r: 'devel', 
-- os: ubuntu-20.04,   r: 'release'
-- os: ubuntu-20.04,   r: 'oldrel'
+  
+### Previous R versions
+* Ubuntu 20.04                 (GitHub), 4.2.3, 4.3.3
+* Windows                      (GitHub), 4.2.3, 4.3.3
+* Windows                 (win-builder), R 4.3.3
 
-### Winbuilder
-* Windows                 (win-builder), R Under development (unstable) (2023-05-19 r84451 ucrt)
-* Windows                 (win-builder), 4.3.0 (2023-04-21 ucrt)
-* Windows                 (win-builder), 4.2.3 (2023-03-15 ucrt)
+### Current R versions
+* macOS 14.5                    (local), R 4.4.1
+* Ubuntu 20.04                 (GitHub), R 4.4.1
+* Ubuntu 20.04                  (local), R 4.4.1
+* Windows                      (GitHub), R 4.4.1
+* Windows                       (local), R 4.4.1
+* Windows                 (win-builder), R 4.4.1
 
-
-### R-hub
-* Linux (Debian, Fedora), MacOS, Windows
+### Development R version
+* Ubuntu 20.04                 (GitHub), R-devel  (2024-07-25 r86925)
+* Ubuntu 20.04                  (local), R-devel  (2024-07-25 r86925)
+* Windows                      (GitHub), R-devel  (2024-07-25 r86925 ucrt)
+* Windows                 (win-builder), R-devel  (2024-07-25 r86925 ucrt)
 
 ## R CMD check results
 
-There were no ERRORs nor WARNINGs nor NOTEs.
+There are no errors, or warnings in any of the above.
 
-## revdepcheck results
+## Downstream dependencies
+
+We checked all reverse dependency from CRAN and found none.
 
 > revdepcheck::revdep_report_cran() ## update cran-comments with this output
 ## revdepcheck results
 
-We checked 2 reverse dependencies (0 from CRAN + 2 from Bioconductor), comparing R CMD check results across CRAN and dev versions of this package.
+We checked 1 reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
 
  * We saw 0 new problems
  * We failed to check 0 packages
