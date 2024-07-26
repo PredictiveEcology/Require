@@ -15,8 +15,8 @@ Description: A single key function, 'Require' that makes rerun-tolerant
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2023-10-19
-Version: 0.3.1.9015
+Date: 2024-07-25
+Version: 1.0.0
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -37,17 +37,49 @@ Depends:
 Imports:
     data.table (>= 1.10.4),
     methods,
+    sys,
     tools,
     utils
 Suggests:
     covr,
+    curl,
+    diffobj,
+    gitcreds,
+    httr,
+    pak,
     parallel,
-    remotes,
-    testit
+    rematch2,
+    rmarkdown,
+    knitr,
+    roxygen2,
+    rprojroot,
+    testthat (>= 3.0.0),
+    tibble,
+    waldo,
+    withr
 Encoding: UTF-8
 Language: en-CA
 License: GPL-3
+VignetteBuilder: knitr, rmarkdown
 BugReports: https://github.com/PredictiveEcology/Require/issues
 ByteCompile: yes
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
+Collate: 
+    'CRAN.R'
+    'Require-helpers.R'
+    'Require-package.R'
+    'messages.R'
+    'Require2.R'
+    'RequireOptions.R'
+    'envs.R'
+    'extract.R'
+    'helpers.R'
+    'pak.R'
+    'pkgDep.R'
+    'pkgDep3.R'
+    'pkgSnapshot.R'
+    'setLibPaths.R'
+    'setup.R'
+    'zzz.R'
+Config/testthat/edition: 3

@@ -2,10 +2,30 @@ utils::globalVariables(c(
   "pkgEnvLast"
 ))
 
-.pkgEnv <- new.env(parent = emptyenv())
+
+#' @include envs.R
+envPkgCreate()
+# .pkgEnv <- newEmptyEnv() # new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()
+  # Have to set this first for pak to work in vanilla session
+  existing <- Sys.getenv("R_USER_CACHE_DIR")
+  if (!nzchar(existing)) {
+    Sys.unsetenv("R_USER_CACHE_DIR")
+    defCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+    Sys.setenv("R_USER_CACHE_DIR" = defCacheDir)
+  }
+
+  # if (FALSE) {
+  if (isTRUE(getOption("Require.usePak")))
+    if (requireNamespace("pak"))
+      existingCacheDir <- pak::cache_summary()$cachepath
+  #   if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
+  #     Sys.setenv("R_USER_CACHE_DIR" = tempdir3())
+  # }
+
+
   opts.Require <- RequireOptions()
   toset <- !(names(opts.Require) %in% names(opts))
   if (any(toset)) options(opts.Require[toset])
@@ -16,7 +36,13 @@ utils::globalVariables(c(
   #     list2env(pkgEnvLast, .pkgEnv)
   #   }
   # }
-  possCacheDir <- getOptionRPackageCache()
+  .RequireDependencies <<- RequireDependencies()
+  if (!isTRUE("sys" %in% .RequireDependencies))
+    .RequireDependencies <- c("Require", "data.table (>= 1.10.4)", "methods", "sys", "tools",
+                              "utils")
+  .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
+
+  possCacheDir <- cacheGetOptionCachePkgDir()
   # if (!is.null(possCacheDir)) {
   #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
   # }
@@ -26,13 +52,13 @@ utils::globalVariables(c(
 
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
-    possCacheDir <- getOptionRPackageCache()
+    possCacheDir <- cacheGetOptionCachePkgDir()
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
       if (!is.null(possCacheDir)) {
         paste0(
           "  Using cache directory: ", possCacheDir,
-          "; clear with clearRequirePackageCache().\n"
+          "; clear with cacheClearPackages().\n"
         )
       },
       "  See ?RequireOptions for this and other settings."
@@ -47,5 +73,5 @@ utils::globalVariables(c(
 }
 
 # .thePersistentFile <- function() {
-#   file.path(RequireCacheDir(FALSE), "pkgEnv.Rdata")
+#   file.path(cacheDir(FALSE), "pkgEnv.Rdata")
 # }

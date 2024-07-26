@@ -1,0 +1,383 @@
+"Package","Version","LibPath","Depends","Imports","LinkingTo","Remotes","GithubRepo","GithubUsername","GithubRef","GithubSHA1","GithubSubFolder","Repository","GitSubFolder"
+"R","4.4",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"abind","1.4-5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"animation","2.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","magick","","",NA,NA,NA,NA,NA,"RSPM",NA
+"ape","5.7-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","nlme, lattice, graphics, methods, stats, utils, parallel, Rcpp        (>= 0.12.0), digest","","",NA,NA,NA,NA,NA,"CRAN",NA
+"archive","1.1.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, glue, rlang, tibble","","",NA,NA,NA,NA,NA,"CRAN",NA
+"arm","1.13-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","MASS, Matrix (>= 1.0), stats, lme4 (>= 1.0)","abind, coda, graphics, grDevices, methods, nlme, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"arrow","13.0.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","assertthat, bit64 (>= 0.9-7), glue, methods, purrr, R6, rlang        (>= 1.0.0), stats, tidyselect (>= 1.0.0), utils, vctrs","","",NA,NA,NA,NA,NA,"CRAN",NA
+"askpass","1.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","sys (>= 2.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"assertthat","0.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","tools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"backports","1.4.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"BalancedSampling","1.6.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.11.1), SamplingBigData","","",NA,NA,NA,NA,NA,"CRAN",NA
+"base64enc","0.1-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bbmle","1.0.25","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats4","stats, numDeriv, lattice, MASS, methods, bdsmatrix, Matrix, mvtnorm","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bdsmatrix","1.3-6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"benchmarkme","1.0.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","benchmarkmeData (>= 1.0.4), compiler, doParallel, dplyr, foreach, graphics, httr, Matrix, methods, parallel, stringr, tibble, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"benchmarkmeData","1.0.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","dplyr, graphics, tibble, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"BH","1.81.0-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bigassertr","0.1.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bigreadr","0.2.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bigassertr (>= 0.1.1), data.table, parallelly, Rcpp, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bit","4.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bit64","4.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","bit (>= 4.0.0), utils, methods, stats","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bitops","1.0-7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"blme","1.0-5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","lme4 (>= 1.0-6)","methods, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"blob","1.2.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, rlang, vctrs (>= 0.2.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"box","1.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","tools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"brew","1.0-8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"brio","1.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"broom","1.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","backports, dplyr (>= 1.0.0), ellipsis, generics (>= 0.0.2), glue, lifecycle, purrr, rlang, stringr, tibble (>= 3.0.0), tidyr (>= 1.0.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"broom.mixed","0.2.9.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","broom, coda, dplyr, forcats, methods, nlme, purrr, stringr, tibble, tidyr, furrr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"bslib","0.5.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","base64enc, cachem, grDevices, htmltools (>= 0.5.4), jquerylib        (>= 0.1.3), jsonlite, memoise (>= 2.0.1), mime, rlang, sass (>=        0.4.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"cachem","1.0.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","rlang, fastmap (>= 1.1.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"callr","3.7.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","processx (>= 3.6.1), R6, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"car","3.1-2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","carData (>= 3.0-0)","abind, MASS, mgcv, nnet, pbkrtest (>= 0.4-4), quantreg, grDevices, utils, stats, graphics, lme4 (>= 1.1-27.1), nlme, scales","","",NA,NA,NA,NA,NA,"CRAN",NA
+"carData","3.0-5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"checkmate","2.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","backports (>= 1.1.0), utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"chron","2.3-61","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, stats","","",NA,NA,NA,NA,NA,"RSPM",NA
+"CircStats","0.2-6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","MASS, boot","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"classInt","0.4-10","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","grDevices, stats, graphics, e1071, class, KernSmooth","","",NA,NA,NA,NA,NA,"CRAN",NA
+"cli","3.6.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"clipr","0.8.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"coda","0.19-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","lattice","","",NA,NA,NA,NA,NA,"CRAN",NA
+"colorspace","2.1-0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","graphics, grDevices, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"commonmark","1.9.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"corrplot","0.92","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"covr","3.6.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","digest, stats, utils, jsonlite, rex, httr, crayon, withr (>=        1.0.2), yaml","","",NA,NA,NA,NA,NA,"CRAN",NA
+"cowplot","1.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ggplot2 (> 2.2.1), grid, gtable, grDevices, methods, rlang, scales","","",NA,NA,NA,NA,NA,"CRAN",NA
+"cpp11","0.4.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"cppRouting","3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 1.0.7), RcppParallel, RcppProgress, data.table","","",NA,NA,NA,NA,NA,"RSPM",NA
+"crayon","1.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","grDevices, methods, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"credentials","2.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","openssl (>= 1.3), sys (>= 2.1), curl, jsonlite, askpass","","",NA,NA,NA,NA,NA,"CRAN",NA
+"crosstalk","1.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","htmltools (>= 0.3.6), jsonlite, lazyeval, R6","","",NA,NA,NA,NA,NA,"CRAN",NA
+"curl","5.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"data.table","1.14.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"DBI","1.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"deldir","1.0-9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, grDevices","","",NA,NA,NA,NA,NA,"CRAN",NA
+"DEoptim","2.2-8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","parallel","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"DEoptimR","1.1-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"Deriv","4.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"desc","1.4.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, R6, rprojroot, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"details","0.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","clipr, desc, grid, httr, htmltools, knitr, magrittr, png, stats, utils, withr, xml2","","",NA,NA,NA,NA,NA,"CRAN",NA
+"devtools","2.4.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","usethis (>= 2.1.6)","cli (>= 3.3.0), desc (>= 1.4.1), ellipsis (>= 0.3.2), fs (>=        1.5.2), lifecycle (>= 1.0.1), memoise (>= 2.0.1), miniUI (>=        0.1.1.1), pkgbuild (>= 1.3.1), pkgdown (>= 2.0.6), pkgload (>=        1.3.0), profvis (>= 0.3.7), rcmdcheck (>= 1.4.0), remotes (>=        2.4.2), rlang (>= 1.0.4), roxygen2 (>= 7.2.1), rversions (>=        2.1.1), sessioninfo (>= 1.2.2), stats, testthat (>= 3.1.5), tools, urlchecker (>= 1.0.1), utils, withr (>= 2.5.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"DiagrammeR","1.0.10","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","dplyr (>= 1.0.7), downloader (>= 0.4), glue (>= 1.5.0), htmltools (>= 0.5.2), htmlwidgets (>= 1.5), igraph (>= 1.2.11), magrittr (>= 1.5), purrr (>= 0.3.4), RColorBrewer (>= 1.1-2), readr (>= 2.1.1), rlang (>= 0.4), rstudioapi (>= 0.7), scales        (>= 1.1), stringr (>= 1.4), tibble (>= 3.1), tidyr (>= 1.1), viridis (>= 0.6.2), visNetwork (>= 2.1.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"dichromat","2.0-0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"diffobj","0.3.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","crayon (>= 1.3.2), tools, methods, utils, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"digest","0.6.34","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"disk.frame","0.8.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","dplyr (>= 1.1.0)","Rcpp (>= 0.12.13), glue (>= 1.3.1), future.apply (>= 1.3.0), fs (>= 1.3.1), jsonlite (>= 1.6), pryr (>= 0.1.4), stringr (>=        1.4.0), fst (>= 0.8.0), future (>= 1.14.0), data.table (>=        1.12.2), crayon (>= 1.3.4), bigreadr (>= 0.2.0), bit64, benchmarkme, purrr (>= 0.3.2), globals, rlang, arrow","","",NA,NA,NA,NA,NA,"CRAN",NA
+"dismo","1.3-14","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","raster (>= 3.5-21), sp (>= 1.4-5)","Rcpp, methods, terra (>= 1.5-34)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"doBy","4.6.22","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","boot, broom, cowplot, Deriv, dplyr, ggplot2, MASS, Matrix, modelr, microbenchmark, rlang, tibble, tidyr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"doParallel","1.0.17","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","foreach (>= 1.2.0), iterators (>= 1.0.0), parallel, utils","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"downlit","0.4.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","brio, desc, digest, evaluate, fansi, memoise, rlang, vctrs, withr, yaml","","",NA,NA,NA,NA,NA,"CRAN",NA
+"downloader","0.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils, digest","","",NA,NA,NA,NA,NA,"RSPM",NA
+"dplyr","1.1.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.4.0), generics, glue (>= 1.3.2), lifecycle (>=        1.0.3), magrittr (>= 1.5), methods, pillar (>= 1.9.0), R6, rlang (>= 1.1.0), tibble (>= 3.2.0), tidyselect (>= 1.2.0), utils, vctrs (>= 0.6.4)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"dqrng","0.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.16)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"dtt","0.1-2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"e1071","1.7-13","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, grDevices, class, stats, methods, utils, proxy","","",NA,NA,NA,NA,NA,"CRAN",NA
+"earth","5.3.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","Formula (>= 1.2-3), plotmo (>= 3.6.0), TeachingDemos (>= 2.10)","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"effsize","0.8.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"ellipsis","0.3.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","rlang (>= 0.3.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"EnvStats","2.8.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","MASS, ggplot2, nortest","","",NA,NA,NA,NA,NA,"CRAN",NA
+"evaluate","0.23","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"exactextractr","0.10.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.12), methods, raster, sf (>= 0.9.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fansi","1.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","grDevices, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"farver","2.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fastdigest","0.6-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fastDummies","1.7.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","data.table, tibble, stringr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fasterize","1.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp, raster (>= 2.8-3), wk","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fastGHQuad","1.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","Rcpp (>= 0.11.0)","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fastmap","1.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fastmatch","1.1-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"ff","4.0.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","bit (>= 4.0.0), utils","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"filelock","1.0.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fontawesome","0.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","rlang (>= 1.0.6), htmltools (>= 0.5.1.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"forcats","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.4.0), glue, lifecycle, magrittr, rlang (>= 1.0.0), tibble","","",NA,NA,NA,NA,NA,"CRAN",NA
+"foreach","1.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","codetools, utils, iterators","","",NA,NA,NA,NA,NA,"CRAN",NA
+"Formula","1.2-5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fpCompare","0.2.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fs","1.6.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fst","0.9.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","fstcore, Rcpp","","",NA,NA,NA,NA,NA,"CRAN",NA
+"fstcore","0.9.14","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp","","",NA,NA,NA,NA,NA,"CRAN",NA
+"furrr","0.3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","future (>= 1.25.0)","globals (>= 0.14.0), lifecycle (>= 1.0.1), purrr (>= 0.3.4), rlang (>= 1.0.2), vctrs (>= 0.4.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"future","1.33.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","digest, globals (>= 0.16.1), listenv (>= 0.8.0), parallel, parallelly (>= 1.34.0), utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"future.apply","1.11.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","future (>= 1.28.0)","globals (>= 0.16.1), parallel, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"future.callr","0.8.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","future (>= 1.33.0)","callr (>= 2.0.3)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"gargle","1.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.0.1), fs (>= 1.3.1), glue (>= 1.3.0), httr (>=        1.4.5), jsonlite, lifecycle, openssl, rappdirs, rlang (>=        1.1.0), stats, utils, withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"gbm","2.1.8.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","lattice, parallel, survival","","",NA,NA,NA,NA,NA,"CRAN",NA
+"gdalUtilities","1.2.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","sf (>= 1.0-11)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"generics","0.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"geojsonsf","2.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp","","",NA,NA,NA,NA,NA,"RSPM",NA
+"geometries","0.2.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 1.0.10)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"gert","2.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","askpass, credentials (>= 1.2.1), openssl (>= 2.0.3), rstudioapi (>= 0.11), sys, zip (>= 2.1.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggforce","0.4.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","ggplot2 (>= 3.3.6)","Rcpp (>= 0.12.2), grid, scales, MASS, tweenr (>= 0.1.5), gtable, rlang, polyclip, stats, grDevices, tidyselect, withr, utils, lifecycle, cli, vctrs, systemfonts","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggfun","0.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, ggplot2, grid, rlang, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggimage","0.3.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","ggplot2","ggfun, ggplotify, grid, jsonlite, magick, methods, scales, tibble, tools, utils, withr","","",NA,NA,NA,NA,NA,"RSPM",NA
+"ggplot2","3.4.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, glue, grDevices, grid, gtable (>= 0.1.1), isoband, lifecycle (> 1.0.1), MASS, mgcv, rlang (>= 1.1.0), scales (>=        1.2.0), stats, tibble, vctrs (>= 0.5.0), withr (>= 2.5.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggplotify","0.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ggplot2, graphics, grDevices, grid, gridGraphics, yulab.utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggpubr","0.6.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","ggplot2 (>= 3.4.0)","ggrepel (>= 0.9.2), grid, ggsci, stats, utils, tidyr (>=        1.3.0), purrr, dplyr (>= 0.7.1), cowplot (>= 1.1.1), ggsignif, scales, gridExtra, glue, polynom, rlang (>= 0.4.6), rstatix (>=        0.7.2), tibble, magrittr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggrepel","0.9.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","ggplot2 (>= 2.2.0)","grid, Rcpp, rlang (>= 0.3.0), scales (>= 0.5.0), withr (>=        2.5.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggsci","3.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ggplot2 (>= 2.0.0), grDevices, scales","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggsignif","0.6.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ggplot2 (>= 3.3.5)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ggspatial","1.1.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","sf, ggplot2 (>= 3.0.0), rosm (>= 0.2), abind, methods, tibble, scales, tidyr, rlang, grid, glue","","",NA,NA,NA,NA,NA,"CRAN",NA
+"gh","1.4.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.0.1), gitcreds, httr2, ini, jsonlite, rlang (>=        1.0.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"gitcreds","0.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"glmm","1.4.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","trust, mvtnorm, Matrix, parallel, doParallel","stats, foreach, itertools, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"glmmTMB","1.1.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, TMB (>= 1.9.0), lme4 (>= 1.1-18.9000), Matrix, nlme, numDeriv, mgcv","","",NA,NA,NA,NA,NA,"CRAN",NA
+"glmnet","4.1-8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","Matrix (>= 1.0-6)","methods, utils, foreach, shape, survival, Rcpp","","",NA,NA,NA,NA,NA,"RSPM",NA
+"globals","0.16.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","codetools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"glue","1.6.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"goftest","1.2-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"RSPM",NA
+"googledrive","2.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.0.0), gargle (>= 1.5.0), glue (>= 1.4.2), httr, jsonlite, lifecycle, magrittr, pillar (>= 1.9.0), purrr (>=        1.0.1), rlang (>= 1.0.2), tibble (>= 2.0.0), utils, uuid, vctrs        (>= 0.3.0), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"gridBase","0.4-7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, grid","","",NA,NA,NA,NA,NA,"RSPM",NA
+"gridExtra","2.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","gtable, grid, grDevices, graphics, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"gridGraphics","0.5-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","grid, graphics","grDevices","","",NA,NA,NA,NA,NA,"RSPM",NA
+"gsubfn","0.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","proto","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"gtable","0.3.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, glue, grid, lifecycle, rlang (>= 1.1.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"here","1.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","rprojroot (>= 2.0.2)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"hexbin","1.28.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","lattice, grid, graphics, grDevices, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"hexSticker","0.4.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ggimage, ggplot2, grDevices, hexbin, showtext, stats, sysfonts","","",NA,NA,NA,NA,NA,"RSPM",NA
+"highr","0.10","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","xfun (>= 0.18)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"hms","1.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","lifecycle, methods, pkgconfig, rlang (>= 1.0.2), vctrs (>=        0.3.8)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"htmltools","0.5.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","base64enc, digest, ellipsis, fastmap (>= 1.1.0), grDevices, rlang (>= 1.0.0), utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"htmlwidgets","1.6.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","grDevices, htmltools (>= 0.5.4), jsonlite (>= 0.9.16), yaml, knitr (>= 1.8), rmarkdown","","",NA,NA,NA,NA,NA,"CRAN",NA
+"httpuv","1.6.15","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","later (>= 0.8.0), promises, R6, Rcpp (>= 1.0.7), utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"httr","1.4.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","curl (>= 5.0.2), jsonlite, mime, openssl (>= 0.8), R6","","",NA,NA,NA,NA,NA,"CRAN",NA
+"httr2","0.2.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.0.0), curl, glue, magrittr, openssl, R6, rappdirs, rlang (>= 1.0.0), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"hunspell","3.0.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp, digest","","",NA,NA,NA,NA,NA,"CRAN",NA
+"igraph","1.5.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","cli, graphics, grDevices, lifecycle, magrittr, Matrix, pkgconfig (>= 2.0.0), rlang, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ini","0.3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"insight","0.19.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"interp","1.1-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.9), deldir","","",NA,NA,NA,NA,NA,"CRAN",NA
+"isoband","0.2.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","grid, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"iterators","1.0.14","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","utils","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"itertools","0.1-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","iterators(>= 1.0.0)","parallel","","",NA,NA,NA,NA,NA,"CRAN",NA
+"jpeg","0.1-10","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"jquerylib","0.1.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","htmltools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"jsonify","1.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.18)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"jsonlite","1.8.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"keyring","1.3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","assertthat, askpass, openssl, R6, utils, sodium, yaml, filelock, rappdirs, tools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"knitr","1.44","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","evaluate (>= 0.15), highr, methods, tools, xfun (>= 0.39), yaml (>= 2.1.19)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"knn","1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"kSamples","1.2-10","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","SuppDists","methods, graphics, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"labeling","0.4.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, graphics","","",NA,NA,NA,NA,NA,"RSPM",NA
+"later","1.3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.9), rlang","","",NA,NA,NA,NA,NA,"CRAN",NA
+"latticeExtra","0.6-30","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","lattice","grid, stats, utils, grDevices, png, jpeg, RColorBrewer, interp, MASS","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lazyeval","0.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"leafem","0.2.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","base64enc, geojsonsf, htmltools (>= 0.3), htmlwidgets, leaflet        (>= 2.0.1), methods, raster, sf, png","","",NA,NA,NA,NA,NA,"RSPM",NA
+"leaflet","2.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","crosstalk, htmltools, htmlwidgets (>= 1.5.4), jquerylib, leaflet.providers (>= 2.0.0), magrittr, methods, png, raster        (>= 3.6.3), RColorBrewer, scales (>= 1.0.0), sp, stats, viridisLite, xfun","","",NA,NA,NA,NA,NA,"RSPM",NA
+"leaflet.providers","2.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","htmltools","","",NA,NA,NA,NA,NA,"RSPM",NA
+"leafpop","0.1.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","base64enc, brew, htmltools, htmlwidgets, sf, svglite, uuid","","",NA,NA,NA,NA,NA,"RSPM",NA
+"leafsync","0.1.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","htmltools (>= 0.3), htmlwidgets, leaflet (>= 2.0.1)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"LearnBayes","2.15.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lifecycle","1.0.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.4.0), glue, rlang (>= 1.1.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"listenv","0.9.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lme4","1.1-35.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","Matrix (>= 1.2-1), methods, stats","graphics, grid, splines, utils, parallel, MASS, lattice, boot, nlme (>= 3.1-123), minqa (>= 1.1.15), nloptr (>= 1.0.4)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lobstr","1.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","crayon, methods, prettyunits, rlang (>= 1.0.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"logging","0.10-108","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lpSolve","5.6.19","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lubridate","1.9.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","generics, timechange (>= 0.1.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"lwgeom","0.2-14","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp, units, sf (>= 1.0-15)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"magick","2.8.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.12), magrittr, curl","","",NA,NA,NA,NA,NA,"CRAN",NA
+"magrittr","2.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"maps","3.4.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"maptools","1.1-8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","sp (>= 1.0-11)","foreign (>= 0.8), methods, grid, lattice, stats, utils, grDevices","","",NA,NA,NA,NA,NA,"CRAN",NA
+"mapview","2.11.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","base64enc, htmltools, htmlwidgets, lattice, leafem, leaflet        (>= 2.0.0), leafpop, png, raster (>= 3.6.3), satellite, scales        (>= 0.2.5), servr, sf, sp","","",NA,NA,NA,NA,NA,"RSPM",NA
+"markdown","1.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils, commonmark (>= 1.9.0), xfun (>= 0.38)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"MatrixModels","0.5-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, methods, Matrix (>= 1.6-0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"matrixStats","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"maxnet","0.1.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","glmnet","","",NA,NA,NA,NA,NA,"RSPM",NA
+"mclust","6.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, utils, graphics, grDevices","","",NA,NA,NA,NA,NA,"CRAN",NA
+"mda","0.5-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats, class","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"memoise","2.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","rlang (>= 0.4.10), cachem","","",NA,NA,NA,NA,NA,"CRAN",NA
+"microbenchmark","1.4.10","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"mime","0.12","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","tools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"miniUI","0.1.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","shiny (>= 0.13), htmltools (>= 0.3), utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"minqa","1.2.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.9.10)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"modelr","0.1.11","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","broom, magrittr, purrr (>= 0.2.2), rlang (>= 1.0.6), tibble, tidyr (>= 0.8.0), tidyselect, vctrs","","",NA,NA,NA,NA,NA,"CRAN",NA
+"MuMIn","1.47.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, methods, Matrix, stats, stats4, nlme, insight","","",NA,NA,NA,NA,NA,"CRAN",NA
+"munsell","0.5.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","colorspace, methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"mvtnorm","1.2-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"NetLogoR","1.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","data.table, grDevices, methods, quickPlot (>= 1.0.2), stats, terra, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"NLMR","1.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","checkmate, dplyr, fasterize, raster, Rcpp, sf, spatstat.random, spatstat.geom, stats, tibble","","",NA,NA,NA,NA,NA,"https://predictiveecology.r-universe.dev",NA
+"nloptr","2.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"nortest","1.0-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"numDeriv","2016.8-1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"odbc","1.3.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bit64, blob (>= 1.2.0), DBI (>= 1.0.0), hms, methods, Rcpp (>=        0.12.11), rlang (>= 0.2.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"openssl","2.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","askpass","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pak","0.5.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","tools, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"parallelly","1.36.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","parallel, tools, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"patchwork","1.1.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ggplot2 (>= 3.0.0), gtable, grid, stats, grDevices, utils, graphics, rlang, cli","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pbapply","1.7-0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","parallel","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pbkrtest","0.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","lme4 (>= 1.1.31)","broom, dplyr, MASS, Matrix (>= 1.2.3), methods, numDeriv, parallel","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pillar","1.9.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 2.3.0), fansi, glue, lifecycle, rlang (>= 1.0.2), utf8        (>= 1.1.0), utils, vctrs (>= 0.5.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pkgbuild","1.4.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","callr (>= 3.2.0), cli (>= 3.4.0), crayon, desc, prettyunits, processx, R6, rprojroot","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pkgconfig","2.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pkgdown","2.0.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bslib (>= 0.3.1), callr (>= 3.7.3), cli, desc, digest, downlit        (>= 0.4.0), fs (>= 1.4.0), httr (>= 1.4.2), jsonlite, magrittr, memoise, purrr, ragg, rlang (>= 1.0.0), rmarkdown (>=        1.1.9007), tibble, whisker, withr (>= 2.4.3), xml2 (>= 1.3.1), yaml","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pkgload","1.3.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.3.0), crayon, desc, fs, glue, methods, pkgbuild, rlang (>= 1.1.1), rprojroot, utils, withr (>= 2.4.3)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"plogr","0.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"plotmo","3.6.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","Formula (>= 1.2-3), plotrix, TeachingDemos","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"plotrix","3.8-2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","grDevices, graphics, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"plyr","1.8.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.11.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"png","0.1-8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"polyclip","1.10-6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"polynom","1.4-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, graphics","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pool","1.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","DBI, later (>= 1.0.0), R6, rlang (>= 1.0.0), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"praise","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"PresenceAbsence","1.1.11","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"prettymapr","0.2.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","digest, rjson, httr, plyr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"prettyunits","1.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pROC","1.18.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, plyr, Rcpp (>= 0.11.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"processx","3.8.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","ps (>= 1.2.0), R6, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"profvis","0.3.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","htmlwidgets (>= 0.3.2), purrr, rlang (>= 0.4.9), stringr, vctrs","","",NA,NA,NA,NA,NA,"CRAN",NA
+"progress","1.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","hms, prettyunits, R6, crayon","","",NA,NA,NA,NA,NA,"CRAN",NA
+"promises","1.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","fastmap (>= 1.1.0), later, magrittr (>= 1.5), R6, Rcpp, rlang, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"proto","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"proxy","0.4-27","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pryr","0.1.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","codetools, lobstr, methods, Rcpp (>= 0.11.0), stringr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ps","1.7.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"pscl","1.5.5.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","MASS, datasets, grDevices, graphics, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"purrr","1.0.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.6.1), lifecycle (>= 1.0.3), magrittr (>= 1.5.0), rlang (>= 1.1.1), vctrs (>= 0.6.3)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"qs","0.25.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp, RApiSerialize (>= 0.1.1), stringfish (>= 0.15.1)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"quantreg","5.97","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats, SparseM","methods, graphics, Matrix, MatrixModels, survival, MASS","","",NA,NA,NA,NA,NA,"CRAN",NA
+"quickPlot","1.0.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","data.table (>= 1.10.4), fpCompare, grDevices, grid, methods, stats, terra, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"R.methodsS3","1.8.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"R.oo","1.25.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","R.methodsS3 (>= 1.8.1)","methods, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"R.utils","2.12.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","R.oo","methods, utils, tools, R.methodsS3","","",NA,NA,NA,NA,NA,"CRAN",NA
+"R6","2.5.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"ragg","1.2.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","systemfonts (>= 1.0.3), textshaping (>= 0.3.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RandomFields","3.3.14","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","sp, RandomFieldsUtils (>= 1.1)","graphics, methods, grDevices, stats, utils","","",NA,NA,NA,NA,NA,"https://predictiveecology.r-universe.dev",NA
+"RandomFieldsUtils","1.2.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils, methods, parallel","","",NA,NA,NA,NA,NA,"https://predictiveecology.r-universe.dev",NA
+"randomForest","4.7-1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"RANN","2.6.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rapidjsonr","1.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"RApiSerialize","0.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rappdirs","0.3.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"raster","3.6-26","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","sp (>= 1.4-5)","Rcpp, methods, terra (>= 1.7-29)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rbenchmark","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rcmdcheck","1.4.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","callr (>= 3.1.1.9000), cli (>= 3.0.0), curl, desc (>= 1.2.0), digest, pkgbuild, prettyunits, R6, rprojroot, sessioninfo (>=        1.1.1), utils, withr, xopen","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RColorBrewer","1.1-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"Rcpp","1.0.11","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RcppArmadillo","0.12.6.6.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.11.0), stats, utils, methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RcppEigen","0.3.3.9.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.11.0), stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RcppParallel","5.1.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RcppProgress","0.4.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"RcppTOML","0.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.11.5)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"readr","2.1.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.2.0), clipr, crayon, hms (>= 0.4.1), lifecycle (>=        0.2.0), methods, R6, rlang, tibble, utils, vroom (>= 1.6.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rematch2","2.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","tibble","","",NA,NA,NA,NA,NA,"CRAN",NA
+"remotes","2.4.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, stats, tools, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"renv","1.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"reproducible","2.0.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","data.table (>= 1.10.4), digest, filelock, fpCompare, fs, lobstr, methods, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"reshape","0.8.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","plyr","","",NA,NA,NA,NA,NA,"RSPM",NA
+"reshape2","1.4.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","plyr (>= 1.8.1), Rcpp, stringr","","",NA,NA,NA,NA,NA,"RSPM",NA
+"reticulate","1.34.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Matrix, Rcpp (>= 1.0.7), RcppTOML, graphics, here, jsonlite, methods, png, rappdirs, utils, rlang, withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rex","1.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","lazyeval","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RhpcBLASctl","0.23-42","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rjson","0.2.21","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rlang","1.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rmarkdown","2.25","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bslib (>= 0.2.5.1), evaluate (>= 0.13), fontawesome (>=        0.5.0), htmltools (>= 0.5.1), jquerylib, jsonlite, knitr (>=        1.22), methods, stringr (>= 1.2.0), tinytex (>= 0.31), tools, utils, xfun (>= 0.36), yaml (>= 2.1.19)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rnaturalearth","1.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","httr (>= 1.1.0), jsonlite, sf (>= 0.3-4), terra, utils (>=        3.2.3)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rnaturalearthdata","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"robustbase","0.99-0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, graphics, utils, methods, DEoptimR","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RODBC","1.3-20","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rosm","0.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","curl, jpeg, png, wk, glue, progress, rlang","","",NA,NA,NA,NA,NA,"CRAN",NA
+"roxygen2","7.2.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","brew, cli (>= 3.3.0), commonmark, desc (>= 1.2.0), knitr, methods, pkgload (>= 1.0.2), purrr (>= 0.3.3), R6 (>= 2.1.2), rlang (>= 1.0.6), stringi, stringr (>= 1.0.0), utils, withr, xml2","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RPostgres","1.4.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bit64, blob (>= 1.2.0), DBI (>= 1.1.0), hms (>= 1.0.0), lubridate, methods, Rcpp (>= 1.0.7), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RPostgreSQL","0.7-5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods, DBI (>= 0.3)","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rprojroot","2.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"RSQLite","2.3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bit64, blob (>= 1.2.0), DBI (>= 1.1.0), memoise, methods, pkgconfig","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rstatix","0.7.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, utils, tidyr (>= 1.0.0), purrr, broom (>= 0.7.4), rlang        (>= 0.3.1), tibble (>= 2.1.3), dplyr (>= 0.7.1), magrittr, corrplot, tidyselect (>= 1.2.0), car, generics (>= 0.0.2)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rstudio.prefs","0.1.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 2.5.0), dplyr (>= 1.0.6), fs (>= 1.5.0), jsonlite (>=        1.7.2), purrr (>= 0.3.4), rappdirs (>= 0.3.3), rlang (>=        0.4.11), rstudioapi (>= 0.13), rvest (>= 1.0.0), tibble (>=        3.1.2)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rstudioapi","0.15.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rversions","2.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","curl, utils, xml2 (>= 1.0.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"rvest","1.0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","glue, cli, httr (>= 0.5), lifecycle (>= 1.0.0), magrittr, rlang (>= 1.0.0), selectr, tibble, xml2 (>= 1.3), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"s2","1.1.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp, wk (>= 0.6.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sampling","2.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","MASS, lpSolve","","",NA,NA,NA,NA,NA,"CRAN",NA
+"SamplingBigData","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"sass","0.4.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","fs (>= 1.2.4), rlang (>= 0.4.10), htmltools (>= 0.5.1), R6, rappdirs","","",NA,NA,NA,NA,NA,"CRAN",NA
+"satellite","1.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","raster, methods, utils, stats, grDevices, graphics","plyr, Rcpp (>= 0.10.3), terra, tools, stats4","","",NA,NA,NA,NA,NA,"RSPM",NA
+"scales","1.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","farver (>= 2.0.3), labeling, lifecycle, munsell (>= 0.5), R6, RColorBrewer, rlang (>= 1.0.0), viridisLite","","",NA,NA,NA,NA,NA,"CRAN",NA
+"selectr","0.4-2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, stringr, R6","","",NA,NA,NA,NA,NA,"RSPM",NA
+"servr","0.30","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","mime (>= 0.2), httpuv (>= 1.5.2), xfun (>= 0.42), jsonlite","","",NA,NA,NA,NA,NA,"RSPM",NA
+"sessioninfo","1.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.1.0), tools, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sf","1.0-16","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","classInt (>= 0.4-1), DBI (>= 0.8), graphics, grDevices, grid, magrittr, Rcpp (>= 0.12.18), s2 (>= 1.1.0), stats, tools, units        (>= 0.7-0), utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sfheaders","0.4.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 1.0.10)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"shape","1.4.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, graphics, grDevices","","",NA,NA,NA,NA,NA,"CRAN",NA
+"shiny","1.8.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","utils, grDevices, httpuv (>= 1.5.2), mime (>= 0.3), jsonlite        (>= 0.9.16), xtable, fontawesome (>= 0.4.0), htmltools (>=        0.5.4), R6 (>= 2.0), sourcetools, later (>= 1.0.0), promises        (>= 1.1.0), tools, crayon, rlang (>= 0.4.10), fastmap (>=        1.1.1), withr, commonmark (>= 1.7), glue (>= 1.3.2), bslib (>=        0.3.0), cachem, lifecycle (>= 0.2.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"showtext","0.9-6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","sysfonts (>= 0.7.1), showtextdb (>= 2.0)","grDevices","","",NA,NA,NA,NA,NA,"CRAN",NA
+"showtextdb","3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","sysfonts (>= 0.7), utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"sitmo","2.0.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp (>= 0.12.13)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"slam","0.1-50","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"RSPM",NA
+"snow","0.4-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","utils","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sodium","1.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sos","2.1-7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","brew","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sourcetools","0.1.7-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sp","2.0-0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","utils, stats, graphics, grDevices, lattice, grid","","",NA,NA,NA,NA,NA,"CRAN",NA
+"SparseM","1.81","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","graphics, stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatialEco","2.0-2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","sf, terra","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat","3.0-6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","spatstat.data (>= 3.0-1), spatstat.geom (>=        3.2-1), spatstat.random (>= 3.1-5), spatstat.explore (>=        3.2-1), spatstat.model (>= 3.2-4), spatstat.linnet (>= 3.1-1), utils","spatstat.utils (>= 3.0-3)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.data","3.0-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","spatstat.utils (>= 3.0-2), Matrix","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.explore","3.2-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","spatstat.data (>= 3.0-1), spatstat.geom (>=        3.2-1), spatstat.random (>= 3.1-4), stats, graphics, grDevices, utils, methods, nlme","spatstat.utils (>= 3.0-3), spatstat.sparse (>= 3.0-1), goftest        (>= 1.2-2), Matrix, abind","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.geom","3.2-7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","spatstat.data (>= 3.0), stats, graphics, grDevices, utils, methods","spatstat.utils (>= 3.0-2), deldir (>= 1.0-2), polyclip (>=        1.10-0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.linnet","3.1-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","spatstat.data (>= 3.0), spatstat.geom (>=        3.2-1), spatstat.random (>= 3.1-5), spatstat.explore (>=        3.2-1), spatstat.model (>= 3.2-3), stats, graphics, grDevices, methods, utils","spatstat.utils (>= 3.0-3), Matrix, spatstat.sparse (>= 3.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.model","3.2-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","spatstat.data (>= 3.0), spatstat.geom (>=        3.2-1), spatstat.random (>= 3.1-5), spatstat.explore (>=        3.2-1), stats, graphics, grDevices, utils, methods, nlme, rpart","spatstat.utils (>= 3.0-3), spatstat.sparse (>= 3.0), mgcv, Matrix, abind, tensor, goftest (>= 1.2-2)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.random","3.2-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","spatstat.data (>= 3.0), spatstat.geom (>=        3.2-1), stats, utils, methods, grDevices","spatstat.utils (>= 3.0-2)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.sparse","3.0-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats, utils, methods, Matrix, abind, tensor","spatstat.utils (>= 3.0-2)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"spatstat.univar","3.0-0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats","spatstat.utils (>= 3.0-5)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"spatstat.utils","3.0-5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats, graphics, grDevices, utils, methods","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"spelling","2.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","commonmark, xml2, hunspell (>= 3.0), knitr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sqldf","0.4-11","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","gsubfn (>= 0.6), proto, RSQLite","DBI, chron","","",NA,NA,NA,NA,NA,"RSPM",NA
+"stars","0.6-6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","abind, sf (>= 1.0-15)","methods, parallel, classInt (>= 0.4-1), rlang, units","","",NA,NA,NA,NA,NA,"RSPM",NA
+"stringfish","0.15.8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp, RcppParallel","","",NA,NA,NA,NA,NA,"CRAN",NA
+"stringi","1.8.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","tools, utils, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"stringr","1.5.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, glue (>= 1.6.1), lifecycle (>= 1.0.3), magrittr, rlang        (>= 1.0.0), stringi (>= 1.5.3), vctrs (>= 0.4.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"SuppDists","1.1-9.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"svglite","2.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","systemfonts (>= 1.0.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sys","3.4.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"sysfonts","0.8.9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"systemfonts","1.0.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"TeachingDemos","2.12","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tensor","1.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"terra","1.7-78","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods, Rcpp (>= 1.0-10)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"testthat","3.2.1.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","brio (>= 1.1.3), callr (>= 3.7.3), cli (>= 3.6.1), desc (>=        1.4.2), digest (>= 0.6.33), evaluate (>= 0.21), jsonlite (>=        1.8.7), lifecycle (>= 1.0.3), magrittr (>= 2.0.3), methods, pkgload (>= 1.3.2.1), praise (>= 1.0.0), processx (>= 3.8.2), ps (>= 1.7.5), R6 (>= 2.5.1), rlang (>= 1.1.1), utils, waldo        (>= 0.5.1), withr (>= 2.5.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"textshaping","0.3.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","systemfonts (>= 1.0.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tibble","3.2.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","fansi (>= 0.4.0), lifecycle (>= 1.0.0), magrittr, methods, pillar (>= 1.8.1), pkgconfig, rlang (>= 1.0.2), utils, vctrs        (>= 0.4.2)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tidyr","1.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.4.1), dplyr (>= 1.0.10), glue, lifecycle (>= 1.0.3), magrittr, purrr (>= 1.0.1), rlang (>= 1.0.4), stringr (>=        1.5.0), tibble (>= 2.1.1), tidyselect (>= 1.2.0), utils, vctrs        (>= 0.5.2)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tidyselect","1.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.3.0), glue (>= 1.3.0), lifecycle (>= 1.0.3), rlang        (>= 1.0.4), vctrs (>= 0.4.1), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"timechange","0.2.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tinytest","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","parallel, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tinytex","0.48","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","xfun (>= 0.29)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tmaptools","3.1-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods","sf (>= 0.9.2), lwgeom (>= 0.1-4), stars (>= 0.4-1), units (>=        0.6-1), grid, magrittr, RColorBrewer, viridisLite, stats, dichromat, XML","","",NA,NA,NA,NA,NA,"RSPM",NA
+"TMB","1.9.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, methods, stats, utils, Matrix (>= 1.0-12)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"truncnorm","1.0-9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"trust","0.1-8","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tweenr","2.0.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","farver, magrittr, rlang, vctrs","","",NA,NA,NA,NA,NA,"CRAN",NA
+"tzdb","0.4.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"units","0.8-3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","Rcpp","","",NA,NA,NA,NA,NA,"CRAN",NA
+"urlchecker","1.0.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, curl, tools, xml2","","",NA,NA,NA,NA,NA,"CRAN",NA
+"usethis","2.2.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.0.1), clipr (>= 0.3.0), crayon, curl (>= 2.7), desc        (>= 1.4.2), fs (>= 1.3.0), gert (>= 1.4.1), gh (>= 1.2.1), glue        (>= 1.3.0), jsonlite, lifecycle (>= 1.0.0), purrr, rappdirs, rlang (>= 1.1.0), rprojroot (>= 1.2), rstudioapi, stats, utils, whisker, withr (>= 2.3.0), yaml","","",NA,NA,NA,NA,NA,"CRAN",NA
+"utf8","1.2.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"uuid","1.1-1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"vctrs","0.6.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli (>= 3.4.0), glue, lifecycle (>= 1.0.3), rlang (>= 1.1.0)","","",NA,NA,NA,NA,NA,"CRAN",NA
+"versions","0.3","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"VGAM","1.1-9","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods, stats, stats4, splines","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"viridis","0.6.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","viridisLite (>= 0.4.0)","ggplot2 (>= 1.0.1), gridExtra","","",NA,NA,NA,NA,NA,"CRAN",NA
+"viridisLite","0.4.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"visNetwork","2.1.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","htmlwidgets, htmltools, jsonlite, magrittr, utils, methods, grDevices, stats","","",NA,NA,NA,NA,NA,"RSPM",NA
+"visualTest","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, grDevices, methods, stats, tools","","",NA,NA,NA,NA,NA,"https://predictiveecology.r-universe.dev",NA
+"vroom","1.6.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","bit64, cli (>= 3.2.0), crayon, glue, hms, lifecycle (>=        1.0.3), methods, rlang (>= 0.4.2), stats, tibble (>= 2.0.0), tidyselect, tzdb (>= 0.1.1), vctrs (>= 0.2.0), withr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"waldo","0.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","cli, diffobj (>= 0.3.4), fansi, glue, methods, rematch2, rlang        (>= 1.0.0), tibble","","",NA,NA,NA,NA,NA,"CRAN",NA
+"webshot","0.5.4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","magrittr, jsonlite, callr","","",NA,NA,NA,NA,NA,"CRAN",NA
+"whisker","0.4.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"widgetframe","0.3.1","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","htmlwidgets","htmltools, purrr, magrittr, utils, tools","","",NA,NA,NA,NA,NA,"RSPM",NA
+"withr","2.5.2","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","graphics, grDevices, stats","","",NA,NA,NA,NA,NA,"CRAN",NA
+"wk","0.9.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"WriteXLS","6.4.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"xfun","0.40","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, tools","","",NA,NA,NA,NA,NA,"CRAN",NA
+"XML","3.99-0.17","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","methods, utils","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"xml2","1.3.5","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","methods","","",NA,NA,NA,NA,NA,"CRAN",NA
+"xopen","1.0.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","processx","","",NA,NA,NA,NA,NA,"CRAN",NA
+"xtable","1.8-4","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"yaml","2.3.7","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"yulab.utils","0.0.6","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","stats, utils","","",NA,NA,NA,NA,NA,"CRAN",NA
+"zip","2.3.0","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","","","","",NA,NA,NA,NA,NA,"CRAN",NA
+"zoo","1.8-12","C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd","stats","utils, graphics, grDevices, lattice (>= 0.20-27)","","",NA,NA,NA,NA,NA,"CRAN",NA

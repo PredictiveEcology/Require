@@ -77,7 +77,7 @@ extractInequality <- function(pkgs) {
 #' @examples
 #' extractPkgGitHub("PredictiveEcology/Require")
 extractPkgGitHub <- function(pkgs) {
-  isGH <- grepl("^[^//].+/.+[@.+]?", pkgs, perl = FALSE)
+  isGH <- grepl("^[^//][[:alnum:]\\_\\.\\-]+/.+[@.+]?", pkgs, perl = FALSE)
   if (any(isGH)) {
     a <- trimVersionNumber(pkgs[isGH])
     hasRepo <- grepl("/", a)
@@ -111,6 +111,8 @@ trimVersionNumber <- function(pkgs) {
     nas <- is.na(pkgs)
     if (any(!nas)) {
       ew <- endsWith(pkgs[!nas], ")")
+      if (getOption("Require.usePak", TRUE))
+        ew <- ew | grepl("@", pkgs[!nas])
       if (any(ew)) {
         pkgs[!nas][ew] <- gsub(paste0("\n|\t|", .grepVersionNumber), "", pkgs[!nas][ew])
       }
@@ -122,7 +124,10 @@ trimVersionNumber <- function(pkgs) {
 rmExtraSpaces <- function(string) {
   gsub(" {2, }", " ", string)
 }
-.grepVersionNumber <- " *\\(.*"
+
+# the @ is both in pak for CRAN and GitHub ... need to disentangle these for grep
+.grepVersionNumber <- " *\\(.*"#| {0,5}@.+$"
+
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
 grepExtractPkgsFilename <-
