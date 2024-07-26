@@ -26,7 +26,7 @@ omitPkgsTemporarily <- function(pkgs) {
   pkgs
 }
 
-dontTryDetach <- c("devtools", "testthat", "googledrive")
+dontTryDetach <- c("devtools", "testthat", "googledrive", "rmarkdown")
 
 dontDetach <- function() {
   c("pak", extractPkgName(unlist(unname(pkgDep(dontTryDetach, recursive = T)))))
