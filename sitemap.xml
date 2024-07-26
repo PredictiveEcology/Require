@@ -1,126 +1,44 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>/404.html</loc>
-  </url>
-  <url>
-    <loc>/CONTRIBUTING.html</loc>
-  </url>
-  <url>
-    <loc>/authors.html</loc>
-  </url>
-  <url>
-    <loc>/index.html</loc>
-  </url>
-  <url>
-    <loc>/news/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/DESCRIPTION-helpers.html</loc>
-  </url>
-  <url>
-    <loc>/reference/GitHubTools.html</loc>
-  </url>
-  <url>
-    <loc>/reference/R_TESTSomit.html</loc>
-  </url>
-  <url>
-    <loc>/reference/Require.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RequireCacheDir.html</loc>
-  </url>
-  <url>
-    <loc>/reference/RequireOptions.html</loc>
-  </url>
-  <url>
-    <loc>/reference/availablePackagesOverride.html</loc>
-  </url>
-  <url>
-    <loc>/reference/availableVersionOK.html</loc>
-  </url>
-  <url>
-    <loc>/reference/availableVersions.html</loc>
-  </url>
-  <url>
-    <loc>/reference/checkPath.html</loc>
-  </url>
-  <url>
-    <loc>/reference/chooseCRANmirror2.html</loc>
-  </url>
-  <url>
-    <loc>/reference/clearRequire.html</loc>
-  </url>
-  <url>
-    <loc>/reference/detachAll.html</loc>
-  </url>
-  <url>
-    <loc>/reference/dot-downloadFileMasterMainAuth.html</loc>
-  </url>
-  <url>
-    <loc>/reference/extractPkgName.html</loc>
-  </url>
-  <url>
-    <loc>/reference/getCRANrepos.html</loc>
-  </url>
-  <url>
-    <loc>/reference/getOptionRPackageCache.html</loc>
-  </url>
-  <url>
-    <loc>/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/invertList.html</loc>
-  </url>
-  <url>
-    <loc>/reference/linkOrCopy.html</loc>
-  </url>
-  <url>
-    <loc>/reference/messageVerbose.html</loc>
-  </url>
-  <url>
-    <loc>/reference/modifyList2.html</loc>
-  </url>
-  <url>
-    <loc>/reference/normPath.html</loc>
-  </url>
-  <url>
-    <loc>/reference/paddedFloatToChar.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pkgDep.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pkgDepIfDepRemoved.html</loc>
-  </url>
-  <url>
-    <loc>/reference/pkgSnapshot.html</loc>
-  </url>
-  <url>
-    <loc>/reference/rversions.html</loc>
-  </url>
-  <url>
-    <loc>/reference/setLibPaths.html</loc>
-  </url>
-  <url>
-    <loc>/reference/setLinuxBinaryRepo.html</loc>
-  </url>
-  <url>
-    <loc>/reference/setdiffNamed.html</loc>
-  </url>
-  <url>
-    <loc>/reference/setup.html</loc>
-  </url>
-  <url>
-    <loc>/reference/sourcePkgs.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tempdir2.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tempfile2.html</loc>
-  </url>
-  <url>
-    <loc>/reference/trimVersionNumber.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/CONTRIBUTING.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/DESCRIPTION-helpers.html</loc></url>
+<url><loc>/reference/GitHubTools.html</loc></url>
+<url><loc>/reference/R_TESTSomit.html</loc></url>
+<url><loc>/reference/Require.html</loc></url>
+<url><loc>/reference/RequireCacheDir.html</loc></url>
+<url><loc>/reference/RequireOptions.html</loc></url>
+<url><loc>/reference/availablePackagesOverride.html</loc></url>
+<url><loc>/reference/availableVersionOK.html</loc></url>
+<url><loc>/reference/availableVersions.html</loc></url>
+<url><loc>/reference/checkPath.html</loc></url>
+<url><loc>/reference/chooseCRANmirror2.html</loc></url>
+<url><loc>/reference/clearRequire.html</loc></url>
+<url><loc>/reference/detachAll.html</loc></url>
+<url><loc>/reference/dot-downloadFileMasterMainAuth.html</loc></url>
+<url><loc>/reference/extractPkgName.html</loc></url>
+<url><loc>/reference/getCRANrepos.html</loc></url>
+<url><loc>/reference/getOptionRPackageCache.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/invertList.html</loc></url>
+<url><loc>/reference/linkOrCopy.html</loc></url>
+<url><loc>/reference/messageVerbose.html</loc></url>
+<url><loc>/reference/modifyList2.html</loc></url>
+<url><loc>/reference/normPath.html</loc></url>
+<url><loc>/reference/paddedFloatToChar.html</loc></url>
+<url><loc>/reference/pkgDep.html</loc></url>
+<url><loc>/reference/pkgDepIfDepRemoved.html</loc></url>
+<url><loc>/reference/pkgSnapshot.html</loc></url>
+<url><loc>/reference/rversions.html</loc></url>
+<url><loc>/reference/setLibPaths.html</loc></url>
+<url><loc>/reference/setLinuxBinaryRepo.html</loc></url>
+<url><loc>/reference/setdiffNamed.html</loc></url>
+<url><loc>/reference/setup.html</loc></url>
+<url><loc>/reference/sourcePkgs.html</loc></url>
+<url><loc>/reference/tempdir2.html</loc></url>
+<url><loc>/reference/tempfile2.html</loc></url>
+<url><loc>/reference/trimVersionNumber.html</loc></url>
 </urlset>
+
