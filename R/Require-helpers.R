@@ -606,10 +606,19 @@ detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("
     dontNeedToUnload <- rep(NA, sum(!isLoaded))
     names(dontNeedToUnload) <- pkgs[!isLoaded]
     pkgs <- pkgs[isLoaded]
-    detached1 <- sapply(pkgs, unloadNamespace)
-    detached1 <- sapply(detached1, is.null)
-    if (!is.list(detached1))
-      detached <- detached1
+    detached1 <- logical()
+    for (pkg in pkgs) {
+      det <- try(unloadNamespace(pkg), silent = TRUE)
+      detached1[[pkg]] <- if (!is(det, "try-error")) TRUE else FALSE
+    }
+    detached <- detached1
+
+    # detached1 <- try(sapply(pkgs, unloadNamespace))
+    # if (!is(detached1, "try-error")) {
+    #   detached1 <- try(sapply(detached1, is.null))
+    #   if (!is.list(detached1))
+    #     detached <- detached1
+    # }
   }
   if (length(didntDetach)) {
     notDetached <- rep(FALSE, length(didntDetach))
