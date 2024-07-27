@@ -380,7 +380,7 @@ test_that("test 1", {
 
   # testthat::expect_true(packageVersion("SpaDES") >= verToCompare)
   try(remove.packages(pkgsHere)) |> suppressMessages()
-  cacheClearPackages(pkgsHere, ask = F)
+  cacheClearPackages(pkgsHere, ask = FALSE)
   a <- list(pkg = "fpCompare")
 
   warns <- capture_warnings(

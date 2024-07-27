@@ -1139,7 +1139,7 @@ rmRifInPackageCol <- function(pkgDT) {
       pkgDT <- pkgDT[-which(hasRasDep)]
     out <- pkgDT[]
   } else {
-    out <- grep(.grepR, pkgDT, value = TRUE, invert = T)
+    out <- grep(.grepR, pkgDT, value = TRUE, invert = TRUE)
   }
   out
 }

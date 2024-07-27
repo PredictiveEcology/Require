@@ -164,7 +164,8 @@ rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = 
     num <- as.numeric(max(sapply(strsplit(poss, "_|\\."), function(x) x[[3]])))
   }
   int <- new.env();
-  load(dir(path, pattern = paste0(counterName, "_", interactive, "_", num), full.names = T),
+  load(dir(path, pattern = paste0(counterName, "_", interactive, "_", num),
+           full.names = TRUE),
        envir = int)
   as.list(int)
 }
