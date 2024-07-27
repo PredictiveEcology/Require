@@ -832,7 +832,7 @@ defaultCacheAgeForPurge <- 3600
 cachePurge <- function(packages = FALSE,
                        repos = getOption("repos")) {
   if (isTRUE(packages))
-    Require::cacheClearPackages(ask = F)
+    Require::cacheClearPackages(ask = FALSE)
   dealWithCache(TRUE, repos = repos)
 }
 
@@ -1008,7 +1008,7 @@ pkgDepTopoSortMemoise <- function(...) {
     pkg <- eval(ss$pkg, envir = parent.frame())
     hash <-
       sum(as.integer(serialize(
-        object = pkg, ascii = T, NULL
+        object = pkg, ascii = TRUE, NULL
       )))
     hash <- as.character(hash)
     if (!exists(hash, envir = pe[[fnName]], inherits = FALSE)) {

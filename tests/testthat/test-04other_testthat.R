@@ -221,7 +221,7 @@ test_that("test 3", {
   if (FALSE) {
     pkgs <- c("fpCompare", "rlang", "cli", "crayon", "stringr", "lobstr")
     a <- unique(extractPkgName(unlist(unname(pkgDep(pkgs)))))
-    cacheClearPackages(a, ask = F)
+    cacheClearPackages(a, ask = FALSE)
     library(sys); library(waldo)
     setLibPaths(tempdir3())
     try(remove.packages(a))
@@ -245,7 +245,7 @@ test_that("test 3", {
     # st <- list()
     st[["Require"]] <- system.time(replicate(N, {
       try(remove.packages(setdiff(extractPkgName(unname(unlist(a))), pkgsKeep)))
-      cacheClearPackages(ask = F)
+      cacheClearPackages(ask = FALSE)
       Install(pkgs)
     }))
     st[["pak"]] <- system.time(replicate(N, {
