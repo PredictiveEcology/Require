@@ -522,7 +522,7 @@ whichToDILES <- function(which) {
             "Package" = dirs[filesExist],
             "Version" = versions
           )
-        if (!is.null(deps)) {
+        if (!is.null(unlist(deps))) {
           cn <- c(colnames(mat), names(deps))
           mat <- cbind(mat, matrix(unlist(deps), ncol = length(deps)))
           colnames(mat) <- cn
