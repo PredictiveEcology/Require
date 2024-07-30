@@ -434,7 +434,9 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
   reposNoHttp <- gsub("^https*:*/*/*", "", repos)
   reposShort <- paste(substr(unlist(lapply(strsplit(reposNoHttp, "//"), function(x) {
-    x[[1]]
+    tryCatch(x[[1]], silent = TRUE,
+             error = function(e) tryCatch(getOption("repos"), silent = TRUE,
+                                          error = function(f) "unknown"))
     })), 1, 20), collapse = "_")
   typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
   objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
