@@ -20,7 +20,7 @@ test_that("test 10", {
               'terra',
               'themis',
               'tidymodels')
-    if (isLinux()) {
+    if (isUbuntuOrDebian()) {
       origRepos2 <- setLinuxBinaryRepo()
       on.exit(options(origRepos2))
     }

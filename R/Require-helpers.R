@@ -650,6 +650,9 @@ isLinux <- function() {
   isMac <- tolower(SysInfo["sysname"]) == "linux"
 }
 
+isUbuntuOrDebian <- function() {
+  grepl("Ubuntu|Debian", utils::osVersion, ignore.case = TRUE)
+}
 warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
   warning(
     "Can't install ", pkgs, "; you will likely need to restart R and run:\n",
