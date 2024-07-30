@@ -28,7 +28,7 @@ extractPkgName <- function(pkgs, filenames) {
   } else {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
-      out <- unlist(lapply(fnsSplit, function(x) x[[1]]))
+      out <- unlist(lapply(fnsSplit, function(xx3) xx3[[1]]))
       out2 <- strsplit(out, split = "-")
       pkgNames <- unlist(Map(len = pmax(1, lengths(out2) - 1), pkg = out2, function(len, pkg) pkg[len]))
     } else {
@@ -56,7 +56,12 @@ extractVersionNumber <- function(pkgs, filenames) {
   } else {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
-      out <- unlist(lapply(fnsSplit, function(x) gsub("\\.zip|\\.tar\\.gz|\\.tgz", "", x[[2]])))
+      out <- unlist(lapply(fnsSplit, function(y) {
+        if (length(y) >= 2)
+          a <- gsub("\\.zip|\\.tar\\.gz|\\.tgz", "", y[[2]])
+        else
+          character()
+        }))
     } else {
       out <- character()
     }
@@ -83,7 +88,7 @@ extractPkgGitHub <- function(pkgs) {
     hasRepo <- grepl("/", a)
     hasBranch <- grepl("@", a)
     a <- strsplit(a, split = "/|@")
-    a <- Map(x = a, hasRep = hasRepo, function(x, hasRep) x[1 + hasRep])
+    a <- Map(y2 = a, hasRep = hasRepo, function(y2, hasRep) y2[1 + hasRep])
     pkgs[isGH] <- unlist(a)
     if (any(!isGH)) {
       pkgs[!isGH] <- NA
