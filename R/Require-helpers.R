@@ -432,7 +432,10 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     names(repos) <- nams
   }
 
-  reposShort <- paste(substr(unlist(lapply(strsplit(repos, "//"), function(x) x[[2]])), 1, 20), collapse = "_")
+  reposNoHttp <- gsub("^https*:*/*/*", "", repos)
+  reposShort <- paste(substr(unlist(lapply(strsplit(reposNoHttp, "//"), function(x) {
+    x[[1]]
+    })), 1, 20), collapse = "_")
   typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
   objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
   if (!exists(objNam, envir = pkgDepEnv()) || isTRUE(purge)) {
