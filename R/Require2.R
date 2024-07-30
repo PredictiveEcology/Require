@@ -1068,7 +1068,10 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
 
   for (i in 1:2) {
     ap <- available.packagesCached(repos = repos, purge = purge, type = type)[, ..apCachedCols]
-    hasRepos <- unlist(lapply(repos, function(xx) any(grepl(pattern = xx, x = ap$Repository))))
+    hasRepos <- unlist(lapply(repos, function(xx) {
+      # need try: invalid regular expression 'https://raw.githubusercontent.com/r-hub/repos/main/ubuntu-22.04/4.5/libc++', reason 'Invalid use of repetition operators'
+      tryCatch(any(grepl(pattern = xx, x = unique(ap$Repository))), silent = TRUE, error = function(e) FALSE)
+      }))
     if (all(hasRepos)) {
       break
     }
