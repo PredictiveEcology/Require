@@ -1149,6 +1149,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
 downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose, numToDownload,
                          tmpdir, type = getOption("pkgType")) {
   pkgCRAN <- pkgNoLocal[["CRAN"]]
+  # browser()
   if (NROW(pkgCRAN)) { # CRAN, Archive, RSPM
     # messageVerbose(messageDownload(pkgCRAN, NROW(pkgCRAN), "CRAN"), verbose = verbose, verboseLevel = 2)
     if (!all(apCachedCols %in% colnames(pkgCRAN))) {
@@ -1203,7 +1204,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         )
         if (!getOption("Require.offlineMode") %in% TRUE) {
           messageVerbose("  CRAN ", downloadedInSeconds(st[[3]]), verbose = verbose)
-          pkgCRAN[dt, localFile := i.localFile, on = "Package"]
+          pkgCRAN[availableVersionOK %in% TRUE][dt, localFile := i.localFile, on = "Package"]
           pkgCRAN[availableVersionOK %in% TRUE, installFrom := .txtLocal]
           pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
         } else {
@@ -1319,8 +1320,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
         pkgGitHub[avOK, (colsToUpdate) := {
           SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
         }, by = "Package"]
-        browser()
-        saveGitHubSHAsToDisk()
+        # saveGitHubSHAsToDisk()
       }
 
       pkgGHList <- split(pkgGitHub, pkgGitHub$availableVersionOK)

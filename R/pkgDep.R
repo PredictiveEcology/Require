@@ -868,7 +868,6 @@ dealWithCache <- function(purge = TRUE,
     unlink(dir(RequireGitHubCacheDir(), full.names = TRUE))
     # getSHAFromGItHubMemoise
     SHAfile <- getSHAFromGitHubDBFilename()
-    browser()
     if (isTRUE(file.exists(SHAfile)))
       unlink(SHAfile)
 

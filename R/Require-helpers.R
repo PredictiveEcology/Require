@@ -233,9 +233,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         oo <- file.remove(unique(destFile2[versionLocalNotOK]))
       }
     } else {
-      if (!exists("wasHere"))
-        wasHere <<- 0
-      wasHere <<- wasHere + 1
+      # NOT CLEAR WHAT SHOULD BE PUT HERE
       # destFile <- NA
     }
     set(pkgDT, NULL, "destFile", destFile)
