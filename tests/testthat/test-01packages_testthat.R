@@ -28,11 +28,15 @@ test_that("test 1", {
 
   dir1 <- Require:::rpackageFolder(Require:::tempdir3("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
-  (out <- suppressMessages(Require::Require("fpCompare (<= 1.2.3)",
+
+  (mess <- capture_messages(out <- Require::Require("fpCompare (<= 1.2.3)",
                                             standAlone = TRUE, libPaths = dir1,
                                             # quiet = TRUE,
                                             returnDetails = TRUE
   ))) |> capture_warnings() -> warns
+
+  skip_if_offline()
+
   if (length(warns))
     expect_true(all(grepl("was built under", warns)))
 

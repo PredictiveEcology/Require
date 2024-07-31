@@ -63,6 +63,7 @@
 #' @rdname RequireOptions
 RequireOptions <- function() {
   list(
+    Require.checkInternet = TRUE,
     Require.cloneFrom = NULL,
     Require.install = TRUE,
     Require.installPackagesSys = if (isMacOSX()) 0L else 2L,
@@ -72,6 +73,7 @@ RequireOptions <- function() {
       , "Rcpp"
       , "RcppParallel"
       ),
+    Require.offlineMode = FALSE,
     Require.packageVersionFile = "packageVersions.txt",
     Require.purge = FALSE,
     Require.cachePkgDir = "default",

@@ -1,7 +1,7 @@
 test_that("test 3", {
 
   setupInitial <- setupTest()
-    # on.exit(endTest(setupInitial))
+  # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   # Test misspelled
@@ -28,16 +28,21 @@ test_that("test 3", {
     pkgDep("data.table", purge = TRUE)
   }
 
+  skip_if_offline()
   if (isTRUE(tryCatch(packageVersion("fpCompare"), error = function(e) "0.0.0") < "0.2.5")) {
     if (isDev) {
-      Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
-                       install= "force", libPaths = .libPaths()[1])
-      expect_true(packVer("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
+      mess <- capture_messages(
+        warns <- capture_warnings(
+          Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
+                           install= "force", libPaths = .libPaths()[1])
+        )
+      )
+      if (!isTRUE(any(grepl("Internet.+unavailable", mess))))
+        expect_true(packVer("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
     }
   }
 
-  # pkgDep2("Require")
-
+  skip_if_offline()
 
   if (!getOption("Require.usePak", TRUE)) {
     pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)
@@ -213,7 +218,7 @@ test_that("test 3", {
       expect_false(isTRUE(grepl(.txtMsgIsInUse, warnsAfter)))
     }
     warns <- capture_warnings( # fpCompare namespace cannot be unloaded: cannot open file?
-                               #  and also restarting interuupted promise evaluation
+      #  and also restarting interuupted promise evaluation
       try(detach("package:fpCompare", unload = TRUE), silent = TRUE) # some are not attaching
     )
   }

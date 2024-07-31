@@ -13,6 +13,9 @@ test_that("test 6", {
   testthat::expect_true({
     length(a) == 1
   })
+
+  skip_if_offline()
+
   testthat::expect_true({
     !isTRUE(all.equal(lapply(a, trimVersionNumber), a))
   })

@@ -840,12 +840,18 @@ cachePurge <- function(packages = FALSE,
 #' @export
 purgeCache <- cachePurge
 
-dealWithCache <- function(purge,
+dealWithCache <- function(purge = TRUE,
                           checkAge = TRUE,
-                          repos = getOption("repos")) {
+                          repos = getOption("repos"),
+                          force = FALSE) {
   if (isTRUE(getOption("Require.offlineMode"))) {
     purge <- FALSE
     checkAge <- FALSE
+  }
+
+  if (isTRUE(force)) {
+    purge <- TRUE
+    checkAge <- TRUE
   }
 
   purgeBasedOnTime <- FALSE
@@ -855,31 +861,26 @@ dealWithCache <- function(purge,
   }
   purge <- purge || purgeBasedOnTime
 
-  if (is.null(pkgDepEnv()) ) {
-    # if (is.null(pkgDepEnv()) || purge) {
-    envPkgDepCreate()
-  }
   if (purge) {
+    unlink(availablePackagesCachedPath(repos, type = c("binary", "source")))
+    Sys.setenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE"=0)
     pkgEnvStartTimeCreate()
-  }
-  if (purge) {
     unlink(dir(RequireGitHubCacheDir(), full.names = TRUE))
     # getSHAFromGItHubMemoise
     SHAfile <- getSHAFromGitHubDBFilename()
+    browser()
     if (isTRUE(file.exists(SHAfile)))
       unlink(SHAfile)
 
     purgeAvailablePackages(repos, purge)
-    # fn <- availablePackagesCachedPath(repos = repos, type = c("source", "binary"))
-    # fExists <- file.exists(fn)
-    # if (any(fExists)) {
-    #   unlink(fn[fExists])
-    # }
 
     # This is for pkgDep
     fn <- pkgDepDBFilename()
     unlink(fn)
   }
+
+  if (is.null(pkgDepEnv()))
+    envPkgDepCreate()
 
   if (is.null(envPkgDepGitHubSHA()))
     envPkgDepGitHubSHACreate()

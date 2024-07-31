@@ -18,6 +18,8 @@ test_that("test 8", {
     # Install 3 packages that are needed for subsequent module and package installations
     # See if Require is already loaded from where#Error in `loadNamespace(name)`: there is no package called 'SpaDES.project'
 
+    skip_if_offline()
+
     if (isWindows()) {
       (Install("Require", repos = "https://predictiveecology.r-univierse.dev",
                install = "force")) |>

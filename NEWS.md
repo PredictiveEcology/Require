@@ -1,5 +1,11 @@
 # Require
 
+version 1.0.1
+=============
+
+## enhancements
+* `offlineMode`, which can be set using `options(Require.offlineMode = TRUE)`, but it will be automatically set if internet is not avaible, has now been widely tested. If packages are available in the local caches, and all elements of package versioning (e.g., `available.packages()` and github packages) have been previously run, then installations should occur as if the internet were availble.
+
 version 1.0.0
 =============
 

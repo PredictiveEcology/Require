@@ -17,11 +17,14 @@ test_that("test 5", {
   opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
   pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE, includeBase = FALSE)
+  skip_if_offline()
+
   pkgDepTest2 <- Require::pkgDep2(c("Require"), # simplify = FALSE,
                                   # which = c("Depends", "Imports"),
                                   includeSelf = FALSE)
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
 
+  skip_if_offline()
   testthat::expect_true({
     length(pkgDepTest1) == 1
   })

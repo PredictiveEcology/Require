@@ -14,6 +14,8 @@ comma <- ", "
 .txtCntInstllDep <- "Can't install dependency"
 .txtConflictsWith <- "Conflicts with"
 
+.txtNoInternetNoLocalCantInstall <- "No internet and no local copy; can't install"
+
 .txtMissingValueWhereTFNeeded <- "missing value where TRUE/FALSE needed"
 .txtUnableToAccessIndex <- "unable to access index"
 .txtGitHub <- "GitHub"
@@ -24,6 +26,7 @@ comma <- ", "
 .txtPakNoPkgCalledPak <- "there is no package called 'pak'"
 .txtUnknownArchiveType <- "unknown archive type"
 
+.txtNoInternetTestNotRelevant <- "No internet; test not relevant"
 # "installation of package 'ccissr' had non-zero exit status"
 # "installation of 2 packages failed"
 .txtInstallationNonZeroExit <- "installation of.+had non-zero exit status"
@@ -68,6 +71,13 @@ messageCantInstallNoVersion <- function(packagesFullName) {
     paste(unique(packagesFullName), collapse = comma),
     " ", .txtCouldNotBeInstalled, "; package ", dd ,
     " exist or the version ", vv," cannot be met"
+  )
+}
+
+messageCantInstallNoInternet <- function(packagesFullName) {
+  turquoise(
+    paste(unique(packagesFullName), collapse = comma),
+    " ", .txtCouldNotBeInstalled, "; no internet"
   )
 }
 
