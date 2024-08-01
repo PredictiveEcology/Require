@@ -262,6 +262,9 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                   ret <- if (!is(dl, "try-error")) {
                     destFile
                   } else {
+                    if (!isTRUE(urlExists(unique(url)[1])))
+                      if (!isTRUE(urlExists("https://www.google.com")))
+                        setOfflineModeTRUE(verbose = verbose)
                     NA
                   }
 

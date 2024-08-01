@@ -1869,15 +1869,24 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 getGitHubVersionOnRepos <- function(pkgGitHub) {
   notYet <- is.na(pkgGitHub[["VersionOnRepos"]])
   if (any(notYet)) {
+    # if (exists("aaaa")) browser()
     pkgGitHub <- dlGitHubFile(pkgGitHub)
     dFile <- pkgGitHub[["DESCFile"]]
     hasDFile <- which(!is.na(dFile))
-    set(pkgGitHub, hasDFile, "VersionOnRepos",  DESCRIPTIONFileVersionV(dFile[hasDFile]))
-    mayNeedPackageNameChange <- DESCRIPTIONFileOtherV(dFile[hasDFile], other = "Package")
-    alreadyCorrect <- pkgGitHub[["Package"]][hasDFile] == mayNeedPackageNameChange
-    notAlreadyCorrect <- alreadyCorrect %in% FALSE
-    if (any(notAlreadyCorrect)) {
-      set(pkgGitHub, hasDFile[notAlreadyCorrect], "Package",  mayNeedPackageNameChange[notAlreadyCorrect])
+    fesLenDFile <- file.exists(pkgGitHub$DESCFile[hasDFile])
+    if (any(!fesLenDFile)) {
+      set(pkgGitHub, hasDFile[!fesLenDFile], "DESCFile", "")
+      # pkgGitHub[hasDFile[!fesLenDFile], DESCFile := ""]
+    }
+    if (any(fesLenDFile)) {
+      set(pkgGitHub, hasDFile[fesLenDFile], "VersionOnRepos",  DESCRIPTIONFileVersionV(dFile[hasDFile[fesLenDFile]]))
+      mayNeedPackageNameChange <- DESCRIPTIONFileOtherV(dFile[hasDFile[fesLenDFile]], other = "Package")
+      alreadyCorrect <- pkgGitHub[["Package"]][hasDFile[fesLenDFile]] == mayNeedPackageNameChange
+      notAlreadyCorrect <- alreadyCorrect %in% FALSE
+      if (any(notAlreadyCorrect)) {
+        set(pkgGitHub, hasDFile[fesLenDFile][notAlreadyCorrect], "Package",
+            mayNeedPackageNameChange[notAlreadyCorrect])
+      }
     }
     # pkgGitHub[!is.na(DESCFile), VersionOnRepos := DESCRIPTIONFileVersionV(DESCFile)]
   }

@@ -373,3 +373,7 @@ paste0WithLineFeed <- function(mess, lineWidth = getOptionWidthWithBuffer()) {
 }
 
 getOptionWidthWithBuffer <- function(buff = 10) getOption("width") - 10
+
+msgStripColor <- function(msg) {
+  gsub("\033\\[..{0,1}m", "", msg)
+}

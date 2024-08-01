@@ -191,6 +191,8 @@ test_that("test 1", {
       )
     )
 
+    if (isTRUE(any(grepl(msgStripColor(messageCantInstallNoInternet("")), msgStripColor(warns)))))
+      skip("Flaky internet")
     inst22 <- suppressMessages(
       Require::Require("achubaty/fpCompare",
                        install = "force", returnDetails = TRUE,
