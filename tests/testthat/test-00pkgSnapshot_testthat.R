@@ -15,10 +15,12 @@ test_that("test 1", {
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
   suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
+  skip_if_offline()
+
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
   if (isDev) {
-    warns <- capture_warnings(Require(c("covr (==3.6.3)"), require = FALSE, quiet = quiet))
+    warns <- capture_warnings(Require(c("rlang", "covr (==3.6.3)"), require = FALSE, quiet = quiet))
     test <- testWarnsInUsePleaseChange(warns)
     if (!isMacOSX())
       expect_true(test)
@@ -26,6 +28,7 @@ test_that("test 1", {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }
 
+  skip_if_offline()
   .libPaths(c(tmpdirActual, tmpdir2Actual))
   # .libPaths(c(tmpdir, tmpdir2))
   aa1 <- pkgSnapshot(packageVersionFile = pkgVF,

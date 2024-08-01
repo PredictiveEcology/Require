@@ -26,8 +26,11 @@ test_that("test 5b", {
       # This one fails to install SpaDES.core because already loaded
       poss2 <- sum(pkgsClean %in% ip[, "Package"]) ==
         length(pkgsClean) - length(acceptableFails) ## TODO: fails on macOS
-      expect_true(poss1 || poss2)
+      if (internetExists())
+        expect_true(poss1 || poss2)
     }
+
+    skip_if_offline()
 
     ## Test Install and also (HEAD)
     messToSilence <- capture_messages(try(remove.packages("fpCompare"), silent = TRUE))

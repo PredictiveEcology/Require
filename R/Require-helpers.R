@@ -212,19 +212,30 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
       versionLocal <- DESCRIPTIONFileVersionV(destFile2)
       versionLocalOK <- rep(TRUE, length(versionLocal)) # no versionSpec will give NA next; NA is "keep"
       anyHEAD <- (pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF] == "HEAD")
-      if (isTRUE(any(anyHEAD %in% TRUE)))
-        versionLocalOK[anyHEAD] <- FALSE
       hasNonHead <- anyHEAD %in% FALSE
+      if (isTRUE(any(anyHEAD %in% TRUE))) {
+        # check if it is in this call to Require or pkgDep, based on time: delete if not
+        stRequire <- get0("stRequire", envir = whereInStack("stRequire"))
+        if (!is.null(stRequire)) {
+          dtime <- difftime(stRequire, file.info(destFile2)[, "mtime"], units = "secs")
+          whThisCall <- dtime < 0
+          if (any(whThisCall))
+            anyHEAD[whThisCall] <- FALSE
+        }
+        versionLocalOK[anyHEAD] <- FALSE
+      }
       if (isTRUE(any(hasNonHead)))
         versionLocalOK <- compareVersion2(versionLocal[hasNonHead],
-                                              pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF][hasNonHead],
-                                              inequality = pkgDT$inequality[feDF][hasNonHead])
+                                          pkgDT$versionSpec[pkgDT$repoLocation == .txtGitHub][feDF][hasNonHead],
+                                          inequality = pkgDT$inequality[feDF][hasNonHead])
       versionLocalNotOK <- versionLocalOK %in% FALSE
-      if (isTRUE(any(versionLocalNotOK))) {
+      if (isTRUE(any(versionLocalNotOK)) && getOption("Require.offlineMode") %in% FALSE) {
         oo <- file.remove(unique(destFile2[versionLocalNotOK]))
       }
+    } else {
+      # NOT CLEAR WHAT SHOULD BE PUT HERE
+      # destFile <- NA
     }
-
     set(pkgDT, NULL, "destFile", destFile)
 
     if (!isTRUE(getOption("Require.offlineMode"))) {
@@ -238,34 +249,50 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         }
       }
       if (any(!alreadyExists)) {
-        pkgDT[repoLocation == .txtGitHub & alreadyExists %in% FALSE,
-              filepath := {
-                messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
-                ret <- NA
-                dl <- .downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
-                                                  need = "master",
-                                                  verbose = verbose - 1
-                )
-                ret <- if (!is(dl, "try-error")) {
-                  destFile
-                } else {
-                  NA
-                }
+        # messageVerbose("GitHub packages:  ", paste(pkgDT$packageFullName, collapse = ", "), verbose = verbose)
+        withCallingHandlers( # if offline
+          pkgDT[which(repoLocation == .txtGitHub & alreadyExists %in% FALSE),
+                filepath := {
+                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
+                  ret <- NA
+                  dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+                                                        need = "master",
+                                                        verbose = verbose - 1
+                  ))
+                  ret <- if (!is(dl, "try-error")) {
+                    destFile
+                  } else {
+                    if (!isTRUE(urlExists(unique(url)[1])))
+                      if (!isTRUE(urlExists("https://www.google.com")))
+                        setOfflineModeTRUE(verbose = verbose)
+                    NA
+                  }
 
-                ret
-              },
-              by = c("Package", "Branch")
-        ]
+                  ret
+                },
+                by = c("Package", "Branch")
+          ], warning = function(w) {
+            # browser()
+          })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
       wh <- which(pkgDT$repoLocation == .txtGitHub)
+      DESCFileVals <- pkgDT[[old]][wh]
       if (identical("DESCRIPTION", filename)) {
-        set(pkgDT, wh, "DESCFile", pkgDT[[old]][wh])
+        cn <- "DESCFile"
+        # set(pkgDT, wh, "DESCFile", pkgDT[[old]][wh])
       } else {
-        set(pkgDT, wh, "filename", pkgDT[[old]][wh])
+        cn <- "filename"
+        # set(pkgDT, wh, "filename", pkgDT[[old]][wh])
       }
 
+    } else {
+      wh <- NULL
+      DESCFileVals <- pkgDT[["destFile"]]
+      cn <- "DESCFile"
     }
+    set(pkgDT, wh, "DESCFile", DESCFileVals)
+
     pkgDT[]
   } else {
     pkg
@@ -297,12 +324,16 @@ dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verb
           readRDS(con)
         },
         warning = function(e) {
+          options(Require.checkInternet = TRUE)
           setOfflineModeTRUE(verbose = verbose)
           list()
         },
-        error = function(e) list()
+        error = function(e) {
+          list()
+        }
       )
-      assign(archiveFile, archive, envir = pkgDepEnv())
+      if (length(archive))
+        assign(archiveFile, archive, envir = pkgDepEnv())
     } else {
       archive <- get(archiveFile, envir = pkgDepEnv())
     }
@@ -440,7 +471,10 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     })), 1, 20), collapse = "_")
   typesShort <- paste(unlist(lapply(strsplit(types, "//"), function(x) x[[1]])), collapse = "_")
   objNam <- paste0("availablePackages", "_", reposShort, "_", typesShort)
-  if (!exists(objNam, envir = pkgDepEnv()) || isTRUE(purge)) {
+  # existsObjNam <- exists(objNam, envir = pkgDepEnv())
+  out <- get0(objNam, envir = pkgDepEnv(), inherits = FALSE)
+
+  if (is.null(out) || NROW(out) == 0 || isTRUE(purge)) {
     for (type in types) {
       fn <- availablePackagesCachedPath(repos, type)
       purgeTime <- purgeBasedOnTimeSinceCached(file.info(fn)[, "mtime"])
@@ -454,16 +488,24 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         # can be interupted and be corrupted
         cap[[type]] <- try(readRDS(fn), silent = TRUE)
         if (!is(cap[[type]], "try-error")) needNewFile <- FALSE
+        # This is case where the previous version is NROW 0; could have happened if internet was down or other
+        if (NROW(cap[[type]]) == 0) needNewFile <- TRUE
       }
       if (isTRUE(needNewFile)) {
         caps <- lapply(repos, function(repo) {
-          available.packagesWithCallingHandlers(repo, type)
+          available.packagesWithCallingHandlers(repo, type, verbose = verbose)
         })
+        # cachePurge may have been used to reset the available.packages cache
+        val <- Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE")
+        if (nzchar(val))
+          if (isTRUE(val == 0))
+            Sys.unsetenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE")
+
         caps <- lapply(caps, as.data.table)
         caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
-        if (!is.null(cacheGetOptionCachePkgDir())) {
+        if (!is.null(cacheGetOptionCachePkgDir()) && NROW(caps) > 0) {
           checkPath(dirname(fn), create = TRUE)
           saveRDS(cap[[type]], file = fn)
         }
@@ -473,7 +515,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     assign(objNam, cap, envir = pkgDepEnv())
     out <- cap
   } else {
-    out <- get(objNam, envir = pkgDepEnv(), inherits = FALSE)
+
   }
 
   if (isFALSE(returnDataTable)) {
@@ -561,7 +603,7 @@ toDT <- function(...) {
 #'
 #'
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("Require.verbose")) {
-  messageVerbose("Detaching is fraught with many potential problems; you may have to",
+  messageVerbose("Detaching is fraught with many potential problems; you may have to ",
                  "restart your session if things aren't working",
                  verbose = verbose, verboseLevel = 2
   )
@@ -931,6 +973,10 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     }
 
     if (is(gitRefs, "try-error")) {
+      if (isTRUE(any(grepl("cannot open the connection", gitRefs)))) {
+        # means no internet
+        setOfflineModeTRUE(verbose)
+      }
       return(gitRefs)
     }
     if (length(gitRefs) > 1) {
@@ -979,14 +1025,21 @@ getSHAfromGitHubMemoise <- function(...) {
   pe <- pkgEnv()
   if (getOption("Require.useMemoise", TRUE)) {
     dots <- list(...)
-    if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE)) {
-      loadGitHubSHAsFromDisk(verbose = dots$verbose) # puts it into the Memoise-expected location
-      if (!exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE))
-        pe[[.txtGetSHAfromGitHub]] <- new.env()
-    }
     ret <- NULL
     ss <- match.call(definition = getSHAfromGitHub)
     uniqueID <- paste(lapply(ss[-1], eval, envir = parent.frame()), collapse = "_")
+
+    # Use disk storage if in Require.offlineMode
+    if (!exists(uniqueID, envir = pe[[.txtGetSHAfromGitHub]], inherits = FALSE) &&
+        getOption("Require.offlineMode", FALSE)) {
+      fn <- getSHAFromGitHubDBFilename()
+      if (file.exists(fn)) {
+        peList <- readRDS(fn)
+        if (!is.null(peList[[uniqueID]])) {
+          pe[[.txtGetSHAfromGitHub]][[uniqueID]] <- peList[[uniqueID]]
+        }
+      }
+    }
     if (!exists(uniqueID, envir = pe[[.txtGetSHAfromGitHub]], inherits = FALSE)) {
       pe[[.txtGetSHAfromGitHub]][[uniqueID]] <- list()
     } else {
@@ -1001,6 +1054,19 @@ getSHAfromGitHubMemoise <- function(...) {
       # Add it to the pe
       newObj <- list(pe[[.txtGetSHAfromGitHub]][[uniqueID]], list(input = inputs, output = ret))
       pe[[.txtGetSHAfromGitHub]][[uniqueID]] <- newObj
+      fn <- getSHAFromGitHubDBFilename()
+      peList <- as.list(pe[[.txtGetSHAfromGitHub]])
+      if (length(fn)) { # this can be character() if cacheGetOptionCachePkgDir() is NULL
+        if (!isTRUE(file.exists(fn))) {
+          saveRDS(peList, file = fn)
+        } else {
+          peListExisting <- readRDS(file = fn)
+          peList <- modifyList(peList, peListExisting)
+          saveRDS(peList, file = fn)
+        }
+      }
+
+
 
     }
   } else {
@@ -1155,9 +1221,9 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
         if (isFALSE(ue)) {
           internetMightExist <- FALSE
 
-          messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
-                         verbose = verbose, verboseLevel = 2
-          )
+          # messageVerbose("\033[32mInternet does not appear to exist; proceeding anyway\033[39m",
+          #                verbose = verbose, verboseLevel = 2
+          # )
         }
         assign(.txtInternetExistsTime, Sys.time(), envir = pkgEnv())
       }
@@ -1304,9 +1370,9 @@ masterMainHEAD <- function(url, need) {
       if (!is.null(urls[["FALSE"]])) {
         outNotMasterMain <-
           Map(URL = urls[["FALSE"]], MoreArgs = list(df = destfile), function(URL, df) {
-            if (!isTRUE(getOption("Require.offlineMode"))) {
+            for (tryNum in 1:2) {
+              if (!isTRUE(getOption("Require.offlineMode"))) {
 
-              for (tryNum in 1:2) {
                 if (is.null(token)) {
                   tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
                            error = function(e) {
@@ -1316,7 +1382,13 @@ masterMainHEAD <- function(url, need) {
                                messageVerbose(e$message, verbose = verbose)
                            })
                 } else {
-                  a <- GETWauthThenNonAuth(url, token, verbose = verbose)
+                  a <- try(GETWauthThenNonAuth(url, token, verbose = verbose))
+                  if (is(a, "try-error")) {
+                    if (any(grepl("Could not resolve host", a))) {
+                      warning(a)
+                      next
+                    }
+                  }
                   # a <- httr::GET(url, httr::add_headers(Authorization = token))
                   # if (grepl("Bad credentials", a) || grepl("404", a$status_code))
                   #   a <- httr::GET(url, httr::add_headers())
@@ -1593,15 +1665,20 @@ RequireGitHubCacheFile <- function(pkgDT, filename) {
 
 
 rmEmptyFiles <- function(files, minSize = 100) {
-  alreadyExists <- file.exists(files)
-  if (any(alreadyExists)) {
-    fs <- file.size(files[alreadyExists])
-    tooSmall <- fs < minSize
-    if (any(tooSmall %in% TRUE)) {
-      unlink(files[alreadyExists[which(tooSmall)]])
-      alreadyExists[alreadyExists] <- tooSmall %in% FALSE
+  notNAs <- is.na(files) %in% FALSE
+  alreadyExists <- rep(FALSE, length(files))
+  if (any(notNAs)) {
+    alreadyExists[notNAs] <- file.exists(files[notNAs])
+    if (any(alreadyExists[notNAs])) {
+      fs <- file.size(files[notNAs][alreadyExists])
+      tooSmall <- fs < minSize
+      if (any(tooSmall %in% TRUE)) {
+        unlink(files[alreadyExists[notNAs][which(tooSmall)]])
+        alreadyExists[notNAs][alreadyExists] <- tooSmall %in% FALSE
+      }
     }
   }
+
   alreadyExists
 }
 
@@ -1618,7 +1695,7 @@ GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose
 
 
 
-available.packagesWithCallingHandlers <- function(repo, type) {
+available.packagesWithCallingHandlers <- function(repo, type, verbose = getOption("Require.verbose")) {
   ignore_repo_cache <- FALSE
   for (attmpt in 1:2) {
     warns <- character()
@@ -1643,8 +1720,12 @@ available.packagesWithCallingHandlers <- function(repo, type) {
           Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
       }, add = TRUE)
     } else {
-      if (any(grepl("cannot open URL", warns)) && attmpt == 1) # seems to be transient esp with predictiveecology.r-universe.dev
-        next
+      if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
+       next
+      }
+      if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
+        break
+      setOfflineModeTRUE(verbose = verbose)
       if (length(otherwarns)) {
         warning(warns)
       }
@@ -1652,6 +1733,7 @@ available.packagesWithCallingHandlers <- function(repo, type) {
     }
 
   }
+
   out
 }
 

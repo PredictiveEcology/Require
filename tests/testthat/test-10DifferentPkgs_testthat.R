@@ -33,6 +33,7 @@ test_that("test 10", {
       warns <- grep("installation of package.+cissr.+had non-zero exit status", invert = TRUE, warns)
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
+    skip_if_offline()
 
     ins <- installed.packages(noCache = TRUE) |> as.data.table()
     notInstalled <- setdiff(extractPkgName(pkgs), ins$Package)

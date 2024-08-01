@@ -69,4 +69,3 @@ dontDetach <- function() {
 
   dtd
 }
-
