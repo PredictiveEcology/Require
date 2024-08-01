@@ -3630,25 +3630,11 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         eval(parse(text = doLine))
       }
     }
-    return(dt)
+    # return(dt)
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig[["Package"]],
                localFile = unlist(ll)) |> as.data.table()
-    # setDT(dt)
-    # if (length(dt$localFile) != length(dt$Package))
-    #   dt$localFile <- rep("", length(dt$Package))
-    # a <- try(setDT(dt), silent = TRUE)
-    # if (is(a, 'try-error')) {
-    #   # out <- mget(ls())
-    #   # out$token <- tryCatch(
-    #   #   gitcreds::gitcreds_get(use_cache = FALSE),
-    #   #   error = function(e) NULL
-    #   # )
-    #   #
-    #   # save(out, file = "/home/emcintir/tmp/dt.rda")
-    #   stop(a)
-    # }
-  } else  { # installPackages and Other
+  } else  { # installPackages and Other -- expecting on logFile as a character string
     dt <- logFile
   }
 
