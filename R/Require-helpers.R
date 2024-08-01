@@ -600,7 +600,7 @@ toDT <- function(...) {
 #'
 #'
 detachAll <- function(pkgs, dontTry = NULL, doSort = TRUE, verbose = getOption("Require.verbose")) {
-  messageVerbose("Detaching is fraught with many potential problems; you may have to",
+  messageVerbose("Detaching is fraught with many potential problems; you may have to ",
                  "restart your session if things aren't working",
                  verbose = verbose, verboseLevel = 2
   )
