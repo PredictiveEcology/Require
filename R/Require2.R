@@ -1172,8 +1172,9 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     if (NROW(pkgCRAN)) {
       pkgCRAN <- updateReposForSrcPkgs(pkgCRAN, verbose = verbose)
 
-      if (getOption("Require.installPackagesSys") == 2) {
-        ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
+      ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
+      if (getOption("Require.installPackagesSys") == 2 && NROW(ap))  {
+        # ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
         args <- list(repos = repos, type = type)
         file <- paste0(ap[["Package"]], "_", ap$VersionOnRepos)
         if (isWindows() && (identical(type, "both") || grepl("bin", type))) {
