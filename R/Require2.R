@@ -3620,23 +3620,21 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
     # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
+    dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
+               localFile = argsOrig$destfile) |> as.data.table()
     if (any(isError)) {
-      dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
-                 localFile = argsOrig$destfile)
       if (any(vapply(ll, grepl, pattern = "cannot open URL", FUN.VALUE = logical(1)))) {
         setOfflineModeTRUE(verbose = verbose)
       } else {
         # pull the plug and run without sys -- this seems to be failing on GA
         eval(parse(text = doLine))
       }
-      return(dt)
     }
-    dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
-               localFile = argsOrig$destfile) |> setDT()
+    return(dt)
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig[["Package"]],
-               localFile = unlist(ll))
-    setDT(dt)
+               localFile = unlist(ll)) |> as.data.table()
+    # setDT(dt)
     # if (length(dt$localFile) != length(dt$Package))
     #   dt$localFile <- rep("", length(dt$Package))
     # a <- try(setDT(dt), silent = TRUE)
