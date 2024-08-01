@@ -905,7 +905,7 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
   } else if (isTRUE(require)) {
     pkgDT[!is.na(loadOrder), require := TRUE]
   } else if (isFALSE(require)) {
-    pkgDT[!is.na(loadOrder), require := FALSE]
+    set(pkgDT, NULL, "require", FALSE)
   }
 
   # override if version was not OK
