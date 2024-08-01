@@ -645,7 +645,12 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
   out <- pkgDepGitHub(pkgDT = pkgDT, which = which,
                       includeBase = FALSE, libPaths = libPaths, verbose = verbose)
   rec <- FALSE # this function is only one time through
-  set(pkgDT, NULL, deps(FALSE), unname(out))
+
+  val <- unname(out)
+  if (length(val) == 0)
+    val <- lapply(seq_len(NROW(pkgDT)), function(x)
+      data.table(Package = character(), which = character(), packageFullName = character()))
+  set(pkgDT, NULL, deps(FALSE), val)
 
   # rec <- recursiveType(whichCatRecursive)
   snHere <- sn(rec)
