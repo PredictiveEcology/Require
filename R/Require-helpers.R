@@ -1053,12 +1053,14 @@ getSHAfromGitHubMemoise <- function(...) {
       pe[[.txtGetSHAfromGitHub]][[uniqueID]] <- newObj
       fn <- getSHAFromGitHubDBFilename()
       peList <- as.list(pe[[.txtGetSHAfromGitHub]])
-      if (!file.exists(fn)) {
-        saveRDS(peList, file = fn)
-      } else {
-        peListExisting <- readRDS(file = fn)
-        peList <- modifyList(peList, peListExisting)
-        saveRDS(peList, file = fn)
+      if (length(fn)) { # this can be character() if cacheGetOptionCachePkgDir() is NULL
+        if (!isTRUE(file.exists(fn)) {)
+          saveRDS(peList, file = fn)
+        } else {
+          peListExisting <- readRDS(file = fn)
+          peList <- modifyList(peList, peListExisting)
+          saveRDS(peList, file = fn)
+        }
       }
 
 
