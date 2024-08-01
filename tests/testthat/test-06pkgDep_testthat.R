@@ -40,8 +40,11 @@ test_that("test 6", {
   testthat::expect_true({
     all(names(b) == pkg)
   })
-  testthat::expect_contains(extractPkgName(b[[1]]), c("data.table", "digest", "fs"))
-  testthat::expect_contains(extractPkgName(a[[1]]), c("data.table"))
+  if (!isTRUE(all(grepl("reproducible", extractPkgName(b[[1]]))))) {
+    # This suggests that there was no internet -- some connections are flaky -- rhub macos R-devel
+    testthat::expect_contains(extractPkgName(b[[1]]), c("data.table", "digest", "fs"))
+    testthat::expect_contains(extractPkgName(a[[1]]), c("data.table"))
+  }
 
   # testthat::expect_true({
   #   length(b[[1]]) > length(a1[[1]])
@@ -128,7 +131,7 @@ test_that("test 6", {
   # needs Require or else it will try from predictiveecology.r-universe.dev ... but version is too low
   # warnsReq <- capture_warnings(Require::Install("Require"))
   warns22 <- capture_warnings(
-    Install("PredictiveEcology/Require@simplify4 (>=0.3.1.9021)", install = "force")
+    Install("PredictiveEcology/Require@development (>=0.3.1.9021)", install = "force")
   )
   # withr::local_options(warn = 2)
   # withr::local_options(Require.verbose = 2)

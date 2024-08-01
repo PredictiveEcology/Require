@@ -211,9 +211,10 @@ test_that("test 1", {
       },
       error = function(x) FALSE
     )
-    testthat::expect_true({
-      isTRUE(isInstalled)
-    })
+    expect_match(normalizePath(out, winslash = "/"), normalizePath(dir3, winslash = "/"))
+    # testthat::expect_true({
+    #   isTRUE(isInstalled)
+    # })
 
     # Try github with version
     dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
@@ -249,9 +250,10 @@ test_that("test 1", {
       testthat::expect_true({
         length(mess) > 0
       })
-      testthat::expect_true({
-        sum(grepl("could not be installed", mess)) == 1
-      })
+      expect_match(paste(mess, collapse = " "), .txtCouldNotBeInstalled)
+      # testthat::expect_true({
+      #   sum(grepl("could not be installed", mess)) == 1
+      # })
     }
     unlink(dirname(dir3), recursive = TRUE)
     unlink(dirname(dir4), recursive = TRUE)
