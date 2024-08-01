@@ -269,7 +269,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                 },
                 by = c("Package", "Branch")
           ], warning = function(w) {
-            browser()
+            # browser()
           })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
@@ -1717,8 +1717,12 @@ available.packagesWithCallingHandlers <- function(repo, type, verbose = getOptio
           Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
       }, add = TRUE)
     } else {
-      if (any(grepl("cannot open URL", warns)) && attmpt == 1) # seems to be transient esp with predictiveecology.r-universe.dev
-        next
+      if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
+       next
+      }
+      if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
+        break
+      setOfflineModeTRUE(verbose = verbose)
       if (length(otherwarns)) {
         warning(warns)
       }
@@ -1726,8 +1730,7 @@ available.packagesWithCallingHandlers <- function(repo, type, verbose = getOptio
     }
 
   }
-  if (any(grepl("cannot open URL", warns)))
-    setOfflineModeTRUE(verbose = verbose)
+
   out
 }
 
