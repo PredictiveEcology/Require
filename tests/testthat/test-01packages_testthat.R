@@ -183,16 +183,20 @@ test_that("test 1", {
     #   installs from source
     Require:::linkOrCopyPackageFilesInner(c("Require", "sys", "data.table", "gitcreds"),
                                      Sys.getenv("R_LIBS_USER"),toLib = dir3)
-    inst <- suppressMessages(
-      Require::Require("achubaty/fpCompare",
-                       install = "force", returnDetails = TRUE,
-                       # quiet = TRUE,
-                       require = FALSE, standAlone = TRUE, libPaths = dir3
+    warns <- capture_warnings(
+      inst <- suppressMessages(
+        Require::Require("achubaty/fpCompare",
+                         install = "force", returnDetails = TRUE,
+                         # quiet = TRUE,
+                         require = FALSE, standAlone = TRUE, libPaths = dir3
+        )
       )
     )
 
     if (isTRUE(any(grepl(msgStripColor(messageCantInstallNoInternet("")), msgStripColor(warns)))))
       skip("Flaky internet")
+
+
     inst22 <- suppressMessages(
       Require::Require("achubaty/fpCompare",
                        install = "force", returnDetails = TRUE,
