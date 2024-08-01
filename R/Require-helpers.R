@@ -1533,7 +1533,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     ipa$type <- ipa$type[2]
 
   if (getOption("Require.installPackagesSys") &&
-      requireNamespace("sys", quietly = TRUE) && !isMacOSX()){
+      requireNamespace("sys", quietly = TRUE)){
     for (i in 1:1) {
       anyFailed <- NULL
       out <- #try(
