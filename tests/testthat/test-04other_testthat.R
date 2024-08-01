@@ -273,8 +273,7 @@ test_that("test 3", {
       Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
                        standAlone = TRUE)
     )
-    test <- testWarnsInUsePleaseChange(warns)
-    expect_true(test)
+    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled))
   }
 
 
