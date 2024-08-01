@@ -890,7 +890,7 @@ whichToInstall <- function(pkgDT, install, verbose) {
                    verbose = verbose, verboseLevel = 1)
   }
   if (identical(install, "force")) {
-    askedByUser <- !is.na(pkgDT$loadOrder)
+    askedByUser <- !is.na(pkgDT[["loadOrder"]])
     set(pkgDT, which(askedByUser), "needInstall", .txtInstall)
   }
 
@@ -902,10 +902,9 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
  needRequire <- require
   if (is.character(require)) {
     pkgDT[Package %in% require, require := TRUE]
-  } else if (isTRUE(require)) {
-    pkgDT[!is.na(loadOrder), require := TRUE]
-  } else if (isFALSE(require)) {
-    set(pkgDT, NULL, "require", FALSE)
+  } else {
+    wh <- if (is.null(pkgDT[["loadOrder"]])) seq_len(NROW(pkgDT)) else which(!is.na(pkgDT[["loadOrder"]]))
+    pkgDT[wh, require := isTRUE(require)]
   }
 
   # override if version was not OK
@@ -928,7 +927,7 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
     out[[2]] <- mapply(x = pkgDT[["Package"]][pkgDT$require %in% FALSE], function(x) FALSE, USE.NAMES = TRUE)
   }
   out <- do.call(c, out)
-  out[na.omit(pkgDT[["Package"]][!is.na(pkgDT$loadOrder)])] # put in order, based on loadOrder
+  out[na.omit(pkgDT[["Package"]][!is.na(pkgDT[["loadOrder"]])])] # put in order, based on loadOrder
 
   out
 }
