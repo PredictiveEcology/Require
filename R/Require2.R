@@ -1205,7 +1205,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         )
         if (!getOption("Require.offlineMode") %in% TRUE) {
           messageVerbose("  CRAN ", downloadedInSeconds(st[[3]]), verbose = verbose)
-          ord <- match(pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE], dt$Package)
+          # ord <- match(pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE], dt$Package)
           if (FALSE) { #error on GitHub Actions: colnamesInt(i, unname(on), check_dups = FALSE)`: argument specifying columns received non-existing column(s): cols[1]='V1'
             pp <- data.table::copy(pkgCRAN)
             pp[availableVersionOK %in% TRUE, localFile := dt[ord]$localFile]
@@ -1213,7 +1213,8 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
             if (!all(pp$Package == pkgCRAN[availableVersionOK %in% TRUE]$Package))
               browser()
           }
-          pkgCRAN[availableVersionOK %in% TRUE, localFile := dt[ord]$localFile]
+          pkgCRAN[dt, localFile := i.localFile, on = "Package"]
+          # pkgCRAN[availableVersionOK %in% TRUE, localFile := dt[ord, ]$localFile]
           pkgCRAN[availableVersionOK %in% TRUE, installFrom := .txtLocal]
           pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
         } else {
@@ -3619,7 +3620,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       dt <- as.data.table(cbind(Package = argsOrig[["Package"]], do.call(rbind, ll)))
     setnames(dt, new = c("Package", "localFile"))
   } else if (downFile) {
-    # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
     dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> as.data.table()
     if (any(isError)) {
