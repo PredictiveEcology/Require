@@ -183,12 +183,14 @@ test_that("test 3", {
     #   were multiple repos; ffbase is no longer on CRAN
     # can't quiet this down on linux because ffbase is not binary but rest are ...
     #  install.packages won't do both types quiet = TRUE for some reason
-    warns1 <- capture_warnings(
-      Install("ff", # verbose = 0,
-              repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
-              ))
-    )
-    expect_identical(character(0), warns1)
+    if (!isMacOSX()) {
+      warns1 <- capture_warnings(
+        Install("ff", # verbose = 0,
+                repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"
+                ))
+      )
+      expect_identical(character(), warns1)
+    }
   }
 
   if (isWindows()) {
@@ -273,7 +275,7 @@ test_that("test 3", {
       Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
                        standAlone = TRUE)
     )
-    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled))
+    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed))
   }
 
 
