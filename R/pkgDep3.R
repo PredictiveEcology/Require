@@ -1220,6 +1220,11 @@ addDepthAndParentPkg <- function(deps, nam, .depth) {
       if (is(deps, "list")) {
         return(Map(deps = deps, nam = names(deps), addDepthAndParentPkg, .depth = .depth))
       }
+      setDT(deps) # sometimes esp. on Mac:
+      # Error in `set(deps, NULL, "parentPackage", nam)`: This data.table has either
+      #   been loaded from disk (e.g. using readRDS()/load()) or constructed manually
+      #   (e.g. using structure()). Please run setDT() or setalloccol() on it first
+      #   (to pre-allocate space for new columns) before assigning by reference to it.
 
       set(deps, NULL, "parentPackage", nam)
       deps <- rmRifInPackageCol(deps)

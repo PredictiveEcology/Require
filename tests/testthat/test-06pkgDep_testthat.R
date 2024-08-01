@@ -40,9 +40,12 @@ test_that("test 6", {
   testthat::expect_true({
     all(names(b) == pkg)
   })
-  testthat::expect_true({
-    length(b[[1]]) > length(a1[[1]])
-  })
+  testthat::expect_contains(extractPkgName(b[[1]]), c("data.table", "digest", "fs"))
+  testthat::expect_contains(extractPkgName(a[[1]]), c("data.table"))
+
+  # testthat::expect_true({
+  #   length(b[[1]]) > length(a1[[1]])
+  # })
 
   # bAlt <- pkgDepAlt(pkg, recursive = TRUE, purge = TRUE) # GitHub
   # testthat::expect_true({length(setdiff(extractPkgName(b[[1]]), extractPkgName(bAlt[[1]]))) == 0})

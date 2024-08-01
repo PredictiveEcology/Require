@@ -4,6 +4,7 @@ if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
 verboseForDev <- 2
 Require.usePak <- FALSE
 Require.installPackageSys <- 2 * (isMacOSX() %in% FALSE)
+Require.offlineMode <- FALSE
 
 if (isTRUE(Require.usePak))
   if (requireNamespace("pak"))
@@ -54,6 +55,7 @@ withr::local_options(.local_envir = teardown_env(),
                      install.packages.check.source = "never",
                      install.packages.compile.from.source = "never",
                      Require.unloadNamespaces = TRUE,
+                     Require.offlineMode = Require.offlineMode,
                      Require.Home = "~/GitHub/Require")
 
 withr::local_envvar(.local_envir = teardown_env(),
