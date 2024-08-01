@@ -3620,11 +3620,15 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   } else if (downFile) {
     # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
     if (any(isError)) {
+      dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
+                 localFile = argsOrig$destfile)
       if (any(vapply(ll, grepl, pattern = "cannot open URL", FUN.VALUE = logical(1)))) {
         setOfflineModeTRUE(verbose = verbose)
-        dt <- list()
-        return(dt)
+      } else {
+        # pull the plug and run without sys -- this seems to be failing on GA
+        eval(parse(text = doLine))
       }
+      return(dt)
     }
     dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> setDT()
