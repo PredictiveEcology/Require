@@ -1054,7 +1054,7 @@ getSHAfromGitHubMemoise <- function(...) {
       fn <- getSHAFromGitHubDBFilename()
       peList <- as.list(pe[[.txtGetSHAfromGitHub]])
       if (length(fn)) { # this can be character() if cacheGetOptionCachePkgDir() is NULL
-        if (!isTRUE(file.exists(fn)) {)
+        if (!isTRUE(file.exists(fn))) {
           saveRDS(peList, file = fn)
         } else {
           peListExisting <- readRDS(file = fn)
