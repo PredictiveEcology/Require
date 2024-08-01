@@ -16,7 +16,7 @@ URL:
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2024-07-31
-Version: 1.0.0.9005
+Version: 1.0.0.9006
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -52,6 +52,7 @@ Suggests:
     rematch2,
     rmarkdown,
     knitr,
+    rlang,
     roxygen2,
     rprojroot,
     testthat (>= 3.0.0),
