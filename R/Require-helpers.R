@@ -975,7 +975,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     if (is(gitRefs, "try-error")) {
       if (isTRUE(any(grepl("cannot open the connection", gitRefs)))) {
         # means no internet
-        setOfflineModeTRUE(verbose)
+        setOfflineModeTRUE(verbose = verbose)
       }
       return(gitRefs)
     }

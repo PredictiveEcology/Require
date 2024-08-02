@@ -1148,7 +1148,6 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
 downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose, numToDownload,
                          tmpdir, type = getOption("pkgType")) {
   pkgCRAN <- pkgNoLocal[["CRAN"]]
-  # browser()
   if (NROW(pkgCRAN)) { # CRAN, Archive, RSPM
     # messageVerbose(messageDownload(pkgCRAN, NROW(pkgCRAN), "CRAN"), verbose = verbose, verboseLevel = 2)
     if (!all(apCachedCols %in% colnames(pkgCRAN))) {
