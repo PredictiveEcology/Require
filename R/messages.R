@@ -25,6 +25,7 @@ comma <- ", "
 .txtPakCurrentlyPakNoSnapshots <- "Currently, pak is unlikely to work for package snapshots"
 .txtPakNoPkgCalledPak <- "there is no package called 'pak'"
 .txtUnknownArchiveType <- "unknown archive type"
+.txtFollowingPkgsVersionCantBeMet <- "The following shows packages whose version requirements can not be met; "
 
 .txtNoInternetTestNotRelevant <- "No internet; test not relevant"
 # "installation of package 'ccissr' had non-zero exit status"

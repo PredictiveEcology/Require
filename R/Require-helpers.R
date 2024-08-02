@@ -272,7 +272,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                 },
                 by = c("Package", "Branch")
           ], warning = function(w) {
-            # browser()
+            ## TODO this seems to be not relevant
           })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
@@ -331,9 +331,9 @@ dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verb
         error = function(e) {
           list()
         }
-      )
-      if (length(archive))
-        assign(archiveFile, archive, envir = pkgDepEnv())
+        )
+if (length(archive))
+  assign(archiveFile, archive, envir = pkgDepEnv())
     } else {
       archive <- get(archiveFile, envir = pkgDepEnv())
     }
@@ -975,7 +975,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     if (is(gitRefs, "try-error")) {
       if (isTRUE(any(grepl("cannot open the connection", gitRefs)))) {
         # means no internet
-        setOfflineModeTRUE(verbose)
+        setOfflineModeTRUE(verbose = verbose)
       }
       return(gitRefs)
     }
