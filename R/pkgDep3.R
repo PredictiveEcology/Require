@@ -410,7 +410,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   pkgDT <- #try(
     joinToAvailablePackages(pkgDT, repos, type, which, verbose)
 
-  if (!isTRUE(getOption("Require.offlineMode") %in% FALSE)) { # if available.packages wasn't available, it turns offlineMode TRUE
+  if (!isTRUE(getOption("Require.offlineMode") %in% TRUE)) { # if available.packages wasn't available, it turns offlineMode TRUE
     # )
     # if (is(pkgDT2, "try-error")) {
     #   o <- options()
