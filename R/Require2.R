@@ -1148,7 +1148,6 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
 downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose, numToDownload,
                          tmpdir, type = getOption("pkgType")) {
   pkgCRAN <- pkgNoLocal[["CRAN"]]
-  # browser()
   if (NROW(pkgCRAN)) { # CRAN, Archive, RSPM
     # messageVerbose(messageDownload(pkgCRAN, NROW(pkgCRAN), "CRAN"), verbose = verbose, verboseLevel = 2)
     if (!all(apCachedCols %in% colnames(pkgCRAN))) {
@@ -1204,16 +1203,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
         )
         if (!getOption("Require.offlineMode") %in% TRUE) {
           messageVerbose("  CRAN ", downloadedInSeconds(st[[3]]), verbose = verbose)
-          # ord <- match(pkgCRAN$Package[pkgCRAN$availableVersionOK %in% TRUE], dt$Package)
-          if (FALSE) { #error on GitHub Actions: colnamesInt(i, unname(on), check_dups = FALSE)`: argument specifying columns received non-existing column(s): cols[1]='V1'
-            pp <- data.table::copy(pkgCRAN)
-            pp[availableVersionOK %in% TRUE, localFile := dt[ord]$localFile]
-            pkgCRAN[dt, localFile := i.localFile, on = "Package"]
-            if (!all(pp$Package == pkgCRAN[availableVersionOK %in% TRUE]$Package))
-              browser()
-          }
           pkgCRAN[dt, localFile := i.localFile, on = "Package"]
-          # pkgCRAN[availableVersionOK %in% TRUE, localFile := dt[ord, ]$localFile]
           pkgCRAN[availableVersionOK %in% TRUE, installFrom := .txtLocal]
           pkgCRAN[availableVersionOK %in% TRUE, newLocalFile := TRUE]
         } else {
@@ -1869,7 +1859,6 @@ moveFileToCacheOrTmp <- function(pkgInstall) {
 getGitHubVersionOnRepos <- function(pkgGitHub) {
   notYet <- is.na(pkgGitHub[["VersionOnRepos"]])
   if (any(notYet)) {
-    # if (exists("aaaa")) browser()
     pkgGitHub <- dlGitHubFile(pkgGitHub)
     dFile <- pkgGitHub[["DESCFile"]]
     hasDFile <- which(!is.na(dFile))
@@ -2095,7 +2084,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
 
     if (any(pkgDT$violation %in% TRUE)) {
       messageVerbose(green(
-        "The following shows packages whose version requirements can not be met; ",
+        .txtFollowingPkgsVersionCantBeMet,
         "keeping the newer version: "
       ), verbose = verbose, verboseLevel = 1)
       cols <- c("Package", "packageFullName", "versionSpec")
@@ -2112,6 +2101,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
         ver[1] <- versionSpec[1]
         ver
       }, by = "Package"][, ..cols3]
+      assign("violations", violationsDF, envir = pkgEnv())
       messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
       if (grepl("remove|rm", ifViolation[1])) {
         keepCols2 <- pkgDT$violation %in% TRUE & !pkgDT[["inequality"]] %in% "==" | pkgDT$violation %in% FALSE
@@ -2123,7 +2113,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
 
     if (any(pkgDT$violation2 %in% TRUE)) {
       messageVerbose(green(
-        "The following shows packages whose version requirements can not be met; ",
+        .txtFollowingPkgsVersionCantBeMet,
         "keeping the newer version: "
       ), verbose = verbose, verboseLevel = 1)
       cols <- c("Package", "packageFullName", "versionSpec")
@@ -3553,7 +3543,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   fullMess <- character()
   preMess <- if (installPackages)  "" else "Downloaded: "
 
+  ll <- list()
   for (pid in pids) {
+    whMatch <- match(pid, pids)
     st <- Sys.time()
     if (!installPackages) {
       spinnerOnPid(pid, isRstudio, st, verbose)
@@ -3590,13 +3582,17 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     }
 
     fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
-    ll <- try(lapply(outfiles, readRDS), silent = TRUE)
-    isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
-    if (!is(ll, "try-error") && any(!isError)) {
-      if ( (Sys.time() - st) > 2 && nzchar(fullMess)) {
-        fullMess <- paste0WithLineFeed(fullMess)
-        messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
-        fullMess <- character()
+    if (!installPackages) {
+      ll[[whMatch]] <- try(readRDS(outfiles[[whMatch]]))
+      # (ll <- try(lapply(outfiles, readRDS), silent = TRUE)) |> capture_warnings() -> wa; if (length(wa) > 0) browser()
+      # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
+      if (!is(ll[[whMatch]], "try-error")) {
+        if ( # (Sys.time() - st) > 2 &&
+          nzchar(fullMess)) {
+          fullMess <- paste0WithLineFeed(fullMess)
+          messageVerbose(blue(paste0("  ", preMess, fullMess)), verbose = verbose)
+          fullMess <- character()
+        }
       }
     }
 
@@ -3610,10 +3606,11 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   # }
 
   # Do it again, in case the first one was in the loop; this maybe isn't necessary
-  ll <- try(lapply(outfiles, readRDS), silent = TRUE)
-  isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
+  # (ll <- try(lapply(outfiles, readRDS), silent = TRUE)) |> capture_warnings() -> wa; if (length(wa) > 0) browser()
+  # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
 
-  if (!is(ll, "try-error") && any(!isError)) {
+  if (!is(ll, "try-error")) {# && any(!isError)) {
+    # if (!is(ll, "try-error") && any(!isError)) {
     if (length(fullMess) && nzchar(fullMess)) {
     fullMess <- gsub("\n", " ", fullMess)
     fullMess <- paste0WithLineFeed(fullMess)
@@ -3630,14 +3627,15 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   } else if (downFile) {
     dt <- list(Package = extractPkgName(filenames = basename(argsOrig$destfile)),
                localFile = argsOrig$destfile) |> as.data.table()
-    if (any(isError)) {
+    # if (any(isError)) {
       if (any(vapply(ll, grepl, pattern = "cannot open URL", FUN.VALUE = logical(1)))) {
+        browser()
         setOfflineModeTRUE(verbose = verbose)
-      } else {
+      } #else {
         # pull the plug and run without sys -- this seems to be failing on GA
-        eval(parse(text = doLine))
-      }
-    }
+        #eval(parse(text = doLine))
+      #}
+    # }
     # return(dt)
   } else if (downAndBuildLocal) {
     dt <- list(Package = argsOrig[["Package"]],

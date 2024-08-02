@@ -126,7 +126,7 @@ test_that("test 5", {
     warns <- grep(.txtCouldNotBeInstalled, warns, invert = TRUE, value = TRUE)
 
     test <- testWarnsInUsePleaseChange(warns)
-    if (!isTRUE(test)) browser()
+    # if (!isTRUE(test)) browser()
     expect_true(test)
 
     # Rerun it to get output table, but capture messages for quiet; should be no installs
