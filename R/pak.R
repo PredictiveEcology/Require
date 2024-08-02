@@ -60,7 +60,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       if (grp[i] == .txtCntInstllDep) {
         whRmAll <- integer()
         for (j in seq_along(pkgNoVersion)) {
-          if (isGH(pkgNoVersion[j])) { # "achubaty/fpCompare (>=2.0.0)"
+          if (isGH(pkgNoVersion[j])) { # "PredictiveEcology/fpCompare (>=2.0.0)"
             if (is.na(pkg[whRm[j]])) browser()
             isOK <- pakCheckGHversionOK(pkg[whRm[j]])
             # pkgDT <- toPkgDTFull(pkg)

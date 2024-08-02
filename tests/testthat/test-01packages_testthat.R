@@ -185,7 +185,7 @@ test_that("test 1", {
                                      Sys.getenv("R_LIBS_USER"),toLib = dir3)
     warns <- capture_warnings(
       inst <- suppressMessages(
-        Require::Require("achubaty/fpCompare",
+        Require::Require("PredictiveEcology/fpCompare",
                          install = "force", returnDetails = TRUE,
                          # quiet = TRUE,
                          require = FALSE, standAlone = TRUE, libPaths = dir3
@@ -198,7 +198,7 @@ test_that("test 1", {
 
 
     inst22 <- suppressMessages(
-      Require::Require("achubaty/fpCompare",
+      Require::Require("PredictiveEcology/fpCompare",
                        install = "force", returnDetails = TRUE,
                        # quiet = TRUE,
                        require = FALSE, standAlone = TRUE, libPaths = dir3
@@ -227,7 +227,7 @@ test_that("test 1", {
     dir4 <- Require::checkPath(dir4, create = TRUE)
     err <- capture_error(
       warns <- capture_warnings(
-        inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+        inst <- Require::Require("PredictiveEcology/fpCompare (>=2.0.0)",
                                  quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
         )
       )
@@ -241,7 +241,7 @@ test_that("test 1", {
       warns <- capture_warnings(
         mess <- utils::capture.output(
           {
-            inst <- Require::Require("achubaty/fpCompare (>=2.0.0)",
+            inst <- Require::Require("PredictiveEcology/fpCompare (>=2.0.0)",
                                      verbose = 5,
                                      quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
             )

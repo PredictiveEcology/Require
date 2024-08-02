@@ -1,4 +1,4 @@
-test_that("test 5b", {
+test_that("test 11", {
 
   # skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
   setupInitial <- setupTest()
@@ -72,3 +72,5 @@ test_that("test 5b", {
   }
 
 })
+
+
