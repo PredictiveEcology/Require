@@ -1,5 +1,7 @@
 test_that("test12 Require.offlineMode", {
 
+  skip_on_ci() # These are still experimental
+  skip_on_cran() # These are still experimental
   # skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
   setupInitial <- setupTest()
 
