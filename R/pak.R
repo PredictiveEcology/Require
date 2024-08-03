@@ -54,7 +54,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         break
       }
       if (grp[i] == .txtFailedToDLFrom) {
-        browser()
+        # browser()
       }
 
       if (grp[i] == .txtCntInstllDep) {

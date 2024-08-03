@@ -117,11 +117,10 @@ test_that("test 09", {
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
       warns <- capture_warnings(
         # mess <- capture_messages(
-        out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
-                       returnDetails = TRUE)
+          out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
+                         returnDetails = TRUE)
         # )
       )
-
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)

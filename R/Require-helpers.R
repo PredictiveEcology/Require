@@ -263,8 +263,9 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                     destFile
                   } else {
                     if (!isTRUE(urlExists(unique(url)[1])))
-                      if (!isTRUE(urlExists("https://www.google.com")))
+                      if (!isTRUE(urlExists("https://www.google.com"))) {
                         setOfflineModeTRUE(verbose = verbose)
+                      }
                     NA
                   }
 
@@ -272,7 +273,7 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                 },
                 by = c("Package", "Branch")
           ], warning = function(w) {
-            # browser()
+            ## TODO this seems to be not relevant
           })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
@@ -324,16 +325,21 @@ dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verb
           readRDS(con)
         },
         warning = function(e) {
+          # "cannot open URL 'https://predictiveecology.r-universe.dev/src/contrib/Meta/archive.rds': HTTP status was '404 Not Found'"
+          #  this seems to be because r-universe.dev doesn't keep archives
           options(Require.checkInternet = TRUE)
-          setOfflineModeTRUE(verbose = verbose)
+          if (!internetExists())
+            setOfflineModeTRUE(verbose = verbose)
+          #
+          #
           list()
         },
         error = function(e) {
           list()
         }
-      )
-      if (length(archive))
-        assign(archiveFile, archive, envir = pkgDepEnv())
+        )
+if (length(archive))
+  assign(archiveFile, archive, envir = pkgDepEnv())
     } else {
       archive <- get(archiveFile, envir = pkgDepEnv())
     }
@@ -975,7 +981,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     if (is(gitRefs, "try-error")) {
       if (isTRUE(any(grepl("cannot open the connection", gitRefs)))) {
         # means no internet
-        setOfflineModeTRUE(verbose)
+        setOfflineModeTRUE(verbose = verbose)
       }
       return(gitRefs)
     }
@@ -1208,12 +1214,14 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
+      checkNow <- TRUE
       if (!is.null(iet)) {
         if ((Sys.time() - getOption("Require.internetExistsTimeout", 30)) < iet) {
-          internetMightExist <- FALSE
+          internetMightExist <- get0(.txtInternetExists, envir = pkgEnv())
+          checkNow <- FALSE
         }
       }
-      if (internetMightExist) {
+      if (checkNow) {
         opts2 <- options(timeout = 2)
         on.exit(options(opts2))
         pe <- pkgEnv()
@@ -1226,6 +1234,7 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
           # )
         }
         assign(.txtInternetExistsTime, Sys.time(), envir = pkgEnv())
+        assign(.txtInternetExists, internetMightExist, envir = pkgEnv())
       }
       out <- internetMightExist
     } else {
