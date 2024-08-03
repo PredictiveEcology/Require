@@ -13,7 +13,6 @@ test_that("test12 Require.offlineMode", {
     fpcPkgName <- extractPkgName(fpc)
     cacheClearPackages(fpcPkgName, ask = FALSE)
     Install(fpc)
-    browser()
     mess <- capture_messages(remove.packages(fpcPkgName))
     withr::local_options(Require.offlineMode = TRUE)
     warns <- capture_warnings(Install(fpc))
