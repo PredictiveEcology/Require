@@ -3,7 +3,7 @@ if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
 }
 verboseForDev <- -2
 Require.usePak <- FALSE
-Require.installPackageSys <- 2# * (isMacOSX() %in% FALSE)
+Require.installPackageSys <- 2 * (isMacOSX() %in% FALSE)
 Require.offlineMode <- FALSE
 
 if (isTRUE(Require.usePak))
