@@ -1,6 +1,6 @@
 test_that("test12 Require.offlineMode", {
 
-  skip_on_ci() # These are still experimental
+  # skip_on_ci() # These are still experimental
   skip_on_cran() # These are still experimental
   setupInitial <- setupTest()
 
