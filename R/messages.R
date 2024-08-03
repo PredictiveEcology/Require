@@ -11,6 +11,7 @@ comma <- ", "
 .txtPleaseChangeReqdVers <- "Please change required version"
 .txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
+.txtInternetExists <- "internetExists"
 .txtCntInstllDep <- "Can't install dependency"
 .txtConflictsWith <- "Conflicts with"
 

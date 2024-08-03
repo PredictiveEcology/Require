@@ -263,8 +263,10 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                     destFile
                   } else {
                     if (!isTRUE(urlExists(unique(url)[1])))
-                      if (!isTRUE(urlExists("https://www.google.com")))
+                      if (!isTRUE(urlExists("https://www.google.com"))) {
+                        browser()
                         setOfflineModeTRUE(verbose = verbose)
+                      }
                     NA
                   }
 
@@ -324,8 +326,13 @@ dlArchiveVersionsAvailable <- function(package, repos = getOption("repos"), verb
           readRDS(con)
         },
         warning = function(e) {
+          # "cannot open URL 'https://predictiveecology.r-universe.dev/src/contrib/Meta/archive.rds': HTTP status was '404 Not Found'"
+          #  this seems to be because r-universe.dev doesn't keep archives
           options(Require.checkInternet = TRUE)
-          setOfflineModeTRUE(verbose = verbose)
+          if (!internetExists())
+            setOfflineModeTRUE(verbose = verbose)
+          #
+          #
           list()
         },
         error = function(e) {
@@ -1208,12 +1215,14 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
     if (getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
+      checkNow <- TRUE
       if (!is.null(iet)) {
         if ((Sys.time() - getOption("Require.internetExistsTimeout", 30)) < iet) {
-          internetMightExist <- FALSE
+          internetMightExist <- get0(.txtInternetExists, envir = pkgEnv())
+          checkNow <- FALSE
         }
       }
-      if (internetMightExist) {
+      if (checkNow) {
         opts2 <- options(timeout = 2)
         on.exit(options(opts2))
         pe <- pkgEnv()
@@ -1226,6 +1235,7 @@ internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
           # )
         }
         assign(.txtInternetExistsTime, Sys.time(), envir = pkgEnv())
+        assign(.txtInternetExists, internetMightExist, envir = pkgEnv())
       }
       out <- internetMightExist
     } else {
@@ -1441,6 +1451,7 @@ masterMainHEAD <- function(url, need) {
     ret
   },
   warning = function(w) {
+    browser()
     setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
     if (is.null(token))
@@ -1725,6 +1736,7 @@ available.packagesWithCallingHandlers <- function(repo, type, verbose = getOptio
       }
       if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
         break
+      browser()
       setOfflineModeTRUE(verbose = verbose)
       if (length(otherwarns)) {
         warning(warns)

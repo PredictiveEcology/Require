@@ -3629,6 +3629,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
                localFile = argsOrig$destfile) |> as.data.table()
     # if (any(isError)) {
       if (any(vapply(ll, grepl, pattern = "cannot open URL", FUN.VALUE = logical(1)))) {
+        browser()
         setOfflineModeTRUE(verbose = verbose)
       } #else {
         # pull the plug and run without sys -- this seems to be failing on GA
