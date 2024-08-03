@@ -264,7 +264,6 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
                   } else {
                     if (!isTRUE(urlExists(unique(url)[1])))
                       if (!isTRUE(urlExists("https://www.google.com"))) {
-                        browser()
                         setOfflineModeTRUE(verbose = verbose)
                       }
                     NA
@@ -1451,7 +1450,6 @@ masterMainHEAD <- function(url, need) {
     ret
   },
   warning = function(w) {
-    browser()
     setOfflineModeTRUE(verbose = verbose)
     # strip the ghp from the warning message
     if (is.null(token))
@@ -1736,7 +1734,6 @@ available.packagesWithCallingHandlers <- function(repo, type, verbose = getOptio
       }
       if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
         break
-      browser()
       setOfflineModeTRUE(verbose = verbose)
       if (length(otherwarns)) {
         warning(warns)
