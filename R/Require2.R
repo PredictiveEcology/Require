@@ -706,7 +706,9 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       if (!is.null(pkgInstall)) {
         pkgInstall[, isBinaryInstall := isBinary(localFile, needRepoCheck = FALSE)] # filename-based
         pkgInstall[localFile %in% useRepository, isBinaryInstall := isBinaryCRANRepo(Repository)] # repository-based
-        pkgInstall <- updateReposForSrcPkgs(pkgInstall, verbose = verbose)
+        if (isTRUE(any(duplicated(pkgInstall$Package)))) {
+          pkgInstall <- updateReposForSrcPkgs(pkgInstall, verbose = verbose)
+        }
 
         startTime <- Sys.time()
 
@@ -995,28 +997,15 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   )
   # When GITHUB_PAT rate limit is hit, the error message in Require is useless;
   #   use `remotes`
-  pkgInstall <-
-    withCallingHandlers(checkAvailableVersions(pkgInstall, repos, purge, libPaths,
-                                               verbose = verbose, type = type),
-                        error = function(e) {
-                          e$message <- gsub(paste0("(https://).*@"), "\\1", e$message)
-                          # if (requireNamespace("remotes")) {
-                          #   # THIS WILL TRY `remotes` TO GET THE CORRECT REASON FOR THE ERROR -- but will still error
-                          #   pkgInstallJustGitHub <- pkgInstall[pkgInstall$repoLocation %in% .txtGitHub]
-                          #   lapply(seq(NROW(pkgInstallJustGitHub)),
-                          #          function(ind) {
-                          #            pijg <- pkgInstallJustGitHub[ind]
-                          #            thisOne <- any(grepl(paste(pijg$Account, pijg$Repo, sep = ".+"), e))
-                          #            if (isTRUE(thisOne))
-                          #              remotes::install_github(pijg[["packageFullName"]])
-                          #          })
-                          #
-                          # } else {
-                          stop(e, "\nDoes the url exist? ",
-                               "Are you not using a GITHUB_PAT? Do you have an old GITHUB_PAT?\n",
-                               "For better error handling, install.packages('remotes')")
-                          # }
-                        })
+  pkgInstall <- withCallingHandlers(
+    checkAvailableVersions(pkgInstall, repos, purge, libPaths,
+                           verbose = verbose, type = type),
+    error = function(e) {
+      e$message <- gsub(paste0("(https://).*@"), "\\1", e$message)
+      stop(e, "\nDoes the url exist? ",
+           "Are you not using a GITHUB_PAT? Do you have an old GITHUB_PAT?\n",
+           "For better error handling, install.packages('remotes')")
+    })
   naRepository <- is.na(pkgInstall$Repository)
   if (any(naRepository)) {
     if (!is.null(pkgInstall$Additional_repositories))
@@ -1168,7 +1157,11 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
       pkgCRAN <- pkgNoLocal[["CRAN"]]
     }
     if (NROW(pkgCRAN)) {
-      pkgCRAN <- updateReposForSrcPkgs(pkgCRAN, verbose = verbose)
+      if (isTRUE(any(duplicated(pkgCRAN$Package)))) {
+        pkgCRAN <- updateReposForSrcPkgs(pkgCRAN, verbose = verbose)
+      }
+
+
 
       ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
       if (getOption("Require.installPackagesSys") == 2 && NROW(ap))  {
@@ -2332,6 +2325,11 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   #  https://cran.rstudio.com/bin/windows/contrib/4.3 should be same Repo as https://cran.rstudio.com/src/contrib
   set(pkgInstall, NULL, "RepositoryTop", strsplit(gsub("http://|https://", "", pkgInstall$Repository), "/")[[c(1, 1)]])
   pkgInstall <- availableVersionOK(pkgInstall)
+
+  pkgInstall <- updateReposForSrcPkgs(pkgInstall, verbose = verbose)
+
+  # This next line removes the duplicates coming from available.packages ... so it will be too late
+  #  after this line to "updateReposForSrcPkgs" further downstream; needs to be previous line
   pkgInstall <-
     rbindlist(list(
       pkgInstall[!availableVersionOK %in% TRUE],
@@ -2697,23 +2695,40 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
         # if there are multiple non-binary repos
       } else { # (length(nonBinaryRepos) > 1) {
         packageExists <- FALSE
+        if (is.null(pkgInstall[["isBinaryInstall"]])) {
+          set(pkgInstall, NULL, "isBinaryInstall", isBinaryCRANRepo(curCRANRepo = pkgInstall$Repository))
+        }
+
+        set(pkgInstall, NULL, "origOrd", seq_len(NROW(pkgInstall)))
+        setorderv(pkgInstall, cols = c("isBinaryInstall"))
+
         for (ind in seq(nonBinaryRepos)) {
           nbrContrib <- contrib.url(nonBinaryRepos)
           whArchive <- pkgInstall$installFrom %in% "Archive"
           dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
-          mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
-          needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
-
-          pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
-          apTmp <- available.packages(contriburl = nbrContrib[ind])
-          packageExists <- pkgInstallNeededHere[["Package"]] %in% apTmp[, "Package"]
-          if (any(packageExists)) {
-            pkgInstall[Package %in% pkgInstallNeededHere[["Package"]][packageExists],
-                       `:=`(Repository, nbrContrib[ind])]
+          if (!is.null(pkgInstall$localFile)) {
+            mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
             needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+            pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
+            apTmp <- available.packages(contriburl = nbrContrib[ind])
+            packageExists <- pkgInstallNeededHere[["Package"]] %in% apTmp[, "Package"]
+            if (any(packageExists)) {
+              pkgInstall[Package %in% pkgInstallNeededHere[["Package"]][packageExists],
+                         `:=`(Repository, nbrContrib[ind])]
+              needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+            }
+            if (isTRUE(all(packageExists)))
+              break
+          } else {
+            set(pkgInstall, NULL, "keep", seq_len(NROW(pkgInstall)))
+            pkgInstall[which(dontInstallBecauseForceSrc), keep := .I[1], by = "Package"]
+            pkgInstall <- pkgInstall[unique(pkgInstall$keep)]
+            set(pkgInstall, NULL, "keep", NULL)
+            setorderv(pkgInstall, "origOrd")
           }
-          if (all(packageExists))
-            break
+          # needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
+
+
         }
         # } else {
         #   pkgInstall[!whArchive %in% TRUE & needSwitchToSrc, Repository := contrib.url(nonBinaryRepos)]
@@ -3584,8 +3599,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     fullMess <- if (length(fullMess)) paste(fullMess, mess, sep = ", ") else mess
     if (!installPackages) {
       ll[[whMatch]] <- try(readRDS(outfiles[[whMatch]]))
-      # (ll <- try(lapply(outfiles, readRDS), silent = TRUE)) |> capture_warnings() -> wa; if (length(wa) > 0) browser()
-      # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
       if (!is(ll[[whMatch]], "try-error")) {
         if ( # (Sys.time() - st) > 2 &&
           nzchar(fullMess)) {
@@ -3606,8 +3619,6 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   # }
 
   # Do it again, in case the first one was in the loop; this maybe isn't necessary
-  # (ll <- try(lapply(outfiles, readRDS), silent = TRUE)) |> capture_warnings() -> wa; if (length(wa) > 0) browser()
-  # isError <- vapply(ll, is, class2 = "try-error", FUN.VALUE = logical(1))
 
   if (!is(ll, "try-error")) {# && any(!isError)) {
     # if (!is(ll, "try-error") && any(!isError)) {
