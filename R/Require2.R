@@ -2708,6 +2708,7 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
           dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
           if (!is.null(pkgInstall$localFile)) {
             mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
+            needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
             pkgInstallNeededHere <- pkgInstall[!whArchive %in% TRUE & needSwitchToSrc]
             apTmp <- available.packages(contriburl = nbrContrib[ind])
             packageExists <- pkgInstallNeededHere[["Package"]] %in% apTmp[, "Package"]
