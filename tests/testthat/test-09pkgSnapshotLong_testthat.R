@@ -70,6 +70,7 @@ test_that("test 09", {
         # data.table::fwrite(pkgs, file = snf)
         # minor corrections -- these can't be compiled on R 4.4.1 on ubuntu
         pkgs[Package %in% "spatstat.sparse", Version := "3.0-3"]
+        pkgs[Package %in% "parallelly", Version := "1.38.0"]
         pkgs[Package %in% "spatstat.geom", Version := "3.2-9"]
         pkgs[Package %in% "spatstat.data", Version := "3.0-4"]
         # pkgs[Package %in% "wk", Version := "0.9.1"]
