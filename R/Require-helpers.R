@@ -981,7 +981,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     }
     gitRefs <- try(suppressWarnings(readLines(tf)), silent = TRUE)
     isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) )) ||
-      (grepl("cannot open URL", gitRefs))
+      (any(grepl("cannot open URL", gitRefs)))
     if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {#} || notFound) {
       if (file.exists(tf)) {
         unlink(tf)
