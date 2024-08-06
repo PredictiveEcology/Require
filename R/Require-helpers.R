@@ -1405,15 +1405,15 @@ masterMainHEAD <- function(url, need) {
             for (tryNum in 1:2) {
               if (!isTRUE(getOption("Require.offlineMode"))) {
 
-                # if (is.null(token)) {
-                #   tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
-                #            error = function(e) {
-                #              if (is.null(token))
-                #                e$message <- stripGHP(ghp, e$message)
-                #              if (tryNum > 1)
-                #                messageVerbose(e$message, verbose = verbose)
-                #            })
-                # } else {
+                if (is.null(token)) {
+                  tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
+                           error = function(e) {
+                             if (is.null(token))
+                               e$message <- stripGHP(ghp, e$message)
+                             if (tryNum > 1)
+                               messageVerbose(e$message, verbose = verbose)
+                           })
+                } else {
                   a <- try(GETWauthThenNonAuth(url, token, verbose = verbose))
                   if (is(a, "try-error")) {
                     if (any(grepl("Could not resolve host", a))) {
@@ -1426,7 +1426,7 @@ masterMainHEAD <- function(url, need) {
                   #   a <- httr::GET(url, httr::add_headers())
                   data <- httr::content(a, "raw")
                   writeBin(data, df)
-                # }
+                }
                 if (file.exists(df))
                   break
                 if (is.null(token))
