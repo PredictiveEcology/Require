@@ -961,6 +961,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
   # tf <- tempfile()
+
   for (ii in 1:2) {
     tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_",acct, "@", repo))
     downloadNow <- TRUE
@@ -969,10 +970,18 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
         downloadNow <- FALSE
       }
     }
-    if (downloadNow)
-      .downloadFileMasterMainAuth(gitRefsURL, destfile = tf, need = "master")
+    if (downloadNow) {
+      withCallingHandlers(
+      .downloadFileMasterMainAuth(gitRefsURL, destfile = tf, need = "master"),
+      message = function(m) {
+        if (any(grepl("cannot open URL", m$message)))
+          stop(.txtDidYouSpell)
+      }
+      )
+    }
     gitRefs <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-    isNotFound <-  (NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) )
+    isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) )) ||
+      (grepl("cannot open URL", gitRefs))
     if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {#} || notFound) {
       if (file.exists(tf)) {
         unlink(tf)
@@ -988,7 +997,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       #   }, add = TRUE)
       # }
       if (isNotFound)
-         stop(.txtDidYouSpell, " the GitHub.com repository, package and or branch/gitRefs correctly?")
+         stop(.txtDidYouSpell)
       stop(gitRefs)
     }
 

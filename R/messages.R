@@ -35,7 +35,7 @@ comma <- ", "
 
 # "installation of.+failed" # "installation of 2 packages failed:"
 .txtInstallationPkgFailed <- "installation of.+failed"
-.txtDidYouSpell <- "Did you spell"
+.txtDidYouSpell <- "Did you spell the GitHub.com repository, package and or branch/gitRefs correctly?"
 
 .txtGitHubCols <- list()
 .txtGitHubCols$Br <- "Branch"
