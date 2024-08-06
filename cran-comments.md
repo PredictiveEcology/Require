@@ -1,6 +1,6 @@
 ## Release information
 
-This is major package update with many new features, new underlying algorithms, and bugfixes. 
+This is minor update to address CRAN failures on Fedora and Mac, as requested by Brian Ripiley. 
 
 See `NEWS.md` for a full list of changes.
 
