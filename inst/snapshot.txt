@@ -201,7 +201,7 @@ numDeriv,2016.8-1.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpd
 odbc,1.3.4,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","bit64, blob (>= 1.2.0), DBI (>= 1.0.0), hms, methods, Rcpp (>=        0.12.11), rlang (>= 0.2.0)",,,,,,,,CRAN,
 openssl,2.1.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"",askpass,,,,,,,,CRAN,
 pak,0.5.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","tools, utils",,,,,,,,CRAN,
-parallelly,1.36.0,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","parallel, tools, utils",,,,,,,,CRAN,
+parallelly,1.38.0,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","parallel, tools, utils",,,,,,,,CRAN,
 patchwork,1.1.3,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","ggplot2 (>= 3.0.0), gtable, grid, stats, grDevices, utils, graphics, rlang, cli",,,,,,,,CRAN,
 pbapply,1.7-0,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"",parallel,,,,,,,,CRAN,
 pbkrtest,0.5.2,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,lme4 (>= 1.1.31),"broom, dplyr, MASS, Matrix (>= 1.2.3), methods, numDeriv, parallel",,,,,,,,CRAN,
