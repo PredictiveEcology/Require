@@ -979,11 +979,12 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       }
       )
     }
-    gitRefs <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-    isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) )) ||
-      (any(grepl("cannot open URL", gitRefs)))
+    fetf <- file.exists(tf)
+    gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
+    isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+      (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, ""))
     if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {#} || notFound) {
-      if (file.exists(tf)) {
+      if (fetf) {
         unlink(tf)
       }
       # if (isNotFound) {
@@ -1433,6 +1434,7 @@ masterMainHEAD <- function(url, need) {
                   URL <- stripGHP(ghp, URL) # this seems to be one of the causes of failures -- the GHP sometimes fails
               }
             }
+            return(invisible())
           })
       }
       if (!is.null(urls[["TRUE"]])) { # should be sequential because they are master OR main
