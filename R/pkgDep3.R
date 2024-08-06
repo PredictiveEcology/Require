@@ -596,7 +596,7 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
               br = pkgDT$Branch[installedNoOKAndNoPkgEnvWh],
               verbose = verbose,
               getSHAfromGitHubMemoise
-            )
+            ), silent = TRUE
           )
           if (is(shaOuts, "try-error")) {
             if (any(grepl(messageCantFind("|", "|", "|"), shaOuts)))

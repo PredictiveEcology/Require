@@ -972,9 +972,23 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     if (downloadNow)
       .downloadFileMasterMainAuth(gitRefsURL, destfile = tf, need = "master")
     gitRefs <- try(suppressWarnings(readLines(tf)), silent = TRUE)
-    if (any(grepl("Bad credentials", gitRefs))) {#} || notFound) {
-      # if (notFound)
-       #  stop("Did you spell the GitHub.com repository, package and or branch/gitRefs correctly?")
+    isNotFound <-  (NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) )
+    if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {#} || notFound) {
+      if (file.exists(tf)) {
+        unlink(tf)
+      }
+      # if (isNotFound) {
+      #   prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+      #   Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
+      #   on.exit({
+      #     if (nzchar(prevCurlVal))
+      #       Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
+      #     else
+      #       Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+      #   }, add = TRUE)
+      # }
+      if (isNotFound)
+         stop(.txtDidYouSpell, " the GitHub.com repository, package and or branch/gitRefs correctly?")
       stop(gitRefs)
     }
 
