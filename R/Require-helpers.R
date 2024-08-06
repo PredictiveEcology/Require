@@ -1716,7 +1716,11 @@ rmEmptyFiles <- function(files, minSize = 100) {
 
 
 GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
-  a <- httr::GET(url, httr::add_headers(Authorization = token))
+  if (is.null(token)) {
+    a <- httr::GET(url)
+  } else {
+    a <- httr::GET(url, httr::add_headers(Authorization = token))
+  }
   if (grepl("Bad credentials", a) || grepl("404", httr::http_status(a)$message)) {
     if (grepl("Bad credentials", a)) messageVerbose(red("Git credentials do not work for this url: ", url,
                                              "\nAre they expired?"), verbose = verbose)
