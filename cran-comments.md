@@ -1,11 +1,15 @@
 ## Release information
 
-This is minor update to address CRAN failures on Fedora and Mac, as requested by Brian Ripley. 
+This is minor update to address CRAN failures on Fedora and Mac, as requested by Prof. Brian Ripley. 
 
 See `NEWS.md` for a full list of changes.
 
 ## Test environments
 
+### Rhub
+
+Tested with `rhub::rhub_check(branch = "master", platforms = rhub::rhub_platforms()$name[c(1:18, 20)])`,
+which includes the same systems as were failing on CRAN machines.
   
 ### Previous R versions
 * Ubuntu 20.04                 (GitHub), 4.2.3, 4.3.3
