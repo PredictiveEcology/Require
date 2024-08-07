@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,7 +52,7 @@
 </h1></div>
 <!-- badges start -->
 <p><a href="https://cran.r-project.org/package=Require" class="external-link"><img src="https://www.r-pkg.org/badges/version/Require" alt="CRAN_Status_Badge"></a> <a href="https://cran.r-project.org/package=Require" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/grand-total/Require" alt="CRAN Downloads"></a> <a href="https://github.com/PredictiveEcology/Require/actions" class="external-link"><img src="https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge.svg" alt="R build status"></a> <!-- badges: end --></p>
-<p><code>Require</code> is a single package that combines features of <code>base::install.packages</code>, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::library</a></code>, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::require</a></code>, as well as <code><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pak::pkg_install</a></code>, <code><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">remotes::install_github</a></code>, and <code>versions::install_version</code>, plus the snapshotting capabilities of <code>renv</code>. It takes its name from the idea that a user could simply have one line like this:</p>
+<p><code>Require</code> is a single package that combines features of <code>base::install.packages</code>, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::library</a></code>, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::require</a></code>, as well as <code><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pak::pkg_install</a></code>, <code>remotes::install_github</code>, and <code>versions::install_version</code>, plus the snapshotting capabilities of <code>renv</code>. It takes its name from the idea that a user could simply have one line like this:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/Require.html">Require</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dplyr"</span>, <span class="st">"lmer"</span>, <span class="st">"PredictiveEcology/LandR@development"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>named after the <code>require</code> function, that would load packages. But with <code>Require</code>, it will also install the packages, if necessary. Set it and forget it. This makes if <em>very clear</em> what packages are being used in a project. <code>Require</code> also continues to work, even if packages are taken off CRAN. This means that even if there is a dependency that is removed from CRAN (“archived”), the line will still work. Because it can be done in one line, it becomes relatively easy to share, it is transparent, and facilitates reproducibility (especially when combined with version specifications). These in turn facilitate, for example, making reprexes for debugging.</p>
@@ -170,7 +170,7 @@
 <span></span>
 <span><span class="co"># Or installing from source</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="st"><a href="https://remotes.r-lib.org" class="external-link">"remotes"</a></span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"PredictiveEcology/Require"</span><span class="op">)</span> </span></code></pre></div>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"PredictiveEcology/Require"</span><span class="op">)</span> </span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="development-version">Development version<a class="anchor" aria-label="anchor" href="#development-version"></a>

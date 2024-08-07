@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,22 @@
       <small>Source: <a href="https://github.com/PredictiveEcology/Require/blob/master/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.1" id="version-101">version 1.0.1<a class="anchor" aria-label="anchor" href="#version-101"></a></h2>
+<div class="section level3">
+<h3 id="cran-requested-fixes-1-0-1">CRAN requested fixes<a class="anchor" aria-label="anchor" href="#cran-requested-fixes-1-0-1"></a></h3>
+<ul><li>Require was failing on secondary check systems (Fedora and one Mac system). This update fixes those.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="enhancements-1-0-1">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-0-1"></a></h3>
+<ul><li>
+<code>offlineMode</code>, gained improved functionality; though it is still experimental. It can be set using <code>options(Require.offlineMode = TRUE)</code>, but it will be automatically set if internet is not available, has now been widely tested. If packages are available in the local caches, and all elements of package versioning (e.g., <code><a href="https://rdrr.io/r/utils/available.packages.html" class="external-link">available.packages()</a></code> and github packages) have been previously run, then installations should occur as if the internet were available.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="other-1-0-1">Other<a class="anchor" aria-label="anchor" href="#other-1-0-1"></a></h3>
+<ul><li>package testing on Linux Fedora and one MacOS machine on CRAN extra machines were addressed.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.0" id="version-100">version 1.0.0<a class="anchor" aria-label="anchor" href="#version-100"></a></h2><p class="text-muted">CRAN release: 2024-07-27</p>
 <div class="section level3">
@@ -276,7 +292,7 @@
 <div class="section level3">
 <h3 id="enhancements-0-1-0">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-0"></a></h3>
 <ul><li>install CRAN packages using vectorized <code>install.packages</code> –&gt; much faster</li>
-<li>now uses internal <code>installGithubPackage</code> instead of <code><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">remotes::install_github</a></code>
+<li>now uses internal <code>installGithubPackage</code> instead of <code>remotes::install_github</code>
 </li>
 <li>this previous means that all installations use <code>install.packages</code> directly</li>
 <li>remove dependency on <code>remotes</code>

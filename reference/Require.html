@@ -25,7 +25,7 @@ will be skipped."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -257,14 +257,14 @@ attribute <code>attr(obj, "Require")</code> to the output of this function.</p>
     </div>
     <div class="section level2">
     <h2 id="github-package">GitHub Package<a class="anchor" aria-label="anchor" href="#github-package"></a></h2>
-    <p>Follows <code><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">remotes::install_github</a></code> standard. As with
-<code><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">remotes::install_github</a></code>, it is not possible to specify a past version of
+    <p>Follows <code>remotes::install_github</code> standard. As with
+<code>remotes::install_github</code>, it is not possible to specify a past version of
 a GitHub package unless that version is a tag or the user passes the SHA
 that had that package version. Similarly, if a developer does a local
 install e.g., via <code>pkgload::install</code>, of an active project, this package
 will not be able know of the GitHub state, and thus <code>pkgSnapshot</code> will not
 be able to recover this state as there is no SHA associated with a local
-installation. Use <code>Require</code> (or <code><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">remotes::install_github</a></code>) to create a
+installation. Use <code>Require</code> (or <code>remotes::install_github</code>) to create a
 record of the GitHub state.</p>
     </div>
     <div class="section level2">

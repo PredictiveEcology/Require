@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,7 @@ McIntire</h4>
 <p><code>Require</code> is a single package that combines features of
 <code>base::install.packages</code>, <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::library</a></code>,
 <code><a href="https://rdrr.io/r/base/library.html" class="external-link">base::require</a></code>, as well as <code><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pak::pkg_install</a></code>,
-<code><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">remotes::install_github</a></code>, and
+<code>remotes::install_github</code>, and
 <code>versions::install_version</code>, plus the snapshotting
 capabilities of <code>renv</code>. It takes its name from the idea that
 a user could simply have one line named from the <code>require</code>
@@ -610,8 +610,8 @@ package-by-package basis. By default, some are automatically installed
 from <code>"source"</code> because in our experience, they tend to fail
 if installed from the binary.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># In this example, it is `terra` that must be installed from source on Linux</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu">Require</span><span class="fu">:::</span><span class="fu">isLinux</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="co"># In this example, it is `terra` that generally needs to be installed from source on Linux</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu">Require</span><span class="fu">:::</span><span class="fu">isUbuntuOrDebian</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">Require</span><span class="fu">::</span><span class="fu"><a href="../reference/setLinuxBinaryRepo.html">setLinuxBinaryRepo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="va">pkgs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"terra"</span>, <span class="st">"PSPclean"</span><span class="op">)</span></span>
 <span>  <span class="va">pkgFullName</span> <span class="op">&lt;-</span> <span class="st">"ianmseddy/PSPclean@development"</span></span>
