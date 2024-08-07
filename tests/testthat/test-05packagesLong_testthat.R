@@ -17,11 +17,14 @@ test_that("test 5", {
   opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
   pkgDepTest1 <- Require::pkgDep("Require", includeSelf = FALSE, includeBase = FALSE)
+  skip_if_offline()
+
   pkgDepTest2 <- Require::pkgDep2(c("Require"), # simplify = FALSE,
                                   # which = c("Depends", "Imports"),
                                   includeSelf = FALSE)
   orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
 
+  skip_if_offline()
   testthat::expect_true({
     length(pkgDepTest1) == 1
   })
@@ -123,7 +126,7 @@ test_that("test 5", {
     warns <- grep(.txtCouldNotBeInstalled, warns, invert = TRUE, value = TRUE)
 
     test <- testWarnsInUsePleaseChange(warns)
-    if (!isTRUE(test)) browser()
+    # if (!isTRUE(test)) browser()
     expect_true(test)
 
     # Rerun it to get output table, but capture messages for quiet; should be no installs

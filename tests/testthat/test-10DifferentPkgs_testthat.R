@@ -20,7 +20,7 @@ test_that("test 10", {
               'terra',
               'themis',
               'tidymodels')
-    if (isLinux()) {
+    if (isUbuntuOrDebian()) {
       origRepos2 <- setLinuxBinaryRepo()
       on.exit(options(origRepos2))
     }
@@ -33,6 +33,7 @@ test_that("test 10", {
       warns <- grep("installation of package.+cissr.+had non-zero exit status", invert = TRUE, warns)
     test <- testWarnsInUsePleaseChange(warns)
     expect_true(test)
+    skip_if_offline()
 
     ins <- installed.packages(noCache = TRUE) |> as.data.table()
     notInstalled <- setdiff(extractPkgName(pkgs), ins$Package)

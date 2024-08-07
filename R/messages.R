@@ -11,8 +11,11 @@ comma <- ", "
 .txtPleaseChangeReqdVers <- "Please change required version"
 .txtRetrying <- "; retrying ... "
 .txtInternetExistsTime <- "internetExistsTime"
+.txtInternetExists <- "internetExists"
 .txtCntInstllDep <- "Can't install dependency"
 .txtConflictsWith <- "Conflicts with"
+
+.txtNoInternetNoLocalCantInstall <- "No internet and no local copy; can't install"
 
 .txtMissingValueWhereTFNeeded <- "missing value where TRUE/FALSE needed"
 .txtUnableToAccessIndex <- "unable to access index"
@@ -23,13 +26,16 @@ comma <- ", "
 .txtPakCurrentlyPakNoSnapshots <- "Currently, pak is unlikely to work for package snapshots"
 .txtPakNoPkgCalledPak <- "there is no package called 'pak'"
 .txtUnknownArchiveType <- "unknown archive type"
+.txtFollowingPkgsVersionCantBeMet <- "The following shows packages whose version requirements can not be met; "
 
+.txtNoInternetTestNotRelevant <- "No internet; test not relevant"
 # "installation of package 'ccissr' had non-zero exit status"
 # "installation of 2 packages failed"
 .txtInstallationNonZeroExit <- "installation of.+had non-zero exit status"
 
 # "installation of.+failed" # "installation of 2 packages failed:"
 .txtInstallationPkgFailed <- "installation of.+failed"
+.txtDidYouSpell <- "Did you spell the GitHub.com repository, package and or branch/gitRefs correctly?"
 
 .txtGitHubCols <- list()
 .txtGitHubCols$Br <- "Branch"
@@ -68,6 +74,13 @@ messageCantInstallNoVersion <- function(packagesFullName) {
     paste(unique(packagesFullName), collapse = comma),
     " ", .txtCouldNotBeInstalled, "; package ", dd ,
     " exist or the version ", vv," cannot be met"
+  )
+}
+
+messageCantInstallNoInternet <- function(packagesFullName) {
+  turquoise(
+    paste(unique(packagesFullName), collapse = comma),
+    " ", .txtCouldNotBeInstalled, "; no internet"
   )
 }
 
@@ -363,3 +376,7 @@ paste0WithLineFeed <- function(mess, lineWidth = getOptionWidthWithBuffer()) {
 }
 
 getOptionWidthWithBuffer <- function(buff = 10) getOption("width") - 10
+
+msgStripColor <- function(msg) {
+  gsub("\033\\[..{0,1}m", "", msg)
+}

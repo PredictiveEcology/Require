@@ -1,7 +1,15 @@
-test_that("test 5b", {
+test_that("test 11", {
 
   # skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
   setupInitial <- setupTest()
+
+  # misspelled github.com
+  err <- capture_error(
+    mess <- capture_messages(
+      warns <- capture_warnings(
+        Install("kevanrastelle/MPBforecasting")
+      )))
+  expect_match(err$message, regexp = .txtDidYouSpell)
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
@@ -26,8 +34,11 @@ test_that("test 5b", {
       # This one fails to install SpaDES.core because already loaded
       poss2 <- sum(pkgsClean %in% ip[, "Package"]) ==
         length(pkgsClean) - length(acceptableFails) ## TODO: fails on macOS
-      expect_true(poss1 || poss2)
+      if (internetExists())
+        expect_true(poss1 || poss2)
     }
+
+    skip_if_offline()
 
     ## Test Install and also (HEAD)
     messToSilence <- capture_messages(try(remove.packages("fpCompare"), silent = TRUE))
@@ -69,3 +80,5 @@ test_that("test 5b", {
   }
 
 })
+
+

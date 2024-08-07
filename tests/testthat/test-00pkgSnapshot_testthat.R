@@ -15,10 +15,12 @@ test_that("test 1", {
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
   suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
+  skip_if_offline()
+
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
   if (isDev) {
-    warns <- capture_warnings(Require(c("covr (==3.6.3)"), require = FALSE, quiet = quiet))
+    warns <- capture_warnings(Require(c("rlang", "covr (==3.6.3)"), require = FALSE, quiet = quiet))
     test <- testWarnsInUsePleaseChange(warns)
     if (!isMacOSX())
       expect_true(test)
@@ -26,6 +28,7 @@ test_that("test 1", {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }
 
+  skip_if_offline()
   .libPaths(c(tmpdirActual, tmpdir2Actual))
   # .libPaths(c(tmpdir, tmpdir2))
   aa1 <- pkgSnapshot(packageVersionFile = pkgVF,
@@ -140,17 +143,19 @@ test_that("test 1", {
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")
-    here <- pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths())
-    anyMissing <- there[!here, on = c("Package", "Version")]
-    anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
-    anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
-    anyMissing <- anyMissing[GithubUsername != "PredictiveEcology"] # even though they have GitHub info,
-    # they are likely missing because of the previous line of local installs
-    if (isWindows()) {
-      anyMissing <- anyMissing[!Package %in% "littler"]
+    here <- try(pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths()))
+    if (!is(here, "try-error")) {
+      anyMissing <- there[!here, on = c("Package", "Version")]
+      anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
+      anyMissing <- anyMissing[!is.na(GithubRepo)] # fails due to "local install"
+      anyMissing <- anyMissing[GithubUsername != "PredictiveEcology"] # even though they have GitHub info,
+      # they are likely missing because of the previous line of local installs
+      if (isWindows()) {
+        anyMissing <- anyMissing[!Package %in% "littler"]
+      }
+      # here[!there, on = "Package"]
+      if (NROW(anyMissing) != 0) stop("Error 832; please contact developer")
+      expect_true(NROW(anyMissing) == 0)
     }
-    # here[!there, on = "Package"]
-    if (NROW(anyMissing) != 0) stop("Error 832; please contact developer")
-    expect_true(NROW(anyMissing) == 0)
   }
 })

@@ -1,5 +1,17 @@
 # Require
 
+version 1.0.1
+=============
+
+## CRAN requested fixes
+* Require was failing on secondary check systems (Fedora and one Mac system). This update fixes those.
+
+## enhancements
+* `offlineMode`, gained improved functionality; though it is still experimental. It can be set using `options(Require.offlineMode = TRUE)`, but it will be automatically set if internet is not available, has now been widely tested. If packages are available in the local caches, and all elements of package versioning (e.g., `available.packages()` and github packages) have been previously run, then installations should occur as if the internet were available.
+
+## Other
+* package testing on Linux Fedora and one MacOS machine on CRAN extra machines were addressed.
+
 version 1.0.0
 =============
 

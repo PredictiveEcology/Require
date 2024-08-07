@@ -247,8 +247,8 @@ Some of the features make it fast the first time being used on a system, some ma
 On Linux, users have the ability to install binary packages that are pre-built e.g., from the Posit Package Manager. Sometimes the binary is incompatible with a user's system, even though it is the correct operating system. This occurs generally for several packages, and thus they must be installed from source. `Require` has a function `sourcePkgs()`, which can be informed by `options("Require.spatialPkgs")` and `options("Require.otherPkgs")` that can be set by a user on a package-by-package basis. By default, some are automatically installed from `"source"` because in our experience, they tend to fail if installed from the binary.
 
 ```{r,eval=FALSE}
-# In this example, it is `terra` that must be installed from source on Linux
-if (Require:::isLinux()) {
+# In this example, it is `terra` that generally needs to be installed from source on Linux
+if (Require:::isUbuntuOrDebian()) {
   Require::setLinuxBinaryRepo()
   pkgs <- c("terra", "PSPclean")
   pkgFullName <- "ianmseddy/PSPclean@development"

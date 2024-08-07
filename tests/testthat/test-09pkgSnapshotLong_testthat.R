@@ -41,8 +41,47 @@ test_that("test 09", {
       pkgs <- data.table::fread(snf)
 
       if (FALSE) {
-        # minor corrections
-        pkgs[Package %in% "climateData", Version := "1.0.4"]
+        pkgsSnp <- packageFullNameFromSnapshot(pkgs)
+        errs <- list()
+        for (p in pkgsSnp[-1]) {
+          b <- capture_messages(Install(p))
+          if (any(grepl("ERROR", b)))
+            errs[[p]] <- b
+        }
+        browser()
+        pkgsToFix <- extractPkgName(names(errs))
+        ava <- list()
+        for (p in pkgsToFix) {
+          ava[[p]] <- dlArchiveVersionsAvailable(p)
+        }
+        ava <- lapply(ava, function(av) tail(av[[1]], 1))
+        ava <- rbindlist(ava)
+        ava[, Version := extractVersionNumber(filenames = basename(ava$PackageUrl))]
+        ava[, Package := dirname(ava$PackageUrl)]
+
+        pkgs[bb, Version := i.Version, on= "Package"]
+        pkgs[ava, Version := i.Version, on = "Package"]
+
+        # remove the packages completely, let the latest be used.
+        pkgs <- pkgs[!ava, on = "Package"]
+        # if (FALSE) {
+        data.table::fwrite(pkgs, file = snf)
+        #   if (FALSE) {
+        # data.table::fwrite(pkgs, file = snf)
+        # minor corrections -- these can't be compiled on R 4.4.1 on ubuntu
+        pkgs[Package %in% "spatstat.sparse", Version := "3.0-3"]
+        pkgs[Package %in% "parallelly", Version := "1.38.0"]
+        pkgs[Package %in% "spatstat.geom", Version := "3.2-9"]
+        pkgs[Package %in% "spatstat.data", Version := "3.0-4"]
+        # pkgs[Package %in% "wk", Version := "0.9.1"]
+        # pkgs[Package %in% "stringi", Version := "1.8.3"]
+        # pkgs[Package %in% "yaml", Version := "2.3.9"]
+        # pkgs[Package %in% "lpSolve", Version := "5.6.20"]
+        # pkgs[Package %in% "rlang", Version := "1.1.3"]
+        # pkgs[Package %in% "sp", Version := "2.1-2"]
+        # pkgs[Package %in% "data.table", Version := "1.15.2"]
+        # pkgs[Package %in% 'Rcpp', Version := "1.0.12"] # 1.0.11 can't be compiled on R 4.4 on Ubuntu
+        # pkgs[Package %in% "climateData", Version := "1.0.4"]
         # pkgs[grep("SpaDES.config", Package, invert = TRUE)]
         pkgs[Package %in% "rnaturalearthhires", Version := "1.0.0.9000"]
         # tmp <- pkgs[1:3, ]
@@ -67,6 +106,7 @@ test_that("test 09", {
       skips <- c("rJava", "Require", "SpaDES.install")
 
       # Can't compile on R 4.4
+      ubuntuSkips <- c("RandomFields", "RandomFieldsUtils", "maptools")
       windowsSkips <- c("XML", "sysfonts", "rgdal", "rgeos",
                         'RCurl', 'httpuv', 'rgdal', 'rgl', 'sf', 'terra', 'DT',
                         'SpaDES.core', 'SpaDES.tools', 'biomod2',
@@ -84,6 +124,9 @@ test_that("test 09", {
         # pkgs <- pkgs[!(Package %in% windowsSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
         # pkgs <- pkgs[!(Package %in% windowsSkips)]
 
+      }
+      if (isUbuntuOrDebian()) {
+        pkgs <- pkgs[!(Package %in% ubuntuSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
       }
 
       # stringfish can't be installed in Eliot's system from binaries
@@ -117,11 +160,10 @@ test_that("test 09", {
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
       warns <- capture_warnings(
         # mess <- capture_messages(
-        out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
-                       returnDetails = TRUE)
+          out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
+                         returnDetails = TRUE)
         # )
       )
-
 
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
@@ -195,6 +237,7 @@ test_that("test 09", {
       # NLMR because the version number doesn't exist on CRAn archives
       # and visualTest which is missing GitHub info for some reason --
 
+      skip_if_offline()
       expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
       warns <- capture_warnings(
         lala <- capture.output(type = "message", {

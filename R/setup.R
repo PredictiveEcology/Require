@@ -282,13 +282,15 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {
-  if (SysInfo["sysname"] == "Linux" && grepl("Ubuntu", utils::osVersion)) {
+  if (isUbuntuOrDebian()) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
+
       repo <- c(
         CRAN =
           positBinaryRepos()
       )
+
       currentRepos <- getOption("repos")
       insertBefore <- 1 # put first, unless otherwise
       if (!is.null(currentRepos)) {
@@ -335,10 +337,15 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
   isCRAN
 }
 
-positBinaryRepos <- function(binaryLinux = urlForArchivedPkgs)
-  paste0(binaryLinux, "__linux__/", linuxRelease(), "/latest")
+positBinaryRepos <- function(binaryLinux = urlForArchivedPkgs) {
+  repo <- character()
+  if (isUbuntuOrDebian()) {
+    repo <- paste0(binaryLinux, "__linux__/", debianUbuntuRelease(), "/latest")
+  }
+  repo
+}
 
-linuxRelease <- function() {
+debianUbuntuRelease <- function() {
   system("lsb_release -cs", intern = TRUE)
 }
 

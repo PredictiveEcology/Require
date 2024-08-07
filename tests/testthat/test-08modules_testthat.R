@@ -8,7 +8,7 @@ test_that("test 8", {
 
   if (isDevAndInteractive) {
     projectDir <- Require:::tempdir2(Require:::.rndstr(1))
-    setLinuxBinaryRepo()
+    # setLinuxBinaryRepo()
     pkgDir <- file.path(projectDir, "R")
     # setLibPaths(pkgDir, standAlone = TRUE)
     # dir.create(pkgDir, showWarnings = FALSE, recursive = TRUE)
@@ -17,6 +17,8 @@ test_that("test 8", {
 
     # Install 3 packages that are needed for subsequent module and package installations
     # See if Require is already loaded from where#Error in `loadNamespace(name)`: there is no package called 'SpaDES.project'
+
+    skip_if_offline()
 
     if (isWindows()) {
       (Install("Require", repos = "https://predictiveecology.r-univierse.dev",
@@ -118,7 +120,7 @@ test_that("test 8", {
     # dir.create(pkgDir, recursive = TRUE, showWarnings = FALSE)
     # .libPaths(pkgDir, include.site = FALSE)
 
-    setLinuxBinaryRepo()
+    # setLinuxBinaryRepo()
 
 
     modulePkgs <- c("archive", "assertthat", "compiler", "crayon", "data.table",
@@ -154,7 +156,7 @@ test_that("test 8", {
                     "PredictiveEcology/SpaDES.core@development (>=1.0.6.9019)", # "PredictiveEcology/SpaDES.install (>= 0.0.5.9013)",
                     "PredictiveEcology/SpaDES.tools@development", "PredictiveEcology/SpaDES.tools@development (>= 0.3.7.9007)",
                     "pryr", "purrr", "quickPlot", "R.utils", "raster", "rasterVis",
-                    "Rcpp", "reproducible (>= 1.2.6.9005)", "rgeos", "RhpcBLASctl",
+                    "Rcpp", "reproducible (>= 1.2.6.9005)", "RhpcBLASctl",
                     "robustbase", "RSQLite", "scales", "sf", "snow", "sp", "SpaDES.core",
                     "SpaDES.tools", "spatialEco", "stats", "terra", "tidyr", "viridis"
     )

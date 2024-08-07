@@ -108,6 +108,7 @@ pkgDep <- function(packages,
                    type = getOption("pkgType"),
                    Additional_repositories = FALSE, ...) {
 
+  stPkgDep <- Sys.time()
   libPaths <- dealWithMissingLibPaths(libPaths, ...)
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NULL
@@ -116,7 +117,12 @@ pkgDep <- function(packages,
 
   purge <- purgePkgDep(purge)
   # purge <- dealWithCache(purge)
-  checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
+
+  if (is.null(get0("stRequire", whereInStack("stRequire")))) {# if this is NOT called from Require
+    on.exit(
+      checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
+    )
+  }
 
   # deps <- packages
   if (!includeBase) {
@@ -188,6 +194,7 @@ pkgDep <- function(packages,
               }))
 
       keepColsOuter <- c("Package", "packageFullName", "parentPackage", depsCol)
+      keepColsOuter <- intersect(colnames(deps), keepColsOuter)
       deps <- deps[, ..keepColsOuter]
       # trimRedundancies is better for following the deps, but it will fail to keep original
       #   user request. Use only duplicated instead ... to keep user order
@@ -197,8 +204,13 @@ pkgDep <- function(packages,
       } else if (simplify %in% TRUE) {
         # collapse or not to list of character vector
         pfn <- deps$packageFullName
-        deps <- lapply(deps[[depsCol]], function(x) x[["packageFullName"]])
+        if (getOption("Require.offlineMode") && !depsCol %in% colnames(deps)) {
+          deps <- lapply(pfn, function(x) list(NULL))
+        } else {
+          deps <- lapply(deps[[depsCol]], function(x) x[["packageFullName"]])
+        }
         names(deps) <- pfn
+
       }
     }
   } else {
@@ -397,63 +409,66 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
 
   pkgDT <- #try(
     joinToAvailablePackages(pkgDT, repos, type, which, verbose)
+
+  if (!isTRUE(getOption("Require.offlineMode") %in% TRUE)) { # if available.packages wasn't available, it turns offlineMode TRUE
     # )
-  # if (is(pkgDT2, "try-error")) {
-  #   o <- options()
-  #   sc <- sys.calls()
-  #   out <- mget(ls())
-  #   save(out, file = "/home/emcintir/tmp/out.rda")
-  #   stop()
-  # }
-  # pkgDT <- pkgDT2
+    # if (is(pkgDT2, "try-error")) {
+    #   o <- options()
+    #   sc <- sys.calls()
+    #   out <- mget(ls())
+    #   save(out, file = "/home/emcintir/tmp/out.rda")
+    #   stop()
+    # }
+    # pkgDT <- pkgDT2
 
-  needsVersionCheck <- !is.na(pkgDT$versionSpec) # | !is.na(pkgDT$VersionOnRepos)
-  set(pkgDT, NULL, "availableVersionOK", NA) # default
+    needsVersionCheck <- !is.na(pkgDT$versionSpec) # | !is.na(pkgDT$VersionOnRepos)
+    set(pkgDT, NULL, "availableVersionOK", NA) # default
 
-  if (any(needsVersionCheck)) {
-    pkgDT <- availableVersionOK(pkgDT)
+    if (any(needsVersionCheck)) {
+      pkgDT <- availableVersionOK(pkgDT)
 
-    # NOT SURE ABOUT THIS -- SHOULDN"T BE NECESSARY TO PICK THE availableVersionOKthisOne
-    # pkgDTVerNums <- split(pkgDT, f = needsVersionCheck)
-    # # setnames(pkgDTVerNums$`TRUE`, old = "Version", "VersionOnRepos")
-    # pkgDTVerNums$`TRUE` <- availableVersionOK(pkgDTVerNums$`TRUE`)
-    # # setnames(pkgDTVerNums$`TRUE`, old = "VersionOnRepos", "Version")
-    # set(pkgDTVerNums$`TRUE`, NULL, "keep", seq(NROW(pkgDTVerNums$`TRUE`)))
-    # dups <- duplicated(pkgDTVerNums$`TRUE`$Package)
-    # pkgDTVerNums$`TRUE`[which(dups), keep := if (any(availableVersionOK)) .I[availableVersionOKthisOne][1] else .I, by = "Package"]
-    # pkgDTVerNums$`TRUE` <- pkgDTVerNums$`TRUE`[na.omit(unique(pkgDTVerNums$`TRUE`$keep))]
-    # set(pkgDTVerNums$`TRUE`, NULL, "keep", NULL) # remove "keep" column; no longer needed
-    # pkgDT <- rbindlist(pkgDTVerNums, fill = TRUE)
+      # NOT SURE ABOUT THIS -- SHOULDN"T BE NECESSARY TO PICK THE availableVersionOKthisOne
+      # pkgDTVerNums <- split(pkgDT, f = needsVersionCheck)
+      # # setnames(pkgDTVerNums$`TRUE`, old = "Version", "VersionOnRepos")
+      # pkgDTVerNums$`TRUE` <- availableVersionOK(pkgDTVerNums$`TRUE`)
+      # # setnames(pkgDTVerNums$`TRUE`, old = "VersionOnRepos", "Version")
+      # set(pkgDTVerNums$`TRUE`, NULL, "keep", seq(NROW(pkgDTVerNums$`TRUE`)))
+      # dups <- duplicated(pkgDTVerNums$`TRUE`$Package)
+      # pkgDTVerNums$`TRUE`[which(dups), keep := if (any(availableVersionOK)) .I[availableVersionOKthisOne][1] else .I, by = "Package"]
+      # pkgDTVerNums$`TRUE` <- pkgDTVerNums$`TRUE`[na.omit(unique(pkgDTVerNums$`TRUE`$keep))]
+      # set(pkgDTVerNums$`TRUE`, NULL, "keep", NULL) # remove "keep" column; no longer needed
+      # pkgDT <- rbindlist(pkgDTVerNums, fill = TRUE)
 
-    #, availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
-  } else {
-    set(pkgDT, NULL, "availableVersionOK", TRUE)
-  }
-
-  inCurrentCRAN <- inCurrentCRAN(pkgDT, verbose)
-
-  if (any(!inCurrentCRAN)) {
-    set(pkgDT, which(!inCurrentCRAN), "repoLocation", "Archive")
-    pkgDTList <- split(pkgDT, by = "repoLocation")
-    dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
-    pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
-    num <- NROW(pkgDTList$Archive$Package)
-    messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
-                   "not on CRAN; checking CRAN archives ... ", verbose = verbose)
-    pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
-    wcr <- whichCatRecursive(which, recursive = FALSE)
-    hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
-    whHadArchive <- which(hadArchive)
-    didntFindOnArchives <- is.na(pkgDTList[["Archive"]]$DESCFileFull)
-    if (any(didntFindOnArchives)) {
-      messageVerbose(red("   Did not find archives of: ",
-                     paste(pkgDTList[["Archive"]]$packageFullName[didntFindOnArchives], collapse = comma),
-                     "\n   --> Maybe version misspecified or were they installed locally?"))
-
+      #, availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
+    } else {
+      set(pkgDT, NULL, "availableVersionOK", TRUE)
     }
 
-    messageVerbose("    Done evaluating archives!", verbose = verbose)
-    pkgDT <- rbindlistNULL(pkgDTList, fill = TRUE, use.names = TRUE)
+    inCurrentCRAN <- inCurrentCRAN(pkgDT, verbose)
+
+    if (any(!inCurrentCRAN)) {
+      set(pkgDT, which(!inCurrentCRAN), "repoLocation", "Archive")
+      pkgDTList <- split(pkgDT, by = "repoLocation")
+      dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
+      pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
+      num <- NROW(pkgDTList$Archive$Package)
+      messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
+                     "not on CRAN; checking CRAN archives ... ", verbose = verbose)
+      pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
+      wcr <- whichCatRecursive(which, recursive = FALSE)
+      hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
+      whHadArchive <- which(hadArchive)
+      didntFindOnArchives <- is.na(pkgDTList[["Archive"]]$DESCFileFull)
+      if (any(didntFindOnArchives)) {
+        messageVerbose(red("   Did not find archives of: ",
+                           paste(pkgDTList[["Archive"]]$packageFullName[didntFindOnArchives], collapse = comma),
+                           "\n   --> Maybe version misspecified or were they installed locally?"))
+
+      }
+
+      messageVerbose("    Done evaluating archives!", verbose = verbose)
+      pkgDT <- rbindlistNULL(pkgDTList, fill = TRUE, use.names = TRUE)
+    }
   }
 
   pkgDT[]
@@ -462,8 +477,6 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
 
 #' @inheritParams Require
 pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = getOption("Require.verbose")) {
-
-  messageVerbose("  ", NROW(pkgDT), " packages on GitHub", verbose = verbose)
 
   pkg <- masterMainToHead(pkgDT$packageFullName)
 
@@ -576,18 +589,26 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
         installedNoOKAndNoPkgEnv <- installedNoOKAndNoPkgEnv & !haveLocalSHA
         installedNoOKAndNoPkgEnvWh <- which(installedNoOKAndNoPkgEnv)
         if (length(installedNoOKAndNoPkgEnvWh)) {
-          shaOuts <- #try(
+          shaOuts <- try( # This try is for "no internet"
             Map(
               repo = pkgDT$Repo[installedNoOKAndNoPkgEnvWh],
               acct = pkgDT$Account[installedNoOKAndNoPkgEnvWh],
               br = pkgDT$Branch[installedNoOKAndNoPkgEnvWh],
               verbose = verbose,
               getSHAfromGitHubMemoise
-            )
-          # )
-          if (is(shaOuts, "try-error"))
+            ), silent = TRUE
+          )
+          if (is(shaOuts, "try-error")) {
             if (any(grepl(messageCantFind("|", "|", "|"), shaOuts)))
               stop(shaOuts)
+            if (any(grepl("Could not resolve host", shaOuts))) {
+              shaOuts <- ""
+            }
+          }
+          individualFails <- vapply(shaOuts, is, "try-error", FUN.VALUE = logical(1))
+          if (any(individualFails)) {
+            shaOuts[individualFails] <- Map(sh = shaOuts[individualFails], function(sh) "")
+          }
           pkgDT[installedNoOKAndNoPkgEnvWh, shas := unlist(shaOuts)]
         }
         if (sum(installedNoOKAndNoPkgEnv %in% FALSE)) {
@@ -595,16 +616,20 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
         }
         needVersion <- needVersions(pkgDT)
         # if (any(needVersion)) {
-          descs <- dlGitHubDESCRIPTION(pkgDT)#$packageFullName)
-          pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
-          wh <- which(!is.na(pkgDT$descFiles))
-          pkgDT[wh, Version := DESCRIPTIONFileVersionV(descFiles)]
-          possPkgUpdate <- DESCRIPTIONFileOtherV(pkgDT$descFiles[wh], other = "Package")
-          correctPkgName <- possPkgUpdate == pkgDT$Package[wh]
-          if (any(correctPkgName %in% FALSE)) {
-            set(pkgDT, wh, "Package", possPkgUpdate)
-            set(pkgDT, wh, "githubPkgName", possPkgUpdate)
-          }
+        descs <- dlGitHubDESCRIPTION(pkgDT)#$packageFullName)
+        pkgDT[descs, descFiles := DESCFile,  on = "packageFullName"]
+        wh <- which(!is.na(pkgDT$descFiles))
+        if (isTRUE(getOption("Require.offlineMode"))) {
+          fe <- file.exists(pkgDT$descFiles)
+          wh <- wh[fe]
+        }
+        pkgDT[wh, Version := DESCRIPTIONFileVersionV(descFiles)]
+        possPkgUpdate <- DESCRIPTIONFileOtherV(pkgDT$descFiles[wh], other = "Package")
+        correctPkgName <- possPkgUpdate == pkgDT$Package[wh]
+        if (any(correctPkgName %in% FALSE)) {
+          set(pkgDT, wh, "Package", possPkgUpdate)
+          set(pkgDT, wh, "githubPkgName", possPkgUpdate)
+        }
         # }
         break
 
@@ -620,7 +645,12 @@ getDepsGH <- function(pkgDT, verbose, which, whichCatRecursive, libPaths, doSave
   out <- pkgDepGitHub(pkgDT = pkgDT, which = which,
                       includeBase = FALSE, libPaths = libPaths, verbose = verbose)
   rec <- FALSE # this function is only one time through
-  set(pkgDT, NULL, deps(FALSE), unname(out))
+
+  val <- unname(out)
+  if (length(val) == 0)
+    val <- lapply(seq_len(NROW(pkgDT)), function(x)
+      data.table(Package = character(), which = character(), packageFullName = character()))
+  set(pkgDT, NULL, deps(FALSE), val)
 
   # rec <- recursiveType(whichCatRecursive)
   snHere <- sn(rec)
@@ -711,8 +741,13 @@ needVersions <- function(pkgDT) {
 updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase, verbose) {
   if (!"shas" %in% colnames(pkgDT))
     set(pkgDT, NULL, "shas", pkgDT$Branch)
+  fe <- seq_len(NROW(pkgDT))
+  if (isTRUE(getOption("Require.offlineMode"))) {
+    fe <- which(file.exists(pkgDT$DESCFile))
+  }
 
-  out <- pkgDT[, list(# packageFullName = packageFullName,
+
+  out <- pkgDT[fe, list(# packageFullName = packageFullName,
                       lis = {
     allDeps <- DESCRIPTIONFileDeps(DESCFile, which = c("Depends", "Imports", "Suggests", "LinkingTo"),
                                   purge = purge, keepSeparate = TRUE)
@@ -729,37 +764,6 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
   out1 <- out$lis
   names(out1) <- out$packageFullName
   return(out1)
-  # neededV <-
-  #   try(DESCRIPTIONFileDepsV(pkgDT[["DESCFile"]], which = which, purge = purge))
-  # if (is(neededV, "try-error")) {
-  #   unlink(pkgDT[["DESCFile"]])
-  #   unlink(pkgDT$destFile)
-  #   set(pkgDT, NULL, c("DESCFile", "destFile"), NULL)
-  #   browserDeveloper(paste0("A problem occurred installing ", pkgDT$packageFullName, ". Does it exist?",
-  #                           "\nTo confirm whether it exists, try browsing to ",
-  #                           file.path("https://github.com", pkgDT$Account, pkgDT$Package, "tree", pkgDT$Branch),
-  #                           "\nIf it does exist, try rerunning with `purge = TRUE`",
-  #                           "\nIf this error is inaccurate, and the problem persists, ",
-  #                           "please contact developers with error code 949"))
-  # }
-  #
-  # neededAdditionalReposV <- DESCRIPTIONFileOtherV(pkgDT[["DESCFile"]], other = "Additional_repositories")
-  #
-  # neededRemotesV <-
-  #   DESCRIPTIONFileDepsV(pkgDT[["DESCFile"]], which = "Remotes", purge = purge)
-  # names(neededV) <- pkgDT$packageFullName
-  #
-  # Map(
-  #   needed = neededV, neededRemotes = neededRemotesV,
-  #   localVersionOK = pkgDT$installedVersionOK,
-  #   neededAdditionalRepos = neededAdditionalReposV,
-  #   localPackageName = pkgDT$Package,
-  #   packageFullName = pkgDT$packageFullName,
-  #   sha = pkgDT$shas,
-  #   MoreArgs = list(includeBase = includeBase, verbose = verbose,
-  #                   pkgDT = pkgDT),
-  #   uwrnar
-  # )
 }
 
 
@@ -1185,6 +1189,11 @@ addDepthAndParentPkg <- function(deps, nam, .depth) {
       if (is(deps, "list")) {
         return(Map(deps = deps, nam = names(deps), addDepthAndParentPkg, .depth = .depth))
       }
+      setDT(deps) # sometimes esp. on Mac:
+      # Error in `set(deps, NULL, "parentPackage", nam)`: This data.table has either
+      #   been loaded from disk (e.g. using readRDS()/load()) or constructed manually
+      #   (e.g. using structure()). Please run setDT() or setalloccol() on it first
+      #   (to pre-allocate space for new columns) before assigning by reference to it.
 
       set(deps, NULL, "parentPackage", nam)
       deps <- rmRifInPackageCol(deps)
