@@ -1,6 +1,6 @@
 ## Release information
 
-This is minor update to address CRAN failures on Fedora and Mac, as requested by Brian Ripiley. 
+This is minor update to address CRAN failures on Fedora and Mac, as requested by Brian Ripley. 
 
 See `NEWS.md` for a full list of changes.
 
@@ -21,10 +21,10 @@ See `NEWS.md` for a full list of changes.
 * Windows                 (win-builder), R 4.4.1
 
 ### Development R version
-* Ubuntu 20.04                 (GitHub), R-devel  (2024-07-25 r86925)
-* Ubuntu 20.04                  (local), R-devel  (2024-07-25 r86925)
-* Windows                      (GitHub), R-devel  (2024-07-25 r86925 ucrt)
-* Windows                 (win-builder), R-devel  (2024-07-25 r86925 ucrt)
+* Ubuntu 20.04                 (GitHub), R-devel  (2024-08-05 r86925)
+* Ubuntu 20.04                  (local), R-devel  (2024-08-05 r86925)
+* Windows                      (GitHub), R-devel  (2024-08-05 r86925 ucrt)
+* Windows                 (win-builder), R-devel  (2024-08-05 r86925 ucrt)
 
 ## R CMD check results
 
