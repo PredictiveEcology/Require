@@ -960,7 +960,6 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     # possibly change order -- i.e., put user choice first
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
-  # tf <- tempfile()
 
   for (ii in 1:2) {
     tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_",acct, "@", repo))
@@ -971,13 +970,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       }
     }
     if (downloadNow) {
-      withCallingHandlers(
-      .downloadFileMasterMainAuth(gitRefsURL, destfile = tf, need = "master"),
-      message = function(m) {
-        if (any(grepl("cannot open URL", m$message)))
-          stop(.txtDidYouSpell)
-      }
-      )
+      mess <- capture.output(type = "message", out <-
+        .downloadFileMasterMainAuth(gitRefsURL, destfile = tf, need = "master"))
     }
     fetf <- file.exists(tf)
     gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
@@ -987,18 +981,15 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       if (fetf) {
         unlink(tf)
       }
-      # if (isNotFound) {
-      #   prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-      #   Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
-      #   on.exit({
-      #     if (nzchar(prevCurlVal))
-      #       Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
-      #     else
-      #       Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-      #   }, add = TRUE)
-      # }
-      if (isNotFound)
-         stop(.txtDidYouSpell)
+      if (isNotFound) {
+        token <- getGitCredsToken()
+        mess <- character()
+        if (is.null(token)) {
+          mess <- "GitHub repository not accessible does it need authentication? "
+        }
+        stop(paste0(mess, .txtDidYouSpell))
+      }
+
       stop(gitRefs)
     }
 
@@ -1088,6 +1079,8 @@ getSHAfromGitHubMemoise <- function(...) {
       peList <- as.list(pe[[.txtGetSHAfromGitHub]])
       if (length(fn)) { # this can be character() if cacheGetOptionCachePkgDir() is NULL
         if (!isTRUE(file.exists(fn))) {
+          if (isFALSE(dir.exists(dirname(fn))))
+            dir.create(dirname(fn), showWarnings = FALSE, recursive = TRUE)
           saveRDS(peList, file = fn)
         } else {
           peListExisting <- readRDS(file = fn)
@@ -1372,13 +1365,7 @@ masterMainHEAD <- function(url, need) {
   usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
     requireNamespace("httr", quietly = TRUE)
   if (usesGitCreds) {
-    token <- tryCatch(
-      gitcreds::gitcreds_get(use_cache = FALSE),
-      error = function(e) NULL
-    )
-    if (!is.null(token)) {
-      token <- paste0("token ", token$password)
-    }
+    token <- getGitCredsToken()
   }
   if (is.null(token)) {
     ghp <- Sys.getenv("GITHUB_PAT")
@@ -1781,4 +1768,15 @@ masterOrMainFromGitRefs <- function(gitRefsSplit2) {
   br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
   br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
   br
+}
+
+getGitCredsToken <- function() {
+  token <- tryCatch(
+    gitcreds::gitcreds_get(use_cache = FALSE),
+    error = function(e) NULL
+  )
+  if (!is.null(token)) {
+    token <- paste0("token ", token$password)
+  }
+  token
 }
