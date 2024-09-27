@@ -2573,10 +2573,11 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
   ref <- ip$GithubRef
   ineq <- "HEAD"
   head <- paste0(" (", ineq, ")")
+  gsf <- !is.na(ip$GithubSubFolder) | nzchar(ip$GithubSubFolder) | ip$GithubSubFolder != "NA"
   pkgs <- paste0(ifelse(
     !is.na(ip$GithubRepo),
     paste0(ip$GithubUsername, "/", ip$GithubRepo,
-           ifelse(is.na(ip$GithubSubFolder), "", paste0("/", ip$GithubSubFolder)),
+           ifelse(gsf, "", paste0("/", ip$GithubSubFolder)),
            "@", ref, head),
     # github
     paste0(ip[["Package"]], head) # cran
