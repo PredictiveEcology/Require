@@ -256,7 +256,7 @@ test_that("test 1", {
       testthat::expect_true({
         length(mess) > 0
       })
-      expect_match(paste(mess, collapse = " "), .txtCouldNotBeInstalled)
+      expect_match(paste(warns, collapse = " "), .txtCouldNotBeInstalled)
       # testthat::expect_true({
       #   sum(grepl("could not be installed", mess)) == 1
       # })
