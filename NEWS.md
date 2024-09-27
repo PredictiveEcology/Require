@@ -1,5 +1,12 @@
 # Require
 
+version 1.0.2
+=============
+
+## Bugfixes
+* minor
+* `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
+
 version 1.0.1
 =============
 

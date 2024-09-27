@@ -749,13 +749,13 @@ updateWithRemotesNamespaceAddRepos2 <- function(pkgDT, which, purge, includeBase
 
   out <- pkgDT[fe, list(# packageFullName = packageFullName,
                       lis = {
-    allDeps <- DESCRIPTIONFileDeps(DESCFile, which = c("Depends", "Imports", "Suggests", "LinkingTo"),
-                                  purge = purge, keepSeparate = TRUE)
-    needed <- allDeps[which]
-    notNeeded <- allDeps[setdiff(names(allDeps), which)]
-    neededAdditionalRepos <- DESCRIPTIONFileOtherV(DESCFile, other = "Additional_repositories")
-    neededRemotes <- DESCRIPTIONFileDeps(DESCFile, which = "Remotes", purge = purge)
-    pfn <- gsub("(@).+( *)", paste0("\\1", shas, "\\2"), packageFullName)
+      allDeps <- DESCRIPTIONFileDeps(DESCFile, which = c("Depends", "Imports", "Suggests", "LinkingTo"),
+                                     purge = purge, keepSeparate = TRUE)
+      needed <- allDeps[which]
+      notNeeded <- allDeps[setdiff(names(allDeps), which)]
+      neededAdditionalRepos <- DESCRIPTIONFileOtherV(DESCFile, other = "Additional_repositories")
+      neededRemotes <- DESCRIPTIONFileDeps(DESCFile, which = "Remotes", purge = purge)
+      pfn <- gsub("(@).+( *)", paste0("\\1", shas, "\\2"), packageFullName)
     # Change branch to use sha
     uwrnar(needed = needed, notNeeded = notNeeded, neededRemotes, installedVersionOK, Package,
            pfn, neededAdditionalRepos, shas = shas, includeBase, localFiles = localFiles, verbose)
@@ -877,7 +877,8 @@ uwrnar <- function(needed, notNeeded, neededRemotes, installedVersionOK, Package
 
     if (exists("Packages", inherits = FALSE)) {
       whOverride <- match(names(Packages)[RepoNotPkgName], pkgDepDT$packageFullName)
-      set(pkgDepDT, whOverride, "Package", unname(unlist(Packages[RepoNotPkgName])))
+      if (length(whOverride))
+        set(pkgDepDT, whOverride, "Package", unname(unlist(Packages[RepoNotPkgName])))
     }
     if (!is.na(neededAdditionalRepos))
       pkgDepDT[, Additional_repositories := neededAdditionalRepos]

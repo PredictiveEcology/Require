@@ -381,7 +381,7 @@ Require <- function(packages,
         pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
         pkgDT <- whichToInstall(pkgDT, install, verbose)
 
-        pkgDT <- removeRequireDeps(pkgDT, verbose)
+        # pkgDT <- removeRequireDeps(pkgDT, verbose)
 
         # Deal with "force" installs
         set(pkgDT, NULL, "forceInstall", FALSE)
@@ -413,6 +413,7 @@ Require <- function(packages,
       pkgDT <- pkgDTBase
     }
 
+    pkgDT <- needToRestartR(pkgDT)
     whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
     if  (length(whRestartNeeded)) {
       warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
@@ -452,13 +453,13 @@ Require <- function(packages,
   noneAv <- pkgDT$installResult %in% .txtNoneAvailable
   if (isTRUE(any(noneAv))) {
     warning(messageCantInstallNoVersion(
-      paste(pkgDT[["packageFullName"]][which(noneAv)], collapse = ", ")))
+      paste(pkgDT[["packageFullName"]][which(noneAv)], collapse = ", ")), call. = FALSE)
   }
 
   noInternet <- pkgDT$installResult %in% .txtNoInternetNoLocalCantInstall
   if (isTRUE(any(noInternet))) {
     warning(messageCantInstallNoInternet(
-      paste(pkgDT[["packageFullName"]][which(noInternet)], collapse = ", ")))
+      paste(pkgDT[["packageFullName"]][which(noInternet)], collapse = ", ")), call. = FALSE)
   }
 
   return(invisible(out))
@@ -691,10 +692,12 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
     if (NROW(pkgDTList[[.txtInstall]])) {
       pkgInstallList <- split(pkgInstall, by = "needInstall") # There are now ones that can't be installed b/c .txtNoneAvailable
       pkgInstall <- pkgInstallList[[.txtInstall]]
-      if (!is.null(pkgInstallList[[.txtNoneAvailable]])) {
-        messageVerbose(messageCantInstallNoVersion(pkgInstallList[[.txtNoneAvailable]][["packageFullName"]]),
-                       verbose = verbose, verboseLevel = 1)
-      }
+
+      # This next one is a warning at the end of installation. Removed this message Sep 27, 2024
+      # if (!is.null(pkgInstallList[[.txtNoneAvailable]])) {
+      #   messageVerbose(messageCantInstallNoVersion(pkgInstallList[[.txtNoneAvailable]][["packageFullName"]]),
+      #                  verbose = verbose, verboseLevel = 1)
+      # }
       if (!is.null(pkgInstallList[[.txtShaUnchangedNoInstall]])) {
         messageVerbose(.txtShaUnchangedNoInstall, ": ", pkgInstallList[[.txtShaUnchangedNoInstall]][["packageFullName"]],
                        verbose = verbose, verboseLevel = 1)
@@ -2573,10 +2576,11 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
   ref <- ip$GithubRef
   ineq <- "HEAD"
   head <- paste0(" (", ineq, ")")
+  gsf <- !is.na(ip$GithubSubFolder) | nzchar(ip$GithubSubFolder) | ip$GithubSubFolder != "NA"
   pkgs <- paste0(ifelse(
     !is.na(ip$GithubRepo),
     paste0(ip$GithubUsername, "/", ip$GithubRepo,
-           ifelse(is.na(ip$GithubSubFolder), "", paste0("/", ip$GithubSubFolder)),
+           ifelse(gsf, "", paste0("/", ip$GithubSubFolder)),
            "@", ref, head),
     # github
     paste0(ip[["Package"]], head) # cran
@@ -3321,49 +3325,50 @@ colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
 
 
 # Get Require dependencies to omit them: it has to exist locally unless this is first install
-removeRequireDeps <- function(pkgDT, verbose) {
-  if (!is.data.table(pkgDT))
-    pkgDT <- toPkgDT(pkgDT)
-
-  # localRequireDir <- file.path(.libPaths(), "Require")
-  # de <- dir.exists(localRequireDir)
-  # if (any(de)) {
-  #   localRequireDir <- localRequireDir[de][1]
-  #   RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
-  # } else {
-  #   # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
-  #   #  then the next line will work to find it
-  #   deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
-  #   if (nzchar(deps)) {
-  #     RequireDeps <- depsWithCommasToVector("Require", depsWithCommas = deps)
-  #   } else {
-  #     RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
-  #   }
-  #
-  # }
-
-  whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
-  toRm <- pkgDT[["Package"]][whNeedInstall] %in% extractPkgName(unlist(.RequireDependencies))
-  if (any(toRm)) {
-    NeedRestart <- if (getOption("Require.installPackagesSys") > 0) {
-      # Can install when in a different process
-      pkgDT[["Package"]][whNeedInstall][toRm] %in% "Require"
-    } else {
-      FALSE
-    }
-
-    whRm <- which(whNeedInstall)[toRm]
-
-    # Try to install them anyway, but it will fail and report error
-    # set(pkgDT, whRm, "needInstall", .txtDontInstall)
-
-    set(pkgDT, whRm, "installed", TRUE)
-    set(pkgDT, whRm, "installResult", "Can't install Require dependency")
-    if (any(NeedRestart))
-      set(pkgDT, whRm, "installResult", "Need to restart R")
-  }
-  pkgDT
-}
+# removeRequireDeps <- function(pkgDT, verbose) {
+#   if (!is.data.table(pkgDT))
+#     pkgDT <- toPkgDT(pkgDT)
+#
+#   # localRequireDir <- file.path(.libPaths(), "Require")
+#   # de <- dir.exists(localRequireDir)
+#   # if (any(de)) {
+#   #   localRequireDir <- localRequireDir[de][1]
+#   #   RequireDeps <- DESCRIPTIONFileDeps(file.path(localRequireDir, "DESCRIPTION"))
+#   # } else {
+#   #   # if the package is loaded to memory from a different .libPaths() that is no longer on the current .libPaths()
+#   #   #  then the next line will work to find it
+#   #   deps <- packageDescription("Require", lib.loc = NULL, fields = "Imports")
+#   #   if (nzchar(deps)) {
+#   #     RequireDeps <- depsWithCommasToVector("Require", depsWithCommas = deps)
+#   #   } else {
+#   #     RequireDeps <- pkgDep("Require", simplify = TRUE, verbose = 0)
+#   #   }
+#   #
+#   # }
+#
+#   # whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
+#   # toRm <- pkgDT[["Package"]][whNeedInstall] %in% extractPkgName(unlist(.RequireDependencies))
+#   # if (any(toRm)) {
+#   #   NeedRestart <- if (getOption("Require.installPackagesSys") > 0) {
+#   #     # Can install when in a different process
+#   #     pkgDT[["Package"]][whNeedInstall][toRm] %in% "Require"
+#   #   } else {
+#   #     FALSE
+#   #   }
+#   #
+#   #   whRm <- which(whNeedInstall)[toRm]
+#   #
+#   #   # Try to install them anyway, but it will fail and report error
+#   #   # set(pkgDT, whRm, "needInstall", .txtDontInstall)
+#   #
+#   #   set(pkgDT, whRm, "installed", TRUE)
+#   #   set(pkgDT, whRm, "installResult", "Can't install Require dependency")
+#   #   browser()
+#   #   if (any(NeedRestart))
+#   #     set(pkgDT, whRm, "installResult", "Need to restart R")
+#   # }
+#   pkgDT
+# }
 
 
 matchWithOriginalPackages <- function(pkgDT, packages) {
@@ -3963,4 +3968,29 @@ clearErrorReadRDSFile <- function(mess, libPath = .libPaths()[1]) {
                  error = function(e) {print(d); unlink(d, recursive = TRUE)}))
     }
   }
+}
+
+
+needToRestartR <- function(pkgDT) {
+  whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
+  toRm <- pkgDT[["Package"]][whNeedInstall] %in% extractPkgName(unlist(.RequireDependencies))
+  if (any(toRm)) {
+    NeedRestart <- if (getOption("Require.installPackagesSys") > 0) {
+      # Can install when in a different process
+      pkgDT[["Package"]][whNeedInstall][toRm] %in% "Require"
+    } else {
+      FALSE
+    }
+
+    whRm <- which(whNeedInstall)[toRm]
+
+    # Try to install them anyway, but it will fail and report error
+    # set(pkgDT, whRm, "needInstall", .txtDontInstall)
+
+    set(pkgDT, whRm, "installed", TRUE)
+    set(pkgDT, whRm, "installResult", "Can't install Require dependency")
+    if (any(NeedRestart))
+      set(pkgDT, whRm, "installResult", "Need to restart R")
+  }
+  pkgDT
 }
