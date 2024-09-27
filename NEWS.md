@@ -1,5 +1,11 @@
 # Require
 
+version 1.0.2
+=============
+
+## Bugfixes
+* minor
+
 version 1.0.1
 =============
 

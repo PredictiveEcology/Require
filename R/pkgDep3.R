@@ -877,7 +877,8 @@ uwrnar <- function(needed, notNeeded, neededRemotes, installedVersionOK, Package
 
     if (exists("Packages", inherits = FALSE)) {
       whOverride <- match(names(Packages)[RepoNotPkgName], pkgDepDT$packageFullName)
-      set(pkgDepDT, whOverride, "Package", unname(unlist(Packages[RepoNotPkgName])))
+      if (length(whOverride))
+        set(pkgDepDT, whOverride, "Package", unname(unlist(Packages[RepoNotPkgName])))
     }
     if (!is.na(neededAdditionalRepos))
       pkgDepDT[, Additional_repositories := neededAdditionalRepos]
