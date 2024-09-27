@@ -348,9 +348,10 @@ DESCRIPTIONFileDeps <-
       if (is.null(desc_path)) {
         needed <- NULL
       } else {
+
         lines <- if (length(desc_path) == 1) {
           # linesAll <- lapply(desc_path, read.dcf)
-          try(readLines(desc_path))
+          try(readLines(desc_path), silent = TRUE)
         } else {
           lines <- desc_path
         }

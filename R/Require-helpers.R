@@ -89,15 +89,24 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
     } else {
       NULL
     }
-    if (length(f) == 1) {
-      lines <- try(readLines(f), silent = TRUE)
-      if (is(lines, "try-error")) {
-        warning(lines)
-        lines <- character()
-      }
-    } else {
-      lines <- f
-    }
+
+    lines <- readLinesWithHandlers(f)
+    # if (length(f) == 1) {
+    #   withCallingHandlers(
+    #     lines <- try(readLines(f), silent = TRUE),
+    #     warning = function(w)
+    #       if (grepl('incomplete final line found on', w$message))
+    #         invokeRestart("muffleWarning")
+    #   )
+    #   if (is(lines, "try-error")) {
+    #     warning(lines)
+    #     lines <- character()
+    #   }
+    #   if (isTRUE(any(grepl("404: Not Found", lines))))
+    #     lines <- character()
+    # } else {
+    #   lines <- f
+    # }
     suppressWarnings({
       vers_line <- lines[grep("^Version: *", lines)]
     })
@@ -116,16 +125,27 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
 #' @param other Any other keyword in a `DESCRIPTION` file that precedes a ":".
 #'   The rest of the line will be retrieved.
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
-  out <- lapply(file, function(f) {
-    if (length(f) == 1) {
-      lines <- try(readLines(f), silent = TRUE)
-      if (is(lines, "try-error")) {
-        warning(lines)
-        lines <- character()
-      }
-    } else {
-      lines <- f
-    }
+  out <- lapply(file, function(fff) {
+    lines <- readLinesWithHandlers(fff)
+    # if (length(fff) == 1) {
+    #   withCallingHandlers(
+    #     lines <- try(readLines(fff), silent = TRUE),
+    #     warning = function(w) {
+    #       if (grepl('incomplete final line found on', w$message))
+    #         invokeRestart("muffleWarning")
+    #     }
+    #   )
+    #
+    #   # lines <- try(readLines(fff), silent = TRUE)
+    #   if (is(lines, "try-error")) {
+    #     warning(lines)
+    #     lines <- character()
+    #   }
+    #   if (isTRUE(any(grepl("404: Not Found", lines))))
+    #     lines <- character()
+    # } else {
+    #   lines <- fff
+    # }
     suppressWarnings({
       vers_line <- lines[grep(paste0("^", other, ": *"), lines)]
     })
@@ -1779,4 +1799,28 @@ getGitCredsToken <- function() {
     token <- paste0("token ", token$password)
   }
   token
+}
+
+
+readLinesWithHandlers <- function(fff) {
+  if (length(fff) == 1) {
+    withCallingHandlers(
+      lines <- try(readLines(fff), silent = TRUE),
+      warning = function(w) {
+        if (grepl('incomplete final line found on', w$message))
+          invokeRestart("muffleWarning")
+      }
+    )
+
+    # lines <- try(readLines(fff), silent = TRUE)
+    if (is(lines, "try-error")) {
+      warning(lines)
+      lines <- character()
+    }
+    if (isTRUE(any(grepl("404: Not Found", lines))))
+      lines <- character()
+  } else {
+    lines <- fff
+  }
+  lines
 }
