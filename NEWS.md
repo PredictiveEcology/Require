@@ -5,6 +5,7 @@ version 1.0.2
 
 ## Bugfixes
 * minor
+* better fails when status is 403 for package dependency checking
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 
 version 1.0.1
