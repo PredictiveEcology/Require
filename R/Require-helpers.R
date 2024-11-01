@@ -815,7 +815,7 @@ isLinux <- function() {
 }
 
 isUbuntuOrDebian <- function() {
-  grepl("Ubuntu|Debian", utils::osVersion, ignore.case = TRUE)
+  isTRUE(grepl("Ubuntu|Debian", utils::osVersion, ignore.case = TRUE))
 }
 warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
   warning(
