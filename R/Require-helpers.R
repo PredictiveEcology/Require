@@ -1004,7 +1004,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
         unlink(tf)
       }
       if (isNotFound) {
-        token <- getGitCredsToken()
+        token <- .getGitCredsToken()
         mess <- character()
         if (is.null(token)) {
           mess <- "GitHub repository not accessible does it need authentication? "
@@ -1386,7 +1386,7 @@ masterMainHEAD <- function(url, need) {
   usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
     requireNamespace("httr", quietly = TRUE)
   if (usesGitCreds) {
-    token <- getGitCredsToken()
+    token <- .getGitCredsToken()
   }
   if (is.null(token)) {
     ghp <- Sys.getenv("GITHUB_PAT")
@@ -1423,7 +1423,7 @@ masterMainHEAD <- function(url, need) {
                                messageVerbose(e$message, verbose = verbose)
                            })
                 } else {
-                  a <- try(GETWauthThenNonAuth(url, token, verbose = verbose))
+                  a <- try(.GETWauthThenNonAuth(url, token, verbose = verbose))
                   if (is(a, "try-error")) {
                     if (any(grepl("Could not resolve host", a))) {
                       warning(a)
@@ -1452,7 +1452,7 @@ masterMainHEAD <- function(url, need) {
               outMasterMain <- try(download.file(urls[["TRUE"]][wh], destfile = destfile, quiet = TRUE), silent = TRUE)
             } else {
               outMasterMain <- try(silent = TRUE, {
-                a <- GETWauthThenNonAuth(urls[["TRUE"]][wh], token, verbose = verbose)
+                a <- .GETWauthThenNonAuth(urls[["TRUE"]][wh], token, verbose = verbose)
                 # a <- httr::GET(urls[["TRUE"]][wh], httr::add_headers(Authorization = token))
                 if (grepl("404", httr::http_status(a)$message))
                   stop()
@@ -1725,16 +1725,26 @@ rmEmptyFiles <- function(files, minSize = 100) {
 }
 
 
-GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
+#' Use gitcreds to download a file from GitHub.com
+#'
+#' A wrapper around `httr::GET` that uses a GitHub token.
+#'
+#' @param url The url to check
+#' @param token A GitHub token retrieved by e.g., gitcreds::gitcreds_get(use_cache = FALSE)
+#' @inheritParams Require
+#' @export
+#' @return Nothing. Used for its side effects, a downloaded GitHub file or repository.
+#'
+.GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose"), ...) {
   if (is.null(token)) {
-    a <- httr::GET(url)
+    a <- httr::GET(url, ...)
   } else {
-    a <- httr::GET(url, httr::add_headers(Authorization = token))
+    a <- httr::GET(url, httr::add_headers(Authorization = token), ...)
   }
   if (grepl("Bad credentials", a) || grepl("404", httr::http_status(a)$message)) {
     if (grepl("Bad credentials", a)) messageVerbose(red("Git credentials do not work for this url: ", url,
                                              "\nAre they expired?"), verbose = verbose)
-    a <- httr::GET(url, httr::add_headers())
+    a <- httr::GET(url, httr::add_headers(), ...)
   }
   a
 }
@@ -1791,7 +1801,10 @@ masterOrMainFromGitRefs <- function(gitRefsSplit2) {
   br
 }
 
-getGitCredsToken <- function() {
+#' Gets the gitcreds token from the gitcreds local storage
+#' @export
+#' @return A github token.
+.getGitCredsToken <- function() {
   token <- tryCatch(
     gitcreds::gitcreds_get(use_cache = FALSE),
     error = function(e) NULL
