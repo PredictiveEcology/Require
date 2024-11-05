@@ -995,11 +995,11 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     }
     fetf <- file.exists(tf)
     gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
+    error403 <- any(grepl("status.+403", gitRefs))
     isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
-      (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
-        any(grepl("status.+403", gitRefs)))
+      (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, ""))
 
-    if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+    if (any(grepl("Bad credentials", gitRefs)) || isNotFound || error403) {
       if (fetf) {
         unlink(tf)
       }
@@ -1008,8 +1008,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
         mess <- character()
         if (is.null(token)) {
           mess <- "GitHub repository not accessible does it need authentication? "
-          stop(paste0(mess, .txtDidYouSpell))
         }
+        stop(paste0(mess, .txtDidYouSpell))
       }
       stop(gitRefs)
     }
