@@ -3,6 +3,9 @@
 version 1.0.2
 =============
 
+## Function exporting
+* `.GETWauthThenNonAuth`, `.getGitCredsToken` are now exported
+
 ## Bugfixes
 * several minor
 * better fails when status is 403 for package dependency checking
