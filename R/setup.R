@@ -307,7 +307,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
         #        grep, x = gsub("https://", "", a$URL), value = TRUE)
         insertBefore <- which(lengths(isCRAN) > 0)
         repos <- c(repo, currentRepos)
-        if (insertBefore > 1) {
+        if (isTRUE(insertBefore > 1)) { # could have no CRAN official mirror
           repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
                      repo,
                      currentRepos[seq(insertBefore, length(currentRepos))])
