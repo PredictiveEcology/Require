@@ -7,7 +7,7 @@ version 1.0.2
 * `.GETWauthThenNonAuth`, `.getGitCredsToken` are now exported
 
 ## Bugfixes
-* minor
+* several minor
 * better fails when status is 403 for package dependency checking
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 
