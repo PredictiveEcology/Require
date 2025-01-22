@@ -1384,7 +1384,7 @@ masterMainHEAD <- function(url, need) {
   # Authentication
   token <- NULL
   usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
-    requireNamespace("httr", quietly = TRUE)
+    requireNamespace("httr", quietly = TRUE) && requireNamespace("curl", quietly = TRUE)
   if (usesGitCreds) {
     token <- getGitCredsToken()
   }
@@ -1725,16 +1725,16 @@ rmEmptyFiles <- function(files, minSize = 100) {
 }
 
 
-GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
+GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose"), ...) {
   if (is.null(token)) {
-    a <- httr::GET(url)
+    a <- httr::GET(url, ...)
   } else {
-    a <- httr::GET(url, httr::add_headers(Authorization = token))
+    a <- httr::GET(url, httr::add_headers(Authorization = token), ...)
   }
   if (grepl("Bad credentials", a) || grepl("404", httr::http_status(a)$message)) {
     if (grepl("Bad credentials", a)) messageVerbose(red("Git credentials do not work for this url: ", url,
                                              "\nAre they expired?"), verbose = verbose)
-    a <- httr::GET(url, httr::add_headers())
+    a <- httr::GET(url, httr::add_headers(), ...)
   }
   a
 }
