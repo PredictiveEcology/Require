@@ -1301,7 +1301,12 @@ splitKeepOrderAndDTIntegrity <- function(pkgDT, splitOn) {
 
   # splitOn <- pkgDT$packageFullName[whHasDeps]
   splitOn <- factor(splitOn, levels = unique(splitOn)) # must keep order
-  split(pkgDT, f = splitOn)
+  pkgDTList <- split(pkgDT, f = splitOn)
+
+  # Next line is about dealing with this
+  # Internal error: DT passed to assign has not been allocated enough column slots
+  pkgDTList <- lapply(pkgDTList, data.table::alloc.col)
+  pkgDTList
   # pkgDTHaveDeps <- split(pkgDT[whHasDeps], f = splitOn)
 }
 
