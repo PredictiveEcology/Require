@@ -3,7 +3,7 @@ utils::globalVariables(c(
   "Archs", "AvailableVersion", "compareVersionAvail", "correctVersion",
   "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup", "filepath",
   "fullGit", "github", "groupCRANtogether", "groupCRANtogetherChange",
-  "groupCRANtogetherDif", "hasHEAD", "hasVersionSpec", "i.neededFiles",
+  "groupCRANtogetherDif", "hasVersionSpec", "i.neededFiles",
   "inequality", "installFrom", "installFromFac", "installOrder",
   "installResult", "isGitPkg", "keep", "keep2", "lastRow", "localFileName",
   "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
@@ -1337,11 +1337,11 @@ masterMainHEAD <- function(url, need) {
     br <- "HEAD"
     url <- gsub(masterMainGrep, paste0("/", br, "\\1"), url)
   }
-  HEADgrep <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
-  hasHEAD <- grepl(HEADgrep, url)
+  HEADgrepForGitBranch <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
+  hasHEAD <- grepl(HEADgrepForGitBranch, url)
   if (any(hasHEAD) && need %in% masterMain) {
     br <- need
-    url <- gsub(HEADgrep, paste0("/", br, "\\1"), url)
+    url <- gsub(HEADgrepForGitBranch, paste0("/", br, "\\1"), url)
   }
   if (any(hasHEAD) && need %in% "HEAD") {
     br <- "HEAD"
@@ -1623,8 +1623,12 @@ installPackagesWithQuiet <- function(ipa, verbose) {
 
 #' @importFrom utils remove.packages
 checkHEAD <- function(pkgDT) {
-  HEADgrep <- " *\\(HEAD\\)"
-  set(pkgDT, NULL, "hasHEAD", grepl(HEADgrep, pkgDT$packageFullName))
+  if (is.null(pkgDT[[hasHEADtxt]])) {
+    data.table::alloc.col(pkgDT)
+    out <- try(set(pkgDT, NULL, hasHEADtxt, grepl(HEADgrepWithParentheses, pkgDT$packageFullName)))
+    if (is(out, "try-error")) browser()
+
+  }
   pkgDT
 }
 

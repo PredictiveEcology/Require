@@ -868,8 +868,8 @@ archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroup
 whichToInstall <- function(pkgDT, install, verbose) {
   set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT[["Version"]]))
   set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT[["Version"]])) # default: if it is installed,  say "OK"
-  if (!is.null(pkgDT[["hasHEAD"]])) {
-    whHasHead <- which(pkgDT[["hasHEAD"]] %in% TRUE)
+  if (!is.null(pkgDT[[hasHEADtxt]])) {
+    whHasHead <- which(pkgDT[[hasHEADtxt]] %in% TRUE)
     set(pkgDT, whHasHead, c("installedVersionOK", "isPkgInstalled"), list(FALSE, FALSE))
   }
   set(
@@ -884,8 +884,8 @@ whichToInstall <- function(pkgDT, install, verbose) {
   }
 
   pkgDT <- checkHEAD(pkgDT)
-  if (any(pkgDT[["hasHEAD"]])) {
-    set(pkgDT, which(pkgDT[["hasHEAD"]]), "installedVersionOK", FALSE)
+  if (any(pkgDT[[hasHEADtxt]])) {
+    set(pkgDT, which(pkgDT[[hasHEADtxt]]), "installedVersionOK", FALSE)
   }
 
   set(pkgDT, NULL, "needInstall", c(.txtDontInstall, .txtInstall)[pkgDT$installedVersionOK %in% FALSE + 1])
@@ -1114,10 +1114,12 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     #   -- the repos are essentially moot for GitHub packages, but will mess downstream with version numbers
     dupReposForGHPkgs <- pkgInstallList[[.txtGitHub]][, .N, by = "Package"][N > 1]
     if (NROW(dupReposForGHPkgs)) {
-      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs[["Package"]] & hasHEAD,
+      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs[["Package"]] &
+                                     get(hasHEADtxt) %in% TRUE,
                                    VersionOK := FALSE]
 
-      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs[["Package"]] & !hasHEAD,
+      pkgInstallList[[.txtGitHub]][Package %in% dupReposForGHPkgs[["Package"]] &
+                                     get(hasHEADtxt) %in% FALSE,
                                    VersionOK := compareVersion2(version = VersionOnRepos,
                                                                 versionSpec = versionSpec,
                                                                 inequality = inequality),
@@ -1530,10 +1532,10 @@ availableVersionOK <- function(pkgDT) {
     pkgDT[, hasAtLeastOneNonNA := any(hasAtLeastOneNonNA), by = "Package"]
     toUpdate <- hasAtLeastOneNonNA %in% TRUE
     whToUpdate <- which(toUpdate)
-    if (!is.null(pkgDT[["hasHEAD"]])) {
-      if (any(pkgDT[["hasHEAD"]])) {
-        whToUpdate1 <- which(toUpdate & pkgDT[["hasHEAD"]])
-        whToUpdate <- which(toUpdate & pkgDT[["hasHEAD"]] %in% FALSE)
+    if (!is.null(pkgDT[[hasHEADtxt]])) {
+      if (any(pkgDT[[hasHEADtxt]])) {
+        whToUpdate1 <- which(toUpdate & pkgDT[[hasHEADtxt]])
+        whToUpdate <- which(toUpdate & pkgDT[[hasHEADtxt]] %in% FALSE)
         set(pkgDT, whToUpdate1, "availableVersionOK", TRUE)
         set(pkgDT, whToUpdate1, "availableVersionOKthisOne", TRUE)
       }
@@ -1597,12 +1599,13 @@ compareVersion2 <- function(version, versionSpec, inequality) {
 updatePackagesWithNames <- function(pkgDT, packages) {
   origPackagesHaveNames <- nchar(names(packages)) > 0
   if (any(origPackagesHaveNames, na.rm = TRUE)) {
-    whHasHEAD <- grep(HEADgrep, names(packages))
+    whHasHEAD <- grep(HEADgrepWithParentheses, names(packages))
     packageFullNameWithHEAD <- packages[whHasHEAD]
     if (length(whHasHEAD)) {
+      browser() # this should use `checkHEAD` not custom here
       pkgDT[
         match(packages[origPackagesHaveNames], packageFullName),
-        hasHEAD := packageFullName %in% packageFullNameWithHEAD
+        hasHEAD := packageFullName %in% packageFullNameWithHEAD #
       ]
       names(packages)[whHasHEAD] <- NA
       origPackagesHaveNames[whHasHEAD] <- FALSE # Dealt with in previous line
@@ -2231,8 +2234,8 @@ trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOp
   if (NROW(pkgInstall)) {
     pkgInstall <- removeDups(pkgInstall)
     if (anyDuplicated(pkgInstall[["Package"]])) {
-      if (!is.null(pkgInstall[["hasHEAD"]])) {
-        hasHeadRows <- which(pkgInstall[["hasHEAD"]] %in% TRUE)
+      if (!is.null(pkgInstall[[hasHEADtxt]])) {
+        hasHeadRows <- which(pkgInstall[[hasHEADtxt]] %in% TRUE)
         whToRM <- which(pkgInstall[["Package"]] %in% pkgInstall[hasHeadRows][["Package"]])
         whToRM <- setdiff(whToRM, hasHeadRows)
         if (length(whToRM))
@@ -2527,7 +2530,7 @@ NoPkgsSupplied <- "No packages supplied"
 
 anyHaveHEAD <- function(packages) {
   # Vectorize
-  haveHead <- grepl(HEADgrep, packages)
+  haveHead <- grepl(HEADgrepWithParentheses, packages)
   if (any(haveHead)) {
     origPackages <- packages
     packages[haveHead] <- trimVersionNumber(packages[haveHead])
@@ -2536,7 +2539,8 @@ anyHaveHEAD <- function(packages) {
   packages
 }
 
-HEADgrep <- " *\\(HEAD\\)"
+HEADgrepWithParentheses <- " *\\(HEAD\\)"
+hasHEADtxt <- "hasHEAD"
 
 packageFullNameFromSnapshot <- function(snapshot) {
   out <- ifelse(!is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo),
@@ -3431,8 +3435,8 @@ binOrSrc <- function(areBinary) {
 #' @include messages.R
 removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Require.verbose")) {
   # needs both Version and VersionOnRepos
-  if (any(pkgInstall$hasHEAD)) {
-    hasHead <- pkgInstall$hasHEAD
+  if (any(pkgInstall[[hasHEADtxt]])) {
+    hasHead <- pkgInstall[[hasHEADtxt]]
     notGH <- !pkgInstall$isGitPkg
     whNoKeep <- which(hasHead & notGH)
     if (length(whNoKeep)) {
