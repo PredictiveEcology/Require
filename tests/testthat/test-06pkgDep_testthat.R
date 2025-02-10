@@ -154,6 +154,8 @@ test_that("test 6", {
   expect_true(test)
 
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
+  out[["data.table"]] <- unique(c("Require", out[["data.table"]])) # add Require as it may not be
+                                                                #actually installed
   knownRevDeps <- append(
     knownRevDeps,
     list(data.table = c(knownRevDeps$Require, "Require"))
