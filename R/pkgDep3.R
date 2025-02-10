@@ -1273,6 +1273,9 @@ toPkgDTFull <- function(pkgDT) {
   if (exists("packagesNames", inherits = FALSE))
     pkgDT <- updatePackagesWithNames(pkgDT, packagesNames)
 
+  pkgDT <- checkHEAD(pkgDT)
+
+
   # set(pkgDT, NULL, "topLevelOrder", seq(NROW(pkgDT)))
 
   pkgDT
