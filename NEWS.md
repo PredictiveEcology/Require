@@ -7,6 +7,7 @@ version 1.0.2
 * several minor
 * better fails when status is 403 for package dependency checking
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
+* failure to install when using `(HEAD)` in some cases for packages in custom repositories
 
 version 1.0.1
 =============

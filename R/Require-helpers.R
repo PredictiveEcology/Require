@@ -1625,9 +1625,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
 checkHEAD <- function(pkgDT) {
   if (is.null(pkgDT[[hasHEADtxt]])) {
     data.table::alloc.col(pkgDT)
-    out <- try(set(pkgDT, NULL, hasHEADtxt, grepl(HEADgrepWithParentheses, pkgDT$packageFullName)))
-    if (is(out, "try-error")) browser()
-
+    set(pkgDT, NULL, hasHEADtxt, grepl(HEADgrepWithParentheses, pkgDT$packageFullName))
   }
   pkgDT
 }
