@@ -931,57 +931,67 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPat
   on.exit({
     unlink(tmpdir, recursive = TRUE)
   }, add = TRUE)
-  pkgDTList$Archive <- identifyLocalFiles(pkgDTList$Archive, repos = repos, purge = purge,
-                                          libPaths = libPaths, verbose = verbose)
-  haveLocal2 <- pkgDTList$Archive[["haveLocal"]] %in% .txtLocal
-  if (any(haveLocal2))
-    pkgDTList$Archive[, PackageUrl := file.path(Package, basename(localFile))]
-  if (!all(haveLocal2)) {
-    # downloadArchive takes a list with an element called "Archive" so can't split on "Archive" here
-    # noLocals <- pkgDTList$Archive$haveLocal2 %in% TRUE
-    txtArchiveHaveLocal <- "ArchiveHaveLocal"
-    if (any(haveLocal2)) {
-      pkgDTList[[txtArchiveHaveLocal]] <- pkgDTList$Archive[which(haveLocal2), ]
+  for (attempt in 1:2) {
+    pkgDTList$Archive <- identifyLocalFiles(pkgDTList$Archive, repos = repos, purge = purge,
+                                            libPaths = libPaths, verbose = verbose)
+    haveLocal2 <- pkgDTList$Archive[["haveLocal"]] %in% .txtLocal
+    if (any(haveLocal2))
+      pkgDTList$Archive[, PackageUrl := file.path(Package, basename(localFile))]
+    if (!all(haveLocal2)) {
+      # downloadArchive takes a list with an element called "Archive" so can't split on "Archive" here
+      # noLocals <- pkgDTList$Archive$haveLocal2 %in% TRUE
+      txtArchiveHaveLocal <- "ArchiveHaveLocal"
+      if (any(haveLocal2)) {
+        pkgDTList[[txtArchiveHaveLocal]] <- pkgDTList$Archive[which(haveLocal2), ]
+      }
+      pkgDTList$Archive <- pkgDTList$Archive[which(!haveLocal2), ]
+      if (!is.null(pkgDTList$Archive)) {
+        pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
+                                     tmpdir = tmpdir, verbose = verbose)
+      }
+      if (!is.null(pkgDTList[[txtArchiveHaveLocal]])) {
+        pkgDTList$Archive <-
+          rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)],
+                    fill = TRUE, use.names = TRUE)
+        pkgDTList[[txtArchiveHaveLocal]] <- NULL
+      }
     }
-    pkgDTList$Archive <- pkgDTList$Archive[which(!haveLocal2), ]
-    if (!is.null(pkgDTList$Archive)) {
-      pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
-                                   tmpdir = tmpdir, verbose = verbose)
-    }
-    if (!is.null(pkgDTList[[txtArchiveHaveLocal]])) {
-      pkgDTList$Archive <-
-        rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)],
-                  fill = TRUE, use.names = TRUE)
-      pkgDTList[[txtArchiveHaveLocal]] <- NULL
-    }
-  }
 
-  # tmpdir <- tempdir3()
-  # pkgDTList <- downloadArchive(pkgDTList, repos = repos, purge = purge,
-  #                              tmpdir = tmpdir, verbose = verbose)
-
-  if (any(!is.na(pkgDTList$Archive$PackageUrl))) {
-    pkgDTList$Archive[!is.na(PackageUrl), DESCFileFull := {
-      .DESCFileFull(PackageUrl, verbose, Repository, Package, tmpdir)
+    if (any(!is.na(pkgDTList$Archive$PackageUrl))) {
+      if (is.null(pkgDTList$Archive[["DESCFileFull"]])) # add empty here; allows for retrying above
+        set(pkgDTList$Archive, NULL, "DESCFileFull", "")
+      pkgDTList$Archive[!is.na(PackageUrl) & !nzchar(DESCFileFull), DESCFileFull := {
+        .DESCFileFull(PackageUrl, verbose, Repository, Package, tmpdir)
       }, by = "packageFullName"]
 
-    gotDESC <- !is.na(pkgDTList$Archive$DESCFileFull)
-    whGotDESC <- which(gotDESC)
+      # The local file in Cache can sometimes be corrupt; it gets deleted in `.DESCFileFull`
+      fails <- (pkgDTList$Archive[!is.na(PackageUrl)][, "DESCFileFull"] == 0) %in% TRUE
+      if (any(fails)) {
+        set(pkgDTList$Archive, which(fails),
+            c("haveLocal", "localFile", "installFrom", "DESCFileFull"),
+            list(.txtNoLocal, "", NA, ""))
+        next
+      }
 
-    VoR <- DESCRIPTIONFileOtherV(pkgDTList$Archive[whGotDESC]$DESCFileFull, "Version")
-    pkgDTList$Archive[whGotDESC, VersionOnRepos := VoR]
-    deps <- DESCRIPTIONFileDepsV(
-      pkgDTList$Archive[whGotDESC]$DESCFileFull,
-      which = which, keepSeparate = TRUE)
-    names(deps) <- pkgDTList$Archive$packageFullName[whGotDESC]
-    deps <- lapply(deps, function(x) {
-      unlist(lapply(x, function(y) paste(y, collapse = comma)))
-    })
-    deps <- do.call(rbind, deps)
-    # deps <- invertList(deps)
-    # deps <- as.data.table(deps)
-    for (co in colnames(deps))
-      set(pkgDTList$Archive, whGotDESC, co, deps[, co])
+
+      gotDESC <- !is.na(pkgDTList$Archive$DESCFileFull) & nzchar(pkgDTList$Archive$DESCFileFull)
+      whGotDESC <- which(gotDESC)
+
+      VoR <- DESCRIPTIONFileOtherV(pkgDTList$Archive[whGotDESC]$DESCFileFull, "Version")
+      pkgDTList$Archive[whGotDESC, VersionOnRepos := VoR]
+      deps <- DESCRIPTIONFileDepsV(
+        pkgDTList$Archive[whGotDESC]$DESCFileFull,
+        which = which, keepSeparate = TRUE)
+      names(deps) <- pkgDTList$Archive$packageFullName[whGotDESC]
+      deps <- lapply(deps, function(x) {
+        unlist(lapply(x, function(y) paste(y, collapse = comma)))
+      })
+      deps <- do.call(rbind, deps)
+      # deps <- invertList(deps)
+      # deps <- as.data.table(deps)
+      for (co in colnames(deps))
+        set(pkgDTList$Archive, whGotDESC, co, deps[, co])
+    }
   }
   pkgDTList
 }
@@ -1580,24 +1590,35 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 .DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
   tf <- file.path(cachePkgDir(), basename(PackageUrl))
   rmEmptyFiles(tf)
-  out <- if (file.exists(tf)) { NULL } else {
-    # This section should only happen if Require.installPackageSys < 1
-    for (i in 1:2) { # can be flaky -- try 2x
-      inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
-                               url = file.path(Repository, basename(PackageUrl)),
-                               destfile = tf), silent = TRUE)
-      if (!is(inn, "try-error"))
-        break
+  for (attempt in 1:2) {
+    out <- if (file.exists(tf)) { NULL } else {
+      # This section should only happen if Require.installPackageSys < 1
+      for (i in 1:2) { # can be flaky -- try 2x
+        inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
+                                 url = file.path(Repository, basename(PackageUrl)),
+                                 destfile = tf), silent = TRUE)
+        if (!is(inn, "try-error"))
+          break
+      }
+      inn
     }
-    inn
-  }
-  if (is(out, "try-error")) {
-    messageVerbose(out, verbose = verbose)
-    out <- NA
-  } else {
-    DESCFile <- file.path(Package, "DESCRIPTION")
-    untar(tf, files = DESCFile, exdir = tmpdir)
-    out <- file.path(tmpdir, DESCFile)
+    if (is(out, "try-error")) {
+      messageVerbose(out, verbose = verbose)
+      out <- NA
+    } else {
+      DESCFile <- file.path(Package, "DESCRIPTION")
+      # while(ret <- )
+      ret <- untar(tf, files = DESCFile, exdir = tmpdir)
+      if (ret > 0) {
+        # means an error
+        redownload <- TRUE
+        unlink(tf, force = TRUE)
+      } else {
+        out <- file.path(tmpdir, DESCFile)
+        break
+      }
+
+    }
   }
   out
 }
