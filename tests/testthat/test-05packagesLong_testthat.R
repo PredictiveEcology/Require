@@ -123,6 +123,8 @@ test_that("test 5", {
     (outFromRequire <- Require(pkg, standAlone = FALSE, require = FALSE)) |>
       capture_warnings() -> warns
 
+    # THis is the warning for versions that are impossible
+    warns <- grep(.txtPleaseChangeReqdVers, warns, invert = TRUE, value = TRUE)
     warns <- grep(.txtCouldNotBeInstalled, warns, invert = TRUE, value = TRUE)
 
     test <- testWarnsInUsePleaseChange(warns)
