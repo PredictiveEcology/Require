@@ -26,7 +26,6 @@ cacheDir <- function(create, verbose = getOption("Require.verbose")) {
   ## CURRENT: using cache dir following conventions used by tools::R_user_dir
   ##   tools::R_user_dir("appName", "cache")
 
-  # browser()
   cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
     Sys.getenv("R_USER_CACHE_DIR")
   } else {
