@@ -2962,7 +2962,7 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
     pkgInstall[which(needRebuild), needRebuild := repoLocation]
     pkgInstallList <- split(pkgInstall, by = "needRebuild")
     # names(pkgInstallList) <- c("No", .txtGitHub)
-    pkgInstallList <- downloadGitHub(pkgInstallList, libPaths, verbose, install.packagesArgs)
+    pkgInstallList <- downloadGitHub(pkgInstallList, libPaths, tmpdir = tmpdir, verbose, install.packagesArgs)
     maxGroup <- 1
     numPackages <- NROW(pkgInstallList[[.txtGitHub]])
     pkgInstallList[[.txtGitHub]][, installOrder := seq(.N)] # renumber the installOrder
