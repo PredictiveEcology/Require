@@ -3,7 +3,7 @@ utils::globalVariables(c(
   "Additional_repositories", "Account", "Branch", "DESCFile",
   "EqualsDoesntViolate", "GitSubFolder", "Repo", "Repository", "SHAonGH", "Version",
   "VersionOnRepos", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig", "comp",
-  "depOrOrig", "getOptions", "GTDoesntViolate",
+  "depOrOrig", "getOptions", "GTDoesntViolate", "hasHEAD",
   "hasEqualsAndInequals", "hasGTAndInequals", "hasSubFolder", "hasVers", "hasVersionsToCompare",
   "haveLocal", "ineq", "i.VersionOnRepos", "installSafeGroups", "installed",
   "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
