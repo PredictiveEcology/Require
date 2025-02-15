@@ -2972,6 +2972,7 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
         repos = repos, purge = purge,
         install.packagesArgs = install.packagesArgs, numPackages = numPackages,
         numGroups = maxGroup, startTime = startTime, type = type,
+        libPaths = libPaths,
         tmpdir = tmpdir, verbose = verbose
       ),
       installAll
