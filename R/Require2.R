@@ -1344,10 +1344,12 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
                        VersionOnRepos = aa$VersionOnRepos)
           splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
           st <- system.time(
-            dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
+            dt <- try(
+              sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
                                         "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)",
                                         libPaths = libPaths, verbose = verbose)
-          )
+          ))
+          if (is(dt, "try-error")) stop("Download failed; perhaps flaky internet or file to large?")
           messageVerbose("  GitHub ", downloadedInSeconds(st[[3]]), verbose = verbose)
           pkgGHtoDL[dt, localFile := i.localFile, on = "Package"]
           pkgGHtoDL[!SHAonGH %in% FALSE, installFrom := .txtLocal]
@@ -3488,7 +3490,8 @@ removeHEADpkgsIfNoUpdateNeeded <- function(pkgInstall, verbose = getOption("Requ
 #'        filenames will be returned with any outputs from the `doLine`.
 sysInstallAndDownload <- function(args, splitOn = "pkgs",
                                   doLine = "outfiles <- do.call(download.packages, args)",
-                                  returnOutfile = FALSE, doLineVectorized = TRUE, tmpdir, libPaths, verbose) {
+                                  returnOutfile = FALSE, doLineVectorized = TRUE,
+                                  tmpdir, libPaths, verbose) {
   downPack <- grepl("download.packages", doLine)
   downFile <- grepl("download.file", doLine)
   installPackages <- grepl("install.packages", doLine)

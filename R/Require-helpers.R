@@ -127,25 +127,6 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   out <- lapply(file, function(fff) {
     lines <- readLinesWithHandlers(fff)
-    # if (length(fff) == 1) {
-    #   withCallingHandlers(
-    #     lines <- try(readLines(fff), silent = TRUE),
-    #     warning = function(w) {
-    #       if (grepl('incomplete final line found on', w$message))
-    #         invokeRestart("muffleWarning")
-    #     }
-    #   )
-    #
-    #   # lines <- try(readLines(fff), silent = TRUE)
-    #   if (is(lines, "try-error")) {
-    #     warning(lines)
-    #     lines <- character()
-    #   }
-    #   if (isTRUE(any(grepl("404: Not Found", lines))))
-    #     lines <- character()
-    # } else {
-    #   lines <- fff
-    # }
     suppressWarnings({
       vers_line <- lines[grep(paste0("^", other, ": *"), lines)]
     })
@@ -1010,6 +991,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
           mess <- "GitHub repository not accessible does it need authentication? "
           stop(paste0(mess, .txtDidYouSpell))
         }
+        stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
       }
       stop(gitRefs)
     }
@@ -1625,9 +1607,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
 checkHEAD <- function(pkgDT) {
   if (is.null(pkgDT[[hasHEADtxt]])) {
     data.table::alloc.col(pkgDT)
-    out <- try(set(pkgDT, NULL, hasHEADtxt, grepl(HEADgrepWithParentheses, pkgDT$packageFullName)))
-    if (is(out, "try-error")) browser()
-
+    set(pkgDT, NULL, hasHEADtxt, grepl(HEADgrepWithParentheses, pkgDT$packageFullName))
   }
   pkgDT
 }
