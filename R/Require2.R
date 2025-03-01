@@ -1726,7 +1726,8 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap3[, "Repository"] <- toInstall[Package %in% pkgsNotInAP]$Repository
     }
     ap3[, "Depends"] <- NA
-    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]], recursive = TRUE,
+    deps <- pkgDep(toInstall[Package %in% pkgsNotInAP][["packageFullName"]],
+                   recursive = TRUE, repos = repos,
                    verbose = verbose)
     pkgHasNameDiffrntThanRepo <- extractPkgName(names(deps)) != toInstall[Package %in% pkgsNotInAP][["Package"]]
     if (any(pkgHasNameDiffrntThanRepo)) {
