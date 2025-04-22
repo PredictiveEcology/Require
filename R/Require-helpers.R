@@ -250,32 +250,16 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         }
       }
       if (any(!alreadyExists)) {
-        # messageVerbose("GitHub packages:  ", paste(pkgDT$packageFullName, collapse = ", "), verbose = verbose)
-        withCallingHandlers( # if offline
+        # withCallingHandlers( # if offline
           pkgDT[which(repoLocation == .txtGitHub & alreadyExists %in% FALSE),
-                filepath := {
-                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
-                  ret <- NA
-                  dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
-                                                        need = "master",
-                                                        verbose = verbose - 1
-                  ))
-                  ret <- if (!is(dl, "try-error")) {
-                    destFile
-                  } else {
-                    if (!isTRUE(urlExists(unique(url)[1])))
-                      if (!isTRUE(urlExists("https://www.google.com"))) {
-                        setOfflineModeTRUE(verbose = verbose)
-                      }
-                    NA
-                  }
-
-                  ret
-                },
+                filepath :=
+                  .downloadFileMasterMainAuthWithHandlers(Account, Package, Branch,
+                                                          packageFullName, filename, url, destFile, verbose)
+                ,
                 by = c("Package", "Branch")
-          ], warning = function(w) {
-            ## TODO this seems to be not relevant
-          })
+          ]# , warning = function(w) {
+          #   ## TODO this seems to be not relevant
+          # })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
       wh <- which(pkgDT$repoLocation == .txtGitHub)
@@ -876,7 +860,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
     gr$br
   }
 
-  url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
+  url <- file.path(githubDotCom, ar, "archive", paste0(br, ".zip"))
   out <- suppressWarnings(
     try(.downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE)
   )
@@ -949,7 +933,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     return(br)
   }
 
-  gitRefsURL <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
+  gitRefsURL <- file.path(apiGithubDotCom, "repos", acct, repo, "git", "refs")
   if (missing(br)) {
     br <- "main"
   }
@@ -1635,7 +1619,7 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
   if (any(hasSubFolder, na.rm = TRUE)) {
     Branch <- paste0(Branch, "/", GitSubFolder)
   }
-  file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
+  file.path(rawGithubDotCom, Account, Repo, Branch, filename, fsep = "/")
 }
 
 
@@ -1809,3 +1793,95 @@ readLinesWithHandlers <- function(fff) {
   }
   lines
 }
+
+
+
+.downloadFileMasterMainAuthWithHandlers <- function(Account, Package, Branch, packageFullName,
+                                                    filename, url, destFile, verbose) {
+    messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
+    ret <- NA
+    dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+                                          need = "master",
+                                          verbose = verbose - 1
+    ))
+    ret <- if (!is(dl, "try-error")) {
+      destFile
+    } else {
+      if (!isTRUE(urlExists(unique(url)[1])))
+        if (!isTRUE(urlExists("https://www.google.com"))) {
+          setOfflineModeTRUE(verbose = verbose)
+        }
+      NA
+    }
+
+    fs <- file.size(destFile)
+    fsTooSmallLikelyError <- fs < 100
+    if (any(fsTooSmallLikelyError)) {
+      checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
+      has404 <- sapply(checkFile, grepl, pattern = "404")
+      if (any(has404)) {
+        suggs <- offerGitHubSuggestions(account = Account, Package)
+        stop("The following repository does not seem to exist: \n",
+             paste(packageFullName[has404], collapse = "\n"),
+             "\n", .txtDidYouSpell,
+             "\nDid you mean one of:\n",
+             paste(suggs, collapse = "\n")
+        )
+      }
+    }
+
+    # if (grepl("404", httr::http_status(a)$message)) {
+    #   offerGitHubSuggestions(account, repo)
+    #   stop("The following repository does not seem to exist: \n",
+    #        paste(pkgDTNotLocal$packageFullName[has404], collapse = "\n"),
+    #        "\n", .txtDidYouSpell,
+    #        "\nDid you mean one of:\n",
+    #        paste(suggs, collapse = "\n")
+    #   )
+    # }
+
+    ret
+}
+
+offerGitHubSuggestions <- function(account, repo) {
+  # apiGithubDotCom <- "https://api.github.com"
+  # account <- "PredictiveEcology"
+  url <- paste0(apiGithubDotCom, "/users/", account, "/repos?per_page=500")
+  names(url) <- account
+  tf <- tempfile()
+  out <- try(.downloadFileMasterMainAuth(url, destfile = tf, need = "master"))
+
+  fetf <- file.exists(tf)
+  gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
+  isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+                    (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+                    any(grepl("status.+403", gitRefs)))
+
+  if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+    if (fetf) {
+      unlink(tf)
+    }
+    if (isNotFound) {
+      token <- getGitCredsToken()
+      mess <- character()
+      if (is.null(token)) {
+        mess <- "GitHub repository not accessible does it need authentication? "
+        stop(paste0(mess, .txtDidYouSpell))
+      }
+      stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
+    }
+    stop(gitRefs)
+  }
+
+  rl <- readLines(tf)
+  poss <- grep(paste0("git_url.+"), rl, value = TRUE)
+  poss2 <- agrep(repo, poss, value = TRUE)
+  poss3 <- grep(file.path(account, paste0(repo, ".git")), poss2, value = TRUE, invert = TRUE)
+  gsub(paste0("^.+(", file.path(account, repo), ".*).git.+"), "\\1", poss3)
+}
+
+
+
+githubDotCom <- "https://github.com"
+rawGithubDotCom <- "https://raw.githubusercontent.com"
+apiGithubDotCom <- "https://api.github.com"
