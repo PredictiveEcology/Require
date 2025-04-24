@@ -1818,7 +1818,7 @@ readLinesWithHandlers <- function(fff) {
       NA
     }
 
-    if (file.exists(destFile)) {
+    if (any(file.exists(destFile))) {
       fs <- file.size(destFile)
       fsTooSmallLikelyError <- fs < 100
       if (any(fsTooSmallLikelyError)) {
