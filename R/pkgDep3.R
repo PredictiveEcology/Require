@@ -1637,7 +1637,6 @@ forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
   } else {
     alreadyIn <- pkgDTEquals$packageFullName %in% .pkgEnv[["pkgDTEqualities"]]$packageFullName
     if (!all(alreadyIn)) {
-      browser()
       .pkgEnv[["pkgDTEqualities"]] <-
         rbindlist(list(.pkgEnv[["pkgDTEqualities"]], pkgDTEquals), fill = TRUE)
     }
@@ -1645,20 +1644,23 @@ forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
   }
   # pfn <- cc$packageFullName[ineq]
   # Find and use equalities, if they are there
-  pkgDTEqualities[[depFa]] <-
-    Map(pkgDTinner = pkgDTEqualities[[depFa]], function(pkgDTinner) {
-      needsUpdate <- match(pkgDTinner$Package, pkgDTEquals$Package) |> na.omit()
-      # needsUpdate <- which(pkgDTEquals$Package %in% pkgDTinner$Package)
-      if (length(needsUpdate)) {
-        ee <- rbindlist(list(pkgDTinner, pkgDTEquals[needsUpdate]), fill = TRUE)
-        pkgDTinner <- trimRedundancies(ee)
-        if (any(table(pkgDTinner$Package) > 1))
-          browser()
-        # needsUpdate2 <- na.omit(match(pkgDTEquals$Package, pkgDTinner$Package))
-        # pkgDTinner[needsUpdate2, packageFullName := pkgDTEquals$packageFullName[needsUpdate]]
-      }
-      pkgDTinner
-    })
+
+  if (isTRUE(depFa %in% colnames(pkgDTEqualities))) {
+    pkgDTEqualities[[depFa]] <-
+      Map(pkgDTinner = pkgDTEqualities[[depFa]], function(pkgDTinner) {
+        needsUpdate <- match(pkgDTinner$Package, pkgDTEquals$Package) |> na.omit()
+        # needsUpdate <- which(pkgDTEquals$Package %in% pkgDTinner$Package)
+        if (length(needsUpdate)) {
+          ee <- rbindlist(list(pkgDTinner, pkgDTEquals[needsUpdate]), fill = TRUE)
+          pkgDTinner <- trimRedundancies(ee)
+          if (any(table(pkgDTinner$Package) > 1))
+            browser()
+          # needsUpdate2 <- na.omit(match(pkgDTEquals$Package, pkgDTinner$Package))
+          # pkgDTinner[needsUpdate2, packageFullName := pkgDTEquals$packageFullName[needsUpdate]]
+        }
+        pkgDTinner
+      })
+  }
   pkgDTEqualities
 }
 

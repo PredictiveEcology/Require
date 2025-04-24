@@ -354,9 +354,9 @@ Require <- function(packages,
         pkgDT <- checkHEAD(pkgDT)
 
         pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
-        pkgDT2 <- trimRedundancies(pkgDT)
-        if (!identical(NROW(pkgDT2), NROW(pkgDT))) browser()
-        pkgDT <- pkgDT2
+        pkgDT <- trimRedundancies(pkgDT)
+        # if (!identical(NROW(pkgDT2), NROW(pkgDT))) browser()
+        # pkgDT <- pkgDT2
 
         pkgDT <- updatePackagesWithNames(pkgDT, packages)
         pkgDT <- recordLoadOrder(packages, pkgDT)

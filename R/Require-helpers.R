@@ -251,15 +251,16 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
       }
       if (any(!alreadyExists)) {
         # withCallingHandlers( # if offline
-          pkgDT[which(repoLocation == .txtGitHub & alreadyExists %in% FALSE),
-                filepath :=
-                  .downloadFileMasterMainAuthWithHandlers(Account, Package, Branch,
-                                                          packageFullName, filename, url, destFile, verbose)
-                ,
-                by = c("Package", "Branch")
-          ]# , warning = function(w) {
-          #   ## TODO this seems to be not relevant
-          # })
+        pkgDT[which(repoLocation == .txtGitHub & alreadyExists %in% FALSE),
+              filepath :=
+                .downloadFileMasterMainAuthWithHandlers(Account, Package, Branch,
+                                                        packageFullName, filename,
+                                                        url, destFile, verbose)
+              ,
+              by = c("Package", "Branch")
+        ]# , warning = function(w) {
+        #   ## TODO this seems to be not relevant
+        # })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
       wh <- which(pkgDT$repoLocation == .txtGitHub)
@@ -960,25 +961,27 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     }
     fetf <- file.exists(tf)
     gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
-    isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
-      (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
-        any(grepl("status.+403", gitRefs)))
 
-    if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
-      if (fetf) {
-        unlink(tf)
-      }
-      if (isNotFound) {
-        token <- getGitCredsToken()
-        mess <- character()
-        if (is.null(token)) {
-          mess <- "GitHub repository not accessible does it need authentication? "
-          stop(paste0(mess, .txtDidYouSpell))
-        }
-        stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
-      }
-      stop(gitRefs)
-    }
+    stopOnGitRefsFails(gitRefs, fetf, tf, acct, repo, br)
+    # isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+    #   (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+    #     any(grepl("status.+403", gitRefs)))
+    #
+    # if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+    #   if (fetf) {
+    #     unlink(tf)
+    #   }
+    #   if (isNotFound) {
+    #     token <- getGitCredsToken()
+    #     # mess <- character()
+    #     if (is.null(token)) {
+    #       # mess <- "GitHub repository not accessible does it need authentication? "
+    #       stop(paste0(.txtGitHubMissingToken, "\n", .txtDidYouSpell))
+    #     }
+    #     stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
+    #   }
+    #   stop(gitRefs)
+    # }
 
     if (is(gitRefs, "try-error")) {
       if (isTRUE(any(grepl("cannot open the connection", gitRefs)))) {
@@ -1348,12 +1351,13 @@ masterMainHEAD <- function(url, need) {
   url <- masterMainHEAD(url, need) # makes 2
 
   # Authentication
-  token <- NULL
-  usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
-    requireNamespace("httr", quietly = TRUE)
-  if (usesGitCreds) {
-    token <- getGitCredsToken()
-  }
+  token <- checkForToken()
+  # token <- NULL
+  # usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
+  #   requireNamespace("httr", quietly = TRUE)
+  # if (usesGitCreds) {
+  #   token <- getGitCredsToken()
+  # }
   if (is.null(token)) {
     ghp <- Sys.getenv("GITHUB_PAT")
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
@@ -1380,7 +1384,7 @@ masterMainHEAD <- function(url, need) {
             for (tryNum in 1:2) {
               if (!isTRUE(getOption("Require.offlineMode"))) {
 
-                if (is.null(token)) {
+                if (is.null(token) && tryNum == 2) {
                   tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
                            error = function(e) {
                              if (is.null(token))
@@ -1814,19 +1818,24 @@ readLinesWithHandlers <- function(fff) {
       NA
     }
 
-    fs <- file.size(destFile)
-    fsTooSmallLikelyError <- fs < 100
-    if (any(fsTooSmallLikelyError)) {
-      checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
-      has404 <- sapply(checkFile, grepl, pattern = "404")
-      if (any(has404)) {
-        suggs <- offerGitHubSuggestions(account = Account, Package)
-        stop("The following repository does not seem to exist: \n",
-             paste(packageFullName[has404], collapse = "\n"),
-             "\n", .txtDidYouSpell,
-             "\nDid you mean one of:\n",
-             paste(suggs, collapse = "\n")
-        )
+    if (file.exists(destFile)) {
+      fs <- file.size(destFile)
+      fsTooSmallLikelyError <- fs < 100
+      if (any(fsTooSmallLikelyError)) {
+        checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
+        has404 <- sapply(checkFile, grepl, pattern = "404")
+        if (any(has404)) {
+          suggs <- offerGitHubSuggestions(account = Account, Package)
+          token <- checkForToken()
+          if (is.null(token))
+            warning("There is no github token")
+          stop("The following repository does not seem to exist: \n",
+               paste(packageFullName[has404], collapse = "\n"),
+               "\n", .txtDidYouSpell,
+               "\nDid you mean one of:\n",
+               paste(suggs, collapse = "\n")
+          )
+        }
       }
     }
 
@@ -1853,25 +1862,26 @@ offerGitHubSuggestions <- function(account, repo) {
 
   fetf <- file.exists(tf)
   gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
-  isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
-                    (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
-                    any(grepl("status.+403", gitRefs)))
-
-  if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
-    if (fetf) {
-      unlink(tf)
-    }
-    if (isNotFound) {
-      token <- getGitCredsToken()
-      mess <- character()
-      if (is.null(token)) {
-        mess <- "GitHub repository not accessible does it need authentication? "
-        stop(paste0(mess, .txtDidYouSpell))
-      }
-      stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
-    }
-    stop(gitRefs)
-  }
+  stopOnGitRefsFails(gitRefs, fetf, tf, account, repo, br = NULL)
+  # isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+  #                   (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+  #                   any(grepl("status.+403", gitRefs)))
+  #
+  # if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+  #   if (fetf) {
+  #     unlink(tf)
+  #   }
+  #   if (isNotFound) {
+  #     token <- getGitCredsToken()
+  #     # mess <- character()
+  #     if (is.null(token)) {
+  #       # mess <- "GitHub repository not accessible does it need authentication? "
+  #       stop(paste0(.txtGitHubMissingToken, "\n", .txtDidYouSpell))
+  #     }
+  #     stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
+  #   }
+  #   stop(gitRefs)
+  # }
 
   rl <- readLines(tf)
   poss <- grep(paste0("git_url.+"), rl, value = TRUE)
@@ -1885,3 +1895,37 @@ offerGitHubSuggestions <- function(account, repo) {
 githubDotCom <- "https://github.com"
 rawGithubDotCom <- "https://raw.githubusercontent.com"
 apiGithubDotCom <- "https://api.github.com"
+
+
+checkForToken <- function() {
+  token <- NULL
+  usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
+    requireNamespace("httr", quietly = TRUE)
+  if (usesGitCreds) {
+    token <- getGitCredsToken()
+  }
+  token
+}
+
+
+stopOnGitRefsFails <- function(gitRefs, fetf, tf, acct, repo, br) {
+  isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+                    (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+                    any(grepl("status.+403", gitRefs)))
+
+  if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+    if (fetf) {
+      unlink(tf)
+    }
+    if (isNotFound) {
+      token <- getGitCredsToken()
+      # mess <- character()
+      if (is.null(token)) {
+        # mess <- "GitHub repository not accessible does it need authentication? "
+        stop(paste0(.txtGitHubMissingToken, "\n", .txtDidYouSpell))
+      }
+      stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, ifelse(is.null(br), "", paste0("@", br)), ")"))
+    }
+    stop(gitRefs)
+  }
+}
