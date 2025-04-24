@@ -345,7 +345,6 @@ Require <- function(packages,
           deps2 <- deps2[deps[, c("packageFullName", "newLocalFile", "localFile")], on = "packageFullName"]
         }
         deps <- unique(deps2)
-        # allPackages <- sort(unique(unname(unlist(deps[["packageFullName"]]))))
         pkgDT <- deps
       } else {
         pkgDT <- toPkgDTFull(packages)
@@ -355,15 +354,11 @@ Require <- function(packages,
         pkgDT <- checkHEAD(pkgDT)
 
         pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+        pkgDT2 <- trimRedundancies(pkgDT)
+        if (!identical(NROW(pkgDT2), NROW(pkgDT))) browser()
+        pkgDT <- pkgDT2
 
-        # pkgDT <- toPkgDT(allPackages, deepCopy = TRUE)
-        # if (!is.null(deps$Additional_repositories))
-        #  pkgDT <- deps[!is.na(Additional_repositories)][pkgDT, on = "packageFullName"]
         pkgDT <- updatePackagesWithNames(pkgDT, packages)
-        # pkgDT <- parsePackageFullname(pkgDT)
-        # pkgDT <- parseGitHub(pkgDT)
-        # pkgDT <- removeDups(pkgDT)
-        # pkgDT <- removeBasePkgs(pkgDT)
         pkgDT <- recordLoadOrder(packages, pkgDT)
         if (!is.null(pkgDT[["Version"]]))
           setnames(pkgDT, old = "Version", new = "VersionOnRepos")
@@ -380,8 +375,6 @@ Require <- function(packages,
         }
         pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
         pkgDT <- whichToInstall(pkgDT, install, verbose)
-
-        # pkgDT <- removeRequireDeps(pkgDT, verbose)
 
         # Deal with "force" installs
         set(pkgDT, NULL, "forceInstall", FALSE)
