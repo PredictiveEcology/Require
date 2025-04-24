@@ -14,9 +14,18 @@ test_that("test 4", {
     )
   )
   test <- testWarnsInUsePleaseChange(warns)
-
   if (!getOption("Require.usePak", TRUE))
     testthat::expect_true(any(grepl("could not be installed", warns))) # {out, "simpleWarning")})
+
+  warns <- capture_warnings(
+    err <- capture_error(# silent = TRUE,
+               out <- capture.output(type = "message",
+                                     lala <- Require("PredictiveEcology/scfm@development")
+               )
+    )
+  )
+  expect_match(all = FALSE, err$message, .txtDidYouSpell)
+  expect_match(all = FALSE, err$message, "scfmutils")
 
   # for coverages that were missing
   pkgDTEmpty <- Require:::toPkgDT(character())

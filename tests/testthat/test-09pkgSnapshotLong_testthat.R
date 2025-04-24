@@ -154,17 +154,13 @@ test_that("test 09", {
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
-      # warnsReq <- capture_warnings(Require::Install("Require"))
-      # aaaa <<- 1
-      # on.exit(rm(aaaa, envir = .GlobalEnv))
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
       warns <- capture_warnings(
-        # mess <- capture_messages(
           out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
                          returnDetails = TRUE)
-        # )
       )
 
+      browser()
       # NLMR specification is for a version that doesn't exist
       NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
       expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
@@ -182,14 +178,27 @@ test_that("test 09", {
       )
       expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
 
+
+      # if (FALSE) {
+      #   pkgDep(c("scales (==1.2.1)", "timechange (==0.2.0)", "yulab.utils (==0.0.6)"))
+      #   rr <- rbindlist(out11$deps)
+      #   bb <- unique(rr[Package %in% c("timechange", "scales", "yulab.utils")])
+      #   setorderv(bb, "Package")
+      #   bb
+      # }
+
       neededBasedOnPackageFullNames <- rbindlistRecursive(out11$deps)
       dups <- duplicated(neededBasedOnPackageFullNames$Package)
       neededBasedOnPackageFullNames <- neededBasedOnPackageFullNames[!dups]
       neededBasedOnPackageFullNames[grep("biosim", ignore.case = TRUE, Package), Package := "BioSIM"] |> invisible()
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
+      # lme4 now has 3 extra package dependencies; because this is a base package, Require doesn't
+      #    override these and install the exact version of lme4 stated in the packageSnapshot file
+      packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
+                                                 c("rbibutils", "reformulas", "Rdpack"))
 
       # tooManyInstalled not right
-      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
+      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
       loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
       # if (isWindows()) {
@@ -204,6 +213,7 @@ test_that("test 09", {
       expect_true(allInIPareInPkgs)
 
       # Check based on Version number
+
       joined <- ip[pkgs, on = "Package"]
       whDiff <- (joined$Version != joined$i.Version)
       versionProblems <- joined[which(whDiff)]
@@ -214,7 +224,7 @@ test_that("test 09", {
         versionProblems$Package %in% devtoolsDeps))]
 
       # scales didn't install the "equals" version because a different package needs >= 1.3.0
-      versionProblems <- versionProblems[!Package %in% "scales"]
+      # versionProblems <- versionProblems[!Package %in% "scales"]
       expect_true(NROW(versionProblems) == 0)
 
       # See if any packages are missing
