@@ -1668,4 +1668,9 @@ snTr <- sn(TRUE)
 snFa <- sn(FALSE)
 caFa <- cached(FALSE)
 caTr <- cached(TRUE)
+
+
+on.exit2 <- function(expr, envir = parent.frame(), add = TRUE, after = TRUE) {
+  funExpr <- as.call(list(function() expr))
+  do.call(base::on.exit, list(funExpr, add, after), envir = envir)
 }
