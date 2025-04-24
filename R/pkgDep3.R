@@ -252,6 +252,9 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
         pkgDTBase[["FALSE"]] <- getDeps(pkgDTBase[["FALSE"]], which, recursive = recursive,
                                         repos = repos, type = type, libPaths = libPaths, verbose = verbose)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
+
+        pkgDTBase[["FALSE"]] <- forceEqualitiesIfAnyAndPoss(pkgDTBase[["FALSE"]])
+
         if (any(hasDeps)) {
           if (recursive %in% TRUE && any(pkgDTBase[["FALSE"]]$cachedTRUE %in% FALSE)) {
             which <- setdiff(which, "Suggests")
@@ -1621,4 +1624,47 @@ RequireDependencies <- function(libPaths = .libPaths()) {
     }
   }
   out
+}
+
+
+
+forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
+  pkgDTFull <- rbindlist(pkgDTEqualities[[depFa]], fill = TRUE)
+  bb <- rbindlist(list(pkgDTFull, pkgDTEqualities[, -grep(depFa, colnames(pkgDTEqualities)), with = FALSE]),
+                  fill = TRUE) # combine
+  cc <- trimRedundancies(bb)
+  ineq <- cc$inequality %in% "=="
+  pkgDTEquals <- cc[, c("Package", "packageFullName", "inequality", "versionSpec")][ineq]
+  .pkgEnv <- pkgEnv()
+  if (is.null(.pkgEnv[["pkgDTEqualities"]])) {
+    .pkgEnv[["pkgDTEqualities"]] <- pkgDTEquals
+    on.exit2(.pkgEnv[["pkgDTEqualities"]] <- NULL)
+
+  } else {
+    alreadyIn <- pkgDTEquals$packageFullName %in% .pkgEnv[["pkgDTEqualities"]]$packageFullName
+    if (!all(alreadyIn)) {
+      browser()
+      .pkgEnv[["pkgDTEqualities"]] <-
+        rbindlist(list(.pkgEnv[["pkgDTEqualities"]], pkgDTEquals), fill = TRUE)
+    }
+    pkgDTEquals <- .pkgEnv[["pkgDTEqualities"]]
+  }
+  # pfn <- cc$packageFullName[ineq]
+  # Find and use equalities, if they are there
+  pkgDTEqualities[[depFa]] <-
+    Map(pkgDTinner = pkgDTEqualities[[depFa]], function(pkgDTinner) {
+      needsUpdate <- match(pkgDTinner$Package, pkgDTEquals$Package) |> na.omit()
+      # needsUpdate <- which(pkgDTEquals$Package %in% pkgDTinner$Package)
+      if (length(needsUpdate)) {
+        ee <- rbindlist(list(pkgDTinner, pkgDTEquals[needsUpdate]), fill = TRUE)
+        pkgDTinner <- trimRedundancies(ee)
+        if (any(table(pkgDTinner$Package) > 1))
+          browser()
+        # needsUpdate2 <- na.omit(match(pkgDTEquals$Package, pkgDTinner$Package))
+        # pkgDTinner[needsUpdate2, packageFullName := pkgDTEquals$packageFullName[needsUpdate]]
+      }
+      pkgDTinner
+    })
+  pkgDTEqualities
+}
 }
