@@ -234,12 +234,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
                                          cleanPkgs(parentPackage)),
                    verbose = .depth <= (lim ) && verbose >= 3)
   deps <- NULL
-  snTr <- sn(TRUE)
-  snFa <- sn(FALSE)
-  depTr <- deps(TRUE)
-  depFa <- deps(FALSE)
-  caFa <- cached(FALSE)
-  caTr <- cached(TRUE)
 
   if (NROW(pkgDT) > 0) { # this will skip any pkgDT that has no deps, breaks out of recursion
     if (is(pkgDT, "list")) pkgDT <- pkgDT[[1]]
@@ -1667,4 +1661,11 @@ forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
     })
   pkgDTEqualities
 }
+
+depTr <- deps(TRUE)
+depFa <- deps(FALSE)
+snTr <- sn(TRUE)
+snFa <- sn(FALSE)
+caFa <- cached(FALSE)
+caTr <- cached(TRUE)
 }
