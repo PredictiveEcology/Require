@@ -160,23 +160,24 @@ test_that("test 09", {
                          returnDetails = TRUE)
       )
 
-      browser()
       # NLMR specification is for a version that doesn't exist
-      NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
-      expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
-      warns <- warns[-which(NLMRandVisualTestWarn)]
+      # NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
+      # expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
+      # warns <- warns[-which(NLMRandVisualTestWarn)]
 
       # Why tmap and tmaptools and stars not installed in first pass?
-      warns <- grep("tmap|tmaptools|stars|cannot open", warns, invert = TRUE, value = TRUE) #
+      # warns <- grep("tmap|tmaptools|stars|cannot open", warns, invert = TRUE, value = TRUE) #
 
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
-      "Please change required version e.g., NLMR (<=1.1)"
+      # "Please change required version e.g., NLMR (<=1.1)"
       warns <- capture_warnings(
         out11 <- pkgDep(unname(packageFullName)[-1], recursive = TRUE, simplify = FALSE)
       )
-      expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
+      # expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
+      expect_identical(warns, character(0))
+
 
 
       # if (FALSE) {
@@ -194,11 +195,12 @@ test_that("test 09", {
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
       # lme4 now has 3 extra package dependencies; because this is a base package, Require doesn't
       #    override these and install the exact version of lme4 stated in the packageSnapshot file
-      packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
-                                                 c("rbibutils", "reformulas", "Rdpack"))
+      # packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
+      #                                            c("rbibutils", "reformulas", "Rdpack"))
 
       # tooManyInstalled not right
-      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
+      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
+      # tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
       loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
       # if (isWindows()) {
@@ -237,10 +239,11 @@ test_that("test 09", {
       loded <- loadedNamespaces()
       missingPackages <- missingPackages[!Package %in% loded]
 
-      knownFails <- c(extractPkgName(.RequireDependencies),
-                      c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
-      if (isLinux())
-        knownFails <- c(knownFails, c("sodium", "keyring"))
+      knownFails <- character()
+      # knownFails <- c(extractPkgName(.RequireDependencies),
+      #                 c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
+      # if (isLinux())
+      #   knownFails <- c(knownFails, c("sodium", "keyring"))
 
 
       # Known missing --
@@ -276,7 +279,6 @@ test_that("test 09", {
 
 
     }
-    # setLibPaths(origLibPaths)
   }
 
 
