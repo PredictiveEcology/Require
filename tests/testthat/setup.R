@@ -101,7 +101,12 @@ if (Sys.info()["user"] %in% "emcintir") {
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   # googledrive::drive_auth()
-  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom", "Require.usePak")])
+  cat(paste0("EnvVar:\n  R_USER_CACHE_DIR: ", Sys.getenv("R_USER_CACHE_DIR"), "\n"))
+  cat(paste0("Num Cached Pkgs: ",
+             length(dir(file.path(Sys.getenv("R_USER_CACHE_DIR"), "packages/4.4"), recursive = FALSE)),
+             "\n"))
+  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose",
+                    "Require.cloneFrom", "Require.usePak")])
   print(paste("Cache size:", length(dir(cachePkgDir())), "files"))
 } else {
   # clean up cache on GA and other

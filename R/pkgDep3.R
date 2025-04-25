@@ -247,6 +247,10 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
                                         repos = repos, type = type, libPaths = libPaths, verbose = verbose)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
 
+        # if (any(grepl("scales", pkgDTBase[["FALSE"]]$Package))) {
+        #   aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
+        #   browser()
+        # }
         pkgDTBase[["FALSE"]] <- forceEqualitiesIfAnyAndPoss(pkgDTBase[["FALSE"]])
 
         if (any(hasDeps)) {
@@ -1627,6 +1631,8 @@ forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
   bb <- rbindlist(list(pkgDTFull, pkgDTEqualities[, -grep(depFa, colnames(pkgDTEqualities)), with = FALSE]),
                   fill = TRUE) # combine
   cc <- trimRedundancies(bb)
+  # if (NROW(pkgDTEqualities[Package %in% "scales"]) > 0 &&
+  #     (!identical(unique(pkgDTEqualities[Package %in% "scales"]$packageFullName), "scales (==1.2.1)"))) browser()
   ineq <- cc$inequality %in% "=="
   pkgDTEquals <- cc[, c("Package", "packageFullName", "inequality", "versionSpec")][ineq]
   .pkgEnv <- pkgEnv()
@@ -1649,14 +1655,9 @@ forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
     pkgDTEqualities[[depFa]] <-
       Map(pkgDTinner = pkgDTEqualities[[depFa]], function(pkgDTinner) {
         needsUpdate <- match(pkgDTinner$Package, pkgDTEquals$Package) |> na.omit()
-        # needsUpdate <- which(pkgDTEquals$Package %in% pkgDTinner$Package)
         if (length(needsUpdate)) {
           ee <- rbindlist(list(pkgDTinner, pkgDTEquals[needsUpdate]), fill = TRUE)
           pkgDTinner <- trimRedundancies(ee)
-          if (any(table(pkgDTinner$Package) > 1))
-            browser()
-          # needsUpdate2 <- na.omit(match(pkgDTEquals$Package, pkgDTinner$Package))
-          # pkgDTinner[needsUpdate2, packageFullName := pkgDTEquals$packageFullName[needsUpdate]]
         }
         pkgDTinner
       })
@@ -1672,7 +1673,7 @@ caFa <- cached(FALSE)
 caTr <- cached(TRUE)
 
 
-on.exit2 <- function(expr, envir = parent.frame(), add = TRUE, after = TRUE) {
+on.exit2 <- function(expr, envir = sys.frame(-2), add = TRUE, after = TRUE) {
   funExpr <- as.call(list(function() expr))
   do.call(base::on.exit, list(funExpr, add, after), envir = envir)
 }

@@ -48,7 +48,6 @@ test_that("test 09", {
           if (any(grepl("ERROR", b)))
             errs[[p]] <- b
         }
-        browser()
         pkgsToFix <- extractPkgName(names(errs))
         ava <- list()
         for (p in pkgsToFix) {
@@ -195,18 +194,22 @@ test_that("test 09", {
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
       # lme4 now has 3 extra package dependencies; because this is a base package, Require doesn't
       #    override these and install the exact version of lme4 stated in the packageSnapshot file
-      # packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
-      #                                            c("rbibutils", "reformulas", "Rdpack"))
+      packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
+                                                c("rbibutils", "reformulas", "Rdpack"))
 
       # tooManyInstalled not right
-      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
-      # tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
+      # tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
+      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
       loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
       # if (isWindows()) {
       #   tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
       # }
-
+      # Failure (test-09pkgSnapshotLong_testthat.R:210:7): test 09
+      # `tooManyInstalled` (`actual`) not identical to character(0) (`expected`).
+      #
+      # `actual`:   "Rdpack" "rbibutils" "reformulas"
+      # `expected`:
       expect_identical(tooManyInstalled, character(0))
 
       ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
