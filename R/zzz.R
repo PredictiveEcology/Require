@@ -15,7 +15,8 @@ envPkgCreate()
     Sys.unsetenv("R_REQUIRE_CACHE")
     ## will use `R_USER_CACHE_DIR` as base path for setting `R_REQUIRE_CACHE`;
     ## NOTE: do not modify `R_USER_CACHE_DIR` (see #124).
-    defCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
+    defCacheDir <- tools::R_user_dir("Require", which = "cache") |>
+      checkPath(create = TRUE)
     Sys.setenv("R_REQUIRE_CACHE" = defCacheDir)
   }
 
@@ -45,7 +46,7 @@ envPkgCreate()
   }
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
-  possCacheDir <- cacheGetOptionCachePkgDir()
+  possCacheDir <- cacheGetOptionCachePkgDir() |> checkPath(create = TRUE)
   # if (!is.null(possCacheDir)) {
   #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
   # }
