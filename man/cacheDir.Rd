@@ -31,16 +31,15 @@ directory associated with the \code{Require} package.
 }
 \details{
 To set a different directory than the default, set the system variable:
-\code{R_USER_CACHE_DIR = "somePath"} and/or \code{R_REQUIRE_PKG_CACHE = "somePath"}
+\code{R_REQUIRE_CACHE = "somePath"} and/or \code{R_REQUIRE_PKG_CACHE = "somePath"}
 e.g., in \code{.Renviron} file or \code{Sys.setenv()}. See Note below.
 }
 \note{
-Currently, there are 2 different Cache directories used by Require:
-\code{cacheDir} and \code{cachePkgDir}. The \code{cachePkgDir}
-is intended to be a sub-directory of the \code{cacheDir}. If you set
-\code{Sys.setenv("R_USER_CACHE_DIR" = "somedir")}, then both the package cache
-and cache dirs will be set, with the package cache a sub-directory. You can, however,
-set them independently, if you set \code{"R_USER_CACHE_DIR"} and \code{"R_REQUIRE_PKG_CACHE"}
-environment variable. The package cache can also be set with
-\code{options("Require.cachePkgDir" = "somedir")}.
+There are two different cache directories used by Require: \code{cacheDir} and \code{cachePkgDir}.
+The \code{cachePkgDir} is intended to be a sub-directory of the \code{cacheDir}.
+If you set \code{Sys.setenv("R_REQUIRE_CACHE" = "somedir")}, then both the package cache
+and cache dirs will be set, with the package cache a sub-directory.
+You can, however, set them independently, if you set \code{"R_REQUIRE_CACHE"} and
+\code{"R_REQUIRE_PKG_CACHE"} environment variables.
+The package cache can also be set with \code{options("Require.cachePkgDir" = "somedir")}.
 }
