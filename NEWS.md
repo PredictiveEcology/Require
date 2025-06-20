@@ -5,6 +5,7 @@
 * better fails when status is 403 for package dependency checking
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 * resolved failure to install when using `(HEAD)` in some cases for packages in custom repositories
+* use `R_REQUIRE_CACHE` environment variable for setting the cache directory instead of modifying `R_USER_CACHE_DIR` (#124);
 
 # Require 1.0.1
 
