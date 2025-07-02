@@ -9,22 +9,26 @@ envPkgCreate()
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()
-  # Have to set this first for pak to work in vanilla session
-  existing <- Sys.getenv("R_USER_CACHE_DIR")
+  ## have to set this first for pak to work in vanilla session
+  existing <- Sys.getenv("R_REQUIRE_CACHE")
   if (!nzchar(existing)) {
-    Sys.unsetenv("R_USER_CACHE_DIR")
-    defCacheDir <- normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
-    Sys.setenv("R_USER_CACHE_DIR" = defCacheDir)
+    Sys.unsetenv("R_REQUIRE_CACHE")
+    ## will use `R_USER_CACHE_DIR` as base path for setting `R_REQUIRE_CACHE`;
+    ## NOTE: do not modify `R_USER_CACHE_DIR` (see #124).
+    defCacheDir <- tools::R_user_dir("Require", which = "cache") |>
+      checkPath(create = TRUE)
+    Sys.setenv("R_REQUIRE_CACHE" = defCacheDir)
   }
 
   # if (FALSE) {
-  if (isTRUE(getOption("Require.usePak")))
-    if (requireNamespace("pak"))
+  if (isTRUE(getOption("Require.usePak"))) {
+    if (requireNamespace("pak")) {
       existingCacheDir <- pak::cache_summary()$cachepath
-  #   if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
-  #     Sys.setenv("R_USER_CACHE_DIR" = tempdir3())
-  # }
-
+    }
+    # if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
+    #   Sys.setenv("R_REQUIRE_CACHE" = tempdir3())
+    # }
+  }
 
   opts.Require <- RequireOptions()
   toset <- !(names(opts.Require) %in% names(opts))
@@ -37,12 +41,12 @@ envPkgCreate()
   #   }
   # }
   .RequireDependencies <<- RequireDependencies()
-  if (!isTRUE("sys" %in% .RequireDependencies))
-    .RequireDependencies <- c("Require", "data.table (>= 1.10.4)", "methods", "sys", "tools",
-                              "utils")
+  if (!isTRUE("sys" %in% .RequireDependencies)) {
+    .RequireDependencies <- c("Require", "data.table (>= 1.10.4)", "methods", "sys", "tools", "utils")
+  }
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
-  possCacheDir <- cacheGetOptionCachePkgDir()
+  possCacheDir <- cacheGetOptionCachePkgDir() |> checkPath(create = TRUE)
   # if (!is.null(possCacheDir)) {
   #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
   # }

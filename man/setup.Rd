@@ -40,8 +40,7 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{Require} function, when \code{verbose >= 2}, also returns details as if
 \code{returnDetails = TRUE} (for backwards compatibility).}
 
-\item{removePackages}{Deprecated. Please remove packages manually from
-the .libPaths()}
+\item{removePackages}{Deprecated. Please remove packages manually from \code{.libPaths()}}
 }
 \description{
 \code{setup} and \code{setupOff} are currently deprecated.
