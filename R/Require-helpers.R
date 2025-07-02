@@ -752,7 +752,7 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 
   grSplit <- strsplit(gitRepo, "/|@")
 
-  repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
+  repo <- lapply(grSplit, function(grsplit) grsplit[[min(2, length(grsplit))]])
   names(grSplit) <- repo
   names(repo) <- repo
   grAcct <- strsplit(gitRepo, "/") # only account and repo
