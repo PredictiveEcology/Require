@@ -1022,8 +1022,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       return(gitRefs)
     }
     if (length(gitRefs) > 1) {
-      # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
-      #   Was easier to collapse the individual lines, then re-split
+      ## Seems to sometimes come out as individual lines; sometimes as one long concatenates string
+      ##   Was easier to collapse the individual lines, then re-split
       gitRefs <- paste(gitRefs, collapse = "")
     }
     gitRefsSplit <- strsplit(gitRefs, "},")[[1]] # this splits onto separate lines
@@ -1035,6 +1035,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       # br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
       # br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
     }
+
     for (branch in br) { # will be length 1 in most cases except master/main
       whHasBr <- which(vapply(gitRefsSplit2, function(xx) {
         any(grepl(paste0(".+refs/.+/+", branch, "\""), xx))
@@ -1043,8 +1044,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
         break
       }
     }
-    # This will catch cases where the RequireGitHubCacheDir() doesn't have it,
-    #    but it is there (e.g., a new branch or new gitRefs)... this will deleted
+    ## This will catch cases where the RequireGitHubCacheDir() doesn't have it,
+    ##    but it is there (e.g., a new branch or new gitRefs)... this will deleted
     if (length(whHasBr) == 0) {
       if (ii %in% 1) {
         unlink(tf)

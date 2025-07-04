@@ -177,5 +177,4 @@ test_that("test 6", {
   repr[["RSQLite"]] <- NULL
   reprWORSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
   testthat::expect_true(identical(sort(reprSimple$Recursive$Remaining), sort(reprWORSQLIte)))
-
 })
