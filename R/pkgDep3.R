@@ -394,10 +394,6 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
   return(pkgDT)
 }
 
-
-
-
-
 pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   fillDefaults(pkgDep)
 
