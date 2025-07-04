@@ -366,7 +366,7 @@ installedVers <- function(pkgDT, libPaths) {
   # pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
     # ip2 <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
-    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, other = "LibPath", which = NULL, packages = pkgDT$Package))#, other = c("Package", "Version"))) # these 2 are defaults
+    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, other = "LibPath", which = NULL, packages = pkgDT$Package)) # , other = c("Package", "Version"))) # these 2 are defaults
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -524,9 +524,9 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 }
 
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
-  theTest <- (endsWith(fn, "zip") & isWindows() ) |
+  theTest <- (endsWith(fn, "zip") & isWindows()) |
     (grepl("R_x86", fn) & !isWindows() & !isMacOSX()) |
-    (endsWith(fn, "tgz") & isMacOSX() )
+    (endsWith(fn, "tgz") & isMacOSX())
   if (isTRUE(needRepoCheck)) {
     if (isWindows() || isMacOSX()) {
       binRepo <- isBinaryCRANRepo(curCRANRepo = repos)
@@ -912,7 +912,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
           subFolderNP <- normPath(file.path(bad, subFolder))
           origOut <- grep(subFolderNP, origOut, value = TRUE)
           outNP <- grep(subFolderNP, origOut, value = TRUE)
-          outNP <- gsub(subFolderNP, newFolder, outNP )
+          outNP <- gsub(subFolderNP, newFolder, outNP)
         } else {
           outNP <- gsub(bad, newFolder, outNP)
         }
@@ -948,7 +948,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
   }
 
   for (ii in 1:2) {
-    tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_",acct, "@", repo))
+    tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_", acct, "@", repo))
     downloadNow <- TRUE
     if (file.exists(tf)) {
       if ((difftime(Sys.time(), file.info(tf)$mtime, units = "sec")) < 60) {
@@ -991,8 +991,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       return(gitRefs)
     }
     if (length(gitRefs) > 1) {
-      # Seems to sometimes come out as individual lines; sometimes as one long concatenates string
-      #   Was easier to collapse the individual lines, then re-split
+      ## Seems to sometimes come out as individual lines; sometimes as one long concatenates string
+      ##   Was easier to collapse the individual lines, then re-split
       gitRefs <- paste(gitRefs, collapse = "")
     }
     gitRefsSplit <- strsplit(gitRefs, "},")[[1]] # this splits onto separate lines
@@ -1004,6 +1004,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       # br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
       # br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
     }
+
     for (branch in br) { # will be length 1 in most cases except master/main
       whHasBr <- which(vapply(gitRefsSplit2, function(xx) {
         any(grepl(paste0(".+refs/.+/+", branch, "\""), xx))
@@ -1012,8 +1013,8 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
         break
       }
     }
-    # This will catch cases where the RequireGitHubCacheDir() doesn't have it,
-    #    but it is there (e.g., a new branch or new gitRefs)... this will deleted
+    ## This will catch cases where the RequireGitHubCacheDir() doesn't have it,
+    ##    but it is there (e.g., a new branch or new gitRefs)... this will deleted
     if (length(whHasBr) == 0) {
       if (ii %in% 1) {
         unlink(tf)
@@ -1122,7 +1123,9 @@ saveGitHubSHAsToDisk <- function(preShas) {
   pe <- pkgEnv()
   if (exists(.txtGetSHAfromGitHub, envir = pe, inherits = FALSE)) {
     obj <- getSHAFromPkgEnv()
-    needSave <- if (missing(preShas)) { TRUE } else {
+    needSave <- if (missing(preShas)) {
+      TRUE
+    } else {
       length(setdiffNamed(as.list(lapply(obj, function(x) x[[2]]$output)), preShas)) > 0
     }
     fn <- getSHAFromGitHubDBFilename() # can return character() if RPackageCache is NULL; but here that is not possible
@@ -1376,22 +1379,24 @@ masterMainHEAD <- function(url, need) {
   outNotMasterMain <- outMasterMain <- character()
 
   ret <- withCallingHandlers({
-
     for (i in 1:2) {
       if (!is.null(urls[["FALSE"]])) {
         outNotMasterMain <-
           Map(URL = urls[["FALSE"]], MoreArgs = list(df = destfile), function(URL, df) {
             for (tryNum in 1:2) {
               if (!isTRUE(getOption("Require.offlineMode"))) {
-
                 if (is.null(token) && tryNum == 2) {
-                  tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
-                           error = function(e) {
-                             if (is.null(token))
-                               e$message <- stripGHP(ghp, e$message)
-                             if (tryNum > 1)
-                               messageVerbose(e$message, verbose = verbose)
-                           })
+                  tryCatch({
+                    if (!dir.exists(dirname(df))) dir.create(df, recursive = TRUE)
+                    download.file(URL, destfile = df, quiet = TRUE) ## need TRUE to hide ghp
+                  },
+                  error = function(e) {
+                    if (is.null(token))
+                      e$message <- stripGHP(ghp, e$message)
+                    if (tryNum > 1)
+                      messageVerbose(e$message, verbose = verbose)
+                    }
+                  )
                 } else {
                   a <- try(GETWauthThenNonAuth(url, token, verbose = verbose))
                   if (is(a, "try-error")) {

@@ -1,10 +1,10 @@
-utils::globalVariables(
-  c("Additional_repositories", "githubPkgName",
-    "localBranch", "localFiles", "localRepo", "installedSha", "localUsername",
-    "newPackageFullName", "DESCFileFull", "correctVersionInCache", "descFiles",
-    "..keep", "..keepShort", "..onlyKeep", "..keep", "..keepCols", "..keepColsOuter",
-    "shas")
-)
+utils::globalVariables(c(
+  "..keep", "..keep", "..keepCols", "..keepColsOuter", "..keepShort",
+  "..onlyKeep", "Additional_repositories", "correctVersionInCache",
+  "DESCFileFull", "descFiles", "githubPkgName", "installedSha",
+  "localBranch", "localFiles", "localRepo", "localUsername", "newPackageFullName",
+  "shas"
+))
 
 #' Determine package dependencies
 #'
@@ -118,7 +118,7 @@ pkgDep <- function(packages,
   purge <- purgePkgDep(purge)
   # purge <- dealWithCache(purge)
 
-  if (is.null(get0("stRequire", whereInStack("stRequire")))) {# if this is NOT called from Require
+  if (is.null(get0("stRequire", whereInStack("stRequire")))) { # if this is NOT called from Require
     on.exit(
       checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
     )
@@ -159,39 +159,39 @@ pkgDep <- function(packages,
                 "githubPkgName", "repoLocation", ".depth", "which", "parentPackage")
     dotDepth <- ".depth"
 
-    set(deps, NULL, #whHasDeps,
+      set(deps, NULL, # whHasDeps,
         depsCol,
         Map(dep = deps[[depsCol]], self = deps[["packageFullName"]],
-            # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
-            function(dep, self) {
-              if (!is.null(dep)) {
+          # Map(dep = deps[[depsCol]][whHasDeps], self = deps[["packageFullName"]][whHasDeps],
+          function(dep, self) {
+            if (!is.null(dep)) {
 
-                  rmCols <- intersect(colnames(dep), c(deps(TRUE), deps(FALSE)))
-                  if (length(rmCols))
-                    set(dep, NULL, rmCols, NULL)
-                  # if (dotDepth %in% colnames(dep) && !all(diff(dep[[dotDepth]]) >= 0)) {
-                  #   if (!exists("sorted")) sorted <<- 0
-                  #   sorted <<- sorted + 1
-                  #   setorderv(dep, cols = dotDepth)
-                  # } else {
-                  #   if (!exists("unsorted")) unsorted <<- 0
-                  #   unsorted <<- unsorted + 1
-                  # }
+              rmCols <- intersect(colnames(dep), c(deps(TRUE), deps(FALSE)))
+              if (length(rmCols))
+                set(dep, NULL, rmCols, NULL)
+              # if (dotDepth %in% colnames(dep) && !all(diff(dep[[dotDepth]]) >= 0)) {
+              #   if (!exists("sorted")) sorted <<- 0
+              #   sorted <<- sorted + 1
+              #   setorderv(dep, cols = dotDepth)
+              # } else {
+              #   if (!exists("unsorted")) unsorted <<- 0
+              #   unsorted <<- unsorted + 1
+              # }
 
-                  keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
-                  if (simplify >= 0)
-                    dep <- dep[!duplicated(dep[["Package"]])]
-                  set(dep, NULL, c("packageFullName", "parentPackage"),
-                      list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
-                  dep <- rmBase(includeBase, dep)
-                  dep <- dep[, ..keepCols] # includeSelf added some cols
-                  # setnames(dep, old = depsCol, new = "deps")
-                }
-                dep <- addSelf(includeSelf, dep, self)
-                if (!is.null(dep))
-                  setorderv(dep, cols = c("Package", intersect(dotDepth, colnames(dep))))# <- dep[order(dep$Package)]
-                dep
-              }))
+              keepCols <- intersect(colnames(dep), c(keepCols, .txtGitHubParsedCols))
+              if (simplify >= 0)
+                dep <- dep[!duplicated(dep[["Package"]])]
+              set(dep, NULL, c("packageFullName", "parentPackage"),
+                list(cleanPkgs(dep[["packageFullName"]]), cleanPkgs(dep[["parentPackage"]])))
+              dep <- rmBase(includeBase, dep)
+              dep <- dep[, ..keepCols] # includeSelf added some cols
+              # setnames(dep, old = depsCol, new = "deps")
+            }
+            dep <- addSelf(includeSelf, dep, self)
+            if (!is.null(dep))
+              setorderv(dep, cols = c("Package", intersect(dotDepth, colnames(dep)))) # <- dep[order(dep$Package)]
+            dep
+          }))
 
       keepColsOuter <- c("Package", "packageFullName", "parentPackage", depsCol)
       keepColsOuter <- intersect(colnames(deps), keepColsOuter)
@@ -284,10 +284,10 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
             if (length(whNotHasRecTRUE)) {
               if (!is.null(pkgDTBase[["FALSE"]][[snFa]]))
                 set(pkgDTBase[["FALSE"]], whNotHasRecTRUE, snTr,
-                    pkgDTBase[["FALSE"]][[snFa]][whNotHasRecTRUE])
+                  pkgDTBase[["FALSE"]][[snFa]][whNotHasRecTRUE])
               if (!is.null(pkgDTBase[["FALSE"]][[depFa]]))
                 set(pkgDTBase[["FALSE"]], whNotHasRecTRUE, depTr,
-                    pkgDTBase[["FALSE"]][[depFa]][whNotHasRecTRUE])
+                  pkgDTBase[["FALSE"]][[depFa]][whNotHasRecTRUE])
             }
             # noSnTr <- which(is.na(pkgDTBase[["FALSE"]][[snTr]]))
             # set(pkgDTBase[["FALSE"]],  NULL, snTr, gsub("FALSE$", "TRUE", pkgDTBase[["FALSE"]][[snTr]]))
@@ -308,12 +308,12 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
 
             isNULL <- sapply(pkgDTBase[["FALSE"]][[depTr]][whHasRecursiveTRUE], is.null)
             if (any(!isNULL)) {
-              assignPkgDTdepsToSaveNames(pkgDTBase[["FALSE"]], recursive = TRUE)#,
-                                         #rowsToUpdate = whHasRecursiveTRUE[!isNULL])
+              assignPkgDTdepsToSaveNames(pkgDTBase[["FALSE"]], recursive = TRUE) # ,
+              # rowsToUpdate = whHasRecursiveTRUE[!isNULL])
               # if (!all(sapply(seq(NROW(pkgDT))[!is.na(pkgDT$snFALSE)], function(i)
               #   isTRUE(all.equal(pkgDT[[depTr]][[i]], get(pkgDT[[snTr]][i], envir = envPkgDepDeps()))))))
             }
-            #}
+            # }
           }
         } else {
           keep <- match(colnames(pkgDTBase[["FALSE"]]), c(depFa, caFa)) |> na.omit()
@@ -366,7 +366,7 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
   }
 
   if (any(!pkgDT[[cached(recursive)]] %in% TRUE) &&
-      sum(!pkgDT[["Package"]][!pkgDT[[cached(recursive)]]] %in% .basePkgs)) {
+    sum(!pkgDT[["Package"]][!pkgDT[[cached(recursive)]]] %in% .basePkgs)) {
 
     recursiveHere <- FALSE
     set(pkgDT, NULL, "ord", seq(NROW(pkgDT)))
@@ -408,7 +408,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   if (!is.data.table(pkgDT))
     pkgDT <- toPkgDT(pkgDT) |> parsePackageFullname()
 
-  pkgDT <- #try(
+  pkgDT <- # try(
     joinToAvailablePackages(pkgDT, repos, type, which, verbose)
 
   if (!isTRUE(getOption("Require.offlineMode") %in% TRUE)) { # if available.packages wasn't available, it turns offlineMode TRUE
@@ -440,7 +440,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       # set(pkgDTVerNums$`TRUE`, NULL, "keep", NULL) # remove "keep" column; no longer needed
       # pkgDT <- rbindlist(pkgDTVerNums, fill = TRUE)
 
-      #, availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
+      # , availableVersionOK := compareVersion2(Version, versionSpec, inequality)]
     } else {
       set(pkgDT, NULL, "availableVersionOK", TRUE)
     }
@@ -503,7 +503,7 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = 
     pkgDT <- pkgDTNotLocal
   }
 
-  hasVersionNum <- grep(grepExtractPkgs, pkgDT$packageFullName)# pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
+  hasVersionNum <- grep(grepExtractPkgs, pkgDT$packageFullName) # pkgDT$hasVers # grep(grepExtractPkgs, pkgDT$packageFullName)
   isHEAD <- grep("(HEAD)", pkgDT$packageFullName)
   if (length(isHEAD)) {
     set(pkgDT, isHEAD, "availableVersionOK", TRUE)
@@ -904,7 +904,7 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
   sf <- sys.frames()
   len <- length(sf)
   for (en in rev(sf)) {
-    i  = i + 1
+    i  <- i + 1
     if (identical(en, envir))
       break
   }
@@ -1005,7 +1005,7 @@ installed.packagesDeps <- function(ip, libPaths, which) {
   if (!is.data.table(ip))
     ip <- as.data.table(ip)
 
-  ip[, deps := do.call(paste, append(.SD, list(sep = comma))), .SDcols=which]
+  ip[, deps := do.call(paste, append(.SD, list(sep = comma))), .SDcols = which]
 
   # remove trailing and initial commas
   set(ip, NULL, "deps", gsub("(, )+$", "", ip$deps))
@@ -1344,7 +1344,11 @@ getFromCache <- function(pkgDT, which, recursive) {
     keep <- intersect(c("Package", "packageFullName", deps(FALSE)), colnames(pkgDT))
     keepShort <- keep[1:2]
     dups <- duplicated(pkgDT[, ..keepShort])
-    pkgDT2 <- if (any(dups)) { pkgDT[which(!dups)] } else { pkgDT }
+    pkgDT2 <- if (any(dups)) {
+      pkgDT[which(!dups)]
+    } else {
+      pkgDT
+    }
 
     maybeHaveCacheDT <- pkgDT2[, ..keep][maybeHaveCacheDT, on = c("Package", "packageFullName")]
 
@@ -1352,7 +1356,7 @@ getFromCache <- function(pkgDT, which, recursive) {
       pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = TRUE, curCache)
     }
     # if (!allNotNull(pkgDT[[cached(TRUE)]]))
-      pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = FALSE, curCache)
+    pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = FALSE, curCache)
 
   }
   pkgDT
@@ -1360,31 +1364,30 @@ getFromCache <- function(pkgDT, which, recursive) {
 
 
 getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
-
   # if (!allNotNull(pkgDT[[cached(TRUE)]])) {
 
-    # if (recursive %in% FALSE && !allNotNull(pkgDT[[cached(TRUE)]])) {
-    if (is.null(pkgDT[[cached(recursive)]])) {
-      alreadyCached <- rep(FALSE, NROW(pkgDT))
-    } else {
-      alreadyCached <- pkgDT[[cached(recursive)]] %in% TRUE
-    }
+  # if (recursive %in% FALSE && !allNotNull(pkgDT[[cached(TRUE)]])) {
+  if (is.null(pkgDT[[cached(recursive)]])) {
+    alreadyCached <- rep(FALSE, NROW(pkgDT))
+  } else {
+    alreadyCached <- pkgDT[[cached(recursive)]] %in% TRUE
+  }
 
-    if (any(alreadyCached)) {
-      toRm <- maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName[alreadyCached]
-      maybeHaveCacheDT <- maybeHaveCacheDT[!toRm]
-    }
+  if (any(alreadyCached)) {
+    toRm <- maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName[alreadyCached]
+    maybeHaveCacheDT <- maybeHaveCacheDT[!toRm]
+  }
 
-    haveInCache <- endsWith(curCache[maybeHaveCacheDT$rowNum], as.character(recursive))
+  haveInCache <- endsWith(curCache[maybeHaveCacheDT$rowNum], as.character(recursive))
 
-    if (isTRUE(any(haveInCache))) {
-      isRecursiveTxt <- paste0("isRecursive", recursive)
+  if (isTRUE(any(haveInCache))) {
+    isRecursiveTxt <- paste0("isRecursive", recursive)
 
-      set(maybeHaveCacheDT, NULL, isRecursiveTxt, haveInCache)
-      maybeHaveCacheDTRec <- maybeHaveCacheDT[which(haveInCache)]
-      set(maybeHaveCacheDTRec, NULL, "curCache", curCache[maybeHaveCacheDTRec$rowNum])
+    set(maybeHaveCacheDT, NULL, isRecursiveTxt, haveInCache)
+    maybeHaveCacheDTRec <- maybeHaveCacheDT[which(haveInCache)]
+    set(maybeHaveCacheDTRec, NULL, "curCache", curCache[maybeHaveCacheDTRec$rowNum])
 
-      # quick for CRAN
+    # quick for CRAN
 
       getFromCurCachePoss <- grepl(paste0(sepForSaveNames, "(CRAN)", sepForSaveNames, paste0(".+", recursive, "$")),
                                    maybeHaveCacheDTRec$curCache)
@@ -1595,9 +1598,12 @@ RequireDependencies <- function(libPaths = .libPaths()) {
     out <- if (file.exists(tf)) { NULL } else {
       # This section should only happen if Require.installPackageSys < 1
       for (i in 1:2) { # can be flaky -- try 2x
-        inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
-                                 url = file.path(Repository, basename(PackageUrl)),
-                                 destfile = tf), silent = TRUE)
+        inn <- try({
+          if (!dir.exists(dirname(tf))) dir.create(tf, recursive = TRUE)
+          download.file(quiet = verbose <= 0 || verbose >= 5,
+                        url = file.path(Repository, basename(PackageUrl)),
+                        destfile = tf)
+        }, silent = TRUE)
         if (!is(inn, "try-error"))
           break
       }
