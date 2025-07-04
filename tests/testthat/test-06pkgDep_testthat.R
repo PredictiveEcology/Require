@@ -14,6 +14,7 @@ test_that("test 6", {
     length(a) == 1
   })
 
+  Install(c("curl", "httr", "waldo")) ## needed by testthat but not installed in tmp libPath
   skip_if_offline()
 
   testthat::expect_true({
