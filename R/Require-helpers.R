@@ -1420,7 +1420,7 @@ masterMainHEAD <- function(url, need) {
                 if (is.null(token)) {
                   tryCatch(
                     {
-                      if (!dir.exists(dirname(df))) dir.create(dirname(df))
+                      if (!dir.exists(dirname(df))) dir.create(dirname(df), recursive = TRUE)
                       download.file(URL, destfile = df, quiet = TRUE) # need TRUE to hide ghp
                     },
                     error = function(e) {

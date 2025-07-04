@@ -1582,7 +1582,7 @@ RequireDependencies <- function(libPaths = .libPaths()) {
     for (i in 1:2) { # can be flaky -- try 2x
       inn <- try(
         {
-          if (!dir.exists(dirname(tf))) dir.create(dirname(tf))
+          if (!dir.exists(dirname(tf))) dir.create(dirname(tf), recursive = TRUE)
           download.file(quiet = verbose <= 0 || verbose >= 5,
             url = file.path(Repository, basename(PackageUrl)),
             destfile = tf)
