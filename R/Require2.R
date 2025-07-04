@@ -1,34 +1,31 @@
 utils::globalVariables(c(
-  "..apCachedCols", "..cols", "..cols3", ".GRP",
-  "Additional_repositories", "Account", "Branch", "DESCFile",
-  "EqualsDoesntViolate", "GitSubFolder", "Repo", "Repository", "SHAonGH", "Version",
-  "VersionOnRepos", "availableVersionOKthisOne", "binOrSrc", "bothDepAndOrig", "comp",
-  "depOrOrig", "getOptions", "GTDoesntViolate",
-  "hasEqualsAndInequals", "hasGTAndInequals", "hasSubFolder", "hasVers", "hasVersionsToCompare",
-  "haveLocal", "ineq", "i.VersionOnRepos", "installSafeGroups", "installed",
-  "installedVersionOK", "isBinaryInstall", "isEquals", "isGT",
-  "keepBasedOnRedundantInequalities", "loadOrder", "localFile", "needInstall",
-  "PackageUrl", "repo", "oppositeInequals", "violationsDoubleInequals",
-  "verbose", "VersionOK", "versionSpec", "versionToKeep",
-  "violation", "violation2", "..keepCols1", "..colsToKeep",
-  "forceInstall", "keepForUpdate", "SHAonLocal", "hasInequality",
-  "i.localFile", "keep44", "keep55", "keepCols3",
-  "keepCols4", "keepCols5", "mayNeedSwitchToSrc", "needKeep", "newLocalFile",
-  "parentPackage", "whArchive"
+  "..apCachedCols", "..cols", "..cols3", "..colsToKeep", "..keepCols1",
+  ".GRP", "Account", "Additional_repositories", "availableVersionOKthisOne",
+  "binOrSrc", "bothDepAndOrig", "Branch", "comp", "depOrOrig",
+  "DESCFile", "EqualsDoesntViolate", "forceInstall", "getOptions",
+  "GitSubFolder", "GTDoesntViolate", "hasEqualsAndInequals", "hasGTAndInequals",
+  "hasInequality", "hasSubFolder", "hasVers", "hasVersionsToCompare",
+  "haveLocal", "i.localFile", "i.VersionOnRepos", "ineq", "installed",
+  "installedVersionOK", "installSafeGroups", "isBinaryInstall",
+  "isEquals", "isGT", "keep44", "keep55", "keepBasedOnRedundantInequalities",
+  "keepCols3", "keepCols4", "keepCols5", "keepForUpdate", "loadOrder",
+  "localFile", "mayNeedSwitchToSrc", "needInstall", "needKeep",
+  "newLocalFile", "oppositeInequals", "PackageUrl", "parentPackage",
+  "repo", "Repo", "Repository", "SHAonGH", "SHAonLocal", "verbose",
+  "Version", "VersionOK", "VersionOnRepos", "versionSpec", "versionToKeep",
+  "violation", "violation2", "violationsDoubleInequals", "whArchive"
 ))
 
-#' Repeatability-safe install and load packages, optionally with specific
-#' versions
+#' Rerun-safe (idempotent) install and load packages, optionally with specific versions
 #'
 #' This is an "all in one" function that will run `install.packages` for CRAN
-#' and GitHub <https://github.com/> packages and will install specific versions
-#' of each package if versions are specified either via an (in)equality (e.g.,
-#' `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
+#' and [GitHub](https://github.com/) packages and will install specific versions
+#' of each package if versions are specified either via an (in)equality
+#' (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an exact version) or with a
 #' `packageVersionFile`. If `require = TRUE`, the default, the function will
-#' then run `require` on all named packages that satisfy their version
-#' requirements. If packages are already installed (`packages` supplied), and
-#' their optional version numbers are satisfied, then the "install" component
-#' will be skipped.
+#' then run `require` on all named packages that satisfy their version requirements.
+#' If packages are already installed (`packages` supplied), and their optional
+#' version numbers are satisfied, then the "install" component will be skipped.
 #'
 #' @return `Require` is intended to replace `base::require`, thus it returns a
 #' logical, named vector indicating whether the named packages have been loaded.
@@ -158,8 +155,7 @@ utils::globalVariables(c(
 #'   function calls.
 #'
 #' @export
-#' @importFrom data.table data.table as.data.table setDT set is.data.table
-#'   rbindlist
+#' @importFrom data.table as.data.table data.table is.data.table rbindlist set setDT
 #' @importFrom data.table  :=  .I .SD setnames setorderv
 #' @importFrom utils available.packages capture.output compareVersion
 #' @importFrom utils install.packages packageVersion
@@ -196,29 +192,29 @@ utils::globalVariables(c(
 #'   #####################################################################################
 #'   # GitHub packages
 #'   if (requireNamespace("gitcreds", quietly = TRUE)) {
-#'     #if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
-#'       ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-#'       if (requireNamespace("curl")) {
-#'         Require("PredictiveEcology/fpCompare@development",
-#'           libPaths = ProjectPackageFolder,
-#'         )
-#'       }
-#'
-#'       # No install because it is there already
-#'       Install("PredictiveEcology/fpCompare@development",
+#'     # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+#'     ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+#'     if (requireNamespace("curl")) {
+#'       Require("PredictiveEcology/fpCompare@development",
 #'         libPaths = ProjectPackageFolder,
-#'       ) # the latest version on GitHub
-#'
-#'       ############################################################################
-#'       # Mixing and matching GitHub, CRAN, with and without version numbering
-#'       ############################################################################
-#'       pkgs <- c(
-#'         "remotes (<=2.4.1)", # old version
-#'         "digest (>= 0.6.28)", # recent version
-#'         "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
 #'       )
-#'       Require::Require(pkgs, libPaths = ProjectPackageFolder)
-#'     #}
+#'     }
+#'
+#'     # No install because it is there already
+#'     Install("PredictiveEcology/fpCompare@development",
+#'       libPaths = ProjectPackageFolder,
+#'     ) # the latest version on GitHub
+#'
+#'     ############################################################################
+#'     # Mixing and matching GitHub, CRAN, with and without version numbering
+#'     ############################################################################
+#'     pkgs <- c(
+#'       "remotes (<=2.4.1)", # old version
+#'       "digest (>= 0.6.28)", # recent version
+#'       "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+#'     )
+#'     Require::Require(pkgs, libPaths = ProjectPackageFolder)
+#'     # }
 #'   }
 #'   Require:::.cleanup(opts)
 #' }
@@ -317,22 +313,20 @@ Require <- function(packages,
     basePkgsToLoad <- packages[packages %in% .basePkgs]
 
     if (getOption("Require.usePak", TRUE)) {
-      opts <- options(repos = repos); on.exit(options(opts), add = TRUE)
+      opts <- options(repos = repos)
+      on.exit(options(opts), add = TRUE)
 
       log <- tempfile2(fileext = ".txt")
       withCallingHandlers(
-        pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose = verbose, packagesOrig)
-        , message = function(m) {
+        pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose = verbose, packagesOrig),
+        message = function(m) {
           if (verbose > 1)
             cat(m$message, file = log, append = TRUE)
           if (verbose < 1)
             invokeRestart("muffleMessage")
         }
       )
-
     } else {
-
-
       if (length(which)) {
         deps <- pkgDep(packages, simplify = FALSE,
                        purge = purge, libPaths = libPaths, recursive = TRUE,
@@ -529,7 +523,7 @@ build <- function(Package, VersionOnRepos, verbose, quiet) {
             #
             invisible()
           },
-          std_err = function(x){
+          std_err = function(x) {
             mess <- rawToChar(x)
             msgStdErrForBuild(mess, logFile, verbose)
             # cat(greyLight(mess), file = logFile, append = TRUE)
@@ -581,7 +575,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   }
 
   # for (i in 1:2) {
-  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type, verbose = verbose) )
+  (ap <- availablePackagesOverride(toInstall, repos, purge, type = type, verbose = verbose))
 
   if (is(ap, "try-error")) {
     browserDeveloper("Error 9566")
@@ -653,9 +647,9 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       add = TRUE
     )
 
-    #if (!getOption("Require.cachePkgDir") %in% FALSE)
+    # if (!getOption("Require.cachePkgDir") %in% FALSE)
     #  wd <- cachePkgDir()
-    #else
+    # else
     wd <- tmpdir
 
     # problem... building in cache dir has nice feature that zip is there immediately ...
@@ -904,7 +898,7 @@ whichToInstall <- function(pkgDT, install, verbose) {
 
 
 doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbose")) {
- needRequire <- require
+  needRequire <- require
   if (is.character(require)) {
     pkgDT[Package %in% require, require := TRUE]
   } else {
@@ -1082,7 +1076,7 @@ getVersionOnRepos <- function(pkgInstall, repos, purge, libPaths, type = getOpti
     hasRepos <- unlist(lapply(repos, function(xx) {
       # need try: invalid regular expression 'https://raw.githubusercontent.com/r-hub/repos/main/ubuntu-22.04/4.5/libc++', reason 'Invalid use of repetition operators'
       tryCatch(any(grepl(pattern = xx, x = unique(ap$Repository))), silent = TRUE, error = function(e) FALSE)
-      }))
+    }))
     if (all(hasRepos)) {
       break
     }
@@ -1167,7 +1161,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
 
 
       ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
-      if (getOption("Require.installPackagesSys") == 2 && NROW(ap))  {
+      if (getOption("Require.installPackagesSys") == 2 && NROW(ap)) {
         # ap <- pkgCRAN[pkgCRAN$availableVersionOK %in% TRUE]
         args <- list(repos = repos, type = type)
         file <- paste0(ap[["Package"]], "_", ap$VersionOnRepos)
@@ -1255,7 +1249,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
                  " not on CRAN; trying Archives"),
             verbose = verbose, verboseLevel = 1
           )
-          #}
+          # }
 
           if (any(pkgArchiveHasPU$`TRUE`[, .N, by = "Package"]$N > 1)) {
             # keep user supplied repos order, in case there are multiple repos that have the package
@@ -1340,7 +1334,7 @@ downloadGitHub <- function(pkgNoLocal, libPaths, verbose, install.packagesArgs, 
           args <- list(Account = aa$Account, Repo = aa$Repo, Branch = aa$Branch,
                        GitSubFolder = aa$GitSubFolder, verbose = verbose, Package = aa[["Package"]],
                        VersionOnRepos = aa$VersionOnRepos)
-          splitOn = c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
+          splitOn <- c("Account", "Repo", "Branch", "GitSubFolder", "VersionOnRepos", "Package")
           st <- system.time(
             dt <- sysInstallAndDownload(args, splitOn = splitOn, tmpdir = tmpdir, doLineVectorized = FALSE,
                                         "outfiles <- do.call(Require:::downloadAndBuildToLocalFile, args)",
@@ -1678,9 +1672,9 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
           paste0(" (grp ", unique(toInstall$installSafeGroups), " of ", numGroups, ")")
         } else {
           ""
-        }#,
-        #". Estimated time left: ",
-        #timeLeftAlt, "; est. finish: ", estTimeFinish
+        } # ,
+        # ". Estimated time left: ",
+        # timeLeftAlt, "; est. finish: ", estTimeFinish
       ),
       verbose = verbose, verboseLevel = 0
     )
@@ -1883,7 +1877,6 @@ getGitHubVersionOnRepos <- function(pkgGitHub) {
 #' @importFrom utils tail
 localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
                         VersionOnRepos, versionSpec, verbose = getOption("Require.verbose")) {
-
   ##### Not vectorized ######
   PackagePattern <- paste0("^", Package, "(\\_|\\-)+.*")
   whLocalFile <- grep(pattern = PackagePattern, x = basename(localFiles))
@@ -2003,7 +1996,6 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
 confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
                                                          ifViolation = c("removeEquals", "stop"),
                                                          verbose = getOption("Require.verbose")) {
-
   # Basically, if the package has no version specification, it can take "any version", so don't use it
   #   at all, unless it is the only description
   set(pkgDT, NULL, "hasInequality", !is.na(pkgDT[["inequality"]]))
@@ -2011,7 +2003,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   pkgDT <- pp[unique(na.omit(keep44))]
   if (!is.null(pkgDT[["parentPackage"]])) {
     pkgDT[, needKeep := grepl("\\(", parentPackage) | is.na(parentPackage)]
-    pkgDT[, keep55 := if(any(needKeep)) ifelse(needKeep | is.na(parentPackage), .I, NA) else .I, by = "Package"]
+    pkgDT[, keep55 := if (any(needKeep)) ifelse(needKeep | is.na(parentPackage), .I, NA) else .I, by = "Package"]
     pkgDT <- pkgDT[unique(na.omit(keep55))]
   }
 
@@ -2020,7 +2012,7 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
   pkgDT[,  oppositeInequals := any(grepl("<", inequality)) & any(grepl(">", inequality)), by = "Package"]
   pkgDT[, hasEqualsAndInequals := any(isEquals %in% TRUE) && any(isEquals %in% FALSE), by = "Package"]
 
-  if (any(pkgDT$hasEqualsAndInequals) ) {
+  if (any(pkgDT$hasEqualsAndInequals)) {
     pkgDT[hasEqualsAndInequals %in% TRUE, EqualsDoesntViolate := {
       out <- rep(NA, length.out = .N)
       wh <- which(isEquals)
@@ -2372,7 +2364,7 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
           pkgAddRepTmp <- rbindlist(pkgAddRepTmp)
           pkgInstallTmp2 <- pkgInstallTmp[, c("packageFullName", "tmpOrder", "Additional_repositories")]
           pkgInstallTmp2 <- unique(pkgInstallTmp2, by = c("packageFullName"))
-          pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"]#, allow.cartesian = TRUE]
+          pkgAddRep <- pkgInstallTmp2[!is.na(Additional_repositories)][pkgAddRepTmp, on = "packageFullName"] # , allow.cartesian = TRUE]
           set(pkgAddRep, NULL, intersect("i.tmpOrder", colnames(pkgAddRep)), NULL)
           pkgInstallTmp <- pkgInstallTmp[is.na(Additional_repositories)] # keep this for end of this chunk
           pkgInstallAvails[["FALSE"]] <- rbindlist(list(pkgInstallTmp, pkgAddRep), fill = TRUE, use.names = TRUE)
@@ -3241,9 +3233,9 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
         }
 
         set(ret, NULL, "dayBeforeTakenOffCRAN", dayBeforeTakenOffCRAN)
-        #} else {
+        # } else {
         #  set(ret, NULL, "dayBeforeTakenOffCRAN", NA_character_)
-        #}
+        # }
         setnames(ret, "mtime", "dayAfterPutOnCRAN")
         set(ret, NULL, "dayAfterPutOnCRAN", as.character(as.Date(ret$dayAfterPutOnCRAN)))
         set(ret, NULL, "dayBeforeTakenOffCRAN", as.character(as.Date(ret$dayBeforeTakenOffCRAN)))
@@ -3296,13 +3288,13 @@ canClone <- function(ip) {
   # if (isWindows()) {
   keepCols6 <- keepCols6 & ip[,  "NeedsCompilation"] == "no"
   # }
-  ip[keepCols6 %in% TRUE ,, drop = FALSE]
+  ip[keepCols6 %in% TRUE, , drop = FALSE]
 }
 
 cantClone <- function(ip) {
   RversionDot <- RversionDot()
   correctBuilt <- correctBuilt(ip, RversionDot)
-  ip[ (ip[, "NeedsCompilation"] == "yes" | correctBuilt %in% FALSE)  %in% TRUE ,, drop = FALSE]
+  ip[(ip[, "NeedsCompilation"] == "yes" | correctBuilt %in% FALSE)  %in% TRUE, , drop = FALSE]
 }
 
 RversionDot <- function() {
@@ -3373,7 +3365,6 @@ colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
 
 
 matchWithOriginalPackages <- function(pkgDT, packages) {
-
   # might be missing `require` column
   colsToKeep <- intersect(colnames(pkgDT), c("Package", "loadOrder", "require"))
   packagesDT <- pkgDT[, ..colsToKeep]
@@ -3395,9 +3386,10 @@ appendInstallResult <- function(pkgDT, rowsToUpdate, installResult, sep = "; ") 
       nas <- is.na(prevInstallResult)
       if (any(!nas)) {
         pkgDT[rowsToUpdate[which(!nas)],
-              installResult := paste(installResult, prevInstallResult[which(!nas)], sep = sep)]
+          installResult := paste(installResult, prevInstallResult[which(!nas)], sep = sep)]
       }
-    }}
+    }
+  }
   pkgDT
 
 }
@@ -3412,7 +3404,7 @@ packageHasError <- function(libs = .libPaths(), packages = NULL) {
 
     suppressWarnings(
       out <- Map(pkg = pkgs, function(pkg) {
-        f <- system.file('Meta', 'package.rds', package = pkg, lib.loc = lib)
+        f <- system.file("Meta", "package.rds", package = pkg, lib.loc = lib)
         tryCatch({readRDS(f); FALSE}, error = function(e) TRUE)
       })
     )
@@ -3512,7 +3504,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   preMess <- if (installPackages) {
     "\n  -- To install: "
   } else {
-    paste0("  -- Downloading", ifelse(nzchar(repos), paste0(" (from ", repos,")"), ""), ":\n")
+    paste0("  -- Downloading", ifelse(nzchar(repos), paste0(" (from ", repos, ")"), ""), ":\n")
   }
   fullMess <- character() # this will accumulate and regularly clear
   for (j in seq_along(vecList)) {
@@ -3562,7 +3554,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
   isRstudio <- isRstudio()
 
   fullMess <- character()
-  preMess <- if (installPackages)  "" else "Downloaded: "
+  preMess <- if (installPackages) "" else "Downloaded: "
 
   ll <- list()
   for (pid in pids) {
@@ -3647,10 +3639,10 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     # if (any(isError)) {
       if (any(vapply(ll, grepl, pattern = "cannot open URL", FUN.VALUE = logical(1)))) {
         setOfflineModeTRUE(verbose = verbose)
-      } #else {
-        # pull the plug and run without sys -- this seems to be failing on GA
-        #eval(parse(text = doLine))
-      #}
+    } # else {
+    # pull the plug and run without sys -- this seems to be failing on GA
+    # eval(parse(text = doLine))
+    # }
     # }
     # return(dt)
   } else if (downAndBuildLocal) {
@@ -3746,7 +3738,7 @@ splitVectors <- function(argsOrig, splitOn, method, installPackages) {
     vecList <- list(seq_along(argsOrig[[splitOn[1]]]))
   } else {
     vec <- seq_along(argsOrig[[splitOn[1]]])
-    chunk2 <- function(x,n) {
+    chunk2 <- function(x, n) {
       if (n == 1)
         list(1)
       else
@@ -3814,7 +3806,7 @@ sysDo <- function(installPackages, cmdLine, logFile, verbose) {
 }
 
 buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPaths) {
-  o <- options()[c('HTTPUserAgent', 'Ncpus')]
+  o <- options()[c("HTTPUserAgent", "Ncpus")]
   tf <- file.path(tmpdir, basename(tempfile(fileext = ".rds")))
   tf <- normalizePath(tf, winslash = "/", mustWork = FALSE)
   saveRDS(o, file = tf)
