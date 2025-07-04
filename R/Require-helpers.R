@@ -1417,13 +1417,17 @@ masterMainHEAD <- function(url, need) {
               if (!isTRUE(getOption("Require.offlineMode"))) {
 
                 if (is.null(token)) {
-                  tryCatch(download.file(URL, destfile = df, quiet = TRUE),# need TRUE to hide ghp
-                           error = function(e) {
-                             if (is.null(token))
-                               e$message <- stripGHP(ghp, e$message)
-                             if (tryNum > 1)
-                               messageVerbose(e$message, verbose = verbose)
-                           })
+                  tryCatch(
+                    {
+                      if (!dir.exists(dirname(df))) dir.create(dirname(df))
+                      download.file(URL, destfile = df, quiet = TRUE) # need TRUE to hide ghp
+                    },
+                    error = function(e) {
+                      if (is.null(token))
+                        e$message <- stripGHP(ghp, e$message)
+                      if (tryNum > 1)
+                        messageVerbose(e$message, verbose = verbose)
+                    })
                 } else {
                   a <- try(GETWauthThenNonAuth(url, token, verbose = verbose))
                   if (is(a, "try-error")) {
