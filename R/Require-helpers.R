@@ -90,7 +90,10 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       NULL
     }
 
-    lines <- readLinesWithHandlers(f)
+    if (isTRUE(any(file.exists(f))))
+      lines <- readLinesWithHandlers(f)
+    else
+      lines <- f
     # if (length(f) == 1) {
     #   withCallingHandlers(
     #     lines <- try(readLines(f), silent = TRUE),
@@ -1385,18 +1388,19 @@ masterMainHEAD <- function(url, need) {
           Map(URL = urls[["FALSE"]], MoreArgs = list(df = destfile), function(URL, df) {
             for (tryNum in 1:2) {
               if (!isTRUE(getOption("Require.offlineMode"))) {
-                if (is.null(token) && tryNum == 2) {
-                  tryCatch({
-                    if (!dir.exists(dirname(df))) dir.create(df, recursive = TRUE)
-                    download.file(URL, destfile = df, quiet = TRUE) ## need TRUE to hide ghp
-                  },
-                  error = function(e) {
-                    if (is.null(token))
-                      e$message <- stripGHP(ghp, e$message)
-                    if (tryNum > 1)
-                      messageVerbose(e$message, verbose = verbose)
-                    }
-                  )
+
+                if (is.null(token)) {
+                  tryCatch(
+                    {
+                      if (!dir.exists(dirname(df))) dir.create(dirname(df), recursive = TRUE)
+                      download.file(URL, destfile = df, quiet = TRUE) # need TRUE to hide ghp
+                    },
+                    error = function(e) {
+                      if (is.null(token))
+                        e$message <- stripGHP(ghp, e$message)
+                      if (tryNum > 1)
+                        messageVerbose(e$message, verbose = verbose)
+                    })
                 } else {
                   a <- try(GETWauthThenNonAuth(url, token, verbose = verbose))
                   if (is(a, "try-error")) {
@@ -1795,7 +1799,8 @@ readLinesWithHandlers <- function(fff) {
       warning(lines)
       lines <- character()
     }
-    if (isTRUE(any(grepl("404: Not Found", lines))))
+    any404 <- suppressWarnings(any(grepl("404: Not Found", lines)))
+    if (isTRUE(any404))
       lines <- character()
   } else {
     lines <- fff

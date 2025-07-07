@@ -247,10 +247,6 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
                                         repos = repos, type = type, libPaths = libPaths, verbose = verbose)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
 
-        # if (any(grepl("scales", pkgDTBase[["FALSE"]]$Package))) {
-        #   aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
-        #   browser()
-        # }
         pkgDTBase[["FALSE"]] <- forceEqualitiesIfAnyAndPoss(pkgDTBase[["FALSE"]])
 
         if (any(hasDeps)) {
@@ -451,6 +447,9 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       num <- NROW(pkgDTList$Archive$Package)
       messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
+      # browser() # check locals first
+
+
       pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
       wcr <- whichCatRecursive(which, recursive = FALSE)
       hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
@@ -1594,12 +1593,10 @@ RequireDependencies <- function(libPaths = .libPaths()) {
     out <- if (file.exists(tf)) { NULL } else {
       # This section should only happen if Require.installPackageSys < 1
       for (i in 1:2) { # can be flaky -- try 2x
-        inn <- try({
-          if (!dir.exists(dirname(tf))) dir.create(tf, recursive = TRUE)
-          download.file(quiet = verbose <= 0 || verbose >= 5,
-                        url = file.path(Repository, basename(PackageUrl)),
-                        destfile = tf)
-        }, silent = TRUE)
+        inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
+                                 # url = file.path(Repository, basename(PackageUrl)),
+                                 url = file.path(Repository, PackageUrl),
+                                 destfile = tf), silent = TRUE)
         if (!is(inn, "try-error"))
           break
       }
@@ -1633,10 +1630,9 @@ forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
   bb <- rbindlist(list(pkgDTFull, pkgDTEqualities[, -grep(depFa, colnames(pkgDTEqualities)), with = FALSE]),
                   fill = TRUE) # combine
   cc <- trimRedundancies(bb)
-  # if (NROW(pkgDTEqualities[Package %in% "scales"]) > 0 &&
-  #     (!identical(unique(pkgDTEqualities[Package %in% "scales"]$packageFullName), "scales (==1.2.1)"))) browser()
   ineq <- cc$inequality %in% "=="
-  pkgDTEquals <- cc[, c("Package", "packageFullName", "inequality", "versionSpec")][ineq]
+  pkgDTEquals <- cc[ineq]
+  # pkgDTEquals <- cc[, c("Package", "packageFullName", "inequality", "versionSpec")][ineq]
   .pkgEnv <- pkgEnv()
   if (is.null(.pkgEnv[["pkgDTEqualities"]])) {
     .pkgEnv[["pkgDTEqualities"]] <- pkgDTEquals
