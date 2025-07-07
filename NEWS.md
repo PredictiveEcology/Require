@@ -6,8 +6,8 @@ version 1.0.2
 ## Bugfixes
 * several minor
 * better fails when status is 403 for package dependency checking
-* `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 * use `R_REQUIRE_CACHE` environment variable for setting the cache directory instead of modifying `R_USER_CACHE_DIR` (#124);
+* `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 
 version 1.0.1
 =============
