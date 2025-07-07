@@ -252,6 +252,9 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
         pkgDTBase[["FALSE"]] <- getDeps(pkgDTBase[["FALSE"]], which, recursive = recursive,
                                         repos = repos, type = type, libPaths = libPaths, verbose = verbose)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
+
+        pkgDTBase[["FALSE"]] <- forceEqualitiesIfAnyAndPoss(pkgDTBase[["FALSE"]])
+
         if (any(hasDeps)) {
           if (recursive %in% TRUE && any(pkgDTBase[["FALSE"]]$cachedTRUE %in% FALSE)) {
             which <- setdiff(which, "Suggests")
@@ -454,6 +457,9 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       num <- NROW(pkgDTList$Archive$Package)
       messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
+      # browser() # check locals first
+
+
       pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
       wcr <- whichCatRecursive(which, recursive = FALSE)
       hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
@@ -1575,27 +1581,54 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 .DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
   tf <- file.path(cachePkgDir(), basename(PackageUrl))
   rmEmptyFiles(tf)
-  out <- if (file.exists(tf)) {
-    NULL
-  } else {
-    # This section should only happen if Require.installPackageSys < 1
-    for (i in 1:2) { # can be flaky -- try 2x
-      inn <- try(
-        {
-          if (!dir.exists(dirname(tf))) dir.create(dirname(tf), recursive = TRUE)
-          download.file(quiet = verbose <= 0 || verbose >= 5,
-            url = file.path(Repository, basename(PackageUrl)),
-            destfile = tf)
-        },
-        silent = TRUE)
-      if (!is(inn, "try-error"))
+  for (attempt in 1:2) {
+    out <- if (file.exists(tf)) { NULL } else {
+      # This section should only happen if Require.installPackageSys < 1
+      for (i in 1:2) { # can be flaky -- try 2x
+        inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
+                                 # url = file.path(Repository, basename(PackageUrl)),
+                                 url = file.path(Repository, PackageUrl),
+                                 destfile = tf), silent = TRUE)
+        if (!is(inn, "try-error"))
+          break
+      }
+      inn
+    }
+    if (is(out, "try-error")) {
+      messageVerbose(out, verbose = verbose)
+      out <- NA
+    } else {
+      DESCFile <- file.path(Package, "DESCRIPTION")
+      # while(ret <- )
+      ret <- untar(tf, files = DESCFile, exdir = tmpdir)
+      if (ret > 0) {
+        # means an error
+        redownload <- TRUE
+        unlink(tf, force = TRUE)
+      } else {
+        out <- file.path(tmpdir, DESCFile)
         break
     }
     inn
   }
-  if (is(out, "try-error")) {
-    messageVerbose(out, verbose = verbose)
-    out <- NA
+  out
+}
+
+
+
+forceEqualitiesIfAnyAndPoss <- function(pkgDTEqualities) {
+  pkgDTFull <- rbindlist(pkgDTEqualities[[depFa]], fill = TRUE)
+  bb <- rbindlist(list(pkgDTFull, pkgDTEqualities[, -grep(depFa, colnames(pkgDTEqualities)), with = FALSE]),
+                  fill = TRUE) # combine
+  cc <- trimRedundancies(bb)
+  ineq <- cc$inequality %in% "=="
+  pkgDTEquals <- cc[ineq]
+  # pkgDTEquals <- cc[, c("Package", "packageFullName", "inequality", "versionSpec")][ineq]
+  .pkgEnv <- pkgEnv()
+  if (is.null(.pkgEnv[["pkgDTEqualities"]])) {
+    .pkgEnv[["pkgDTEqualities"]] <- pkgDTEquals
+    on.exit2(.pkgEnv[["pkgDTEqualities"]] <- NULL)
+
   } else {
     DESCFile <- file.path(Package, "DESCRIPTION")
     untar(tf, files = DESCFile, exdir = tmpdir)

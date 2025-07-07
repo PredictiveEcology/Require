@@ -90,7 +90,10 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       NULL
     }
 
-    lines <- readLinesWithHandlers(f)
+    if (isTRUE(any(file.exists(f))))
+      lines <- readLinesWithHandlers(f)
+    else
+      lines <- f
     # if (length(f) == 1) {
     #   withCallingHandlers(
     #     lines <- try(readLines(f), silent = TRUE),
@@ -1825,7 +1828,8 @@ readLinesWithHandlers <- function(fff) {
       warning(lines)
       lines <- character()
     }
-    if (isTRUE(any(grepl("404: Not Found", lines))))
+    any404 <- suppressWarnings(any(grepl("404: Not Found", lines)))
+    if (isTRUE(any404))
       lines <- character()
   } else {
     lines <- fff
