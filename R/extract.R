@@ -29,7 +29,8 @@ extractPkgName <- function(pkgs, filenames) {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
       out <- unlist(lapply(fnsSplit, function(xx3) xx3[[1]]))
-      out2 <- strsplit(out, split = "-")
+      out2 <- try(strsplit(out, split = "-"))
+      if (is(out2, "try-error")) browser()
       pkgNames <- unlist(Map(len = pmax(1, lengths(out2) - 1), pkg = out2, function(len, pkg) pkg[len]))
     } else {
       pkgNames <- character()

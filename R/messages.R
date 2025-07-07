@@ -58,7 +58,7 @@ comma <- ", "
 
 .txtNoneAvailable <- "noneAvailable"
 
-
+.txtGitHubMissingToken <- "GitHub repository not accessible does it need authentication? "
 
 messageCantFind <- function(br, acct, repo)
   paste0("Can't find ", paste0(acct, "/", repo, "@", br), "; \n -- does it exist? --")

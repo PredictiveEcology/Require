@@ -1,10 +1,11 @@
 test_that("test 6", {
-
-  skip_on_cran()
+  testthat::skip_on_cran()
 
   setupInitial <- setupTest()
   tmpdir <- tempdir2(.rndstr())
   .libPaths(tmpdir)
+
+  Install(c("curl", "httr", "waldo")) ## needed by testthat but not installed in tmp libPath
 
   isDev <- getOption("Require.isDev")
   # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
@@ -14,7 +15,7 @@ test_that("test 6", {
     length(a) == 1
   })
 
-  skip_if_offline()
+  testthat::skip_if_offline()
 
   testthat::expect_true({
     !isTRUE(all.equal(lapply(a, trimVersionNumber), a))
@@ -154,6 +155,7 @@ test_that("test 6", {
   expect_true(test)
 
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
+  out[["data.table"]] <- unique(c("Require", out[["data.table"]])) ## ensure Require is installed
   knownRevDeps <- append(
     knownRevDeps,
     list(data.table = c(knownRevDeps$Require, "Require"))
@@ -177,5 +179,4 @@ test_that("test 6", {
   repr[["RSQLite"]] <- NULL
   reprWORSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
   testthat::expect_true(identical(sort(reprSimple$Recursive$Remaining), sort(reprWORSQLIte)))
-
 })

@@ -48,7 +48,6 @@ test_that("test 09", {
           if (any(grepl("ERROR", b)))
             errs[[p]] <- b
         }
-        browser()
         pkgsToFix <- extractPkgName(names(errs))
         ava <- list()
         for (p in pkgsToFix) {
@@ -154,48 +153,63 @@ test_that("test 09", {
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
-      # warnsReq <- capture_warnings(Require::Install("Require"))
-      # aaaa <<- 1
-      # on.exit(rm(aaaa, envir = .GlobalEnv))
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
       warns <- capture_warnings(
-        # mess <- capture_messages(
           out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
                          returnDetails = TRUE)
-        # )
       )
 
       # NLMR specification is for a version that doesn't exist
-      NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
-      expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
-      warns <- warns[-which(NLMRandVisualTestWarn)]
+      # NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
+      # expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
+      # warns <- warns[-which(NLMRandVisualTestWarn)]
 
       # Why tmap and tmaptools and stars not installed in first pass?
-      warns <- grep("tmap|tmaptools|stars|cannot open", warns, invert = TRUE, value = TRUE) #
+      # warns <- grep("tmap|tmaptools|stars|cannot open", warns, invert = TRUE, value = TRUE) #
 
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
-      "Please change required version e.g., NLMR (<=1.1)"
+      # "Please change required version e.g., NLMR (<=1.1)"
       warns <- capture_warnings(
         out11 <- pkgDep(unname(packageFullName)[-1], recursive = TRUE, simplify = FALSE)
       )
-      expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
+      # expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
+      expect_identical(warns, character(0))
+
+
+
+      # if (FALSE) {
+      #   pkgDep(c("scales (==1.2.1)", "timechange (==0.2.0)", "yulab.utils (==0.0.6)"))
+      #   rr <- rbindlist(out11$deps)
+      #   bb <- unique(rr[Package %in% c("timechange", "scales", "yulab.utils")])
+      #   setorderv(bb, "Package")
+      #   bb
+      # }
 
       neededBasedOnPackageFullNames <- rbindlistRecursive(out11$deps)
       dups <- duplicated(neededBasedOnPackageFullNames$Package)
       neededBasedOnPackageFullNames <- neededBasedOnPackageFullNames[!dups]
       neededBasedOnPackageFullNames[grep("biosim", ignore.case = TRUE, Package), Package := "BioSIM"] |> invisible()
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
+      # lme4 now has 3 extra package dependencies; because this is a base package, Require doesn't
+      #    override these and install the exact version of lme4 stated in the packageSnapshot file
+      packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
+                                                c("rbibutils", "reformulas", "Rdpack"))
 
       # tooManyInstalled not right
-      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
+      # tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
+      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
       loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
       # if (isWindows()) {
       #   tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
       # }
-
+      # Failure (test-09pkgSnapshotLong_testthat.R:210:7): test 09
+      # `tooManyInstalled` (`actual`) not identical to character(0) (`expected`).
+      #
+      # `actual`:   "Rdpack" "rbibutils" "reformulas"
+      # `expected`:
       expect_identical(tooManyInstalled, character(0))
 
       ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
@@ -204,6 +218,7 @@ test_that("test 09", {
       expect_true(allInIPareInPkgs)
 
       # Check based on Version number
+
       joined <- ip[pkgs, on = "Package"]
       whDiff <- (joined$Version != joined$i.Version)
       versionProblems <- joined[which(whDiff)]
@@ -214,7 +229,7 @@ test_that("test 09", {
         versionProblems$Package %in% devtoolsDeps))]
 
       # scales didn't install the "equals" version because a different package needs >= 1.3.0
-      versionProblems <- versionProblems[!Package %in% "scales"]
+      # versionProblems <- versionProblems[!Package %in% "scales"]
       expect_true(NROW(versionProblems) == 0)
 
       # See if any packages are missing
@@ -227,10 +242,11 @@ test_that("test 09", {
       loded <- loadedNamespaces()
       missingPackages <- missingPackages[!Package %in% loded]
 
-      knownFails <- c(extractPkgName(.RequireDependencies),
-                      c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
-      if (isLinux())
-        knownFails <- c(knownFails, c("sodium", "keyring"))
+      knownFails <- character()
+      # knownFails <- c(extractPkgName(.RequireDependencies),
+      #                 c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
+      # if (isLinux())
+      #   knownFails <- c(knownFails, c("sodium", "keyring"))
 
 
       # Known missing --
@@ -266,7 +282,6 @@ test_that("test 09", {
 
 
     }
-    # setLibPaths(origLibPaths)
   }
 
 
