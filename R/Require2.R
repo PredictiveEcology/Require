@@ -595,7 +595,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
     },
     add = TRUE)
-    tries <- seq(1, 2)
+    tries <- seq(1, 10) # may need several rounds of this for failed compiled pkgs
     for (attempt in tries) {
       toInstallOut <- try(withCallingHandlers(
         installPackagesWithQuiet(ipa, verbose = verbose),
@@ -609,28 +609,40 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
       rl <- try(readLines(toInstallOut))
       if (length(rl)) {
+        makefileErrorGrep <- "Makefile:.+:.+\\.ts] Error 1"
+        makefileErrorGsub <- "^.+Makefile:.+: (.+)\\.ts.+Error.*$"
+        startLine4 <- grep(makefileErrorGsub, rl)
         startLine <- grep("installation of one or more packages failed", rl)
         startLine2 <- grep("non-zero", rl)
         compFailed <- "compilation failed for package"
         startLine3 <- grep(compFailed, rl)
-        pkgs <- rl[c(startLine+1, startLine2, startLine3)]
+        pkgs <- rl[c(startLine+1, startLine2, startLine3, startLine4)]
         # pkgs <- rl[startLine+1]
         if (length(pkgs)) {
           pkgs2 <- strsplit(gsub("^.+package '(.+)' had non.+$", "\\1", rl[startLine2]), split = "', '") |>
             unlist()
           pkgs1 <- strsplit(gsub("^.*probably '", "", rl[startLine + 1]), split = "', '")
           pkgs3 <- gsub(paste0("^.+", compFailed, ".+'(.+)'.*$"), "\\1", rl[startLine3])
+          pkgs4 <- gsub(makefileErrorGsub, "\\1", rl[startLine4])
           if (length(pkgs1)) {
             pkgs1 <- gsub("'$", "", pkgs1[[1]])
           }
-          browser()
-          failedToCompileOrDownstream <- toInstall[Package %in% unique(c(pkgs1, pkgs2, pkgs3))]
+
+          if (length(pkgs3) == 0) {
+            pkgsFailedCompile <- unique(c(pkgs4))
+          } else {
+            pkgsFailedCompile <- unique(c(pkgs3))
+          }
+          failedToCompileOrDownstream <- toInstall[Package %in% pkgsFailedCompile]
+          # failedToCompileOrDownstream <- toInstall[Package %in% unique(c(pkgs1, pkgs2, pkgs3))]
           failedPkgs <- failedToCompileOrDownstream[!isGitPkg %in% TRUE]$Package
           # failedBcCompilerFail <- ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes", ]
-          ap <- available.packagesCached(type = "binary")
-          apFailed <- ap[Package %in% failedPkgs]
-          # do.call(install.packages, ipa)
-          install.packages(apFailed[["Package"]], type = "binary", dependencies = FALSE)
+          if (length(failedPkgs)) {
+            ap <- available.packagesCached(type = "binary")
+            apFailed <- ap[Package %in% failedPkgs]
+            # do.call(install.packages, ipa)
+            install.packages(apFailed[["Package"]], type = "binary", dependencies = FALSE)
+          }
 
 
           ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
@@ -644,6 +656,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
 
         }
       }
+      browser()
 
       if (!is(toInstallOut, "try-error") || !is.null(errorCond)) {
         break
@@ -1013,7 +1026,6 @@ dealWithStandAlone <- function(pkgDT, libPaths, standAlone) {
 
 doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
                         libPaths, tmpdir, type = getOption("pkgType")) {
-  browser()
   pkgInstall[, installSafeGroups := 1L]
 
   # this is a placeholder; set noLocal by default
@@ -1497,6 +1509,7 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
 
     haves <- paste0(needPkg, "_", needVer)
     needs <- paste0(havePkg, "_", haveVer)
+    browser() # need to confirm what got installed vs. what was asked
 
 
   } else {
