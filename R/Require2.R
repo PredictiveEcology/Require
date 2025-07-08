@@ -595,7 +595,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       rmErroredPkgInstalls(logFile = logFile, toInstall, verbose)
     },
     add = TRUE)
-    tries <- seq(1, 10) # may need several rounds of this for failed compiled pkgs
+    tries <- seq(1, 3) # may need several rounds of this for failed compiled pkgs
     for (attempt in tries) {
       toInstallOut <- try(withCallingHandlers(
         installPackagesWithQuiet(ipa, verbose = verbose),
@@ -606,7 +606,6 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
         }
       ))
       errorCond <- attr(toInstallOut, "condition")
-
       rl <- try(readLines(toInstallOut))
       if (length(rl)) {
         makefileErrorGrep <- "Makefile:.+:.+\\.ts] Error 1"
@@ -622,7 +621,14 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
           pkgs2 <- strsplit(gsub("^.+package '(.+)' had non.+$", "\\1", rl[startLine2]), split = "', '") |>
             unlist()
           pkgs1 <- strsplit(gsub("^.*probably '", "", rl[startLine + 1]), split = "', '")
-          pkgs3 <- gsub(paste0("^.+", compFailed, ".+'(.+)'.*$"), "\\1", rl[startLine3])
+          startLine3a <- unlist(lapply(startLine3, function(x) x:(x+ 1))) # can be line wrapped
+          startLine3 <- grep("'.+'", rl[startLine3a], value = TRUE)
+          startLine3c <- grep("removing", startLine3, invert = TRUE, value = TRUE)
+          pkgs3 <- gsub("^.+'(.+)'.*$", "\\1", startLine3c)
+          # pkgs3 <- gsub(paste0("^.+", compFailed, ".+'(.+)'.*$"), "\\1", rl[startLine3])
+          # pkgs3 can be wrapped onto next line; so unreliable
+          # startLine3b <- grep("removing", rl)
+          # pkgs3 <- gsub("^.+removing.*'(.+)'", "\\1", rl[startLine3b]) |> basename()
           pkgs4 <- gsub(makefileErrorGsub, "\\1", rl[startLine4])
           if (length(pkgs1)) {
             pkgs1 <- gsub("'$", "", pkgs1[[1]])
@@ -636,27 +642,25 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
           failedToCompileOrDownstream <- toInstall[Package %in% pkgsFailedCompile]
           # failedToCompileOrDownstream <- toInstall[Package %in% unique(c(pkgs1, pkgs2, pkgs3))]
           failedPkgs <- failedToCompileOrDownstream[!isGitPkg %in% TRUE]$Package
+          # ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes" & ipa$available[, "Package"] %in% failedPkgs,]
           # failedBcCompilerFail <- ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes", ]
           if (length(failedPkgs)) {
+            messageVerbose("Require encountered package(s) that cannot be compiled; ",
+                           "installing the binary which will mean it may not be the expected version", verbose = verbose)
             ap <- available.packagesCached(type = "binary")
             apFailed <- ap[Package %in% failedPkgs]
+            # apFailed[, "NeedsCompilation"] %in% "yes"
             # do.call(install.packages, ipa)
             install.packages(apFailed[["Package"]], type = "binary", dependencies = FALSE)
           }
-
-
           ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
           ipa$pkgs <- ipa$pkgs[!ipa$pkgs %in% ip$Package]
-          ipa$available <- ipa$available[!ipa$available[, "Package"] %in% ip$Package, ]
-
+          ipa$available <- ipa$available[!ipa$available[, "Package"] %in% ip$Package, , drop = FALSE]
           # ipa$available <- ipa$available[!ipa$available[, "Package"] %in% apFailed[["Package"]], ]
           # ipa$pkgs <- ipa$available[, "Package"]
           next
-
-
         }
       }
-      browser()
 
       if (!is(toInstallOut, "try-error") || !is.null(errorCond)) {
         break
@@ -1497,7 +1501,6 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                    standAlone = standAlone, require = FALSE, install = TRUE,
                    returnDetails = returnDetails, ...
     )
-    browser() # need to confirm what got installed vs. what was asked
     ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
     ip2 <- ip[LibPath == .libPaths()[[1]]]
     # ip2$Package,
@@ -1509,9 +1512,21 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
 
     haves <- paste0(needPkg, "_", needVer)
     needs <- paste0(havePkg, "_", haveVer)
-    browser() # need to confirm what got installed vs. what was asked
 
+    incorrect <- setdiff(haves, needs)
+    installedInstead <- setdiff(needs, haves)
 
+    correct <- intersect(haves, needs)
+    if (NROW(correct))
+      messageVerbose(NROW(correct), " packages correct version installed; ", verbose = verbose)
+    if (NROW(incorrect)) {
+      messageVerbose("These package versions not correctly installed, but alternatives installed:\n",
+                     paste(incorrect, collapse = ", "), verbose = verbose)
+      messageVerbose("Instead, these were installed (most likely due to inability to compile the package):\n",
+                     paste(installedInstead, collapse = ", "), verbose = verbose)
+    }
+    messageVerbose("PLEASE RESTART R using the correct library to start using the installed snapshot",
+                   verbose = verbose)
   } else {
     out <- FALSE
   }
