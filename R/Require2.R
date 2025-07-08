@@ -647,7 +647,10 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
           if (length(failedPkgs)) {
             messageVerbose("Require encountered package(s) that cannot be compiled; ",
                            "installing the binary which will mean it may not be the expected version", verbose = verbose)
-            ap <- available.packagesCached(type = "binary")
+            if (isWindows())
+              ap <- available.packagesCached(type = "binary")
+            else 
+              ap <- available.packagesCached()
             apFailed <- ap[Package %in% failedPkgs]
             # apFailed[, "NeedsCompilation"] %in% "yes"
             # do.call(install.packages, ipa)
