@@ -649,7 +649,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                            "installing the binary which will mean it may not be the expected version", verbose = verbose)
             if (isWindows())
               ap <- available.packagesCached(type = "binary")
-            else 
+            else
               ap <- available.packagesCached()
             apFailed <- ap[Package %in% failedPkgs]
             # apFailed[, "NeedsCompilation"] %in% "yes"
