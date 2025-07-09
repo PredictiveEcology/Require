@@ -1370,7 +1370,7 @@ getDepsFromCache <- function(pkgDT, maybeHaveCacheDT, recursive, curCache) {
 
   if (any(alreadyCached)) {
     toRm <- maybeHaveCacheDT$packageFullName %in% pkgDT$packageFullName[alreadyCached]
-    maybeHaveCacheDT <- maybeHaveCacheDT[!toRm]
+    maybeHaveCacheDT <- maybeHaveCacheDT[toRm]
   }
 
   haveInCache <- endsWith(curCache[maybeHaveCacheDT$rowNum], as.character(recursive))
