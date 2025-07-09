@@ -8,7 +8,7 @@ utils::globalVariables(c(
   "haveLocal", "i.localFile", "i.VersionOnRepos", "ineq", "installed",
   "installedVersionOK", "installSafeGroups", "isBinaryInstall",
   "isEquals", "isGT", "keep44", "keep55", "keepBasedOnRedundantInequalities",
-  "keepCols3", "keepCols4", "keepCols5", "keepForUpdate", "loadOrder",
+  "keepCols3", "keepCols4", "keepCols5", "keepForUpdate", "LibPath", "loadOrder",
   "localFile", "mayNeedSwitchToSrc", "needInstall", "needKeep",
   "newLocalFile", "oppositeInequals", "PackageUrl", "parentPackage",
   "repo", "Repo", "Repository", "SHAonGH", "SHAonLocal", "verbose",
@@ -649,7 +649,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                            "installing the binary which will mean it may not be the expected version", verbose = verbose)
             if (isWindows())
               ap <- available.packagesCached(type = "binary")
-            else 
+            else
               ap <- available.packagesCached()
             apFailed <- ap[Package %in% failedPkgs]
             # apFailed[, "NeedsCompilation"] %in% "yes"
@@ -3842,7 +3842,7 @@ naToEmpty <- function(vec) {
   vec
 }
 
-
+#' @importFrom stats setNames
 splitVectors <- function(argsOrig, splitOn, method, installPackages) {
   if (identical(method, "libcurl") || isTRUE(installPackages)) {
     vecList <- list(seq_along(argsOrig[[splitOn[1]]]))
