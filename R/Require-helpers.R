@@ -1822,54 +1822,62 @@ readLinesWithHandlers <- function(fff) {
 
 .downloadFileMasterMainAuthWithHandlers <- function(Account, Package, Branch, packageFullName,
                                                     filename, url, destFile, verbose) {
-    messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
-    ret <- NA
-    dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
-                                          need = "master",
-                                          verbose = verbose - 1
-    ))
-    ret <- if (!is(dl, "try-error")) {
-      destFile
-    } else {
-      if (!isTRUE(urlExists(unique(url)[1])))
-        if (!isTRUE(urlExists("https://www.google.com"))) {
-          setOfflineModeTRUE(verbose = verbose)
-        }
-      NA
-    }
+  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
+  ret <- NA
+  dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+                                        need = "master",
+                                        verbose = verbose
+  ))
+  ret <- if (!is(dl, "try-error")) {
+    destFile
+  } else {
+    if (!isTRUE(urlExists(unique(url)[1])))
+      if (!isTRUE(urlExists("https://www.google.com"))) {
+        setOfflineModeTRUE(verbose = verbose)
+      }
+    NA
+  }
 
-    if (any(file.exists(destFile))) {
-      fs <- file.size(destFile)
-      fsTooSmallLikelyError <- fs < 100
-      if (any(fsTooSmallLikelyError)) {
-        checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
-        has404 <- sapply(checkFile, grepl, pattern = "404")
-        if (any(has404)) {
-          suggs <- offerGitHubSuggestions(account = Account, Package)
-          token <- checkForToken()
-          if (is.null(token))
-            warning("There is no github token")
-          stop("The following repository does not seem to exist: \n",
-               paste(packageFullName[has404], collapse = "\n"),
-               "\n", .txtDidYouSpell,
-               "\nDid you mean one of:\n",
-               paste(suggs, collapse = "\n")
-          )
-        }
+  stopNotAvailable <- FALSE
+  failDoesntExist <- seq_along(packageFullName)
+  suggs <- ""
+  if (any(file.exists(destFile))) {
+    fs <- file.size(destFile)
+    fsTooSmallLikelyError <- fs < 100
+    if (any(fsTooSmallLikelyError)) {
+      checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
+      failDoesntExist <- sapply(checkFile, grepl, pattern = "404")
+      if (any(failDoesntExist)) {
+        suggs <- offerGitHubSuggestions(account = Account, Package)
+        token <- checkForToken()
+        if (is.null(token))
+          warning("There is no github token")
+        stopNotAvailable <- TRUE
       }
     }
+  } else {
+    stopNotAvailable <- TRUE
+  }
+  if (isTRUE(stopNotAvailable)) {
+    stop("The following repository does not seem to exist: \n",
+         paste(packageFullName[failDoesntExist], collapse = "\n"),
+         "\n", .txtDidYouSpell,
+         if (nzchar(suggs)) paste0("\nDid you mean one of:\n",
+                                   paste(suggs, collapse = "\n"))
+    )
+  }
 
-    # if (grepl("404", httr::http_status(a)$message)) {
-    #   offerGitHubSuggestions(account, repo)
-    #   stop("The following repository does not seem to exist: \n",
-    #        paste(pkgDTNotLocal$packageFullName[has404], collapse = "\n"),
-    #        "\n", .txtDidYouSpell,
-    #        "\nDid you mean one of:\n",
-    #        paste(suggs, collapse = "\n")
-    #   )
-    # }
+  # if (grepl("404", httr::http_status(a)$message)) {
+  #   offerGitHubSuggestions(account, repo)
+  #   stop("The following repository does not seem to exist: \n",
+  #        paste(pkgDTNotLocal$packageFullName[has404], collapse = "\n"),
+  #        "\n", .txtDidYouSpell,
+  #        "\nDid you mean one of:\n",
+  #        paste(suggs, collapse = "\n")
+  #   )
+  # }
 
-    ret
+  ret
 }
 
 offerGitHubSuggestions <- function(account, repo) {
