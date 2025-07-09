@@ -243,6 +243,7 @@ getPkgDeps <- function(pkgDT, parentPackage, recursive, which, repos, type, incl
     if (!all(isInBase)) {
       pkgDTBase <- splitKeepOrderAndDTIntegrity(pkgDT, splitOn = isInBase)
       if (NROW(pkgDTBase[["FALSE"]])) {
+
         pkgDTBase[["FALSE"]] <- getDeps(pkgDTBase[["FALSE"]], which, recursive = recursive,
                                         repos = repos, type = type, libPaths = libPaths, verbose = verbose)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
@@ -1350,7 +1351,6 @@ getFromCache <- function(pkgDT, which, recursive) {
     if (recursive %in% TRUE) {
       pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = TRUE, curCache)
     }
-    # if (!allNotNull(pkgDT[[cached(TRUE)]]))
     pkgDT <- getDepsFromCache(pkgDT, maybeHaveCacheDT, recursive = FALSE, curCache)
 
   }
