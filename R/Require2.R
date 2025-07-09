@@ -645,16 +645,19 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
           # ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes" & ipa$available[, "Package"] %in% failedPkgs,]
           # failedBcCompilerFail <- ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes", ]
           if (length(failedPkgs)) {
-            messageVerbose("Require encountered package(s) that cannot be compiled; ",
-                           "installing the binary which will mean it may not be the expected version", verbose = verbose)
-            if (isWindows())
-              ap <- available.packagesCached(type = "binary")
-            else
-              ap <- available.packagesCached()
-            apFailed <- ap[Package %in% failedPkgs]
-            # apFailed[, "NeedsCompilation"] %in% "yes"
-            # do.call(install.packages, ipa)
-            install.packages(apFailed[["Package"]], type = "binary", dependencies = FALSE)
+            if (isWindows()) {
+              messageVerbose("Require encountered package(s) that cannot be compiled; ",
+                             "installing the binary which will mean it may not be the expected version", verbose = verbose)
+              typeHere <- "binary"
+              ap <- available.packagesCached(type = typeHere)
+              apFailed <- ap[Package %in% failedPkgs]
+              # apFailed[, "NeedsCompilation"] %in% "yes"
+              # do.call(install.packages, ipa)
+              install.packages(apFailed[["Package"]], type = typeHere, dependencies = FALSE)
+            } else {
+              # try binary
+              install.packages(failedPkgs, repos = positBinaryRepos(), dependencies = FALSE)
+            }
           }
           ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
           ipa$pkgs <- ipa$pkgs[!ipa$pkgs %in% ip$Package]
@@ -1504,6 +1507,7 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                    standAlone = standAlone, require = FALSE, install = TRUE,
                    returnDetails = returnDetails, ...
     )
+
     ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
     ip2 <- ip[LibPath == .libPaths()[[1]]]
     # ip2$Package,
@@ -1513,11 +1517,11 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     haveVer <- ip2$Version
     havePkg <- ip2$Package
 
-    haves <- paste0(needPkg, "_", needVer)
-    needs <- paste0(havePkg, "_", haveVer)
+    needs <- paste0(needPkg, "_", needVer)
+    haves <- paste0(havePkg, "_", haveVer)
 
-    incorrect <- setdiff(haves, needs)
-    installedInstead <- setdiff(needs, haves)
+    installedInstead <- setdiff(haves, needs)
+    incorrect <- setdiff(needs, haves)
 
     correct <- intersect(haves, needs)
     if (NROW(correct))
