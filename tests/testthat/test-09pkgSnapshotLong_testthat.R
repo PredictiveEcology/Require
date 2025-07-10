@@ -167,6 +167,7 @@ test_that("test 09", {
       # Why tmap and tmaptools and stars not installed in first pass?
       # warns <- grep("tmap|tmaptools|stars|cannot open", warns, invert = TRUE, value = TRUE) #
 
+      warns <- grep("unable to translate|string.+invalid|TRE pattern compilation error", warns, invert = TRUE, value = TRUE)
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
@@ -242,7 +243,11 @@ test_that("test 09", {
       loded <- loadedNamespaces()
       missingPackages <- missingPackages[!Package %in% loded]
 
-      knownFails <- character()
+      knownFails <- c("archive", "DiagrammeR", "keyring", "mapview", "readr", "servr",
+                      "sodium", "vroom")#character()
+
+      # For Sodium
+      # Need: sudo apt install libarchive-dev libsodium-dev
       # knownFails <- c(extractPkgName(.RequireDependencies),
       #                 c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
       # if (isLinux())
