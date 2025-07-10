@@ -1789,7 +1789,9 @@ readLinesWithHandlers <- function(fff) {
     withCallingHandlers(
       lines <- try(readLines(fff), silent = TRUE),
       warning = function(w) {
-        if (grepl('incomplete final line found on', w$message))
+        if (grepl(
+          paste('incomplete final line found on', 'cannot open file', 'cannot open the connection', sep = "|"),
+          w$message))
           invokeRestart("muffleWarning")
       }
     )
