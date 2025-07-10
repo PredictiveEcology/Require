@@ -622,9 +622,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
             unlist()
           pkgs1 <- strsplit(gsub("^.*probably '", "", rl[startLine + 1]), split = "', '")
           startLine3a <- unlist(lapply(startLine3, function(x) x:(x+ 1))) # can be line wrapped
-          startLine3 <- grep("'.+'", rl[startLine3a], value = TRUE)
-          startLine3c <- grep("removing", startLine3, invert = TRUE, value = TRUE)
-          pkgs3 <- gsub("^.+'(.+)'.*$", "\\1", startLine3c)
+          startLine3b <- grep("'.+'|\u2018.+\u2019", rl[startLine3a], value = TRUE)
+          startLine3c <- grep("removing", startLine3b, invert = TRUE, value = TRUE)
+          pkgs3 <- gsub("^.+('|\u2018)(.+)('|\u2019).*$", "\\2", startLine3c)
           # pkgs3 <- gsub(paste0("^.+", compFailed, ".+'(.+)'.*$"), "\\1", rl[startLine3])
           # pkgs3 can be wrapped onto next line; so unreliable
           # startLine3b <- grep("removing", rl)
