@@ -2466,6 +2466,13 @@ checkAvailableVersions <- function(pkgInstall, repos, purge, libPaths, verbose =
   }
   pkgInstall <- rbindlist(pkgInstallList, fill = TRUE, use.names = TRUE)
 
+  whRmImports <- which(pkgInstall$availableVersionOK %in% FALSE)
+  if (length(whRmImports)) {
+    set(pkgInstall, whRmImports,
+        intersect(colnames(pkgInstall), c("Imports", "Depends", "LinkingTo", "Suggests")),
+        NA)
+  }
+
   pkgInstall
 }
 
