@@ -142,10 +142,15 @@ test_that("test 09", {
       )
       names(packageFullName) <- packageFullName
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
+
+
+
+      # THE INSTALL #
       warns <- capture_warnings(
           out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
                          returnDetails = TRUE)
       )
+      # END THE INSTALL #
 
       warns <- grep("unable to translate|string.+invalid|TRE pattern compilation error",
                     warns, invert = TRUE, value = TRUE)
