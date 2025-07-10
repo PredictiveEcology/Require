@@ -161,7 +161,10 @@ test_that("test 8", {
                     "SpaDES.tools", "spatialEco", "stats", "terra", "tidyr", "viridis"
     )
 
-    otherPkgs <- c("archive", "details", "DBI", "s-u/fastshp", "logging", "RPostgres", "slackr")
+    otherPkgs <- c("archive", "details", "DBI", # "s-u/fastshp", # can't compile fastshp in Windows R 4.5
+                   "logging", "RPostgres", "slackr")
+    if (!isWindows())
+      otherPkgs <- c(otherPkgs, "s-u/fastshp")
 
     pkgs <- unique(c(modulePkgs, otherPkgs))
 

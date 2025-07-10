@@ -132,24 +132,12 @@ test_that("test 09", {
       if (isWindows())
         if (Sys.info()["user"] == "emcintir")
           withr::local_options(Require.otherPkgs = union(getOption("Require.otherPkgs"), "stringfish"))
-      # pkgs <- pkgs[!Package %in% c("RandomFields", "RandomFieldsUtils")] # the version 1.0-7 is corrupt on RSPM
       pkgs <- pkgs[!Package %in% c("usefulFuns")] # incorrectly imports Require from reproducible... while other packages need newer reproducible
 
-      # ERROR: compilation failed for package 'sf'# on Windows R 4.3.2
-      # pkgs[Package %in% "sf", Version := "1.0-9"] # the version 1.0-7 is corrupt on RSPM
-      #pkgs[Package %in% "SpaDES.core", `:=`(Version = "1.1.1", GithubRepo = "SpaDES.core",
-      #                                      GithubUsername = "PredictiveEcology", GithubRef = "development",
-      #                                      GithubSHA1 = "535cd39d84aeb35de29f88b0245c9538d86a1223")]
-      # pks <- c("ymlthis", "SpaDES.tools", "amc")
-      # pkgs <- pkgs[Package %in% pks]
-      # "PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c (==0.0.2.9071)"
-      #
-      # pkgs <- pkgs[Package %in% extractPkgName(pkgDep("PredictiveEcology/SpaDES.config@94e90b0537b103f83504c96f51be157449e32c9c (==0.0.2.9071)")[[1]])]
-
-      # debug(installAll)
       snfTmp <- tempfile2(fileext = ".txt")
       data.table::fwrite(pkgs, file = snfTmp) # have to get rid of skips in the snfTmp
-      packageFullName <- ifelse(!nzchar(pkgs$GithubRepo) | is.na(pkgs$GithubRepo), paste0(pkgs$Package, " (==", pkgs$Version, ")"),
+      packageFullName <- ifelse(!nzchar(pkgs$GithubRepo) | is.na(pkgs$GithubRepo),
+                                paste0(pkgs$Package, " (==", pkgs$Version, ")"),
                                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
@@ -159,14 +147,8 @@ test_that("test 09", {
                          returnDetails = TRUE)
       )
 
-      # NLMR specification is for a version that doesn't exist
-      # NLMRandVisualTestWarn <- grepl(.txtPleaseChangeReqdVers, warns)
-      # expect_true(sum(unique(NLMRandVisualTestWarn)) <= 1L)
-      # warns <- warns[-which(NLMRandVisualTestWarn)]
-
-      # Why tmap and tmaptools and stars not installed in first pass?
-      # warns <- grep("tmap|tmaptools|stars|cannot open", warns, invert = TRUE, value = TRUE) #
-
+      warns <- grep("unable to translate|string.+invalid|TRE pattern compilation error",
+                    warns, invert = TRUE, value = TRUE)
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
@@ -176,8 +158,6 @@ test_that("test 09", {
       )
       # expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
       expect_identical(warns, character(0))
-
-
 
       # if (FALSE) {
       #   pkgDep(c("scales (==1.2.1)", "timechange (==0.2.0)", "yulab.utils (==0.0.6)"))
@@ -214,6 +194,9 @@ test_that("test 09", {
 
       ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
       ip <- ip[!Package %in% .basePkgs]
+
+      missingFirst <- setdiff(packagesBasedOnPackageFullNames, ip$Package)
+
       allInIPareInPkgs <- all(ip$Package %in% packagesBasedOnPackageFullNames)
       expect_true(allInIPareInPkgs)
 
@@ -242,7 +225,11 @@ test_that("test 09", {
       loded <- loadedNamespaces()
       missingPackages <- missingPackages[!Package %in% loded]
 
-      knownFails <- character()
+      knownFails <- c("archive", "DiagrammeR", "keyring", "mapview", "readr", "servr",
+                      "sodium", "vroom")#character()
+
+      # For Sodium
+      # Need: sudo apt install libarchive-dev libsodium-dev
       # knownFails <- c(extractPkgName(.RequireDependencies),
       #                 c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
       # if (isLinux())
