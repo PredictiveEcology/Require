@@ -608,62 +608,9 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
       errorCond <- attr(toInstallOut, "condition")
       rl <- try(readLines(toInstallOut))
       if (length(rl)) {
-        makefileErrorGrep <- "Makefile:.+:.+\\.ts] Error 1"
-        makefileErrorGsub <- "^.+Makefile:.+: (.+)\\.ts.+Error.*$"
-        startLine4 <- grep(makefileErrorGsub, rl)
-        startLine <- grep("installation of one or more packages failed", rl)
-        startLine2 <- grep("non-zero", rl)
-        compFailed <- "compilation failed for package"
-        startLine3 <- grep(compFailed, rl)
-        pkgs <- rl[c(startLine+1, startLine2, startLine3, startLine4)]
-        # pkgs <- rl[startLine+1]
-        if (length(pkgs)) {
-          pkgs2 <- strsplit(gsub("^.+package '(.+)' had non.+$", "\\1", rl[startLine2]), split = "', '") |>
-            unlist()
-          pkgs1 <- strsplit(gsub("^.*probably '", "", rl[startLine + 1]), split = "', '")
-          startLine3a <- unlist(lapply(startLine3, function(x) x:(x+ 1))) # can be line wrapped
-          startLine3b <- grep("'.+'|\u2018.+\u2019", rl[startLine3a], value = TRUE)
-          startLine3c <- grep("removing", startLine3b, invert = TRUE, value = TRUE)
-          pkgs3 <- gsub("^.+('|\u2018)(.+)('|\u2019).*$", "\\2", startLine3c)
-          # pkgs3 <- gsub(paste0("^.+", compFailed, ".+'(.+)'.*$"), "\\1", rl[startLine3])
-          # pkgs3 can be wrapped onto next line; so unreliable
-          # startLine3b <- grep("removing", rl)
-          # pkgs3 <- gsub("^.+removing.*'(.+)'", "\\1", rl[startLine3b]) |> basename()
-          pkgs4 <- gsub(makefileErrorGsub, "\\1", rl[startLine4])
-          if (length(pkgs1)) {
-            pkgs1 <- gsub("'$", "", pkgs1[[1]])
-          }
-
-          if (length(pkgs3) == 0) {
-            pkgsFailedCompile <- unique(c(pkgs4))
-          } else {
-            pkgsFailedCompile <- unique(c(pkgs3))
-          }
-          failedToCompileOrDownstream <- toInstall[Package %in% pkgsFailedCompile]
-          # failedToCompileOrDownstream <- toInstall[Package %in% unique(c(pkgs1, pkgs2, pkgs3))]
-          failedPkgs <- failedToCompileOrDownstream[!isGitPkg %in% TRUE]$Package
-          # ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes" & ipa$available[, "Package"] %in% failedPkgs,]
-          # failedBcCompilerFail <- ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes", ]
-          if (length(failedPkgs)) {
-            if (isWindows()) {
-              messageVerbose("Require encountered package(s) that cannot be compiled; ",
-                             "installing the binary which will mean it may not be the expected version", verbose = verbose)
-              typeHere <- "binary"
-              ap <- available.packagesCached(type = typeHere)
-              apFailed <- ap[Package %in% failedPkgs]
-              # apFailed[, "NeedsCompilation"] %in% "yes"
-              # do.call(install.packages, ipa)
-              install.packages(apFailed[["Package"]], type = typeHere, dependencies = FALSE)
-            } else {
-              # try binary
-              install.packages(failedPkgs, repos = positBinaryRepos(), dependencies = FALSE)
-            }
-          }
-          ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
-          ipa$pkgs <- ipa$pkgs[!ipa$pkgs %in% ip$Package]
-          ipa$available <- ipa$available[!ipa$available[, "Package"] %in% ip$Package, , drop = FALSE]
-          # ipa$available <- ipa$available[!ipa$available[, "Package"] %in% apFailed[["Package"]], ]
-          # ipa$pkgs <- ipa$available[, "Package"]
+        ipaNext <- checkCompileFailedThenInstallBinary(rl, ipa, toInstall, verbose)
+        if (!identical(ipa, ipaNext)) {
+          ipa <- ipaNext;
           next
         }
       }
@@ -4108,4 +4055,66 @@ needToRestartR <- function(pkgDT) {
       set(pkgDT, whRm, "installResult", "Need to restart R")
   }
   pkgDT
+}
+
+
+checkCompileFailedThenInstallBinary <- function(rl, ipa, toInstall, verbose) {
+  makefileErrorGrep <- "Makefile:.+:.+\\.ts] Error 1"
+  makefileErrorGsub <- "^.+Makefile:.+: (.+)\\.ts.+Error.*$"
+  startLine4 <- grep(makefileErrorGsub, rl)
+  startLine <- grep("installation of one or more packages failed", rl)
+  startLine2 <- grep("non-zero", rl)
+  compFailed <- "compilation failed for package"
+  startLine3 <- grep(compFailed, rl)
+  pkgs <- rl[c(startLine+1, startLine2, startLine3, startLine4)]
+  # pkgs <- rl[startLine+1]
+  if (length(pkgs)) {
+    pkgs2 <- strsplit(gsub("^.+package '(.+)' had non.+$", "\\1", rl[startLine2]), split = "', '") |>
+      unlist()
+    pkgs1 <- strsplit(gsub("^.*probably '", "", rl[startLine + 1]), split = "', '")
+    startLine3a <- unlist(lapply(startLine3, function(x) x:(x+ 1))) # can be line wrapped
+    startLine3b <- grep("'.+'|\u2018.+\u2019", rl[startLine3a], value = TRUE)
+    startLine3c <- grep("removing", startLine3b, invert = TRUE, value = TRUE)
+    pkgs3 <- gsub("^.+('|\u2018)(.+)('|\u2019).*$", "\\2", startLine3c)
+    # pkgs3 <- gsub(paste0("^.+", compFailed, ".+'(.+)'.*$"), "\\1", rl[startLine3])
+    # pkgs3 can be wrapped onto next line; so unreliable
+    # startLine3b <- grep("removing", rl)
+    # pkgs3 <- gsub("^.+removing.*'(.+)'", "\\1", rl[startLine3b]) |> basename()
+    pkgs4 <- gsub(makefileErrorGsub, "\\1", rl[startLine4])
+    if (length(pkgs1)) {
+      pkgs1 <- gsub("'$", "", pkgs1[[1]])
+    }
+
+    if (length(pkgs3) == 0) {
+      pkgsFailedCompile <- unique(c(pkgs4))
+    } else {
+      pkgsFailedCompile <- unique(c(pkgs3))
+    }
+    failedToCompileOrDownstream <- toInstall[Package %in% pkgsFailedCompile]
+    # failedToCompileOrDownstream <- toInstall[Package %in% unique(c(pkgs1, pkgs2, pkgs3))]
+    failedPkgs <- failedToCompileOrDownstream[!isGitPkg %in% TRUE]$Package
+    # ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes" & ipa$available[, "Package"] %in% failedPkgs,]
+    # failedBcCompilerFail <- ipa$available[ipa$available[, "NeedsCompilation"] %in% "yes", ]
+    if (length(failedPkgs)) {
+      if (isWindows()) {
+        messageVerbose("Require encountered package(s) that cannot be compiled; ",
+                       "installing the binary which will mean it may not be the expected version", verbose = verbose)
+        typeHere <- "binary"
+        ap <- available.packagesCached(type = typeHere)
+        apFailed <- ap[Package %in% failedPkgs]
+        # apFailed[, "NeedsCompilation"] %in% "yes"
+        # do.call(install.packages, ipa)
+        install.packages(apFailed[["Package"]], type = typeHere, dependencies = FALSE)
+      } else {
+        # try binary
+        install.packages(failedPkgs, repos = positBinaryRepos(), dependencies = FALSE)
+      }
+    }
+    ip <- .installed.pkgs(purge = TRUE) |> as.data.table()
+    ipa$pkgs <- ipa$pkgs[!ipa$pkgs %in% ip$Package]
+    ipa$available <- ipa$available[!ipa$available[, "Package"] %in% ip$Package, , drop = FALSE]
+    # ipa$available <- ipa$available[!ipa$available[, "Package"] %in% apFailed[["Package"]], ]
+    # ipa$pkgs <- ipa$available[, "Package"]
+  }
+  ipa
 }
