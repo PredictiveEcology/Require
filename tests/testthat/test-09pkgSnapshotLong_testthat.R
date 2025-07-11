@@ -1,7 +1,7 @@
 test_that("test 09", {
 
   skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
-  setupInitial <- setupTest(needRequireInNewLib = TRUE)
+  setupInitial <- setupTest(needRequireInNewLib = FALSE)
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
@@ -143,8 +143,6 @@ test_that("test 09", {
       names(packageFullName) <- packageFullName
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
-
-
       # THE INSTALL #
       warns <- capture_warnings(
           out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
@@ -177,24 +175,10 @@ test_that("test 09", {
       neededBasedOnPackageFullNames <- neededBasedOnPackageFullNames[!dups]
       neededBasedOnPackageFullNames[grep("biosim", ignore.case = TRUE, Package), Package := "BioSIM"] |> invisible()
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
-      # lme4 now has 3 extra package dependencies; because this is a base package, Require doesn't
-      #    override these and install the exact version of lme4 stated in the packageSnapshot file
-      packagesBasedOnPackageFullNamesNolme4 <- setdiff(packagesBasedOnPackageFullNames,
-                                                c("rbibutils", "reformulas", "Rdpack"))
 
-      # tooManyInstalled not right
-      # tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
-      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNamesNolme4, pkgs$Package)
+      tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
       loaded <- c("Require", "testthat")
       tooManyInstalled <- setdiff(tooManyInstalled, c(fnMissing, loaded))
-      # if (isWindows()) {
-      #   tooManyInstalled <- setdiff(tooManyInstalled, windowsSkips)
-      # }
-      # Failure (test-09pkgSnapshotLong_testthat.R:210:7): test 09
-      # `tooManyInstalled` (`actual`) not identical to character(0) (`expected`).
-      #
-      # `actual`:   "Rdpack" "rbibutils" "reformulas"
-      # `expected`:
       expect_identical(tooManyInstalled, character(0))
 
       ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
@@ -202,6 +186,7 @@ test_that("test 09", {
 
       missingFirst <- setdiff(packagesBasedOnPackageFullNames, ip$Package)
 
+      # setdiff(ip$Package, packagesBasedOnPackageFullNames) # this is the same as next line, but gives the actual packages
       allInIPareInPkgs <- all(ip$Package %in% packagesBasedOnPackageFullNames)
       expect_true(allInIPareInPkgs)
 
