@@ -1871,6 +1871,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap[, "File"] <- newNameWithoutSHA
       ap[, "Repository"] <-
         paste0("file:///", normPath("."))
+      ap[, c("Imports", "Suggests", "Enhances", "Depends", "LinkingTo")] <- NA
     }
     apList[[i]] <- ap
   }
