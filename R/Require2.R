@@ -1061,8 +1061,30 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
     pkgInstallList[[.txtNoLocal]] <- pkgNeedInternet # pointer
 
   }
-
   pkgInstall <- rbindlistRecursive(pkgInstallList)
+
+  # fix the dependencies for the ones that were not availableVersionOKthisOne
+  pkgInstallAOK <- split(pkgInstall, by = "availableVersionOKthisOne")
+  pp <- pkgInstallAOK[["FALSE"]]#[availableVersionOKthisOne %in% FALSE]
+  pp <- unique(pp, by = "localFile")
+  rr <- by(pp, seq_len(NROW(pp)),
+           function(pu, lf) {
+             with(pu, {
+               DF <- .DESCFileFull(PackageUrl = basename(pu$localFile),
+                                   Package = pu$Package, verbose = verbose,
+                                   tmpdir = tmpdir)
+             }
+             )}) |> setNames(pp$packageFullName)
+  colsHere <- setdiff(colsOfDeps, "Remotes")
+  a <- DESCRIPTIONFileDepsV(rr, which = colsHere, keepSeparate = TRUE)
+  b <- invertList(a)
+  d <- as.data.table(b)
+  set(d, NULL, c("Package", "packageFullName"),
+      list(pp$Package, pp$package))
+  pp <- pp[, -..colsHere][d, on = c("Package", "packageFullName")]
+  pkgInstall <- rbindlist(
+    append(pkgInstallAOK[setdiff(names(pkgInstallAOK), "FALSE")], list(pp)),
+    fill = TRUE)
 
   # This will potentially do Archive (HEAD)
   pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall, verbose = verbose)
@@ -1818,7 +1840,17 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
       ap[, "File"] <- newNameWithoutSHA
       ap[, "Repository"] <-
         paste0("file:///", normPath("."))
-      ap[, c("Imports", "Suggests", "Enhances", "Depends", "LinkingTo")] <- NA
+
+      # CHECK correct Imports etc.
+      # if (any("lme4" %in% ap[, "Package"])) browser() # try to change fewer
+      whichNeedDepsOverride <- which(toInstall$availableVersionOKthisOne %in% FALSE)
+      pks <- toInstall$Package[whichNeedDepsOverride]
+      colsHere <- intersect(colsOfDeps, colnames(ap))
+      ll <- Map(jj = colsHere, function(jj)
+        lapply(toInstall[[jj]][toInstall$Package %in% pks], paste, collapse = ", "))
+      for (ch in colsHere)
+        ap[ap[, "Package"] %in% pks, ch] <- unlist(ll[[ch]])
+
     }
     apList[[i]] <- ap
   }
@@ -4107,6 +4139,10 @@ checkCompileFailedThenInstallBinary <- function(rl, ipa, toInstall, verbose) {
         install.packages(apFailed[["Package"]], type = typeHere, dependencies = FALSE)
       } else {
         # try binary
+        ipa2 <- ipa
+        ipa2$pkgs <- failedPkgs
+        ipa2$available <- ipa$available[ipa$available[, "Package"] %in% failedPkgs,,drop = F]
+
         install.packages(failedPkgs, repos = positBinaryRepos(), dependencies = FALSE)
       }
     }
