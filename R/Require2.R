@@ -1066,25 +1066,27 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   # fix the dependencies for the ones that were not availableVersionOKthisOne
   pkgInstallAOK <- split(pkgInstall, by = "availableVersionOKthisOne")
   pp <- pkgInstallAOK[["FALSE"]]#[availableVersionOKthisOne %in% FALSE]
-  pp <- unique(pp, by = "localFile")
-  rr <- by(pp, seq_len(NROW(pp)),
-           function(pu, lf) {
-             with(pu, {
-               DF <- .DESCFileFull(PackageUrl = basename(pu$localFile),
-                                   Package = pu$Package, verbose = verbose,
-                                   tmpdir = tmpdir)
-             }
-             )}) |> setNames(pp$packageFullName)
-  colsHere <- setdiff(colsOfDeps, "Remotes")
-  a <- DESCRIPTIONFileDepsV(rr, which = colsHere, keepSeparate = TRUE)
-  b <- invertList(a)
-  d <- as.data.table(b)
-  set(d, NULL, c("Package", "packageFullName"),
-      list(pp$Package, pp$package))
-  pp <- pp[, -..colsHere][d, on = c("Package", "packageFullName")]
-  pkgInstall <- rbindlist(
-    append(pkgInstallAOK[setdiff(names(pkgInstallAOK), "FALSE")], list(pp)),
-    fill = TRUE)
+  if (NROW(pp)) {
+    # pp <- unique(pp, by = "localFile")
+    rr <- by(pp, seq_len(NROW(pp)),
+             function(pu, lf) {
+               with(pu, {
+                 DF <- .DESCFileFull(PackageUrl = basename(pu$localFile),
+                                     Package = pu$Package, verbose = verbose,
+                                     tmpdir = tmpdir)
+               }
+               )}) |> setNames(pp$packageFullName)
+    colsHere <- setdiff(colsOfDeps, "Remotes")
+    a <- DESCRIPTIONFileDepsV(rr, which = colsHere, keepSeparate = TRUE)
+    b <- invertList(a)
+    d <- as.data.table(b)
+    set(d, NULL, c("Package", "packageFullName"),
+        list(pp$Package, pp$package))
+    pp <- pp[, -..colsHere][d, on = c("Package", "packageFullName")]
+    pkgInstall <- rbindlist(
+      append(pkgInstallAOK[setdiff(names(pkgInstallAOK), "FALSE")], list(pp)),
+      fill = TRUE)
+  }
 
   # This will potentially do Archive (HEAD)
   pkgInstall <- removeHEADpkgsIfNoUpdateNeeded(pkgInstall, verbose = verbose)
