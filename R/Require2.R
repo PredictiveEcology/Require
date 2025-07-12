@@ -1067,22 +1067,28 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
   pkgInstallAOK <- split(pkgInstall, by = "availableVersionOKthisOne")
   pp <- pkgInstallAOK[["FALSE"]]#[availableVersionOKthisOne %in% FALSE]
   if (NROW(pp)) {
-    # pp <- unique(pp, by = "localFile")
-    rr <- by(pp, seq_len(NROW(pp)),
-             function(pu, lf) {
-               with(pu, {
-                 DF <- .DESCFileFull(PackageUrl = basename(pu$localFile),
-                                     Package = pu$Package, verbose = verbose,
-                                     tmpdir = tmpdir)
-               }
-               )}) |> setNames(pp$packageFullName)
-    colsHere <- setdiff(colsOfDeps, "Remotes")
-    a <- DESCRIPTIONFileDepsV(rr, which = colsHere, keepSeparate = TRUE)
-    b <- invertList(a)
-    d <- as.data.table(b)
-    set(d, NULL, c("Package", "packageFullName"),
-        list(pp$Package, pp$package))
-    pp <- pp[, -..colsHere][d, on = c("Package", "packageFullName")]
+    nih <- "needInstallHere"
+    set(pp, NULL, nih, pp[["needInstall"]] != .txtNoneAvailable)
+    pp1 <- split(pp, by = nih)
+    if (NROW(pp1[["TRUE"]])) {
+      rr <- by(pp1[["TRUE"]], seq_len(NROW(pp1[["TRUE"]])),
+               function(pu, lf) {
+                 with(pu, {
+                   DF <- .DESCFileFull(PackageUrl = basename(pu$localFile),
+                                       Package = pu$Package, verbose = verbose,
+                                       tmpdir = tmpdir)
+                 }
+                 )}) |> setNames(pp1[["TRUE"]]$packageFullName)
+      colsHere <- setdiff(colsOfDeps, "Remotes")
+      a <- DESCRIPTIONFileDepsV(rr, which = colsHere, keepSeparate = TRUE)
+      b <- invertList(a)
+      d <- as.data.table(b)
+      set(d, NULL, c("Package", "packageFullName"),
+          list(pp1[["TRUE"]]$Package, pp1[["TRUE"]]$package))
+      pp1[["TRUE"]] <- pp1[["TRUE"]][, -..colsHere][d, on = c("Package", "packageFullName")]
+      pp <- rbindlist(pp1, fill = TRUE)
+    }
+    set(pp, NULL, nih, NULL)
     pkgInstall <- rbindlist(
       append(pkgInstallAOK[setdiff(names(pkgInstallAOK), "FALSE")], list(pp)),
       fill = TRUE)
