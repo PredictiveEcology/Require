@@ -441,7 +441,7 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
     inCurrentCRAN <- inCurrentCRAN(pkgDT, verbose)
 
     if (any(!inCurrentCRAN)) {
-      set(pkgDT, which(!inCurrentCRAN), "repoLocation", "Archive")
+      set(pkgDT, which(!inCurrentCRAN), "repoLocation", .txtArchive)
       pkgDTList <- split(pkgDT, by = "repoLocation")
       dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
       pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
@@ -455,10 +455,10 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       wcr <- whichCatRecursive(which, recursive = FALSE)
       hadArchive <- !is.na(pkgDTList$Archive$VersionOnRepos)
       whHadArchive <- which(hadArchive)
-      didntFindOnArchives <- is.na(pkgDTList[["Archive"]]$DESCFileFull)
+      didntFindOnArchives <- is.na(pkgDTList[[.txtArchive]]$DESCFileFull)
       if (any(didntFindOnArchives)) {
         messageVerbose(red("   Did not find archives of: ",
-                           paste(pkgDTList[["Archive"]]$packageFullName[didntFindOnArchives], collapse = comma),
+                           paste(pkgDTList[[.txtArchive]]$packageFullName[didntFindOnArchives], collapse = comma),
                            "\n   --> Maybe version misspecified or were they installed locally?"))
 
       }
@@ -935,7 +935,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPat
     if (any(haveLocal2))
       pkgDTList$Archive[, PackageUrl := file.path(Package, basename(localFile))]
     if (!all(haveLocal2)) {
-      # downloadArchive takes a list with an element called "Archive" so can't split on "Archive" here
+      # downloadArchive takes a list with an element called .txtArchive so can't split on .txtArchive here
       # noLocals <- pkgDTList$Archive$haveLocal2 %in% TRUE
       txtArchiveHaveLocal <- "ArchiveHaveLocal"
       if (any(haveLocal2)) {
@@ -948,7 +948,7 @@ getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPat
       }
       if (!is.null(pkgDTList[[txtArchiveHaveLocal]])) {
         pkgDTList$Archive <-
-          rbindlist(pkgDTList[c("Archive", txtArchiveHaveLocal)],
+          rbindlist(pkgDTList[c(.txtArchive, txtArchiveHaveLocal)],
                     fill = TRUE, use.names = TRUE)
         pkgDTList[[txtArchiveHaveLocal]] <- NULL
       }

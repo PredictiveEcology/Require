@@ -1150,7 +1150,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
     notOK <- !pkgCRAN$availableVersionOK %in% TRUE # FALSE means it is on CRAN, but not that version; NA means it is not on CRAN currently
     if (any(notOK)) {
       pkgNot <- unique(pkgCRAN[["packageFullName"]][notOK])
-      pkgCRAN[notOK, `:=`(repoLocation = "Archive", installFrom = "Archive")]
+      pkgCRAN[notOK, `:=`(repoLocation = .txtArchive, installFrom = .txtArchive)]
       pkgNoLocal[["CRAN"]] <- pkgCRAN
       pkgNoLocal <- rbindlistRecursive(pkgNoLocal)
       pkgNoLocal <- split(pkgNoLocal, by = "repoLocation")
@@ -1216,10 +1216,10 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
 downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesArgs,
                             numToDownload, tmpdir, verbose) {
   # fillDefaults(pkgDep)
-  pkgArchive <- pkgNonLocal[["Archive"]]
+  pkgArchive <- pkgNonLocal[[.txtArchive]]
 
   if (NROW(pkgArchive)) {
-    ava <- dlArchiveVersionsAvailable(unique(pkgArchive[["Package"]][pkgArchive$repoLocation %in% "Archive"]),
+    ava <- dlArchiveVersionsAvailable(unique(pkgArchive[["Package"]][pkgArchive$repoLocation %in% .txtArchive]),
                                       repos = repos, verbose = verbose
     )
     if (!isTRUE(getOption("Require.offlineMode"))) {
@@ -1265,19 +1265,19 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
           # Check RSPM
           # pkgArchiveHasPU$`TRUE` <- downloadRSPM(pkgArchiveHasPU$`TRUE`, install.packagesArgs, verbose)
 
-          if (any(pkgArchiveHasPU$`TRUE`$repoLocation %in% "Archive" &
+          if (any(pkgArchiveHasPU$`TRUE`$repoLocation %in% .txtArchive &
                   pkgArchiveHasPU$`TRUE`$availableVersionOK %in% TRUE)) {
             pkgArchiveHasPU$`TRUE` <- split(pkgArchiveHasPU$`TRUE`, pkgArchiveHasPU$`TRUE`[["repoLocation"]])
-            pkgArchOnly <- pkgArchiveHasPU$`TRUE`[["Archive"]]
+            pkgArchOnly <- pkgArchiveHasPU$`TRUE`[[.txtArchive]]
 
             if (getOption("Require.installPackagesSys") >= 1) {
               on.exit(copyBuiltToCache(pkgArchOnly, tmpdir, copyOnly = TRUE))
 
               pkgArchOnly <- archiveDownloadSys(pkgArchOnly, whNotfe, tmpdir = tmpdir, verbose)
-              pkgArchiveHasPU$`TRUE`[["Archive"]] <- pkgArchOnly
+              pkgArchiveHasPU$`TRUE`[[.txtArchive]] <- pkgArchOnly
 
             } else {
-              pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), "Archive", Package)]
+              pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), .txtArchive, Package)]
               pkgArchOnly[whNotfe, localFile := useRepository]
 
             }
@@ -1290,7 +1290,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
     }
   }
 
-  pkgNonLocal[["Archive"]] <- pkgArchive
+  pkgNonLocal[[.txtArchive]] <- pkgArchive
 
   pkgNonLocal
 }
@@ -1687,7 +1687,7 @@ messageForInstall <- function(startTime, toInstall, numPackages, verbose, numGro
 
     srces <- names(pkgToReportBySource)
     messageVerbose("  -- To install from:", verbose = verbose)
-    nxtSrc <- c(yellow = .txtLocal, blue = "CRAN", turquoise = "Archive", green = .txtGitHub, black = "RSPM")
+    nxtSrc <- c(yellow = .txtLocal, blue = "CRAN", turquoise = .txtArchive, green = .txtGitHub, black = "RSPM")
     Map(colr = names(nxtSrc), type = nxtSrc, function(colr, type) {
       pp <- pkgToReportBySource[[type]]
       if (type %in% srces) {
@@ -1795,7 +1795,7 @@ availablePackagesOverride <- function(toInstall, repos, purge, type = getOption(
     if (any(!isNA)) {
       ap[!isNA, "Version"] <- toInstallList[[i]][["VersionOnRepos"]][!isNA]
     }
-    if (i %in% c("Archive", "CRAN")) {
+    if (i %in% c(.txtArchive, "CRAN")) {
       ap[, "Repository"] <- toInstallList[[i]]$Repository
     }
     if (i %in% c(.txtLocal, .txtGitHub)) {
@@ -2744,7 +2744,7 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
 
         for (ind in seq(nonBinaryRepos)) {
           nbrContrib <- contrib.url(nonBinaryRepos)
-          whArchive <- pkgInstall$installFrom %in% "Archive"
+          whArchive <- pkgInstall$installFrom %in% .txtArchive
           dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
           if (!is.null(pkgInstall$localFile)) {
             mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
@@ -2910,7 +2910,7 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
 }
 
 getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
-  file.path(contrib.url(repo, type), "Archive", pkg)
+  file.path(contrib.url(repo, type), .txtArchive, pkg)
 }
 
 isGitHub <- function(pkg, filenames) {
@@ -3767,8 +3767,8 @@ archiveDownloadSys <- function(pkgArchOnly, whNotfe, tmpdir, verbose) {
   set(pkgArchOnly, whNotfe, "fileExists", FALSE)
   pkg <- split(pkgArchOnly, by = "fileExists")
   p <- pkg[["FALSE"]]
-  set(p, NULL, "Repository", file.path(contrib.url(p$repo, type = "source"), "Archive"))
-  # p[, Repository := file.path(contrib.url(repo, type = "source"), "Archive")]
+  set(p, NULL, "Repository", file.path(contrib.url(p$repo, type = "source"), .txtArchive))
+  # p[, Repository := file.path(contrib.url(repo, type = "source"), .txtArchive)]
   p$repo <- naToEmpty(p$repo)
   p$PackageUrl <- naToEmpty(p$PackageUrl)
   url <- if (any(greplV(unique(p$repo), p$PackageUrl))) {
