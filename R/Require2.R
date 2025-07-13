@@ -1083,6 +1083,8 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       a <- DESCRIPTIONFileDepsV(rr, which = colsHere, keepSeparate = TRUE)
       b <- invertList(a)
       d <- as.data.table(b)
+      for (ch in colsHere)
+        set(d, NULL, ch, sapply(d[[ch]], function(x) paste0(x, collapse = ",")))
       set(d, NULL, c("Package", "packageFullName"),
           list(pp1[["TRUE"]]$Package, pp1[["TRUE"]]$package))
       pp1[["TRUE"]] <- pp1[["TRUE"]][, -..colsHere][d, on = c("Package", "packageFullName")]
