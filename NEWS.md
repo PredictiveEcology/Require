@@ -1,16 +1,11 @@
-# Require
-
-version 1.0.2
-=============
+# Require (development version)
 
 ## Bugfixes
 * several minor
 * better fails when status is 403 for package dependency checking
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
-* failure to install when using `(HEAD)` in some cases for packages in custom repositories
 
-version 1.0.1
-=============
+# Require 1.0.1
 
 ## CRAN requested fixes
 * Require was failing on secondary check systems (Fedora and one Mac system). This update fixes those.
@@ -21,8 +16,7 @@ version 1.0.1
 ## Other
 * package testing on Linux Fedora and one MacOS machine on CRAN extra machines were addressed.
 
-version 1.0.0
-=============
+# Require 1.0.0
 
 ## major changes
 * Installation, package downloading, and package building from source now occur in an external process using `sys` package. This allows for more control over messaging during installations, and it also allows of installation of many packages that are already loaded (with a message that the session will need restarting). This can be turned off with This is turned on with `option(Require.installPackagesSys = FALSE)`.
@@ -53,8 +47,7 @@ version 1.0.0
 * Some issues specific to MacOS have been fixed.
 * fixes or implemented other issues #91, #96, #97, #102, #105
 
-version 0.3.1
-=============
+# Require 0.3.1
 
 ## enhancements
 * minor modifications for when internet is not available
@@ -63,8 +56,7 @@ version 0.3.1
 ## bugfixes
 * updates to tests that have begun to fail
 
-version 0.3.0
-=============
+# Require 0.3.0
 
 ## enhancements
 * Moved from MRAN archives for binaries to <https://packagemanager.posit.co/>
@@ -85,8 +77,7 @@ version 0.3.0
 * corrected support for multiple repos that each offer the same packages. Now works like `install.packages`, i.e., first one first.
 * base packages can now be installed as previous issues about installing them were dealt with.
 
-version 0.2.6
-=============
+# Require 0.2.6
 
 ## enhancements
 * attempts to deal with more cases of failed installations
@@ -102,8 +93,7 @@ version 0.2.6
 * can now deal with case when `repos` has multiple, non-binary CRAN-like repositories, when there is also at least one binary repository supplied e.g., the rstudio package manager, i.e., there are at least 3 repositories supplied, 1 of which is binary.
 * other minor
 
-version 0.2.5
-=============
+# Require 0.2.5
 
 ## enhancements
 * several modifications to enable CRAN-policy violations all addressed, notably keeping all temporary and (package and personal) cache directories clean after examples and tests
@@ -138,9 +128,7 @@ new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and
 * `setup` and `setupOff` are now deprecated; messaging is supplied for what to do if these were being used
 * several options are deprecated
 
-
-version 0.1.6
-=============
+# Require 0.1.6
 
 ## enhancements
 * `pkgSnapshot` examples brought up to present usage & simplified
@@ -150,9 +138,7 @@ version 0.1.6
 ## bugfix
 * minor bugfix only detected on submission to CRAN
 
-
-version 0.1.5
-=============
+# Require 0.1.5
 
 ## enhancements
 * package caching for packages that need sources installs (i.e., identified with `sourcePkgs()`, which tend to occur when R packages require idiosyncratic system dependencies) cache the binary version and reuse that on the same system with subsequent re-installs.
@@ -160,8 +146,7 @@ version 0.1.5
 ## bugfix
 * `pkgDep` was misidentifying the correct package dependencies. This would manifest when a user had a version of package "A" installed as well as all its dependencies, e.g., "B". When the user updated "A" to a new version that required a new version of "B", it would not correctly identify the new dependency requirement, and not update "B", causing "A" update to fail. This is fixed.
 
-version 0.1.4
-=============
+# Require 0.1.4
 
 * Make corrections for 2 failing architectures on CRAN
 * MUCH less verbose during automated testing
@@ -173,8 +158,8 @@ version 0.1.4
 ## bugfixes
 * more edge cases found and dealt with
 
-version 0.1.2
-==============
+# Require 0.1.2
+
 ## dependencies
 * drop support for R 3.6 (R >= 4.0 are supported)
 
@@ -187,16 +172,16 @@ version 0.1.2
 
 * much faster installations:
 
-  * When source packages, they are grouped and installed together using the internal parallelism of install.packages (setting Ncpus option to 4)
+  * When source packages, they are grouped and installed together using the internal parallelism of `install.packages` (setting `Ncpus` option to 4)
   * when binary, passes vectors to install.packages so much faster.
   * all packages are installed in install-safe groups for speed
 
-* can use pak package under the hood when options("Require.usepak" = TRUE), though there are still many cases that pak cannot deal with. Users should try and determine if this option delivers as expected. pak installs tend to be slightly faster if they work correctly.
+* can use pak package under the hood when `options("Require.usepak" = TRUE)`, though there are still many cases that pak cannot deal with. Users should try and determine if this option delivers as expected. pak installs tend to be slightly faster if they work correctly.
 * binary package caching is turned in by default in a user-specific standard directory, making repeat installations (on same system, or shared drive systems) much faster.
 * MRAN installs for Windows are now much more robust under many conditions.
-* archived packages (ie no longer on CRAN) will now be found and installed (latest available version)
+* archived packages (i.e., no longer on CRAN) will now be found and installed (latest available version)
 * more robust dependency identification even for archived or older packages or package versions (including their dependencies)
-* MRAN binaries will be used in MacOSX.
+* MRAN binaries will be used in MacOS.
 * improved installation of older packages (e.g. when dependencies are removed from CRAN, or source versions can't be easily compiled)
 * several other minor improvements in package dependency resolution and installation.
 
@@ -205,16 +190,16 @@ version 0.1.2
 * identified possible bug with `install.packages` when `options(Ncpus = XX)` where XX is a number > 1. Some packages are skipped. `Require` now captures this and attempts to install the ones that did not get correctly installed.
 * multiple fixes for certain edge cases.
 
-version 0.1.1
-==============
+# Require 0.1.1
+
 ## enhancements
 * can now use `pak` if `options("Require.usepak" = TRUE)` and there are no version specifications (i.e., if a user specifies e.g., `Require("reproducible (<= 1.2.9))`, then the non-`pak` approach will be used)
 
 ## bugfixes
 * fixed an error installing certain GitHub packages
 
-version 0.1.0
-==============
+# Require 0.1.0
+
 ## enhancements
 * install CRAN packages using vectorized `install.packages` --> much faster
 * now uses internal `installGithubPackage` instead of `remotes::install_github`
@@ -230,12 +215,11 @@ version 0.1.0
 * `extractPkgNames` now allows GitHub packages that have the repository omitted, i.e., they only have `@`. This is useful if there is a default expectation for a github repository
 * better handling of GitHub package install issues
 
-version 0.0.13
-==============
+# Require 0.0.13
+
 * fix CRAN policy violation -- dealt with extraneous folder created during testing
 
-version 0.0.12
-==============
+# Require 0.0.12
 
 ## Dependency changes
 * with the release of R 4.1, we dropped support for R 3.5. R 3.6 (`oldrel`) and newer are supported.
@@ -253,15 +237,13 @@ version 0.0.12
 * allow either `master` or `main` branches to be installed from GitHub, without needing to specify (#26)
 * fix use of options in `setup()`
 
-version 0.0.10
-==============
+# Require 0.0.10
 
 ## Bug fixes
 * CRAN error on one flavour of Linux
 * erroneous `checkPath` error creating `Specified path xxxx doesn't exist` even though it does.
 
-version 0.0.9
-==============
+# Require 0.0.9
 
 ## New features
 * `modifyList2`, a generalization of `utils::modifyList` for >2 lists. Also, can handle NULL lists.
@@ -276,9 +258,7 @@ version 0.0.9
 * captures and deals with a bug in `install.packages` (`argument "av2" is missing, with no default`) on R-devel for Windows (on Sept 09, 2020). May be transient.
 * Was, by default, installing from `source` on Windows. Fixed.
 
-
-version 0.0.8
-==============
+# Require 0.0.8
 
 ## New features
 * GitHub SHA is now stored during `pkgSnapshot`, meaning that a new system can be built with exact versions and SHAs of GitHub packages.
@@ -296,9 +276,7 @@ version 0.0.8
 * `pkgDepTopoSort` now appears to be correct for all types of package descriptions currently allowed by `Require`, namely, packages with no version specification, packages with version specification (including older versions), and GitHub packages.
 * many minor edge cases
 
-
-version 0.0.7
-==============
+# Require 0.0.7
 
 ## New features
 * no longer sets CRAN repository to cloud.r-project.org even if non-interactive with no CRAN repository set. Now uses `chooseCRANmirror(ind = 1)`
@@ -306,8 +284,7 @@ version 0.0.7
 ## Bug fixes
 * fixes CRAN check issues on Fedora.
 
-version 0.0.6
-==============
+# Require 0.0.6
 
 ## New features
 * none
@@ -316,8 +293,7 @@ version 0.0.6
 * fixed CRAN check issues.
 * default repo now uses option `repos` instead of specifying CRAN repo.
 
-version 0.0.5
-==============
+# Require 0.0.5
 
 ## New features
 * moved several functions that have to do with package loading and installing from `reproducible` to `Require`, including `pkgDep`, `pkgDepTopoSort`.
@@ -327,24 +303,20 @@ version 0.0.5
 * minor changes in non-exported functions
 * handling of bugs in `base::available.packages` for old Mac machines and R versions
 
-version 0.0.4
-==============
+# Require 0.0.4
 
 ## Bug fixes
 * remove `installed.packages` from test code, as per CRAN request
 
-version 0.0.3
-==============
+# Require 0.0.3
 
 * Change title to Title Case in DESCRIPTION
 
-version 0.0.2
-==============
+# Require 0.0.2
 
 * Change backticks to single quotes in DESCRIPTION
 
-version 0.0.1
-==============
+# Require 0.0.1
 
 ## New features
 * This is a rewrite of the function, `Require` (and helpers) which will be removed from package `reproducible`
