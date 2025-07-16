@@ -528,10 +528,10 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest <- (endsWith(fn, "zip") & isWindows()) |
-    (grepl("R_x86", fn) & !isWindows() & !isMacOSX()) |
-    (endsWith(fn, "tgz") & isMacOSX())
+    (grepl("R_x86", fn) & !isWindows() & !isMacOS()) |
+    (endsWith(fn, "tgz") & isMacOS())
   if (isTRUE(needRepoCheck)) {
-    if (isWindows() || isMacOSX()) {
+    if (isWindows() || isMacOS()) {
       binRepo <- isBinaryCRANRepo(curCRANRepo = repos)
     } else {
       binRepo <- isBinaryCRANRepo()
@@ -543,7 +543,7 @@ isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
 
 isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
                              repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
-  if (isWindows() || isMacOSX()) {
+  if (isWindows() || isMacOS()) {
     isBin <- grepl("[\\|/])|/bin[\\|/]", curCRANRepo)
   } else {
     if (is.name(repoToTest))
@@ -684,7 +684,7 @@ isWindows <- function() {
   tolower(SysInfo["sysname"]) == "windows"
 }
 
-isMacOSX <- function() {
+isMacOS <- function() {
   isMac <- tolower(SysInfo["sysname"]) == "darwin"
 }
 
@@ -1593,7 +1593,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     }
   } else {
 
-    if (isMacOSX() && "covr" %in% ipa$pkgs)
+    if (isMacOS() && "covr" %in% ipa$pkgs)
       print(ipa)
     # if (ipa$quiet && ipa$type %in% "source" && isWindows())
     #   ipa$quiet <- FALSE

@@ -63,7 +63,7 @@ RequireOptions <- function() {
     Require.checkInternet = TRUE,
     Require.cloneFrom = NULL,
     Require.install = TRUE,
-    Require.installPackagesSys = if (isMacOSX()) 0L else 2L,
+    Require.installPackagesSys = if (isMacOS()) 0L else 2L,
     Require.otherPkgs = c(
       "cpp11",
       "igraph",

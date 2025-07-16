@@ -561,7 +561,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                        verbose = getOption("Require.verbose")) {
 
   messageForInstall(startTime, toInstall, numPackages, verbose, numGroups)
-  type <- if (isWindows() || isMacOSX()) {
+  type <- if (isWindows() || isMacOS()) {
     # "binary"
     unique(c("source", "binary")[toInstall$isBinaryInstall + 1])
   } else {
@@ -706,7 +706,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
                        verbose = verbose, verboseLevel = 1)
       }
 
-      if (isMacOSX() && "covr" %in% pkgInstall$Package)
+      if (isMacOS() && "covr" %in% pkgInstall$Package)
         print(pkgInstall)
 
       if (!is.null(pkgInstall)) {
@@ -720,7 +720,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
 
         # The install
         pkgInstall[, installSafeGroups := 1L]
-        if (isWindows() || isMacOSX()) {
+        if (isWindows() || isMacOS()) {
           pkgInstall[, installSafeGroups := (isBinaryInstall %in% FALSE) + 1L]
           pkgInstall <- updateInstallSafeGroups(pkgInstall)
         }
@@ -1217,7 +1217,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
             packageUrl <- file
           else
             packageUrl <- file.path(ap[["Package"]], file)
-          if (isMacOSX())
+          if (isMacOS())
             fileext <- "tgz"
           else
             fileext <- ".tar.gz"
@@ -1424,10 +1424,10 @@ cleanUpNewBuilds <- function(pkgDT, prevDir) {
 }
 
 types <- function(length = 1L) {
-  isOldMac <- isMacOSX() && compareVersion(as.character(getRversion()), "4.0.0") < 0
+  isOldMac <- isMacOS() && compareVersion(as.character(getRversion()), "4.0.0") < 0
   types <- if (isOldMac) {
     c("mac.binary.el-capitan", "source")
-  } else if (!isWindows() && !isMacOSX()) {
+  } else if (!isWindows() && !isMacOS()) {
     c("source")
   } else {
     c("binary", "source")
@@ -1968,7 +1968,7 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
   fn <- localFiles[whLocalFile]
   systemSpecificFileTypes <- if (isWindows()) {
     endsWith(fn, "zip") | endsWith(fn, "tar.gz")
-  } else if (isMacOSX()) {
+  } else if (isMacOS()) {
     endsWith(fn, "tgz") | endsWith(fn, "tar.gz")
   } else {
     endsWith(fn, "tar.gz")
@@ -2742,13 +2742,13 @@ updateReposForSrcPkgs <- function(pkgInstall, verbose = getOption("Require.verbo
 
     # }
     #
-    # if (!isWindows() && !isMacOSX() &&
+    # if (!isWindows() && !isMacOS() &&
     #     any(pkgInstall$isBinaryInstall & pkgInstall$localFile %in% useRepository)) {
     #   dontInstallBecauseForceSrc <- pkgInstall[["Package"]] %in% sourcePkgs()
     #   mayNeedSwitchToSrc <- pkgInstall$localFile %in% useRepository & dontInstallBecauseForceSrc
     #   pkgInstall[
     #     which(mayNeedSwitchToSrc),
-    #     isBinaryInstall := isWindows() | isMacOSX()
+    #     isBinaryInstall := isWindows() | isMacOS()
     #   ]
     #   needSwitchToSrc <- mayNeedSwitchToSrc & pkgInstall$isBinaryInstall %in% FALSE
     #   if (any(needSwitchToSrc %in% TRUE)) {
@@ -3309,7 +3309,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
         earlyDate <- ava[[Package]][correctVersions[1]][["mtime"]] + secondsInADay
         ret <- ava[[Package]][correctVersions[1]][, c("PackageUrl", "mtime", "repo")]
 
-        # if (isWindows() || isMacOSX()) { # relevant for RSPM
+        # if (isWindows() || isMacOS()) { # relevant for RSPM
         messageVerbose(.GRP, " of ", numGroups, ": ", Package,
                        verbose = verbose,
                        verboseLevel = 2
