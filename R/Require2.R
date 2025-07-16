@@ -1,5 +1,5 @@
 utils::globalVariables(c(
-  "..apCachedCols", "..cols", "..cols3", "..colsToKeep", "..keepCols1",
+  ".", "..apCachedCols", "..cols", "..cols3", "..colsHere", "..colsToKeep", "..keepCols1",
   ".GRP", "Account", "Additional_repositories", "availableVersionOKthisOne",
   "binOrSrc", "bothDepAndOrig", "Branch", "comp", "depOrOrig",
   "DESCFile", "EqualsDoesntViolate", "forceInstall", "getOptions",
@@ -9,8 +9,8 @@ utils::globalVariables(c(
   "installedVersionOK", "installSafeGroups", "isBinaryInstall",
   "isEquals", "isGT", "keep44", "keep55", "keepBasedOnRedundantInequalities",
   "keepCols3", "keepCols4", "keepCols5", "keepForUpdate", "LibPath", "loadOrder",
-  "localFile", "mayNeedSwitchToSrc", "needInstall", "needKeep",
-  "newLocalFile", "oppositeInequals", "PackageUrl", "parentPackage",
+  "localFile", "mayNeedSwitchToSrc", "needInstall", "needKeep", "newLocalFile",
+  "oppositeInequals", "ord", "ordB", "PackageUrl", "parentPackage", "parentVersionQueried",
   "repo", "Repo", "Repository", "SHAonGH", "SHAonLocal", "verbose",
   "Version", "VersionOK", "VersionOnRepos", "versionSpec", "versionToKeep",
   "violation", "violation2", "violationsDoubleInequals", "whArchive"
@@ -4173,7 +4173,7 @@ checkCompileFailedThenInstallBinary <- function(rl, ipa, toInstall, verbose) {
   ipa
 }
 
-
+#' @importFrom data.table copy
 cleanUpRecursivePkgVersionIssues <- function(deps2, verbose) {
   if (isTRUE(any(deps2$inequality %in% "==")) &&
       isTRUE(!is.null(deps2[["parentVersionQueried"]]))) {
@@ -4189,10 +4189,12 @@ cleanUpRecursivePkgVersionIssues <- function(deps2, verbose) {
     for (i in 1:3) {
       b <- confirmEqualsDontViolateInequalitiesThenTrim(a, verbose = verbose - 1 )
       set(b, NULL, "ordB", seq_len(NROW(b)))
-      parents <- b[!is.na(parentPackage), .(packageFullName = paste0(extractPkgName(parentPackage), " (==", parentVersionQueried, ")"),
-                                            Package = extractPkgName(parentPackage),
-                                            ord = ord,
-                                            ordB = ordB)]
+      parents <- b[!is.na(parentPackage),
+                   .(packageFullName = paste0(extractPkgName(parentPackage),
+                                              " (==", parentVersionQueried, ")"),
+                     Package = extractPkgName(parentPackage),
+                     ord = ord,
+                     ordB = ordB)]
       parentsDT <- parsePackageFullname(parents)
       kickOut <- b[ , {
         .pkg = Package
