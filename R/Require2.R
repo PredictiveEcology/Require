@@ -3191,10 +3191,10 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
   return(invisible())
 }
 
-
 linkOrCopyPackageFilesInner <- function(Packages, fromLib, toLib) {
   ret <- lapply(Packages, function(packToClone) {
-    from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE), recursive = TRUE, all.files = TRUE)
+    from <- dir(dir(fromLib, pattern = paste0("^", packToClone, "$"), full.names = TRUE),
+                recursive = TRUE, all.files = TRUE)
     fromFull <- file.path(fromLib, packToClone, from)
     to <- file.path(toLib, packToClone, from)
     dups <- fromFull %in% to

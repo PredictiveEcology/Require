@@ -1,5 +1,5 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
-  Sys.setenv("R_REQUIRE_RUN_ALL_TESTS" = "true")
+  Sys.setenv(R_REQUIRE_RUN_ALL_TESTS = "true")
 }
 verboseForDev <- -2
 Require.usePak <- FALSE
@@ -38,7 +38,7 @@ withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
 suggests <- setdiff(suggests, c("testthat", "SpaDES", "SpaDES.core", "quickPlot")) # doesn't like being local_package'd
-withr::local_options("Require.packagesLeaveAttached" = suggests, .local_envir = teardown_env())
+withr::local_options(Require.packagesLeaveAttached = suggests, .local_envir = teardown_env())
 # for (pk in suggests) {
 #   try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)
 # }

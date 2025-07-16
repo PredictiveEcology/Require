@@ -35,7 +35,7 @@ To set a different directory than the default, set the system variable:
 e.g., in \code{.Renviron} file or \code{Sys.setenv()}. See Note below.
 }
 \note{
-There are two different cache directories used by Require: \code{cacheDir} and \code{cachePkgDir}.
+There are two different cache directories used by \code{Require}: \code{cacheDir} and \code{cachePkgDir}.
 The \code{cachePkgDir} is intended to be a sub-directory of the \code{cacheDir}.
 If you set \code{Sys.setenv("R_REQUIRE_CACHE" = "somedir")}, then both the package cache
 and cache dirs will be set, with the package cache a sub-directory.

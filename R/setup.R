@@ -93,7 +93,7 @@ normPathMemoise <- function(d) {
 #' @rdname cacheDir
 #'
 #' @note
-#' There are two different cache directories used by Require: `cacheDir` and `cachePkgDir`.
+#' There are two different cache directories used by `Require`: `cacheDir` and `cachePkgDir`.
 #' The `cachePkgDir` is intended to be a sub-directory of the `cacheDir`.
 #' If you set `Sys.setenv("R_REQUIRE_CACHE" = "somedir")`, then both the package cache
 #'  and cache dirs will be set, with the package cache a sub-directory.
@@ -346,8 +346,6 @@ debianUbuntuRelease <- function() {
   system("lsb_release -cs", intern = TRUE)
 }
 
-appName <- "R-Require"
-
 #' The default cache directory for Require Cache
 #'
 #' A wrapper around `tools::R_user_dir("Require", which = "cache")` that
@@ -360,6 +358,8 @@ appName <- "R-Require"
 cacheDefaultDir <- function() {
   normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 }
+
+appName <- "R-Require"
 
 defaultCacheDirOld <- switch(SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
