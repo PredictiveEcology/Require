@@ -6,7 +6,7 @@ test_that("test 5", {
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
-  if (isDevAndInteractive && !isMacOSX()) { ## TODO: source installs failing on macOS
+  if (isDevAndInteractive && !isMacOS()) { ## TODO: source installs failing on macOS
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     # packages that don't compile on Windows:
     #   checkmate ==2.0.0

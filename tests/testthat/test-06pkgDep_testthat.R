@@ -5,8 +5,6 @@ test_that("test 6", {
   tmpdir <- tempdir2(.rndstr())
   .libPaths(tmpdir)
 
-  Install(c("curl", "httr", "waldo")) ## needed by testthat but not installed in tmp libPath
-
   isDev <- getOption("Require.isDev")
   # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 

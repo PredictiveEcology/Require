@@ -1,11 +1,10 @@
 test_that("test 1", {
-
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
 
-  ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
+  ## cover CRAN in case of having a environment variable set, which CI seems to
   origCRAN_REPO <- Sys.getenv("CRAN_REPO")
   Sys.unsetenv("CRAN_REPO")
   isInteractive <- function() FALSE
@@ -21,19 +20,20 @@ test_that("test 1", {
     all(nchar(repos) > 0) # may have binary also
   })
 
-  # # cannot open file 'startup.Rs': No such file or directory
-  # # suggested solution https://stackoverflow.com/a/27994299/3890027
+  ## cannot open file 'startup.Rs': No such file or directory
+  ## suggested solution https://stackoverflow.com/a/27994299/3890027
   # Sys.setenv("R_TESTS" = "")
   # Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
   dir1 <- Require:::rpackageFolder(Require:::tempdir3("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
 
-  (mess <- capture_messages(out <- Require::Require("fpCompare (<= 1.2.3)",
-                                            standAlone = TRUE, libPaths = dir1,
-                                            # quiet = TRUE,
-                                            returnDetails = TRUE
-  ))) |> capture_warnings() -> warns
+  (mess <- capture_messages({
+    out <- Require::Require("fpCompare (<= 1.2.3)",
+                            standAlone = TRUE, libPaths = dir1,
+                            # quiet = TRUE,
+                            returnDetails = TRUE)
+  })) |> capture_warnings() -> warns
 
   skip_if_offline()
 

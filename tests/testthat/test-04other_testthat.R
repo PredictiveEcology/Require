@@ -47,7 +47,7 @@ test_that("test 4", {
         )
       )
       # mac has a transient, unidentified failure on GHA with this
-      if (isMacOSX() && length(dir(.libPaths()[1], pattern = "fpCompare")) > 0)
+      if (isMacOS() && length(dir(.libPaths()[1], pattern = "fpCompare")) > 0)
         if (!isTRUE(any(grepl("Internet.+unavailable", mess))))
           expect_true(packVer("fpCompare", lib.loc = .libPaths()[1]) > "0.2.4")
     }
@@ -194,7 +194,7 @@ test_that("test 4", {
     #   were multiple repos; ffbase is no longer on CRAN
     # can't quiet this down on linux because ffbase is not binary but rest are ...
     #  install.packages won't do both types quiet = TRUE for some reason
-    if (!isMacOSX()) {
+    if (!isMacOS()) {
       warns1 <- capture_warnings(
         Install("ff", # verbose = 0,
                 repos = c(RSPM = urlForPositPACKAGES, CRAN = "https://cloud.r-project.org"

@@ -1132,8 +1132,7 @@ cacheClearPackages <- function(packages,
         "crancache is being used because options(Require.useCranCache = TRUE); ",
         "however, clearCranCache is FALSE. This means that packages from ",
         "crancache will continue to re-populate the Require Cache. ",
-        "To remove all local packages, set clearCranCache in this ",
-        "function to TRUE"
+        "To remove all local packages, set clearCranCache in this  function to TRUE."
       ))
     }
     if (isTRUE(clearCranCache)) {

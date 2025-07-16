@@ -683,7 +683,7 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   if (!is(his, "try-error") || grep(pattern = isCRAN, getOption("repos")) != 1) {
     # opt <- options(repos = isCRAN)
     # on.exit(options(opt))
-    if (isWindows() || isMacOSX()) {
+    if (isWindows() || isMacOS()) {
       type <- "binary"
     }
     ap <- available.packagesWithCallingHandlers(isCRAN, type = type) |> as.data.table()
