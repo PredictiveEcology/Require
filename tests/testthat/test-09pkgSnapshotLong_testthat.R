@@ -186,9 +186,9 @@ test_that("test 09", {
 
       missingFirst <- setdiff(packagesBasedOnPackageFullNames, ip$Package)
 
-      # setdiff(ip$Package, packagesBasedOnPackageFullNames) # this is the same as next line, but gives the actual packages
-      allInIPareInPkgs <- all(ip$Package %in% packagesBasedOnPackageFullNames)
-      expect_true(allInIPareInPkgs)
+      pkgsTooMany <- setdiff(ip$Package, packagesBasedOnPackageFullNames) # this is the same as next line, but gives the actual packages
+      expect_identical(pkgsTooMany, character())
+
 
       # Check based on Version number
 
@@ -231,7 +231,8 @@ test_that("test 09", {
       # and visualTest which is missing GitHub info for some reason --
 
       skip_if_offline()
-      expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
+      expect_true(identical(missingPackages$Package, character(0)))
+      # expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
       warns <- capture_warnings(
         lala <- capture.output(type = "message", {
           out2 <- Require(
