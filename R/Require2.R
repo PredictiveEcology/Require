@@ -328,12 +328,20 @@ Require <- function(packages,
       )
     } else {
       if (length(which)) {
+        # "Rdpack"     "S7"         "rbibutils"  "reformulas"
         deps <- pkgDep(packages, simplify = FALSE,
                        purge = purge, libPaths = libPaths, recursive = TRUE,
                        which = which, type = type, verbose = verbose, repos = repos,
                        Additional_repositories = TRUE
         )
-        deps2 <- rbindlist(deps$deps, fill = TRUE, use.names = TRUE)
+        # if (any(c("reformulas", "lme4") %in% packages) ||
+        #     isTRUE(any(grepl("test 09", sys.calls())))) browser() # try to change fewer
+        deps4 <- parsePackageFullname(data.table::copy(deps))
+        deps3 <- confirmEqualsDontViolateInequalitiesThenTrim(data.table::copy(deps4))
+
+        deps2 <- rbindlist(deps3$deps, fill = TRUE, use.names = TRUE)
+        deps2 <- cleanUpRecursivePkgVersionIssues(deps2, verbose)
+
         # If there were archives in pkgDep, it had to go get them, so it has them locally, don't want to waste them
         if (!is.null(deps[["localFile"]])) {
           deps2 <- deps2[deps[, c("packageFullName", "newLocalFile", "localFile")], on = "packageFullName"]
@@ -4163,4 +4171,64 @@ checkCompileFailedThenInstallBinary <- function(rl, ipa, toInstall, verbose) {
     # ipa$pkgs <- ipa$available[, "Package"]
   }
   ipa
+}
+
+
+cleanUpRecursivePkgVersionIssues <- function(deps2, verbose) {
+  if (isTRUE(any(deps2$inequality %in% "==")) &&
+      isTRUE(!is.null(deps2[["parentVersionQueried"]]))) {
+    set(deps2, NULL, "ord", seq_len(NROW(deps2)))
+    depsTmp <- deps2[, .(Package = extractPkgName(parentPackage),
+                         packageFullName = parentPackage,
+                         Version = parentVersionQueried,
+                         ord = ord)]
+    depsTmp2 <- depsTmp[!is.na(Package)]
+    depsTmp3 <- parsePackageFullname(data.table::copy(depsTmp2))#[Package %in% "lme4"]
+    a <- data.table::copy(deps2)
+    set(a, NULL, "ordA", seq_len(NROW(a)))
+    for (i in 1:3) {
+      b <- confirmEqualsDontViolateInequalitiesThenTrim(a, verbose = verbose - 1 )
+      set(b, NULL, "ordB", seq_len(NROW(b)))
+      parents <- b[!is.na(parentPackage), .(packageFullName = paste0(extractPkgName(parentPackage), " (==", parentVersionQueried, ")"),
+                                            Package = extractPkgName(parentPackage),
+                                            ord = ord,
+                                            ordB = ordB)]
+      parentsDT <- parsePackageFullname(parents)
+      kickOut <- b[ , {
+        .pkg = Package
+        parentsIndPkg <- parentsDT[Package %in% .pkg]
+        out <- NULL
+        if (NROW(parentsIndPkg)) {
+          good <- compareVersion2(parentsIndPkg$versionSpec, versionSpec, inequality)
+          out <- try(parentsIndPkg$ordB[!good])
+          # if (is(out, "try-error")) browser()
+        }
+        out
+      }, by = c("versionSpec", "Package")]
+      if (NROW(kickOut) == 0) {
+        break
+      }
+      setorderv(kickOut, "V1")
+      notOK <- b[ordB %in% kickOut$V1]
+      kickOutInd <- na.omit(kickOut$V1)
+      kickOutIndA <- b$ordA[kickOutInd]
+      notUserAsked <- is.na(kickOut$V1)
+      if (any(notUserAsked)) {
+        kickOutNotAsked1 <- which(b$Package %in% kickOut$Package[notUserAsked])
+        kickOutNotAskedA <- b$ordA[kickOutNotAsked1]
+        kickOutIndA <- sort(c(kickOutIndA, kickOutNotAskedA))
+      }
+      actualRmInA <- which(a$ordA %in% kickOutIndA)
+      a[actualRmInA]
+      a <- a[-actualRmInA]
+    }
+
+    # Final pass -- packages that are parentPackages, but that are not Packages
+    toRm <- setdiff(extractPkgName(a$parentPackage), a$Package) |> na.omit()
+    a <- a[!extractPkgName(parentPackage) %in% toRm]
+
+    deps2 <- a
+
+  }
+  deps2
 }
