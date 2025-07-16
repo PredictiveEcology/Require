@@ -30,9 +30,9 @@ if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
 }
 
-# The local user's cache may have package versions that are newer than those requested in the tests
-#  The tests could be written to accommodate this fact, but it is idiosyncratic to the user's
-#  cache directory; so, this just starts fresh on every new R session
+## The local user's cache may have package versions that are newer than those requested in the tests
+##  The tests could be written to accommodate this fact, but it is idiosyncratic to the user's
+##  cache directory; so, this just starts fresh on every new R session
 withr::local_envvar("R_USER_CACHE_DIR" = tempdir2("RequireCacheForTests"), .local_envir = teardown_env())
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
@@ -43,8 +43,8 @@ withr::local_options("Require.packagesLeaveAttached" = suggests, .local_envir = 
 #   try(suppressWarnings(withr::local_package(pk, .local_envir = teardown_env(), quietly = TRUE, verbose = FALSE)), silent = TRUE)
 # }
 
-# can't use withr::local_package reliably because if a package gets unloaded in the tests,
-#   then there is a warning on teardown that can't be silenced
+## can't use withr::local_package reliably because if a package gets unloaded in the tests,
+##   then there is a warning on teardown that can't be silenced
 for (pk in suggests) {
   try(suppressWarnings(
     requireNamespace(pk, # .local_envir = teardown_env(),
@@ -80,16 +80,16 @@ withr::local_envvar(
   .local_envir = teardown_env()
 )
 
-if (Sys.info()["user"] == "achubaty") {
+if (Sys.info()[["user"]] == "achubaty") {
   withr::local_options(.local_envir = teardown_env(),
-                       "Require.Home" = "~/GitHub/PredictiveEcology/Require")
+                       Require.Home = "~/GitHub/PredictiveEcology/Require")
 }
 
-# This is for cases e.g., linux where there are >2 .libPaths().
-#  The tests use `withr::local_libpaths`, which keeps all site paths. This means that
-#  some of the tests fail because R will load a copy of a package e.g., rlang that is
-#  in one of the site libraries. Essentially, this is fine for a user, but the tests
-#  weren't written to accommodate this.
+## This is for cases e.g., linux where there are >2 .libPaths().
+##  The tests use `withr::local_libpaths`, which keeps all site paths. This means that
+##  some of the tests fail because R will load a copy of a package e.g., rlang that is
+##  in one of the site libraries. Essentially, this is fine for a user, but the tests
+##  weren't written to accommodate this.
 lp <- .libPaths()
 lp2 <- c(head(lp, 1), tail(lp, 1))
 orig <- setLibPaths(lp2, standAlone = TRUE)
