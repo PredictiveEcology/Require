@@ -1,5 +1,5 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
-  Sys.setenv(R_REQUIRE_RUN_ALL_TESTS = "true")
+  withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
 }
 verboseForDev <- -2
 Require.usePak <- FALSE
@@ -27,7 +27,7 @@ withr::local_options(
 )
 
 if (!isDevAndInteractive) { # i.e., CRAN
-  Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
+  withr::local_envvar(R_REQUIRE_PKG_CACHE = "FALSE", .local_envir = teardown_env())
 }
 
 ## Always use temporary package cache for tests (#128):
