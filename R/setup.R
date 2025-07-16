@@ -104,7 +104,13 @@ cachePkgDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
   }
-  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
+
+  if (nzchar(cacheGetOptionCachePkgDir())) {
+    pkgCacheDir <- normPathMemoise(file.path(cacheGetOptionCachePkgDir(), "packages", versionMajorMinor()))
+  } else {
+    pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
+  }
+
   if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
   }
@@ -129,6 +135,7 @@ RequireGitHubCacheDir <- function(create) {
 
   return(pkgCacheDir)
 }
+
 #' Get the option for `Require.cachePkgDir`
 #'
 #' First checks if an environment variable `Require.cachePkgDir`
