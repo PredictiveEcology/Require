@@ -14,7 +14,7 @@ test_that("test 5", {
       ## Long pkgSnapshot -- issue 41
       pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))
       checkPath(pkgPath, create = TRUE)
-      download.file("https://raw.githubusercontent.com/PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt",
+      download.file(file.path(rawGithubDotCom, "PredictiveEcology/LandR-Manual/30a51761e0f0ce27698185985dc0fa763640d4ae/packages/pkgSnapshot.txt"),
                     destfile = file.path(pkgPath, "pkgSnapshot.txt")
       )
       origLibPaths <- setLibPaths(pkgPath, standAlone = TRUE)

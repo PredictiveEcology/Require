@@ -3,7 +3,7 @@ utils::globalVariables(c(
   "Archs", "AvailableVersion", "compareVersionAvail", "correctVersion",
   "dayAfterPutOnCRAN", "DepVersion", "destFile", "dup", "filepath",
   "fullGit", "github", "groupCRANtogether", "groupCRANtogetherChange",
-  "groupCRANtogetherDif", "hasHEAD", "hasVersionSpec", "i.neededFiles",
+  "groupCRANtogetherDif", "hasVersionSpec", "i.neededFiles",
   "inequality", "installFrom", "installFromFac", "installOrder",
   "installResult", "isGitPkg", "keep", "keep2", "lastRow", "localFileName",
   "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
@@ -90,7 +90,10 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
       NULL
     }
 
-    lines <- readLinesWithHandlers(f)
+    if (isTRUE(any(file.exists(f))))
+      lines <- readLinesWithHandlers(f)
+    else
+      lines <- f
     # if (length(f) == 1) {
     #   withCallingHandlers(
     #     lines <- try(readLines(f), silent = TRUE),
@@ -127,25 +130,6 @@ DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FAL
 DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   out <- lapply(file, function(fff) {
     lines <- readLinesWithHandlers(fff)
-    # if (length(fff) == 1) {
-    #   withCallingHandlers(
-    #     lines <- try(readLines(fff), silent = TRUE),
-    #     warning = function(w) {
-    #       if (grepl('incomplete final line found on', w$message))
-    #         invokeRestart("muffleWarning")
-    #     }
-    #   )
-    #
-    #   # lines <- try(readLines(fff), silent = TRUE)
-    #   if (is(lines, "try-error")) {
-    #     warning(lines)
-    #     lines <- character()
-    #   }
-    #   if (isTRUE(any(grepl("404: Not Found", lines))))
-    #     lines <- character()
-    # } else {
-    #   lines <- fff
-    # }
     suppressWarnings({
       vers_line <- lines[grep(paste0("^", other, ": *"), lines)]
     })
@@ -269,32 +253,17 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
         }
       }
       if (any(!alreadyExists)) {
-        # messageVerbose("GitHub packages:  ", paste(pkgDT$packageFullName, collapse = ", "), verbose = verbose)
-        withCallingHandlers( # if offline
-          pkgDT[which(repoLocation == .txtGitHub & alreadyExists %in% FALSE),
-                filepath := {
-                  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
-                  ret <- NA
-                  dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
-                                                        need = "master",
-                                                        verbose = verbose - 1
-                  ))
-                  ret <- if (!is(dl, "try-error")) {
-                    destFile
-                  } else {
-                    if (!isTRUE(urlExists(unique(url)[1])))
-                      if (!isTRUE(urlExists("https://www.google.com"))) {
-                        setOfflineModeTRUE(verbose = verbose)
-                      }
-                    NA
-                  }
-
-                  ret
-                },
-                by = c("Package", "Branch")
-          ], warning = function(w) {
-            ## TODO this seems to be not relevant
-          })
+        # withCallingHandlers( # if offline
+        pkgDT[which(repoLocation == .txtGitHub & alreadyExists %in% FALSE),
+              filepath :=
+                .downloadFileMasterMainAuthWithHandlers(Account, Package, Branch,
+                                                        packageFullName, filename,
+                                                        url, destFile, verbose)
+              ,
+              by = c("Package", "Branch")
+        ]# , warning = function(w) {
+        #   ## TODO this seems to be not relevant
+        # })
       }
       old <- grep("filepath|destFile", colnames(pkgDT), value = TRUE)[1]
       wh <- which(pkgDT$repoLocation == .txtGitHub)
@@ -786,7 +755,7 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 
   grSplit <- strsplit(gitRepo, "/|@")
 
-  repo <- lapply(grSplit, function(grsplit) grsplit[[2]])
+  repo <- lapply(grSplit, function(grsplit) grsplit[[min(2, length(grsplit))]])
   names(grSplit) <- repo
   names(repo) <- repo
   grAcct <- strsplit(gitRepo, "/") # only account and repo
@@ -895,7 +864,7 @@ downloadRepo <- function(gitRepo, subFolder, overwrite = FALSE, destDir = ".",
     gr$br
   }
 
-  url <- paste0("https://github.com/", ar, "/archive/", br, ".zip")
+  url <- file.path(githubDotCom, ar, "archive", paste0(br, ".zip"))
   out <- suppressWarnings(
     try(.downloadFileMasterMainAuth(url, destfile = zipFileName, need = "master"), silent = TRUE)
   )
@@ -968,7 +937,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     return(br)
   }
 
-  gitRefsURL <- file.path("https://api.github.com/repos", acct, repo, "git", "refs")
+  gitRefsURL <- file.path(apiGithubDotCom, "repos", acct, repo, "git", "refs")
   if (missing(br)) {
     br <- "main"
   }
@@ -981,7 +950,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
 
-  for (ii in 1:2) {
+  for (ii in 1:4) {
     tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_", acct, "@", repo))
     downloadNow <- TRUE
     if (file.exists(tf)) {
@@ -995,24 +964,27 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     }
     fetf <- file.exists(tf)
     gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
-    isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs)) ||
-      (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
-      any(grepl("status.+403", gitRefs)))
 
-    if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
-      if (fetf) {
-        unlink(tf)
-      }
-      if (isNotFound) {
-        token <- getGitCredsToken()
-        mess <- character()
-        if (is.null(token)) {
-          mess <- "GitHub repository not accessible does it need authentication? "
-          stop(paste0(mess, .txtDidYouSpell))
-        }
-      }
-      stop(gitRefs)
-    }
+    stopOnGitRefsFails(gitRefs, fetf, tf, acct, repo, br)
+    # isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+    #   (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+    #     any(grepl("status.+403", gitRefs)))
+    #
+    # if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+    #   if (fetf) {
+    #     unlink(tf)
+    #   }
+    #   if (isNotFound) {
+    #     token <- getGitCredsToken()
+    #     # mess <- character()
+    #     if (is.null(token)) {
+    #       # mess <- "GitHub repository not accessible does it need authentication? "
+    #       stop(paste0(.txtGitHubMissingToken, "\n", .txtDidYouSpell))
+    #     }
+    #     stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
+    #   }
+    #   stop(gitRefs)
+    # }
 
     if (is(gitRefs, "try-error")) {
       if (isTRUE(any(grepl("cannot open the connection", gitRefs)))) {
@@ -1031,9 +1003,19 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     gitRefsSplit2 <- strsplit(gitRefsSplit, ":")
 
     if (any(grepl("master|main|HEAD", unlist(br)))) {
-      br <- masterOrMainFromGitRefs(gitRefsSplit2)
+      br2 <- masterOrMainFromGitRefs(gitRefsSplit2)
+      if (length(br2) > 0)
+        br <- br2
+      else  {
+        gitRefsURL <- paste0(gitRefsURL, paste0("?per_page=100&page=", ii))
+        unlink(tf)
+        next
+      }
+
       # br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
       # br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
+    } else {
+
     }
 
     for (branch in br) { # will be length 1 in most cases except master/main
@@ -1340,11 +1322,11 @@ masterMainHEAD <- function(url, need) {
     br <- "HEAD"
     url <- gsub(masterMainGrep, paste0("/", br, "\\1"), url)
   }
-  HEADgrep <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
-  hasHEAD <- grepl(HEADgrep, url)
+  HEADgrepForGitBranch <- paste0("/", paste("HEAD", collapse = "|"), "(/|\\.)")
+  hasHEAD <- grepl(HEADgrepForGitBranch, url)
   if (any(hasHEAD) && need %in% masterMain) {
     br <- need
-    url <- gsub(HEADgrep, paste0("/", br, "\\1"), url)
+    url <- gsub(HEADgrepForGitBranch, paste0("/", br, "\\1"), url)
   }
   if (any(hasHEAD) && need %in% "HEAD") {
     br <- "HEAD"
@@ -1385,12 +1367,13 @@ masterMainHEAD <- function(url, need) {
   url <- masterMainHEAD(url, need) # makes 2
 
   # Authentication
-  token <- NULL
-  usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
-    requireNamespace("httr", quietly = TRUE)
-  if (usesGitCreds) {
-    token <- getGitCredsToken()
-  }
+  token <- checkForToken()
+  # token <- NULL
+  # usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
+  #   requireNamespace("httr", quietly = TRUE)
+  # if (usesGitCreds) {
+  #   token <- getGitCredsToken()
+  # }
   if (is.null(token)) {
     ghp <- Sys.getenv("GITHUB_PAT")
     messageGithubPAT(ghp, verbose = verbose, verboseLevel = 0)
@@ -1409,7 +1392,6 @@ masterMainHEAD <- function(url, need) {
   outNotMasterMain <- outMasterMain <- character()
 
   ret <- withCallingHandlers({
-
     for (i in 1:2) {
       if (!is.null(urls[["FALSE"]])) {
         outNotMasterMain <-
@@ -1630,8 +1612,10 @@ installPackagesWithQuiet <- function(ipa, verbose) {
 
 #' @importFrom utils remove.packages
 checkHEAD <- function(pkgDT) {
-  HEADgrep <- " *\\(HEAD\\)"
-  set(pkgDT, NULL, "hasHEAD", grepl(HEADgrep, pkgDT$packageFullName))
+  if (is.null(pkgDT[[hasHEADtxt]])) {
+    data.table::alloc.col(pkgDT)
+    set(pkgDT, NULL, hasHEADtxt, grepl(HEADgrepWithParentheses, pkgDT$packageFullName))
+  }
   pkgDT
 }
 
@@ -1658,7 +1642,7 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
   if (any(hasSubFolder, na.rm = TRUE)) {
     Branch <- paste0(Branch, "/", GitSubFolder)
   }
-  file.path("https://raw.githubusercontent.com", Account, Repo, Branch, filename, fsep = "/")
+  file.path(rawGithubDotCom, Account, Repo, Branch, filename, fsep = "/")
 }
 
 
@@ -1815,7 +1799,9 @@ readLinesWithHandlers <- function(fff) {
     withCallingHandlers(
       lines <- try(readLines(fff), silent = TRUE),
       warning = function(w) {
-        if (grepl('incomplete final line found on', w$message))
+        if (grepl(
+          paste('incomplete final line found on', 'cannot open file', 'cannot open the connection', sep = "|"),
+          w$message))
           invokeRestart("muffleWarning")
       }
     )
@@ -1825,10 +1811,151 @@ readLinesWithHandlers <- function(fff) {
       warning(lines)
       lines <- character()
     }
-    if (isTRUE(any(grepl("404: Not Found", lines))))
+    any404 <- suppressWarnings(any(grepl("404: Not Found", lines)))
+    if (isTRUE(any404))
       lines <- character()
   } else {
     lines <- fff
   }
   lines
+}
+
+
+
+.downloadFileMasterMainAuthWithHandlers <- function(Account, Package, Branch, packageFullName,
+                                                    filename, url, destFile, verbose) {
+  messageVerbose(Package, "@", Branch, " downloading ", filename, verbose = verbose - 1)
+  ret <- NA
+  dl <- try(.downloadFileMasterMainAuth(unique(url)[1], unique(destFile)[1],
+                                        need = "master",
+                                        verbose = verbose
+  ))
+  ret <- if (!is(dl, "try-error")) {
+    destFile
+  } else {
+    if (!isTRUE(urlExists(unique(url)[1])))
+      if (!isTRUE(urlExists("https://www.google.com"))) {
+        setOfflineModeTRUE(verbose = verbose)
+      }
+    NA
+  }
+
+  stopNotAvailable <- FALSE
+  failDoesntExist <- seq_along(packageFullName)
+  suggs <- ""
+  if (any(file.exists(destFile))) {
+    fs <- file.size(destFile)
+    fsTooSmallLikelyError <- fs < 100
+    if (any(fsTooSmallLikelyError)) {
+      checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
+      failDoesntExist <- sapply(checkFile, grepl, pattern = "404")
+      if (any(failDoesntExist)) {
+        suggs <- offerGitHubSuggestions(account = Account, Package)
+        token <- checkForToken()
+        if (is.null(token))
+          warning("There is no github token")
+        stopNotAvailable <- TRUE
+      }
+    }
+  } else {
+    stopNotAvailable <- TRUE
+  }
+  if (isTRUE(stopNotAvailable)) {
+    stop("The following repository does not seem to exist: \n",
+         paste(packageFullName[failDoesntExist], collapse = "\n"),
+         "\n", .txtDidYouSpell,
+         if (nzchar(suggs)) paste0("\nDid you mean one of:\n",
+                                   paste(suggs, collapse = "\n"))
+    )
+  }
+
+  # if (grepl("404", httr::http_status(a)$message)) {
+  #   offerGitHubSuggestions(account, repo)
+  #   stop("The following repository does not seem to exist: \n",
+  #        paste(pkgDTNotLocal$packageFullName[has404], collapse = "\n"),
+  #        "\n", .txtDidYouSpell,
+  #        "\nDid you mean one of:\n",
+  #        paste(suggs, collapse = "\n")
+  #   )
+  # }
+
+  ret
+}
+
+offerGitHubSuggestions <- function(account, repo) {
+  # apiGithubDotCom <- "https://api.github.com"
+  # account <- "PredictiveEcology"
+  url <- paste0(apiGithubDotCom, "/users/", account, "/repos?per_page=500")
+  names(url) <- account
+  tf <- tempfile()
+  out <- try(.downloadFileMasterMainAuth(url, destfile = tf, need = "master"))
+
+  fetf <- file.exists(tf)
+  gitRefs <- if (fetf) try(suppressWarnings(readLines(tf)), silent = TRUE) else ""
+  stopOnGitRefsFails(gitRefs, fetf, tf, account, repo, br = NULL)
+  # isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+  #                   (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+  #                   any(grepl("status.+403", gitRefs)))
+  #
+  # if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+  #   if (fetf) {
+  #     unlink(tf)
+  #   }
+  #   if (isNotFound) {
+  #     token <- getGitCredsToken()
+  #     # mess <- character()
+  #     if (is.null(token)) {
+  #       # mess <- "GitHub repository not accessible does it need authentication? "
+  #       stop(paste0(.txtGitHubMissingToken, "\n", .txtDidYouSpell))
+  #     }
+  #     stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, "@", br, ")"))
+  #   }
+  #   stop(gitRefs)
+  # }
+
+  rl <- readLines(tf)
+  poss <- grep(paste0("git_url.+"), rl, value = TRUE)
+  poss2 <- agrep(repo, poss, value = TRUE)
+  poss3 <- grep(file.path(account, paste0(repo, ".git")), poss2, value = TRUE, invert = TRUE)
+  gsub(paste0("^.+(", file.path(account, repo), ".*).git.+"), "\\1", poss3)
+}
+
+
+
+githubDotCom <- "https://github.com"
+rawGithubDotCom <- "https://raw.githubusercontent.com"
+apiGithubDotCom <- "https://api.github.com"
+
+
+checkForToken <- function() {
+  token <- NULL
+  usesGitCreds <- requireNamespace("gitcreds", quietly = TRUE) &&
+    requireNamespace("httr", quietly = TRUE)
+  if (usesGitCreds) {
+    token <- getGitCredsToken()
+  }
+  token
+}
+
+
+stopOnGitRefsFails <- function(gitRefs, fetf, tf, acct, repo, br) {
+  isNotFound <-  ((NROW(gitRefs) <= 5) && any(grepl("Not Found", gitRefs) ) ||
+                    (any(grepl("cannot open URL", gitRefs))) || identical(gitRefs, "") ||
+                    any(grepl("status.+403", gitRefs)))
+
+  if (any(grepl("Bad credentials", gitRefs)) || isNotFound) {
+    if (fetf) {
+      unlink(tf)
+    }
+    if (isNotFound) {
+      token <- getGitCredsToken()
+      # mess <- character()
+      if (is.null(token)) {
+        # mess <- "GitHub repository not accessible does it need authentication? "
+        stop(paste0(.txtGitHubMissingToken, "\n", .txtDidYouSpell))
+      }
+      stop(paste0(.txtDidYouSpell, " (", acct, "/", repo, ifelse(is.null(br), "", paste0("@", br)), ")"))
+    }
+    stop(gitRefs)
+  }
 }

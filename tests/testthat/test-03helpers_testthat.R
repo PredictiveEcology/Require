@@ -116,7 +116,7 @@ test_that("test 3", {
   })
   options(opts)
   testthat::expect_true({
-    isTRUE(grepl("is an existing file", out))
+    isTRUE(any(grepl("is an existing file", out)))
   })
 
   rst <- .rndstr(1, 6)

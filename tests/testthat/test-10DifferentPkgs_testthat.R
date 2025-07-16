@@ -25,7 +25,6 @@ test_that("test 10", {
       on.exit(options(origRepos2))
     }
 
-    # warnsReq <- capture_warnings(Require::Install("Require"))
     Install(pkgs) |>
       capture_warnings() -> warns
 

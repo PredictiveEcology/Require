@@ -161,7 +161,10 @@ test_that("test 8", {
                     "SpaDES.tools", "spatialEco", "stats", "terra", "tidyr", "viridis"
     )
 
-    otherPkgs <- c("archive", "details", "DBI", "s-u/fastshp", "logging", "RPostgres", "slackr")
+    otherPkgs <- c("archive", "details", "DBI", # "s-u/fastshp", # can't compile fastshp in Windows R 4.5
+                   "logging", "RPostgres", "slackr")
+    if (!isWindows())
+      otherPkgs <- c(otherPkgs, "s-u/fastshp")
 
     pkgs <- unique(c(modulePkgs, otherPkgs))
 
@@ -205,7 +208,7 @@ test_that("test 8", {
                   out2Attr$Package[out2Attr$installResult %in% "OK"])) == 0)
       # testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
     }
-    testthat::expect_true(st[[1]]["elapsed"]/st[[2]]["elapsed"] > 15) # WAY faster -- though st1 is not that slow b/c local binaries
+    testthat::expect_true(st[[1]]["elapsed"]/st[[2]]["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
   }
 

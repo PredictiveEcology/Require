@@ -26,6 +26,11 @@ if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
 }
 
+# The local user's cache may have package versions that are newer than those requested in the tests
+#  The tests could be written to accommodate this fact, but it is idiosyncratic to the user's
+#  cache directory; so, this just starts fresh on every new R session
+withr::local_envvar("R_USER_CACHE_DIR" = tempdir2("RequireCacheForTests"), .local_envir = teardown_env())
+
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
 suggests <- setdiff(suggests, c("testthat", "SpaDES", "SpaDES.core", "quickPlot")) # dpesn't like being local_package'd
@@ -96,7 +101,12 @@ if (Sys.info()["user"] %in% "emcintir") {
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath)#, .local_envir = teardown_env())
   # googledrive::drive_auth()
-  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose", "Require.cloneFrom", "Require.usePak")])
+  cat(paste0("EnvVar:\n  R_USER_CACHE_DIR: ", Sys.getenv("R_USER_CACHE_DIR"), "\n"))
+  cat(paste0("Num Cached Pkgs: ",
+             length(dir(file.path(Sys.getenv("R_USER_CACHE_DIR"), "packages/4.4"), recursive = FALSE)),
+             "\n"))
+  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose",
+                    "Require.cloneFrom", "Require.usePak")])
   print(paste("Cache size:", length(dir(cachePkgDir())), "files"))
 } else {
   # clean up cache on GA and other
