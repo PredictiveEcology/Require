@@ -34,8 +34,8 @@ setMethod(
         path[nas] <- NA_character_
       }
 
-      # Eliot changed this Sept 24, 2019 because weird failures with getwd()
-      # in non-interactive testing
+      ## Eliot changed this Sept 24, 2019 because weird failures with getwd()
+      ## in non-interactive testing
       path <- unlist(path)
       if (!is.null(path)) {
         path <- gsub("\\\\", "//", path)
@@ -632,9 +632,6 @@ SysInfo <-
   .isDevelVersion() ||
     Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
 }
-
-
-
 
 doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
   if (getOption("Require.useCranCache", FALSE)) {
