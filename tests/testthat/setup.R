@@ -30,9 +30,9 @@ if (!isDevAndInteractive) { # i.e., CRAN
   Sys.setenv(R_REQUIRE_PKG_CACHE = "FALSE")
 }
 
-## The local user's cache may have package versions that are newer than those requested in the tests
-##  The tests could be written to accommodate this fact, but it is idiosyncratic to the user's
-##  cache directory; so, this just starts fresh on every new R session
+## Always use temporary package cache for tests (#128):
+## - we don't want to modify the user's cache;
+## - user's cache may have package versions that are newer than those requested in the tests;
 withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local_envir = teardown_env())
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
