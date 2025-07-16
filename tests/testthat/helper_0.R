@@ -28,7 +28,6 @@ omitPkgsTemporarily <- function(pkgs) {
 
 dontTryDetach <- c("devtools", "testthat", "googledrive", "rmarkdown")
 
-
 dontTryDetachCurrent <- c("pak", "R6", "Rcpp", "askpass", "base64enc", "brew", "brio",
                           "bslib", "cachem", "callr", "cli", "clipr", "commonmark", "cpp11",
                           "crayon", "credentials", "curl", "desc", "devtools", "diffobj",

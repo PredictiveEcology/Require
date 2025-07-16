@@ -120,7 +120,7 @@ if (Sys.info()["user"] %in% "emcintir") {
                     "Require.cloneFrom", "Require.usePak")])
   print(paste("Cache size:", length(dir(cachePkgDir())), "files"))
 } else {
-  # clean up cache on GA and other
+  ## clean up cache on GA and other
   withr::defer(unlink(cacheDir(), recursive = TRUE), envir = teardown_env())
 }
 

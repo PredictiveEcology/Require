@@ -61,8 +61,7 @@ envPkgCreate()
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
       if (!is.null(possCacheDir)) {
         paste0(
-          "  Using cache directory: ", possCacheDir,
-          "; clear with cacheClearPackages().\n"
+          "  Using cache directory: ", possCacheDir, ";\n   clear with cacheClearPackages().\n"
         )
       },
       "  See ?RequireOptions for this and other settings."
