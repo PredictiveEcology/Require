@@ -26,10 +26,6 @@ withr::local_options(
   .local_envir = teardown_env()
 )
 
-if (!isDevAndInteractive) { # i.e., CRAN
-  withr::local_envvar(R_REQUIRE_PKG_CACHE = "FALSE", .local_envir = teardown_env())
-}
-
 ## Always use temporary package cache for tests (#128):
 ## - we don't want to modify the user's cache;
 ## - user's cache may have package versions that are newer than those requested in the tests;

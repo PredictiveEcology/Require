@@ -480,17 +480,17 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
       rmEmptyFiles(fn, 200)
       needNewFile <- TRUE
       if (file.exists(fn)) {
-        # can be interupted and be corrupted
+        ## can be interupted and be corrupted
         cap[[type]] <- try(readRDS(fn), silent = TRUE)
         if (!is(cap[[type]], "try-error")) needNewFile <- FALSE
-        # This is case where the previous version is NROW 0; could have happened if internet was down or other
+        ## This is case where the previous version is NROW 0; could have happened if internet was down or other
         if (NROW(cap[[type]]) == 0) needNewFile <- TRUE
       }
       if (isTRUE(needNewFile)) {
         caps <- lapply(repos, function(repo) {
           available.packagesWithCallingHandlers(repo, type, verbose = verbose)
         })
-        # cachePurge may have been used to reset the available.packages cache
+        ## cachePurge may have been used to reset the available.packages cache
         val <- Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE")
         if (nzchar(val))
           if (isTRUE(val == 0))
@@ -509,8 +509,6 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     cap <- do.call(rbind, cap)
     assign(objNam, cap, envir = pkgDepEnv())
     out <- cap
-  } else {
-
   }
 
   if (isFALSE(returnDataTable)) {
@@ -520,8 +518,6 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     dimnames(bb)[[1]] <- unname(bb[, "Package"])
     out <- bb
   }
-
-
 
   return(out)
 }
@@ -1512,7 +1508,7 @@ extractPkgNameFromWarning <- function(x) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(cacheGetOptionCachePkgDir(),
+  file.path(dirname(cacheGetOptionCachePkgDir()),
             paste0(gsub("https|[:/]", "", repos), collapse = "/"),
             type, "availablePackages.rds")
 }
@@ -1526,8 +1522,9 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     on.exit(options(op), add = TRUE)
   }
 
-  if (isTRUE(length(ipa$type) > 1))
+  if (isTRUE(length(ipa$type) > 1)) {
     ipa$type <- ipa$type[2]
+  }
 
   if (getOption("Require.installPackagesSys") && requireNamespace("sys", quietly = TRUE)) {
     for (i in 1:1) {
@@ -1554,9 +1551,9 @@ installPackagesWithQuiet <- function(ipa, verbose) {
       ipa$available <- ipa$available[ipa$available[, "Package"] %in% pkgName, , drop = FALSE]
     }
   } else {
-
-    if (isMacOS() && "covr" %in% ipa$pkgs)
+    if (isMacOS() && "covr" %in% ipa$pkgs) {
       print(ipa)
+    }
     # if (ipa$quiet && ipa$type %in% "source" && isWindows())
     #   ipa$quiet <- FALSE
     if (isTRUE(ipa$quiet)) {

@@ -52,28 +52,26 @@ reverse depends (i.e., the packages that \emph{use} each
 of these packages)}
 
 \item{deps}{An optional named list of (reverse) dependencies.
-If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)}
-will be used}
+If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)} will be used.}
 
-\item{reverse}{Logical. If \code{TRUE}, then this will use \code{tools::pkgDependsOn}
-to determine which packages depend on the \code{pkgs}}
+\item{reverse}{Logical. If \code{TRUE}, then this will use \link[tools:dependsOnPkgs]{tools::dependsOnPkgs}
+to determine which packages depend on the \code{pkgs}.}
 
 \item{topoSort}{Logical. If \code{TRUE}, the default, then
 the returned list of packages will be in order with the
-least number of dependencies listed in \code{pkgs} at
-the top of the list.}
+least number of dependencies listed in \code{pkgs} at the top of the list.}
 
 \item{libPaths}{A path to search for installed packages. Defaults to
 \code{.libPaths()}}
 
 \item{useAllInSearch}{Logical. If \code{TRUE}, then all non-core
-R packages in \code{search()} will be appended to \code{pkgs}
-to allow those to also be identified}
+R packages in \code{\link[=search]{search()}} will be appended to \code{pkgs}
+to allow those to also be identified.}
 
 \item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}.
 If \code{TRUE}, then then all installed packages will be searched.
 If \code{FALSE}, the default, only packages that are currently in
-the \code{search()} path and passed in \code{pkgs} will be included
+the \code{\link[=search]{search()}} path and passed in \code{pkgs} will be included
 in the possible reverse dependencies.}
 
 \item{recursive}{Logical. Should dependencies of dependencies be searched,
@@ -168,13 +166,11 @@ A possibly ordered, named (with packages as names) list where list elements
 are either full reverse depends.
 }
 \description{
-This is a wrapper around \code{tools::dependsOnPkgs},
-but with the added option of \code{topoSort}, which
-will sort them such that the packages at the top will have
-the least number of dependencies that are in \code{pkgs}.
-This is essentially a topological sort, but it is done
-heuristically. This can be used to e.g., \code{detach} or
-\code{unloadNamespace} packages in order so that they each
+This is a wrapper around \link[tools:dependsOnPkgs]{tools::dependsOnPkgs}, but with the added option of \code{topoSort},
+which will sort them such that the packages at the top will have the least number of
+dependencies that are in \code{pkgs}.
+This is essentially a topological sort, but it is done heuristically.
+This can be used to e.g., \link{detach} or \link{unloadNamespace} packages (in order) so that each
 of their dependencies are detached or unloaded first.
 
 \code{pkgDep2} is a convenience wrapper of \code{pkgDep} that "goes one level in",

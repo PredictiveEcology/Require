@@ -4,36 +4,32 @@ utils::globalVariables(
     "newPackageFullName", "..keepNames")
 )
 
-
 #' Reverse package depends
 #'
-#' This is a wrapper around `tools::dependsOnPkgs`,
-#' but with the added option of `topoSort`, which
-#' will sort them such that the packages at the top will have
-#' the least number of dependencies that are in `pkgs`.
-#' This is essentially a topological sort, but it is done
-#' heuristically. This can be used to e.g., `detach` or
-#' `unloadNamespace` packages in order so that they each
+#' This is a wrapper around [tools::dependsOnPkgs], but with the added option of `topoSort`,
+#' which will sort them such that the packages at the top will have the least number of
+#' dependencies that are in `pkgs`.
+#' This is essentially a topological sort, but it is done heuristically.
+#' This can be used to e.g., [detach] or [unloadNamespace] packages (in order) so that each
 #' of their dependencies are detached or unloaded first.
+#'
 #' @param pkgs A vector of package names to evaluate their
 #'   reverse depends (i.e., the packages that *use* each
 #'   of these packages)
 #' @param deps An optional named list of (reverse) dependencies.
-#'   If not supplied, then `tools::dependsOnPkgs(..., recursive = TRUE)`
-#'   will be used
+#'   If not supplied, then `tools::dependsOnPkgs(..., recursive = TRUE)` will be used.
 #' @param topoSort Logical. If `TRUE`, the default, then
 #'   the returned list of packages will be in order with the
-#'   least number of dependencies listed in `pkgs` at
-#'   the top of the list.
-#' @param reverse Logical. If `TRUE`, then this will use `tools::pkgDependsOn`
-#'   to determine which packages depend on the `pkgs`
+#'   least number of dependencies listed in `pkgs` at the top of the list.
+#' @param reverse Logical. If `TRUE`, then this will use [tools::dependsOnPkgs]
+#'   to determine which packages depend on the `pkgs`.
 #' @param useAllInSearch Logical. If `TRUE`, then all non-core
-#' R packages in `search()` will be appended to `pkgs`
-#' to allow those to also be identified
+#'   R packages in [search()] will be appended to `pkgs`
+#'   to allow those to also be identified.
 #' @param returnFull Logical. Primarily useful when `reverse = TRUE`.
 #'   If `TRUE`, then then all installed packages will be searched.
 #'   If `FALSE`, the default, only packages that are currently in
-#'   the `search()` path and passed in `pkgs` will be included
+#'   the [search()] path and passed in `pkgs` will be included
 #'   in the possible reverse dependencies.
 #'
 #' @inheritParams Require
@@ -1115,10 +1111,10 @@ getAvailablePackagesIfNeeded <-
 #' @inheritParams Require
 #' @rdname clearRequire
 cacheClearPackages <- function(packages,
-                                     ask = interactive(),
-                                     Rversion = versionMajorMinor(),
-                                     clearCranCache = FALSE,
-                                     verbose = getOption("Require.verbose")) {
+                               ask = interactive(),
+                               Rversion = versionMajorMinor(),
+                               clearCranCache = FALSE,
+                               verbose = getOption("Require.verbose")) {
   out <- cachePkgDir(create = FALSE)
   if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)
@@ -1150,10 +1146,8 @@ cacheClearPackages <- function(packages,
   isFile <- !dir.exists(indivFiles)
   indivFiles <- indivFiles[isFile]
   if (missing(packages)) {
-    toDelete <-
-      indivFiles # don't delete whole dir because has available.packages too; not to delete
-    forMess <-
-      paste0("all ", length(indivFiles), " cached packages in ", out)
+    toDelete <- indivFiles # #don't delete whole dir: has available.packages too; not to delete.
+    forMess <- paste0("all ", length(indivFiles), " cached packages in ", out)
   } else {
     if (length(indivFiles)) {
       pkgNamesInFiles <- extractPkgName(filenames = basename(indivFiles))

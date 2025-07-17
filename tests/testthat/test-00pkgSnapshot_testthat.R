@@ -10,13 +10,13 @@ test_that("test 1", {
   tmpdir2 <- tempdir3()
   created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
-  setLibPaths(tmpdir, standAlone = TRUE)
+  setLibPaths(tmpdir, standAlone = TRUE) ## prints the old paths
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
   suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
   skip_if_offline()
 
-  setLibPaths(tmpdir2, standAlone = TRUE)
+  setLibPaths(tmpdir2, standAlone = TRUE) ## prints the old paths
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
   if (isDev) {
     warns <- capture_warnings(Require(c("rlang", "covr (==3.6.3)"), require = FALSE, quiet = quiet))
