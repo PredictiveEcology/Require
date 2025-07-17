@@ -212,15 +212,17 @@ RequireGitHubCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
   }
-  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), .txtGitHub))
+  ghPkgCacheDir <- file.path(cacheDir(create), .txtGitHub) |>
+    normPathMemoise()
+
   if (isTRUE(create)) {
-    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+    ghPkgCacheDir <- checkPath(ghPkgCacheDir, create = TRUE)
   }
 
   ## TODO: prompt the user ONCE about using this cache dir, and save their choice
   ##       - remind them how to change this, and make sure it's documented!
 
-  return(pkgCacheDir)
+  return(ghPkgCacheDir)
 }
 
 normPathMemoise <- function(d) {
