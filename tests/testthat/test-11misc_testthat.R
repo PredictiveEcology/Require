@@ -75,10 +75,6 @@ test_that("test 11", {
       } else {
         testthat::expect_true(out2[Package == "SpaDES.core"]$installResult == "OK")
       }
-
     }
   }
-
 })
-
-

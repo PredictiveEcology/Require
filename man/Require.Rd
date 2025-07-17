@@ -51,8 +51,7 @@ in operational code.
 In the case of a GitHub package, it
 will be assumed that the name of the repository is the name of the package.
 If this is not the case, then pass a \emph{named} character vector here, where the
-names are the package names that could be different than the GitHub
-repository name.}
+names are the package names that could be different than the GitHub repository name.}
 
 \item{packageVersionFile}{Character string of a file name or logical. If
 \code{TRUE}, then this function will load the default file,
@@ -192,19 +191,17 @@ If a \code{libPaths} is used, it must be used in both functions.
 
 \section{Mutual Dependencies}{
  This function works best if all required
-packages are called within one \code{Require} call, as all dependencies can be
+packages are called within one \code{\link[=Require]{Require()}} call, as all dependencies can be
 identified together, and all package versions will be addressed (if there
-are no conflicts), allowing a call to \code{pkgSnapshot()} to take a snapshot or
+are no conflicts), allowing a call to \code{\link[=pkgSnapshot]{pkgSnapshot()}} to take a snapshot or
 "record" of the current collection of packages and versions.
 }
 
 \section{Local Cache of Packages}{
- When installing new packages, \code{Require}
-will put all source and binary files in an R-version specific subfolder of
-\code{getOption("Require.cachePkgDir")} whose default is \code{RPackageCache()},
-meaning \emph{cache packages locally in a project-independent location}, and
-will reuse them if needed. To turn off this feature, set
-\code{options("Require.cachePkgDir" = FALSE)}.
+ When installing new packages, \code{Require} will put all
+source and binary files in an R-version-specific directory whose default is \code{\link[=cachePkgDir]{cachePkgDir()}}.
+\emph{Package are cached locally in a project-independent location}, and will reuse them if needed.
+To turn off this feature, set \code{options("Require.cachePkgDir" = FALSE)}.
 }
 
 \examples{

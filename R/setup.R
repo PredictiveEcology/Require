@@ -1,19 +1,29 @@
-#' Path to (package) cache directory
+#' Get cache directory paths
 #'
-#' Sets (if `create = TRUE`) or gets the cache
-#' directory associated with the `Require` package.
-#' @return
-#' If `!is.null(cacheGetOptionCachePkgDir())`, i.e., a cache path exists,
-#' the cache directory will be created,
-#'   with a README placed in the folder. Otherwise, this function will just
-#'   return the path of what the cache directory would be.
+#' Get the path to the cache directories associated with the `Require` package:
+#' `cacheDir` and `cachePkgDir`, the latter is intended to be a sub-directory of `cacheDir`.
+#' If `create = TRUE`, will ensure the directory path is created,
+#' and a `README` file will be placed in that directory.
+#'
+#' @return character, specifying the path to the cache directory,
+#'   or `NULL` indicating a cache is not in use.
+#'   If `create = TRUE`, will create the directory at that path as a side effect.
 #'
 #' @details
-#' To set a different directory than the default, set the system variable:
-#' `R_REQUIRE_CACHE = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
-#' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
+#' These can be set using the environment variables `R_REQUIRE_CACHE` and `R_REQUIRE_PKG_CACHE`.
+#' If you set only `R_REQUIRE_CACHE`, then both the package cache and cache directories will be set,
+#' with the package cache as a sub-directory.
+#' You can, however, set them independently, if you set both environment variables,
+#' although doing so is less well-tested.
+#' The package cache can also be set via an option `Require.cachePkgDir` (see [RequireOptions]).
+#'
+#' `cacheDir()` is used to get the current cache directory, checking the value of `R_REQUIRE_CACHE`,
+#' which is used if set. If not set, will use the default cache directory via `cacheDefaultDir()`.
+#'
 #' @inheritParams checkPath
+#'
 #' @inheritParams Require
+#'
 #' @export
 #' @rdname cacheDir
 cacheDir <- function(create, verbose = getOption("Require.verbose")) {
@@ -67,6 +77,152 @@ cacheDir <- function(create, verbose = getOption("Require.verbose")) {
   return(cacheDir)
 }
 
+#' @details
+#' `cacheDefaultDir()` is simply a wrapper around [tools::R_user_dir()], used to identify the
+#' OS-specific user cache directory.
+#'
+#' @importFrom tools R_user_dir
+#' @export
+#' @rdname cacheDir
+cacheDefaultDir <- function() {
+  tools::R_user_dir("Require", which = "cache") |>
+    normalizePath(mustWork = FALSE)
+}
+
+appName <- "R-Require"
+
+defaultCacheDirOld <- switch(
+  SysInfo[["sysname"]],
+  Darwin = file.path("~", "Library", "Caches", appName) |>
+    normalizePath(mustWork = FALSE),
+  Linux = file.path("~", ".cache", appName) |>
+    normalizePath(mustWork = FALSE),
+  Windows = file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName) |>
+    normalizePath(mustWork = FALSE)
+)
+
+#' @details
+#'
+#' `cachePkgDir()` is used to get the default package cache path, not the currently set path.
+#' I.e., it does not check the values of the `Require.cachePkgDir` option, nor the
+#' `R_REQUIRE_PKG_CACHE` environment variable.
+#'
+#' @export
+#' @rdname cacheDir
+cachePkgDir <- function(create) {
+  if (missing(create)) {
+    create <- FALSE
+  }
+
+  pkgCacheDir <- file.path(cacheDir(create), "packages") |>
+    rpackageFolder(exact = FALSE) |>
+    normPathMemoise()
+
+  if (isTRUE(create)) {
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+  }
+
+  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
+  ##       - remind them how to change this, and make sure it's documented!
+
+  return(pkgCacheDir)
+}
+
+#' @details
+#' `cacheGetOptionCachePkgDir()` is used to get the current package cache path.
+#' It first checks whether the option `Require.cachePkgDir` is set (see [RequireOptions]).
+#' This option can take one of several values:
+#' - `TRUE`, `"true"`, `"TRUE"` mean use the default via `cachePkgDir()`;
+#' - `FALSE`, `"false"`, `"FALSE"` mean do not use the cache (function will return `NULL`);
+#' - `"default"` will check whether the `R_REQUIRE_PKG_CACHE` environment variable is set
+#'   and defines a path. If so, that path is used (postpended with the R version).
+#'   If not set, it uses the default package cache path via `cachePkgDir()`.
+#'
+#' @export
+#' @rdname cacheDir
+cacheGetOptionCachePkgDir <- function() {
+  curVal <- getOption("Require.cachePkgDir") ## "default" set by default
+
+  stopifnot(is.null(curVal) || is.logical(curVal) || is.character(curVal))
+
+  if (!is.null(curVal)) {
+    curValLogical <- as.logical(curVal) ## will treat "TRUE", "false", etc. as logical
+    if (isTRUE(curValLogical)) {
+      curVal <- cachePkgDir(create = FALSE) ## default cache package directory
+    } else if (isFALSE(curValLogical)) {
+      curVal <- NULL
+    } else {
+      ## curVal should be non-NULL and non-logical value;
+      ## presumably a character string with value "default" or a directory path.
+      fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+
+      if (identical("default", curVal)) {
+        if (nchar(fromEnvVars) == 0) {
+          curVal <- cachePkgDir(create = FALSE) ## default cache package directory
+        } else {
+          curVal <- rpackageFolder(fromEnvVars, exact = FALSE)
+        }
+      } else {
+        curVal <- rpackageFolder(fromEnvVars, exact = FALSE)
+      }
+    }
+  }
+
+  if (!is.null(curVal)) {
+    curVal <- normPathMemoise(curVal) |> checkPath(create = TRUE)
+  }
+
+  return(curVal)
+}
+
+#' Append the R version to a directory path
+#'
+#' @param path character specifying a directory path
+#'
+#' @param exact logical indicating whether to use `path` as-is (i.e., without appending)
+#'
+#' @keywords internal
+rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
+  if (!is.null(path)) {
+    if (isTRUE(exact)) {
+      return(path)
+    }
+    if (isFALSE(path)) {
+      return(NULL)
+    }
+
+    path <- path[1]
+    if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
+      path
+    } else {
+      if (interactive() && !endsWith(path, versionMajorMinor())) {
+        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
+        ## need to know if it's a user, who *should* keep R-version-specific dirs
+        file.path(path, versionMajorMinor())
+      } else {
+        path
+      }
+    }
+  } else {
+    NULL
+  }
+}
+
+RequireGitHubCacheDir <- function(create) {
+  if (missing(create)) {
+    create <- FALSE
+  }
+  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), .txtGitHub))
+  if (isTRUE(create)) {
+    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
+  }
+
+  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
+  ##       - remind them how to change this, and make sure it's documented!
+
+  return(pkgCacheDir)
+}
+
 normPathMemoise <- function(d) {
   pe <- pkgEnv()
   if (getOption("Require.useMemoise", TRUE)) {
@@ -87,92 +243,6 @@ normPathMemoise <- function(d) {
   }
 
   return(ret)
-}
-
-#' @export
-#' @rdname cacheDir
-#'
-#' @note
-#' There are two different cache directories used by `Require`: `cacheDir` and `cachePkgDir`.
-#' The `cachePkgDir` is intended to be a sub-directory of the `cacheDir`.
-#' If you set `Sys.setenv("R_REQUIRE_CACHE" = "somedir")`, then both the package cache
-#'  and cache dirs will be set, with the package cache a sub-directory.
-#' You can, however, set them independently, if you set `"R_REQUIRE_CACHE"` and
-#'  `"R_REQUIRE_PKG_CACHE"` environment variables.
-#'  The package cache can also be set with `options("Require.cachePkgDir" = "somedir")`.
-cachePkgDir <- function(create) {
-  if (missing(create)) {
-    create <- FALSE
-  }
-
-  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
-
-  if (isTRUE(create)) {
-    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
-  }
-
-  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
-  ##       - remind them how to change this, and make sure it's documented!
-
-  return(pkgCacheDir)
-}
-
-RequireGitHubCacheDir <- function(create) {
-  if (missing(create)) {
-    create <- FALSE
-  }
-  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), .txtGitHub))
-  if (isTRUE(create)) {
-    pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
-  }
-
-  ## TODO: prompt the user ONCE about using this cache dir, and save their choice
-  ##       - remind them how to change this, and make sure it's documented!
-
-  return(pkgCacheDir)
-}
-
-#' Get the option for `Require.cachePkgDir`
-#'
-#' First checks if an environment variable `R_REQUIRE_PKG_CACHE` is set and defines a path.
-#' If not set, checks whether the `options("Require.cachePkgDir")` is set.
-#' If a character string, then it returns that.
-#' If `TRUE`, uses `cachePkgDir()`; else returns `NULL`.
-#'
-#' @export
-cacheGetOptionCachePkgDir <- function() {
-  curVal <- getOption("Require.cachePkgDir")
-  try <- 1
-  while (try < 3) {
-    if (isTRUE(curVal)) {
-      curVal <- cachePkgDir(FALSE)
-      break
-    } else if (isFALSE(curVal)) {
-      curVal <- NULL
-      break
-    } else {
-      if (identical("default", curVal)) {
-        fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-        if (nchar(fromEnvVars) == 0) {
-          curVal <- cachePkgDir(FALSE)
-          break
-        } else {
-          try <- try + 1
-          curVal <- rpackageFolder(fromEnvVars, exact = FALSE) |> normPathMemoise()
-          if (identical("TRUE", curVal)) {
-            curVal <- TRUE
-          } else if (identical("FALSE", curVal)) {
-            curVal <- NULL
-          } else {
-            break
-          }
-        }
-      } else {
-        break
-      }
-    }
-  }
-  curVal
 }
 
 #' Setup a project library, cache, options
@@ -346,24 +416,3 @@ positBinaryRepos <- function(binaryLinux = urlForArchivedPkgs) {
 debianUbuntuRelease <- function() {
   system("lsb_release -cs", intern = TRUE)
 }
-
-#' The default cache directory for Require Cache
-#'
-#' A wrapper around `tools::R_user_dir("Require", which = "cache")` that
-#' creates the directory, if it does not exist.
-#'
-#' @return The default cache directory
-#'
-#' @importFrom tools R_user_dir
-#' @export
-cacheDefaultDir <- function() {
-  normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
-}
-
-appName <- "R-Require"
-
-defaultCacheDirOld <- switch(SysInfo[["sysname"]],
-  Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),
-  Linux = normalizePath(file.path("~", ".cache", appName), mustWork = FALSE),
-  Windows = normalizePath(file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName), mustWork = FALSE)
-)

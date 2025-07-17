@@ -124,6 +124,7 @@ test_that("test 4", {
   #   testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
   # } else {
   #   if (!(is.null(cacheGetOptionCachePkgDir()) || cacheGetOptionCachePkgDir() == "FALSE"))
+  #     ## not true in tests b/c we set non-default package cache path:
   #     testthat::expect_true(identical(normPath(cacheGetOptionCachePkgDir()), normPath(cachePkgDir())))
   # }
 
@@ -146,14 +147,7 @@ test_that("test 4", {
     testthat::expect_true(identical(cacheGetOptionCachePkgDir(), tempdir()))
   })
   withr::with_options(list(Require.cachePkgDir = "default"), {
-    RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-    if (identical(RPackageCacheSysEnv, "FALSE")) {
-      testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
-    } else {
-      if (!(is.null(cacheGetOptionCachePkgDir()) || cacheGetOptionCachePkgDir() == "FALSE")) {
-        testthat::expect_identical(normPath(cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir()))
-      }
-    }
+    testthat::expect_identical(cacheGetOptionCachePkgDir(), cachePkgDir())
   })
 
   ro <- RequireOptions()
@@ -171,7 +165,6 @@ test_that("test 4", {
     lala <- strsplit(gsub("\n", "", utils::packageDescription("Require", fields = i)), ",")[[1]]
     utilsOut[[i]] <- gsub(x = lala, " ", "") # remove spaces
   }
-
 
   if (getRversion() >= "4.3.0") { # R 4.2.X and lower don't exist on PEuniverse so this test fails
     opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)

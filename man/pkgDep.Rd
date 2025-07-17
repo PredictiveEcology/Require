@@ -116,8 +116,7 @@ in operational code.
 In the case of a GitHub package, it
 will be assumed that the name of the repository is the name of the package.
 If this is not the case, then pass a \emph{named} character vector here, where the
-names are the package names that could be different than the GitHub
-repository name.}
+names are the package names that could be different than the GitHub repository name.}
 
 \item{depends}{Logical. Include packages listed in "Depends". Default \code{TRUE}.}
 

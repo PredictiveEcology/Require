@@ -36,8 +36,8 @@ if (!isDevAndInteractive) { # i.e., CRAN
 testCacheDir <- tempdir2("RequireCacheForTests")
 withr::local_envvar(
   .new = list(
-    "R_REQUIRE_CACHE" = checkPath(testCacheDir, create = TRUE),
-    "R_REQUIRE_PKG_CACHE" = checkPath(file.path(testCacheDir, "packages"), create = TRUE)
+    R_REQUIRE_CACHE = testCacheDir,
+    R_REQUIRE_PKG_CACHE = file.path(testCacheDir, "packages")
   ),
   .local_envir = teardown_env()
 )

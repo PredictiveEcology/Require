@@ -56,17 +56,15 @@ utils::globalVariables(c(
 #'   If a `libPaths` is used, it must be used in both functions.
 #'
 #' @section Mutual Dependencies: This function works best if all required
-#'   packages are called within one `Require` call, as all dependencies can be
+#'   packages are called within one [Require()] call, as all dependencies can be
 #'   identified together, and all package versions will be addressed (if there
-#'   are no conflicts), allowing a call to `pkgSnapshot()` to take a snapshot or
+#'   are no conflicts), allowing a call to [pkgSnapshot()] to take a snapshot or
 #'   "record" of the current collection of packages and versions.
 #'
-#' @section Local Cache of Packages: When installing new packages, `Require`
-#'   will put all source and binary files in an R-version specific subfolder of
-#'   `getOption("Require.cachePkgDir")` whose default is `RPackageCache()`,
-#'   meaning *cache packages locally in a project-independent location*, and
-#'   will reuse them if needed. To turn off this feature, set
-#'   `options("Require.cachePkgDir" = FALSE)`.
+#' @section Local Cache of Packages: When installing new packages, `Require` will put all
+#'   source and binary files in an R-version-specific directory whose default is [cachePkgDir()].
+#'   *Package are cached locally in a project-independent location*, and will reuse them if needed.
+#'   To turn off this feature, set `options("Require.cachePkgDir" = FALSE)`.
 #'
 #' @note For advanced use and diagnosis, the user can set `verbose = TRUE` or
 #' `1` or `2` (or via `options("Require.verbose")`). This will attach an
@@ -91,8 +89,7 @@ utils::globalVariables(c(
 #'   In the case of a GitHub package, it
 #'   will be assumed that the name of the repository is the name of the package.
 #'   If this is not the case, then pass a *named* character vector here, where the
-#'   names are the package names that could be different than the GitHub
-#'   repository name.
+#'   names are the package names that could be different than the GitHub repository name.
 #' @param packageVersionFile  Character string of a file name or logical. If
 #'   `TRUE`, then this function will load the default file,
 #'   `getOption("Require.packageVersionFile")`. If this argument is provided,
@@ -656,7 +653,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       add = TRUE
     )
 
-    # if (!getOption("Require.cachePkgDir") %in% FALSE)
+    # if (!cacheGetOptionCachePkgDir() %in% FALSE)
     #  wd <- cachePkgDir()
     # else
     wd <- tmpdir

@@ -2,12 +2,18 @@
 % Please edit documentation in R/setup.R
 \name{cacheDir}
 \alias{cacheDir}
+\alias{cacheDefaultDir}
 \alias{cachePkgDir}
-\title{Path to (package) cache directory}
+\alias{cacheGetOptionCachePkgDir}
+\title{Get cache directory paths}
 \usage{
 cacheDir(create, verbose = getOption("Require.verbose"))
 
+cacheDefaultDir()
+
 cachePkgDir(create)
+
+cacheGetOptionCachePkgDir()
 }
 \arguments{
 \item{create}{A logical indicating whether the path should
@@ -20,26 +26,42 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \value{
-If \code{!is.null(cacheGetOptionCachePkgDir())}, i.e., a cache path exists,
-the cache directory will be created,
-with a README placed in the folder. Otherwise, this function will just
-return the path of what the cache directory would be.
+character, specifying the path to the cache directory,
+or \code{NULL} indicating a cache is not in use.
+If \code{create = TRUE}, will create the directory at that path as a side effect.
 }
 \description{
-Sets (if \code{create = TRUE}) or gets the cache
-directory associated with the \code{Require} package.
+Get the path to the cache directories associated with the \code{Require} package:
+\code{cacheDir} and \code{cachePkgDir}, the latter is intended to be a sub-directory of \code{cacheDir}.
+If \code{create = TRUE}, will ensure the directory path is created,
+and a \code{README} file will be placed in that directory.
 }
 \details{
-To set a different directory than the default, set the system variable:
-\code{R_REQUIRE_CACHE = "somePath"} and/or \code{R_REQUIRE_PKG_CACHE = "somePath"}
-e.g., in \code{.Renviron} file or \code{Sys.setenv()}. See Note below.
+These can be set using the environment variables \code{R_REQUIRE_CACHE} and \code{R_REQUIRE_PKG_CACHE}.
+If you set only \code{R_REQUIRE_CACHE}, then both the package cache and cache directories will be set,
+with the package cache as a sub-directory.
+You can, however, set them independently, if you set both environment variables,
+although doing so is less well-tested.
+The package cache can also be set via an option \code{Require.cachePkgDir} (see \link{RequireOptions}).
+
+\code{cacheDir()} is used to get the current cache directory, checking the value of \code{R_REQUIRE_CACHE},
+which is used if set. If not set, will use the default cache directory via \code{cacheDefaultDir()}.
+
+\code{cacheDefaultDir()} is simply a wrapper around \code{\link[tools:userdir]{tools::R_user_dir()}}, used to identify the
+OS-specific user cache directory.
+
+\code{cachePkgDir()} is used to get the default package cache path, not the currently set path.
+I.e., it does not check the values of the \code{Require.cachePkgDir} option, nor the
+\code{R_REQUIRE_PKG_CACHE} environment variable.
+
+\code{cacheGetOptionCachePkgDir()} is used to get the current package cache path.
+It first checks whether the option \code{Require.cachePkgDir} is set (see \link{RequireOptions}).
+This option can take one of several values:
+\itemize{
+\item \code{TRUE}, \code{"true"}, \code{"TRUE"} mean use the default via \code{cachePkgDir()};
+\item \code{FALSE}, \code{"false"}, \code{"FALSE"} mean do not use the cache (function will return \code{NULL});
+\item \code{"default"} will check whether the \code{R_REQUIRE_PKG_CACHE} environment variable is set
+and defines a path. If so, that path is used (postpended with the R version).
+If not set, it uses the default package cache path via \code{cachePkgDir()}.
 }
-\note{
-There are two different cache directories used by \code{Require}: \code{cacheDir} and \code{cachePkgDir}.
-The \code{cachePkgDir} is intended to be a sub-directory of the \code{cacheDir}.
-If you set \code{Sys.setenv("R_REQUIRE_CACHE" = "somedir")}, then both the package cache
-and cache dirs will be set, with the package cache a sub-directory.
-You can, however, set them independently, if you set \code{"R_REQUIRE_CACHE"} and
-\code{"R_REQUIRE_PKG_CACHE"} environment variables.
-The package cache can also be set with \code{options("Require.cachePkgDir" = "somedir")}.
 }

@@ -22,7 +22,7 @@
 #' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`,
 #'   but does not affect `Install`. If this is `FALSE`, then no installations
 #'   will be attempted, and missing packages will result in an error.}
-#' \item{`cachePkgDir`}{ Default: "default" (which means use `cachePkgDir()`).
+#' \item{`cachePkgDir`}{ Default: "default" (which means use [cachePkgDir()]).
 #'   Other accepted values are character denoting an existing directory path or a logical.
 #'   To turn off package caching, set this to `FALSE`.
 #'   This can be set using an environment variable e.g.,
@@ -38,7 +38,7 @@
 #' \item{`otherPkgs`}{Default: A character vector of packages that are
 #'   generally more successful if installed from Source on Unix-alikes. Since
 #'   there are repositories that offer binary packages builds for Linux (e.g.,
-#'   RStudio Package Manager), the vector of package names indicated here will
+#'   Posit Package Manager), the vector of package names indicated here will
 #'   default to a standard CRAN repository, forcing a source install. See also
 #'   `spatialPkgs` option, which does the same for spatial packages.}
 #' \item{`purge`}{Default: `FALSE`. If set to (almost) all internal caches used

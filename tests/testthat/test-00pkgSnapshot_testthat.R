@@ -68,7 +68,7 @@ test_that("test 1", {
     #
     #   origLibPaths <- setLibPaths(paste0(fileNames[["fn0"]][["lp"]]), updateRprofile = FALSE)
     #
-    #   theDir <- Require:::rpackageFolder(cachePkgDir())
+    #   theDir <- cacheGetOptionCachePkgDir()
     #   if (!is.null(theDir)) {
     #     localBins <- dir(theDir, pattern = "data.table")
     #     localBinsFull <- dir(theDir, full.names = TRUE, pattern = "data.table")

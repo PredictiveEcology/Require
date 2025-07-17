@@ -30,7 +30,7 @@ The following options are likely of interest to most users:
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
 but does not affect \code{Install}. If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error.}
-\item{\code{cachePkgDir}}{ Default: "default" (which means use \code{cachePkgDir()}).
+\item{\code{cachePkgDir}}{ Default: "default" (which means use \code{\link[=cachePkgDir]{cachePkgDir()}}).
 Other accepted values are character denoting an existing directory path or a logical.
 To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment variable e.g.,
@@ -46,7 +46,7 @@ be from the original source, e.g., CRAN, GitHub.}
 \item{\code{otherPkgs}}{Default: A character vector of packages that are
 generally more successful if installed from Source on Unix-alikes. Since
 there are repositories that offer binary packages builds for Linux (e.g.,
-RStudio Package Manager), the vector of package names indicated here will
+Posit Package Manager), the vector of package names indicated here will
 default to a standard CRAN repository, forcing a source install. See also
 \code{spatialPkgs} option, which does the same for spatial packages.}
 \item{\code{purge}}{Default: \code{FALSE}. If set to (almost) all internal caches used

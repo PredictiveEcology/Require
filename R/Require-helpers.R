@@ -704,32 +704,6 @@ warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
   )
 }
 
-rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
-  if (!is.null(path)) {
-    if (isTRUE(exact)) {
-      return(path)
-    }
-    if (isFALSE(path)) {
-      return(NULL)
-    }
-
-    path <- path[1]
-    if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
-      path
-    } else {
-      if (interactive() && !endsWith(path, versionMajorMinor())) {
-        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
-        ## need to know if it's a user, who *should* keep R-version-specific dirs
-        file.path(path, versionMajorMinor())
-      } else {
-        path
-      }
-    }
-  } else {
-    NULL
-  }
-}
-
 preparePkgNameToReport <- function(Package, packageFullName) {
   pkgsCleaned <- gsub(.grepTooManySpaces, " ", packageFullName)
   pkgsCleaned <- gsub(.grepTabCR, "", pkgsCleaned)
@@ -745,9 +719,8 @@ preparePkgNameToReport <- function(Package, packageFullName) {
 }
 
 splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = NULL) {
-
   gitRepoOrig <- gitRepo
-  # Can have version number --> most cases (other than SpaDES modules) just strip off
+  ## Can have version number --> most cases (other than SpaDES modules) just strip off
   gitRepo <- trimVersionNumber(gitRepo)
   hasVersionSpec <- gitRepo != gitRepoOrig
 
@@ -1539,7 +1512,7 @@ extractPkgNameFromWarning <- function(x) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(cachePkgDir(),
+  file.path(cacheGetOptionCachePkgDir(),
             paste0(gsub("https|[:/]", "", repos), collapse = "/"),
             type, "availablePackages.rds")
 }
@@ -1556,8 +1529,7 @@ installPackagesWithQuiet <- function(ipa, verbose) {
   if (isTRUE(length(ipa$type) > 1))
     ipa$type <- ipa$type[2]
 
-  if (getOption("Require.installPackagesSys") &&
-      requireNamespace("sys", quietly = TRUE)){
+  if (getOption("Require.installPackagesSys") && requireNamespace("sys", quietly = TRUE)) {
     for (i in 1:1) {
       anyFailed <- NULL
       out <- #try(
