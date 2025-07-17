@@ -12,6 +12,6 @@ rPkgDir(path = cacheGetOptionCachePkgDir(), exact = FALSE)
 \item{exact}{logical indicating whether to use \code{path} as-is (i.e., without appending)}
 }
 \description{
-Append the R version to a directory path
+Used primarily with \code{cacheGetOptionCachePkgDir}.
 }
 \keyword{internal}

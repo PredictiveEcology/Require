@@ -661,8 +661,8 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
       add = TRUE
     )
 
-    # if (!cacheGetOptionCachePkgDir() %in% FALSE)
-    #  wd <- cachePkgDir()
+    # if (!is.null(cacheGetOptionCachePkgDir()))
+    #  wd <- cacheGetOptionCachePkgDir()
     # else
     wd <- tmpdir
 
@@ -1271,8 +1271,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
 
       if (any(hasPackageUrl)) {
         pkgArchiveHasPU <- split(pkgArchive, f = hasPackageUrl)
-
-        tf <- file.path(cachePkgDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
+        tf <- file.path(cacheGetOptionCachePkgDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
         fe <- file.exists(tf)
         if (any(fe)) {
           messageVerbose(
@@ -3317,7 +3316,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                        verboseLevel = 2
         )
         if (is.na(correctVersions[2])) { # if 2nd one is NA, it means it an archived package
-          tf <- file.path(cachePkgDir(), basename(ret$PackageUrl))
+          tf <- file.path(cacheGetOptionCachePkgDir(), basename(ret$PackageUrl))
           fe <- file.exists(tf)
           if (fe) {
             dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]

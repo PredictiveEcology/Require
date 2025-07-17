@@ -599,18 +599,19 @@ SysInfo <-
     Rversion = versionMajorMinor(),
     verbose = FALSE
   )
-  # It appears that _R_CHECK_THINGS_IN_OTHER_DIRS_ detects both the R and the Require
-  #   dirs, even though the R is not affiliated specifically with Require
-  #   Nevertheless, if there is no other folder than "Require" in the "R" dir
-  #   it will delete both the Require subdir and the R dir in the
-  #   so that _R_CHECK_THINGS_IN_OTHER_DIRS_ shows nothing; but if there is another
-  #   subdir in the R dir, it won't delete the R dir
-  filesOuter <- dir(dirname(dirname(tools::R_user_dir(
-    "Require", "cache"
-  ))), full.names = TRUE, pattern = "^R$")
-  filesOneIn <- dir(dirname(tools::R_user_dir(
-    "Require", "cache"
-  )), full.names = TRUE)
+  ## It appears that _R_CHECK_THINGS_IN_OTHER_DIRS_ detects both the R and the Require
+  ##   dirs, even though the R is not affiliated specifically with Require
+  ##   Nevertheless, if there is no other folder than "Require" in the "R" dir
+  ##   it will delete both the Require subdir and the R dir in the
+  ##   so that _R_CHECK_THINGS_IN_OTHER_DIRS_ shows nothing; but if there is another
+  ##   subdir in the R dir, it won't delete the R dir
+  filesOuter <- cacheGetOptionCachePkgDir() |>
+    dirname() |>
+    dirname() |>
+    dir(full.names = TRUE, pattern = "^R$")
+  filesOneIn <- cacheGetOptionCachePkgDir() |>
+    dirname() |>
+    dir(full.names = TRUE)
   unlink(filesOneIn, recursive = TRUE)
   if (length(filesOuter) == 1 && length(filesOneIn) <= 1) {
     unlink(filesOuter, recursive = TRUE)
@@ -679,7 +680,10 @@ rversionHistory <- as.data.table(
 )
 
 crancacheFolder <- function() {
-  crancache <- file.path(dirname(dirname(tools::R_user_dir("Require", "cache"))), "R-crancache")
+  cacheDefaultDir() |>
+    dirname() |>
+    dirname() |>
+    file.path("R-crancache")
 }
 
 colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")

@@ -2,23 +2,33 @@ utils::globalVariables(c(
   "pkgEnvLast"
 ))
 
-
 #' @include envs.R
 envPkgCreate()
 # .pkgEnv <- newEmptyEnv() # new.env(parent = emptyenv())
 
 .onLoad <- function(libname, pkgname) {
   opts <- options()
-  ## have to set this first for pak to work in vanilla session
-  existing <- Sys.getenv("R_REQUIRE_CACHE")
-  if (!nzchar(existing)) {
-    Sys.unsetenv("R_REQUIRE_CACHE")
+  opts.Require <- RequireOptions()
+
+  ## TODO: have to set R_USER_CACHE_DIR first for pak to work in vanilla session??
+
+  envvar_cache <- Sys.getenv("R_REQUIRE_CACHE")
+  if (!nzchar(envvar_cache)) {
     ## will use `R_USER_CACHE_DIR` as base path for setting `R_REQUIRE_CACHE`;
     ## NOTE: do not modify `R_USER_CACHE_DIR` (see #124).
-    defCacheDir <- tools::R_user_dir("Require", which = "cache") |>
-      checkPath(create = TRUE)
-    Sys.setenv("R_REQUIRE_CACHE" = defCacheDir)
+    Sys.setenv(R_REQUIRE_CACHE = checkPath(cacheDefaultDir(), create = TRUE))
   }
+
+  envvar_pkgcache <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+  if (!nzchar(envvar_pkgcache)) {
+    ## will use `R_USER_CACHE_DIR` as base path for setting `R_REQUIRE_PKG_CACHE`;
+    ## NOTE: do not modify `R_USER_CACHE_DIR` (see #124).
+    Sys.setenv(R_REQUIRE_PKG_CACHE = cacheGetOptionCachePkgDir())
+    opts.Require[["Require.cachePkgDir"]] <- cacheGetOptionCachePkgDir()
+  }
+
+  toset <- !(names(opts.Require) %in% names(opts))
+  if (any(toset)) options(opts.Require[toset])
 
   # if (FALSE) {
   if (isTRUE(getOption("Require.usePak"))) {
@@ -29,10 +39,6 @@ envPkgCreate()
     #   Sys.setenv("R_REQUIRE_CACHE" = tempdir3())
     # }
   }
-
-  opts.Require <- RequireOptions()
-  toset <- !(names(opts.Require) %in% names(opts))
-  if (any(toset)) options(opts.Require[toset])
 
   # if (getOption("Require.persistentPkgEnv")) {
   #   if (file.exists(.thePersistentFile())) {

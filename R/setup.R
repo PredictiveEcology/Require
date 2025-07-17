@@ -114,7 +114,7 @@ cachePkgDir <- function(create) {
     create <- FALSE
   }
 
-  pkgCacheDir <- file.path(cacheDir(create), "packages") |>
+  pkgCacheDir <- file.path(cacheDefaultDir(), "packages") |>
     rPkgDir(exact = FALSE) |>
     normPathMemoise()
 
@@ -145,6 +145,7 @@ cacheGetOptionCachePkgDir <- function() {
 
   stopifnot(is.null(curVal) || is.logical(curVal) || is.character(curVal))
 
+  ## TODO: deal with situation where R_REQUIRE_CACHE is set but not R_REQUIRE_PKG_CACHE
   if (!is.null(curVal)) {
     curValLogical <- as.logical(curVal) ## will treat "TRUE", "false", etc. as logical
     if (isTRUE(curValLogical)) {
@@ -169,7 +170,8 @@ cacheGetOptionCachePkgDir <- function() {
   }
 
   if (!is.null(curVal)) {
-    curVal <- normPathMemoise(curVal) |> checkPath(create = TRUE)
+    curVal <- normPathMemoise(curVal) |>
+      checkPath(create = TRUE)
   }
 
   return(curVal)
@@ -177,35 +179,34 @@ cacheGetOptionCachePkgDir <- function() {
 
 #' Append the R version to a directory path
 #'
+#' Used primarily with `cacheGetOptionCachePkgDir`.
+#'
 #' @param path character specifying a directory path
 #'
 #' @param exact logical indicating whether to use `path` as-is (i.e., without appending)
 #'
 #' @keywords internal
 rPkgDir <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
-  if (!is.null(path)) {
-    if (isTRUE(exact)) {
-      return(path)
-    }
-    if (isFALSE(path)) {
-      return(NULL)
-    }
-
-    path <- path[1]
-    if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
-      path
-    } else {
-      if (interactive() && !endsWith(path, versionMajorMinor())) {
-        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
-        ## need to know if it's a user, who *should* keep R-version-specific dirs
-        file.path(path, versionMajorMinor())
-      } else {
-        path
-      }
-    }
-  } else {
-    NULL
+  if (is.null(path)) {
+    return(NULL)
   }
+
+  if (isTRUE(exact)) {
+    return(path)
+  }
+
+  path <- path[1]
+  if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
+    path
+  } else {
+    if (!endsWith(path, versionMajorMinor())) {
+      path <- file.path(path, versionMajorMinor())
+    } else {
+      path
+    }
+  }
+
+  return(path)
 }
 
 RequireGitHubCacheDir <- function(create) {
@@ -356,16 +357,13 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
       if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
 
-      repo <- c(
-        CRAN =
-          positBinaryRepos()
-      )
+      repo <- c(CRAN = positBinaryRepos())
 
       currentRepos <- getOption("repos")
       insertBefore <- 1 # put first, unless otherwise
       if (!is.null(currentRepos)) {
         isCRAN <- whIsOfficialCRANrepo(currentRepos, srcPackageURLOnCRAN)
-        # mirrorsLocalFile <- file.path(cachePkgDir(), ".mirrors.csv")
+        # mirrorsLocalFile <- file.path(dirname(cacheGetOptionCachePkgDir()), ".mirrors.csv")
         # if (!file.exists(mirrorsLocalFile))
         #   download.file("https://cran.r-project.org/CRAN_mirrors.csv",
         #                 destfile = mirrorsLocalFile, quiet = TRUE)
@@ -393,7 +391,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
 }
 
 whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
-  mirrorsLocalFile <- file.path(cachePkgDir(), ".mirrors.csv")
+  mirrorsLocalFile <- file.path(dirname(cacheGetOptionCachePkgDir()), ".mirrors.csv")
   dir.create(dirname(mirrorsLocalFile), recursive = TRUE, showWarnings = FALSE)
   if (!file.exists(mirrorsLocalFile))
     download.file("https://cran.r-project.org/CRAN_mirrors.csv",

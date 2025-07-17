@@ -1034,7 +1034,7 @@ pkgDepTopoSortMemoise <- function(...) {
 
 pkgDepDBFilename <- function() {
   if (!is.null(cacheGetOptionCachePkgDir())) {
-    file.path(cachePkgDir(), "pkgDepDB.rds")
+    file.path(dirname(cacheGetOptionCachePkgDir()), "pkgDepDB.rds")
   } # returns NULL if no Cache used
 }
 
@@ -1115,7 +1115,7 @@ cacheClearPackages <- function(packages,
                                Rversion = versionMajorMinor(),
                                clearCranCache = FALSE,
                                verbose = getOption("Require.verbose")) {
-  out <- cachePkgDir(create = FALSE)
+  out <- cacheGetOptionCachePkgDir()
   if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)
   }
@@ -1146,7 +1146,7 @@ cacheClearPackages <- function(packages,
   isFile <- !dir.exists(indivFiles)
   indivFiles <- indivFiles[isFile]
   if (missing(packages)) {
-    toDelete <- indivFiles # #don't delete whole dir: has available.packages too; not to delete.
+    toDelete <- indivFiles ## don't delete whole dir: has available.packages too; not to delete.
     forMess <- paste0("all ", length(indivFiles), " cached packages in ", out)
   } else {
     if (length(indivFiles)) {

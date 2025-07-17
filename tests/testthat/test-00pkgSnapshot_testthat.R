@@ -22,7 +22,7 @@ test_that("test 1", {
     warns <- capture_warnings(Require(c("rlang", "covr (==3.6.3)"), require = FALSE, quiet = quiet))
     test <- testWarnsInUsePleaseChange(warns)
     if (!isMacOS())
-      expect_true(test)
+      expect_true(test) ## not true on ubuntu
   } else {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }

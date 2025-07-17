@@ -30,10 +30,11 @@ withr::local_options(
 ## - we don't want to modify the user's cache;
 ## - user's cache may have package versions that are newer than those requested in the tests;
 testCacheDir <- tempdir2("RequireCacheForTests")
+testCachePkgDir <- file.path(testCacheDir, "packages")
 withr::local_envvar(
   .new = list(
     R_REQUIRE_CACHE = testCacheDir,
-    R_REQUIRE_PKG_CACHE = file.path(testCacheDir, "packages")
+    R_REQUIRE_PKG_CACHE = testCachePkgDir
   ),
   .local_envir = teardown_env()
 )
@@ -115,11 +116,11 @@ if (Sys.info()["user"] %in% "emcintir") {
   # googledrive::drive_auth()
   cat(paste0("EnvVar:\n  R_REQUIRE_CACHE: ", Sys.getenv("R_REQUIRE_CACHE"), "\n"))
   cat(paste0("Num Cached Pkgs: ",
-             length(dir(file.path(Sys.getenv("R_REQUIRE_CACHE"), "packages/4.4"), recursive = FALSE)),
+             length(dir(Sys.getenv("R_REQUIRE_CACHE"), recursive = FALSE)),
              "\n"))
   print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose",
                     "Require.cloneFrom", "Require.usePak")])
-  print(paste("Cache size:", length(dir(cachePkgDir())), "files"))
+  print(paste("Cache size:", length(dir(cacheGetOptionCachePkgDir())), "files"))
 } else {
   ## clean up cache on GA and other
   withr::defer(unlink(cacheDir(), recursive = TRUE), envir = teardown_env())

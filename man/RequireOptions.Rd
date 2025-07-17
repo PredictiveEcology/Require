@@ -31,24 +31,23 @@ The following options are likely of interest to most users:
 but does not affect \code{Install}. If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error.}
 \item{\code{cachePkgDir}}{ Default: "default" (which means use \code{\link[=cachePkgDir]{cachePkgDir()}}).
-Other accepted values are character denoting an existing directory path or a logical.
+Other accepted values are character, denoting an existing directory path, or a logical.
 To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment variable e.g.,
-\code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or
-\code{Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")}; if that is not set, then an
-either a path or logical option (\code{options(Require.cachePkgDir = "somePath")}
-or \code{options(Require.cachePkgDir = TRUE)}).
-If \code{TRUE}, the default folder location \code{cachePkgDir()} will be used.
-If this is \code{TRUE} or a path is provided, then binary and source packages will be cached here.
+\code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")};
+if that is not set, then either a path or logical option
+(\code{options(Require.cachePkgDir = "somePath")} or \code{options(Require.cachePkgDir = TRUE)}).
+If \code{TRUE}, the default folder location returned by \code{cachePkgDir()} will be used.
+If caching is used, both binary and source packages will be cached here.
 Subsequent downloads of same package will use local copy.
 Default is to have packages not be cached locally so each install of the same version will
 be from the original source, e.g., CRAN, GitHub.}
 \item{\code{otherPkgs}}{Default: A character vector of packages that are
-generally more successful if installed from Source on Unix-alikes. Since
-there are repositories that offer binary packages builds for Linux (e.g.,
-Posit Package Manager), the vector of package names indicated here will
-default to a standard CRAN repository, forcing a source install. See also
-\code{spatialPkgs} option, which does the same for spatial packages.}
+generally more successful if installed from Source on Unix-alikes.
+Since there are repositories that offer binary packages builds for Linux
+(e.g., Posit Package Manager), the vector of package names indicated here will
+default to a standard CRAN repository, forcing a source install.
+See also \code{spatialPkgs} option, which does the same for spatial packages.}
 \item{\code{purge}}{Default: \code{FALSE}. If set to (almost) all internal caches used
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set
