@@ -106,7 +106,7 @@ cachePkgDir <- function(create) {
   }
 
   if (nzchar(cacheGetOptionCachePkgDir())) {
-    pkgCacheDir <- normPathMemoise(file.path(cacheGetOptionCachePkgDir(), "packages", versionMajorMinor()))
+    pkgCacheDir <- normPathMemoise(file.path(cacheGetOptionCachePkgDir(), versionMajorMinor()))
   } else {
     pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
   }

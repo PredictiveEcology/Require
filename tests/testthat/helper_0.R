@@ -9,7 +9,14 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   ## Always use temporary package cache for tests (#128):
   ## - we don't want to modify the user's cache;
   ## - user's cache may have package versions that are newer than those requested in the tests;
-  withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local_envir = envir)
+  testCacheDir <- tempdir2("RequireCacheForTests")
+  withr::local_envvar(
+    .new = list(
+      "R_REQUIRE_CACHE" = checkPath(testCacheDir, create = TRUE),
+      "R_REQUIRE_PKG_CACHE" = checkPath(file.path(testCacheDir, "packages"), create = TRUE)
+    ),
+    .local_envir = teardown_env()
+  )
 
   Install(c("curl", "httr", "waldo")) ## needed by testthat but not installed in tmp libPath
 

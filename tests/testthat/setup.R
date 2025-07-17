@@ -33,7 +33,14 @@ if (!isDevAndInteractive) { # i.e., CRAN
 ## Always use temporary package cache for tests (#128):
 ## - we don't want to modify the user's cache;
 ## - user's cache may have package versions that are newer than those requested in the tests;
-withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local_envir = teardown_env())
+testCacheDir <- tempdir2("RequireCacheForTests")
+withr::local_envvar(
+  .new = list(
+    "R_REQUIRE_CACHE" = checkPath(testCacheDir, create = TRUE),
+    "R_REQUIRE_PKG_CACHE" = checkPath(file.path(testCacheDir, "packages"), create = TRUE)
+  ),
+  .local_envir = teardown_env()
+)
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()
@@ -46,9 +53,7 @@ withr::local_options(Require.packagesLeaveAttached = suggests, .local_envir = te
 ## can't use withr::local_package reliably because if a package gets unloaded in the tests,
 ##   then there is a warning on teardown that can't be silenced
 for (pk in suggests) {
-  try(suppressWarnings(
-    requireNamespace(pk, # .local_envir = teardown_env(),
-                     quietly = TRUE)), silent = TRUE)
+  try(suppressWarnings(requireNamespace(pk, quietly = TRUE)), silent = TRUE)
 }
 
 # withr::defer({
