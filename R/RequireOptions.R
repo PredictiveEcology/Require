@@ -22,8 +22,9 @@
 #' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`,
 #'   but does not affect `Install`. If this is `FALSE`, then no installations
 #'   will be attempted, and missing packages will result in an error.}
-#' \item{`RPackageCache`}{ Default: `cacheGetOptionCachePkgDir()`, which must be
-#'   either a path or a logical. To turn off package caching, set this to `FALSE`.
+#' \item{`cachePkgDir`}{ Default: "default" (which means use `cachePkgDir()`).
+#'   Other accepted values are character denoting an existing directory path or a logical.
+#'   To turn off package caching, set this to `FALSE`.
 #'   This can be set using an environment variable e.g.,
 #'   `Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")`, or
 #'   `Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")`; if that is not set, then an

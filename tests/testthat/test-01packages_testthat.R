@@ -76,11 +76,11 @@ test_that("test 1", {
   # detach("package:fpCompare", unload = TRUE)
   remove.packages("fpCompare", lib = dir1) |> suppressMessages()
 
-  # Try older version
+  ## Try older version
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
       isDevAndInteractive || # interactive
       identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-    dir2 <- rpackageFolder(tempdir3())
+    dir2 <- Require:::rpackageFolder(tempdir3())
     dir2 <- checkPath(dir2, create = TRUE)
     pvWant <- "0.2.2"
     warns <- capture_warnings(
@@ -96,7 +96,7 @@ test_that("test 1", {
     testthat::expect_true({
       pv <= pvWant
     })
-    # Test snapshot file
+    ## Test snapshot file
     orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
     pkgSnapFile <- tempfile()
     pkgSnapshot(pkgSnapFile, libPaths = .libPaths()[-length(.libPaths())])

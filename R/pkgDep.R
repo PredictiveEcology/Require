@@ -1060,7 +1060,6 @@ singularPlural <- function(singPlur, l, v) {
   out
 }
 
-
 prependSelf <- function(deps, includeSelf) {
   if (isTRUE(includeSelf)) {
     deps <- Map(pkgDepDT = deps, nam = names(deps), function(pkgDepDT, nam) {

@@ -117,14 +117,14 @@ test_that("test 4", {
   # out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc))
   # testthat::expect_true(identical(getOption("Require.cachePkgDir"), ccc)) ## TODO: warnings in readLines() cannot open DESCRIPTION file
   # out2222 <- capture.output(setupOff())
-  # Require:::messageVerbose("This is getOption('Require.cachePkgDir'): ", Require:::cacheGetOptionCachePkgDir(),
+  # Require:::messageVerbose("This is getOption('Require.cachePkgDir'): ", cacheGetOptionCachePkgDir(),
   #                verboseLevel = 0)
   # RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
   # if (identical(RPackageCacheSysEnv, "FALSE") ) {
   #   testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
   # } else {
-  #   if (!(is.null(Require:::cacheGetOptionCachePkgDir()) || Require:::cacheGetOptionCachePkgDir() == "FALSE"))
-  #     testthat::expect_true(identical(normPath(Require:::cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir())))
+  #   if (!(is.null(cacheGetOptionCachePkgDir()) || cacheGetOptionCachePkgDir() == "FALSE"))
+  #     testthat::expect_true(identical(normPath(cacheGetOptionCachePkgDir()), normPath(cachePkgDir())))
   # }
 
   # reset options after setupOff()
@@ -132,25 +132,29 @@ test_that("test 4", {
   # opt22 <- options("Require.cachePkgDir" = secondTry)
   # ccc <- checkPath(secondTry, create = TRUE)
   # out2222 <- capture.output(setup(setupTestDir, RPackageCache = ccc)) ## TODO: warnings in file() cannot open DESCRIPTION files
-  # testthat::expect_true(identical(Require:::cacheGetOptionCachePkgDir(), ccc))
+  # testthat::expect_true(identical(cacheGetOptionCachePkgDir(), ccc))
   # out2222 <- capture.output(setupOff())
-  # testthat::expect_true(identical(Require:::cacheGetOptionCachePkgDir(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
+  # testthat::expect_true(identical(cacheGetOptionCachePkgDir(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
 
-  ooo <- options(Require.cachePkgDir = TRUE)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), cachePkgDir()))
-  ooo <- options(Require.cachePkgDir = FALSE)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
-  ooo <- options(Require.cachePkgDir = tempdir())
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), tempdir()))
-  ooo <- options(Require.cachePkgDir = "default")
-  RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-  if (identical(RPackageCacheSysEnv, "FALSE")) {
-    testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
-  } else {
-    if (!(is.null(Require:::cacheGetOptionCachePkgDir()) || Require:::cacheGetOptionCachePkgDir() == "FALSE")) {
-      testthat::expect_true(identical(normPath(Require:::cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir())))
+  withr::with_options(list(Require.cachePkgDir = TRUE), {
+    testthat::expect_true(identical(cacheGetOptionCachePkgDir(), cachePkgDir()))
+  })
+  withr::with_options(list(Require.cachePkgDir = FALSE), {
+    testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  })
+  withr::with_options(list(Require.cachePkgDir = tempdir()), {
+    testthat::expect_true(identical(cacheGetOptionCachePkgDir(), tempdir()))
+  })
+  withr::with_options(list(Require.cachePkgDir = "default"), {
+    RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+    if (identical(RPackageCacheSysEnv, "FALSE")) {
+      testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
+    } else {
+      if (!(is.null(cacheGetOptionCachePkgDir()) || cacheGetOptionCachePkgDir() == "FALSE")) {
+        testthat::expect_identical(normPath(cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir()))
+      }
     }
-  }
+  })
 
   ro <- RequireOptions()
   gro <- getRequireOptions()
@@ -290,8 +294,7 @@ test_that("test 4", {
   }
 
 
-  ooo <- options(Require.cachePkgDir = NULL)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
-  options(ooo)
-
+  withr::with_options(list(Require.cachePkgDir = NULL), {
+    testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  })
 })

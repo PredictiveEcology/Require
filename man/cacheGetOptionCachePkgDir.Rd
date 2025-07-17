@@ -7,10 +7,8 @@
 cacheGetOptionCachePkgDir()
 }
 \description{
-First checks if an environment variable \code{Require.cachePkgDir}
-is set and defines a path.
+First checks if an environment variable \code{R_REQUIRE_PKG_CACHE} is set and defines a path.
 If not set, checks whether the \code{options("Require.cachePkgDir")} is set.
 If a character string, then it returns that.
-If \code{TRUE}, then use \code{cachePkgDir()}. If \code{FALSE}
-then returns \code{NULL}.
+If \code{TRUE}, uses \code{cachePkgDir()}; else returns \code{NULL}.
 }

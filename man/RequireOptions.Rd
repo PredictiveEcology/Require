@@ -30,8 +30,9 @@ The following options are likely of interest to most users:
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
 but does not affect \code{Install}. If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error.}
-\item{\code{RPackageCache}}{ Default: \code{cacheGetOptionCachePkgDir()}, which must be
-either a path or a logical. To turn off package caching, set this to \code{FALSE}.
+\item{\code{cachePkgDir}}{ Default: "default" (which means use \code{cachePkgDir()}).
+Other accepted values are character denoting an existing directory path or a logical.
+To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment variable e.g.,
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")}; if that is not set, then an

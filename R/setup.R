@@ -138,12 +138,10 @@ RequireGitHubCacheDir <- function(create) {
 
 #' Get the option for `Require.cachePkgDir`
 #'
-#' First checks if an environment variable `Require.cachePkgDir`
-#' is set and defines a path.
+#' First checks if an environment variable `R_REQUIRE_PKG_CACHE` is set and defines a path.
 #' If not set, checks whether the `options("Require.cachePkgDir")` is set.
 #' If a character string, then it returns that.
-#' If `TRUE`, then use `cachePkgDir()`. If `FALSE`
-#' then returns `NULL`.
+#' If `TRUE`, uses `cachePkgDir()`; else returns `NULL`.
 #'
 #' @export
 cacheGetOptionCachePkgDir <- function() {
@@ -159,7 +157,7 @@ cacheGetOptionCachePkgDir <- function() {
     } else {
       if (identical("default", curVal)) {
         fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-        if (nchar(fromEnvVars) == 0) {
+        if (!nzchar(fromEnvVars)) {
           curVal <- cachePkgDir(FALSE)
           break
         } else {

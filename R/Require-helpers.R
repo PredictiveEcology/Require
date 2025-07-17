@@ -731,7 +731,6 @@ rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
   }
 }
 
-
 preparePkgNameToReport <- function(Package, packageFullName) {
   pkgsCleaned <- gsub(.grepTooManySpaces, " ", packageFullName)
   pkgsCleaned <- gsub(.grepTabCR, "", pkgsCleaned)
@@ -1014,8 +1013,6 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
 
       # br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
       # br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
-    } else {
-
     }
 
     for (branch in br) { # will be length 1 in most cases except master/main
@@ -1092,9 +1089,6 @@ getSHAfromGitHubMemoise <- function(...) {
           saveRDS(peList, file = fn)
         }
       }
-
-
-
     }
   } else {
     ret <- getSHAfromGitHub(...)
@@ -1156,7 +1150,6 @@ getSHAFromPkgEnv <- function() {
   as.list(pe[[.txtGetSHAfromGitHub]])
 }
 
-
 getSHAFromGitHubDBFilename <- function() {
   go <- cacheGetOptionCachePkgDir()
   if (!is.null(go))
@@ -1165,8 +1158,6 @@ getSHAFromGitHubDBFilename <- function() {
     out <- character()
   out
 }
-
-
 
 # .earliestRSPMDate <- "2015-06-06" # THIS WAS MRAN's DATE
 .earliestRSPMDate <- "2017-10-10"
