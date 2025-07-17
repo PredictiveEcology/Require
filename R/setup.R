@@ -115,7 +115,7 @@ cachePkgDir <- function(create) {
   }
 
   pkgCacheDir <- file.path(cacheDir(create), "packages") |>
-    rpackageFolder(exact = FALSE) |>
+    rPkgDir(exact = FALSE) |>
     normPathMemoise()
 
   if (isTRUE(create)) {
@@ -160,10 +160,10 @@ cacheGetOptionCachePkgDir <- function() {
         if (nchar(fromEnvVars) == 0) {
           curVal <- cachePkgDir(create = FALSE) ## default cache package directory
         } else {
-          curVal <- rpackageFolder(fromEnvVars, exact = FALSE)
+          curVal <- rPkgDir(fromEnvVars, exact = FALSE)
         }
       } else {
-        curVal <- rpackageFolder(fromEnvVars, exact = FALSE)
+        curVal <- rPkgDir(fromEnvVars, exact = FALSE)
       }
     }
   }
@@ -182,7 +182,7 @@ cacheGetOptionCachePkgDir <- function() {
 #' @param exact logical indicating whether to use `path` as-is (i.e., without appending)
 #'
 #' @keywords internal
-rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
+rPkgDir <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
   if (!is.null(path)) {
     if (isTRUE(exact)) {
       return(path)

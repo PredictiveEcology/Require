@@ -170,7 +170,7 @@ checkLibPaths <- function(libPaths, ifMissing, exact = FALSE, ...) {
     pathsToCheck <- libPaths
   }
   unlist(lapply(pathsToCheck, function(lp) {
-    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)
+    checkPath(rPkgDir(lp, exact = exact), create = TRUE)
   }))
 }
 

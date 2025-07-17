@@ -25,7 +25,7 @@ test_that("test 1", {
   # Sys.setenv("R_TESTS" = "")
   # Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
-  dir1 <- Require:::rpackageFolder(Require:::tempdir3("test1"))
+  dir1 <- Require:::rPkgDir(Require:::tempdir3("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
 
   (mess <- capture_messages({
@@ -80,7 +80,7 @@ test_that("test 1", {
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
       isDevAndInteractive || # interactive
       identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
-    dir2 <- Require:::rpackageFolder(tempdir3())
+    dir2 <- Require:::rPkgDir(tempdir3())
     dir2 <- checkPath(dir2, create = TRUE)
     pvWant <- "0.2.2"
     warns <- capture_warnings(
@@ -101,7 +101,7 @@ test_that("test 1", {
     pkgSnapFile <- tempfile()
     pkgSnapshot(pkgSnapFile, libPaths = .libPaths()[-length(.libPaths())])
     pkgSnapFileRes <- data.table::fread(pkgSnapFile)
-    dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
+    dir6 <- Require:::rPkgDir(Require::tempdir2("test6"))
     dir6 <- Require::checkPath(dir6, create = TRUE)
     warns <- capture_warnings(
       out <- Require::Require(
@@ -173,7 +173,7 @@ test_that("test 1", {
     testthat::expect_true(isFALSE(outInner))
 
     # Skip on CRAN
-    dir3 <- Require:::rpackageFolder(tempdir3())
+    dir3 <- Require:::rPkgDir(tempdir3())
     dir3 <- Require::checkPath(dir3, create = TRUE)
     # dir.create(dir3, recursive = TRUE, showWarnings = FALSE)
     # try({
@@ -223,7 +223,7 @@ test_that("test 1", {
     # })
 
     # Try github with version
-    dir4 <- Require:::rpackageFolder(Require::tempdir2("test4"))
+    dir4 <- Require:::rPkgDir(Require::tempdir2("test4"))
     dir4 <- Require::checkPath(dir4, create = TRUE)
     err <- capture_error(
       warns <- capture_warnings(
