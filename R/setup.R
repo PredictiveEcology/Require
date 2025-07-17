@@ -239,7 +239,7 @@ normPathMemoise <- function(d) {
       }
       fnEnv[[di]]
     })
-    ret <- unlist(ret)
+    ret <- unlist(ret) |> unname()
   } else {
     ret <- normPath(d)
   }
