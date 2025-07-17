@@ -704,7 +704,6 @@ warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
   )
 }
 
-
 rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
   if (!is.null(path)) {
     if (isTRUE(exact)) {

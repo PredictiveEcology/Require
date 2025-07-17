@@ -105,11 +105,7 @@ cachePkgDir <- function(create) {
     create <- FALSE
   }
 
-  if (nzchar(cacheGetOptionCachePkgDir())) {
-    pkgCacheDir <- normPathMemoise(file.path(cacheGetOptionCachePkgDir(), versionMajorMinor()))
-  } else {
-    pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
-  }
+  pkgCacheDir <- normPathMemoise(file.path(cacheDir(create), "packages", versionMajorMinor()))
 
   if (isTRUE(create)) {
     pkgCacheDir <- checkPath(pkgCacheDir, create = TRUE)
@@ -157,12 +153,12 @@ cacheGetOptionCachePkgDir <- function() {
     } else {
       if (identical("default", curVal)) {
         fromEnvVars <- Sys.getenv("R_REQUIRE_PKG_CACHE")
-        if (!nzchar(fromEnvVars)) {
+        if (nchar(fromEnvVars) == 0) {
           curVal <- cachePkgDir(FALSE)
           break
         } else {
           try <- try + 1
-          curVal <- fromEnvVars
+          curVal <- rpackageFolder(fromEnvVars, exact = FALSE) |> normPathMemoise()
           if (identical("TRUE", curVal)) {
             curVal <- TRUE
           } else if (identical("FALSE", curVal)) {
