@@ -1020,11 +1020,11 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       pkgInstall[naRepository, Repository := Additional_repositories]
   }
 
-  # Will set `haveLocal = .txtLocal` and `installFrom = .txtLocal`
+  ## Will set `haveLocal = .txtLocal` and `installFrom = .txtLocal`
   pkgInstall <- identifyLocalFiles(pkgInstall, repos, purge, libPaths = libPaths, verbose = verbose)
   pkgInstallList <- split(pkgInstall, by = "haveLocal")
   if (!is.null(pkgInstallList$Local)) {
-    # could be duplicated if repos had multiple versions of the package; only need 1 from local installed
+    ## could be duplicated if repos had multiple versions of the package; only need 1 from local installed
     pkgInstallList$Local <- pkgInstallList$Local[, .SD[availableVersionOK %in% TRUE][1], by = "Package"]
   }
 
@@ -1990,15 +1990,17 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
   } else {
     if (length(fn)) {
       fn <- keepOnlyBinary(fn)
-      localVer <- extractVersionNumber(filenames = fn) # there may be >1 file for a given package; take
-      if (is.na(inequality)) { # need max --> which will be the versionSpec; so see if localVer is same as versionSpec
+      localVer <- extractVersionNumber(filenames = fn) ## may be >1 file for a given package; take
+      if (is.na(inequality)) {
+        ## need max --> which will be the versionSpec; so see if localVer is same as versionSpec
         if (!is.na(VersionOnRepos)) {
           ord <- order(c(package_version(localVer), package_version(VersionOnRepos)), decreasing = TRUE) # local first
         } else {
           ord <- 1
         }
 
-        if (ord[1] %in% seq_along(localVer)) { # if it is first, then it is bigger or equal, so keep
+        if (ord[1] %in% seq_along(localVer)) {
+          ## if it is first, then it is bigger or equal, so keep
           fn <- fn[ord[1]]
         } else {
           fn <- ""
@@ -3462,7 +3464,6 @@ colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
 #   # }
 #   pkgDT
 # }
-
 
 matchWithOriginalPackages <- function(pkgDT, packages) {
   # might be missing `require` column

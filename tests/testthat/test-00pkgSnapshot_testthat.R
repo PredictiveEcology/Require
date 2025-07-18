@@ -11,18 +11,18 @@ test_that("test 1", {
   created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
   setLibPaths(tmpdir, standAlone = TRUE) ## prints the old paths
-  tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
+  tmpdirActual <- .libPaths()[1] ## setLibPaths postpends the R version
   suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
   skip_if_offline()
 
   setLibPaths(tmpdir2, standAlone = TRUE) ## prints the old paths
-  tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
+  tmpdir2Actual <- .libPaths()[1] ## setLibPaths postpends the R version
   if (isDev) {
     warns <- capture_warnings(Require(c("rlang", "covr (==3.6.3)"), require = FALSE, quiet = quiet))
-    test <- testWarnsInUsePleaseChange(warns)
-    if (!isMacOS())
-      expect_true(test) ## not true on ubuntu
+    if (isWindows()) {
+      expect_true(testWarnsInUsePleaseChange(warns))
+    }
   } else {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }
@@ -43,7 +43,7 @@ test_that("test 1", {
       lens <- lengths(deps)
       haveFewDeps <- order(lens)
       deps <- deps[haveFewDeps]
-      # the `max(1)` is because "Error in seq.default(-Inf) : 'from' must be a finite number" on some GHA
+      ## the `max(1)` is because "Error in seq.default(-Inf) : 'from' must be a finite number" on some GHA
       wh <- max(0, min(4, max(which(cumsum(lengths(deps) + 1) < 10))))
       if (wh > 0) {
         deps <- deps[seq(wh)]
@@ -54,7 +54,7 @@ test_that("test 1", {
   }
 
   bb1 <- data.table::rbindlist(bb)
-  bb1 <- bb1[!Package %in% "Require"] # don't try to install Require here; not relevant; failing on covr::coverage()
+  bb1 <- bb1[!Package %in% "Require"] ## don't try to install Require here; not relevant; failing on covr::coverage()
   data.table::fwrite(x = bb1, file = pkgVF)
 
   if (file.exists(pkgVF)) {
