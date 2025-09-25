@@ -9,14 +9,11 @@
 
 # Require 1.0.1
 
-## CRAN requested fixes
-* Require was failing on secondary check systems (Fedora and one Mac system). This update fixes those.
-
 ## enhancements
 * `offlineMode`, gained improved functionality; though it is still experimental. It can be set using `options(Require.offlineMode = TRUE)`, but it will be automatically set if internet is not available, has now been widely tested. If packages are available in the local caches, and all elements of package versioning (e.g., `available.packages()` and github packages) have been previously run, then installations should occur as if the internet were available.
 
 ## Other
-* package testing on Linux Fedora and one MacOS machine on CRAN extra machines were addressed.
+* package testing on Linux Fedora and one macOS machine on CRAN extra machines were addressed.
 
 # Require 1.0.0
 
@@ -46,7 +43,7 @@
 * allow user-specified path in `pkgSnapshot()` (#93);
 * a number of new cases have been added to `tests` that previously would have hit errors;
 * many other small bugs fixed;
-* Some issues specific to MacOS have been fixed.
+* Some issues specific to macOS have been fixed.
 * fixes or implemented other issues #91, #96, #97, #102, #105
 
 # Require 0.3.1
@@ -183,7 +180,7 @@ new `options("Require.offlineMode")` can be set to `FALSE` to stop `Require` and
 * MRAN installs for Windows are now much more robust under many conditions.
 * archived packages (i.e., no longer on CRAN) will now be found and installed (latest available version)
 * more robust dependency identification even for archived or older packages or package versions (including their dependencies)
-* MRAN binaries will be used in MacOS.
+* MRAN binaries will be used in macOS.
 * improved installation of older packages (e.g. when dependencies are removed from CRAN, or source versions can't be easily compiled)
 * several other minor improvements in package dependency resolution and installation.
 
