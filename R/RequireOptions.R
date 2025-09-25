@@ -64,12 +64,7 @@ RequireOptions <- function() {
     Require.cloneFrom = NULL,
     Require.install = TRUE,
     Require.installPackagesSys = if (isMacOS()) 0L else 2L,
-    Require.otherPkgs = c(
-      "cpp11",
-      "igraph",
-      "Rcpp",
-      "RcppParallel"
-    ),
+    Require.otherPkgs = c("cpp11", "igraph", "Rcpp", "RcppParallel"),
     Require.offlineMode = FALSE,
     Require.packageVersionFile = "packageVersions.txt",
     Require.purge = FALSE,

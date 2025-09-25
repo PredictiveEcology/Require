@@ -41,13 +41,17 @@ cacheDir <- function(create, verbose = getOption("Require.verbose")) {
     Sys.getenv("R_REQUIRE_CACHE")
   } else {
     defaultCacheDirectory <- cacheDefaultDir()
-    if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
+    if (!is.null(defaultCacheDirOld)) {
+      # solaris doesn't have this set
       if (dir.exists(defaultCacheDirOld)) {
         oldLocs <- dir(defaultCacheDirOld, full.names = TRUE, recursive = TRUE)
         if (length(oldLocs) > 0) {
           messageVerbose(
             "Require has changed default package cache folder from\n",
-            defaultCacheDirOld, "\nto \n", defaultCacheDirectory, ". \nThere are packages ",
+            defaultCacheDirOld,
+            "\nto \n",
+            defaultCacheDirectory,
+            ". \nThere are packages ",
             "in the old Cache, moving them now..."
           )
           checkPath(defaultCacheDirectory, create = TRUE)
@@ -85,18 +89,15 @@ cacheDir <- function(create, verbose = getOption("Require.verbose")) {
 #' @export
 #' @rdname cacheDir
 cacheDefaultDir <- function() {
-  tools::R_user_dir("Require", which = "cache") |>
-    normalizePath(mustWork = FALSE)
+  tools::R_user_dir("Require", which = "cache") |> normalizePath(mustWork = FALSE)
 }
 
 appName <- "R-Require"
 
 defaultCacheDirOld <- switch(
   SysInfo[["sysname"]],
-  Darwin = file.path("~", "Library", "Caches", appName) |>
-    normalizePath(mustWork = FALSE),
-  Linux = file.path("~", ".cache", appName) |>
-    normalizePath(mustWork = FALSE),
+  Darwin = file.path("~", "Library", "Caches", appName) |> normalizePath(mustWork = FALSE),
+  Linux = file.path("~", ".cache", appName) |> normalizePath(mustWork = FALSE),
   Windows = file.path("C:", "Users", SysInfo[["user"]], "AppData", "Local", ".cache", appName) |>
     normalizePath(mustWork = FALSE)
 )
@@ -170,8 +171,7 @@ cacheGetOptionCachePkgDir <- function() {
   }
 
   if (!is.null(curVal)) {
-    curVal <- normPathMemoise(curVal) |>
-      checkPath(create = TRUE)
+    curVal <- normPathMemoise(curVal) |> checkPath(create = TRUE)
   }
 
   return(curVal)
@@ -196,7 +196,10 @@ rPkgDir <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
   }
 
   path <- path[1]
-  if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
+  if (
+    normPathMemoise(path) %in%
+      normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])
+  ) {
     path
   } else {
     if (!endsWith(path, versionMajorMinor())) {
@@ -213,8 +216,7 @@ RequireGitHubCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
   }
-  ghPkgCacheDir <- file.path(cacheDir(create), .txtGitHub) |>
-    normPathMemoise()
+  ghPkgCacheDir <- file.path(cacheDir(create), .txtGitHub) |> normPathMemoise()
 
   if (isTRUE(create)) {
     ghPkgCacheDir <- checkPath(ghPkgCacheDir, create = TRUE)
@@ -271,11 +273,13 @@ normPathMemoise <- function(d) {
 #' @export
 #' @rdname setup
 #'
-setup <- function(newLibPaths,
-                  RPackageFolders, # = getOption("Require.RPackageFolders", "R"),
-                  RPackageCache = cacheGetOptionCachePkgDir(),
-                  standAlone = getOption("Require.standAlone", TRUE),
-                  verbose = getOption("Require.verbose")) {
+setup <- function(
+  newLibPaths,
+  RPackageFolders, # = getOption("Require.RPackageFolders", "R"),
+  RPackageCache = cacheGetOptionCachePkgDir(),
+  standAlone = getOption("Require.standAlone", TRUE),
+  verbose = getOption("Require.verbose")
+) {
   if (missing(newLibPaths)) {
     if (missing(RPackageFolders)) {
       newLibPaths <- "R"
@@ -285,12 +289,18 @@ setup <- function(newLibPaths,
   }
   newLibPaths <- normPath(newLibPaths)
   newLibPaths <- checkLibPaths(newLibPaths)
-  .Deprecated(msg = paste0(
-    "setup is deprecated; to get approximately the same functionality, ",
-    "please put a line like\n",
-    ".libPaths('", newLibPaths, "', include.site = ", !standAlone, ")",
-    "\nin your .Rprofile file"
-  ))
+  .Deprecated(
+    msg = paste0(
+      "setup is deprecated; to get approximately the same functionality, ",
+      "please put a line like\n",
+      ".libPaths('",
+      newLibPaths,
+      "', include.site = ",
+      !standAlone,
+      ")",
+      "\nin your .Rprofile file"
+    )
+  )
   return(invisible())
 }
 
@@ -300,7 +310,8 @@ setup <- function(newLibPaths,
 #' @param removePackages Deprecated. Please remove packages manually from `.libPaths()`
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   updateRprofile <- checkTRUERprofile(TRUE)
-  if (!file.exists(updateRprofile)) { # not in current dir
+  if (!file.exists(updateRprofile)) {
+    # not in current dir
     ## 1. Check project
     possDirs <- c(rprojroot::find_root(rprojroot::is_rstudio_project), "~")
     for (i in 1:2) {
@@ -322,13 +333,14 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
       rproflines <- rproflines[-(start:end)]
       if (length(rproflines) <= 1 && all(nchar(rproflines) == 0) && isTRUE(newFile)) {
         unlink(updateRprofile)
-        messageVerbose("removing the .Rprofile file, which had been created with ",
-                       "setLibPaths(updateRprofile = TRUE)")
+        messageVerbose(
+          "removing the .Rprofile file, which had been created with ",
+          "setLibPaths(updateRprofile = TRUE)"
+        )
       } else {
         cat(rproflines, file = updateRprofile)
         messageVerbose("Setting .libPaths() has been removed from the .Rprofile file")
       }
-
     } else {
       messageVerbose("Require::setLibPaths was not run to change the .Rprofile file; nothing to do")
     }
@@ -351,11 +363,12 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #'
 #' @importFrom utils read.csv
 #' @export
-setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
-                               backupCRAN = srcPackageURLOnCRAN) {
+setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs, backupCRAN = srcPackageURLOnCRAN) {
   if (isUbuntuOrDebian()) {
     if (!grepl("R Under development", R.version.string) && getRversion() >= "4.1") {
-      if (is.null(names(backupCRAN))) names(backupCRAN) <- rep("CRAN", length(backupCRAN))
+      if (is.null(names(backupCRAN))) {
+        names(backupCRAN) <- rep("CRAN", length(backupCRAN))
+      }
 
       repo <- c(CRAN = positBinaryRepos())
 
@@ -375,10 +388,13 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
         #        grep, x = gsub("https://", "", a$URL), value = TRUE)
         insertBefore <- which(lengths(isCRAN) > 0)
         repos <- c(repo, currentRepos)
-        if (isTRUE(insertBefore > 1)) { # could have no CRAN official mirror
-          repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
-                     repo,
-                     currentRepos[seq(insertBefore, length(currentRepos))])
+        if (isTRUE(insertBefore > 1)) {
+          # could have no CRAN official mirror
+          repos <- c(
+            currentRepos[seq(1, insertBefore - 1)],
+            repo,
+            currentRepos[seq(insertBefore, length(currentRepos))]
+          )
         }
       } else {
         repos <- c(repo, backupCRAN)
@@ -390,18 +406,29 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
   }
 }
 
-whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
+whIsOfficialCRANrepo <- function(
+  currentRepos = getOption("repos"),
+  backupCRAN = srcPackageURLOnCRAN
+) {
   mirrorsLocalFile <- file.path(dirname(cacheGetOptionCachePkgDir()), ".mirrors.csv")
   dir.create(dirname(mirrorsLocalFile), recursive = TRUE, showWarnings = FALSE)
-  if (!file.exists(mirrorsLocalFile))
-    download.file("https://cran.r-project.org/CRAN_mirrors.csv",
-                  destfile = mirrorsLocalFile, quiet = TRUE)
+  if (!file.exists(mirrorsLocalFile)) {
+    download.file(
+      "https://cran.r-project.org/CRAN_mirrors.csv",
+      destfile = mirrorsLocalFile,
+      quiet = TRUE
+    )
+  }
   a <- read.csv(mirrorsLocalFile)
   b <- a[1, ]
   b$URL <- "https://cran.rstudio.com/"
   a <- rbind(a, b)
-  isCRAN <- lapply(gsub("https://", "", currentRepos),
-                   grep, x = gsub("https://", "", a$URL), value = TRUE)
+  isCRAN <- lapply(
+    gsub("https://", "", currentRepos),
+    grep,
+    x = gsub("https://", "", a$URL),
+    value = TRUE
+  )
   isCRAN
 }
 

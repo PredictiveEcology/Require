@@ -15,14 +15,13 @@ if (isTRUE(Require.usePak)) {
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
 ## Actually interactive
-isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
+isDevAndInteractive <- interactive() &&
+  isDev &&
+  Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
 withr::local_options(
-  .new = list(
-    Require.usePak = Require.usePak,
-    Require.verbose = ifelse(isDev, verboseForDev, -2)
-  ),
+  .new = list(Require.usePak = Require.usePak, Require.verbose = ifelse(isDev, verboseForDev, -2)),
   .local_envir = teardown_env()
 )
 
@@ -32,14 +31,14 @@ withr::local_options(
 testCacheDir <- tempdir2("RequireCacheForTests")
 testCachePkgDir <- file.path(testCacheDir, "packages")
 withr::local_envvar(
-  .new = list(
-    R_REQUIRE_CACHE = testCacheDir,
-    R_REQUIRE_PKG_CACHE = testCachePkgDir
-  ),
+  .new = list(R_REQUIRE_CACHE = testCacheDir, R_REQUIRE_PKG_CACHE = testCachePkgDir),
   .local_envir = teardown_env()
 )
 
-suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
+suggests <- DESCRIPTIONFileDeps(
+  system.file("DESCRIPTION", package = "Require"),
+  which = "Suggests"
+) |>
   extractPkgName()
 suggests <- setdiff(suggests, c("testthat", "SpaDES", "SpaDES.core", "quickPlot")) # doesn't like being local_package'd
 withr::local_options(Require.packagesLeaveAttached = suggests, .local_envir = teardown_env())
@@ -74,17 +73,15 @@ withr::local_options(
 )
 
 withr::local_envvar(
-  .new = list(
-    "R_TESTS" = "",
-    "R_REMOTES_UPGRADE" = "never",
-    "CRANCACHE_DISABLE" = TRUE
-  ),
+  .new = list("R_TESTS" = "", "R_REMOTES_UPGRADE" = "never", "CRANCACHE_DISABLE" = TRUE),
   .local_envir = teardown_env()
 )
 
 if (Sys.info()[["user"]] == "achubaty") {
-  withr::local_options(.local_envir = teardown_env(),
-                       Require.Home = "~/GitHub/PredictiveEcology/Require")
+  withr::local_options(
+    .local_envir = teardown_env(),
+    Require.Home = "~/GitHub/PredictiveEcology/Require"
+  )
 }
 
 ## This is for cases e.g., linux where there are >2 .libPaths().
@@ -112,14 +109,23 @@ if (Sys.info()["user"] %in% "emcintir") {
     repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
     gargle_oauth_email = "eliotmcintire@gmail.com",
-    gargle_oauth_cache = secretPath) # , .local_envir = teardown_env())
+    gargle_oauth_cache = secretPath
+  ) # , .local_envir = teardown_env())
   # googledrive::drive_auth()
   cat(paste0("EnvVar:\n  R_REQUIRE_CACHE: ", Sys.getenv("R_REQUIRE_CACHE"), "\n"))
-  cat(paste0("Num Cached Pkgs: ",
-             length(dir(Sys.getenv("R_REQUIRE_CACHE"), recursive = FALSE)),
-             "\n"))
-  print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose",
-                    "Require.cloneFrom", "Require.usePak")])
+  cat(paste0(
+    "Num Cached Pkgs: ",
+    length(dir(Sys.getenv("R_REQUIRE_CACHE"), recursive = FALSE)),
+    "\n"
+  ))
+  print(options()[c(
+    "Ncpus",
+    "repos",
+    "Require.installPackagesSys",
+    "Require.verbose",
+    "Require.cloneFrom",
+    "Require.usePak"
+  )])
   print(paste("Cache size:", length(dir(cacheGetOptionCachePkgDir())), "files"))
 } else {
   ## clean up cache on GA and other
@@ -128,34 +134,53 @@ if (Sys.info()["user"] %in% "emcintir") {
 
 runTests <- function(have, pkgs) {
   ## the is.character is for pak -- has a column but it is a path, not logical
-  if (is.null(have$installed) || is.character(have$installed))
+  if (is.null(have$installed) || is.character(have$installed)) {
     have[, installed := installResult %in% "OK"]
+  }
   ## recall LandR.CS won't be installed, also, Version number is not in place for newly installed packages
-  theTest <- all(!is.na(have[installed == TRUE &
-                               !Package %in% extractPkgName(.RequireDependencies)]$Version))
-  if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (!isTRUE(theTest)) browser()
+  theTest <- all(
+    !is.na(have[installed == TRUE & !Package %in% extractPkgName(.RequireDependencies)]$Version)
+  )
+  if (identical(Sys.info()[["user"]], "emcintir") && interactive()) {
+    if (!isTRUE(theTest)) browser()
+  }
   testthat::expect_true(isTRUE(theTest))
   if ("installResult" %in% colnames(have)) {
-    theTest <- NROW(have[is.na(installResult) | installResult %in% "OK" |
-                           installResult %in% "Can't install Require dependency"]) == sum(have$installed)
-    if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (!isTRUE(theTest)) browser()
+    theTest <- NROW(have[
+      is.na(installResult) |
+        installResult %in% "OK" |
+        installResult %in% "Can't install Require dependency"
+    ]) ==
+      sum(have$installed)
+    if (identical(Sys.info()[["user"]], "emcintir") && interactive()) {
+      if (!isTRUE(theTest)) browser()
+    }
     testthat::expect_true(isTRUE(theTest))
   }
 }
 
-testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, couldNot = TRUE,
-                                       restart = TRUE) {
+testWarnsInUsePleaseChange <- function(
+  warns,
+  please = TRUE,
+  inUse = TRUE,
+  couldNot = TRUE,
+  restart = TRUE
+) {
   test <- TRUE
   if (length(warns)) {
     tst <- character()
-    if (isTRUE(restart))
+    if (isTRUE(restart)) {
       tst <- .txtPleaseRestart
-    if (isTRUE(please))
+    }
+    if (isTRUE(please)) {
       tst <- c(tst, .txtPleaseChangeReqdVers)
-    if (isTRUE(inUse))
+    }
+    if (isTRUE(inUse)) {
       tst <- c(tst, .txtMsgIsInUse)
-    if (isTRUE(couldNot))
+    }
+    if (isTRUE(couldNot)) {
       tst <- c(tst, .txtCouldNotBeInstalled)
+    }
     tst <- paste(tst, collapse = "|")
     test <- all(grepl(tst, warns)) # "Please change" comes with verbose >= 1
   }
@@ -170,25 +195,40 @@ testCouldNotBeInstalled <- function(warns) {
   test
 }
 
-rcmdDebug <- function(counterName = "a", envir = parent.frame(), envirAssign = .GlobalEnv,
-                      path = "/home/emcintir/tmp/") {
-  if (!exists(counterName, envir = envirAssign))
-    assign(counterName, 0, envir = envirAssign) # m <<- 0
+rcmdDebug <- function(
+  counterName = "a",
+  envir = parent.frame(),
+  envirAssign = .GlobalEnv,
+  path = "/home/emcintir/tmp/"
+) {
+  if (!exists(counterName, envir = envirAssign)) {
+    assign(counterName, 0, envir = envirAssign)
+  } # m <<- 0
   m <- get(counterName, envir = envirAssign)
   m <- m + 1
   assign(counterName, m, envir = envirAssign)
-  save(list = ls(envir), envir = envir, file = paste0(path, counterName, "_", interactive(), "_", m, ".rda"))
+  save(
+    list = ls(envir),
+    envir = envir,
+    file = paste0(path, counterName, "_", interactive(), "_", m, ".rda")
+  )
 }
 
-rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = "/home/emcintir/tmp") {
+rcmdLoad <- function(
+  interactive = TRUE,
+  counterName = "a",
+  num = "max",
+  path = "/home/emcintir/tmp"
+) {
   if (identical(num, "max")) {
     poss <- dir(path, pattern = paste0("^", counterName, "_", interactive))
     num <- as.numeric(max(sapply(strsplit(poss, "_|\\."), function(x) x[[3]])))
   }
   int <- new.env()
-  load(dir(path, pattern = paste0(counterName, "_", interactive, "_", num),
-           full.names = TRUE),
-       envir = int)
+  load(
+    dir(path, pattern = paste0(counterName, "_", interactive, "_", num), full.names = TRUE),
+    envir = int
+  )
   as.list(int)
 }
 

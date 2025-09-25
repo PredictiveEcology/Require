@@ -1,17 +1,31 @@
-utils::globalVariables(c(
-  "..keepCols", "op", "package", "ref"
-))
+utils::globalVariables(c("..keepCols", "op", "package", "ref"))
 
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
 .txtCantFindPackage <- "Can't find package called "
 
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
   grp <- c(
-    .txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith,
-    .txtCantFindPackage, .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps,
-    .txtFailedToDLFrom, .txtPakNoPkgCalledPak, .txtUnknownArchiveType
+    .txtCntInstllDep,
+    .txtFailedToBuildSrcPkg,
+    .txtConflictsWith,
+    .txtCantFindPackage,
+    .txtMissingValueWhereTFNeeded,
+    .txtCldNotSlvPkgDeps,
+    .txtFailedToDLFrom,
+    .txtPakNoPkgCalledPak,
+    .txtUnknownArchiveType
   )
-  spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\. ", "NULL", "NULL", "NULL", "NULL", "NULL")
+  spl <- c(
+    " |\\)",
+    "\033\\[..{0,1}m",
+    "\033\\[..{0,1}m| |@",
+    " |\\. ",
+    "NULL",
+    "NULL",
+    "NULL",
+    "NULL",
+    "NULL"
+  )
   pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL", "NULL", "NULL", "NULL")
   for (i in seq_along(grp)) {
     splitStr <- strsplit(err, split = "\n")[[1]]
@@ -35,8 +49,9 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         pkg2 <- extractPkgName(filenames = basename(filename))
         whRm <- grep(pkg2, packages)
         packages2 <- pakCacheDeleteTryAgain(pkg2 = pkg2, packages = packages, whRm = whRm)
-        if (!identical(length(packages2), length(packages)))
+        if (!identical(length(packages2), length(packages))) {
           packages <- packages[-whRm]
+        }
       }
       if (length(pkg2) > 1) {
         d <- Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 1]])
@@ -44,10 +59,15 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       }
       pkgNoVersion <- trimVersionNumber(pkg2)
 
-      vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
-                       error = function(x) "")
+      vers <- tryCatch(
+        Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
+        error = function(x) ""
+      )
       whRm <- unlist(unname(lapply(
-        paste0("^", pkgNoVersion, ".*", vers, "|/", pkgNoVersion, ".*", vers), grep, x = pkg)))
+        paste0("^", pkgNoVersion, ".*", vers, "|/", pkgNoVersion, ".*", vers),
+        grep,
+        x = pkg
+      )))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
         packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
@@ -60,29 +80,32 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       if (grp[i] == .txtCntInstllDep) {
         whRmAll <- integer()
         for (j in seq_along(pkgNoVersion)) {
-          if (isGH(pkgNoVersion[j])) { # "PredictiveEcology/fpCompare (>=2.0.0)"
-            if (is.na(pkg[whRm[j]])) browser()
+          if (isGH(pkgNoVersion[j])) {
+            # "PredictiveEcology/fpCompare (>=2.0.0)"
+            if (is.na(pkg[whRm[j]])) {
+              browser()
+            }
             isOK <- pakCheckGHversionOK(pkg[whRm[j]])
             # pkgDT <- toPkgDTFull(pkg)
             # dl <- pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2())
             # vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
             # isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
-            if (isOK %in% FALSE)
+            if (isOK %in% FALSE) {
               whRmAll <- c(whRmAll, whRm[j])
-              # packages <- packages[-whRm[j]]
+            }
+            # packages <- packages[-whRm[j]]
             next
           }
           packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRm[j])
-          if (!identical(length(packages2), length(packages)))
+          if (!identical(length(packages2), length(packages))) {
             whRmAll <- c(whRmAll, whRm[j])
-
+          }
         }
         packages <- packages[-whRmAll]
         break
       }
 
       dups <- Map(x = b, function(x) duplicated(x))
-
 
       if (sum(unlist(dups)) >= 2 || grp[i] == .txtCldNotSlvPkgDeps) {
         # likely a repository that has a 4th version number element,
@@ -101,13 +124,17 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
           if (grp[i] == .txtCantFindPackage) {
             # This is the case when a package is archived
             packages2 <- pakGetArchive(pkg2, packages, whRm)
-            if (identical(packages2, packages)) { # doesn't exist
+            if (identical(packages2, packages)) {
+              # doesn't exist
               packages <- packages[-whRm]
               warning(err)
               break
             }
-            messageVerbose(packages2, " may be archived from CRAN; checking archives... ",
-                           verbose = verbose)
+            messageVerbose(
+              packages2,
+              " may be archived from CRAN; checking archives... ",
+              verbose = verbose
+            )
             packages <- packages2
             break
           } else {
@@ -135,7 +162,6 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
 }
 
 pakPkgSetup <- function(pkgs, doDeps) {
-
   # rm spaces
   pkgs <- gsub(" {0,3}(\\()(..{0,1}) {0,4}(.+)(\\))", " \\1\\2\\3\\4", pkgs)
 
@@ -148,13 +174,14 @@ pakPkgSetup <- function(pkgs, doDeps) {
     pkgDT <- toPkgDTFull(depsFlat)
     if (FALSE) {
       setorderv(pkgDT, "Package")
-      a <- pkgDT[, any(any(grep("==", inequality)) & any(grep(">=", inequality))), by = "Package"][V1 %in% TRUE]
+      a <- pkgDT[, any(any(grep("==", inequality)) & any(grep(">=", inequality))), by = "Package"][
+        V1 %in% TRUE
+      ]
       a <- pkgDT[a, on = "Package"]
       a <- a[!is.na(inequality)]
     }
     pkgDT <- trimRedundancies(pkgDT)
     pkgs <- pkgDT$packageFullName
-
   }
   # Convert equals to @
   whLT <- grep("<", pkgs)
@@ -179,10 +206,10 @@ pakPkgSetup <- function(pkgs, doDeps) {
         keep <- max(which(versOK))
         his[keep, ]$Version
       }
-
     })
     NAvers <- is.na(vers)
-    if (any(NAvers)) {# means none available
+    if (any(NAvers)) {
+      # means none available
       pkgs <- pkgs[-whLT[NAvers]]
       whLT <- whLT[!NAvers]
       # need redo these
@@ -208,18 +235,22 @@ pakPkgSetup <- function(pkgs, doDeps) {
 
   whNormal <- ind[-sort(c(whEquals, whGT, whLT, whHEAD, whGH, whAlreadyColoned))]
 
-  if (length(whEquals))
+  if (length(whEquals)) {
     pkgs[whEquals] <- equalsToAt(pkgs[whEquals])
-    # pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
-  if (length(whLT))
+  }
+  # pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
+  if (length(whLT)) {
     pkgs[whLT] <- lessThanToAt(pkgs[whLT])
-    # pkgs[whLT] <- gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs[whLT])
-  if (length(whHEAD))
+  }
+  # pkgs[whLT] <- gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs[whLT])
+  if (length(whHEAD)) {
     pkgs[whHEAD] <- HEADtoNone(pkgs[whHEAD])
-    # pkgs[whHEAD] <- gsub(" {0,3}\\(HEAD\\)", "", pkgs[whHEAD])
+  }
+  # pkgs[whHEAD] <- gsub(" {0,3}\\(HEAD\\)", "", pkgs[whHEAD])
 
-  if (length(whNormal))
+  if (length(whNormal)) {
     pkgs[whNormal] <- paste0("any::", pkgs[whNormal])
+  }
 
   pkgsForDESCRIPTIONFile <- if (length(whGT)) pkgs[whGT] else character()
   pkgsForDirect <- if (length(whGT)) pkgs[-whGT] else pkgs
@@ -229,53 +260,67 @@ pakPkgSetup <- function(pkgs, doDeps) {
 
 
 pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOrig) {
-  if (!requireNamespace("pak")) stop("Please install pak")
+  if (!requireNamespace("pak")) {
+    stop("Please install pak")
+  }
 
   packages <- unique(packages)
   packages <- packages[!extractPkgName(packages) %in% .basePkgs]
 
   pkgs <- list()
   for (i in 1:15) {
-  # while(!identical(packages, pkgs) ) {
+    # while(!identical(packages, pkgs) ) {
     pkgs <- packages
     if (length(pkgs)) {
       pkgsList <- pakPkgSetup(pkgs, doDeps = doDeps)
       td3 <- tempdir3()
-      on.exit({unlink(dirname(td3))}, add = TRUE)
+      on.exit(
+        {
+          unlink(dirname(td3))
+        },
+        add = TRUE
+      )
       # if (any(grepl("quickPlot", pkgsList$DESC))) browser()
-      dfile <- DESCRIPTIONfileFromModule(verbose = -2,
-                                         packageFolderName = td3,
-                                         .txtDummyPackage,
-                                         md = list(name = .txtDummyPackage, description = .txtDummyPackage,
-                                                   version = list(a = 1, dummy = "0.0.1"),
-                                                   authors =
-                                                     'person(given = "Eliot",
+      dfile <- DESCRIPTIONfileFromModule(
+        verbose = -2,
+        packageFolderName = td3,
+        .txtDummyPackage,
+        md = list(
+          name = .txtDummyPackage,
+          description = .txtDummyPackage,
+          version = list(a = 1, dummy = "0.0.1"),
+          authors = 'person(given = "Eliot",
                              family = "McIntire",
                              role = c("aut", "cre"),
                              email = "eliot.mcintire@canada.ca",
                              comment = c(ORCID = "0000-0002-6914-8316"))'
-                                         ),
-                                         deps = pkgsList$DESC,
-                                         hasNamespaceFile = FALSE)
-      err <- try(outs <- pak::pak(c(
-        paste0("deps::", td3),
-        pkgsList$direct
-      ), lib = libPaths[1], ask = FALSE,
+        ),
+        deps = pkgsList$DESC,
+        hasNamespaceFile = FALSE
+      )
+      err <- try(
+        outs <- pak::pak(
+          c(paste0("deps::", td3), pkgsList$direct),
+          lib = libPaths[1],
+          ask = FALSE,
 
-      # already done in pakPkgSetup # doDeps,
-      # FALSE doesn't work when `deps::` is used
-      dependencies = doDeps,
-      upgrade = upgrade),
-      silent = TRUE)
+          # already done in pakPkgSetup # doDeps,
+          # FALSE doesn't work when `deps::` is used
+          dependencies = doDeps,
+          upgrade = upgrade
+        ),
+        silent = TRUE
+      )
 
-      if (!is(err, "try-error"))
+      if (!is(err, "try-error")) {
         break
+      }
 
       # deal with errors
       packages <- pakErrorHandling(err, pkgs, packages, verbose = verbose)
-      if (length(packages) == 0)
+      if (length(packages) == 0) {
         stop(err)
-
+      }
     } else {
       outs <- list()
       break
@@ -284,7 +329,9 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
 
   pkgDT <- try(as.data.table(outs))
   pkgDT <- pkgDT[package != paste0(.txtDummyPackage, "-deps")]
-  if (is(pkgDT, "try-error")) browser()
+  if (is(pkgDT, "try-error")) {
+    browser()
+  }
   setnames(pkgDT, old = c("package", "status"), new = c("Package", "installResult"))
   loadSequence <- match(extractPkgName(packagesOrig), pkgDT$Package)
   loadSequence <- na.omit(loadSequence)
@@ -303,9 +350,18 @@ isGH <- function(pkgs) {
   grepl("^[[:alpha:]]+/.+", pkgs)
 }
 
-pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
-                      keepVersionNumber, verbose = getOption("Require.verbose")) {
-  if (!requireNamespace("pak")) stop("Please install pak")
+pakPkgDep <- function(
+  packages,
+  which,
+  simplify,
+  includeSelf,
+  includeBase,
+  keepVersionNumber,
+  verbose = getOption("Require.verbose")
+) {
+  if (!requireNamespace("pak")) {
+    stop("Please install pak")
+  }
 
   deps <- list()
 
@@ -319,19 +375,24 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       haveAlready <- match(packages, names(depsList)) |> na.omit()
       packages <- packages[-haveAlready]
     }
-
   }
 
   deps <- Map(pkg1 = packages, function(pkg1) {
     reposOrig <- getOption("repos")
-    on.exit({
-      options(repos = reposOrig)
-    }, add = TRUE)
+    on.exit(
+      {
+        options(repos = reposOrig)
+      },
+      add = TRUE
+    )
     pkgOrig <- pkg1
     pkg <- pkg1
     valExtra <- list()
-    wh <- ifelse(any(grepl("suggests", tolower(unlist(which)))), TRUE,
-                 ifelse(length(which), NA, FALSE))
+    wh <- ifelse(
+      any(grepl("suggests", tolower(unlist(which)))),
+      TRUE,
+      ifelse(length(which), NA, FALSE)
+    )
 
     pkgDone <- character()
     i <- 0
@@ -355,16 +416,21 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
         val <- character()
         break
       }
-      if (any(notGH)) pkg[notGH] <- pkg2
+      if (any(notGH)) {
+        pkg[notGH] <- pkg2
+      }
 
       pkg <- HEADtoNone(pkg)
       isGT <- isGT(pkg) # grep(">", pkgs)
       needRm <- isGH | isGT
-      if (any(needRm))
+      if (any(needRm)) {
         pkg[needRm] <- trimVersionNumber(pkg[needRm])
+      }
 
       # give up for archives of archives
-      if (i > 1 && pkg %in% pkgDone) wh <- FALSE
+      if (i > 1 && pkg %in% pkgDone) {
+        wh <- FALSE
+      }
 
       val <- try(pak::pkg_deps(pkg, dependencies = wh), silent = TRUE)
       if (is(val, "try-error")) {
@@ -379,7 +445,8 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
           } else {
             pkg1[1] <- pkg
           }
-        } else { # fail because of various reasons
+        } else {
+          # fail because of various reasons
           pkg1 <- pkg
           val <- character()
         }
@@ -392,12 +459,14 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       }
     }
     if (length(valExtra)) {
-      if (!requireNamespace("tibble")) stop("Please install tibble")
+      if (!requireNamespace("tibble")) {
+        stop("Please install tibble")
+      }
       valExtra <- do.call(rbind, valExtra)
       newDeps <- append(val$deps, valExtra$deps)
       newDeps <- do.call(rbind, newDeps)
       data.table::setDT(newDeps)
-      newDeps <- newDeps[newDeps[, .I[max(version) == version], by = "ref"]$V1,]
+      newDeps <- newDeps[newDeps[, .I[max(version) == version], by = "ref"]$V1, ]
       whOverride <- which(newDeps$ref %in% valExtra$package)
       newDeps <- newDeps[whOverride, ref := valExtra$ref]
       newDeps <- tibble::as_tibble(newDeps)
@@ -405,17 +474,15 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
     }
 
     val
-
-  }
-  )
+  })
 
   if (useCache) {
-
     if (!is.null(haveAlready)) {
       newList <- Map(x = packagesOrig, function(x) list())
       newList[names(depsList)] <- depsList
-      if (NROW(deps))
+      if (NROW(deps)) {
         newList[-haveAlready] <- deps
+      }
       deps <- newList
     }
     assign("depsList", deps, envir = pakEnv())
@@ -425,79 +492,96 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
   if (simplify %in% TRUE && any(hasDeps)) {
     deps[hasDeps] <- Map(dep = deps[hasDeps], nam = names(deps)[hasDeps], function(dep, nam) {
       dd <- try(dep$deps)
-      if (is(dd, "try-error")) browser()
+      if (is(dd, "try-error")) {
+        browser()
+      }
       dep$deps <- Map(innerDep = dep$deps, outerPkg = dep$package, function(innerDep, outerPkg) {
         if (!nam %in% outerPkg || !any(tolower(unlist(which)) == "suggests")) {
-          innerDep[tolower(innerDep$type) %in%
-                     setdiff(tolower(unlist(which)), "suggests"),]
+          innerDep[tolower(innerDep$type) %in% setdiff(tolower(unlist(which)), "suggests"), ]
         } else {
           innerDep
-        }})
+        }
+      })
       dep
     })
-    deps[hasDeps] <- Map(dep = deps[hasDeps], packFullName = packagesOrig[hasDeps], function(dep, packFullName) {
-      rr <- rbindlist(dep$deps) # only gets 1st order dependencies; still need self
-      rr <- unique(rr)
-      # rr <- rr[tolower(type) %in%  setdiff(tolower(unlist(which)), "suggests")]
-      rr <- packageFullNameFromPkgVers(rr)
-      hasWeirdSource <- grep("^.+::", rr$packageFullName)
-      if (any(hasWeirdSource)) {
-        rr[hasWeirdSource, packageFullName := trimVersionNumber(packageFullName)]
-      }
-      # rr[, packageFullName := paste0(ref, ifelse(nzchar(version), paste0(" (", op, " ", version, ")"), ""))]
+    deps[hasDeps] <- Map(
+      dep = deps[hasDeps],
+      packFullName = packagesOrig[hasDeps],
+      function(dep, packFullName) {
+        rr <- rbindlist(dep$deps) # only gets 1st order dependencies; still need self
+        rr <- unique(rr)
+        # rr <- rr[tolower(type) %in%  setdiff(tolower(unlist(which)), "suggests")]
+        rr <- packageFullNameFromPkgVers(rr)
+        hasWeirdSource <- grep("^.+::", rr$packageFullName)
+        if (any(hasWeirdSource)) {
+          rr[hasWeirdSource, packageFullName := trimVersionNumber(packageFullName)]
+        }
+        # rr[, packageFullName := paste0(ref, ifelse(nzchar(version), paste0(" (", op, " ", version, ")"), ""))]
 
-      if (includeSelf) {
-        selfPkgs <- toPkgDTFull(packFullName)
-        setnames(selfPkgs, old = c("Package", "versionSpec", "inequality"),
-                 new = c("package", "version", "op"))
-        selfPkgs[is.na(version), `:=`(version = "", op = "")]
-        selfPkgs[, type := "Depends"]
-        selfPkgs[, ref := trimVersionNumber(packageFullName)]
-        keepCols <- colnames(rr)
-        rr <- rbindlist(list(rr, selfPkgs[, ..keepCols]))
-        pkg <- extractPkgName(packFullName)
-        if (!identical(dep$ref, pkg)) {
-          replacement <- if (grepl("^url", dep$ref[dep$package %in% pkg])) {
-            dep$ref[dep$package %in% pkg]
-          } else {
-            packFullName
+        if (includeSelf) {
+          selfPkgs <- toPkgDTFull(packFullName)
+          setnames(
+            selfPkgs,
+            old = c("Package", "versionSpec", "inequality"),
+            new = c("package", "version", "op")
+          )
+          selfPkgs[is.na(version), `:=`(version = "", op = "")]
+          selfPkgs[, type := "Depends"]
+          selfPkgs[, ref := trimVersionNumber(packageFullName)]
+          keepCols <- colnames(rr)
+          rr <- rbindlist(list(rr, selfPkgs[, ..keepCols]))
+          pkg <- extractPkgName(packFullName)
+          if (!identical(dep$ref, pkg)) {
+            replacement <- if (grepl("^url", dep$ref[dep$package %in% pkg])) {
+              dep$ref[dep$package %in% pkg]
+            } else {
+              packFullName
+            }
+            rr[package %in% pkg, packageFullName := replacement]
           }
-          rr[package %in% pkg, packageFullName := replacement]
         }
 
+        setorderv(rr, c("package", "op"), order = c(1L, -1L))
+        rr <- unique(rr, by = "package")
+
+        lcPackage <- "package"
+        ucPackage <- "Package"
+        setnames(rr, old = lcPackage, new = ucPackage)
+        rr <- rmRifInPackageCol(rr)
+        setnames(rr, old = ucPackage, new = lcPackage)
+        if (!includeBase) {
+          rr <- rr[!package %in% .basePkgs]
+        }
+
+        deps <- rr$packageFullName
+
+        if (keepVersionNumber %in% FALSE) {
+          deps <- trimVersionNumber(deps)
+        }
+        deps
       }
-
-      setorderv(rr, c("package", "op"), order = c(1L, -1L))
-      rr <- unique(rr, by = "package")
-
-      lcPackage <- "package"
-      ucPackage <- "Package"
-      setnames(rr, old = lcPackage, new = ucPackage)
-      rr <- rmRifInPackageCol(rr)
-      setnames(rr, old = ucPackage, new = lcPackage)
-      if (!includeBase) {
-        rr <- rr[!package %in% .basePkgs]
-      }
-
-      deps <- rr$packageFullName
-
-      if (keepVersionNumber %in% FALSE)
-        deps <- trimVersionNumber(deps)
-      deps
-    })
-
+    )
   }
   deps
 }
 
 packageFullNameFromPkgVers <- function(rr) {
-  rr[, packageFullName := paste0(ref, ifelse(nzchar(version), paste0(" (", op, " ", version, ")"), ""))]
+  rr[,
+    packageFullName := paste0(ref, ifelse(nzchar(version), paste0(" (", op, " ", version, ")"), ""))
+  ]
 }
 
 
-DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESPACEFile,
-                                      filePathImportSpadesCore = file.path(".", fileext = ".R"),
-                                      packageFolderName = module, verbose = getOption("Require.verbose")) {
+DESCRIPTIONfileFromModule <- function(
+  module,
+  md,
+  deps,
+  hasNamespaceFile,
+  NAMESPACEFile,
+  filePathImportSpadesCore = file.path(".", fileext = ".R"),
+  packageFolderName = module,
+  verbose = getOption("Require.verbose")
+) {
   d <- list()
   # d$Package <- .moduleNameNoUnderscore(module)
   d$Package <- module
@@ -509,7 +593,6 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   d$Date <- Sys.Date()
   d$Authors <- md$authors
   d$Authors <- c(paste0("  ", format(d$Authors)[1]), format(d$Authors)[-1])
-
 
   # hasSC <- grepl("SpaDES.core", deps)
   # if (all(!hasSC))
@@ -523,8 +606,9 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   hasVersionNumb <- !is.na(versionNumb)
   inequality <- paste0("(", gsub("(.+)\\((.+)\\)", "\\2", deps[hasVersionNumb]), ")")
   missingSpace <- !grepl("[[:space:]]", inequality)
-  if (any(missingSpace))
+  if (any(missingSpace)) {
     inequality[missingSpace] <- gsub("([=><]+)", "\\1 ", inequality[missingSpace])
+  }
 
   namespaceImports <- d$Imports
   # Create "import all" for each of the packages, unless it is already in an @importFrom
@@ -533,8 +617,12 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
     hasImportFrom <- grepl("importFrom", nsTxt)
     if (any(hasImportFrom)) {
       pkgsNotNeeded <- unique(gsub(".+\\((.+)\\,.+\\)", "\\1", nsTxt[hasImportFrom]))
-      namespaceImports <- grep(paste(pkgsNotNeeded, collapse = "|"),
-                               namespaceImports, invert = TRUE, value = TRUE)
+      namespaceImports <- grep(
+        paste(pkgsNotNeeded, collapse = "|"),
+        namespaceImports,
+        invert = TRUE,
+        value = TRUE
+      )
     }
   }
 
@@ -544,27 +632,35 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   d$Imports[hasVersionNumb] <- paste(d$Imports[hasVersionNumb], inequality)
 
   dFile <- filenameFromFunction(packageFolderName, "DESCRIPTION", fileExt = "")
-  if (!dir.exists(packageFolderName))
+  if (!dir.exists(packageFolderName)) {
     dir.create(packageFolderName, recursive = TRUE, showWarnings = FALSE)
+  }
   origDESCtxt <- if (file.exists(dFile)) read.dcf(dFile) else character()
 
   cat(paste("Package:", d$Package), file = dFile, sep = "\n")
   cat(paste("Type:", d$Type), file = dFile, sep = "\n", append = TRUE)
   cat(paste("Title:", d$Title), file = dFile, sep = "\n", append = TRUE)
   cat(paste("Version:", d$Version), file = dFile, sep = "\n", append = TRUE)
-  cat(paste("Description:", paste(d$Description, collapse = " ")), file = dFile, sep = "\n", append = TRUE)
+  cat(
+    paste("Description:", paste(d$Description, collapse = " ")),
+    file = dFile,
+    sep = "\n",
+    append = TRUE
+  )
   cat(paste("Date:", d$Date), file = dFile, sep = "\n", append = TRUE)
   cat(c("Authors@R:  ", format(d$Authors)), file = dFile, sep = "\n", append = TRUE)
 
-  if (length(d$Imports) || length(origDESCtxt))
+  if (length(d$Imports) || length(origDESCtxt)) {
     mergeField(origDESCtxt = origDESCtxt, field = d$Imports, fieldName = "Imports", dFile)
+  }
 
   # suggs <- c('knitr', 'rmarkdown', 'testthat', 'withr', 'roxygen2')
   # if (length(suggs) || length(origDESCtxt))
   #   mergeField(origDESCtxt = origDESCtxt, field = suggs, fieldName = "Suggests", dFile)
 
-  if (length(d$Remotes) || length(origDESCtxt))
+  if (length(d$Remotes) || length(origDESCtxt)) {
     mergeField(origDESCtxt = origDESCtxt, field = d$Remotes, fieldName = "Remotes", dFile)
+  }
 
   cat("Encoding: UTF-8", sep = "\n", file = dFile, append = TRUE)
   cat("License: GPL-3", sep = "\n", file = dFile, append = TRUE)
@@ -573,7 +669,6 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   cat("Roxygen: list(markdown = TRUE)", sep = "\n", file = dFile, append = TRUE)
   # cat(paste0("RoxygenNote: ", as.character(packageVersion("roxygen2"))), sep = "\n",
   #     file = dFile, append = TRUE)
-
 
   messageVerbose("New/updated DESCRIPTION file is: ", dFile, verbose = verbose)
   return(dFile)
@@ -586,15 +681,19 @@ filenameFromFunction <- function(packageFolderName, fn = "", subFolder = "", fil
 
 mergeField <- function(origDESCtxt, field, dFile, fieldName = "Imports") {
   fieldVals <- character()
-  if (fieldName %in% colnames(origDESCtxt))
+  if (fieldName %in% colnames(origDESCtxt)) {
     fieldVals <- strsplit(origDESCtxt[, fieldName], split = ",+\n")[[1]]
+  }
   if (length(field)) {
     field <- trimRedundancies(unique(c(field, fieldVals)))
   }
-  cat(c(paste0(fieldName, ":"), paste("   ", sort(field$packageFullName), collapse = ",\n")),
-      sep = "\n", file = dFile, append = TRUE)
+  cat(
+    c(paste0(fieldName, ":"), paste("   ", sort(field$packageFullName), collapse = ",\n")),
+    sep = "\n",
+    file = dFile,
+    append = TRUE
+  )
 }
-
 
 
 equalsToAt <- function(pkgs) {
@@ -608,17 +707,17 @@ lessThanToAt <- function(pkgs) {
     #whTrulyLT <- which(trulyLT)
     #val <- character(length(pkgs))
     # if (any(trulyLT)) {
-    pkgDT <- toPkgDTFull(pkgs[hasLT])#[whTrulyLT])
+    pkgDT <- toPkgDTFull(pkgs[hasLT]) #[whTrulyLT])
     vers <- Map(pkg = pkgDT$packageFullName, function(pkg) {
-
       isGH <- isGH(pkg)
       if (any(isGH)) {
         isOK <- pakCheckGHversionOK(pkg)
         notOK <- isOK %in% FALSE
         if (any(notOK)) {
           pkg2 <- pkg[!notOK]
-          if (length(pkg2) == 0)
+          if (length(pkg2) == 0) {
             return(character())
+          }
           pkg[!notOK] <- pkg2
         }
       }
@@ -626,10 +725,16 @@ lessThanToAt <- function(pkgs) {
       # vers <- Map(pkg = pkgs[whTrulyLT], function(pkg) {
       pkgNoVersion <- trimVersionNumber(pkg)
       his <- try(pak::pkg_history(pkgNoVersion))
-      if (is(his, "try-error")) browser()
+      if (is(his, "try-error")) {
+        browser()
+      }
       whOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(whOK %in% FALSE)) {
-        warning(msgPleaseChangeRqdVersion(pkgNoVersion, ineq = ">=", newVersion = tail(his$Version, 1)))
+        warning(msgPleaseChangeRqdVersion(
+          pkgNoVersion,
+          ineq = ">=",
+          newVersion = tail(his$Version, 1)
+        ))
       }
       vers <- tail(his$Version[whOK], 1)
     })
@@ -695,8 +800,10 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
       type <- "source"
       pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
     }
-    if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
-    pth <- paste0("url::",file.path(contrib.url(isCRAN, type = type), pth))
+    if (isTRUE(!startsWith(isCRAN, "https"))) {
+      isCRAN <- paste0("https://", isCRAN)
+    }
+    pth <- paste0("url::", file.path(contrib.url(isCRAN, type = type), pth))
     packages[whRm] <- pth
   }
 
@@ -717,7 +824,9 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
 pakCheckGHversionOK <- function(pkg) {
   pkgDT <- toPkgDTFull(pkg)
   dl <- try(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()))
-  if (is(dl, "try-error")) browser()
+  if (is(dl, "try-error")) {
+    browser()
+  }
   vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
   isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
   isOK

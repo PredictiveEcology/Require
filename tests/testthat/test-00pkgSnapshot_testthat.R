@@ -30,8 +30,10 @@ test_that("test 1", {
   skip_if_offline()
   .libPaths(c(tmpdirActual, tmpdir2Actual))
   # .libPaths(c(tmpdir, tmpdir2))
-  aa1 <- pkgSnapshot(packageVersionFile = pkgVF,
-                     libPaths = unique(c(head(.libPaths(), 1), tail(.libPaths(), 1))))
+  aa1 <- pkgSnapshot(
+    packageVersionFile = pkgVF,
+    libPaths = unique(c(head(.libPaths(), 1), tail(.libPaths(), 1)))
+  )
   aa <- aa1[!Package %in% "R"]
 
   bb <- list()
@@ -142,7 +144,10 @@ test_that("test 1", {
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")
-    here <- try(pkgSnapshot(file.path(tempdir2("test"), "packageVersionsEliot.txt"), libPaths = .libPaths()))
+    here <- try(pkgSnapshot(
+      file.path(tempdir2("test"), "packageVersionsEliot.txt"),
+      libPaths = .libPaths()
+    ))
     if (!is(here, "try-error")) {
       anyMissing <- there[!here, on = c("Package", "Version")]
       anyMissing <- anyMissing[!Package %in% c("Require", getFromNamespace(".basePkgs", "Require"))]
@@ -153,7 +158,9 @@ test_that("test 1", {
         anyMissing <- anyMissing[!Package %in% "littler"]
       }
       # here[!there, on = "Package"]
-      if (NROW(anyMissing) != 0) stop("Error 832; please contact developer")
+      if (NROW(anyMissing) != 0) {
+        stop("Error 832; please contact developer")
+      }
       expect_true(NROW(anyMissing) == 0)
     }
   }

@@ -20,77 +20,55 @@ setGeneric("normPath", function(path) {
 
 #' @export
 #' @rdname normPath
-setMethod(
-  "normPath",
-  signature(path = "character"),
-  definition = function(path) {
-    if (length(path) > 0) {
-      nas <- is.na(path)
-      if (any(!nas)) {
-        path[!nas] <-
-          normalizePath(path[!nas], winslash = "/", mustWork = FALSE)
-      }
-      if (any(nas)) {
-        path[nas] <- NA_character_
-      }
-
-      ## Eliot changed this Sept 24, 2019 because weird failures with getwd()
-      ## in non-interactive testing
-      path <- unlist(path)
-      if (!is.null(path)) {
-        path <- gsub("\\\\", "//", path)
-        path <- gsub("//", "/", path)
-        hasDotStart <- startsWith(path, "./")
-        if (isTRUE(any(hasDotStart))) {
-          path[hasDotStart] <-
-            gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
-        }
-        path <- gsub("/$", "", path) # nolint
-      }
+setMethod("normPath", signature(path = "character"), definition = function(path) {
+  if (length(path) > 0) {
+    nas <- is.na(path)
+    if (any(!nas)) {
+      path[!nas] <- normalizePath(path[!nas], winslash = "/", mustWork = FALSE)
     }
-    return(path)
+    if (any(nas)) {
+      path[nas] <- NA_character_
+    }
+
+    ## Eliot changed this Sept 24, 2019 because weird failures with getwd()
+    ## in non-interactive testing
+    path <- unlist(path)
+    if (!is.null(path)) {
+      path <- gsub("\\\\", "//", path)
+      path <- gsub("//", "/", path)
+      hasDotStart <- startsWith(path, "./")
+      if (isTRUE(any(hasDotStart))) {
+        path[hasDotStart] <- gsub("^[.]/", paste0(getwd(), "/"), path[hasDotStart])
+      }
+      path <- gsub("/$", "", path) # nolint
+    }
   }
-)
+  return(path)
+})
 
 #' @export
 #' @rdname normPath
-setMethod(
-  "normPath",
-  signature(path = "list"),
-  definition = function(path) {
-    return(normPath(unlist(path)))
-  }
-)
+setMethod("normPath", signature(path = "list"), definition = function(path) {
+  return(normPath(unlist(path)))
+})
 
 #' @export
 #' @rdname normPath
-setMethod(
-  "normPath",
-  signature(path = "NULL"),
-  definition = function(path) {
-    return(character(0))
-  }
-)
+setMethod("normPath", signature(path = "NULL"), definition = function(path) {
+  return(character(0))
+})
 
 #' @export
 #' @rdname normPath
-setMethod(
-  "normPath",
-  signature(path = "missing"),
-  definition = function() {
-    return(character(0))
-  }
-)
+setMethod("normPath", signature(path = "missing"), definition = function() {
+  return(character(0))
+})
 
 #' @export
 #' @rdname normPath
-setMethod(
-  "normPath",
-  signature(path = "logical"),
-  definition = function(path) {
-    return(NA_character_)
-  }
-)
+setMethod("normPath", signature(path = "logical"), definition = function(path) {
+  return(NA_character_)
+})
 
 #' Check directory path
 #'
@@ -128,8 +106,7 @@ setMethod(
     if (isTRUE(all(is.na(path)))) {
       stop("Invalid path: cannot be NA.")
     } else {
-      path <-
-        normPath(path) # this is necessary to cover Windows
+      path <- normPath(path) # this is necessary to cover Windows
       # double slash used on non-Windows
       dirsThatExist <- dir.exists(path)
       if (any(!dirsThatExist)) {
@@ -143,26 +120,20 @@ setMethod(
         } else {
           if (create == TRUE) {
             lapply(path[!dirsThatExist[!isExistingFile]], function(pth) {
-              dir.create(file.path(pth),
-                         recursive = TRUE,
-                         showWarnings = FALSE
-              )
+              dir.create(file.path(pth), recursive = TRUE, showWarnings = FALSE)
             })
           } else {
-            stop(
-              paste(
-                "Specified path",
-                normPath(path),
-                "does not exist.",
-                "Create it and try again."
-              )
-            )
+            stop(paste(
+              "Specified path",
+              normPath(path),
+              "does not exist.",
+              "Create it and try again."
+            ))
           }
         }
       }
       if (SysInfo[["sysname"]] == "Darwin") {
-        path <-
-          normPath(path)
+        path <- normPath(path)
       } # ensure path re-normalized after creation
 
       return(path)
@@ -182,23 +153,15 @@ setMethod(
 
 #' @export
 #' @rdname checkPath
-setMethod(
-  "checkPath",
-  signature(path = "NULL", create = "ANY"),
-  definition = function(path) {
-    stop("Invalid path: cannot be NULL.")
-  }
-)
+setMethod("checkPath", signature(path = "NULL", create = "ANY"), definition = function(path) {
+  stop("Invalid path: cannot be NULL.")
+})
 
 #' @export
 #' @rdname checkPath
-setMethod(
-  "checkPath",
-  signature(path = "missing", create = "ANY"),
-  definition = function() {
-    stop("Invalid path: no path specified.")
-  }
-)
+setMethod("checkPath", signature(path = "missing", create = "ANY"), definition = function() {
+  stop("Invalid path: no path specified.")
+})
 
 #' @keywords internal
 .rndstr <- function(n = 1, len = 8) {
@@ -228,28 +191,24 @@ setMethod(
 #' @importFrom utils capture.output
 #' @export
 #' @rdname messageVerbose
-messageDF <-
-  function(df,
-           round,
-           verbose = getOption("Require.verbose"),
-           verboseLevel = 1) {
-    if (is.matrix(df)) {
-      df <- as.data.frame(df)
-    }
-    if (!is.data.table(df)) {
-      df <- as.data.table(df)
-    }
-    if (!missing(round)) {
-      isNum <- sapply(df, is.numeric)
-      isNum <- colnames(df)[isNum]
-      for (Col in isNum) {
-        set(df, NULL, Col, round(df[[Col]], round))
-      }
-    }
-    out <- lapply(capture.output(df), function(x) {
-      messageVerbose(x, verbose = verbose, verboseLevel = verboseLevel)
-    })
+messageDF <- function(df, round, verbose = getOption("Require.verbose"), verboseLevel = 1) {
+  if (is.matrix(df)) {
+    df <- as.data.frame(df)
   }
+  if (!is.data.table(df)) {
+    df <- as.data.table(df)
+  }
+  if (!missing(round)) {
+    isNum <- sapply(df, is.numeric)
+    isNum <- colnames(df)[isNum]
+    for (Col in isNum) {
+      set(df, NULL, Col, round(df[[Col]], round))
+    }
+  }
+  out <- lapply(capture.output(df), function(x) {
+    messageVerbose(x, verbose = verbose, verboseLevel = verboseLevel)
+  })
+}
 
 #' Make a temporary (sub-)directory
 #'
@@ -264,9 +223,11 @@ messageDF <-
 #' @param create Logical. Should the directory be created. Default `TRUE`
 #' @seealso [tempfile2()]
 #' @export
-tempdir2 <- function(sub = "",
-                     tempdir = getOption("Require.tempPath", .RequireTempPath()),
-                     create = TRUE) {
+tempdir2 <- function(
+  sub = "",
+  tempdir = getOption("Require.tempPath", .RequireTempPath()),
+  create = TRUE
+) {
   np <- normPath(file.path(tempdir, sub))
   if (isTRUE(create)) {
     checkPath(np, create = TRUE)
@@ -288,9 +249,7 @@ tempdir3 <- function(sub = "Require") {
 #' @inheritParams tempdir2
 #' @param ... passed to `tempfile`, e.g., `fileext`
 #' @export
-tempfile2 <- function(sub = "",
-                      tempdir = getOption("Require.tempPath", .RequireTempPath()),
-                      ...) {
+tempfile2 <- function(sub = "", tempdir = getOption("Require.tempPath", .RequireTempPath()), ...) {
   normPath(file.path(tempdir2(sub = sub, tempdir = tempdir), basename(tempfile(...))))
 }
 
@@ -404,8 +363,7 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
     }
     if (any(!res)) {
       ## finally, copy the file
-      res[!res] <-
-        suppressWarnings(file.copy(from[!res], to[!res], recursive = TRUE))
+      res[!res] <- suppressWarnings(file.copy(from[!res], to[!res], recursive = TRUE))
     }
   }
   return(invisible(res))
@@ -419,8 +377,7 @@ fileRenameOrMove <- function(from, to) {
   res <- suppressWarnings(file.rename(from, to)) ## try hardlink
   if (any(!res)) {
     ## finally, copy the file
-    res[!res] <-
-      suppressWarnings(file.copy(from[!res], to[!res], overwrite = TRUE))
+    res[!res] <- suppressWarnings(file.copy(from[!res], to[!res], overwrite = TRUE))
     unlink(from[!res])
   }
   return(invisible(res))
@@ -451,14 +408,11 @@ timestamp <- function() {
 #' Used for side effects, namely messaging that can be turned on or off with different
 #' numeric values of `verboseLevel`. A user sets the `verboseLevel` for a particular
 #' message.
-messageVerbose <-
-  function(...,
-           verbose = getOption("Require.verbose"),
-           verboseLevel = 1) {
-    if (verbose >= verboseLevel) {
-      message(...)
-    }
+messageVerbose <- function(..., verbose = getOption("Require.verbose"), verboseLevel = 1) {
+  if (verbose >= verboseLevel) {
+    message(...)
   }
+}
 
 #' @rdname messageVerbose
 #' @inheritParams Require
@@ -467,36 +421,30 @@ messageVerbose <-
 #' @param counter An integer indicating which iteration is being done
 #' @param total An integer indicating the total number to be done.
 #' @param minCounter An integer indicating the minimum (i.e,. starting value)
-messageVerboseCounter <-
-  function(pre = "",
-           post = "",
-           verbose = getOption("Require.verbose"),
-           verboseLevel = 1,
-           counter = 1,
-           total = 1,
-           minCounter = 1) {
-    total <- max(counter, total)
-    minCounter <- min(minCounter, counter)
-    mess <-
-      paste0(
-        paddedFloatToChar(counter, padL = nchar(total), pad = " "),
-        " of ", total
-      )
-    numCharsNeeded <- nchar(mess) + 1
-    messWithPrePost <- paste0(pre, mess, post)
-    if (counter == minCounter) {
-      messageVerbose(rep(" ", numCharsNeeded),
-                     verbose = verbose,
-                     verboseLevel = verboseLevel
-      )
-    }
-    messageVerbose(
-      rep("\b", numCharsNeeded),
-      messWithPrePost,
-      verbose = verbose,
-      verboseLevel = verboseLevel
-    )
+messageVerboseCounter <- function(
+  pre = "",
+  post = "",
+  verbose = getOption("Require.verbose"),
+  verboseLevel = 1,
+  counter = 1,
+  total = 1,
+  minCounter = 1
+) {
+  total <- max(counter, total)
+  minCounter <- min(minCounter, counter)
+  mess <- paste0(paddedFloatToChar(counter, padL = nchar(total), pad = " "), " of ", total)
+  numCharsNeeded <- nchar(mess) + 1
+  messWithPrePost <- paste0(pre, mess, post)
+  if (counter == minCounter) {
+    messageVerbose(rep(" ", numCharsNeeded), verbose = verbose, verboseLevel = verboseLevel)
   }
+  messageVerbose(
+    rep("\b", numCharsNeeded),
+    messWithPrePost,
+    verbose = verbose,
+    verboseLevel = verboseLevel
+  )
+}
 
 #' This environment variable "R_TESTS" is set during testing, and it points to a file
 #' called `Startup.Rs` that is placed in the `.libPaths()`.
@@ -545,17 +493,24 @@ R_TESTSomit <- function() {
 setdiffNamed <- function(l1, l2, missingFill) {
   changed1 <- setdiff(names(l2), names(l1)) # new option
   changed2 <- setdiff(names(l1), names(l2)) # option set to NULL
-  changed3 <-
-    vapply(names(l1), FUN.VALUE = logical(1), function(nam) {
+  changed3 <- vapply(
+    names(l1),
+    FUN.VALUE = logical(1),
+    function(nam) {
       identical(l2[nam], l1[nam])
-    }, USE.NAMES = TRUE) # changed values of existing
+    },
+    USE.NAMES = TRUE
+  ) # changed values of existing
   changed3 <- l1[names(changed3[!changed3])]
   dif <- list()
   if (!missing(missingFill)) {
-    dif[[1]] <-
-      mapply(x = changed1, function(x) {
+    dif[[1]] <- mapply(
+      x = changed1,
+      function(x) {
         missingFill
-      }, USE.NAMES = TRUE)
+      },
+      USE.NAMES = TRUE
+    )
   }
   dif[[2]] <- l1[changed2]
   dif[[3]] <- l1[names(changed3)]
@@ -578,15 +533,11 @@ getInStack <- function(obj) {
   return(get(obj, envir = env, inherits = FALSE))
 }
 
-SysInfo <-
-  Sys.info() # do this on load; nothing can change, so repeated calls are a waste
+SysInfo <- Sys.info() # do this on load; nothing can change, so repeated calls are a waste
 
 .setupExample <- function() {
   l <- list()
-  l$opts <- options(
-    Ncpus = 2L,
-    Require.RequirePkgCache = FALSE
-  ) ## TODO: use e.g., `tempdir2("examples")`
+  l$opts <- options(Ncpus = 2L, Require.RequirePkgCache = FALSE) ## TODO: use e.g., `tempdir2("examples")`
   # l$libOrig <- setLibPaths(tempdir3())
   l
 }
@@ -594,11 +545,7 @@ SysInfo <-
 .cleanup <- function(opts = list()) {
   unlink(file.path(tempdir(), "Require"), recursive = TRUE)
   unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
-  cacheClearPackages(
-    ask = FALSE,
-    Rversion = versionMajorMinor(),
-    verbose = FALSE
-  )
+  cacheClearPackages(ask = FALSE, Rversion = versionMajorMinor(), verbose = FALSE)
   ## It appears that _R_CHECK_THINGS_IN_OTHER_DIRS_ detects both the R and the Require
   ##   dirs, even though the R is not affiliated specifically with Require
   ##   Nevertheless, if there is no other folder than "Require" in the "R" dir
@@ -609,9 +556,7 @@ SysInfo <-
     dirname() |>
     dirname() |>
     dir(full.names = TRUE, pattern = "^R$")
-  filesOneIn <- cacheGetOptionCachePkgDir() |>
-    dirname() |>
-    dir(full.names = TRUE)
+  filesOneIn <- cacheGetOptionCachePkgDir() |> dirname() |> dir(full.names = TRUE)
   unlink(filesOneIn, recursive = TRUE)
   if (length(filesOuter) == 1 && length(filesOneIn) <= 1) {
     unlink(filesOuter, recursive = TRUE)
@@ -630,8 +575,7 @@ SysInfo <-
 }
 
 .runLongExamples <- function() {
-  .isDevelVersion() ||
-    Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
+  .isDevelVersion() || Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
 }
 
 doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
@@ -648,8 +592,10 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
           ccFiles <- ccFiles[!alreadyThere]
           toFiles <- file.path(cacheGetOptionCachePkgDir(), basename(ccFiles))
           linked <- linkOrCopy(ccFiles, toFiles)
-          messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
-                         verbose = verbose, verboseLevel = 1
+          messageVerbose(
+            blue("crancache had some packages; creating link or copy in Require Cache"),
+            verbose = verbose,
+            verboseLevel = 1
           )
           localFiles <- dir(cacheGetOptionCachePkgDir(), full.names = TRUE)
         }
@@ -661,29 +607,61 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
 
 # library(rversions)
 # dput(tail(r_versions(), 12))
-rversionHistory <- as.data.table(
-  structure(list(
-    version = c("4.0.5",
-                "4.1.0", "4.1.1", "4.1.2", "4.1.3",
-                "4.2.0", "4.2.1", "4.2.2", "4.2.3",
-                "4.3.0", "4.3.1", "4.3.2"),
-    date = structure(c(1617174315,
-                       1621321522, 1628579106, 1635753912, 1646899538,
-                       1650611141, 1655967933, 1667203554, 1678867561,
-                       1682060774, 1686899167, 1698739662), class = c("POSIXct", "POSIXt"
-                       ), tzone = "UTC"),
-    nickname = c("Shake and Throw",
-                 "Camp Pontanezen", "Kick Things", "Bird Hippie", "One Push-Up",
-                 "Vigorous Calisthenics", "Funny-Looking Kid", "Innocent and Trusting", "Shortstop Beagle",
-                 "Already Tomorrow", "Beagle Scouts", "Eye Holes")),
-    row.names = 122:133, class = "data.frame")
-)
+rversionHistory <- as.data.table(structure(
+  list(
+    version = c(
+      "4.0.5",
+      "4.1.0",
+      "4.1.1",
+      "4.1.2",
+      "4.1.3",
+      "4.2.0",
+      "4.2.1",
+      "4.2.2",
+      "4.2.3",
+      "4.3.0",
+      "4.3.1",
+      "4.3.2"
+    ),
+    date = structure(
+      c(
+        1617174315,
+        1621321522,
+        1628579106,
+        1635753912,
+        1646899538,
+        1650611141,
+        1655967933,
+        1667203554,
+        1678867561,
+        1682060774,
+        1686899167,
+        1698739662
+      ),
+      class = c("POSIXct", "POSIXt"),
+      tzone = "UTC"
+    ),
+    nickname = c(
+      "Shake and Throw",
+      "Camp Pontanezen",
+      "Kick Things",
+      "Bird Hippie",
+      "One Push-Up",
+      "Vigorous Calisthenics",
+      "Funny-Looking Kid",
+      "Innocent and Trusting",
+      "Shortstop Beagle",
+      "Already Tomorrow",
+      "Beagle Scouts",
+      "Eye Holes"
+    )
+  ),
+  row.names = 122:133,
+  class = "data.frame"
+))
 
 crancacheFolder <- function() {
-  cacheDefaultDir() |>
-    dirname() |>
-    dirname() |>
-    file.path("R-crancache")
+  cacheDefaultDir() |> dirname() |> dirname() |> file.path("R-crancache")
 }
 
 colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")

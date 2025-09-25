@@ -1,6 +1,4 @@
-utils::globalVariables(c(
-  "pkgEnvLast"
-))
+utils::globalVariables(c("pkgEnvLast"))
 
 #' @include envs.R
 envPkgCreate()
@@ -28,7 +26,9 @@ envPkgCreate()
   }
 
   toset <- !(names(opts.Require) %in% names(opts))
-  if (any(toset)) options(opts.Require[toset])
+  if (any(toset)) {
+    options(opts.Require[toset])
+  }
 
   # if (FALSE) {
   if (isTRUE(getOption("Require.usePak"))) {
@@ -48,7 +48,14 @@ envPkgCreate()
   # }
   .RequireDependencies <<- RequireDependencies()
   if (!isTRUE("sys" %in% .RequireDependencies)) {
-    .RequireDependencies <- c("Require", "data.table (>= 1.10.4)", "methods", "sys", "tools", "utils")
+    .RequireDependencies <- c(
+      "Require",
+      "data.table (>= 1.10.4)",
+      "methods",
+      "sys",
+      "tools",
+      "utils"
+    )
   }
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
@@ -64,10 +71,14 @@ envPkgCreate()
   if (isInteractive()) {
     possCacheDir <- cacheGetOptionCachePkgDir()
     mess <- c(
-      "Require version: ", as.character(utils::packageVersion("Require")), "\n",
+      "Require version: ",
+      as.character(utils::packageVersion("Require")),
+      "\n",
       if (!is.null(possCacheDir)) {
         paste0(
-          "  Using cache directory: ", possCacheDir, ";\n   clear with cacheClearPackages().\n"
+          "  Using cache directory: ",
+          possCacheDir,
+          ";\n   clear with cacheClearPackages().\n"
         )
       },
       "  See ?RequireOptions for this and other settings."
@@ -77,9 +88,7 @@ envPkgCreate()
   }
 }
 
-.onUnload <- function(libpath) {
-
-}
+.onUnload <- function(libpath) {}
 
 # .thePersistentFile <- function() {
 #   file.path(cacheDir(FALSE), "pkgEnv.Rdata")

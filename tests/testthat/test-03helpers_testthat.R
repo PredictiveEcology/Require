@@ -1,14 +1,13 @@
 test_that("test 3", {
-
   setupInitial <- setupTest()
-    # on.exit(endTest(setupInitial))
+  # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
 
-  out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232),
-                                                                     round = 2,
-                                                                     verboseLevel = 1
-  ))
+  out <- utils::capture.output(
+    type = "message",
+    Require:::messageDF(cbind(a = 1.1232), round = 2, verboseLevel = 1)
+  )
   testthat::expect_true({
     is.character(out)
   })
@@ -78,27 +77,23 @@ test_that("test 3", {
 
   # extra checks for missing/NA/NULL
   testthat::expect_true({
-    isTRUE(
-      tryCatch(Require::checkPath(),
-               "Invalid path: no path specified.",
-               error = function(x) TRUE
-      )
-    )
+    isTRUE(tryCatch(Require::checkPath(), "Invalid path: no path specified.", error = function(x) {
+      TRUE
+    }))
   })
 
   testthat::expect_true({
-    isTRUE(
-      tryCatch(Require::checkPath(NULL), "Invalid path: cannot be NULL.", error = function(x) TRUE)
-    )
+    isTRUE(tryCatch(Require::checkPath(NULL), "Invalid path: cannot be NULL.", error = function(x) {
+      TRUE
+    }))
   })
 
   testthat::expect_true({
-    isTRUE(
-      tryCatch(Require::checkPath(NA_character_),
-               "Invalid path: cannot be NA.",
-               error = function(x) TRUE
-      )
-    )
+    isTRUE(tryCatch(
+      Require::checkPath(NA_character_),
+      "Invalid path: cannot be NA.",
+      error = function(x) TRUE
+    ))
   })
 
   # Case where it is an existing fle
@@ -165,5 +160,4 @@ test_that("test 3", {
   testthat::expect_true("g" %in% names(mm))
   mm2 <- modifyList2(f1, f2, f3, f4, keep.null = FALSE)
   testthat::expect_true(!"g" %in% names(mm2))
-
 })

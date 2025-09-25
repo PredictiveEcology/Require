@@ -30,8 +30,12 @@ extractPkgName <- function(pkgs, filenames) {
       fnsSplit <- strsplit(filenames, "_")
       out <- unlist(lapply(fnsSplit, function(xx3) xx3[[1]]))
       out2 <- try(strsplit(out, split = "-"))
-      if (is(out2, "try-error")) browser()
-      pkgNames <- unlist(Map(len = pmax(1, lengths(out2) - 1), pkg = out2, function(len, pkg) pkg[len]))
+      if (is(out2, "try-error")) {
+        browser()
+      }
+      pkgNames <- unlist(Map(len = pmax(1, lengths(out2) - 1), pkg = out2, function(len, pkg) {
+        pkg[len]
+      }))
     } else {
       pkgNames <- character()
     }
@@ -58,11 +62,12 @@ extractVersionNumber <- function(pkgs, filenames) {
     if (!missing(filenames)) {
       fnsSplit <- strsplit(filenames, "_")
       out <- unlist(lapply(fnsSplit, function(y) {
-        if (length(y) >= 2)
+        if (length(y) >= 2) {
           a <- gsub("\\.zip|\\.tar\\.gz|\\.tgz", "", y[[2]])
-        else
+        } else {
           character()
-        }))
+        }
+      }))
     } else {
       out <- character()
     }
@@ -117,8 +122,9 @@ trimVersionNumber <- function(pkgs) {
     nas <- is.na(pkgs)
     if (any(!nas)) {
       ew <- endsWith(pkgs[!nas], ")")
-      if (getOption("Require.usePak", TRUE))
+      if (getOption("Require.usePak", TRUE)) {
         ew <- ew | grepl("@", pkgs[!nas])
+      }
       if (any(ew)) {
         pkgs[!nas][ew] <- gsub(paste0("\n|\t|", .grepVersionNumber), "", pkgs[!nas][ew])
       }
@@ -132,11 +138,10 @@ rmExtraSpaces <- function(string) {
 }
 
 # the @ is both in pak for CRAN and GitHub ... need to disentangle these for grep
-.grepVersionNumber <- " *\\(.*"#| {0,5}@.+$"
+.grepVersionNumber <- " *\\(.*" #| {0,5}@.+$"
 
 
 grepExtractPkgs <- ".*\\([ \n\t]*(<*>*=*)[ \n\t]*(.*)\\)"
-grepExtractPkgsFilename <-
-  "^[[:alpha:]].*_([0-9]+[.\\-][0-9]+[.\\-][0-9]+[.\\-]*[0-9]*)(_.*)(\\.zip|\\.tar.gz)"
+grepExtractPkgsFilename <- "^[[:alpha:]].*_([0-9]+[.\\-][0-9]+[.\\-][0-9]+[.\\-]*[0-9]*)(_.*)(\\.zip|\\.tar.gz)"
 
 .grepR <- "^ *R( |\\(|$)"

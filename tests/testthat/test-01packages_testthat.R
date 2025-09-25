@@ -29,16 +29,21 @@ test_that("test 1", {
   dir1 <- Require::checkPath(dir1, create = TRUE)
 
   (mess <- capture_messages({
-    out <- Require::Require("fpCompare (<= 1.2.3)",
-                            standAlone = TRUE, libPaths = dir1,
-                            # quiet = TRUE,
-                            returnDetails = TRUE)
-  })) |> capture_warnings() -> warns
+    out <- Require::Require(
+      "fpCompare (<= 1.2.3)",
+      standAlone = TRUE,
+      libPaths = dir1,
+      # quiet = TRUE,
+      returnDetails = TRUE
+    )
+  })) |>
+    capture_warnings() -> warns
 
   skip_if_offline()
 
-  if (length(warns))
+  if (length(warns)) {
     expect_true(all(grepl("was built under", warns)))
+  }
 
   testthat::expect_true({
     data.table::is.data.table(attr(out, "Require"))
@@ -58,10 +63,9 @@ test_that("test 1", {
   })
   if (!getOption("Require.usePak")) {
     out <- try(
-      detachAll(
-        c("Require", "fpCompare", "sdfd", "reproducible"),
-        dontTry = dontDetach()),
-      silent = TRUE) |>
+      detachAll(c("Require", "fpCompare", "sdfd", "reproducible"), dontTry = dontDetach()),
+      silent = TRUE
+    ) |>
       suppressWarnings()
     if (!is(out, "try-error")) {
       expectedPkgs <- c(sdfd = 3, fpCompare = 2, Require = 1, data.table = 1)
@@ -77,16 +81,22 @@ test_that("test 1", {
   remove.packages("fpCompare", lib = dir1) |> suppressMessages()
 
   ## Try older version
-  if (identical(tolower(Sys.getenv("CI")), "true") || # travis
+  if (
+    identical(tolower(Sys.getenv("CI")), "true") || # travis
       isDevAndInteractive || # interactive
-      identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
+      identical(Sys.getenv("NOT_CRAN"), "true")
+  ) {
+    # CTRL-SHIFT-E
     dir2 <- Require:::rPkgDir(tempdir3())
     dir2 <- checkPath(dir2, create = TRUE)
     pvWant <- "0.2.2"
     warns <- capture_warnings(
-      inst <- Install(paste0("fpCompare (<=", pvWant, ")"),
-                      standAlone = TRUE,
-                      libPaths = dir2, dependencies = FALSE, returnDetails = TRUE
+      inst <- Install(
+        paste0("fpCompare (<=", pvWant, ")"),
+        standAlone = TRUE,
+        libPaths = dir2,
+        dependencies = FALSE,
+        returnDetails = TRUE
       )
     )
     fpC <- "fpCompare"
@@ -105,8 +115,10 @@ test_that("test 1", {
     dir6 <- Require::checkPath(dir6, create = TRUE)
     warns <- capture_warnings(
       out <- Require::Require(
-        packageVersionFile = pkgSnapFile, libPaths = dir6,
-        quiet = TRUE, install = "force"
+        packageVersionFile = pkgSnapFile,
+        libPaths = dir6,
+        quiet = TRUE,
+        install = "force"
       )
     )
     if (isTRUE(getOption("Require.usePak"))) {
@@ -121,7 +133,6 @@ test_that("test 1", {
     # vers6 <- DESCRIPTIONFileVersionV(file.path(dir6, "fpCompare/DESCRIPTION"))
     testthat::expect_equal(vers2, vers6)
 
-
     remove.packages("fpCompare", lib = dir2) |> suppressMessages()
     remove.packages("fpCompare", lib = dir6) |> suppressMessages()
 
@@ -130,8 +141,9 @@ test_that("test 1", {
     # Test snapshot file with no args # on CRAN and GA, this is likely empty
     prevDir <- setwd(Require::tempdir2("test11"))
     out <- pkgSnapshot()
-    pkgSnapFileRes <- data.table::fread(eval(formals("pkgSnapshot")$packageVersionFile),
-                                        colClasses = "character"
+    pkgSnapFileRes <- data.table::fread(
+      eval(formals("pkgSnapshot")$packageVersionFile),
+      colClasses = "character"
     ) # if empty, they become logical
     testthat::expect_true({
       is.data.frame(out)
@@ -145,7 +157,7 @@ test_that("test 1", {
     })
 
     #warns <- capture_warnings(
-      out3 <- pkgSnapshot2()
+    out3 <- pkgSnapshot2()
     #)
     #if (isTRUE(getOption("Require.usePak"))) {
     #  browser()
@@ -164,10 +176,9 @@ test_that("test 1", {
     )
 
     if (isTRUE(getOption("Require.usePak"))) {
-     okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-     expect_true(okWarn)
+      okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
+      expect_true(okWarn)
     }
-
 
     testthat::expect_true(any(grepl(NoPkgsSupplied, mess11)))
     testthat::expect_true(isFALSE(outInner))
@@ -181,30 +192,36 @@ test_that("test 1", {
     # This next one is correct version, but it was installed from CRAN, so it fails
     #   the GH SHA test (i.e., one has the SHA the other does not); so
     #   installs from source
-    Require:::linkOrCopyPackageFilesInner(c("Require", "sys", "data.table", "gitcreds"),
-                                     Sys.getenv("R_LIBS_USER"),toLib = dir3)
+    Require:::linkOrCopyPackageFilesInner(
+      c("Require", "sys", "data.table", "gitcreds"),
+      Sys.getenv("R_LIBS_USER"),
+      toLib = dir3
+    )
     warns <- capture_warnings(
-      inst <- suppressMessages(
-        Require::Require("PredictiveEcology/fpCompare",
-                         install = "force", returnDetails = TRUE,
-                         # quiet = TRUE,
-                         require = FALSE, standAlone = TRUE, libPaths = dir3
-        )
-      )
+      inst <- suppressMessages(Require::Require(
+        "PredictiveEcology/fpCompare",
+        install = "force",
+        returnDetails = TRUE,
+        # quiet = TRUE,
+        require = FALSE,
+        standAlone = TRUE,
+        libPaths = dir3
+      ))
     )
 
-    if (isTRUE(any(grepl(msgStripColor(messageCantInstallNoInternet("")), msgStripColor(warns)))))
+    if (isTRUE(any(grepl(msgStripColor(messageCantInstallNoInternet("")), msgStripColor(warns))))) {
       skip("Flaky internet")
+    }
 
-
-    inst22 <- suppressMessages(
-      Require::Require("PredictiveEcology/fpCompare",
-                       install = "force", returnDetails = TRUE,
-                       # quiet = TRUE,
-                       require = FALSE, standAlone = TRUE, libPaths = dir3
-      )
-    )
-
+    inst22 <- suppressMessages(Require::Require(
+      "PredictiveEcology/fpCompare",
+      install = "force",
+      returnDetails = TRUE,
+      # quiet = TRUE,
+      require = FALSE,
+      standAlone = TRUE,
+      libPaths = dir3
+    ))
 
     attrOut <- capture.output(type = "message", Require:::messageDF(attr(inst, "Require")))
     # }, silent = TRUE)
@@ -227,8 +244,12 @@ test_that("test 1", {
     dir4 <- Require::checkPath(dir4, create = TRUE)
     err <- capture_error(
       warns <- capture_warnings(
-        inst <- Require::Require("PredictiveEcology/fpCompare (>=2.0.0)",
-                                 quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
+        inst <- Require::Require(
+          "PredictiveEcology/fpCompare (>=2.0.0)",
+          quiet = TRUE,
+          require = FALSE,
+          standAlone = FALSE,
+          libPaths = dir4
         )
       )
     )
@@ -241,9 +262,13 @@ test_that("test 1", {
       warns <- capture_warnings(
         mess <- utils::capture.output(
           {
-            inst <- Require::Require("PredictiveEcology/fpCompare (>=2.0.0)",
-                                     verbose = 5,
-                                     quiet = TRUE, require = FALSE, standAlone = FALSE, libPaths = dir4
+            inst <- Require::Require(
+              "PredictiveEcology/fpCompare (>=2.0.0)",
+              verbose = 5,
+              quiet = TRUE,
+              require = FALSE,
+              standAlone = FALSE,
+              libPaths = dir4
             )
           },
           type = "message"
@@ -280,7 +305,9 @@ test_that("test 1", {
   Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
 
   warnsReq <- capture_warnings(Require::Install("Require"))
-  (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
+  (Require::Install(c(
+    "CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"
+  ))) |>
     capture_warnings() -> warns
 
   test <- testWarnsInUsePleaseChange(warns)
@@ -300,7 +327,8 @@ test_that("test 1", {
   # detach("package:reproducible", unload = TRUE);
   unloadNamespace("package:fpCompare")
   # now installs correct SHA which is 2.0.2.9001
-  warnsHere <- capture_warnings(  # "package 'reproducible' was built under ...
+  warnsHere <- capture_warnings(
+    # "package 'reproducible' was built under ...
     Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   )
   vers <- packVer("reproducible", .libPaths()[1])
@@ -311,11 +339,13 @@ test_that("test 1", {
   suggests <- getOption("Require.packagesLeaveAttached")
 
   if (!getOption("Require.usePak")) {
-
     out <- try(
-      detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
-                dontTry = unique(c(suggests, dontDetach()))),
-      silent = TRUE) |>
+      detachAll(
+        c("Require", "fpCompare", "sdfd", "reproducible"),
+        dontTry = unique(c(suggests, dontDetach()))
+      ),
+      silent = TRUE
+    ) |>
       suppressWarnings()
   }
   # detach("package:reproducible", unload = TRUE)
@@ -374,10 +404,12 @@ test_that("test 1", {
     )
   }
 
-
   # Test substitute(packages)
-  suppressWarnings(try(remove.packages(c("magrittr", "crayon", "fpCompare", "lobstr")),
-                       silent = TRUE)) |> suppressMessages()
+  suppressWarnings(try(
+    remove.packages(c("magrittr", "crayon", "fpCompare", "lobstr")),
+    silent = TRUE
+  )) |>
+    suppressMessages()
   verToCompare <- "2.0.2"
   cacheClearPackages(c("magrittr", "crayon"), ask = FALSE)
 
@@ -385,8 +417,7 @@ test_that("test 1", {
 
   pkgsHere <- c("magrittr", "crayon", "lobstr")
   pkgdeps <- pkgDep(pkgsHere)
-  out2 <- Require::Install(pkgsHere) |>
-    capture_warnings() -> warns
+  out2 <- Require::Install(pkgsHere) |> capture_warnings() -> warns
   test <- testWarnsInUsePleaseChange(warns)
   expect_true(test)
 
@@ -395,16 +426,12 @@ test_that("test 1", {
   cacheClearPackages(pkgsHere, ask = FALSE)
   a <- list(pkg = "fpCompare")
 
-  warns <- capture_warnings(
-    out <- Require::Install(pkgsHere, returnDetails = TRUE)
-  )
+  warns <- capture_warnings(out <- Require::Install(pkgsHere, returnDetails = TRUE))
   vers <- packVer("magrittr", .libPaths()[1])
   # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
   testthat::expect_true(vers != verToCompare)
 
-  warns <- capture_warnings(
-    out <- Require::Install(pkgsHere, returnDetails = TRUE)
-  )
+  warns <- capture_warnings(out <- Require::Install(pkgsHere, returnDetails = TRUE))
   vers <- packVer("magrittr", .libPaths()[1])
   # vers <- DESCRIPTIONFileVersionV(file.path(.libPaths()[1], "magrittr/DESCRIPTION"))
 

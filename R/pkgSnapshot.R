@@ -75,13 +75,15 @@
 #' }
 #'
 #' @rdname pkgSnapshot
-pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),
-                        libPaths = .libPaths(),
-                        standAlone = FALSE,
-                        purge = getOption("Require.purge", FALSE),
-                        exact = TRUE,
-                        includeBase = FALSE,
-                        verbose = getOption("Require.verbose")) {
+pkgSnapshot <- function(
+  packageVersionFile = getOption("Require.packageVersionFile"),
+  libPaths = .libPaths(),
+  standAlone = FALSE,
+  purge = getOption("Require.purge", FALSE),
+  exact = TRUE,
+  includeBase = FALSE,
+  verbose = getOption("Require.verbose")
+) {
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
   libPaths <- doLibPaths(libPaths, standAlone)
 
@@ -90,11 +92,7 @@ pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFi
   rv <- cbind(Package = "R", Version = rv)
   ip <- rbind(rv, ip, fill = TRUE)
 
-  fwrite(ip,
-    file = packageVersionFile,
-    row.names = FALSE,
-    na = NA
-  )
+  fwrite(ip, file = packageVersionFile, row.names = FALSE, na = NA)
   messageVerbose(
     "package version file saved in ",
     packageVersionFile,
@@ -107,40 +105,44 @@ pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFi
 
 #' @rdname pkgSnapshot
 #' @export
-pkgSnapshot2 <-
-  function(packageVersionFile = getOption("Require.packageVersionFile"),
-           libPaths,
-           standAlone = FALSE,
-           purge = getOption("Require.purge", FALSE),
-           exact = TRUE,
-           includeBase = FALSE,
-           verbose = getOption("Require.verbose")) {
-    libPaths <- doLibPaths(libPaths, standAlone)
+pkgSnapshot2 <- function(
+  packageVersionFile = getOption("Require.packageVersionFile"),
+  libPaths,
+  standAlone = FALSE,
+  purge = getOption("Require.purge", FALSE),
+  exact = TRUE,
+  includeBase = FALSE,
+  verbose = getOption("Require.verbose")
+) {
+  libPaths <- doLibPaths(libPaths, standAlone)
 
-    ip <- doInstalledPackages(libPaths, purge, includeBase)
+  ip <- doInstalledPackages(libPaths, purge, includeBase)
 
-    if (isTRUE(exact)) {
-      ref <- ip$GithubSHA1
-      ineq <- "=="
-    } else {
-      ref <- ip$GithubRef
-      ineq <- ">="
-    }
-    thePkgAndVers <- paste0(ifelse(
-      !is.na(ip$GithubRepo),
-      paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref),
-      # github
-      paste0(ip$Package, " (", ineq, ip$Version, ")") # cran
-    ))
-    thePkgAndVers
+  if (isTRUE(exact)) {
+    ref <- ip$GithubSHA1
+    ineq <- "=="
+  } else {
+    ref <- ip$GithubRef
+    ineq <- ">="
   }
+  thePkgAndVers <- paste0(ifelse(
+    !is.na(ip$GithubRepo),
+    paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref),
+    # github
+    paste0(ip$Package, " (", ineq, ip$Version, ")") # cran
+  ))
+  thePkgAndVers
+}
 
 
 #' Only checks for deprecated libPath argument (singular)
 #' @inheritParams Require
 #' @param ... Checks for the incorrect argument `libPath` (no s)
-dealWithMissingLibPaths <- function(libPaths, standAlone = getOption("Require.standAlone", FALSE),
-                                    ...) {
+dealWithMissingLibPaths <- function(
+  libPaths,
+  standAlone = getOption("Require.standAlone", FALSE),
+  ...
+) {
   missingLP <- missing(libPaths)
   if (missingLP) {
     if (!is.null(list(...)[["libPath"]])) {
@@ -194,12 +196,12 @@ doLibPaths <- function(libPaths, standAlone = FALSE) {
 }
 
 doInstalledPackages <- function(libPaths, purge, includeBase) {
-  ip <-
-    as.data.table(
-      .installed.pkgs(lib.loc = libPaths, which = c("Depends", "Imports", "LinkingTo", "Remotes"),
-        other = c("GitHubSha", "Repository", "GitSubFolder"), purge = purge
-      )
-    )
+  ip <- as.data.table(.installed.pkgs(
+    lib.loc = libPaths,
+    which = c("Depends", "Imports", "LinkingTo", "Remotes"),
+    other = c("GitHubSha", "Repository", "GitSubFolder"),
+    purge = purge
+  ))
   if (isFALSE(includeBase)) {
     ip <- ip[!Package %in% .basePkgs]
   }

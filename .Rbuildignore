@@ -27,3 +27,5 @@ R/SpaDES
 inst\timings.csv
 ^docs/RequireApproach.html$
 ^pkgdown$
+^[.]?air[.]toml$
+^\.vscode$

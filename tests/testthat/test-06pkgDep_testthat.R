@@ -61,10 +61,7 @@ test_that("test 6", {
   # remotes was in, now it isn't; depending on which version of R, result shows up different;
   #   ignore `remotes` for now
   testthat::expect_true({
-    isTRUE(all.equal(
-      setdiff(a$Require, "remotes"),
-      setdiff(d$Require, "remotes")
-    ))
+    isTRUE(all.equal(setdiff(a$Require, "remotes"), setdiff(d$Require, "remotes")))
   })
 
   # dAlt <- pkgDepAlt(pkg2, recursive = TRUE)
@@ -122,21 +119,26 @@ test_that("test 6", {
     Require = c(
       # "reproducible",
       "SpaDES",
-      "SpaDES.addins", "SpaDES.core",
-      "SpaDES.experiment", "SpaDES.project"
+      "SpaDES.addins",
+      "SpaDES.core",
+      "SpaDES.experiment",
+      "SpaDES.project"
     )
   )
   # withr::local_options(Require.verbose = 2)
   # needs Require or else it will try from predictiveecology.r-universe.dev ... but version is too low
   # warnsReq <- capture_warnings(Require::Install("Require"))
-  warns22 <- capture_warnings(
-    Install("PredictiveEcology/Require@development (>=0.3.1.9021)", install = "force")
-  )
+  warns22 <- capture_warnings(Install(
+    "PredictiveEcology/Require@development (>=0.3.1.9021)",
+    install = "force"
+  ))
   # withr::local_options(warn = 2)
   # withr::local_options(Require.verbose = 2)
 
-  (outtt <- Require::Install(c(knownRevDeps$Require),#, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
-                   repos = c("https://predictiveecology.r-universe.dev", getOption("repos")))) |>
+  (outtt <- Require::Install(
+    c(knownRevDeps$Require), #, "PredictiveEcology/Require@simplify2 (>=0.3.1.9021)"),
+    repos = c("https://predictiveecology.r-universe.dev", getOption("repos"))
+  )) |>
     capture_warnings() -> warns
 
   # the repos with predictiveecology.r-universe.dev doesn't seem to have the PACKAGES
@@ -145,7 +147,9 @@ test_that("test 6", {
   #  this isn't a Require problem
   warns <- grep("SpaDES.addins|cannot open", warns, invert = TRUE, value = TRUE) #
   test <- testWarnsInUsePleaseChange(warns)
-  if  (identical(Sys.info()[["user"]], "emcintir") && interactive()) if (isFALSE(test)) browser()
+  if (identical(Sys.info()[["user"]], "emcintir") && interactive()) {
+    if (isFALSE(test)) browser()
+  }
   if (isFALSE(test)) {
     print(warns)
     print(test)
@@ -154,10 +158,7 @@ test_that("test 6", {
 
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
   out[["data.table"]] <- unique(c("Require", out[["data.table"]])) ## ensure Require is installed
-  knownRevDeps <- append(
-    knownRevDeps,
-    list(data.table = c(knownRevDeps$Require, "Require"))
-  )
+  knownRevDeps <- append(knownRevDeps, list(data.table = c(knownRevDeps$Require, "Require")))
   installedPkgs <- dir(.libPaths()[1])
   knownRevDeps <- lapply(knownRevDeps, function(krd) intersect(krd, installedPkgs))
 

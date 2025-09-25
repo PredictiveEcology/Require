@@ -1,5 +1,4 @@
 test_that("test 1", {
-
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
@@ -62,5 +61,4 @@ test_that("test 1", {
   testthat::expect_true({
     "hasSubFolder" %in% colnames(out)
   })
-
 })

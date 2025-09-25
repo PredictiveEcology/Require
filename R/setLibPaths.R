@@ -65,9 +65,13 @@
 #' }
 #' }
 #'
-setLibPaths <- function(libPaths, standAlone = TRUE,
-                        updateRprofile = getOption("Require.updateRprofile", FALSE),
-                        exact = FALSE, verbose = getOption("Require.verbose")) {
+setLibPaths <- function(
+  libPaths,
+  standAlone = TRUE,
+  updateRprofile = getOption("Require.updateRprofile", FALSE),
+  exact = FALSE,
+  verbose = getOption("Require.verbose")
+) {
   oldLibPaths <- .libPaths()
   if (missing(libPaths)) {
     return(checkMissingLibPaths(libPaths, updateRprofile))
@@ -78,12 +82,10 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
     setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
   }
   gte4.1 <- isTRUE(getRversion() >= "4.1")
-  if (gte4.1) { # now correct behaviour; remaining parts unnecessary
+  if (gte4.1) {
+    # now correct behaviour; remaining parts unnecessary
     ## to avoid triggering warning on R < 4.1
-    do.call(.libPaths, list(
-      new = libPaths,
-      if (gte4.1) include.site <- !standAlone
-    ))
+    do.call(.libPaths, list(new = libPaths, if (gte4.1) include.site <- !standAlone))
     return(oldLibPaths)
   }
 
@@ -103,8 +105,12 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   return(invisible(oldLibPaths))
 }
 
-setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofile = NULL,
-                                      verbose = getOption("Require.verbose")) {
+setLibPathsUpdateRprofile <- function(
+  libPaths,
+  standAlone = TRUE,
+  updateRprofile = NULL,
+  verbose = getOption("Require.verbose")
+) {
   updateRprofile <- checkTRUERprofile(updateRprofile)
   if (is.character(updateRprofile)) {
     newFile <- FALSE
@@ -122,7 +128,9 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
     } else {
       bodyFn <- format(body(Require::setLibPaths))
       lineWCheckPath <- grepl("checkPath.normPath|checkLibPaths", bodyFn)
-      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths[1])) dir.create(libPaths[1], recursive = TRUE)"
+      bodyFn[
+        lineWCheckPath
+      ] <- "    if (!dir.exists(libPaths[1])) dir.create(libPaths[1], recursive = TRUE)"
       lineWReturn <- grepl("return.*oldLibPaths", bodyFn)
       bodyFn <- bodyFn[!lineWReturn]
       bodyFn <- gsub("tail", "utils::tail", bodyFn)
@@ -139,7 +147,11 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
       bodyFn <- gsub("origDotlibPaths", ".libPaths", bodyFn)
       bodyFn <- c(
         paste0(
-          "\n", setLibPathsStartText, " #### ", newFileTrigger, newFile,
+          "\n",
+          setLibPathsStartText,
+          " #### ",
+          newFileTrigger,
+          newFile,
           " # DO NOT EDIT BETWEEN THESE LINES"
         ),
         "### DELETE THESE LINES BELOW TO RESTORE STANDARD R Package LIBRARY",
@@ -152,16 +164,23 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
         },
         paste0(setLibPathsEndText)
       )
-      messageVerbose("Updating ", normPath(updateRprofile),
+      messageVerbose(
+        "Updating ",
+        normPath(updateRprofile),
         "; this will set new libPaths for R packages even after restarting R",
-        verbose = verbose, verboseLevel = 1
+        verbose = verbose,
+        verboseLevel = 1
       )
       cat(bodyFn, file = updateRprofile, append = TRUE, sep = "\n")
     }
   }
 }
 
-checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getOption("Require.verbose")) {
+checkMissingLibPaths <- function(
+  libPaths,
+  updateRprofile = NULL,
+  verbose = getOption("Require.verbose")
+) {
   if (!is.null(updateRprofile)) {
     if (updateRprofile == FALSE && missing(libPaths)) {
       updateRprofile <- TRUE
@@ -173,8 +192,10 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
         ll <- readLines(updateRprofile)
         bounds <- which(grepl("#### setLibPaths", ll))
         if (length(bounds)) {
-          messageVerbose("removing custom libPaths in .Rprofile",
-            verbose = verbose, verboseLevel = 1
+          messageVerbose(
+            "removing custom libPaths in .Rprofile",
+            verbose = verbose,
+            verboseLevel = 1
           )
           if (identical("", ll[bounds[1] - 1])) {
             bounds[1] <- bounds[1] - 1
@@ -183,7 +204,10 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
           newFile <- gsub(paste0(".*", newFileTrigger, "([[:alpha:]]+) .*"), "\\1", ll[newFileLine])
           wasNew <- as.logical(newFile)
           prevLines <- grepl(prevLibPathsText, ll)
-          prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
+          prevLibPaths <- strsplit(
+            gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]),
+            split = ", "
+          )[[1]]
           .libPaths(prevLibPaths)
 
           # needs to be NEW and starts on 2nd line
@@ -200,8 +224,10 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
         noChange <- TRUE
       }
       if (isTRUE(noChange)) {
-        messageVerbose("There was no custom libPaths setting in .Rprofile; nothing changed",
-          verbose = verbose, verboseLevel = 0
+        messageVerbose(
+          "There was no custom libPaths setting in .Rprofile; nothing changed",
+          verbose = verbose,
+          verboseLevel = 0
         )
       }
 
@@ -213,11 +239,15 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
 }
 
 resetRprofileMessage <- function(updateRprofile = ".Rprofile") {
-  paste0("message(\"To reset libPaths to previous state, run: Require::setupOff() (or delete section in .Rprofile file)\") ")
+  paste0(
+    "message(\"To reset libPaths to previous state, run: Require::setupOff() (or delete section in .Rprofile file)\") "
+  )
 }
 
 checkTRUERprofile <- function(updateRprofile) {
-  if (isTRUE(updateRprofile)) updateRprofile <- ".Rprofile"
+  if (isTRUE(updateRprofile)) {
+    updateRprofile <- ".Rprofile"
+  }
   updateRprofile
 }
 

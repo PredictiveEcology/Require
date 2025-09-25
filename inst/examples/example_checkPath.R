@@ -1,11 +1,13 @@
 ## normalize file paths
-paths <- list("./aaa/zzz",
-              "./aaa/zzz/",
-              ".//aaa//zzz",
-              ".//aaa//zzz/",
-              ".\\\\aaa\\\\zzz",
-              ".\\\\aaa\\\\zzz\\\\",
-              file.path(".", "aaa", "zzz"))
+paths <- list(
+  "./aaa/zzz",
+  "./aaa/zzz/",
+  ".//aaa//zzz",
+  ".//aaa//zzz/",
+  ".\\\\aaa\\\\zzz",
+  ".\\\\aaa\\\\zzz\\\\",
+  file.path(".", "aaa", "zzz")
+)
 
 checked <- normPath(paths)
 length(unique(checked)) ## 1; all of the above are equivalent

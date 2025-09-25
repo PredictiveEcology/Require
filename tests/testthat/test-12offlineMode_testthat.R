@@ -1,5 +1,4 @@
 test_that("test12 Require.offlineMode", {
-
   skip_on_ci() # These are still experimental
   skip_on_cran() # These are still experimental
   setupInitial <- setupTest()
@@ -35,7 +34,5 @@ test_that("test12 Require.offlineMode", {
     expect_true(base::require(fpcPkgName, quietly = TRUE, character.only = TRUE))
     detach(name = paste0("package:", fpcPkgName), unload = TRUE, character.only = TRUE)
     mess <- capture_messages(remove.packages(fpcPkgName))
-
   }
-
 })

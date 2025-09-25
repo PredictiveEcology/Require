@@ -1,12 +1,12 @@
 test_that("test 09", {
-
   skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
   setupInitial <- setupTest(needRequireInNewLib = FALSE)
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
-  if (isDevAndInteractive && !isMacOS()) { ## TODO: source installs failing on macOS
+  if (isDevAndInteractive && !isMacOS()) {
+    ## TODO: source installs failing on macOS
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)
@@ -45,8 +45,9 @@ test_that("test 09", {
         errs <- list()
         for (p in pkgsSnp[-1]) {
           b <- capture_messages(Install(p))
-          if (any(grepl("ERROR", b)))
+          if (any(grepl("ERROR", b))) {
             errs[[p]] <- b
+          }
         }
         pkgsToFix <- extractPkgName(names(errs))
         ava <- list()
@@ -58,7 +59,7 @@ test_that("test 09", {
         ava[, Version := extractVersionNumber(filenames = basename(ava$PackageUrl))]
         ava[, Package := dirname(ava$PackageUrl)]
 
-        pkgs[bb, Version := i.Version, on= "Package"]
+        pkgs[bb, Version := i.Version, on = "Package"]
         pkgs[ava, Version := i.Version, on = "Package"]
 
         # remove the packages completely, let the latest be used.
@@ -84,11 +85,21 @@ test_that("test 09", {
         # pkgs[grep("SpaDES.config", Package, invert = TRUE)]
         pkgs[Package %in% "rnaturalearthhires", Version := "1.0.0.9000"]
         # tmp <- pkgs[1:3, ]
-        tmps2 <- neededBasedOnPackageFullNames[Package %in% c("modelr", "doBy", "Deriv")][, c("Package", "packageFullName")]
+        tmps2 <- neededBasedOnPackageFullNames[Package %in% c("modelr", "doBy", "Deriv")][, c(
+          "Package",
+          "packageFullName"
+        )]
 
-        pkgs <- rbindlist(list(pkgs,
-                               ip[Package %in% c("Deriv", "doBy", "modelr"), mget(intersect(colnames(pkgs), colnames(ip)))]),
-                          fill = TRUE)
+        pkgs <- rbindlist(
+          list(
+            pkgs,
+            ip[
+              Package %in% c("Deriv", "doBy", "modelr"),
+              mget(intersect(colnames(pkgs), colnames(ip)))
+            ]
+          ),
+          fill = TRUE
+        )
         #
         # data.table::fwrite(pkgs, file = snf)
         # googledrive::drive_update(file = googledrive::as_id("1WaJq6DZJxy_2vs2lfzkLG5u3T1MKREa8"),
@@ -99,59 +110,93 @@ test_that("test 09", {
         # These have NA for repository
         "NLMR"
         "visualTest"
-
       }
       # remove some specifics for tests that are not expected to work
       skips <- c("rJava", "Require", "SpaDES.install")
 
       # Can't compile on R 4.4
       ubuntuSkips <- c("RandomFields", "RandomFieldsUtils", "maptools")
-      windowsSkips <- c("XML", "sysfonts", "rgdal", "rgeos",
-                        'RCurl', 'httpuv', 'rgdal', 'rgl', 'sf', 'terra', 'DT',
-                        'SpaDES.core', 'SpaDES.tools', 'biomod2',
-                        # 'climateData',
-                        'lwgeom', 'raster', 'servr', 'stars',
-                        'geodata', 'shiny', 'tidyterra', 'leaflet', 'prioritizr',
-                        'rpostgis', 'satellite', 'amc', 'merTools', 'rasterVis',
-                        'tmap'
-                        # , 'LandR', 'LandR.CS', 'LandWebUtils'
-                        ) # pkgDep may add these back, but maybe newer versions
-                                      # that can be built
+      windowsSkips <- c(
+        "XML",
+        "sysfonts",
+        "rgdal",
+        "rgeos",
+        'RCurl',
+        'httpuv',
+        'rgdal',
+        'rgl',
+        'sf',
+        'terra',
+        'DT',
+        'SpaDES.core',
+        'SpaDES.tools',
+        'biomod2',
+        # 'climateData',
+        'lwgeom',
+        'raster',
+        'servr',
+        'stars',
+        'geodata',
+        'shiny',
+        'tidyterra',
+        'leaflet',
+        'prioritizr',
+        'rpostgis',
+        'satellite',
+        'amc',
+        'merTools',
+        'rasterVis',
+        'tmap'
+        # , 'LandR', 'LandR.CS', 'LandWebUtils'
+      ) # pkgDep may add these back, but maybe newer versions
+      # that can be built
       pkgs <- pkgs[!(Package %in% skips)]
       if (isWindows()) {
         # keep the GitHub ones because they have SHA, which should work fine
         # pkgs <- pkgs[!(Package %in% windowsSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
         # pkgs <- pkgs[!(Package %in% windowsSkips)]
-
       }
       if (isUbuntuOrDebian()) {
         pkgs <- pkgs[!(Package %in% ubuntuSkips) & (GithubSHA1 == "" | is.na(GithubSHA1))]
       }
 
       # stringfish can't be installed in Eliot's system from binaries
-      if (isWindows())
-        if (Sys.info()["user"] == "emcintir")
-          withr::local_options(Require.otherPkgs = union(getOption("Require.otherPkgs"), "stringfish"))
+      if (isWindows()) {
+        if (Sys.info()["user"] == "emcintir") {
+          withr::local_options(
+            Require.otherPkgs = union(getOption("Require.otherPkgs"), "stringfish")
+          )
+        }
+      }
       pkgs <- pkgs[!Package %in% c("usefulFuns")] # incorrectly imports Require from reproducible... while other packages need newer reproducible
 
       snfTmp <- tempfile2(fileext = ".txt")
       data.table::fwrite(pkgs, file = snfTmp) # have to get rid of skips in the snfTmp
-      packageFullName <- ifelse(!nzchar(pkgs$GithubRepo) | is.na(pkgs$GithubRepo),
-                                paste0(pkgs$Package, " (==", pkgs$Version, ")"),
-                                paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
+      packageFullName <- ifelse(
+        !nzchar(pkgs$GithubRepo) | is.na(pkgs$GithubRepo),
+        paste0(pkgs$Package, " (==", pkgs$Version, ")"),
+        paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1)
       )
       names(packageFullName) <- packageFullName
-      opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
+      opts <- options(repos = PEUniverseRepo())
+      on.exit(options(opts), add = TRUE)
 
       # THE INSTALL #
       warns <- capture_warnings(
-          out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
-                         returnDetails = TRUE)
+        out <- Require(
+          packageVersionFile = snfTmp,
+          require = FALSE, # purge = TRUE,
+          returnDetails = TRUE
+        )
       )
       # END THE INSTALL #
 
-      warns <- grep("unable to translate|string.+invalid|TRE pattern compilation error",
-                    warns, invert = TRUE, value = TRUE)
+      warns <- grep(
+        "unable to translate|string.+invalid|TRE pattern compilation error",
+        warns,
+        invert = TRUE,
+        value = TRUE
+      )
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
@@ -173,7 +218,11 @@ test_that("test 09", {
       neededBasedOnPackageFullNames <- rbindlistRecursive(out11$deps)
       dups <- duplicated(neededBasedOnPackageFullNames$Package)
       neededBasedOnPackageFullNames <- neededBasedOnPackageFullNames[!dups]
-      neededBasedOnPackageFullNames[grep("biosim", ignore.case = TRUE, Package), Package := "BioSIM"] |> invisible()
+      neededBasedOnPackageFullNames[
+        grep("biosim", ignore.case = TRUE, Package),
+        Package := "BioSIM"
+      ] |>
+        invisible()
       packagesBasedOnPackageFullNames <- c(neededBasedOnPackageFullNames$Package, "Require")
 
       tooManyInstalled <- setdiff(packagesBasedOnPackageFullNames, pkgs$Package)
@@ -189,17 +238,20 @@ test_that("test 09", {
       pkgsTooMany <- setdiff(ip$Package, packagesBasedOnPackageFullNames) # this is the same as next line, but gives the actual packages
       expect_identical(pkgsTooMany, character())
 
-
       # Check based on Version number
 
       joined <- ip[pkgs, on = "Package"]
       whDiff <- (joined$Version != joined$i.Version)
       versionProblems <- joined[which(whDiff)]
-      testthatDeps <- extractPkgName(pkgDep("testthat", dependencies = TRUE, recursive = TRUE)$testthat)
-      devtoolsDeps <- extractPkgName(pkgDep("devtools", dependencies = TRUE, recursive = TRUE)$devtools)
-      versionProblems <- versionProblems[
-        which(!(versionProblems$Package %in% testthatDeps |
-        versionProblems$Package %in% devtoolsDeps))]
+      testthatDeps <- extractPkgName(
+        pkgDep("testthat", dependencies = TRUE, recursive = TRUE)$testthat
+      )
+      devtoolsDeps <- extractPkgName(
+        pkgDep("devtools", dependencies = TRUE, recursive = TRUE)$devtools
+      )
+      versionProblems <- versionProblems[which(
+        !(versionProblems$Package %in% testthatDeps | versionProblems$Package %in% devtoolsDeps)
+      )]
 
       # scales didn't install the "equals" version because a different package needs >= 1.3.0
       # versionProblems <- versionProblems[!Package %in% "scales"]
@@ -215,8 +267,16 @@ test_that("test 09", {
       loded <- loadedNamespaces()
       missingPackages <- missingPackages[!Package %in% loded]
 
-      knownFails <- c("archive", "DiagrammeR", "keyring", "mapview", "readr", "servr",
-                      "sodium", "vroom")#character()
+      knownFails <- c(
+        "archive",
+        "DiagrammeR",
+        "keyring",
+        "mapview",
+        "readr",
+        "servr",
+        "sodium",
+        "vroom"
+      ) #character()
 
       # For Sodium
       # Need: sudo apt install libarchive-dev libsodium-dev
@@ -224,7 +284,6 @@ test_that("test 09", {
       #                 c("SpaDES.config", "NLMR", "visualTest")) # can't install because Require is installed, but too old
       # if (isLinux())
       #   knownFails <- c(knownFails, c("sodium", "keyring"))
-
 
       # Known missing --
       # NLMR because the version number doesn't exist on CRAn archives
@@ -237,7 +296,8 @@ test_that("test 09", {
         lala <- capture.output(type = "message", {
           out2 <- Require(
             packageVersionFile = snfTmp,
-            require = FALSE, returnDetails = TRUE# , purge = TRUE
+            require = FALSE,
+            returnDetails = TRUE # , purge = TRUE
           )
         })
       )
@@ -252,16 +312,18 @@ test_that("test 09", {
       noneAvailable <- att$Package[grep(.txtNoneAvailable, att$installResult)]
       didnt <- att[!is.na(att$installResult)]
 
-
-      allDone <- setdiff(didnt$Package, c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
-                                          noneAvailable, c("Require", "data.table")))
+      allDone <- setdiff(
+        didnt$Package,
+        c(
+          versionViolation,
+          testthatDeps,
+          looksLikeGHPkgWithoutGitInfo,
+          noneAvailable,
+          c("Require", "data.table")
+        )
+      )
       allDone <- setdiff(allDone, knownFails)
       expect_identical(allDone, character(0))
-
-
     }
   }
-
-
 })
-
