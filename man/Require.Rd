@@ -153,17 +153,16 @@ packages and their dependencies that are otherwise not installed in
 or dependencies that are not yet installed will be installed in \code{libPaths}.
 }
 \description{
-A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and `require` for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and GitHub packages. This approach is developed to create reproducible workflows that are flexible and fast enough to use while in development stages, while able to build snapshots once a stable package collection is found. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the user or developer.
+A single key function, 'Require' that makes rerun-tolerant versions of 'install.packages' and 'require' for CRAN packages, packages no longer on CRAN (i.e., archived), specific versions of packages, and GitHub packages. This approach is developed to create reproducible workflows that are flexible and fast enough to use while in development stages, while able to build snapshots once a stable package collection is found. As with other functions in a reproducible workflow, this package emphasizes functions that return the same result whether it is the first or subsequent times running the function, with subsequent times being sufficiently fast that they can be run every time without undue waiting burden on the user or developer.
 
 This is an "all in one" function that will run \code{install.packages} for CRAN
-and GitHub \url{https://github.com/} packages and will install specific versions
-of each package if versions are specified either via an (in)equality (e.g.,
-\code{"glue (>=1.6.2)"} or \code{"glue (==1.6.2)"} for an exact version) or with a
+and \href{https://github.com/}{GitHub} packages and will install specific versions
+of each package if versions are specified either via an (in)equality
+(e.g., \code{"glue (>=1.6.2)"} or \code{"glue (==1.6.2)"} for an exact version) or with a
 \code{packageVersionFile}. If \code{require = TRUE}, the default, the function will
-then run \code{require} on all named packages that satisfy their version
-requirements. If packages are already installed (\code{packages} supplied), and
-their optional version numbers are satisfied, then the "install" component
-will be skipped.
+then run \code{require} on all named packages that satisfy their version requirements.
+If packages are already installed (\code{packages} supplied), and their optional
+version numbers are satisfied, then the "install" component will be skipped.
 }
 \details{
 \code{Install} is the same as \code{Require(..., require = FALSE)}, for convenience.
@@ -240,29 +239,29 @@ if (Require:::.runLongExamples()) {
   #####################################################################################
   # GitHub packages
   if (requireNamespace("gitcreds", quietly = TRUE)) {
-    #if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
-      ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-      if (requireNamespace("curl")) {
-        Require("PredictiveEcology/fpCompare@development",
-          libPaths = ProjectPackageFolder,
-        )
-      }
-
-      # No install because it is there already
-      Install("PredictiveEcology/fpCompare@development",
+    # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+    ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+    if (requireNamespace("curl")) {
+      Require("PredictiveEcology/fpCompare@development",
         libPaths = ProjectPackageFolder,
-      ) # the latest version on GitHub
-
-      ############################################################################
-      # Mixing and matching GitHub, CRAN, with and without version numbering
-      ############################################################################
-      pkgs <- c(
-        "remotes (<=2.4.1)", # old version
-        "digest (>= 0.6.28)", # recent version
-        "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
       )
-      Require::Require(pkgs, libPaths = ProjectPackageFolder)
-    #}
+    }
+
+    # No install because it is there already
+    Install("PredictiveEcology/fpCompare@development",
+      libPaths = ProjectPackageFolder,
+    ) # the latest version on GitHub
+
+    ############################################################################
+    # Mixing and matching GitHub, CRAN, with and without version numbering
+    ############################################################################
+    pkgs <- c(
+      "remotes (<=2.4.1)", # old version
+      "digest (>= 0.6.28)", # recent version
+      "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+    )
+    Require::Require(pkgs, libPaths = ProjectPackageFolder)
+    # }
   }
   Require:::.cleanup(opts)
 }
@@ -284,7 +283,7 @@ Useful links:
 Other contributors:
 \itemize{
   \item Alex M Chubaty \email{achubaty@for-cast.ca} (\href{https://orcid.org/0000-0001-7146-8135}{ORCID}) [contributor]
-  \item Her Majesty the Queen in Right of Canada, as represented by the Minister of Natural Resources Canada [copyright holder]
+  \item His Majesty the King in Right of Canada, as represented by the Minister of Natural Resources Canada [copyright holder]
 }
 
 }

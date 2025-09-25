@@ -20,6 +20,7 @@ comma <- ", "
 .txtMissingValueWhereTFNeeded <- "missing value where TRUE/FALSE needed"
 .txtUnableToAccessIndex <- "unable to access index"
 .txtGitHub <- "GitHub"
+.txtArchive <- "Archive"
 .txtCouldNotBeInstalled <- "could not be installed"
 .txtCldNotSlvPkgDeps <- "Could not solve package dependencies"
 .txtFailedToDLFrom <- "Failed to download.+from"
@@ -58,7 +59,7 @@ comma <- ", "
 
 .txtNoneAvailable <- "noneAvailable"
 
-
+.txtGitHubMissingToken <- "GitHub repository not accessible does it need authentication? "
 
 messageCantFind <- function(br, acct, repo)
   paste0("Can't find ", paste0(acct, "/", repo, "@", br), "; \n -- does it exist? --")
