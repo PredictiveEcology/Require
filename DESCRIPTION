@@ -1,37 +1,31 @@
-Package: Require
 Type: Package
+Package: Require
 Title: Installing and Loading R Packages for Reproducible Workflows
-Description: A single key function, 'Require' that makes rerun-tolerant
-    versions of 'install.packages' and 'require' for CRAN packages, packages
-    no longer on CRAN (i.e., archived), specific versions of packages, 
-    and GitHub packages. This approach is developed to create reproducible 
-    workflows that are flexible and fast enough to use while in development stages,
-    while able to build snapshots once a stable package collection is found. 
-    As with other functions in a reproducible workflow, this package 
-    emphasizes functions that return the same result whether it is 
-    the first or subsequent times running the function, with subsequent times being
-    sufficiently fast that they can be run every time without undue waiting burden on 
-    the user or developer.
-URL: 
-    https://Require.predictiveecology.org,
-    https://github.com/PredictiveEcology/Require
-Date: 2025-07-16
 Version: 1.0.1.9020
+Date: 2025-07-16
 Authors@R: c(
-    person(given = "Eliot J B",
-           family = "McIntire",
-           role = c("aut", "cre"),
-           email = "eliot.mcintire@canada.ca",
+    person("Eliot J B", "McIntire", , "eliot.mcintire@canada.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-6914-8316")),
-      person(given = "Alex M",
-             family = "Chubaty",
-             role = "ctb",
-             email = "achubaty@for-cast.ca",
-             comment = c(ORCID = "0000-0001-7146-8135")),
-    person(paste("His Majesty the King in Right of Canada,",
-                 "as represented by the Minister of Natural Resources Canada"),
-           role = "cph")
-    )
+    person("Alex M", "Chubaty", , "achubaty@for-cast.ca", role = "ctb",
+           comment = c(ORCID = "0000-0001-7146-8135")),
+    person("His Majesty the King in Right of Canada, as represented by the Minister of Natural Resources Canada", role = "cph")
+  )
+Description: A single key function, 'Require' that makes rerun-tolerant
+    versions of 'install.packages' and 'require' for CRAN packages,
+    packages no longer on CRAN (i.e., archived), specific versions of
+    packages, and GitHub packages. This approach is developed to create
+    reproducible workflows that are flexible and fast enough to use while
+    in development stages, while able to build snapshots once a stable
+    package collection is found.  As with other functions in a
+    reproducible workflow, this package emphasizes functions that return
+    the same result whether it is the first or subsequent times running
+    the function, with subsequent times being sufficiently fast that they
+    can be run every time without undue waiting burden on the user or
+    developer.
+License: GPL-3
+URL: https://Require.predictiveecology.org,
+    https://github.com/PredictiveEcology/Require
+BugReports: https://github.com/PredictiveEcology/Require/issues
 Depends:
     R (>= 4.1)
 Imports:
@@ -47,26 +41,27 @@ Suggests:
     fpCompare,
     gitcreds,
     httr,
+    knitr,
     pak,
     parallel,
     rematch2,
-    rmarkdown,
-    knitr,
     rlang,
+    rmarkdown,
     roxygen2,
     rprojroot,
     testthat (>= 3.0.0),
     tibble,
     waldo,
     withr
+VignetteBuilder: 
+    knitr,
+    rmarkdown
+ByteCompile: yes
+Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-CA
-License: GPL-3
-VignetteBuilder: knitr, rmarkdown
-BugReports: https://github.com/PredictiveEcology/Require/issues
-ByteCompile: yes
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Collate: 
     'CRAN.R'
     'Require-helpers.R'
@@ -84,4 +79,3 @@ Collate:
     'setLibPaths.R'
     'setup.R'
     'zzz.R'
-Config/testthat/edition: 3
