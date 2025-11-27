@@ -118,11 +118,13 @@ pkgDep <- function(packages,
   purge <- purgePkgDep(purge)
   # purge <- dealWithCache(purge)
 
-  if (is.null(get0("stRequire", whereInStack("stRequire")))) { # if this is NOT called from Require
-    on.exit(
-      checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
-    )
-  }
+  stRequireEnv <- whereInStack("stRequire")
+  if (!is.null(stRequireEnv))
+    if (is.null(get0("stRequire", stRequireEnv))) { # if this is NOT called from Require
+      on.exit(
+        checkAutomaticOfflineMode() # This will turn off offlineMode if it had been turned on automatically
+      )
+    }
 
   # deps <- packages
   if (!includeBase) {
