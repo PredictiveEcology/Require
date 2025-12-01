@@ -937,7 +937,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     return(br)
   }
 
-  gitRefsURL <- file.path(apiGithubDotCom, "repos", acct, repo, "git", "refs")
+  gitRefsURLOrig <- file.path(apiGithubDotCom, "repos", acct, repo, "git", "refs")
   if (missing(br)) {
     br <- "main"
   }
@@ -951,6 +951,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
   }
 
   for (ii in 1:4) {
+    gitRefsURL <- paste0(gitRefsURLOrig, paste0("?per_page=100&page=", ii))
     tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_", acct, "@", repo))
     downloadNow <- TRUE
     if (file.exists(tf)) {
@@ -1007,15 +1008,13 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
       if (length(br2) > 0)
         br <- br2
       else  {
-        gitRefsURL <- paste0(gitRefsURL, paste0("?per_page=100&page=", ii))
+        gitRefsURL <- paste0(gitRefsURLOrig, paste0("?per_page=100&page=", ii))
         unlink(tf)
         next
       }
 
       # br2 <- grep(unlist(gitRefsSplit2), pattern = "api.+heads/(master|main)", value = TRUE)
       # br <- gsub(br2, pattern = ".+api.+heads.+(master|main).+", replacement = "\\1")
-    } else {
-
     }
 
     for (branch in br) { # will be length 1 in most cases except master/main

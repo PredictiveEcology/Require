@@ -564,13 +564,19 @@ setdiffNamed <- function(l1, l2, missingFill) {
 }
 
 whereInStack <- function(obj) {
-  for (i in 1:sys.nframe()) {
+  nframes <- sys.nframe()
+  for (i in 1:nframes) {
     fn <- get0(obj, sys.frame(-i), inherits = FALSE)
     if (!is.null(fn)) {
       break
     }
   }
-  return(sys.frame(-i))
+  if (is.null(fn)) {
+    ret <- NULL
+  } else {
+    ret <- sys.frame(-i)
+  }
+  return(ret)
 }
 
 getInStack <- function(obj) {
