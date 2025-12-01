@@ -950,7 +950,7 @@ getSHAfromGitHub <- function(acct, repo, br, verbose = getOption("Require.verbos
     br <- masterMain[rev(masterMain %in% br + 1)]
   }
 
-  for (ii in 1:4) {
+  for (ii in 1:40) {
     gitRefsURL <- paste0(gitRefsURLOrig, paste0("?per_page=100&page=", ii))
     tf <- file.path(RequireGitHubCacheDir(), paste0("listOfRepos_", acct, "@", repo))
     downloadNow <- TRUE
@@ -1639,7 +1639,9 @@ packageFullName <- function(pkgDT) {
 
 gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, filename) {
   if (any(hasSubFolder, na.rm = TRUE)) {
-    Branch <- paste0(Branch, "/", GitSubFolder)
+    isHash <- grepl("[[:alnum:]]{40}", Branch)
+    if (!grepl("/", Branch) && !isHash)
+      Branch <- paste0(Branch, "/", GitSubFolder)
   }
   file.path(rawGithubDotCom, Account, Repo, Branch, filename, fsep = "/")
 }
@@ -1849,7 +1851,11 @@ readLinesWithHandlers <- function(fff) {
       checkFile <- suppressWarnings(lapply(destFile[fsTooSmallLikelyError], readLines))
       failDoesntExist <- sapply(checkFile, grepl, pattern = "404")
       if (any(failDoesntExist)) {
-        suggs <- offerGitHubSuggestions(account = Account, Package)
+        suggs <- if (nchar(Branch) != 40) {
+          offerGitHubSuggestions(account = Account, Package)
+        } else {
+          ""
+        }
         token <- checkForToken()
         if (is.null(token))
           warning("There is no github token")
@@ -1863,7 +1869,7 @@ readLinesWithHandlers <- function(fff) {
     stop("The following repository does not seem to exist: \n",
          paste(packageFullName[failDoesntExist], collapse = "\n"),
          "\n", .txtDidYouSpell,
-         if (nzchar(suggs)) paste0("\nDid you mean one of:\n",
+         if (isTRUE(nzchar(suggs))) paste0("\nDid you mean one of:\n",
                                    paste(suggs, collapse = "\n"))
     )
   }
@@ -1957,4 +1963,9 @@ stopOnGitRefsFails <- function(gitRefs, fetf, tf, acct, repo, br) {
     }
     stop(gitRefs)
   }
+}
+
+
+isGitCommitHash <- function(Branch) {
+  grepl("[[:alnum:]]{40}", Branch)
 }
