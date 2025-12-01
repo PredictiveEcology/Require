@@ -2671,6 +2671,36 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
     # github
     paste0(ip[["Package"]], head) # cran
   ))
+
+  # check for SHAs that need user input to update:
+  pkgsSplit <- strsplit(pkgs, split = "@")
+  hasHash <- mapply(pkg = pkgsSplit, function(pkg) {
+    out <- FALSE
+    if (length(pkg) > 1) {
+      br <- strsplit(pkg[-1], split = " *\\(")[[1]][1]
+      if (grepl("[[:alnum:]]{40}", br)) out <- TRUE
+    }
+    out
+  })
+  if (any(hasHash)) {
+    message("These packages are installed with an exact hash from github; \n",
+            "you want these updated? (if Y, then will take `main` branch; ",
+            "if N, then no updates for those packages)")
+    message(paste(pkgs[hasHash], collapse = "\n"))
+    if (interactive()) {
+      updated <- readline("Y or N: ")
+    } else {
+      updated <- "N"
+    }
+    updated <- tolower(updated)
+    if (startsWith(updated, "y"))
+      pkgs[hasHash] <- paste0(unlist(lapply(pkgsSplit[hasHash], function(x) x[[1]])), " (HEAD)")
+    else {
+      message("Not updating these packages")
+      pkgs <- pkgs[!hasHash]
+    }
+  }
+
   Install(pkgs, purge = purge, verbose = verbose)
 }
 

@@ -151,4 +151,6 @@ test_that("test 5", {
     endTime <- Sys.time()
   }
 
+  Install("HenrikBengtsson/revdepcheck@feature/check_args")
+
 })
