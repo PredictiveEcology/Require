@@ -1746,29 +1746,32 @@ available.packagesWithCallingHandlers <- function(repo, type, verbose = getOptio
       })
     SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
     otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
-    if (is(out, "try-error") || any(SSLwarns)) {
-      # https://stackoverflow.com/a/76684292/3890027
-      prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-      Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
-      ignore_repo_cache <- TRUE
-      on.exit({
-        if (nzchar(prevCurlVal))
-          Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
-        else
-          Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-      }, add = TRUE)
-    } else {
-      if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
-       next
-      }
-      if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
-        break
-      setOfflineModeTRUE(verbose = verbose)
-      if (length(otherwarns)) {
-        warning(warns)
-      }
-      break
-    }
+    SSLout <- SSLmodsWithFails(out, SSLwarns, warns, attmpt, verbose, otherwarns)
+    if (!is.null(SSLout))
+      eval(parse(text = SSLout)) # will be next or break
+    # if (is(out, "try-error") || any(SSLwarns)) {
+    #   # https://stackoverflow.com/a/76684292/3890027
+    #   prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+    #   Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
+    #   ignore_repo_cache <- TRUE
+    #   on.exit({
+    #     if (nzchar(prevCurlVal))
+    #       Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
+    #     else
+    #       Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+    #   }, add = TRUE)
+    # } else {
+    #   if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
+    #    next
+    #   }
+    #   if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
+    #     break
+    #   setOfflineModeTRUE(verbose = verbose)
+    #   if (length(otherwarns)) {
+    #     warning(warns)
+    #   }
+    #   break
+    # }
 
   }
 
@@ -1968,4 +1971,33 @@ stopOnGitRefsFails <- function(gitRefs, fetf, tf, acct, repo, br) {
 
 isGitCommitHash <- function(Branch) {
   grepl("[[:alnum:]]{40}", Branch)
+}
+
+
+SSLmodsWithFails <- function(out, SSLwarns, warns, attmpt, verbose, otherwarns) {
+  SSLout <- NULL
+  if (is(out, "try-error") || any(SSLwarns)) {
+    # https://stackoverflow.com/a/76684292/3890027
+    prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+    Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
+    ignore_repo_cache <- TRUE
+    on.exit2({
+      if (nzchar(prevCurlVal))
+        Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
+      else
+        Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+    }, add = TRUE)
+  } else {
+    if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
+      SSLout <- "next"
+    }
+    if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
+      SSLout <- "break"
+    setOfflineModeTRUE(verbose = verbose)
+    if (length(otherwarns)) {
+      warning(warns)
+    }
+    SSLout <- "break"
+  }
+  SSLout
 }
