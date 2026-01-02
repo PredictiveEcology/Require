@@ -322,10 +322,26 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
 whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
   mirrorsLocalFile <- file.path(cachePkgDir(), ".mirrors.csv")
   dir.create(dirname(mirrorsLocalFile), recursive = TRUE, showWarnings = FALSE)
-  if (!file.exists(mirrorsLocalFile))
-    download.file("https://cran.r-project.org/CRAN_mirrors.csv",
-                  destfile = mirrorsLocalFile, quiet = TRUE)
-  a <- read.csv(mirrorsLocalFile)
+
+  for (attempt in 1:3) {
+    if (!file.exists(mirrorsLocalFile))
+      download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+                    destfile = mirrorsLocalFile, quiet = TRUE)
+    a <- try(read.csv(mirrorsLocalFile), silent = TRUE)
+    if (!is(a, "try-error"))
+      break
+    unlink(mirrorsLocalFile)
+    if (i == 2) {
+      SSLout <- SSLmodsWithFails(a, SSLwarns = TRUE, warns = character(), attempt,
+                       verbose = getOption("Require.verbose"), otherwarns = character())
+      if (!is.null(SSLout))
+        eval(parse(text = SSLout)) # will be next or break
+    }
+    if (i == 3) {
+      optsHere <- options(download.file.method = "curl")
+      on.exit(options(optsHere))
+    }
+  }
   b <- a[1, ]
   b$URL <- "https://cran.rstudio.com/"
   a <- rbind(a, b)
