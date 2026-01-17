@@ -613,13 +613,15 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
           invokeRestart("muffleWarning") # muffle them because if they were necessary, they were redone in `messagesAboutWarnings`
         }
       ))
-      errorCond <- attr(toInstallOut, "condition")
-      rl <- try(readLines(toInstallOut))
-      if (length(rl)) {
-        ipaNext <- checkCompileFailedThenInstallBinary(rl, ipa, toInstall, verbose)
-        if (!identical(ipa, ipaNext)) {
-          ipa <- ipaNext;
-          next
+      if (!is.null(toInstallOut)) {
+        errorCond <- attr(toInstallOut, "condition")
+        rl <- try(readLines(toInstallOut), silent = TRUE)
+        if (length(rl)) {
+          ipaNext <- checkCompileFailedThenInstallBinary(rl, ipa, toInstall, verbose)
+          if (!identical(ipa, ipaNext)) {
+            ipa <- ipaNext;
+            next
+          }
         }
       }
 
@@ -730,7 +732,7 @@ doInstalls <- function(pkgDT, repos, purge, libPaths, install.packagesArgs,
         setorderv(pkgInstall, c("installSafeGroups", "Package"))
         pkgInstall[, installOrder := seq(.N)]
 
-        if (isWindows())
+        if (isWindows() || isMacOS())
           toInstallList <- split(pkgInstall, by = "installSafeGroups")
         else
           toInstallList <- list(pkgInstall)
