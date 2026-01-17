@@ -363,7 +363,7 @@ Require <- function(packages,
         pkgDT <- recordLoadOrder(packages, pkgDT)
         if (!is.null(pkgDT[["Version"]]))
           setnames(pkgDT, old = "Version", new = "VersionOnRepos")
-        pkgDT <- installedVers(pkgDT, libPaths = libPaths)
+        pkgDT <- installedVers(pkgDT, libPaths = libPaths, standAlone = standAlone)
         if (isTRUE(upgrade)) {
           pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
           if (any(pkgDT[["VersionOnRepos"]] != pkgDT[["Version"]], na.rm = TRUE)) {
@@ -1220,7 +1220,7 @@ downloadCRAN <- function(pkgNoLocal, repos, purge, install.packagesArgs, verbose
           else
             packageUrl <- file.path(ap[["Package"]], file)
           if (isMacOS())
-            fileext <- "tgz"
+            fileext <- ".tgz"
           else
             fileext <- ".tar.gz"
         }
@@ -1259,7 +1259,6 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
                             numToDownload, tmpdir, verbose) {
   # fillDefaults(pkgDep)
   pkgArchive <- pkgNonLocal[[.txtArchive]]
-
   if (NROW(pkgArchive)) {
     ava <- dlArchiveVersionsAvailable(unique(pkgArchive[["Package"]][pkgArchive$repoLocation %in% .txtArchive]),
                                       repos = repos, verbose = verbose
@@ -1312,25 +1311,26 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
             pkgArchiveHasPU$`TRUE` <- split(pkgArchiveHasPU$`TRUE`, pkgArchiveHasPU$`TRUE`[["repoLocation"]])
             pkgArchOnly <- pkgArchiveHasPU$`TRUE`[[.txtArchive]]
 
-            if (getOption("Require.installPackagesSys") >= 1) {
+            # The non sys doesn't work. It needs to download the file; but doesn't
+            # if (getOption("Require.installPackagesSys") >= 1) {
               on.exit(copyBuiltToCache(pkgArchOnly, tmpdir, copyOnly = TRUE))
 
               pkgArchOnly <- archiveDownloadSys(pkgArchOnly, whNotfe, tmpdir = tmpdir, verbose)
               pkgArchiveHasPU$`TRUE`[[.txtArchive]] <- pkgArchOnly
 
-            } else {
-              # Package name is already in the PackageUrl
-              pkg <- rep("", NROW(pkgArchOnly))
-              havePkgAlreadyInPkgUrl <- dirname(pkgArchOnly$PackageUrl) != pkgArchOnly$Package
-              if (any(havePkgAlreadyInPkgUrl)) {
-                pkg[havePkgAlreadyInPkgUrl] <- pkgArchOnly$Package
-              }
-              pkgArchOnly[whNotfe, Repository := getArchiveURL(repo, pkg = "", type = "source")]
-
-              # pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), .txtArchive, Package)]
-              pkgArchOnly[whNotfe, localFile := useRepository]
-
-            }
+            # } else {
+            #   # Package name is already in the PackageUrl
+            #   pkg <- rep("", NROW(pkgArchOnly))
+            #   havePkgAlreadyInPkgUrl <- dirname(pkgArchOnly$PackageUrl) != pkgArchOnly$Package
+            #   if (any(havePkgAlreadyInPkgUrl)) {
+            #     pkg[havePkgAlreadyInPkgUrl] <- pkgArchOnly$Package
+            #   }
+            #   pkgArchOnly[whNotfe, Repository := getArchiveURL(repo, pkg = "", type = "source")]
+            #
+            #   # pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), .txtArchive, Package)]
+            #   pkgArchOnly[whNotfe, localFile := useRepository]
+            #
+            # }
 
           }
         }
