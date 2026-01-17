@@ -267,8 +267,11 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
             parentVersion <- rep(NA, NROW(pkgDTNeedRecursive[["TRUE"]]))
             if (is.null(pkgDTNeedRecursive[["TRUE"]]$VersionOnRepos) ||
                 anyNA(pkgDTNeedRecursive[["TRUE"]]$VersionOnRepos)) {
-              parentVersion <- gsub("^.+\\_+(.+)\\_\\_+htt.+$", "\\1",
-                                    pkgDTNeedRecursive[["TRUE"]]$snFALSE)
+              parentVersion <- vapply(strsplit(pkgDTNeedRecursive[["TRUE"]]$snFALSE, split = "__"),
+                                      function(x) if (any(is.na(x))) x else x[[2]], FUN.VALUE = character(1))
+              # parentVersion <- gsub("^.+\\_+(.+)\\_\\_+htt.+$", "\\1",
+              #                       pkgDTNeedRecursive[["TRUE"]]$snFALSE)
+
             }
             nasPV <- is.na(parentVersion)
             if (any(nasPV)) {
@@ -463,7 +466,6 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       num <- NROW(pkgDTList$Archive$Package)
       messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
-
 
       pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
       wcr <- whichCatRecursive(which, recursive = FALSE)
