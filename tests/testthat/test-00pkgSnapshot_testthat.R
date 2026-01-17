@@ -14,7 +14,7 @@ test_that("test 1", {
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
   suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
-  skip_if_offline()
+  skip_if_offline2()
 
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
@@ -27,7 +27,7 @@ test_that("test 1", {
     Require(c("crayon"), require = FALSE, quiet = quiet)
   }
 
-  skip_if_offline()
+  skip_if_offline2()
   .libPaths(c(tmpdirActual, tmpdir2Actual))
   # .libPaths(c(tmpdir, tmpdir2))
   aa1 <- pkgSnapshot(packageVersionFile = pkgVF,

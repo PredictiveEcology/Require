@@ -24,7 +24,12 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   return()
 }
 
-omitPkgsTemporarily <- function(pkgs) {
+skip_if_offline2 <- function() {
+  # default with testthat::skip_if_offline is apple.com
+  #   which was returning true when wifi connection exists, but no internet e.g., on a plane
+  skip_if_offline("github.com")
+}
+  omitPkgsTemporarily <- function(pkgs) {
   if (getRversion() < "4.2") {
     pkgs <- grep("mumin", pkgs, invert = TRUE, value = TRUE) # MuMIn requires R >= 4.2
     pkgs <- grep("LandR", pkgs, invert = TRUE, value = TRUE) # LandR requires R >= 4.2

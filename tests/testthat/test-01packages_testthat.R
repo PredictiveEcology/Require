@@ -35,7 +35,7 @@ test_that("test 1", {
                             returnDetails = TRUE)
   })) |> capture_warnings() -> warns
 
-  skip_if_offline()
+  skip_if_offline2()
 
   if (length(warns))
     expect_true(all(grepl("was built under", warns)))

@@ -37,7 +37,7 @@ test_that("test 4", {
     pkgDep("data.table", purge = TRUE)
   }
 
-  skip_if_offline()
+  skip_if_offline2()
   if (isTRUE(tryCatch(packageVersion("fpCompare"), error = function(e) "0.0.0") < "0.2.5")) {
     if (isDev) {
       mess <- capture_messages(
@@ -53,7 +53,7 @@ test_that("test 4", {
     }
   }
 
-  skip_if_offline()
+  skip_if_offline2()
 
   if (!getOption("Require.usePak", TRUE)) {
     pkgDepTopoSort(c("data.table"), useAllInSearch = TRUE)

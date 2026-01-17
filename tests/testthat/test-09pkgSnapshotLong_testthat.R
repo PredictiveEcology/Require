@@ -230,7 +230,7 @@ test_that("test 09", {
       # NLMR because the version number doesn't exist on CRAn archives
       # and visualTest which is missing GitHub info for some reason --
 
-      skip_if_offline()
+      skip_if_offline2()
       expect_true(identical(missingPackages$Package, character(0)))
       # expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
       warns <- capture_warnings(
