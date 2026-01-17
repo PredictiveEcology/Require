@@ -363,13 +363,18 @@ if (length(archive))
 
 
 #' @importFrom utils packageVersion installed.packages
-installedVers <- function(pkgDT, libPaths) {
+installedVers <- function(pkgDT, libPaths, standAlone = FALSE) {
 
   pkgDT <- toPkgDT(pkgDT)
   # pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
     # ip2 <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
-    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, other = "LibPath", which = NULL, packages = pkgDT$Package)) # , other = c("Package", "Version"))) # these 2 are defaults
+    if (isTRUE(standAlone)) {
+      lp <- libPaths[1]
+    } else {
+      lp <- libPaths
+    }
+    ip <- as.data.table(.installed.pkgs(lib.loc = lp, other = "LibPath", which = NULL, packages = pkgDT$Package)) # , other = c("Package", "Version"))) # these 2 are defaults
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -430,7 +435,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     purge <- FALSE
   }
   cap <- list()
-  isMac <- tolower(SysInfo["sysname"]) == "darwin"
+  isMac <- isMacOS()#tolower(SysInfo["sysname"]) == "darwin"
   isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
   isWindows <- isWindows()
 
