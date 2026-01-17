@@ -356,6 +356,7 @@ DESCRIPTIONFileDeps <-
           lines <- desc_path
         }
         if (is(lines, "try-error")) {
+          browser()
           stop("Cannot read the file: ", desc_path)
         }
         Sys.setlocale(locale = "C") # required to deal with non English characters in Author names

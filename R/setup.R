@@ -331,13 +331,13 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
     if (!is(a, "try-error"))
       break
     unlink(mirrorsLocalFile)
-    if (i == 2) {
+    if (attempt == 2) {
       SSLout <- SSLmodsWithFails(a, SSLwarns = TRUE, warns = character(), attempt,
                        verbose = getOption("Require.verbose"), otherwarns = character())
       if (!is.null(SSLout))
         eval(parse(text = SSLout)) # will be next or break
     }
-    if (i == 3) {
+    if (attempt == 3) {
       optsHere <- options(download.file.method = "curl")
       on.exit(options(optsHere))
     }

@@ -1319,7 +1319,15 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
               pkgArchiveHasPU$`TRUE`[[.txtArchive]] <- pkgArchOnly
 
             } else {
-              pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), .txtArchive, Package)]
+              # Package name is already in the PackageUrl
+              pkg <- rep("", NROW(pkgArchOnly))
+              havePkgAlreadyInPkgUrl <- dirname(pkgArchOnly$PackageUrl) != pkgArchOnly$Package
+              if (any(havePkgAlreadyInPkgUrl)) {
+                pkg[havePkgAlreadyInPkgUrl] <- pkgArchOnly$Package
+              }
+              pkgArchOnly[whNotfe, Repository := getArchiveURL(repo, pkg = "", type = "source")]
+
+              # pkgArchOnly[whNotfe, Repository := file.path(contrib.url(repo, type = "source"), .txtArchive, Package)]
               pkgArchOnly[whNotfe, localFile := useRepository]
 
             }
