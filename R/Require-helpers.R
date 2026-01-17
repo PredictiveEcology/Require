@@ -534,7 +534,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest <- (endsWith(fn, "zip") & isWindows()) |
     (grepl("R_x86", fn) & !isWindows() & !isMacOS()) |
-    (endsWith(fn, "tgz") & isMacOS())
+    (endsWith(fn, macBinaryFileExtNoDot) & isMacOS())
   if (isTRUE(needRepoCheck)) {
     if (isWindows() || isMacOS()) {
       binRepo <- isBinaryCRANRepo(curCRANRepo = repos)
@@ -1597,10 +1597,6 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     }
   } else {
 
-    if (isMacOS() && "covr" %in% ipa$pkgs)
-      print(ipa)
-    # if (ipa$quiet && ipa$type %in% "source" && isWindows())
-    #   ipa$quiet <- FALSE
     if (isTRUE(ipa$quiet)) {
       messSupp2 <- capture.output({
         messSupp <- capture.output(type = "message", {

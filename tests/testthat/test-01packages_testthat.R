@@ -103,6 +103,7 @@ test_that("test 1", {
     pkgSnapFileRes <- data.table::fread(pkgSnapFile)
     dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
     dir6 <- Require::checkPath(dir6, create = TRUE)
+    # aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
     warns <- capture_warnings(
       out <- Require::Require(
         packageVersionFile = pkgSnapFile, libPaths = dir6,
@@ -120,7 +121,6 @@ test_that("test 1", {
     # vers2 <- DESCRIPTIONFileVersionV(file.path(dir2, "fpCompare/DESCRIPTION"))
     # vers6 <- DESCRIPTIONFileVersionV(file.path(dir6, "fpCompare/DESCRIPTION"))
     testthat::expect_equal(vers2, vers6)
-
 
     remove.packages("fpCompare", lib = dir2) |> suppressMessages()
     remove.packages("fpCompare", lib = dir6) |> suppressMessages()
@@ -144,14 +144,7 @@ test_that("test 1", {
       isTRUE(all.equal(out1[], pkgSnapFileRes[], check.attributes = FALSE))
     })
 
-    #warns <- capture_warnings(
-      out3 <- pkgSnapshot2()
-    #)
-    #if (isTRUE(getOption("Require.usePak"))) {
-    #  browser()
-    #  okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-    #  expect_true(okWarn)
-    #}
+    out3 <- pkgSnapshot2()
 
     testthat::expect_true(is(out3, "character"))
     setwd(prevDir)

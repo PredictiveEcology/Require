@@ -356,7 +356,6 @@ DESCRIPTIONFileDeps <-
           lines <- desc_path
         }
         if (is(lines, "try-error")) {
-          browser()
           stop("Cannot read the file: ", desc_path)
         }
         Sys.setlocale(locale = "C") # required to deal with non English characters in Author names
@@ -474,6 +473,7 @@ whichToDILES <- function(which) {
     }
 
     out <- lapply(lib.loc, function(path) {
+      if (exists("aaaa", envir = .GlobalEnv)) browser()
       dirs <- dir(path, full.names = TRUE)
       # from pak -- makes a _cache which isn't relevant here
       dirs <- dirs[!endsWith(dirs, suffix = "_cache")]
