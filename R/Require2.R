@@ -328,6 +328,8 @@ Require <- function(packages,
       )
     } else {
       if (length(which)) {
+        if (exists("aaaa", envir = .GlobalEnv)) browser()
+
         # "Rdpack"     "S7"         "rbibutils"  "reformulas"
         deps <- pkgDep(packages, simplify = FALSE,
                        purge = purge, libPaths = libPaths, recursive = TRUE,
@@ -1501,8 +1503,19 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                    returnDetails = returnDetails, ...
     )
 
+    browser() # things to do
+    #  1. the ones that are incorrecxtly installed (because of version).
+    #     These should offer to install a newer one
+    #  2. Update the `out` attribute to indicate that they didn't install correcxtly
+    #
     ip <- .installed.pkgs(lib.loc = libPaths, purge = TRUE) |> as.data.table()
     ip2 <- ip[LibPath == libPaths[[1]]]
+
+    outAttr <- attr(out, "Require")
+    ip2[outAttr, newResult := "FAIL", on = "Package"]
+    outAttr[ip2, on = "Package", installResult := "OK"]
+    outAttr[!ip2, on = "Package", installResult := "FAIL"]
+    attr(out, "Require") <- outAttr
     # ip2$Package,
     needPkg <- extractPkgName(need)
     needVer <- extractVersionNumber(need)
@@ -1513,10 +1526,20 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     needs <- paste0(needPkg, "_", needVer)
     haves <- paste0(havePkg, "_", haveVer)
 
+
+
     installedInstead <- setdiff(haves, needs)
     incorrect <- setdiff(needs, haves)
+    pkgWrongVersion <- vapply(strsplit(incorrect, split = "_"),
+                              function(x) x[[1]], FUN.VALUE = character(1))
+    m <- match(havePkg, needPkg)
+    pkgNotInstalledAtAll <- needPkg[-m]
+    pkgNotInstalledAtAllWVer <- needs[-m]
 
+    # pkgNotInstalledAtAll2 <- setdiff(needPkg, havePkg)
+    correctPkgWrongVersion <- setdiff(pkgNotInstalledAtAll, pkgWrongVersion)
     correct <- intersect(haves, needs)
+
     if (NROW(correct))
       messageVerbose(NROW(correct), " packages correct version installed; ", verbose = verbose)
     if (NROW(incorrect)) {

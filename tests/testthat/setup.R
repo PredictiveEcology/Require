@@ -1,10 +1,11 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
 }
-verboseForDev <- -2
+verboseForDev <- 2
 Require.usePak <- FALSE
 Require.installPackageSys <- 2L#2 * (isMacOS() %in% FALSE)
 Require.offlineMode <- FALSE
+usePkgCache <- tempdir2("RequireCacheForTests") # or NULL for using default
 
 if (isTRUE(Require.usePak)) {
   if (requireNamespace("pak")) {
@@ -27,13 +28,15 @@ withr::local_options(
 )
 
 if (!isDevAndInteractive) { # i.e., CRAN
-  withr::local_envvar(R_REQUIRE_PKG_CACHE = "FALSE", .local_envir = teardown_env())
+  withr::local_envvar(# R_REQUIRE_PKG_CACHE = "FALSE",
+                      .local_envir = teardown_env())
 }
 
 ## Always use temporary package cache for tests (#128):
 ## - we don't want to modify the user's cache;
 ## - user's cache may have package versions that are newer than those requested in the tests;
-withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local_envir = teardown_env())
+withr::local_envvar("R_REQUIRE_CACHE" = usePkgCache,
+                    .local_envir = teardown_env())
 
 suggests <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"), which = "Suggests") |>
   extractPkgName()

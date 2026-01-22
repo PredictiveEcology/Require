@@ -103,8 +103,7 @@ test_that("test 1", {
     pkgSnapFileRes <- data.table::fread(pkgSnapFile)
     dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
     dir6 <- Require::checkPath(dir6, create = TRUE)
-    # aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
-    warns <- capture_warnings(
+    Fwarns <- capture_warnings(
       out <- Require::Require(
         packageVersionFile = pkgSnapFile, libPaths = dir6,
         quiet = TRUE, install = "force"

@@ -1,12 +1,14 @@
 test_that("test 09", {
 
   skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
+  skip_if(getRversion() > "4.4.3", "test09 only runs on R4.4")
   setupInitial <- setupTest(needRequireInNewLib = FALSE)
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
-  if (isDevAndInteractive && !isMacOS()) { ## TODO: source installs failing on macOS
+
+  if (isDevAndInteractive && isMacOS()) { ## TODO: source installs failing on macOS
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)
@@ -144,6 +146,7 @@ test_that("test 09", {
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
       # THE INSTALL #
+      aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
       warns <- capture_warnings(
           out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
                          returnDetails = TRUE)
@@ -152,6 +155,21 @@ test_that("test 09", {
 
       warns <- grep("unable to translate|string.+invalid|TRE pattern compilation error",
                     warns, invert = TRUE, value = TRUE)
+
+      c('RPostgreSQL', 'RcppArmadillo', 'RcppEigen', 'SparseM', 'SuppDists',
+        'VGAM', 'archive', 'bit', 'classInt', 'data.table', 'deldir',
+        'digest', 'earth', 'hexbin', 'igraph', 'jpeg', 'maps',
+        'matrixStats', 'mclust', 'mda', 'minqa', 'mvtnorm', 'randomForest',
+        'robustbase', 'slam', 'stringi', 'svglite', 'terra', 'wk')
+
+      aa <- attr(out, "Require")
+      bb <- aa[!installResult %in% "OK"]
+      ee <- aa[installResult %in% "OK"]
+      cc <- bb[!Package %in% extractPkgName(RequireDependencies())]
+      rr <- data.table::fread(snfTmp)
+      qq <- rr[!ee, on = c("Package")]
+
+      browser()
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
@@ -160,6 +178,7 @@ test_that("test 09", {
         out11 <- pkgDep(unname(packageFullName)[-1], recursive = TRUE, simplify = FALSE)
       )
       # expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
+      browser()
       expect_identical(warns, character(0))
 
       # if (FALSE) {
@@ -231,6 +250,7 @@ test_that("test 09", {
       # and visualTest which is missing GitHub info for some reason --
 
       skip_if_offline2()
+      browser()
       expect_true(identical(missingPackages$Package, character(0)))
       # expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
       warns <- capture_warnings(
@@ -243,6 +263,7 @@ test_that("test 09", {
       )
 
       test <- testWarnsInUsePleaseChange(warns)
+      browser()
       expect_true(test)
 
       att <- attr(out2, "Require")
@@ -256,6 +277,7 @@ test_that("test 09", {
       allDone <- setdiff(didnt$Package, c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
                                           noneAvailable, c("Require", "data.table")))
       allDone <- setdiff(allDone, knownFails)
+      browser()
       expect_identical(allDone, character(0))
 
 

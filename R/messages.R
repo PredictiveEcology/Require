@@ -100,7 +100,6 @@ msgStdOut <- function(mess, logFile, verbose) {
   messOrig <- mess
   appendLF <- endsWith(mess, "\n") %in% FALSE
   if (verbose <= 1) {
-    # if (grepl("\\<sf\\>|\\<terra\\>|\\<RcppParallel\\>|\\<units\\>", messOrig)) browser()
     errs <- "Error in dyn.load|Execution halted|Aborted"
     if (!any(grepl(errs, mess))) {
 

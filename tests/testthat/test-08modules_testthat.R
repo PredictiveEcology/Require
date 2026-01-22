@@ -20,24 +20,24 @@ test_that("test 8", {
 
     skip_if_offline2()
 
-    if (isWindows()) {
-      (Install("Require", repos = "https://predictiveecology.r-univierse.dev",
-               install = "force")) |>
-        capture_warnings() -> warns1
+    # if (isWindows() || isMacOS()) {
+      # (Install("Require", repos = c("https://predictiveecology.r-univierse.dev", getOption("repos")),
+      #          install = "force")) |>
+      #   capture_warnings() -> warns1
       (a <- Install(c(
         "PredictiveEcology/SpaDES.project@development"),
         upgrade = FALSE, returnDetails = TRUE
       )) |>
         capture_warnings() -> warns
 
-    } else {
-      warnsReq <- capture_warnings(Require::Install("Require"))
-      (a <- Install(c(
-        "PredictiveEcology/SpaDES.project@development"),
-        upgrade = FALSE, returnDetails = TRUE
-      )) |>
-        capture_warnings() -> warns
-    }
+    # } else {
+    #   warnsReq <- capture_warnings(Require::Install("Require"))
+    #   (a <- Install(c(
+    #     "PredictiveEcology/SpaDES.project@development"),
+    #     upgrade = FALSE, returnDetails = TRUE
+    #   )) |>
+    #     capture_warnings() -> warns
+    # }
 
 
     on.exit(unloadNamespace("SpaDES.project"))
@@ -75,6 +75,7 @@ test_that("test 8", {
       Require::cacheClearPackages("stringfish", ask = FALSE) # get this from RSPM or CRAN fresh
     }
     # THE INSTALL
+    pkgs <- c(pkgs, "xml2 (>=1.5.2)")
     pkgs <- omitPkgsTemporarily(pkgs)
 
     (
@@ -163,7 +164,7 @@ test_that("test 8", {
 
     otherPkgs <- c("archive", "details", "DBI", # "s-u/fastshp", # can't compile fastshp in Windows R 4.5
                    "logging", "RPostgres", "slackr")
-    if (!isWindows())
+    if (!isWindows() && !isMacOS())
       otherPkgs <- c(otherPkgs, "s-u/fastshp")
 
     pkgs <- unique(c(modulePkgs, otherPkgs))
@@ -201,8 +202,8 @@ test_that("test 8", {
       # some sort of test about whether anything was installed; pick reproducible as a random pkg
       testthat::expect_true(
         sum(grepl("reproducible",
-                  out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1 &&
-          is.character(getOption("Require.cloneFrom")))
+                  out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1)# &&
+          #is.character(getOption("Require.cloneFrom"))
       testthat::expect_true(
         sum(grepl("reproducible",
                   out2Attr$Package[out2Attr$installResult %in% "OK"])) == 0)

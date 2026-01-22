@@ -244,8 +244,6 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
     pkgDT <- toPkgDTFull(pkgDT)
     pkgDT <- rmRifInPackageCol(pkgDT)
     isInBase <- pkgDT$Package %in% .basePkgs
-    # if (any(pkgDT$packageFullName %in% "reformulas (>= 0.3.0)") &&
-    #     parentPackage %in% "lme4 (>= 1.1.31)") browser()
     if (!all(isInBase)) {
       pkgDTBase <- splitKeepOrderAndDTIntegrity(pkgDT, splitOn = isInBase)
       if (NROW(pkgDTBase[["FALSE"]])) {
@@ -263,7 +261,6 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
               splitKeepOrderAndDTIntegrity(pkgDTBase[["FALSE"]],
                                            splitOn = pkgDTBase[["FALSE"]]$cachedTRUE %in% FALSE)
 
-            # if (any(grepl("lme4.+1.1.31", pkgDTNeedRecursive[["TRUE"]]$packageFullName))) browser()
             parentVersion <- rep(NA, NROW(pkgDTNeedRecursive[["TRUE"]]))
             if (is.null(pkgDTNeedRecursive[["TRUE"]]$VersionOnRepos) ||
                 anyNA(pkgDTNeedRecursive[["TRUE"]]$VersionOnRepos)) {
@@ -349,8 +346,6 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
     }
 
   }
-  # if (any(pkgDT$packageFullName %in% "reformulas (>= 0.3.0)") &&
-  #     parentPackage %in% "lme4 (>= 1.1.31)") browser()
   pkgDT <- addDepthAndParentPkg(pkgDT, nam = parentPackage,
                                 parentPackageVersion = parentPackageVersion, .depth)
 
@@ -938,7 +933,8 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 #' @importFrom utils download.file untar
 #' @include messages.R
-getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPaths, verbose = getOption("Require.cloneFrom")) {
+getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPaths,
+                                  verbose = getOption("Require.verbose")) {
 
   tmpdir <- tempdir3() # faster than tempdir2
   on.exit({

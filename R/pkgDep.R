@@ -473,7 +473,6 @@ whichToDILES <- function(which) {
     }
 
     out <- lapply(lib.loc, function(path) {
-      if (exists("aaaa", envir = .GlobalEnv)) browser()
       dirs <- dir(path, full.names = TRUE)
       # from pak -- makes a _cache which isn't relevant here
       dirs <- dirs[!endsWith(dirs, suffix = "_cache")]
