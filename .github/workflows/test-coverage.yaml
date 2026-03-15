@@ -4,13 +4,11 @@ on:
       - main
       - master
       - development
-      - mac
   pull_request:
     branches:
       - main
       - master
       - development
-  workflow_dispatch:
 
 name: test-coverage
 
