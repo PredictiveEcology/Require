@@ -3710,8 +3710,9 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
     # }
     # return(dt)
   } else if (downAndBuildLocal) {
+    localFile <- vapply(ll, function(x) if (length(x) > 0) x[[1]] else "", character(1))
     dt <- list(Package = argsOrig[["Package"]],
-               localFile = unlist(ll)) |> as.data.table()
+               localFile = localFile) |> as.data.table()
   } else  { # installPackages and Other -- expecting on logFile as a character string
     dt <- logFile
   }
