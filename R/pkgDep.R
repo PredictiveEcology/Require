@@ -557,10 +557,10 @@ whichToDILES <- function(which) {
       out <- cbind(out, "LibPath" = rep(lib.loc, lengths), stringsAsFactors = FALSE)
 
       dups <- duplicated(out[, "Package"]) # means installed in >1 .libPaths()
-      out <- out[!dups, ]
+      out <- out[!dups, , drop = FALSE]
     }
     colNames <- intersect(colNames, colnames(out))
-    out <- out[, colNames]
+    out <- out[, colNames, drop = FALSE]
     # ret <-
     #   cbind(
     #     "Package" = basename(unlist(out[, "Package"])),

@@ -21,6 +21,7 @@ vignettes/.*\.log$
 ^codecov\.yml$
 ^\.secrets$
 ^\.secret$
+^\.claude$
 R/SpaDES
 ^\.git
 ^CRAN-SUBMISSION$

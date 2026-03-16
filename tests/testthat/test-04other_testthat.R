@@ -171,7 +171,7 @@ test_that("test 4", {
 
   if (getRversion() >= "4.3.0") { # R 4.2.X and lower don't exist on PEuniverse so this test fails
     opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
-    out2 <- by(wh, seq(NROW(wh)), function(wh1Row) {
+    out2 <- suppressWarnings(by(wh, seq(NROW(wh)), function(wh1Row) {
       out <- do.call(pkgDep, append(list("Require"), as.list(wh1Row[1, , drop = TRUE])))[[1]]
       o2 <- tools::toTitleCase(names(wh1Row)[unlist(wh1Row)])
       if (length(o2)) {
@@ -180,7 +180,7 @@ test_that("test 4", {
         # out <- setdiff(out, grep("R\\(.+", pkgs, value = TRUE, invert = TRUE))
       }
       setdiff(out, "remotes") # remotes was removed in version 0.2.6.9020
-    })
+    }))
     localDeps <- DESCRIPTIONFileDeps(system.file("DESCRIPTION", package = "Require"),
                                      which = c("Suggests", "Imports", "Depends"))
     locals <- setdiff(extractPkgName(localDeps), .basePkgs)
@@ -286,7 +286,7 @@ test_that("test 4", {
       Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
                        standAlone = TRUE)
     )
-    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed))
+    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed, "is not available for this version of R"))
   }
 
 

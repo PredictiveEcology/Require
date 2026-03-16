@@ -1603,7 +1603,7 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 
 .DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
 
-  tf <- file.path(cachePkgDir(), basename(PackageUrl))
+  tf <- file.path(cachePkgDir(create = TRUE), basename(PackageUrl))
   rmEmptyFiles(tf)
   for (attempt in 1:2) {
     out <- if (file.exists(tf)) { NULL } else {
