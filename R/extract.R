@@ -58,9 +58,9 @@ extractVersionNumber <- function(pkgs, filenames) {
       fnsSplit <- strsplit(basename(filenames), "_")
       out <- unlist(lapply(fnsSplit, function(y) {
         if (length(y) >= 2)
-          a <- gsub(paste0("\\.zip|\\.tar\\.gz|", macBinaryFileExtGrep), "", y[[2]])
+          gsub(paste0("\\.zip|\\.tar\\.gz|", macBinaryFileExtGrep), "", y[[2]])
         else
-          character()
+          NA_character_
         }))
     } else {
       out <- character()
