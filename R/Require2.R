@@ -1081,7 +1081,7 @@ doDownloads <- function(pkgInstall, repos, purge, verbose, install.packagesArgs,
       rr <- by(pp1[["TRUE"]], seq_len(NROW(pp1[["TRUE"]])),
                function(pu, lf) {
                  with(pu, {
-                   DF <- .DESCFileFull(PackageUrl = basename(pu$localFile),
+                   DF <- .DESCFileFull(PackageUrl = pu$localFile,
                                        Package = pu$Package, verbose = verbose,
                                        tmpdir = tmpdir)
                  }
@@ -1268,7 +1268,7 @@ downloadArchive <- function(pkgNonLocal, repos, purge = FALSE, install.packagesA
       if (any(hasPackageUrl)) {
         pkgArchiveHasPU <- split(pkgArchive, f = hasPackageUrl)
 
-        tf <- file.path(cachePkgDir(), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
+        tf <- file.path(cachePkgDirForRepo(repos[1]), basename(pkgArchiveHasPU$`TRUE`$PackageUrl))
         fe <- file.exists(tf)
         if (any(fe)) {
           messageVerbose(
@@ -2038,8 +2038,15 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
   if (!is.null(cacheGetOptionCachePkgDir())) {
-    # check for crancache copies
-    localFiles <- dir(cacheGetOptionCachePkgDir(), full.names = TRUE)
+    # check for crancache copies -- only look in repos-specific subdirectories
+    repoDirs <- cachePkgDirForRepo(repos)
+    repoDirs <- repoDirs[dir.exists(repoDirs)]
+    localFiles <- if (length(repoDirs) > 0) {
+      lf <- unlist(lapply(repoDirs, dir, full.names = TRUE))
+      lf[!dir.exists(lf)]  # exclude subdirectories (e.g., metadata dirs like source/, binary/)
+    } else {
+      character(0)
+    }
     localFiles <- doCranCacheCheck(localFiles, verbose)
     pkgInstall <- localFilename(pkgInstall, localFiles, libPaths = libPaths, verbose = verbose)
     if (isTRUE(getOption("Require.offlineMode"))) {
@@ -2053,7 +2060,7 @@ identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
     pkgInstall[haveLocal %in% .txtLocal, `:=`(
       installFrom = haveLocal,
       availableVersionOK = TRUE,
-      Repository = paste0("file:///", cacheGetOptionCachePkgDir())
+      Repository = paste0("file:///", dirname(localFile))
     )]
   } else {
     set(pkgInstall, NULL, c("localFile"), "")
@@ -2554,7 +2561,6 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 copyBuiltToCache <- function(pkgInstall, tmpdirs, copyOnly = FALSE) {
   if (!is.null(pkgInstall)) {
     if (!is.null(cacheGetOptionCachePkgDir())) {
-      cacheFiles <- dir(cacheGetOptionCachePkgDir())
       out <- try(Map(td = tmpdirs, function(td) {
         tdPkgs <- dir(td, full.names = TRUE,
                       pattern = paste0("\\.zip|\\.tar\\.gz|", macBinaryFileExtGrep))
@@ -2567,21 +2573,18 @@ copyBuiltToCache <- function(pkgInstall, tmpdirs, copyOnly = FALSE) {
             tdPkgs[isGitHub] <- renameLocalGitTarWSHA(tdPkgs[isGitHub], SHA)
           }
 
-          whAlreadyInCache <- na.omit(match(
-            cacheFiles,
-            basename(tdPkgs)
-          ))
-          if (length(whAlreadyInCache)) {
-            tdPkgs <- tdPkgs[-whAlreadyInCache]
-          }
-          if (length(tdPkgs)) {
-            newFiles <- file.path(cacheGetOptionCachePkgDir(), basename(tdPkgs))
-            if (isTRUE(copyOnly)) {
-              suppressWarnings(file.copy(tdPkgs, newFiles))
-            } else {
-              suppressWarnings(fileRenameOrMove(tdPkgs, newFiles))
+          for (i in seq_along(tdPkgs)) {
+            repo <- if (!is.null(pkgsInstalled$Repository)) pkgsInstalled$Repository[i] else NA_character_
+            if (is.na(repo) || !nzchar(repo)) next
+            destDir <- cachePkgDirForRepo(repo, create = TRUE)
+            destFile <- file.path(destDir, basename(tdPkgs[[i]]))
+            if (!file.exists(destFile)) {
+              if (isTRUE(copyOnly)) {
+                suppressWarnings(file.copy(tdPkgs[[i]], destFile))
+              } else {
+                suppressWarnings(fileRenameOrMove(tdPkgs[[i]], destFile))
+              }
             }
-
           }
         }
       }))
@@ -3328,7 +3331,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
                        verboseLevel = 2
         )
         if (is.na(correctVersions[2])) { # if 2nd one is NA, it means it an archived package
-          tf <- file.path(cachePkgDir(), basename(ret$PackageUrl))
+          tf <- file.path(cachePkgDirForRepo(ret$repo), basename(ret$PackageUrl))
           fe <- file.exists(tf)
           if (fe) {
             dayBeforeTakenOffCRAN <- ava[[Package]][correctVersions[2]][["mtime"]]
@@ -3336,7 +3339,7 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
             dayBeforeTakenOffCRAN <- archivedOn(Package, pkgRelPath = ret$PackageUrl, verbose, repos,
                                                 numGroups = numGroups,
                                                 counter = .GRP,
-                                                srcPackageURLOnCRAN, repo
+                                                srcPackageURLOnCRAN, ret$repo
             )
             dayBeforeTakenOffCRAN <- dayBeforeTakenOffCRAN[[1]]$archivedOn
           }

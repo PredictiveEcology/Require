@@ -1147,9 +1147,10 @@ cacheClearPackages <- function(packages,
     }
   }
   proceed <- TRUE
-  indivFiles <- dir(out, full.names = TRUE)
+  # Scan flat dir AND repos-specific subdirs, excluding metadata (.rds) files
+  indivFiles <- dir(out, full.names = TRUE, recursive = TRUE)
   isFile <- !dir.exists(indivFiles)
-  indivFiles <- indivFiles[isFile]
+  indivFiles <- indivFiles[isFile & !grepl("\\.rds$", indivFiles)]
   if (missing(packages)) {
     toDelete <-
       indivFiles # don't delete whole dir because has available.packages too; not to delete

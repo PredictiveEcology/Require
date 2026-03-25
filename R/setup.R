@@ -114,6 +114,18 @@ cachePkgDir <- function(create) {
   return(pkgCacheDir)
 }
 
+cachePkgDirForRepo <- function(repos, create = FALSE) {
+  # Normalize to just protocol+host so that "https://cloud.r-project.org/src/contrib"
+  # and "https://cloud.r-project.org" map to the same cache subdirectory
+  normalized <- sub("^(https?://[^/]+).*", "\\1", repos)
+  sanitized <- gsub("https|[:/]", "", normalized)
+  d <- file.path(cachePkgDir(), sanitized)
+  if (isTRUE(create)) {
+    d <- vapply(d, checkPath, character(1), create = TRUE)
+  }
+  d
+}
+
 RequireGitHubCacheDir <- function(create) {
   if (missing(create)) {
     create <- FALSE

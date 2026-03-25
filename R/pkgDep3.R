@@ -1601,9 +1601,15 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 .RequireDependencies <- character()
 .RequireDependenciesNoBase <- character()
 
-.DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
+.DESCFileFull <- function(PackageUrl, verbose, Repository = NULL, Package, tmpdir) {
 
-  tf <- file.path(cachePkgDir(create = TRUE), basename(PackageUrl))
+  tf <- if (file.exists(PackageUrl)) {
+    PackageUrl  # already a full path to an existing local file
+  } else if (!is.null(Repository) && !is.na(Repository) && nzchar(Repository)) {
+    file.path(cachePkgDirForRepo(Repository, create = TRUE), basename(PackageUrl))
+  } else {
+    file.path(cachePkgDir(create = TRUE), basename(PackageUrl))
+  }
   rmEmptyFiles(tf)
   for (attempt in 1:2) {
     out <- if (file.exists(tf)) { NULL } else {
