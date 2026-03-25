@@ -2038,6 +2038,7 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
   if (!is.null(cacheGetOptionCachePkgDir())) {
+    removeOldFlatCachePkgs(verbose = verbose)
     # check for crancache copies -- only look in repos-specific subdirectories
     repoDirs <- cachePkgDirForRepo(repos)
     repoDirs <- repoDirs[dir.exists(repoDirs)]

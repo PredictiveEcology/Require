@@ -114,6 +114,30 @@ cachePkgDir <- function(create) {
   return(pkgCacheDir)
 }
 
+removeOldFlatCachePkgs <- function(verbose = getOption("Require.verbose")) {
+  pe <- pkgEnv()
+  if (!is.null(pe[["oldFlatCacheChecked"]])) return(invisible(NULL))
+  pe[["oldFlatCacheChecked"]] <- TRUE
+
+  flatDir <- cachePkgDir()
+  if (!dir.exists(flatDir)) return(invisible(NULL))
+
+  # Package files are directly in the flat dir (not in subdirs); subdirs belong to the new scheme
+  allEntries <- dir(flatDir, full.names = TRUE)
+  pkgPat <- "\\.tar\\.gz$|\\.zip$|\\.tgz$"
+  oldFiles <- allEntries[!dir.exists(allEntries) & grepl(pkgPat, allEntries)]
+
+  if (length(oldFiles)) {
+    messageVerbose(
+      "Removing ", length(oldFiles), " package file(s) from old flat cache location ",
+      "(", flatDir, "); they will be re-downloaded into repos-specific subdirectories.",
+      verbose = verbose, verboseLevel = 1
+    )
+    unlink(oldFiles)
+  }
+  invisible(NULL)
+}
+
 cachePkgDirForRepo <- function(repos, create = FALSE) {
   # Normalize to just protocol+host so that "https://cloud.r-project.org/src/contrib"
   # and "https://cloud.r-project.org" map to the same cache subdirectory
