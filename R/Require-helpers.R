@@ -502,7 +502,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
             Sys.unsetenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE")
 
         caps <- lapply(caps, as.data.table)
-        caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
+        caps <- unique(rbindlist(caps, fill = TRUE, use.names = TRUE), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
         if (!is.null(cacheGetOptionCachePkgDir()) && NROW(caps) > 0) {
