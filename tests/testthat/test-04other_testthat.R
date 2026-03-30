@@ -286,7 +286,7 @@ test_that("test 4", {
       Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
                        standAlone = TRUE)
     )
-    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed, "is not available for this version of R", "downloaded length 0"))
+    expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed, "is not available for this version of R", "downloaded length 0", "cannot open URL", "404 Not Found"))
   }
 
 

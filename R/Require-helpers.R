@@ -350,7 +350,7 @@ if (length(archive))
   info <- invertList(info)
   # info <- lapply(info, unname)
   info <- lapply(info, function(dd) lapply(dd, function(d) as.data.table(d, keep.rownames = "PackageUrl")))
-  info <- lapply(info, rbindlist, idcol = "repo")
+  info <- lapply(info, rbindlist, idcol = "repo", fill = TRUE, use.names = TRUE)
   # info <- lapply(info, rbindlist)
   info <- lapply(info, function(d) {
     if (!is.null(d[["mtime"]])) setorderv(d, "mtime")
