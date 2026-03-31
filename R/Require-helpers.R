@@ -511,7 +511,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         }
       }
     }
-    cap <- do.call(rbind, cap)
+    cap <- rbindlist(cap, fill = TRUE, use.names = TRUE)
     assign(objNam, cap, envir = pkgDepEnv())
     out <- cap
   } else {
