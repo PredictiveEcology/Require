@@ -182,7 +182,8 @@ doLibPaths <- function(libPaths, standAlone = FALSE) {
     libPaths <- .libPaths()
   }
   if (standAlone) {
-    libPaths <- c(head(libPaths, 1), tail(.libPaths(), 1))
+    libPaths <- head(libPaths, 1)
+    # libPaths <- c(head(libPaths, 1), tail(.libPaths(), 1))
   } else {
     libPaths <- unique(c(head(libPaths, 1), .libPaths()))
   }

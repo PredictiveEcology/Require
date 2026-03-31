@@ -26,7 +26,6 @@ cacheDir <- function(create, verbose = getOption("Require.verbose")) {
   ## CURRENT: using cache dir following conventions used by tools::R_user_dir
   ##   tools::R_user_dir("appName", "cache")
 
-  # browser()
   cacheDir <- if (nzchar(Sys.getenv("R_REQUIRE_CACHE"))) {
     Sys.getenv("R_REQUIRE_CACHE")
   } else {
@@ -113,6 +112,42 @@ cachePkgDir <- function(create) {
   ##       - remind them how to change this, and make sure it's documented!
 
   return(pkgCacheDir)
+}
+
+removeOldFlatCachePkgs <- function(verbose = getOption("Require.verbose")) {
+  pe <- pkgEnv()
+  if (!is.null(pe[["oldFlatCacheChecked"]])) return(invisible(NULL))
+  pe[["oldFlatCacheChecked"]] <- TRUE
+
+  flatDir <- cachePkgDir()
+  if (!dir.exists(flatDir)) return(invisible(NULL))
+
+  # Package files are directly in the flat dir (not in subdirs); subdirs belong to the new scheme
+  allEntries <- dir(flatDir, full.names = TRUE)
+  pkgPat <- "\\.tar\\.gz$|\\.zip$|\\.tgz$"
+  oldFiles <- allEntries[!dir.exists(allEntries) & grepl(pkgPat, allEntries)]
+
+  if (length(oldFiles)) {
+    messageVerbose(
+      "Removing ", length(oldFiles), " package file(s) from old flat cache location ",
+      "(", flatDir, "); they will be re-downloaded into repos-specific subdirectories.",
+      verbose = verbose, verboseLevel = 1
+    )
+    unlink(oldFiles)
+  }
+  invisible(NULL)
+}
+
+cachePkgDirForRepo <- function(repos, create = FALSE) {
+  # Normalize to just protocol+host so that "https://cloud.r-project.org/src/contrib"
+  # and "https://cloud.r-project.org" map to the same cache subdirectory
+  normalized <- sub("^(https?://[^/]+).*", "\\1", repos)
+  sanitized <- gsub("https|[:/]", "", normalized)
+  d <- file.path(cachePkgDir(), sanitized)
+  if (isTRUE(create)) {
+    d <- vapply(d, checkPath, character(1), create = TRUE)
+  }
+  d
 }
 
 RequireGitHubCacheDir <- function(create) {
@@ -331,13 +366,13 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
     if (!is(a, "try-error"))
       break
     unlink(mirrorsLocalFile)
-    if (i == 2) {
+    if (attempt == 2) {
       SSLout <- SSLmodsWithFails(a, SSLwarns = TRUE, warns = character(), attempt,
                        verbose = getOption("Require.verbose"), otherwarns = character())
       if (!is.null(SSLout))
         eval(parse(text = SSLout)) # will be next or break
     }
-    if (i == 3) {
+    if (attempt == 3) {
       optsHere <- options(download.file.method = "curl")
       on.exit(options(optsHere))
     }

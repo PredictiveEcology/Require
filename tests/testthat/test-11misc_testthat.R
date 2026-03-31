@@ -38,7 +38,7 @@ test_that("test 11", {
         expect_true(poss1 || poss2)
     }
 
-    skip_if_offline()
+    skip_if_offline2()
 
     ## Test Install and also (HEAD)
     messToSilence <- capture_messages(try(remove.packages("fpCompare"), silent = TRUE))

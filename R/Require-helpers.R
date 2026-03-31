@@ -350,7 +350,7 @@ if (length(archive))
   info <- invertList(info)
   # info <- lapply(info, unname)
   info <- lapply(info, function(dd) lapply(dd, function(d) as.data.table(d, keep.rownames = "PackageUrl")))
-  info <- lapply(info, rbindlist, idcol = "repo")
+  info <- lapply(info, rbindlist, idcol = "repo", fill = TRUE, use.names = TRUE)
   # info <- lapply(info, rbindlist)
   info <- lapply(info, function(d) {
     if (!is.null(d[["mtime"]])) setorderv(d, "mtime")
@@ -363,13 +363,18 @@ if (length(archive))
 
 
 #' @importFrom utils packageVersion installed.packages
-installedVers <- function(pkgDT, libPaths) {
+installedVers <- function(pkgDT, libPaths, standAlone = FALSE) {
 
   pkgDT <- toPkgDT(pkgDT)
   # pp <- data.table::copy(pkgDT)
   if (NROW(pkgDT)) {
     # ip2 <- as.data.table(installed.packages(lib.loc = libPaths, fields = c("Package", "LibPath", "Version")))
-    ip <- as.data.table(.installed.pkgs(lib.loc = libPaths, other = "LibPath", which = NULL, packages = pkgDT$Package)) # , other = c("Package", "Version"))) # these 2 are defaults
+    if (isTRUE(standAlone)) {
+      lp <- libPaths[1]
+    } else {
+      lp <- libPaths
+    }
+    ip <- as.data.table(.installed.pkgs(lib.loc = lp, other = "LibPath", which = NULL, packages = pkgDT$Package)) # , other = c("Package", "Version"))) # these 2 are defaults
     ip <- ip[ip$Package %in% pkgDT$Package]
     if (NROW(ip)) {
       pkgs <- pkgDT$Package
@@ -430,7 +435,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     purge <- FALSE
   }
   cap <- list()
-  isMac <- tolower(SysInfo["sysname"]) == "darwin"
+  isMac <- isMacOS()#tolower(SysInfo["sysname"]) == "darwin"
   isOldMac <- isMac && compareVersion(as.character(getRversion()), "4.0.0") < 0
   isWindows <- isWindows()
 
@@ -497,7 +502,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
             Sys.unsetenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE")
 
         caps <- lapply(caps, as.data.table)
-        caps <- unique(rbindlist(caps), by = c("Package", "Version", "Repository"))
+        caps <- unique(rbindlist(caps, fill = TRUE, use.names = TRUE), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
         if (!is.null(cacheGetOptionCachePkgDir()) && NROW(caps) > 0) {
@@ -506,7 +511,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         }
       }
     }
-    cap <- do.call(rbind, cap)
+    cap <- rbindlist(cap, fill = TRUE, use.names = TRUE)
     assign(objNam, cap, envir = pkgDepEnv())
     out <- cap
   } else {
@@ -529,7 +534,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
 isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest <- (endsWith(fn, "zip") & isWindows()) |
     (grepl("R_x86", fn) & !isWindows() & !isMacOS()) |
-    (endsWith(fn, "tgz") & isMacOS())
+    (endsWith(fn, macBinaryFileExtNoDot) & isMacOS())
   if (isTRUE(needRepoCheck)) {
     if (isWindows() || isMacOS()) {
       binRepo <- isBinaryCRANRepo(curCRANRepo = repos)
@@ -1592,10 +1597,6 @@ installPackagesWithQuiet <- function(ipa, verbose) {
     }
   } else {
 
-    if (isMacOS() && "covr" %in% ipa$pkgs)
-      print(ipa)
-    # if (ipa$quiet && ipa$type %in% "source" && isWindows())
-    #   ipa$quiet <- FALSE
     if (isTRUE(ipa$quiet)) {
       messSupp2 <- capture.output({
         messSupp <- capture.output(type = "message", {

@@ -54,7 +54,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         break
       }
       if (grp[i] == .txtFailedToDLFrom) {
-        # browser()
+        #
       }
 
       if (grp[i] == .txtCntInstllDep) {
@@ -242,7 +242,6 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
       pkgsList <- pakPkgSetup(pkgs, doDeps = doDeps)
       td3 <- tempdir3()
       on.exit({unlink(dirname(td3))}, add = TRUE)
-      # if (any(grepl("quickPlot", pkgsList$DESC))) browser()
       dfile <- DESCRIPTIONfileFromModule(verbose = -2,
                                          packageFolderName = td3,
                                          .txtDummyPackage,

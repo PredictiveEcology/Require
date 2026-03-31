@@ -49,8 +49,9 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -855,8 +856,8 @@ they must be installed from source. <code>Require</code> has a function
 package-by-package basis. By default, some are automatically installed
 from <code>&quot;source&quot;</code> because in our experience, they tend to fail
 if installed from the binary.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># In this example, it is `terra` that must be installed from source on Linux</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="cf">if</span> (Require<span class="sc">:::</span><span class="fu">isLinux</span>()) {</span>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># In this example, it is `terra` that generally needs to be installed from source on Linux</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="cf">if</span> (Require<span class="sc">:::</span><span class="fu">isUbuntuOrDebian</span>()) {</span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  Require<span class="sc">::</span><span class="fu">setLinuxBinaryRepo</span>()</span>
 <span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  pkgs <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;terra&quot;</span>, <span class="st">&quot;PSPclean&quot;</span>)</span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  pkgFullName <span class="ot">&lt;-</span> <span class="st">&quot;ianmseddy/PSPclean@development&quot;</span></span>

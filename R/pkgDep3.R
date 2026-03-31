@@ -244,8 +244,6 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
     pkgDT <- toPkgDTFull(pkgDT)
     pkgDT <- rmRifInPackageCol(pkgDT)
     isInBase <- pkgDT$Package %in% .basePkgs
-    # if (any(pkgDT$packageFullName %in% "reformulas (>= 0.3.0)") &&
-    #     parentPackage %in% "lme4 (>= 1.1.31)") browser()
     if (!all(isInBase)) {
       pkgDTBase <- splitKeepOrderAndDTIntegrity(pkgDT, splitOn = isInBase)
       if (NROW(pkgDTBase[["FALSE"]])) {
@@ -263,12 +261,14 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
               splitKeepOrderAndDTIntegrity(pkgDTBase[["FALSE"]],
                                            splitOn = pkgDTBase[["FALSE"]]$cachedTRUE %in% FALSE)
 
-            # if (any(grepl("lme4.+1.1.31", pkgDTNeedRecursive[["TRUE"]]$packageFullName))) browser()
             parentVersion <- rep(NA, NROW(pkgDTNeedRecursive[["TRUE"]]))
             if (is.null(pkgDTNeedRecursive[["TRUE"]]$VersionOnRepos) ||
                 anyNA(pkgDTNeedRecursive[["TRUE"]]$VersionOnRepos)) {
-              parentVersion <- gsub("^.+\\_+(.+)\\_\\_+htt.+$", "\\1",
-                                    pkgDTNeedRecursive[["TRUE"]]$snFALSE)
+              parentVersion <- vapply(strsplit(pkgDTNeedRecursive[["TRUE"]]$snFALSE, split = "__"),
+                                      function(x) if (any(is.na(x))) x else x[[2]], FUN.VALUE = character(1))
+              # parentVersion <- gsub("^.+\\_+(.+)\\_\\_+htt.+$", "\\1",
+              #                       pkgDTNeedRecursive[["TRUE"]]$snFALSE)
+
             }
             nasPV <- is.na(parentVersion)
             if (any(nasPV)) {
@@ -346,8 +346,6 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
     }
 
   }
-  # if (any(pkgDT$packageFullName %in% "reformulas (>= 0.3.0)") &&
-  #     parentPackage %in% "lme4 (>= 1.1.31)") browser()
   pkgDT <- addDepthAndParentPkg(pkgDT, nam = parentPackage,
                                 parentPackageVersion = parentPackageVersion, .depth)
 
@@ -463,7 +461,6 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       num <- NROW(pkgDTList$Archive$Package)
       messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
-
 
       pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
       wcr <- whichCatRecursive(which, recursive = FALSE)
@@ -936,7 +933,8 @@ fillDefaults <- function(fillFromFn, envir = parent.frame()) {
 
 #' @importFrom utils download.file untar
 #' @include messages.R
-getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPaths, verbose = getOption("Require.cloneFrom")) {
+getArchiveDESCRIPTION <- function(pkgDTList, repos, purge = FALSE, which, libPaths,
+                                  verbose = getOption("Require.verbose")) {
 
   tmpdir <- tempdir3() # faster than tempdir2
   on.exit({
@@ -1603,8 +1601,15 @@ RequireDependencies <- function(libPaths = .libPaths()) {
 .RequireDependencies <- character()
 .RequireDependenciesNoBase <- character()
 
-.DESCFileFull <- function(PackageUrl, verbose, Repository, Package, tmpdir) {
-  tf <- file.path(cachePkgDir(), basename(PackageUrl))
+.DESCFileFull <- function(PackageUrl, verbose, Repository = NULL, Package, tmpdir) {
+
+  tf <- if (file.exists(PackageUrl)) {
+    PackageUrl  # already a full path to an existing local file
+  } else if (!is.null(Repository) && !is.na(Repository) && nzchar(Repository)) {
+    file.path(cachePkgDirForRepo(Repository, create = TRUE), basename(PackageUrl))
+  } else {
+    file.path(cachePkgDir(create = TRUE), basename(PackageUrl))
+  }
   rmEmptyFiles(tf)
   for (attempt in 1:2) {
     out <- if (file.exists(tf)) { NULL } else {
