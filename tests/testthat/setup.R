@@ -145,7 +145,7 @@ runTests <- function(have, pkgs) {
 }
 
 testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, couldNot = TRUE,
-                                       restart = TRUE) {
+                                       restart = TRUE, installFailed = TRUE) {
   test <- TRUE
   if (length(warns)) {
     tst <- character()
@@ -157,6 +157,8 @@ testWarnsInUsePleaseChange <- function(warns, please = TRUE, inUse = TRUE, could
       tst <- c(tst, .txtMsgIsInUse)
     if (isTRUE(couldNot))
       tst <- c(tst, .txtCouldNotBeInstalled)
+    if (isTRUE(installFailed))
+      tst <- c(tst, .txtInstallationNonZeroExit, .txtInstallationPkgFailed)
     tst <- paste(tst, collapse = "|")
     test <- all(grepl(tst, warns)) # "Please change" comes with verbose >= 1
   }

@@ -416,7 +416,10 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
 fileRenameOrMove <- function(from, to) {
   du <- unique(dirname(to))
   checkPath(du, create = TRUE) # somewhat slow because `normPath`
-  res <- suppressWarnings(file.rename(from, to)) ## try hardlink
+  res <- tryCatch(
+    suppressWarnings(file.rename(from, to)), ## try hardlink
+    error = function(e) rep(FALSE, length(from)) # e.g. Windows MAX_PATH exceeded
+  )
   if (any(!res)) {
     ## finally, copy the file
     res[!res] <-
