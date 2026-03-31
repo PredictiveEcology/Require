@@ -116,10 +116,11 @@ test_that("setup.R cache functions", {
   testthat::expect_true(is.character(pkgDir))
   testthat::expect_true(grepl("packages", pkgDir))
 
-  # cachePkgDirForRepo sanitizes URL
+  # cachePkgDirForRepo sanitizes URL -- check the subdir name only (not full path,
+  # which on Windows contains ":" from the drive letter e.g. "C:\...")
   d1 <- Require:::cachePkgDirForRepo("https://cloud.r-project.org")
   testthat::expect_true(is.character(d1))
-  testthat::expect_false(grepl("https|:", d1, fixed = FALSE))
+  testthat::expect_false(grepl("https|:", basename(d1), fixed = FALSE))
 
   # Two URLs with same host but different paths map to same subdir
   d2 <- Require:::cachePkgDirForRepo("https://cloud.r-project.org/src/contrib")
