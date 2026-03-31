@@ -316,7 +316,7 @@ Require <- function(packages,
 
     basePkgsToLoad <- packages[packages %in% .basePkgs]
 
-    if (getOption("Require.usePak", TRUE)) {
+    if (getOption("Require.usePak", FALSE)) {
       opts <- options(repos = repos); on.exit(options(opts), add = TRUE)
 
       log <- tempfile2(fileext = ".txt")
