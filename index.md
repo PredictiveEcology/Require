@@ -16,7 +16,7 @@ snapshotting capabilities of `renv`. It takes its name from the idea
 that a user could simply have one line like this:
 
 ``` r
-Require(c("dplyr", "lmer", "PredictiveEcology/LandR@development"))
+Require(c("dplyr", "lme4", "PredictiveEcology/LandR@development"))
 ```
 
 named after the `require` function, that would load packages. But with
