@@ -413,6 +413,23 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
   return(pkgDT)
 }
 
+getDepChain <- function(pkg, pkgDT, visited = character()) {
+  if (pkg %in% visited) return(character(0))
+  parents <- unique(pkgDT$parentPackage[pkgDT$Package == pkg])
+  parents <- parents[!parents %in% c("user", "aboveuser", NA_character_)]
+  if (!length(parents)) return(character(0))
+  chains <- character(0)
+  for (parent in parents) {
+    subChains <- getDepChain(parent, pkgDT, c(visited, pkg))
+    if (!length(subChains)) {
+      chains <- c(chains, parent)
+    } else {
+      chains <- c(chains, paste0(parent, " -> ", subChains))
+    }
+  }
+  unique(chains)
+}
+
 pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
   fillDefaults(pkgDep)
 
@@ -459,7 +476,13 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
       pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
       num <- NROW(pkgDTList$Archive$Package)
-      messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
+      archDT <- pkgDTList$Archive
+      parentInfo <- vapply(archDT$Package, function(pkg) {
+        chains <- getDepChain(pkg, pkgDT)
+        if (length(chains)) paste0(" (required by: ", paste(chains, collapse = " or "), ")") else ""
+      }, character(1))
+      pkgMsgs <- paste0(archDT$packageFullName, parentInfo)
+      messageVerbose(paste(pkgMsgs, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
 
       pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
