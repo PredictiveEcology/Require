@@ -28,3 +28,4 @@ R/SpaDES
 inst\timings.csv
 ^docs/RequireApproach.html$
 ^pkgdown$
+^\.vscode$
