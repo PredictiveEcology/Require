@@ -226,7 +226,7 @@ pkgDep <- function(packages,
 }
 
 getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursive, which, repos, type, includeBase,
-                       includeSelf, libPaths, verbose, .depth = 0, .counter, grandp) {
+                       includeSelf, libPaths, verbose, .depth = 0, .counter, grandp, parentChain = "") {
 
   if (is.list(which)) which <- which[[1]]
 
@@ -248,8 +248,12 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
       pkgDTBase <- splitKeepOrderAndDTIntegrity(pkgDT, splitOn = isInBase)
       if (NROW(pkgDTBase[["FALSE"]])) {
 
+        callerChain <- if (parentPackage %in% c("user", "aboveuser", NA_character_)) ""
+                       else if (!nzchar(parentChain)) parentPackage
+                       else paste0(parentPackage, " -> ", parentChain)
         pkgDTBase[["FALSE"]] <- getDeps(pkgDTBase[["FALSE"]], which, recursive = recursive,
-                                        repos = repos, type = type, libPaths = libPaths, verbose = verbose)
+                                        repos = repos, type = type, libPaths = libPaths, verbose = verbose,
+                                        parentChain = callerChain)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
 
         pkgDTBase[["FALSE"]] <- forceEqualitiesIfAnyAndPoss(pkgDTBase[["FALSE"]])
@@ -288,7 +292,8 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
                                type = type, includeBase = includeBase,
                                includeSelf = includeSelf,
                                libPaths = libPaths,
-                               .depth = .depth + 1, verbose = verbose))
+                               .depth = .depth + 1, verbose = verbose,
+                               parentChain = callerChain))
 
             pkgDTBase[["FALSE"]] <- appendRecursiveToDeps(pkgDTNeedRecursive, caTr, depFa, caFa, snFa, depTr, snTr)
             hasRecursiveTRUE <- !is.na(pkgDTBase[["FALSE"]][[snTr]])
@@ -371,7 +376,7 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
 #' @return
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
 #' above, plus the `which` and the `recursive`.
-getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbose) {
+getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbose, parentChain = "") {
   fillDefaults(pkgDep)
 
   for (tf in c(TRUE, FALSE))
@@ -398,7 +403,8 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
     if (!all(pkgDTCached[["FALSE"]]$Package %in% .basePkgs)) {
       if (any(!isGH)) {
         pkgDTNonGH <- getDepsNonGH(pkgDTCached[["FALSE"]][!isGH], repos, type = type, verbose,
-                                   which = which, whichCatRecursive, libPaths = libPaths)
+                                   which = which, whichCatRecursive, libPaths = libPaths,
+                                   parentChain = parentChain)
       }
       if (any(isGH)) {
         pkgDTGH <- getDepsGH(pkgDTCached[["FALSE"]][isGH], verbose, which = which, whichCatRecursive,
@@ -413,24 +419,8 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
   return(pkgDT)
 }
 
-getDepChain <- function(pkg, pkgDT, visited = character()) {
-  if (pkg %in% visited) return(character(0))
-  parents <- unique(pkgDT$parentPackage[pkgDT$Package == pkg])
-  parents <- parents[!parents %in% c("user", "aboveuser", NA_character_)]
-  if (!length(parents)) return(character(0))
-  chains <- character(0)
-  for (parent in parents) {
-    subChains <- getDepChain(parent, pkgDT, c(visited, pkg))
-    if (!length(subChains)) {
-      chains <- c(chains, parent)
-    } else {
-      chains <- c(chains, paste0(parent, " -> ", subChains))
-    }
-  }
-  unique(chains)
-}
 
-pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
+pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose, parentChain = "") {
   fillDefaults(pkgDep)
 
   num <- NROW(unique(pkgDT$Package)) # can have src and bin listed
@@ -477,11 +467,8 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
       num <- NROW(pkgDTList$Archive$Package)
       archDT <- pkgDTList$Archive
-      parentInfo <- vapply(archDT$Package, function(pkg) {
-        chains <- getDepChain(pkg, pkgDT)
-        if (length(chains)) paste0(" (required by: ", paste(chains, collapse = " or "), ")") else ""
-      }, character(1))
-      pkgMsgs <- paste0(archDT$packageFullName, parentInfo)
+      chainSuffix <- if (nzchar(parentChain)) paste0(" (required by: ", parentChain, ")") else ""
+      pkgMsgs <- paste0(archDT$packageFullName, chainSuffix)
       messageVerbose(paste(pkgMsgs, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
 
@@ -563,10 +550,11 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = 
 
 
 getDepsNonGH <- function(pkgDT, repos, verbose, type, which,
-                           whichCatRecursive, libPaths, doSave = TRUE) {
+                           whichCatRecursive, libPaths, doSave = TRUE, parentChain = "") {
   pkgDT <- toPkgDTFull(pkgDT)
 
-  pkgDT <- pkgDepCRAN(pkgDT, which = which, repos = repos, type = type, libPaths = libPaths, verbose = verbose)
+  pkgDT <- pkgDepCRAN(pkgDT, which = which, repos = repos, type = type, libPaths = libPaths, verbose = verbose,
+                      parentChain = parentChain)
 
   if (endsWith(whichCatRecursive, "FALSE")) { # this is joining the ap, so can only be recursive = FALSE
     if (isTRUE(doSave)) {
