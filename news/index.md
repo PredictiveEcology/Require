@@ -33,8 +33,10 @@
 
 ### Bugfixes
 
-- several minor
-- better fails when status is 403 for package dependency checking
+- fixes on MacOS that were preventing many types of packages from
+  installing.
+- several minor.
+- better fails when status is 403 for package dependency checking.
 - `updatePackages` had 2 minor bugs that prevented some mixtures of
   necessary updates from being correctly identified.
 - resolved failure to install when using `(HEAD)` in some cases for
