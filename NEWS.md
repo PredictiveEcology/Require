@@ -1,11 +1,28 @@
-# Require (development version)
+# Require 1.1.0
+
+## Breaking changes
+* Package cache now uses per-repository subdirectories (e.g., `cloudr-projectorg/`) instead of a flat directory. This prevents cross-repository cache contamination (e.g., an r-universe package being used when only CRAN is specified). Old flat-cache files will be ignored and packages re-downloaded as needed. A `removeOldFlatCachePkgs()` function is provided to clean up legacy flat-cache files (#143).
+
+## New functions
+* `removeOldFlatCachePkgs()`: migrates users from the pre-#143 flat package cache by removing old `.tar.gz` files from the top-level cache directory.
+* `cachePkgDirForRepo()`: returns (and optionally creates) the per-repository cache subdirectory for a given repository URL.
+
+## Enhancements
+* Default for `getOption("Require.usePak")` changed from `TRUE` to `FALSE` for consistency with the documented default.
+* `CODECOV_TOKEN` added to the test-coverage GitHub Actions workflow to avoid rate limiting on Codecov.
+* Expanded test suite with targeted unit tests for many previously uncovered internal functions, including message helpers, cache helpers, environment accessors, and `pkgDepTopoSort`.
 
 ## Bugfixes
 * several minor
 * better fails when status is 403 for package dependency checking
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 * resolved failure to install when using `(HEAD)` in some cases for packages in custom repositories
-* use `R_REQUIRE_CACHE` environment variable for setting the cache directory instead of modifying `R_USER_CACHE_DIR` (#124);
+* use `R_REQUIRE_CACHE` environment variable for setting the cache directory instead of modifying `R_USER_CACHE_DIR` (#124).
+* `extractVersionNumber()` no longer returns `character(0)` for empty filename inputs.
+* Fixed `data.table` recycling warning in `sysInstallAndDownload`.
+* `fileRenameOrMove()` now catches errors from `dirname(to)` on Windows when paths exceed MAX_PATH limits.
+* Fixed `rbindlist(fill=TRUE)` column-mismatch errors on R-devel for Windows in `available.packagesCached()`.
+* Broadened download failure warning pattern to handle more cases on older Windows R versions.
 
 # Require 1.0.1
 
