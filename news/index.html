@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,11 +34,44 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.0.1" id="version-101">version 1.0.1<a class="anchor" aria-label="anchor" href="#version-101"></a></h2><p class="text-muted">CRAN release: 2024-08-17</p>
+<h2 class="pkg-version" data-toc-text="1.1.0" id="require-110">Require 1.1.0<a class="anchor" aria-label="anchor" href="#require-110"></a></h2>
 <div class="section level3">
-<h3 id="cran-requested-fixes-1-0-1">CRAN requested fixes<a class="anchor" aria-label="anchor" href="#cran-requested-fixes-1-0-1"></a></h3>
-<ul><li>Require was failing on secondary check systems (Fedora and one Mac system). This update fixes those.</li>
+<h3 id="breaking-changes-1-1-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-1-1-0"></a></h3>
+<ul><li>Package cache now uses per-repository subdirectories (e.g., <code>cloudr-projectorg/</code>) instead of a flat directory. This prevents cross-repository cache contamination (e.g., an r-universe package being used when only CRAN is specified). Old flat-cache files will be ignored and packages re-downloaded as needed. A <code>removeOldFlatCachePkgs()</code> function is provided to clean up legacy flat-cache files (<a href="https://github.com/PredictiveEcology/Require/issues/143" class="external-link">#143</a>).</li>
 </ul></div>
+<div class="section level3">
+<h3 id="new-functions-1-1-0">New functions<a class="anchor" aria-label="anchor" href="#new-functions-1-1-0"></a></h3>
+<ul><li>
+<code>removeOldFlatCachePkgs()</code>: migrates users from the pre-#143 flat package cache by removing old <code>.tar.gz</code> files from the top-level cache directory.</li>
+<li>
+<code>cachePkgDirForRepo()</code>: returns (and optionally creates) the per-repository cache subdirectory for a given repository URL.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="enhancements-1-1-0">Enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-1-0"></a></h3>
+<ul><li>Default for <code>getOption("Require.usePak")</code> changed from <code>TRUE</code> to <code>FALSE</code> for consistency with the documented default.</li>
+<li>
+<code>CODECOV_TOKEN</code> added to the test-coverage GitHub Actions workflow to avoid rate limiting on Codecov.</li>
+<li>Expanded test suite with targeted unit tests for many previously uncovered internal functions, including message helpers, cache helpers, environment accessors, and <code>pkgDepTopoSort</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bugfixes-1-1-0">Bugfixes<a class="anchor" aria-label="anchor" href="#bugfixes-1-1-0"></a></h3>
+<ul><li>several minor</li>
+<li>better fails when status is 403 for package dependency checking</li>
+<li>
+<code>updatePackages</code> had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.</li>
+<li>resolved failure to install when using <code>(HEAD)</code> in some cases for packages in custom repositories</li>
+<li>use <code>R_REQUIRE_CACHE</code> environment variable for setting the cache directory instead of modifying <code>R_USER_CACHE_DIR</code> (<a href="https://github.com/PredictiveEcology/Require/issues/124" class="external-link">#124</a>).</li>
+<li>
+<code><a href="../reference/extractPkgName.html">extractVersionNumber()</a></code> no longer returns <code>character(0)</code> for empty filename inputs.</li>
+<li>Fixed <code>data.table</code> recycling warning in <code>sysInstallAndDownload</code>.</li>
+<li>
+<code><a href="../reference/linkOrCopy.html">fileRenameOrMove()</a></code> now catches errors from <code>dirname(to)</code> on Windows when paths exceed MAX_PATH limits.</li>
+<li>Fixed <code>rbindlist(fill=TRUE)</code> column-mismatch errors on R-devel for Windows in <code><a href="../reference/availableVersions.html">available.packagesCached()</a></code>.</li>
+<li>Broadened download failure warning pattern to handle more cases on older Windows R versions.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="1.0.1" id="require-101">Require 1.0.1<a class="anchor" aria-label="anchor" href="#require-101"></a></h2><p class="text-muted">CRAN release: 2024-08-17</p>
 <div class="section level3">
 <h3 id="enhancements-1-0-1">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-1-0-1"></a></h3>
 <ul><li>
@@ -46,11 +79,11 @@
 </ul></div>
 <div class="section level3">
 <h3 id="other-1-0-1">Other<a class="anchor" aria-label="anchor" href="#other-1-0-1"></a></h3>
-<ul><li>package testing on Linux Fedora and one MacOS machine on CRAN extra machines were addressed.</li>
+<ul><li>package testing on Linux Fedora and one macOS machine on CRAN extra machines were addressed.</li>
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="1.0.0" id="version-100">version 1.0.0<a class="anchor" aria-label="anchor" href="#version-100"></a></h2><p class="text-muted">CRAN release: 2024-07-27</p>
+<h2 class="pkg-version" data-toc-text="1.0.0" id="require-100">Require 1.0.0<a class="anchor" aria-label="anchor" href="#require-100"></a></h2><p class="text-muted">CRAN release: 2024-07-27</p>
 <div class="section level3">
 <h3 id="major-changes-1-0-0">major changes<a class="anchor" aria-label="anchor" href="#major-changes-1-0-0"></a></h3>
 <ul><li>Installation, package downloading, and package building from source now occur in an external process using <code>sys</code> package. This allows for more control over messaging during installations, and it also allows of installation of many packages that are already loaded (with a message that the session will need restarting). This can be turned off with This is turned on with <code>option(Require.installPackagesSys = FALSE)</code>.</li>
@@ -83,12 +116,12 @@
 <li>allow user-specified path in <code><a href="../reference/pkgSnapshot.html">pkgSnapshot()</a></code> (<a href="https://github.com/PredictiveEcology/Require/issues/93" class="external-link">#93</a>);</li>
 <li>a number of new cases have been added to <code>tests</code> that previously would have hit errors;</li>
 <li>many other small bugs fixed;</li>
-<li>Some issues specific to MacOS have been fixed.</li>
+<li>Some issues specific to macOS have been fixed.</li>
 <li>fixes or implemented other issues <a href="https://github.com/PredictiveEcology/Require/issues/91" class="external-link">#91</a>, <a href="https://github.com/PredictiveEcology/Require/issues/96" class="external-link">#96</a>, <a href="https://github.com/PredictiveEcology/Require/issues/97" class="external-link">#97</a>, <a href="https://github.com/PredictiveEcology/Require/issues/102" class="external-link">#102</a>, <a href="https://github.com/PredictiveEcology/Require/issues/105" class="external-link">#105</a></li>
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.1" id="version-031">version 0.3.1<a class="anchor" aria-label="anchor" href="#version-031"></a></h2><p class="text-muted">CRAN release: 2023-05-22</p>
+<h2 class="pkg-version" data-toc-text="0.3.1" id="require-031">Require 0.3.1<a class="anchor" aria-label="anchor" href="#require-031"></a></h2><p class="text-muted">CRAN release: 2023-05-22</p>
 <div class="section level3">
 <h3 id="enhancements-0-3-1">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-3-1"></a></h3>
 <ul><li>minor modifications for when internet is not available</li>
@@ -100,7 +133,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0" id="version-030">version 0.3.0<a class="anchor" aria-label="anchor" href="#version-030"></a></h2><p class="text-muted">CRAN release: 2023-03-14</p>
+<h2 class="pkg-version" data-toc-text="0.3.0" id="require-030">Require 0.3.0<a class="anchor" aria-label="anchor" href="#require-030"></a></h2><p class="text-muted">CRAN release: 2023-03-14</p>
 <div class="section level3">
 <h3 id="enhancements-0-3-0">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-3-0"></a></h3>
 <ul><li>Moved from MRAN archives for binaries to <a href="https://packagemanager.posit.co/" class="external-link uri">https://packagemanager.posit.co/</a>
@@ -130,7 +163,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.6" id="version-026">version 0.2.6<a class="anchor" aria-label="anchor" href="#version-026"></a></h2><p class="text-muted">CRAN release: 2023-01-05</p>
+<h2 class="pkg-version" data-toc-text="0.2.6" id="require-026">Require 0.2.6<a class="anchor" aria-label="anchor" href="#require-026"></a></h2><p class="text-muted">CRAN release: 2023-01-05</p>
 <div class="section level3">
 <h3 id="enhancements-0-2-6">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-6"></a></h3>
 <ul><li>attempts to deal with more cases of failed installations</li>
@@ -152,7 +185,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.5" id="version-025">version 0.2.5<a class="anchor" aria-label="anchor" href="#version-025"></a></h2><p class="text-muted">CRAN release: 2022-11-24</p>
+<h2 class="pkg-version" data-toc-text="0.2.5" id="require-025">Require 0.2.5<a class="anchor" aria-label="anchor" href="#require-025"></a></h2><p class="text-muted">CRAN release: 2022-11-24</p>
 <div class="section level3">
 <h3 id="enhancements-0-2-5">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-2-5"></a></h3>
 <ul><li>several modifications to enable CRAN-policy violations all addressed, notably keeping all temporary and (package and personal) cache directories clean after examples and tests</li>
@@ -198,7 +231,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.6" id="version-016">version 0.1.6<a class="anchor" aria-label="anchor" href="#version-016"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.6" id="require-016">Require 0.1.6<a class="anchor" aria-label="anchor" href="#require-016"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-6">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-6"></a></h3>
 <ul><li>
@@ -214,7 +247,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.5" id="version-015">version 0.1.5<a class="anchor" aria-label="anchor" href="#version-015"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.5" id="require-015">Require 0.1.5<a class="anchor" aria-label="anchor" href="#require-015"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-5">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-5"></a></h3>
 <ul><li>package caching for packages that need sources installs (i.e., identified with <code><a href="../reference/sourcePkgs.html">sourcePkgs()</a></code>, which tend to occur when R packages require idiosyncratic system dependencies) cache the binary version and reuse that on the same system with subsequent re-installs.</li>
@@ -226,7 +259,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.4" id="version-014">version 0.1.4<a class="anchor" aria-label="anchor" href="#version-014"></a></h2><p class="text-muted">CRAN release: 2022-10-07</p>
+<h2 class="pkg-version" data-toc-text="0.1.4" id="require-014">Require 0.1.4<a class="anchor" aria-label="anchor" href="#require-014"></a></h2><p class="text-muted">CRAN release: 2022-10-07</p>
 <ul><li>Make corrections for 2 failing architectures on CRAN</li>
 <li>MUCH less verbose during automated testing</li>
 </ul><div class="section level3">
@@ -242,7 +275,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.2" id="version-012">version 0.1.2<a class="anchor" aria-label="anchor" href="#version-012"></a></h2><p class="text-muted">CRAN release: 2022-09-23</p>
+<h2 class="pkg-version" data-toc-text="0.1.2" id="require-012">Require 0.1.2<a class="anchor" aria-label="anchor" href="#require-012"></a></h2><p class="text-muted">CRAN release: 2022-09-23</p>
 <div class="section level3">
 <h3 id="dependencies-0-1-2">dependencies<a class="anchor" aria-label="anchor" href="#dependencies-0-1-2"></a></h3>
 <ul><li>drop support for R 3.6 (R &gt;= 4.0 are supported)</li>
@@ -256,16 +289,16 @@
 <li><p><code>require</code> argument in <code>Require</code> can now be a character vector indicating which packages should be attached, not just installed. Note: by default, all packages that are passed to <code>packages</code> are attached if <code>require = TRUE</code></p></li>
 <li>
 <p>much faster installations:</p>
-<ul><li>When source packages, they are grouped and installed together using the internal parallelism of install.packages (setting Ncpus option to 4)</li>
+<ul><li>When source packages, they are grouped and installed together using the internal parallelism of <code>install.packages</code> (setting <code>Ncpus</code> option to 4)</li>
 <li>when binary, passes vectors to install.packages so much faster.</li>
 <li>all packages are installed in install-safe groups for speed</li>
 </ul></li>
-<li><p>can use pak package under the hood when options(“Require.usepak” = TRUE), though there are still many cases that pak cannot deal with. Users should try and determine if this option delivers as expected. pak installs tend to be slightly faster if they work correctly.</p></li>
+<li><p>can use pak package under the hood when <code>options("Require.usepak" = TRUE)</code>, though there are still many cases that pak cannot deal with. Users should try and determine if this option delivers as expected. pak installs tend to be slightly faster if they work correctly.</p></li>
 <li><p>binary package caching is turned in by default in a user-specific standard directory, making repeat installations (on same system, or shared drive systems) much faster.</p></li>
 <li><p>MRAN installs for Windows are now much more robust under many conditions.</p></li>
-<li><p>archived packages (ie no longer on CRAN) will now be found and installed (latest available version)</p></li>
+<li><p>archived packages (i.e., no longer on CRAN) will now be found and installed (latest available version)</p></li>
 <li><p>more robust dependency identification even for archived or older packages or package versions (including their dependencies)</p></li>
-<li><p>MRAN binaries will be used in MacOSX.</p></li>
+<li><p>MRAN binaries will be used in macOS.</p></li>
 <li><p>improved installation of older packages (e.g. when dependencies are removed from CRAN, or source versions can’t be easily compiled)</p></li>
 <li><p>several other minor improvements in package dependency resolution and installation.</p></li>
 </ul></div>
@@ -277,7 +310,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.1" id="version-011">version 0.1.1<a class="anchor" aria-label="anchor" href="#version-011"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.1" id="require-011">Require 0.1.1<a class="anchor" aria-label="anchor" href="#require-011"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-1">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-1"></a></h3>
 <ul><li>can now use <code>pak</code> if <code>options("Require.usepak" = TRUE)</code> and there are no version specifications (i.e., if a user specifies e.g., <code>Require("reproducible (&lt;= 1.2.9))</code>, then the non-<code>pak</code> approach will be used)</li>
@@ -288,7 +321,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.1.0" id="version-010">version 0.1.0<a class="anchor" aria-label="anchor" href="#version-010"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.0" id="require-010">Require 0.1.0<a class="anchor" aria-label="anchor" href="#require-010"></a></h2>
 <div class="section level3">
 <h3 id="enhancements-0-1-0">enhancements<a class="anchor" aria-label="anchor" href="#enhancements-0-1-0"></a></h3>
 <ul><li>install CRAN packages using vectorized <code>install.packages</code> –&gt; much faster</li>
@@ -314,11 +347,11 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.13" id="version-0013">version 0.0.13<a class="anchor" aria-label="anchor" href="#version-0013"></a></h2><p class="text-muted">CRAN release: 2021-05-31</p>
+<h2 class="pkg-version" data-toc-text="0.0.13" id="require-0013">Require 0.0.13<a class="anchor" aria-label="anchor" href="#require-0013"></a></h2><p class="text-muted">CRAN release: 2021-05-31</p>
 <ul><li>fix CRAN policy violation – dealt with extraneous folder created during testing</li>
 </ul></div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.12" id="version-0012">version 0.0.12<a class="anchor" aria-label="anchor" href="#version-0012"></a></h2><p class="text-muted">CRAN release: 2021-05-26</p>
+<h2 class="pkg-version" data-toc-text="0.0.12" id="require-0012">Require 0.0.12<a class="anchor" aria-label="anchor" href="#require-0012"></a></h2><p class="text-muted">CRAN release: 2021-05-26</p>
 <div class="section level3">
 <h3 id="dependency-changes-0-0-12">Dependency changes<a class="anchor" aria-label="anchor" href="#dependency-changes-0-0-12"></a></h3>
 <ul><li>with the release of R 4.1, we dropped support for R 3.5. R 3.6 (<code>oldrel</code>) and newer are supported.</li>
@@ -346,7 +379,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.10" id="version-0010">version 0.0.10<a class="anchor" aria-label="anchor" href="#version-0010"></a></h2><p class="text-muted">CRAN release: 2020-12-02</p>
+<h2 class="pkg-version" data-toc-text="0.0.10" id="require-0010">Require 0.0.10<a class="anchor" aria-label="anchor" href="#require-0010"></a></h2><p class="text-muted">CRAN release: 2020-12-02</p>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-10">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-10"></a></h3>
 <ul><li>CRAN error on one flavour of Linux</li>
@@ -354,7 +387,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.9" id="version-009">version 0.0.9<a class="anchor" aria-label="anchor" href="#version-009"></a></h2><p class="text-muted">CRAN release: 2020-11-30</p>
+<h2 class="pkg-version" data-toc-text="0.0.9" id="require-009">Require 0.0.9<a class="anchor" aria-label="anchor" href="#require-009"></a></h2><p class="text-muted">CRAN release: 2020-11-30</p>
 <div class="section level3">
 <h3 id="new-features-0-0-9">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-9"></a></h3>
 <ul><li>
@@ -374,7 +407,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.8" id="version-008">version 0.0.8<a class="anchor" aria-label="anchor" href="#version-008"></a></h2><p class="text-muted">CRAN release: 2020-09-10</p>
+<h2 class="pkg-version" data-toc-text="0.0.8" id="require-008">Require 0.0.8<a class="anchor" aria-label="anchor" href="#require-008"></a></h2><p class="text-muted">CRAN release: 2020-09-10</p>
 <div class="section level3">
 <h3 id="new-features-0-0-8">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-8"></a></h3>
 <ul><li>GitHub SHA is now stored during <code>pkgSnapshot</code>, meaning that a new system can be built with exact versions and SHAs of GitHub packages.</li>
@@ -399,7 +432,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.7" id="version-007">version 0.0.7<a class="anchor" aria-label="anchor" href="#version-007"></a></h2><p class="text-muted">CRAN release: 2020-08-18</p>
+<h2 class="pkg-version" data-toc-text="0.0.7" id="require-007">Require 0.0.7<a class="anchor" aria-label="anchor" href="#require-007"></a></h2><p class="text-muted">CRAN release: 2020-08-18</p>
 <div class="section level3">
 <h3 id="new-features-0-0-7">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-7"></a></h3>
 <ul><li>no longer sets CRAN repository to cloud.r-project.org even if non-interactive with no CRAN repository set. Now uses <code>chooseCRANmirror(ind = 1)</code>
@@ -411,7 +444,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.6" id="version-006">version 0.0.6<a class="anchor" aria-label="anchor" href="#version-006"></a></h2><p class="text-muted">CRAN release: 2020-08-11</p>
+<h2 class="pkg-version" data-toc-text="0.0.6" id="require-006">Require 0.0.6<a class="anchor" aria-label="anchor" href="#require-006"></a></h2><p class="text-muted">CRAN release: 2020-08-11</p>
 <div class="section level3">
 <h3 id="new-features-0-0-6">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-6"></a></h3>
 <ul><li>none</li>
@@ -423,7 +456,7 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.5" id="version-005">version 0.0.5<a class="anchor" aria-label="anchor" href="#version-005"></a></h2><p class="text-muted">CRAN release: 2020-07-17</p>
+<h2 class="pkg-version" data-toc-text="0.0.5" id="require-005">Require 0.0.5<a class="anchor" aria-label="anchor" href="#require-005"></a></h2><p class="text-muted">CRAN release: 2020-07-17</p>
 <div class="section level3">
 <h3 id="new-features-0-0-5">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-5"></a></h3>
 <ul><li>moved several functions that have to do with package loading and installing from <code>reproducible</code> to <code>Require</code>, including <code>pkgDep</code>, <code>pkgDepTopoSort</code>.</li>
@@ -436,22 +469,22 @@
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.4" id="version-004">version 0.0.4<a class="anchor" aria-label="anchor" href="#version-004"></a></h2><p class="text-muted">CRAN release: 2020-06-05</p>
+<h2 class="pkg-version" data-toc-text="0.0.4" id="require-004">Require 0.0.4<a class="anchor" aria-label="anchor" href="#require-004"></a></h2><p class="text-muted">CRAN release: 2020-06-05</p>
 <div class="section level3">
 <h3 id="bug-fixes-0-0-4">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-4"></a></h3>
 <ul><li>remove <code>installed.packages</code> from test code, as per CRAN request</li>
 </ul></div>
 </div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.3" id="version-003">version 0.0.3<a class="anchor" aria-label="anchor" href="#version-003"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.0.3" id="require-003">Require 0.0.3<a class="anchor" aria-label="anchor" href="#require-003"></a></h2>
 <ul><li>Change title to Title Case in DESCRIPTION</li>
 </ul></div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.2" id="version-002">version 0.0.2<a class="anchor" aria-label="anchor" href="#version-002"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.0.2" id="require-002">Require 0.0.2<a class="anchor" aria-label="anchor" href="#require-002"></a></h2>
 <ul><li>Change backticks to single quotes in DESCRIPTION</li>
 </ul></div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.1" id="version-001">version 0.0.1<a class="anchor" aria-label="anchor" href="#version-001"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.0.1" id="require-001">Require 0.0.1<a class="anchor" aria-label="anchor" href="#require-001"></a></h2>
 <div class="section level3">
 <h3 id="new-features-0-0-1">New features<a class="anchor" aria-label="anchor" href="#new-features-0-0-1"></a></h3>
 <ul><li>This is a rewrite of the function, <code>Require</code> (and helpers) which will be removed from package <code>reproducible</code>

@@ -1,13 +1,62 @@
 # Changelog
 
-## version 1.0.1
+## Require 1.1.0
+
+### Breaking changes
+
+- Package cache now uses per-repository subdirectories (e.g.,
+  `cloudr-projectorg/`) instead of a flat directory. This prevents
+  cross-repository cache contamination (e.g., an r-universe package
+  being used when only CRAN is specified). Old flat-cache files will be
+  ignored and packages re-downloaded as needed. A
+  `removeOldFlatCachePkgs()` function is provided to clean up legacy
+  flat-cache files
+  ([\#143](https://github.com/PredictiveEcology/Require/issues/143)).
+
+### New functions
+
+- `removeOldFlatCachePkgs()`: migrates users from the pre-#143 flat
+  package cache by removing old `.tar.gz` files from the top-level cache
+  directory.
+- `cachePkgDirForRepo()`: returns (and optionally creates) the
+  per-repository cache subdirectory for a given repository URL.
+
+### Enhancements
+
+- Default for `getOption("Require.usePak")` changed from `TRUE` to
+  `FALSE` for consistency with the documented default.
+- `CODECOV_TOKEN` added to the test-coverage GitHub Actions workflow to
+  avoid rate limiting on Codecov.
+- Expanded test suite with targeted unit tests for many previously
+  uncovered internal functions, including message helpers, cache
+  helpers, environment accessors, and `pkgDepTopoSort`.
+
+### Bugfixes
+
+- several minor
+- better fails when status is 403 for package dependency checking
+- `updatePackages` had 2 minor bugs that prevented some mixtures of
+  necessary updates from being correctly identified.
+- resolved failure to install when using `(HEAD)` in some cases for
+  packages in custom repositories
+- use `R_REQUIRE_CACHE` environment variable for setting the cache
+  directory instead of modifying `R_USER_CACHE_DIR`
+  ([\#124](https://github.com/PredictiveEcology/Require/issues/124)).
+- [`extractVersionNumber()`](https://Require.predictiveecology.org/reference/extractPkgName.md)
+  no longer returns `character(0)` for empty filename inputs.
+- Fixed `data.table` recycling warning in `sysInstallAndDownload`.
+- [`fileRenameOrMove()`](https://Require.predictiveecology.org/reference/linkOrCopy.md)
+  now catches errors from `dirname(to)` on Windows when paths exceed
+  MAX_PATH limits.
+- Fixed `rbindlist(fill=TRUE)` column-mismatch errors on R-devel for
+  Windows in
+  [`available.packagesCached()`](https://Require.predictiveecology.org/reference/availableVersions.md).
+- Broadened download failure warning pattern to handle more cases on
+  older Windows R versions.
+
+## Require 1.0.1
 
 CRAN release: 2024-08-17
-
-### CRAN requested fixes
-
-- Require was failing on secondary check systems (Fedora and one Mac
-  system). This update fixes those.
 
 ### enhancements
 
@@ -23,10 +72,10 @@ CRAN release: 2024-08-17
 
 ### Other
 
-- package testing on Linux Fedora and one MacOS machine on CRAN extra
+- package testing on Linux Fedora and one macOS machine on CRAN extra
   machines were addressed.
 
-## version 1.0.0
+## Require 1.0.0
 
 CRAN release: 2024-07-27
 
@@ -100,7 +149,7 @@ CRAN release: 2024-07-27
 - a number of new cases have been added to `tests` that previously would
   have hit errors;
 - many other small bugs fixed;
-- Some issues specific to MacOS have been fixed.
+- Some issues specific to macOS have been fixed.
 - fixes or implemented other issues
   [\#91](https://github.com/PredictiveEcology/Require/issues/91),
   [\#96](https://github.com/PredictiveEcology/Require/issues/96),
@@ -108,7 +157,7 @@ CRAN release: 2024-07-27
   [\#102](https://github.com/PredictiveEcology/Require/issues/102),
   [\#105](https://github.com/PredictiveEcology/Require/issues/105)
 
-## version 0.3.1
+## Require 0.3.1
 
 CRAN release: 2023-05-22
 
@@ -124,7 +173,7 @@ CRAN release: 2023-05-22
 
 - updates to tests that have begun to fail
 
-## version 0.3.0
+## Require 0.3.0
 
 CRAN release: 2023-03-14
 
@@ -164,7 +213,7 @@ CRAN release: 2023-03-14
 - base packages can now be installed as previous issues about installing
   them were dealt with.
 
-## version 0.2.6
+## Require 0.2.6
 
 CRAN release: 2023-01-05
 
@@ -196,7 +245,7 @@ CRAN release: 2023-01-05
   repositories supplied, 1 of which is binary.
 - other minor
 
-## version 0.2.5
+## Require 0.2.5
 
 CRAN release: 2022-11-24
 
@@ -284,7 +333,7 @@ CRAN release: 2022-11-24
   what to do if these were being used
 - several options are deprecated
 
-## version 0.1.6
+## Require 0.1.6
 
 ### enhancements
 
@@ -299,7 +348,7 @@ CRAN release: 2022-11-24
 
 - minor bugfix only detected on submission to CRAN
 
-## version 0.1.5
+## Require 0.1.5
 
 ### enhancements
 
@@ -319,7 +368,7 @@ CRAN release: 2022-11-24
   correctly identify the new dependency requirement, and not update “B”,
   causing “A” update to fail. This is fixed.
 
-## version 0.1.4
+## Require 0.1.4
 
 CRAN release: 2022-10-07
 
@@ -337,7 +386,7 @@ CRAN release: 2022-10-07
 
 - more edge cases found and dealt with
 
-## version 0.1.2
+## Require 0.1.2
 
 CRAN release: 2022-09-23
 
@@ -366,15 +415,16 @@ CRAN release: 2022-09-23
 - much faster installations:
 
   - When source packages, they are grouped and installed together using
-    the internal parallelism of install.packages (setting Ncpus option
-    to 4)
+    the internal parallelism of `install.packages` (setting `Ncpus`
+    option to 4)
   - when binary, passes vectors to install.packages so much faster.
   - all packages are installed in install-safe groups for speed
 
-- can use pak package under the hood when options(“Require.usepak” =
-  TRUE), though there are still many cases that pak cannot deal with.
-  Users should try and determine if this option delivers as expected.
-  pak installs tend to be slightly faster if they work correctly.
+- can use pak package under the hood when
+  `options("Require.usepak" = TRUE)`, though there are still many cases
+  that pak cannot deal with. Users should try and determine if this
+  option delivers as expected. pak installs tend to be slightly faster
+  if they work correctly.
 
 - binary package caching is turned in by default in a user-specific
   standard directory, making repeat installations (on same system, or
@@ -383,13 +433,13 @@ CRAN release: 2022-09-23
 - MRAN installs for Windows are now much more robust under many
   conditions.
 
-- archived packages (ie no longer on CRAN) will now be found and
+- archived packages (i.e., no longer on CRAN) will now be found and
   installed (latest available version)
 
 - more robust dependency identification even for archived or older
   packages or package versions (including their dependencies)
 
-- MRAN binaries will be used in MacOSX.
+- MRAN binaries will be used in macOS.
 
 - improved installation of older packages (e.g. when dependencies are
   removed from CRAN, or source versions can’t be easily compiled)
@@ -407,7 +457,7 @@ CRAN release: 2022-09-23
   that did not get correctly installed.
 - multiple fixes for certain edge cases.
 
-## version 0.1.1
+## Require 0.1.1
 
 ### enhancements
 
@@ -420,7 +470,7 @@ CRAN release: 2022-09-23
 
 - fixed an error installing certain GitHub packages
 
-## version 0.1.0
+## Require 0.1.0
 
 ### enhancements
 
@@ -455,14 +505,14 @@ CRAN release: 2022-09-23
   default expectation for a github repository
 - better handling of GitHub package install issues
 
-## version 0.0.13
+## Require 0.0.13
 
 CRAN release: 2021-05-31
 
 - fix CRAN policy violation – dealt with extraneous folder created
   during testing
 
-## version 0.0.12
+## Require 0.0.12
 
 CRAN release: 2021-05-26
 
@@ -504,7 +554,7 @@ CRAN release: 2021-05-26
 - fix use of options in
   [`setup()`](https://Require.predictiveecology.org/reference/setup.md)
 
-## version 0.0.10
+## Require 0.0.10
 
 CRAN release: 2020-12-02
 
@@ -514,7 +564,7 @@ CRAN release: 2020-12-02
 - erroneous `checkPath` error creating
   `Specified path xxxx doesn't exist` even though it does.
 
-## version 0.0.9
+## Require 0.0.9
 
 CRAN release: 2020-11-30
 
@@ -544,7 +594,7 @@ CRAN release: 2020-11-30
   (on Sept 09, 2020). May be transient.
 - Was, by default, installing from `source` on Windows. Fixed.
 
-## version 0.0.8
+## Require 0.0.8
 
 CRAN release: 2020-09-10
 
@@ -596,7 +646,7 @@ CRAN release: 2020-09-10
   older versions), and GitHub packages.
 - many minor edge cases
 
-## version 0.0.7
+## Require 0.0.7
 
 CRAN release: 2020-08-18
 
@@ -610,7 +660,7 @@ CRAN release: 2020-08-18
 
 - fixes CRAN check issues on Fedora.
 
-## version 0.0.6
+## Require 0.0.6
 
 CRAN release: 2020-08-11
 
@@ -623,7 +673,7 @@ CRAN release: 2020-08-11
 - fixed CRAN check issues.
 - default repo now uses option `repos` instead of specifying CRAN repo.
 
-## version 0.0.5
+## Require 0.0.5
 
 CRAN release: 2020-07-17
 
@@ -642,7 +692,7 @@ CRAN release: 2020-07-17
 - handling of bugs in `base::available.packages` for old Mac machines
   and R versions
 
-## version 0.0.4
+## Require 0.0.4
 
 CRAN release: 2020-06-05
 
@@ -650,15 +700,15 @@ CRAN release: 2020-06-05
 
 - remove `installed.packages` from test code, as per CRAN request
 
-## version 0.0.3
+## Require 0.0.3
 
 - Change title to Title Case in DESCRIPTION
 
-## version 0.0.2
+## Require 0.0.2
 
 - Change backticks to single quotes in DESCRIPTION
 
-## version 0.0.1
+## Require 0.0.1
 
 ### New features
 

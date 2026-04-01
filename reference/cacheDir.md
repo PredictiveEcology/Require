@@ -36,19 +36,18 @@ directory would be.
 ## Details
 
 To set a different directory than the default, set the system variable:
-`R_USER_CACHE_DIR = "somePath"` and/or
-`R_REQUIRE_PKG_CACHE = "somePath"` e.g., in `.Renviron` file or
+`R_REQUIRE_CACHE = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
+e.g., in `.Renviron` file or
 [`Sys.setenv()`](https://rdrr.io/r/base/Sys.setenv.html). See Note
 below.
 
 ## Note
 
-Currently, there are 2 different Cache directories used by Require:
-`cacheDir` and `cachePkgDir`. The `cachePkgDir` is intended to be a
-sub-directory of the `cacheDir`. If you set
-`Sys.setenv("R_USER_CACHE_DIR" = "somedir")`, then both the package
-cache and cache dirs will be set, with the package cache a
-sub-directory. You can, however, set them independently, if you set
-`"R_USER_CACHE_DIR"` and `"R_REQUIRE_PKG_CACHE"` environment variable.
-The package cache can also be set with
-`options("Require.cachePkgDir" = "somedir")`.
+There are two different cache directories used by `Require`: `cacheDir`
+and `cachePkgDir`. The `cachePkgDir` is intended to be a sub-directory
+of the `cacheDir`. If you set
+`Sys.setenv("R_REQUIRE_CACHE" = "somedir")`, then both the package cache
+and cache dirs will be set, with the package cache a sub-directory. You
+can, however, set them independently, if you set `"R_REQUIRE_CACHE"` and
+`"R_REQUIRE_PKG_CACHE"` environment variables. The package cache can
+also be set with `options("Require.cachePkgDir" = "somedir")`.

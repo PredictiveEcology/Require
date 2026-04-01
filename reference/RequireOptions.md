@@ -42,7 +42,7 @@ The following options are likely of interest to most users:
   [`cacheGetOptionCachePkgDir()`](https://Require.predictiveecology.org/reference/cacheGetOptionCachePkgDir.md),
   which must be either a path or a logical. To turn off package caching,
   set this to `FALSE`. This can be set using an environment variable
-  e.g. `Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")`, or
+  e.g., `Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")`, or
   `Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")`; if that is not set, then
   an either a path or logical option
   (`options(Require.cachePkgDir = "somePath")` or
@@ -71,17 +71,16 @@ The following options are likely of interest to most users:
   `Require` will be deleted and rebuilt. This should not generally be
   necessary as it will automatically be deleted after (by default) 1
   hour (set via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment
-  variable in seconds)
+  variable in seconds).
 
 - `spatialPkgs`:
 
   Default: A character vector of packages that are generally more
   successful if installed from Source on Unix-alikes. Since there are
-  repositories that offer binary packages builds for Linux (e.g.,
-  RStudio Package Manager), the vector of package names indicated here
-  will default to a standard CRAN repository, forcing a source install.
-  See also `otherPkgs` option, which does the same for non-spatial
-  packages.
+  repositories that offer binary packages builds for Linux (e.g., Posit
+  Package Manager), the vector of package names indicated here will
+  default to a standard CRAN repository, forcing a source install. See
+  also `otherPkgs` option, which does the same for non-spatial packages.
 
 - `useCranCache`:
 

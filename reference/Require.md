@@ -1,7 +1,7 @@
 # Require: Installing and Loading R Packages for Reproducible Workflows
 
 A single key function, 'Require' that makes rerun-tolerant versions of
-'install.packages' and \`require\` for CRAN packages, packages no longer
+'install.packages' and 'require' for CRAN packages, packages no longer
 on CRAN (i.e., archived), specific versions of packages, and GitHub
 packages. This approach is developed to create reproducible workflows
 that are flexible and fast enough to use while in development stages,
@@ -13,9 +13,9 @@ sufficiently fast that they can be run every time without undue waiting
 burden on the user or developer.
 
 This is an "all in one" function that will run `install.packages` for
-CRAN and GitHub <https://github.com/> packages and will install specific
-versions of each package if versions are specified either via an
-(in)equality (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an
+CRAN and [GitHub](https://github.com/) packages and will install
+specific versions of each package if versions are specified either via
+an (in)equality (e.g., `"glue (>=1.6.2)"` or `"glue (==1.6.2)"` for an
 exact version) or with a `packageVersionFile`. If `require = TRUE`, the
 default, the function will then run `require` on all named packages that
 satisfy their version requirements. If packages are already installed
@@ -280,7 +280,7 @@ Other contributors:
 - Alex M Chubaty <achubaty@for-cast.ca>
   ([ORCID](https://orcid.org/0000-0001-7146-8135)) \[contributor\]
 
-- Her Majesty the Queen in Right of Canada, as represented by the
+- His Majesty the King in Right of Canada, as represented by the
   Minister of Natural Resources Canada \[copyright holder\]
 
 ## Examples
@@ -317,29 +317,29 @@ if (Require:::.runLongExamples()) {
   #####################################################################################
   # GitHub packages
   if (requireNamespace("gitcreds", quietly = TRUE)) {
-    #if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
-      ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-      if (requireNamespace("curl")) {
-        Require("PredictiveEcology/fpCompare@development",
-          libPaths = ProjectPackageFolder,
-        )
-      }
-
-      # No install because it is there already
-      Install("PredictiveEcology/fpCompare@development",
+    # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+    ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+    if (requireNamespace("curl")) {
+      Require("PredictiveEcology/fpCompare@development",
         libPaths = ProjectPackageFolder,
-      ) # the latest version on GitHub
-
-      ############################################################################
-      # Mixing and matching GitHub, CRAN, with and without version numbering
-      ############################################################################
-      pkgs <- c(
-        "remotes (<=2.4.1)", # old version
-        "digest (>= 0.6.28)", # recent version
-        "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
       )
-      Require::Require(pkgs, libPaths = ProjectPackageFolder)
-    #}
+    }
+
+    # No install because it is there already
+    Install("PredictiveEcology/fpCompare@development",
+      libPaths = ProjectPackageFolder,
+    ) # the latest version on GitHub
+
+    ############################################################################
+    # Mixing and matching GitHub, CRAN, with and without version numbering
+    ############################################################################
+    pkgs <- c(
+      "remotes (<=2.4.1)", # old version
+      "digest (>= 0.6.28)", # recent version
+      "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+    )
+    Require::Require(pkgs, libPaths = ProjectPackageFolder)
+    # }
   }
   Require:::.cleanup(opts)
 }

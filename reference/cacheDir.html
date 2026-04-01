@@ -9,7 +9,7 @@ directory associated with the Require package."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,19 +75,18 @@ return the path of what the cache directory would be.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>To set a different directory than the default, set the system variable:
-<code>R_USER_CACHE_DIR = "somePath"</code> and/or <code>R_REQUIRE_PKG_CACHE = "somePath"</code>
+<code>R_REQUIRE_CACHE = "somePath"</code> and/or <code>R_REQUIRE_PKG_CACHE = "somePath"</code>
 e.g., in <code>.Renviron</code> file or <code><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv()</a></code>. See Note below.</p>
     </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
-    <p>Currently, there are 2 different Cache directories used by Require:
-<code>cacheDir</code> and <code>cachePkgDir</code>. The <code>cachePkgDir</code>
-is intended to be a sub-directory of the <code>cacheDir</code>. If you set
-<code>Sys.setenv("R_USER_CACHE_DIR" = "somedir")</code>, then both the package cache
-and cache dirs will be set, with the package cache a sub-directory. You can, however,
-set them independently, if you set <code>"R_USER_CACHE_DIR"</code> and <code>"R_REQUIRE_PKG_CACHE"</code>
-environment variable. The package cache can also be set with
-<code>options("Require.cachePkgDir" = "somedir")</code>.</p>
+    <p>There are two different cache directories used by <code>Require</code>: <code>cacheDir</code> and <code>cachePkgDir</code>.
+The <code>cachePkgDir</code> is intended to be a sub-directory of the <code>cacheDir</code>.
+If you set <code>Sys.setenv("R_REQUIRE_CACHE" = "somedir")</code>, then both the package cache
+and cache dirs will be set, with the package cache a sub-directory.
+You can, however, set them independently, if you set <code>"R_REQUIRE_CACHE"</code> and
+<code>"R_REQUIRE_PKG_CACHE"</code> environment variables.
+The package cache can also be set with <code>options("Require.cachePkgDir" = "somedir")</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

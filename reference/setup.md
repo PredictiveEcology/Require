@@ -62,4 +62,5 @@ setupOff(removePackages = FALSE, verbose = getOption("Require.verbose"))
 
 - removePackages:
 
-  Deprecated. Please remove packages manually from the .libPaths()
+  Deprecated. Please remove packages manually from
+  [`.libPaths()`](https://rdrr.io/r/base/libPaths.html)
