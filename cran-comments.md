@@ -47,12 +47,11 @@ needed.
 
 ## Downstream dependencies
 
-We checked all reverse dependencies from CRAN (1 package: SpaDES.core).
-
-> revdepcheck::revdep_report_cran()
-## revdepcheck results
-
-We checked 1 reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
+We checked 1 reverse dependency (SpaDES.core 3.0.4).
 
  * We saw 0 new problems
  * We failed to check 0 packages
+
+SpaDES.core has 1 pre-existing error (vignette requires package `NLMR` from a
+non-CRAN repository) that occurs identically on both the CRAN and dev versions
+of Require. It is unrelated to this package.
