@@ -36,6 +36,15 @@ Tested with `rhub::rhub_check()` and `devtools::check_win_devel()`.
 
 There are no errors or warnings in any of the above.
 
+There is one NOTE on win-builder:
+
+    Author field differs from that derived from Authors@R
+
+This is a known cosmetic difference in how R renders ORCID identifiers from
+`Authors@R`: the auto-derived `Author:` field includes `ORCID: ` as a label
+before the URL, while the `Authors@R` field shows the bare URL. No action is
+needed.
+
 ## Downstream dependencies
 
 We checked all reverse dependencies from CRAN (1 package: SpaDES.core).
