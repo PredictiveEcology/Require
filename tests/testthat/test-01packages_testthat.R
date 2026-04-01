@@ -1,11 +1,10 @@
 test_that("test 1", {
-
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
 
-  ### cover CRAN in case of having a environment variable set, which TRAVIS seems to
+  ## cover CRAN in case of having a environment variable set, which CI seems to
   origCRAN_REPO <- Sys.getenv("CRAN_REPO")
   Sys.unsetenv("CRAN_REPO")
   isInteractive <- function() FALSE
@@ -21,21 +20,22 @@ test_that("test 1", {
     all(nchar(repos) > 0) # may have binary also
   })
 
-  # # cannot open file 'startup.Rs': No such file or directory
-  # # suggested solution https://stackoverflow.com/a/27994299/3890027
+  ## cannot open file 'startup.Rs': No such file or directory
+  ## suggested solution https://stackoverflow.com/a/27994299/3890027
   # Sys.setenv("R_TESTS" = "")
   # Sys.setenv("R_REMOTES_UPGRADE" = "never")
 
   dir1 <- Require:::rpackageFolder(Require:::tempdir3("test1"))
   dir1 <- Require::checkPath(dir1, create = TRUE)
 
-  (mess <- capture_messages(out <- Require::Require("fpCompare (<= 1.2.3)",
-                                            standAlone = TRUE, libPaths = dir1,
-                                            # quiet = TRUE,
-                                            returnDetails = TRUE
-  ))) |> capture_warnings() -> warns
+  (mess <- capture_messages({
+    out <- Require::Require("fpCompare (<= 1.2.3)",
+                            standAlone = TRUE, libPaths = dir1,
+                            # quiet = TRUE,
+                            returnDetails = TRUE)
+  })) |> capture_warnings() -> warns
 
-  skip_if_offline()
+  skip_if_offline2()
 
   if (length(warns))
     expect_true(all(grepl("was built under", warns)))
@@ -103,7 +103,7 @@ test_that("test 1", {
     pkgSnapFileRes <- data.table::fread(pkgSnapFile)
     dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
     dir6 <- Require::checkPath(dir6, create = TRUE)
-    warns <- capture_warnings(
+    Fwarns <- capture_warnings(
       out <- Require::Require(
         packageVersionFile = pkgSnapFile, libPaths = dir6,
         quiet = TRUE, install = "force"
@@ -120,7 +120,6 @@ test_that("test 1", {
     # vers2 <- DESCRIPTIONFileVersionV(file.path(dir2, "fpCompare/DESCRIPTION"))
     # vers6 <- DESCRIPTIONFileVersionV(file.path(dir6, "fpCompare/DESCRIPTION"))
     testthat::expect_equal(vers2, vers6)
-
 
     remove.packages("fpCompare", lib = dir2) |> suppressMessages()
     remove.packages("fpCompare", lib = dir6) |> suppressMessages()
@@ -144,14 +143,7 @@ test_that("test 1", {
       isTRUE(all.equal(out1[], pkgSnapFileRes[], check.attributes = FALSE))
     })
 
-    #warns <- capture_warnings(
-      out3 <- pkgSnapshot2()
-    #)
-    #if (isTRUE(getOption("Require.usePak"))) {
-    #  browser()
-    #  okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-    #  expect_true(okWarn)
-    #}
+    out3 <- pkgSnapshot2()
 
     testthat::expect_true(is(out3, "character"))
     setwd(prevDir)
@@ -256,7 +248,7 @@ test_that("test 1", {
       testthat::expect_true({
         length(mess) > 0
       })
-      expect_match(paste(mess, collapse = " "), .txtCouldNotBeInstalled)
+      expect_match(paste(warns, collapse = " "), .txtCouldNotBeInstalled)
       # testthat::expect_true({
       #   sum(grepl("could not be installed", mess)) == 1
       # })

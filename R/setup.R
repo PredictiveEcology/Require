@@ -10,7 +10,7 @@
 #'
 #' @details
 #' To set a different directory than the default, set the system variable:
-#' `R_USER_CACHE_DIR = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
+#' `R_REQUIRE_CACHE = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
 #' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
 #' @inheritParams checkPath
 #' @inheritParams Require
@@ -26,9 +26,8 @@ cacheDir <- function(create, verbose = getOption("Require.verbose")) {
   ## CURRENT: using cache dir following conventions used by tools::R_user_dir
   ##   tools::R_user_dir("appName", "cache")
 
-  # browser()
-  cacheDir <- if (nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
-    Sys.getenv("R_USER_CACHE_DIR")
+  cacheDir <- if (nzchar(Sys.getenv("R_REQUIRE_CACHE"))) {
+    Sys.getenv("R_REQUIRE_CACHE")
   } else {
     defaultCacheDirectory <- cacheDefaultDir()
     if (!is.null(defaultCacheDirOld)) { # solaris doesn't have this set
@@ -93,14 +92,13 @@ normPathMemoise <- function(d) {
 #' @rdname cacheDir
 #'
 #' @note
-#' Currently, there are 2 different Cache directories used by Require:
-#' `cacheDir` and `cachePkgDir`. The `cachePkgDir`
-#'  is intended to be a sub-directory of the `cacheDir`. If you set
-#'  `Sys.setenv("R_USER_CACHE_DIR" = "somedir")`, then both the package cache
-#'  and cache dirs will be set, with the package cache a sub-directory. You can, however,
-#'  set them independently, if you set `"R_USER_CACHE_DIR"` and `"R_REQUIRE_PKG_CACHE"`
-#'  environment variable. The package cache can also be set with
-#'  `options("Require.cachePkgDir" = "somedir")`.
+#' There are two different cache directories used by `Require`: `cacheDir` and `cachePkgDir`.
+#' The `cachePkgDir` is intended to be a sub-directory of the `cacheDir`.
+#' If you set `Sys.setenv("R_REQUIRE_CACHE" = "somedir")`, then both the package cache
+#'  and cache dirs will be set, with the package cache a sub-directory.
+#' You can, however, set them independently, if you set `"R_REQUIRE_CACHE"` and
+#'  `"R_REQUIRE_PKG_CACHE"` environment variables.
+#'  The package cache can also be set with `options("Require.cachePkgDir" = "somedir")`.
 cachePkgDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
@@ -114,6 +112,42 @@ cachePkgDir <- function(create) {
   ##       - remind them how to change this, and make sure it's documented!
 
   return(pkgCacheDir)
+}
+
+removeOldFlatCachePkgs <- function(verbose = getOption("Require.verbose")) {
+  pe <- pkgEnv()
+  if (!is.null(pe[["oldFlatCacheChecked"]])) return(invisible(NULL))
+  pe[["oldFlatCacheChecked"]] <- TRUE
+
+  flatDir <- cachePkgDir()
+  if (!dir.exists(flatDir)) return(invisible(NULL))
+
+  # Package files are directly in the flat dir (not in subdirs); subdirs belong to the new scheme
+  allEntries <- dir(flatDir, full.names = TRUE)
+  pkgPat <- "\\.tar\\.gz$|\\.zip$|\\.tgz$"
+  oldFiles <- allEntries[!dir.exists(allEntries) & grepl(pkgPat, allEntries)]
+
+  if (length(oldFiles)) {
+    messageVerbose(
+      "Removing ", length(oldFiles), " package file(s) from old flat cache location ",
+      "(", flatDir, "); they will be re-downloaded into repos-specific subdirectories.",
+      verbose = verbose, verboseLevel = 1
+    )
+    unlink(oldFiles)
+  }
+  invisible(NULL)
+}
+
+cachePkgDirForRepo <- function(repos, create = FALSE) {
+  # Normalize to just protocol+host so that "https://cloud.r-project.org/src/contrib"
+  # and "https://cloud.r-project.org" map to the same cache subdirectory
+  normalized <- sub("^(https?://[^/]+).*", "\\1", repos)
+  sanitized <- gsub("https|[:/]", "", normalized)
+  d <- file.path(cachePkgDir(), sanitized)
+  if (isTRUE(create)) {
+    d <- vapply(d, checkPath, character(1), create = TRUE)
+  }
+  d
 }
 
 RequireGitHubCacheDir <- function(create) {
@@ -224,14 +258,12 @@ setup <- function(newLibPaths,
 #' @rdname setup
 #' @inheritParams Require
 #' @export
-#' @param removePackages Deprecated. Please remove packages manually from
-#'        the .libPaths()
+#' @param removePackages Deprecated. Please remove packages manually from `.libPaths()`
 setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbose")) {
   updateRprofile <- checkTRUERprofile(TRUE)
   if (!file.exists(updateRprofile)) { # not in current dir
-    # 1. Check project
-    possDirs <- c(rprojroot::find_root(rprojroot::is_rstudio_project),
-                 "~")
+    ## 1. Check project
+    possDirs <- c(rprojroot::find_root(rprojroot::is_rstudio_project), "~")
     for (i in 1:2) {
       possDir <- possDirs[i]
       possFile <- file.path(possDir, updateRprofile)
@@ -307,7 +339,7 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
         #        grep, x = gsub("https://", "", a$URL), value = TRUE)
         insertBefore <- which(lengths(isCRAN) > 0)
         repos <- c(repo, currentRepos)
-        if (insertBefore > 1) {
+        if (isTRUE(insertBefore > 1)) { # could have no CRAN official mirror
           repos <- c(currentRepos[seq(1, insertBefore - 1)] ,
                      repo,
                      currentRepos[seq(insertBefore, length(currentRepos))])
@@ -325,12 +357,28 @@ setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
 whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN = srcPackageURLOnCRAN) {
   mirrorsLocalFile <- file.path(cachePkgDir(), ".mirrors.csv")
   dir.create(dirname(mirrorsLocalFile), recursive = TRUE, showWarnings = FALSE)
-  if (!file.exists(mirrorsLocalFile))
-    download.file("https://cran.r-project.org/CRAN_mirrors.csv",
-                  destfile = mirrorsLocalFile, quiet = TRUE)
-  a <- read.csv(mirrorsLocalFile)
-  b <- a[1,]
-  b$URL = "https://cran.rstudio.com/"
+
+  for (attempt in 1:3) {
+    if (!file.exists(mirrorsLocalFile))
+      download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+                    destfile = mirrorsLocalFile, quiet = TRUE)
+    a <- try(read.csv(mirrorsLocalFile), silent = TRUE)
+    if (!is(a, "try-error"))
+      break
+    unlink(mirrorsLocalFile)
+    if (attempt == 2) {
+      SSLout <- SSLmodsWithFails(a, SSLwarns = TRUE, warns = character(), attempt,
+                       verbose = getOption("Require.verbose"), otherwarns = character())
+      if (!is.null(SSLout))
+        eval(parse(text = SSLout)) # will be next or break
+    }
+    if (attempt == 3) {
+      optsHere <- options(download.file.method = "curl")
+      on.exit(options(optsHere))
+    }
+  }
+  b <- a[1, ]
+  b$URL <- "https://cran.rstudio.com/"
   a <- rbind(a, b)
   isCRAN <- lapply(gsub("https://", "", currentRepos),
                    grep, x = gsub("https://", "", a$URL), value = TRUE)
@@ -349,8 +397,6 @@ debianUbuntuRelease <- function() {
   system("lsb_release -cs", intern = TRUE)
 }
 
-appName <- "R-Require"
-
 #' The default cache directory for Require Cache
 #'
 #' A wrapper around `tools::R_user_dir("Require", which = "cache")` that
@@ -363,6 +409,8 @@ appName <- "R-Require"
 cacheDefaultDir <- function() {
   normalizePath(tools::R_user_dir("Require", which = "cache"), mustWork = FALSE)
 }
+
+appName <- "R-Require"
 
 defaultCacheDirOld <- switch(SysInfo[["sysname"]],
   Darwin = normalizePath(file.path("~", "Library", "Caches", appName), mustWork = FALSE),

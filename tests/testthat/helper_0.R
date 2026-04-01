@@ -1,9 +1,18 @@
 setupTest <- function(verbose = getOption("Require.verbose"),
                       needRequireInNewLib = FALSE, envir = parent.frame()) {
-  newLib <- tempdir3()
-  if (needRequireInNewLib)
+  newLib <- tempdir3("Require_test_libs")
+  if (needRequireInNewLib) {
     linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
+  }
   withr::local_libpaths(newLib, .local_envir = envir)
+
+  ## Always use temporary package cache for tests (#128):
+  ## - we don't want to modify the user's cache;
+  ## - user's cache may have package versions that are newer than those requested in the tests;
+  withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local_envir = envir)
+
+  Install(c("curl", "httr", "waldo")) ## needed by testthat but not installed in tmp libPath
+
   messageVerbose(blue(" getOption('Require.verbose'): ",
     getOption("Require.verbose")),
     verboseLevel = 0
@@ -15,7 +24,12 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   return()
 }
 
-omitPkgsTemporarily <- function(pkgs) {
+skip_if_offline2 <- function() {
+  # default with testthat::skip_if_offline is apple.com
+  #   which was returning true when wifi connection exists, but no internet e.g., on a plane
+  skip_if_offline("github.com")
+}
+  omitPkgsTemporarily <- function(pkgs) {
   if (getRversion() < "4.2") {
     pkgs <- grep("mumin", pkgs, invert = TRUE, value = TRUE) # MuMIn requires R >= 4.2
     pkgs <- grep("LandR", pkgs, invert = TRUE, value = TRUE) # LandR requires R >= 4.2
@@ -27,7 +41,6 @@ omitPkgsTemporarily <- function(pkgs) {
 }
 
 dontTryDetach <- c("devtools", "testthat", "googledrive", "rmarkdown")
-
 
 dontTryDetachCurrent <- c("pak", "R6", "Rcpp", "askpass", "base64enc", "brew", "brio",
                           "bslib", "cachem", "callr", "cli", "clipr", "commonmark", "cpp11",

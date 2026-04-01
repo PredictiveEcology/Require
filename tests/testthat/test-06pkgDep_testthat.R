@@ -1,6 +1,5 @@
 test_that("test 6", {
-
-  skip_on_cran()
+  testthat::skip_on_cran()
 
   setupInitial <- setupTest()
   tmpdir <- tempdir2(.rndstr())
@@ -14,7 +13,7 @@ test_that("test 6", {
     length(a) == 1
   })
 
-  skip_if_offline()
+  skip_if_offline2()
 
   testthat::expect_true({
     !isTRUE(all.equal(lapply(a, trimVersionNumber), a))
@@ -154,6 +153,7 @@ test_that("test 6", {
   expect_true(test)
 
   out <- pkgDepTopoSort(c("data.table", "Require"), reverse = TRUE, recursive = TRUE)
+  out[["data.table"]] <- unique(c("Require", out[["data.table"]])) ## ensure Require is installed
   knownRevDeps <- append(
     knownRevDeps,
     list(data.table = c(knownRevDeps$Require, "Require"))
@@ -177,5 +177,4 @@ test_that("test 6", {
   repr[["RSQLite"]] <- NULL
   reprWORSQLIte <- unique(extractPkgName(c(names(repr), unname(unlist(repr)))))
   testthat::expect_true(identical(sort(reprSimple$Recursive$Remaining), sort(reprWORSQLIte)))
-
 })

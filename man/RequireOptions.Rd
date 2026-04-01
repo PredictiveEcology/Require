@@ -10,60 +10,57 @@ RequireOptions()
 getRequireOptions()
 }
 \description{
-These provide top-level, powerful settings for a comprehensive reproducible
-workflow. See Details below.
+These provide top-level, powerful settings for a comprehensive reproducible workflow.
+See Details below.
 }
 \details{
 \describe{
-\item{\code{RequireOptions()}}{prints the default values of package
-options set at startup, which may have been changed (e.g., by the user)
-during the current session.}
-\item{\code{getRequireOptions()}}{prints the current
-values of package options.} }
+\item{\code{RequireOptions()}}{prints the default values of package options set at startup,
+which may have been changed (e.g., by the user) during the current session.}
+\item{\code{getRequireOptions()}}{prints the current values of package options.}
+}
 
 Below are options that can be set with \code{options("Require.xxx" = newValue)},
 where \code{xxx} is one of the values below, and \code{newValue} is a new value to give
 the option. Sometimes these options can be placed in the user's \code{.Rprofile}
 file so they persist between sessions.
 
-The following options are likely of interest to most users: \describe{
+The following options are likely of interest to most users:
+\describe{
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
 but does not affect \code{Install}. If this is \code{FALSE}, then no installations
-will be attempted, and missing packages will result in an error. }
+will be attempted, and missing packages will result in an error.}
 \item{\code{RPackageCache}}{ Default: \code{cacheGetOptionCachePkgDir()}, which must be
 either a path or a logical. To turn off package caching, set this to \code{FALSE}.
-This can be set using an environment variable e.g.
+This can be set using an environment variable e.g.,
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "TRUE")}; if that is not set, then an
-either a path or logical option (\code{options(Require.cachePkgDir = "somePath")} or \code{options(Require.cachePkgDir = TRUE)}). If \code{TRUE}, the
-default folder location \code{cachePkgDir()} will be used. If this is
-\code{TRUE} or a path is provided, then binary and source packages will be cached
-here. Subsequent downloads of same package will use local copy. Default is to
-have packages not be cached locally so each install of the same version will
-be from the original source, e.g., CRAN, GitHub. }
-\item{\code{otherPkgs}}{ Default: A character vector of packages that are
+either a path or logical option (\code{options(Require.cachePkgDir = "somePath")}
+or \code{options(Require.cachePkgDir = TRUE)}).
+If \code{TRUE}, the default folder location \code{cachePkgDir()} will be used.
+If this is \code{TRUE} or a path is provided, then binary and source packages will be cached here.
+Subsequent downloads of same package will use local copy.
+Default is to have packages not be cached locally so each install of the same version will
+be from the original source, e.g., CRAN, GitHub.}
+\item{\code{otherPkgs}}{Default: A character vector of packages that are
 generally more successful if installed from Source on Unix-alikes. Since
 there are repositories that offer binary packages builds for Linux (e.g.,
 RStudio Package Manager), the vector of package names indicated here will
 default to a standard CRAN repository, forcing a source install. See also
-\code{spatialPkgs} option, which does the same for spatial packages. }
-\item{\code{purge}}{ Default: \code{FALSE}. If set to (almost) all internal caches used
+\code{spatialPkgs} option, which does the same for spatial packages.}
+\item{\code{purge}}{Default: \code{FALSE}. If set to (almost) all internal caches used
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set
-via \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in
-seconds) }
+via \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds).}
 \item{\code{spatialPkgs}}{ Default: A character vector of packages that are
 generally more successful if installed from Source on Unix-alikes. Since
 there are repositories that offer binary packages builds for Linux (e.g.,
-RStudio Package Manager), the vector of package names indicated here will
-default to a standard CRAN repository, forcing a source install. See also
-\code{otherPkgs} option, which does the same for non-spatial packages. }
-\item{\code{useCranCache}}{ Default: \code{FALSE}. A user can optionally use the
-locally cached packages that are available due to a user's use of the
-\code{crancache} package.
+Posit Package Manager), the vector of package names indicated here will
+default to a standard CRAN repository, forcing a source install.
+See also \code{otherPkgs} option, which does the same for non-spatial packages.}
+\item{\code{useCranCache}}{ Default: \code{FALSE}. A user can optionally use the locally
+cached packages that are available due to a user's use of the \code{crancache} package.
 }
-\item{\code{verbose}}{ Default: \code{1}. See ?Require.
-}
-
+\item{\code{verbose}}{ Default: \code{1}. See ?Require. }
 }
 }

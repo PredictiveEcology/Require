@@ -2,12 +2,10 @@ on:
   push:
     branches:
       - main
-      - master
       - development
   pull_request:
     branches:
       - main
-      - master
       - development
 
 name: R-CMD-check
@@ -23,15 +21,17 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macOS-latest,   r: 'release'}
-          - {os: windows-latest, r: 'devel'}
-          - {os: windows-latest, r: 'release'}
-          - {os: windows-latest, r: 'oldrel/1'}
-          - {os: windows-latest, r: 'oldrel/2'}
-          - {os: ubuntu-20.04,   r: 'devel'}
-          - {os: ubuntu-20.04,   r: 'release'}
-          - {os: ubuntu-20.04,   r: 'oldrel/1'}
-          - {os: ubuntu-20.04,   r: 'oldrel/2'}
+          - {os: macOS-latest,    r: 'release'}
+          - {os: windows-latest,  r: 'devel'}
+          - {os: windows-latest,  r: 'release'}  ## currently 4.5
+          - {os: windows-latest,  r: 'oldrel-1'} ## currently 4.4
+          - {os: windows-latest,  r: 'oldrel-2'} ## currently 4.3
+          - {os: windows-latest,  r: 'oldrel-3'} ## currently 4.2
+          - {os: ubuntu-latest,   r: 'devel'}
+          - {os: ubuntu-latest,   r: 'release'}  ## currently 4.5
+          - {os: ubuntu-latest,   r: 'oldrel-1'} ## currently 4.4
+          - {os: ubuntu-latest,   r: 'oldrel-2'} ## currently 4.3
+          - {os: ubuntu-latest,   r: 'oldrel-3'} ## currently 4.2
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -49,7 +49,7 @@ jobs:
           use-public-rspm: true
 
       - name: Set additional env vars for checks when on Ubuntu
-        if: ${{ matrix.config.os == 'ubuntu-20.04' }}
+        if: ${{ matrix.config.os == 'ubuntu-latest' }}
         run: |
           echo "_R_CHECK_THINGS_IN_OTHER_DIRS_=true" >> $GITHUB_ENV
 

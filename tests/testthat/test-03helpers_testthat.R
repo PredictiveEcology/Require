@@ -116,7 +116,7 @@ test_that("test 3", {
   })
   options(opts)
   testthat::expect_true({
-    isTRUE(grepl("is an existing file", out))
+    isTRUE(any(grepl("is an existing file", out)))
   })
 
   rst <- .rndstr(1, 6)
@@ -165,5 +165,10 @@ test_that("test 3", {
   testthat::expect_true("g" %in% names(mm))
   mm2 <- modifyList2(f1, f2, f3, f4, keep.null = FALSE)
   testthat::expect_true(!"g" %in% names(mm2))
+
+  # A filename with a underscore ... lol
+  vn <- extractVersionNumber(filenames = "/fs/vnas_Hnrcan/forsite/fastdigest_0.6-4.tar.gz")
+  expect_identical(vn, "0.6-4")
+
 
 })

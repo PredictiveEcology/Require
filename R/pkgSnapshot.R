@@ -35,8 +35,8 @@
 #' @export
 #' @inheritParams Require
 #' @inheritParams pkgDep
-#' @importFrom utils write.table
 #' @importFrom data.table fwrite
+#' @importFrom utils write.table
 #' @examples
 #' \dontrun{
 #' if (Require:::.runLongExamples()) {
@@ -75,36 +75,35 @@
 #' }
 #'
 #' @rdname pkgSnapshot
-pkgSnapshot <-
-  function(packageVersionFile = getOption("Require.packageVersionFile"),
-           libPaths = .libPaths(),
-           standAlone = FALSE,
-           purge = getOption("Require.purge", FALSE),
-           exact = TRUE,
-           includeBase = FALSE,
-           verbose = getOption("Require.verbose")) {
-    libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
-    libPaths <- doLibPaths(libPaths, standAlone)
+pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),
+                        libPaths = .libPaths(),
+                        standAlone = FALSE,
+                        purge = getOption("Require.purge", FALSE),
+                        exact = TRUE,
+                        includeBase = FALSE,
+                        verbose = getOption("Require.verbose")) {
+  libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE)
+  libPaths <- doLibPaths(libPaths, standAlone)
 
-    ip <- doInstalledPackages(libPaths, purge, includeBase)
-    rv <- versionMajorMinor()
-    rv <- cbind(Package = "R", Version = rv)
-    ip <- rbind(rv, ip, fill = TRUE)
+  ip <- doInstalledPackages(libPaths, purge, includeBase)
+  rv <- versionMajorMinor()
+  rv <- cbind(Package = "R", Version = rv)
+  ip <- rbind(rv, ip, fill = TRUE)
 
-    fwrite(ip,
-      file = packageVersionFile,
-      row.names = FALSE,
-      na = NA
-    )
-    messageVerbose(
-      "package version file saved in ",
-      packageVersionFile,
-      verbose = verbose,
-      verboseLevel = 1
-    )
+  fwrite(ip,
+    file = packageVersionFile,
+    row.names = FALSE,
+    na = NA
+  )
+  messageVerbose(
+    "package version file saved in ",
+    packageVersionFile,
+    verbose = verbose,
+    verboseLevel = 1
+  )
 
-    return(invisible(ip))
-  }
+  return(invisible(ip))
+}
 
 #' @rdname pkgSnapshot
 #' @export
@@ -183,7 +182,8 @@ doLibPaths <- function(libPaths, standAlone = FALSE) {
     libPaths <- .libPaths()
   }
   if (standAlone) {
-    libPaths <- c(head(libPaths, 1), tail(.libPaths(), 1))
+    libPaths <- head(libPaths, 1)
+    # libPaths <- c(head(libPaths, 1), tail(.libPaths(), 1))
   } else {
     libPaths <- unique(c(head(libPaths, 1), .libPaths()))
   }

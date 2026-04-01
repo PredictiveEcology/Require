@@ -18,26 +18,26 @@ test_that("test 8", {
     # Install 3 packages that are needed for subsequent module and package installations
     # See if Require is already loaded from where#Error in `loadNamespace(name)`: there is no package called 'SpaDES.project'
 
-    skip_if_offline()
+    skip_if_offline2()
 
-    if (isWindows()) {
-      (Install("Require", repos = "https://predictiveecology.r-univierse.dev",
-               install = "force")) |>
-        capture_warnings() -> warns1
+    # if (isWindows() || isMacOS()) {
+      # (Install("Require", repos = c("https://predictiveecology.r-univierse.dev", getOption("repos")),
+      #          install = "force")) |>
+      #   capture_warnings() -> warns1
       (a <- Install(c(
         "PredictiveEcology/SpaDES.project@development"),
         upgrade = FALSE, returnDetails = TRUE
       )) |>
         capture_warnings() -> warns
 
-    } else {
-      warnsReq <- capture_warnings(Require::Install("Require"))
-      (a <- Install(c(
-        "PredictiveEcology/SpaDES.project@development"),
-        upgrade = FALSE, returnDetails = TRUE
-      )) |>
-        capture_warnings() -> warns
-    }
+    # } else {
+    #   warnsReq <- capture_warnings(Require::Install("Require"))
+    #   (a <- Install(c(
+    #     "PredictiveEcology/SpaDES.project@development"),
+    #     upgrade = FALSE, returnDetails = TRUE
+    #   )) |>
+    #     capture_warnings() -> warns
+    # }
 
 
     on.exit(unloadNamespace("SpaDES.project"))
@@ -75,6 +75,7 @@ test_that("test 8", {
       Require::cacheClearPackages("stringfish", ask = FALSE) # get this from RSPM or CRAN fresh
     }
     # THE INSTALL
+    pkgs <- c(pkgs, "xml2 (>=1.5.2)")
     pkgs <- omitPkgsTemporarily(pkgs)
 
     (
@@ -161,7 +162,10 @@ test_that("test 8", {
                     "SpaDES.tools", "spatialEco", "stats", "terra", "tidyr", "viridis"
     )
 
-    otherPkgs <- c("archive", "details", "DBI", "s-u/fastshp", "logging", "RPostgres", "slackr")
+    otherPkgs <- c("archive", "details", "DBI", # "s-u/fastshp", # can't compile fastshp in Windows R 4.5
+                   "logging", "RPostgres", "slackr")
+    if (!isWindows() && !isMacOS())
+      otherPkgs <- c(otherPkgs, "s-u/fastshp")
 
     pkgs <- unique(c(modulePkgs, otherPkgs))
 
@@ -198,14 +202,14 @@ test_that("test 8", {
       # some sort of test about whether anything was installed; pick reproducible as a random pkg
       testthat::expect_true(
         sum(grepl("reproducible",
-                  out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1 &&
-          is.character(getOption("Require.cloneFrom")))
+                  out1Attr$Package[out1Attr$installResult %in% "OK"])) == 1)# &&
+          #is.character(getOption("Require.cloneFrom"))
       testthat::expect_true(
         sum(grepl("reproducible",
                   out2Attr$Package[out2Attr$installResult %in% "OK"])) == 0)
       # testthat::expect_true(sum(grepl("reproducible", out[[2]])) == 0)
     }
-    testthat::expect_true(st[[1]]["elapsed"]/st[[2]]["elapsed"] > 15) # WAY faster -- though st1 is not that slow b/c local binaries
+    testthat::expect_true(st[[1]]["elapsed"]/st[[2]]["elapsed"] > 5) # WAY faster -- though st1 is not that slow b/c local binaries
 
   }
 

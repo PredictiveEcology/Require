@@ -34,8 +34,8 @@ setMethod(
         path[nas] <- NA_character_
       }
 
-      # Eliot changed this Sept 24, 2019 because weird failures with getwd()
-      # in non-interactive testing
+      ## Eliot changed this Sept 24, 2019 because weird failures with getwd()
+      ## in non-interactive testing
       path <- unlist(path)
       if (!is.null(path)) {
         path <- gsub("\\\\", "//", path)
@@ -414,16 +414,21 @@ linkOrCopy <- function(from, to, allowSymlink = FALSE) {
 #' `fileRenameOrMove` is like `file.rename`, but will work across disks.
 #' @rdname linkOrCopy
 fileRenameOrMove <- function(from, to) {
-  du <- unique(dirname(to))
-  checkPath(du, create = TRUE) # somewhat slow because `normPath`
-  res <- suppressWarnings(file.rename(from, to)) ## try hardlink
-  if (any(!res)) {
-    ## finally, copy the file
-    res[!res] <-
-      suppressWarnings(file.copy(from[!res], to[!res], overwrite = TRUE))
-    unlink(from[!res])
-  }
-  return(invisible(res))
+  tryCatch({
+    du <- unique(dirname(to))
+    checkPath(du, create = TRUE) # somewhat slow because `normPath`
+    res <- tryCatch(
+      suppressWarnings(file.rename(from, to)), ## try hardlink
+      error = function(e) rep(FALSE, length(from)) # e.g. Windows MAX_PATH exceeded
+    )
+    if (any(!res)) {
+      ## finally, copy the file
+      res[!res] <-
+        suppressWarnings(file.copy(from[!res], to[!res], overwrite = TRUE))
+      unlink(from[!res])
+    }
+    invisible(res)
+  }, error = function(e) invisible(rep(FALSE, length(from)))) # e.g. path too long on old Windows
 }
 
 timestamp <- function() {
@@ -564,13 +569,19 @@ setdiffNamed <- function(l1, l2, missingFill) {
 }
 
 whereInStack <- function(obj) {
-  for (i in 1:sys.nframe()) {
+  nframes <- sys.nframe()
+  for (i in 1:nframes) {
     fn <- get0(obj, sys.frame(-i), inherits = FALSE)
     if (!is.null(fn)) {
       break
     }
   }
-  return(sys.frame(-i))
+  if (is.null(fn)) {
+    ret <- NULL
+  } else {
+    ret <- sys.frame(-i)
+  }
+  return(ret)
 }
 
 getInStack <- function(obj) {
@@ -633,9 +644,6 @@ SysInfo <-
     Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
 }
 
-
-
-
 doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
   if (getOption("Require.useCranCache", FALSE)) {
     pe <- pkgEnv()
@@ -661,21 +669,22 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
   return(localFiles)
 }
 
-
 # library(rversions)
 # dput(tail(r_versions(), 12))
 rversionHistory <- as.data.table(
   structure(list(
-    version = c("4.0.5", "4.1.0", "4.1.1", "4.1.2",
-                "4.1.3", "4.2.0", "4.2.1", "4.2.2", "4.2.3", "4.3.0", "4.3.1",
-                "4.3.2"),
-    date = structure(c(1617174315, 1621321522, 1628579106,
-                       1635753912, 1646899538, 1650611141, 1655967933, 1667203554, 1678867561,
+    version = c("4.0.5",
+                "4.1.0", "4.1.1", "4.1.2", "4.1.3",
+                "4.2.0", "4.2.1", "4.2.2", "4.2.3",
+                "4.3.0", "4.3.1", "4.3.2"),
+    date = structure(c(1617174315,
+                       1621321522, 1628579106, 1635753912, 1646899538,
+                       1650611141, 1655967933, 1667203554, 1678867561,
                        1682060774, 1686899167, 1698739662), class = c("POSIXct", "POSIXt"
                        ), tzone = "UTC"),
-    nickname = c("Shake and Throw", "Camp Pontanezen",
-                 "Kick Things", "Bird Hippie", "One Push-Up", "Vigorous Calisthenics",
-                 "Funny-Looking Kid", "Innocent and Trusting", "Shortstop Beagle",
+    nickname = c("Shake and Throw",
+                 "Camp Pontanezen", "Kick Things", "Bird Hippie", "One Push-Up",
+                 "Vigorous Calisthenics", "Funny-Looking Kid", "Innocent and Trusting", "Shortstop Beagle",
                  "Already Tomorrow", "Beagle Scouts", "Eye Holes")),
     row.names = 122:133, class = "data.frame")
 )
@@ -683,7 +692,6 @@ rversionHistory <- as.data.table(
 crancacheFolder <- function() {
   crancache <- file.path(dirname(dirname(tools::R_user_dir("Require", "cache"))), "R-crancache")
 }
-
 
 colr <- function(..., digit = 32) paste0("\033[", digit, "m", paste0(...), "\033[39m")
 purple <- function(...) colr(..., digit = "38;5;129m")
@@ -696,4 +704,3 @@ yellow <- function(...) colr(..., digit = 33)
 blue <- function(...) colr(..., digit = 34)
 turquoise <- function(...) colr(..., digit = 36)
 greyLight <- function(...) colr(..., digit = 90)
-

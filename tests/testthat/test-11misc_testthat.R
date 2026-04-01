@@ -16,7 +16,7 @@ test_that("test 11", {
 
   if (isDevAndInteractive) {
     # Use a mixture of different types of "off CRAN"
-    if (!isMacOSX()) {
+    if (!isMacOS()) {
       pkgs <- c("knn", "ggplot2 (==3.4.3)", "silly1", "SpaDES.core")
       pkgsClean <- extractPkgName(pkgs)
       lala <- try(suppressWarnings(capture.output(suppressMessages(remove.packages(pkgsClean)))), silent = TRUE)
@@ -38,7 +38,7 @@ test_that("test 11", {
         expect_true(poss1 || poss2)
     }
 
-    skip_if_offline()
+    skip_if_offline2()
 
     ## Test Install and also (HEAD)
     messToSilence <- capture_messages(try(remove.packages("fpCompare"), silent = TRUE))
@@ -56,7 +56,7 @@ test_that("test 11", {
       testthat::expect_true(isTRUE(sum(grepl(theGrep2, capted2)) == 1))
     }
     # two sources, where both are OK; use CRAN by preference
-    if (!isMacOSX()) {
+    if (!isMacOS()) {
       lala <- suppressWarnings(capture.output(suppressMessages(
         remove.packages("SpaDES.core")))) ## TODO: fails on macOS
       suppressWarnings(

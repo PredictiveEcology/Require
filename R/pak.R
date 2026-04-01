@@ -1,16 +1,16 @@
 utils::globalVariables(c(
-  "..keepCols", "ref", "op", "package"
+  "..keepCols", "op", "package", "ref"
 ))
-
 
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
 .txtCantFindPackage <- "Can't find package called "
 
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
-
-  grp <- c(.txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith, .txtCantFindPackage,
-           .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps, .txtFailedToDLFrom, .txtPakNoPkgCalledPak,
-           .txtUnknownArchiveType)
+  grp <- c(
+    .txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith,
+    .txtCantFindPackage, .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps,
+    .txtFailedToDLFrom, .txtPakNoPkgCalledPak, .txtUnknownArchiveType
+  )
   spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\. ", "NULL", "NULL", "NULL", "NULL", "NULL")
   pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL", "NULL", "NULL", "NULL")
   for (i in seq_along(grp)) {
@@ -28,7 +28,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         # redo
         splitStr
         whDeps <- grep(grp[i], splitStr)
-        pkgLong <- splitStr[whDeps-1]
+        pkgLong <- splitStr[whDeps - 1]
         pkgLong <- strsplit(pkgLong, spl[2])[[1]]
         pkgLong <- basename(pkgLong)
         filename <- pkgLong[nchar(pkgLong) > 2]
@@ -54,7 +54,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         break
       }
       if (grp[i] == .txtFailedToDLFrom) {
-        # browser()
+        #
       }
 
       if (grp[i] == .txtCntInstllDep) {
@@ -242,7 +242,6 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
       pkgsList <- pakPkgSetup(pkgs, doDeps = doDeps)
       td3 <- tempdir3()
       on.exit({unlink(dirname(td3))}, add = TRUE)
-      # if (any(grepl("quickPlot", pkgsList$DESC))) browser()
       dfile <- DESCRIPTIONfileFromModule(verbose = -2,
                                          packageFolderName = td3,
                                          .txtDummyPackage,
@@ -292,7 +291,7 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
   # if it didn't fail, then it is OK
   pkgDT[is.na(pkgDT$installed), needInstall := .txtInstall]
   set(pkgDT, NULL, c("installedVersionOK", "availableVersionOK"), TRUE)
-  pkgDT[, packageFullName:= Package]
+  pkgDT[, packageFullName := Package]
 }
 
 whEquals <- function(pkgs) {
@@ -331,11 +330,11 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
     pkg <- pkg1
     valExtra <- list()
     wh <- ifelse(any(grepl("suggests", tolower(unlist(which)))), TRUE,
-                 ifelse (length(which), NA, FALSE))
+                 ifelse(length(which), NA, FALSE))
 
     pkgDone <- character()
     i <- 0
-    while(length(pkg1) > 0) {
+    while (length(pkg1) > 0) {
       i <- i + 1 # counter
       pkg <- pkg1[1]
       # for (pkg in pkg1) {
@@ -683,7 +682,7 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   if (!is(his, "try-error") || grep(pattern = isCRAN, getOption("repos")) != 1) {
     # opt <- options(repos = isCRAN)
     # on.exit(options(opt))
-    if (isWindows() || isMacOSX()) {
+    if (isWindows() || isMacOS()) {
       type <- "binary"
     }
     ap <- available.packagesWithCallingHandlers(isCRAN, type = type) |> as.data.table()
@@ -712,9 +711,7 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   packages
 }
 
-
 .txtDummyPackage <- "dummy"
-
 
 pakCheckGHversionOK <- function(pkg) {
   pkgDT <- toPkgDTFull(pkg)
@@ -724,7 +721,6 @@ pakCheckGHversionOK <- function(pkg) {
   isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
   isOK
 }
-
 
 pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
   prevFail <- get0("failedPkgs", envir = pakEnv())

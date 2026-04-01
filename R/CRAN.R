@@ -41,6 +41,12 @@ getCRANrepos <- function(repos = NULL, ind) {
       repos <- getCRANrepos(repos, 1)
     }
   }
+  reposNow <- getOption("repos")
+  hasAts <- reposNow %in% "@CRAN@"
+  if (isTRUE(any(hasAts))) {
+    options(repos = reposNow[!hasAts])
+  }
+
 
   return(repos)
 }
