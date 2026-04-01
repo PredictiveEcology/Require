@@ -201,7 +201,7 @@ does not detect the dependencies of base packages among themselves, \emph{e.g.},
 \code{methods} depends on \code{stats} and \code{graphics}. }
 }
 \examples{
-\dontrun{
+\donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -211,7 +211,7 @@ if (Require:::.runLongExamples()) {
 }
 }
 
-\dontrun{
+\donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -222,7 +222,7 @@ if (Require:::.runLongExamples()) {
   Require:::.cleanup(opts)
 }
 }
-\dontrun{
+\donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 

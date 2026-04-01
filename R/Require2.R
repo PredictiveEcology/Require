@@ -161,7 +161,7 @@ utils::globalVariables(c(
 #' @importFrom utils install.packages packageVersion
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' opts <- Require:::.setupExample()
 #'
 #' library(Require)

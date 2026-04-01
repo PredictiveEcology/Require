@@ -37,7 +37,7 @@ recursive dependencies would be if a package was removed from the immediate
 dependencies.
 }
 \examples{
-\dontrun{
+\donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 

@@ -208,7 +208,7 @@ will reuse them if needed. To turn off this feature, set
 }
 
 \examples{
-\dontrun{
+\donttest{
 opts <- Require:::.setupExample()
 
 library(Require)

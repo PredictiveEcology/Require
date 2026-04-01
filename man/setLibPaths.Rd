@@ -68,7 +68,7 @@ approach that also works is here:
 \url{https://stackoverflow.com/a/36873741/3890027}.
 }
 \examples{
-\dontrun{
+\donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
   origDir <- setwd(tempdir())

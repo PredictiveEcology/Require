@@ -91,7 +91,7 @@ This can later be passed to \code{Require}.
 examples.
 }
 \examples{
-\dontrun{
+\donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 

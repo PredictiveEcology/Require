@@ -38,7 +38,7 @@
 #' @importFrom utils compareVersion
 #' @inheritParams Require
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'   origDir <- setwd(tempdir())

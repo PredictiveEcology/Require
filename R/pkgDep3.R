@@ -77,7 +77,7 @@ utils::globalVariables(c(
 #' @rdname pkgDep
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'

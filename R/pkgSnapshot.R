@@ -38,7 +38,7 @@
 #' @importFrom data.table fwrite
 #' @importFrom utils write.table
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'

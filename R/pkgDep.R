@@ -44,7 +44,7 @@ utils::globalVariables(
 #' are either full reverse depends.
 #'
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'
@@ -641,7 +641,7 @@ DESCRIPTIONFileDepsV <-
 #' dependency elsewhere, so its removal has no effect.
 #' @inheritParams Require
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'
@@ -1497,7 +1497,7 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 #' @rdname pkgDep
 #' @export
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' if (Require:::.runLongExamples()) {
 #'   opts <- Require:::.setupExample()
 #'
