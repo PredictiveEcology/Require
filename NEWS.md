@@ -1,5 +1,10 @@
 # Require 1.1.0.9000 (development version)
 
+## Bugfixes
+* Fixed `file:////` URL error when downloading archived packages that were
+  previously cached locally; `basename()` is now used for `file://` repository
+  URLs to match the flat cache layout.
+
 ## Enhancements
 * When packages are not found on CRAN, the message now shows the full recursive
   dependency chain explaining why they are needed, e.g.:

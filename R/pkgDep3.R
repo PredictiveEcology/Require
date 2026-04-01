@@ -1639,8 +1639,10 @@ RequireDependencies <- function(libPaths = .libPaths()) {
       # This section should only happen if Require.installPackageSys < 1
       for (i in 1:2) { # can be flaky -- try 2x
         inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
-                                 # url = file.path(Repository, basename(PackageUrl)),
-                                 url = file.path(Repository, PackageUrl),
+                                 url = if (startsWith(Repository, "file:"))
+                                   file.path(Repository, basename(PackageUrl))
+                                 else
+                                   file.path(Repository, PackageUrl),
                                  destfile = tf), silent = TRUE)
         if (!is(inn, "try-error"))
           break
