@@ -22,7 +22,7 @@ editor_options:
 `Require` is a single package that combines features of `base::install.packages`, `base::library`, `base::require`, as well as `pak::pkg_install`, `remotes::install_github`, and `versions::install_version`, plus the snapshotting capabilities of `renv`. It takes its name from the idea that a user could simply have one line like this:
 
 ```r
-Require(c("dplyr", "lmer", "PredictiveEcology/LandR@development"))
+Require(c("dplyr", "lme4", "PredictiveEcology/LandR@development"))
 ```
 named after the `require` function, that would load packages. But with `Require`, it will also install the packages, if necessary. Set it and forget it. This makes if *very clear* what packages are being used in a project. `Require` also continues to work, even if packages are taken off CRAN. This means that even if there is a dependency that is removed from CRAN ("archived"), the line will still work. Because it can be done in one line, it becomes relatively easy to share, it is transparent, and facilitates reproducibility (especially when combined with version specifications). These in turn facilitate, for example, making reprexes for debugging. 
 
