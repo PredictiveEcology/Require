@@ -14,7 +14,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/PredictiveEcology/Require/blob/master/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/PredictiveEcology/Require/blob/main/DESCRIPTION)
 
 McIntire E (2026). *Require: Installing and Loading R Packages for
 Reproducible Workflows*. R package version 1.0.1,
