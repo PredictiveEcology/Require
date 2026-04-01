@@ -1,3 +1,10 @@
+# Require 1.1.0.9000 (development version)
+
+## Enhancements
+* When packages are not found on CRAN, the message now shows the full recursive
+  dependency chain explaining why they are needed, e.g.:
+  `fastdigest (required by: digest -> reproducible) not on CRAN; checking CRAN archives`
+
 # Require 1.1.0
 
 ## Breaking changes
