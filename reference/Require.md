@@ -286,16 +286,21 @@ Other contributors:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 opts <- Require:::.setupExample()
 
 library(Require)
 getCRANrepos(ind = 1)
+#>                                                          RSPM 
+#> "https://packagemanager.posit.co/cran/__linux__/noble/latest" 
+#>                                                          CRAN 
+#>                                    "https://cran.rstudio.com" 
 Require("utils") # analogous to require(stats), but it checks for
 #   pkg dependencies, and installs them, if missing
 
 # unquoted version
 Require(c(tools, utils))
+#> Loading required package: tools
 
 if (Require:::.runLongExamples()) {
   # Install in a new local library (libPaths)
@@ -343,5 +348,5 @@ if (Require:::.runLongExamples()) {
   }
   Require:::.cleanup(opts)
 }
-} # }
+# }
 ```

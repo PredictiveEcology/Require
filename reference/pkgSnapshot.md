@@ -114,7 +114,7 @@ file output. See examples.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -148,5 +148,5 @@ if (Require:::.runLongExamples()) {
   Require:::.cleanup(opts)
   unlink(getOption("Require.packageVersionFile"))
 }
-} # }
+# }
 ```

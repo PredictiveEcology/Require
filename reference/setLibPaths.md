@@ -89,7 +89,7 @@ CRAN approach that also works is here:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
   origDir <- setwd(tempdir())
@@ -114,5 +114,5 @@ if (Require:::.runLongExamples()) {
   Require:::.cleanup(opts)
   unlink(otherLib, recursive = TRUE)
 }
-} # }
+# }
 ```

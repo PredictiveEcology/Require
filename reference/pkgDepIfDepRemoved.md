@@ -46,7 +46,7 @@ is also a recursive dependency elsewhere, so its removal has no effect.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -54,5 +54,5 @@ if (Require:::.runLongExamples()) {
 
   Require:::.cleanup(opts)
 }
-} # }
+# }
 ```

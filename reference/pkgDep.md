@@ -255,7 +255,7 @@ and `pkgDep` will differ under the following circumstances:
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+# \donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -263,9 +263,9 @@ if (Require:::.runLongExamples()) {
 
   Require:::.cleanup(opts)
 }
-} # }
+# }
 
-if (FALSE) { # \dontrun{
+# \donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -275,8 +275,8 @@ if (Require:::.runLongExamples()) {
 
   Require:::.cleanup(opts)
 }
-} # }
-if (FALSE) { # \dontrun{
+# }
+# \donttest{
 if (Require:::.runLongExamples()) {
   opts <- Require:::.setupExample()
 
@@ -287,5 +287,5 @@ if (Require:::.runLongExamples()) {
 
   Require:::.cleanup(opts)
 }
-} # }
+# }
 ```
