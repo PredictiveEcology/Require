@@ -373,6 +373,9 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
 #' or a version e.g., getDeps("PredictiveEcology/LandR@development (==1.0.2)")
 #' @inheritParams pkgDep
 #' @param pkgDT A `pkgDT` object e.g., from `toPkgDT`
+#' @param parentChain A character string representing the chain of parent
+#'   packages that required this package, e.g., `"digest -> reproducible"`.
+#'   Used to provide context in "not on CRAN" messages. Default `""`.
 #' @return
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
 #' above, plus the `which` and the `recursive`.
