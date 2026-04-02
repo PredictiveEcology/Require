@@ -451,7 +451,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
     types <- type
   }
 
-  missingHttp <- !startsWith(unlist(repos), "http")
+  missingHttp <- !grepl("^[a-z]+://", unlist(repos))  # only bare domain names, not file:// or other protocols
   if (any(missingHttp)) {
     repos[missingHttp] <- lapply(repos[missingHttp], function(r) {
       paste0("https://", r)
