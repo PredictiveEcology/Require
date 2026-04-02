@@ -226,7 +226,7 @@ pkgDep <- function(packages,
 }
 
 getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursive, which, repos, type, includeBase,
-                       includeSelf, libPaths, verbose, .depth = 0, .counter, grandp) {
+                       includeSelf, libPaths, verbose, .depth = 0, .counter, grandp, parentChain = "") {
 
   if (is.list(which)) which <- which[[1]]
 
@@ -248,8 +248,12 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
       pkgDTBase <- splitKeepOrderAndDTIntegrity(pkgDT, splitOn = isInBase)
       if (NROW(pkgDTBase[["FALSE"]])) {
 
+        callerChain <- if (parentPackage %in% c("user", "aboveuser", NA_character_)) ""
+                       else if (!nzchar(parentChain)) parentPackage
+                       else paste0(parentPackage, " -> ", parentChain)
         pkgDTBase[["FALSE"]] <- getDeps(pkgDTBase[["FALSE"]], which, recursive = recursive,
-                                        repos = repos, type = type, libPaths = libPaths, verbose = verbose)
+                                        repos = repos, type = type, libPaths = libPaths, verbose = verbose,
+                                        parentChain = callerChain)
         hasDeps <- sapply(pkgDTBase$`FALSE`[[depFa]], NROW) > 0
 
         pkgDTBase[["FALSE"]] <- forceEqualitiesIfAnyAndPoss(pkgDTBase[["FALSE"]])
@@ -288,7 +292,8 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
                                type = type, includeBase = includeBase,
                                includeSelf = includeSelf,
                                libPaths = libPaths,
-                               .depth = .depth + 1, verbose = verbose))
+                               .depth = .depth + 1, verbose = verbose,
+                               parentChain = callerChain))
 
             pkgDTBase[["FALSE"]] <- appendRecursiveToDeps(pkgDTNeedRecursive, caTr, depFa, caFa, snFa, depTr, snTr)
             hasRecursiveTRUE <- !is.na(pkgDTBase[["FALSE"]][[snTr]])
@@ -368,10 +373,13 @@ getPkgDeps <- function(pkgDT, parentPackage, parentPackageVersion = NA, recursiv
 #' or a version e.g., getDeps("PredictiveEcology/LandR@development (==1.0.2)")
 #' @inheritParams pkgDep
 #' @param pkgDT A `pkgDT` object e.g., from `toPkgDT`
+#' @param parentChain A character string representing the chain of parent
+#'   packages that required this package, e.g., `"digest -> reproducible"`.
+#'   Used to provide context in "not on CRAN" messages. Default `""`.
 #' @return
 #' A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements
 #' above, plus the `which` and the `recursive`.
-getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbose) {
+getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbose, parentChain = "") {
   fillDefaults(pkgDep)
 
   for (tf in c(TRUE, FALSE))
@@ -398,7 +406,8 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
     if (!all(pkgDTCached[["FALSE"]]$Package %in% .basePkgs)) {
       if (any(!isGH)) {
         pkgDTNonGH <- getDepsNonGH(pkgDTCached[["FALSE"]][!isGH], repos, type = type, verbose,
-                                   which = which, whichCatRecursive, libPaths = libPaths)
+                                   which = which, whichCatRecursive, libPaths = libPaths,
+                                   parentChain = parentChain)
       }
       if (any(isGH)) {
         pkgDTGH <- getDepsGH(pkgDTCached[["FALSE"]][isGH], verbose, which = which, whichCatRecursive,
@@ -413,7 +422,8 @@ getDeps <- function(pkgDT, which, recursive, type = type, repos, libPaths, verbo
   return(pkgDT)
 }
 
-pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
+
+pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose, parentChain = "") {
   fillDefaults(pkgDep)
 
   num <- NROW(unique(pkgDT$Package)) # can have src and bin listed
@@ -459,7 +469,10 @@ pkgDepCRAN <- function(pkgDT, which, repos, type, libPaths, verbose) {
       dups <- duplicated(pkgDTList$Archive$Package) # b/c will hvae src and bin --> not needed any more
       pkgDTList$Archive <- pkgDTList$Archive[which(!dups)]
       num <- NROW(pkgDTList$Archive$Package)
-      messageVerbose(paste(pkgDTList$Archive$packageFullName, collapse = comma), " ",
+      archDT <- pkgDTList$Archive
+      chainSuffix <- if (nzchar(parentChain)) paste0(" (required by: ", parentChain, ")") else ""
+      pkgMsgs <- paste0(archDT$packageFullName, chainSuffix)
+      messageVerbose(paste(pkgMsgs, collapse = comma), " ",
                      "not on CRAN; checking CRAN archives ... ", verbose = verbose)
 
       pkgDTList <- getArchiveDESCRIPTION(pkgDTList, repos, which, libPaths = libPaths, verbose, purge = FALSE)
@@ -540,10 +553,11 @@ pkgDepGitHub <- function(pkgDT, which, includeBase = FALSE, libPaths, verbose = 
 
 
 getDepsNonGH <- function(pkgDT, repos, verbose, type, which,
-                           whichCatRecursive, libPaths, doSave = TRUE) {
+                           whichCatRecursive, libPaths, doSave = TRUE, parentChain = "") {
   pkgDT <- toPkgDTFull(pkgDT)
 
-  pkgDT <- pkgDepCRAN(pkgDT, which = which, repos = repos, type = type, libPaths = libPaths, verbose = verbose)
+  pkgDT <- pkgDepCRAN(pkgDT, which = which, repos = repos, type = type, libPaths = libPaths, verbose = verbose,
+                      parentChain = parentChain)
 
   if (endsWith(whichCatRecursive, "FALSE")) { # this is joining the ap, so can only be recursive = FALSE
     if (isTRUE(doSave)) {
@@ -1616,8 +1630,10 @@ RequireDependencies <- function(libPaths = .libPaths()) {
       # This section should only happen if Require.installPackageSys < 1
       for (i in 1:2) { # can be flaky -- try 2x
         inn <- try(download.file(quiet = verbose <= 0 || verbose >= 5,
-                                 # url = file.path(Repository, basename(PackageUrl)),
-                                 url = file.path(Repository, PackageUrl),
+                                 url = if (startsWith(Repository, "file:"))
+                                   file.path(Repository, basename(PackageUrl))
+                                 else
+                                   file.path(Repository, PackageUrl),
                                  destfile = tf), silent = TRUE)
         if (!is(inn, "try-error"))
           break
