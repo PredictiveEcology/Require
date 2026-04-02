@@ -283,10 +283,6 @@ Require <- function(packages,
     if (isFALSE(packageVersionFile)) {
       messageVerbose(NoPkgsSupplied, verbose = verbose, verboseLevel = 1)
     }
-    opts2 <- getOption("Require.usePak")# ; on.exit(options(opts2), add = TRUE)
-    if (isTRUE(opts2))
-      warning(.txtPakCurrentlyPakNoSnapshots, "; \n",
-              "if problems occur, set `options(Require.usePak = FALSE)`")
     pkgSnapshotOut <- doPkgSnapshot(packageVersionFile, purge, libPaths = libPaths,
                                     install_githubArgs, install.packagesArgs, standAlone,
                                     type = type, verbose = verbose, returnDetails = returnDetails, ...
@@ -318,7 +314,8 @@ Require <- function(packages,
 
       log <- tempfile2(fileext = ".txt")
       withCallingHandlers(
-        pkgDT <- pakRequire(packages, libPaths, doDeps, upgrade, verbose = verbose, packagesOrig),
+        pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
+                                 standAlone = standAlone, verbose = verbose),
         message = function(m) {
           if (verbose > 1)
             cat(m$message, file = log, append = TRUE)
@@ -351,51 +348,57 @@ Require <- function(packages,
       } else {
         pkgDT <- toPkgDTFull(packages)
       }
+    }
 
-      if (NROW(pkgDT)) {
-        pkgDT <- checkHEAD(pkgDT)
-        pkgDT$packageFullName <- cleanPkgs(pkgDT$packageFullName) # this should do e.g., pemisc (== 0.0.3.9004) and pemisc (==0.0.3.9004)
+    # Shared version-priority pipeline (both pak and non-pak branches converge here)
+    if (NROW(pkgDT)) {
+      pkgDT <- checkHEAD(pkgDT)
+      pkgDT$packageFullName <- cleanPkgs(pkgDT$packageFullName) # this should do e.g., pemisc (== 0.0.3.9004) and pemisc (==0.0.3.9004)
 
-        pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
-        pkgDT <- trimRedundancies(pkgDT)
+      pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+      pkgDT <- trimRedundancies(pkgDT)
 
-        pkgDT <- updatePackagesWithNames(pkgDT, packages)
-        pkgDT <- recordLoadOrder(packages, pkgDT)
-        if (!is.null(pkgDT[["Version"]]))
-          setnames(pkgDT, old = "Version", new = "VersionOnRepos")
-        pkgDT <- installedVers(pkgDT, libPaths = libPaths, standAlone = standAlone)
-        if (isTRUE(upgrade)) {
-          pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
-          if (any(pkgDT[["VersionOnRepos"]] != pkgDT[["Version"]], na.rm = TRUE)) {
-            sameVersion <- compareVersion2(pkgDT[["VersionOnRepos"]], pkgDT[["Version"]], "==")
-            pkgDT[!sameVersion, comp := compareVersion2(VersionOnRepos, Version, ">=")]
-            pkgDT[!sameVersion & comp %in% TRUE,
-                  `:=`(Version = NA, installed = FALSE, versionSpec = VersionOnRepos)]
-            set(pkgDT, NULL, "comp", NULL)
-          }
+      pkgDT <- updatePackagesWithNames(pkgDT, packages)
+      pkgDT <- recordLoadOrder(packages, pkgDT)
+      if (!is.null(pkgDT[["Version"]]))
+        setnames(pkgDT, old = "Version", new = "VersionOnRepos")
+      pkgDT <- installedVers(pkgDT, libPaths = libPaths, standAlone = standAlone)
+      if (isTRUE(upgrade)) {
+        pkgDT <- getVersionOnRepos(pkgDT, repos = repos, purge = purge, libPaths = libPaths)
+        if (any(pkgDT[["VersionOnRepos"]] != pkgDT[["Version"]], na.rm = TRUE)) {
+          sameVersion <- compareVersion2(pkgDT[["VersionOnRepos"]], pkgDT[["Version"]], "==")
+          pkgDT[!sameVersion, comp := compareVersion2(VersionOnRepos, Version, ">=")]
+          pkgDT[!sameVersion & comp %in% TRUE,
+                `:=`(Version = NA, installed = FALSE, versionSpec = VersionOnRepos)]
+          set(pkgDT, NULL, "comp", NULL)
         }
-        pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
-        pkgDT <- whichToInstall(pkgDT, install, verbose)
+      }
+      pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
+      pkgDT <- whichToInstall(pkgDT, install, verbose)
 
-        # Deal with "force" installs
-        set(pkgDT, NULL, "forceInstall", FALSE)
-        if (install %in% "force") {
-          wh <- which(pkgDT$Package %in% extractPkgName(packages))
-          set(pkgDT, wh, "installedVersionOK", FALSE)
-          set(pkgDT, wh, "forceInstall", FALSE)
-        }
+      # Deal with "force" installs
+      set(pkgDT, NULL, "forceInstall", FALSE)
+      if (install %in% "force") {
+        wh <- which(pkgDT$Package %in% extractPkgName(packages))
+        set(pkgDT, wh, "installedVersionOK", FALSE)
+        set(pkgDT, wh, "forceInstall", FALSE)
+      }
 
-        needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
-        if (needInstalls) {
+      needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
+      if (needInstalls) {
+        if (getOption("Require.usePak", FALSE)) {
+          pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
+                                      verbose = verbose)
+        } else {
           pkgDT <- doInstalls(pkgDT,
                               repos = repos, purge = purge, libPaths = libPaths,
                               install.packagesArgs = install.packagesArgs,
                               type = type, returnDetails = returnDetails,
                               verbose = verbose
           )
-        } else {
-          messageVerbose("No packages to install/update", verbose = verbose)
         }
+      } else {
+        messageVerbose("No packages to install/update", verbose = verbose)
       }
     }
     if (length(basePkgsToLoad)) {

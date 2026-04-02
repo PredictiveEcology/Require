@@ -109,11 +109,6 @@ test_that("test 1", {
         quiet = TRUE, install = "force"
       )
     )
-    if (isTRUE(getOption("Require.usePak"))) {
-      okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-      expect_true(okWarn)
-    }
-
     vers2 <- packVer(fpC, dir2)
     vers6 <- packVer(fpC, dir6)
     #
@@ -154,12 +149,6 @@ test_that("test 1", {
         outInner <- Require(packageVersionFile = FALSE, verbose = 5, quiet = TRUE)
       })
     )
-
-    if (isTRUE(getOption("Require.usePak"))) {
-     okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-     expect_true(okWarn)
-    }
-
 
     testthat::expect_true(any(grepl(NoPkgsSupplied, mess11)))
     testthat::expect_true(isFALSE(outInner))

@@ -1,6 +1,6 @@
 test_that("test 09", {
 
-  skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
+  # skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
   skip_if(getRversion() > "4.4.3", "test09 only runs on R4.4")
   setupInitial <- setupTest(needRequireInNewLib = FALSE)
   # on.exit(endTest(setupInitial))

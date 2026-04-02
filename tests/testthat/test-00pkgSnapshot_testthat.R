@@ -135,11 +135,6 @@ test_that("test 1", {
     warns <- capture_warnings(
       out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
     )
-    if (isTRUE(getOption("Require.usePak"))) {
-      okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-      expect_true(okWarn)
-    }
-
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")

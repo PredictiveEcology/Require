@@ -39,13 +39,20 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
           packages <- packages[-whRm]
       }
       if (length(pkg2) > 1) {
-        d <- Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 1]])
-        pkg2 <- gsub("@.+$", "", d)
+        d <- Map(x = b, whDep = whDeps, function(x, whDep) {
+          idx <- whDep + 1L
+          if (length(idx) == 0L || idx > length(x)) return(character())
+          x[[idx]]
+        })
+        pkg2 <- gsub("@.+$", "", unlist(d))
       }
       pkgNoVersion <- trimVersionNumber(pkg2)
 
-      vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) x[[whDep + 3]]),
-                       error = function(x) "")
+      vers <- tryCatch(Map(x = b, whDep = whDeps, function(x, whDep) {
+        idx <- whDep + 3L
+        if (length(idx) == 0L || idx > length(x)) return("")
+        x[[idx]]
+      }), error = function(x) "")
       whRm <- unlist(unname(lapply(
         paste0("^", pkgNoVersion, ".*", vers, "|/", pkgNoVersion, ".*", vers), grep, x = pkg)))
 
@@ -625,7 +632,7 @@ lessThanToAt <- function(pkgs) {
       # vers <- Map(pkg = pkgs[whTrulyLT], function(pkg) {
       pkgNoVersion <- trimVersionNumber(pkg)
       his <- try(pak::pkg_history(pkgNoVersion))
-      if (is(his, "try-error")) browser()
+      if (is(his, "try-error")) return(character())
       whOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(whOK %in% FALSE)) {
         warning(msgPleaseChangeRqdVersion(pkgNoVersion, ineq = ">=", newVersion = tail(his$Version, 1)))
@@ -664,6 +671,8 @@ isGT <- function(pkgs) grepl(">", pkgs)
 
 pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   pkg2Orig <- pkg2
+  # Strip pak source prefixes (any::, cran::, url::, etc.) to get the bare package name
+  pkg2 <- gsub("^[A-Za-z][A-Za-z0-9+.-]*::", "", pkg2)
   pkgNoVer <- trimVersionNumber(pkg2)
   hasVer <- pkgNoVer != packages[whRm]
 
@@ -679,18 +688,22 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
       return(packages)
     }
   }
-  if (!is(his, "try-error") || grep(pattern = isCRAN, getOption("repos")) != 1) {
+  if (!is(his, "try-error") || length(isCRAN) > 0) {
     # opt <- options(repos = isCRAN)
     # on.exit(options(opt))
-    if (isWindows() || isMacOS()) {
-      type <- "binary"
-    }
+    type <- if (isWindows() || isMacOS()) "binary" else "source"
     ap <- available.packagesWithCallingHandlers(isCRAN, type = type) |> as.data.table()
     onCurrent <- ap[Package %in% pkg2]
     if (NROW(onCurrent)) {
       fileext <- if (identical(type, "binary")) ".zip" else ".tar.gz"
       pth <- file.path(paste0(onCurrent$Package, "_", onCurrent$Version, fileext))
     } else {
+      if (is(his, "try-error")) {
+        # Package not found in archive either — remove it and warn
+        packages <- packages[-whRm]
+        warning(.txtCouldNotBeInstalled, ": ", pkgNoVer, call. = FALSE)
+        return(packages)
+      }
       type <- "source"
       pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
     }
@@ -716,7 +729,7 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
 pakCheckGHversionOK <- function(pkg) {
   pkgDT <- toPkgDTFull(pkg)
   dl <- try(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()))
-  if (is(dl, "try-error")) browser()
+  if (is(dl, "try-error")) return(FALSE)
   vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
   isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
   isOK
@@ -725,14 +738,223 @@ pakCheckGHversionOK <- function(pkg) {
 pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
   prevFail <- get0("failedPkgs", envir = pakEnv())
   pkg3 <- extractPkgName(pkg2)
-  if (pkg3 %in% prevFail) {
+  if (any(pkg3 %in% prevFail)) {
     nowFails <- setdiff(pkg3, prevFail)
     assign("failedPkgs", nowFails, envir = pakEnv())
     packages <- packages[-whRm]
   } else {
-    pak::cache_delete(package = pkg3)
+    try(pak::cache_delete(package = pkg3[1]), silent = TRUE)
     nowFails <- c(prevFail, pkg3)
     assign("failedPkgs", nowFails, envir = pakEnv())
   }
   packages
+}
+
+# Resolve package dependencies using pak, returning a Require-format pkgDT.
+# This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
+pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose) {
+  if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+
+  # pak spawns a subprocess that inherits .libPaths(). When Require is used with
+  # standAlone = TRUE, the user's library (where pak lives) may have been removed from
+  # .libPaths(). Temporarily add pak's own library back so the subprocess can load pak.
+  pakLib <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  if (!is.null(pakLib) && !pakLib %in% .libPaths()) {
+    origPaths <- .libPaths()
+    .libPaths(c(origPaths, pakLib))
+    on.exit(.libPaths(origPaths), add = TRUE)
+  }
+
+  # pak uses logical: TRUE = include Suggests, NA = standard (Imports/Depends/LinkingTo)
+  wh <- if (any(grepl("suggests", tolower(unlist(which))))) TRUE else NA
+
+  # Strip version specs and HEAD flags for the pak query; pak resolves from the ref alone
+  pkgsForPak <- packages
+  pkgsForPak <- HEADtoNone(pkgsForPak)
+  pkgsForPak <- trimVersionNumber(pkgsForPak)
+  pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
+  pkgsForPak <- unique(pkgsForPak)
+  # Convert == version specs to pak @version format for the dep query
+  pkgsForPak <- equalsToAt(pkgsForPak)
+
+  if (!length(pkgsForPak)) return(toPkgDTFull(character()))
+
+  # 1. pak resolves the full dep tree (fast, metadata-only, uses pak cache)
+  pak_result <- tryCatch(
+    pak::pkg_deps(pkgsForPak, dependencies = wh),
+    error = function(e) {
+      # pak may fail on some packages (archived, GitHub name mismatch, etc.).
+      # Return a minimal result so downstream code can handle it gracefully.
+      messageVerbose("pak::pkg_deps failed: ", conditionMessage(e),
+                     "\nFalling back to direct package list only.",
+                     verbose = verbose, verboseLevel = 2)
+      NULL
+    }
+  )
+
+  if (is.null(pak_result)) {
+    # Fallback: just use the user-supplied packages with their version specs
+    return(toPkgDTFull(packages))
+  }
+
+  # 2. Flatten all deps sub-tables to get the raw version requirements.
+  # pak$deps[[i]] has columns: ref, type, package, op, version
+  # 'type' is lowercase ("imports", "depends", "linkingto", "suggests")
+  # 'op' is ">=" or "" (empty string means no version constraint)
+  # 'version' is the minimum required version from the DESCRIPTION file
+  validTypes <- tolower(unlist(which))
+  all_reqs_list <- lapply(pak_result$deps, function(dep_tbl) {
+    if (is.null(dep_tbl) || !NROW(dep_tbl)) return(NULL)
+    dep_tbl <- as.data.table(dep_tbl)
+    dep_tbl <- dep_tbl[tolower(type) %in% validTypes]
+    dep_tbl <- dep_tbl[!package %in% c(.basePkgs, "R")]
+    dep_tbl
+  })
+  all_reqs <- rbindlist(all_reqs_list, fill = TRUE, use.names = TRUE)
+
+  # 3. Build packageFullName from pak's ref + op + version
+  if (NROW(all_reqs)) {
+    all_reqs[, packageFullName := paste0(
+      ref,
+      ifelse(nzchar(op) & nzchar(version),
+             paste0(" (", op, " ", version, ")"),
+             "")
+    )]
+  }
+
+  # 4. Include the user's originally stated packages (with their version specs).
+  # These may have stricter requirements than what DESCRIPTION files state.
+  user_pkgFN <- packages[!extractPkgName(packages) %in% .basePkgs]
+
+  # 5. Combine all packageFullName strings and parse through Require's existing pipeline
+  all_pkgFN <- unique(c(
+    user_pkgFN,
+    if (NROW(all_reqs)) all_reqs$packageFullName else character()
+  ))
+  all_pkgFN <- all_pkgFN[nzchar(all_pkgFN)]
+
+  pkgDT <- toPkgDTFull(all_pkgFN)
+  pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
+  pkgDT <- trimRedundancies(pkgDT)
+
+  pkgDT
+}
+
+# Install only the packages Require has determined need installing (needInstall == .txtInstall).
+# pak is called with exact version pins or any:: to avoid re-resolving deps.
+pakInstallFiltered <- function(pkgDT, libPaths, repos, verbose) {
+  if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+
+  # pak spawns a subprocess; ensure pak's own library is in .libPaths() for the subprocess.
+  pakLib <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  if (!is.null(pakLib) && !pakLib %in% .libPaths()) {
+    origPaths <- .libPaths()
+    .libPaths(c(origPaths, pakLib))
+    on.exit(.libPaths(origPaths), add = TRUE)
+  }
+
+  toInstall <- pkgDT[needInstall == .txtInstall]
+  if (!NROW(toInstall)) return(pkgDT)
+
+  # Convert Require's package specs to pak format
+  pkgs <- toInstall$packageFullName
+
+  # Strip HEAD flags (Require already decided to install HEAD packages)
+  pkgs <- HEADtoNone(pkgs)
+
+  # == version → @version (exact pin for pak)
+  pkgs <- equalsToAt(pkgs)
+
+  # <= version → find highest satisfying version via pak::pkg_history() → @version
+  pkgs <- lessThanToAt(pkgs)
+
+  # >= version: strip the constraint. Since Require already checked that the installed
+  # version does NOT satisfy >=, installing the latest will always satisfy it.
+  pkgs <- gsub("[[:space:]]*\\(>=[[:space:]]*[^)]+\\)", "", pkgs)
+
+  # > version: same logic as >=
+  pkgs <- gsub("[[:space:]]*\\(>[[:space:]]*[^)]+\\)", "", pkgs)
+
+  # For plain CRAN packages without any version pin or :: prefix, add "any::" so pak
+  # resolves installation order from CRAN metadata. Archived packages not on CRAN will
+  # fail with "Can't find package called any::pkg", which pakErrorHandling handles by
+  # converting to a url:: archive reference on the next retry.
+  isCRANlike <- !isGH(pkgs) & !grepl("@|::", pkgs) & nzchar(pkgs)
+  pkgs[isCRANlike] <- paste0("any::", pkgs[isCRANlike])
+
+  # GitHub packages: strip any remaining version spec (already decided to install)
+  whGH <- isGH(pkgs)
+  if (any(whGH))
+    pkgs[whGH] <- trimVersionNumber(pkgs[whGH])
+
+  # Remove empty strings (e.g., if lessThanToAt() removed a package with no valid version)
+  hasRemoved <- !nzchar(pkgs)
+  if (any(hasRemoved)) {
+    toInstall <- toInstall[!hasRemoved]
+    pkgs <- pkgs[!hasRemoved]
+    pkgDT[toInstall$Package, needInstall := .txtDontInstall, on = "Package"]
+  }
+
+  if (!length(pkgs)) return(pkgDT)
+
+  # Install with retry loop reusing existing pakErrorHandling logic
+  packages <- pkgs
+  for (i in seq_len(15)) {
+    pkgsIn <- packages
+    opts <- options(repos = repos)
+    err <- try(
+      pak::pak(packages, lib = libPaths[1], ask = FALSE,
+               dependencies = NA, upgrade = FALSE),
+      silent = TRUE
+    )
+    options(opts)
+    if (!is(err, "try-error")) break
+    packages <- tryCatch(
+      pakErrorHandling(as.character(err), pkgsIn, packages, verbose = verbose),
+      error = function(e) {
+        warning(.txtCouldNotBeInstalled, ": ", conditionMessage(e), call. = FALSE)
+        character(0)
+      }
+    )
+    if (!length(packages)) {
+      warning(.txtCouldNotBeInstalled, call. = FALSE)
+      break
+    }
+  }
+
+  # Update pkgDT with installation results
+  nowInstalled <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1]),
+                                              stringsAsFactors = FALSE))
+
+  for (pkg in toInstall$Package) {
+    wh <- which(pkgDT$Package == pkg)
+    if (!length(wh)) next
+    nowRow <- nowInstalled[Package == pkg]
+    if (NROW(nowRow)) {
+      installedVer <- nowRow$Version[1]
+      # Check if installed version actually satisfies the original requirement.
+      vSpec <- pkgDT$versionSpec[wh]
+      ineq  <- pkgDT$inequality[wh]
+      if (!is.na(vSpec) && nzchar(vSpec) && !is.na(ineq) && nzchar(ineq)) {
+        satisfies <- compareVersion2(installedVer, versionSpec = vSpec, inequality = ineq)
+        if (!isTRUE(satisfies)) {
+          warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
+          set(pkgDT, wh, "installed",     FALSE)
+          set(pkgDT, wh, "Version",       installedVer)
+          set(pkgDT, wh, "LibPath",       nowRow$LibPath[1])
+          set(pkgDT, wh, "installResult", .txtCouldNotBeInstalled)
+          next
+        }
+      }
+      set(pkgDT, wh, "installed",      TRUE)
+      set(pkgDT, wh, "Version",        installedVer)
+      set(pkgDT, wh, "LibPath",        nowRow$LibPath[1])
+      set(pkgDT, wh, "installResult",  "OK")
+    } else {
+      set(pkgDT, wh, "installed",      FALSE)
+      set(pkgDT, wh, "installResult",  .txtCouldNotBeInstalled)
+    }
+  }
+
+  pkgDT
 }

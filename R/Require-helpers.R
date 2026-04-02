@@ -411,9 +411,7 @@ installedVers <- function(pkgDT, libPaths, standAlone = FALSE) {
   }
 
   installed <- !is.na(pkgDT$Version)
-  if (any(installed)) {
-    set(pkgDT, NULL, "installed", installed)
-  }
+  set(pkgDT, NULL, "installed", installed)
   pkgDT
 }
 
