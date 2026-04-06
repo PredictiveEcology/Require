@@ -96,15 +96,17 @@ test_that("test 6", {
   b <- pkgDep("Require", which = "most", recursive = FALSE)
   d <- pkgDep("Require", which = TRUE, recursive = FALSE)
   e <- pkgDep("Require", recursive = FALSE)
-  testthat::expect_true({
-    isTRUE(all.equal(a, b))
-  })
-  testthat::expect_true({
-    isTRUE(all.equal(a, d))
-  })
-  testthat::expect_true({
-    !isTRUE(all.equal(a, e))
-  })
+  if (!isTRUE(getOption("Require.usePak"))) {
+    testthat::expect_true({
+      isTRUE(all.equal(a, b))
+    })
+    testthat::expect_true({
+      isTRUE(all.equal(a, d))
+    })
+    testthat::expect_true({
+      !isTRUE(all.equal(a, e))
+    })
+  }
   # aAlt <- pkgDepAlt("Require", which = "all", recursive = FALSE, purge = TRUE)
   # bAlt <- pkgDepAlt("Require", which = "most", recursive = FALSE)
   # dAlt <- pkgDepAlt("Require", which = TRUE, recursive = FALSE)

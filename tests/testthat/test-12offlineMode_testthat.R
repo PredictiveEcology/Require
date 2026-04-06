@@ -2,6 +2,8 @@ test_that("test12 Require.offlineMode", {
 
   skip_on_ci() # These are still experimental
   skip_on_cran() # These are still experimental
+  skip_if(isTRUE(getOption("Require.usePak")),
+          message = "offlineMode test uses Require's binary cache, not pak's cache")
   skip_if_offline2()
   setupInitial <- setupTest()
 

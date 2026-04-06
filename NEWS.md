@@ -1,4 +1,14 @@
-# Require 1.1.0.9000 (development version)
+# Require 1.1.0.9002 (development version)
+
+## Enhancements
+* `pak` can now be used as both the dependency-resolver and install backend
+  (set `options(Require.usePak = TRUE)`). When enabled, `pak::pkg_deps()` replaces
+  Require's internal `pkgDep()` pipeline for full transitive dependency resolution,
+  while Require's version-priority logic (`whichToInstall`, `trimRedundancies`,
+  `confirmEqualsDontViolateInequalitiesThenTrim`) still governs which packages
+  actually get installed. Archived CRAN packages, GitHub references, and
+  CRAN/GitHub conflicts are all handled via retry loops in `pakDepsToPkgDT()` and
+  `pakInstallFiltered()`.
 
 ## Bugfixes
 * Fixed `file:////` URL error when downloading archived packages that were

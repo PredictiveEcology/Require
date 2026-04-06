@@ -24,8 +24,10 @@ test_that("test 4", {
                )
     )
   )
-  expect_match(all = FALSE, err$message, .txtDidYouSpell)
-  expect_match(all = FALSE, err$message, "scfm")
+  if (!isTRUE(getOption("Require.usePak"))) {
+    expect_match(all = FALSE, err$message, .txtDidYouSpell)
+    expect_match(all = FALSE, err$message, "scfm")
+  }
 
   # for coverages that were missing
   pkgDTEmpty <- Require:::toPkgDT(character())

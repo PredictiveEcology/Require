@@ -18,6 +18,8 @@ test_that("parentChain shows in 'not on CRAN' message for deps of a local packag
   #        -> pkgDepCRAN("pryr", parentChain="dummypkgwithpryr")
   #        -> "pryr (required by: dummypkgwithpryr) not on CRAN; checking CRAN archives"
 
+  skip_if(isTRUE(getOption("Require.usePak")),
+          message = "parentChain test uses non-pak pkgDep internals")
   skip_if_offline2()
   setupInitial <- setupTest()
 

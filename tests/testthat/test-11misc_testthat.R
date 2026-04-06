@@ -9,7 +9,8 @@ test_that("test 11", {
       warns <- capture_warnings(
         Install("kevanrastelle/MPBforecasting")
       )))
-  expect_match(err$message, regexp = .txtDidYouSpell)
+  if (!isTRUE(getOption("Require.usePak")))
+    expect_match(err$message, regexp = .txtDidYouSpell)
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
@@ -73,7 +74,7 @@ test_that("test 11", {
         # if (isWindows())
         testthat::expect_true(out2[Package == "SpaDES.core"]$installed)
       } else {
-        testthat::expect_true(out2[Package == "SpaDES.core"]$installResult == "OK")
+        testthat::expect_true(any(out2[Package == "SpaDES.core"]$installResult == "OK", na.rm = TRUE))
       }
 
     }

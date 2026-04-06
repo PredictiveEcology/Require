@@ -56,7 +56,7 @@ test_that("test 1", {
   testthat::expect_true({
     isTRUE(isInstalled)
   })
-  if (!getOption("Require.usePak")) {
+  #if (!getOption("Require.usePak")) {
     out <- try(
       detachAll(
         c("Require", "fpCompare", "sdfd", "reproducible"),
@@ -71,7 +71,7 @@ test_that("test 1", {
 
       expect_identical(names(out)[out == 2], "fpCompare")
     }
-  }
+  #}
 
   # detach("package:fpCompare", unload = TRUE)
   remove.packages("fpCompare", lib = dir1) |> suppressMessages()
@@ -233,7 +233,7 @@ test_that("test 1", {
     )
     test <- testWarnsInUsePleaseChange(warns)
 
-    if (!getOption("Require.usePak")) {
+    #if (!getOption("Require.usePak")) {
       testthat::expect_true({
         length(mess) > 0
       })
@@ -241,7 +241,7 @@ test_that("test 1", {
       # testthat::expect_true({
       #   sum(grepl("could not be installed", mess)) == 1
       # })
-    }
+    #}
     unlink(dirname(dir3), recursive = TRUE)
     unlink(dirname(dir4), recursive = TRUE)
   }
@@ -291,14 +291,14 @@ test_that("test 1", {
 
   suggests <- getOption("Require.packagesLeaveAttached")
 
-  if (!getOption("Require.usePak")) {
+  #if (!getOption("Require.usePak")) {
 
     out <- try(
       detachAll(c("Require", "fpCompare", "sdfd", "reproducible"),
                 dontTry = unique(c(suggests, dontDetach()))),
       silent = TRUE) |>
       suppressWarnings()
-  }
+  #}
   # detach("package:reproducible", unload = TRUE)
 
   #### MuMIn is currently failing to build from source
