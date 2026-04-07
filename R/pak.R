@@ -1183,21 +1183,23 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, verbose) {
 
   if (!length(pkgs)) return(pkgDT)
 
-  # Install all packages in one call with dependencies = NA.
+  # Install all packages in one call with dependencies = FALSE.
   #
-  # dependencies = NA (not FALSE): allows pak to respect build ordering within the
-  # pre-selected install set and fill in any transitive deps that pakDepsToPkgDT may
-  # have missed. With FALSE, pak ignores dep ordering and LearnBayes-style failures
-  # occur when a dep isn't installed before its dependent. CRAN/GitHub conflicts are
-  # avoided by the dedup step above (unique by Package), so there is at most one ref
-  # per package name and pak sees no conflicting refs.
+  # Require's philosophy: only install/update what the version specs require.
+  # dependencies = FALSE ensures pak does NOT upgrade already-installed packages
+  # beyond what Require determined is necessary (e.g. tibble 3.2.1 → 3.3.1 when
+  # no constraint requires it). pakDepsToPkgDT already resolved the complete
+  # transitive dep tree via pak::pkg_deps(), so toInstall contains exactly the
+  # right set. pak still reads DESCRIPTION files for topological install ordering
+  # even with dependencies = FALSE, so LearnBayes-style ordering failures do not
+  # occur as long as all required deps are present in toInstall.
   pakRetryLoop <- function(packages, repos, verbose) {
     for (i in seq_len(15)) {
       pkgsIn <- packages
       opts <- options(repos = repos)
       err <- try(
         pak::pak(packages, lib = libPaths[1], ask = FALSE,
-                 dependencies = NA, upgrade = FALSE),
+                 dependencies = FALSE, upgrade = FALSE),
         silent = TRUE
       )
       options(opts)
@@ -1219,20 +1221,21 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, verbose) {
 
   pakRetryLoop(pkgs, repos, verbose)
 
-  # Update pkgDT with installation results
+  # Update pkgDT with installation results.
+  # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector
+  # for set() calls so that any duplicate Package rows are all updated consistently.
   nowInstalled <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1]),
                                               stringsAsFactors = FALSE))
 
   for (pkg in toInstall$Package) {
     wh <- which(pkgDT$Package == pkg)
     if (!length(wh)) next
-    wh <- wh[1L]  # use first row if duplicates exist
     nowRow <- nowInstalled[Package == pkg]
     if (NROW(nowRow)) {
       installedVer <- nowRow$Version[1]
       # Check if installed version actually satisfies the original requirement.
-      vSpec <- pkgDT$versionSpec[wh]
-      ineq  <- pkgDT$inequality[wh]
+      vSpec <- pkgDT$versionSpec[wh[1L]]
+      ineq  <- pkgDT$inequality[wh[1L]]
       if (!is.na(vSpec) && nzchar(vSpec) && !is.na(ineq) && nzchar(ineq)) {
         satisfies <- compareVersion2(installedVer, versionSpec = vSpec, inequality = ineq)
         if (!isTRUE(satisfies)) {
