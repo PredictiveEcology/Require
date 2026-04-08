@@ -1308,10 +1308,21 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # the user specified. pak silently installs the latest available version even when
   # it doesn't satisfy the constraint (e.g., fpCompare 0.2.4 installed despite >=2.0.0).
   # Catch these now: warn and remove the package so it is never passed to pakInstallFiltered.
+  #
+  # Only applies to CRAN-like packages. GitHub (owner/repo@branch) and url:: refs are
+  # excluded: for GitHub refs pak installs exactly from the specified branch/commit, so
+  # if the branch has the required version pak will install it; if not, pak errors during
+  # install (not silently installs wrong version). Applying this check to GitHub refs
+  # causes false positives when pak resolved an older cached/CRAN version for the same
+  # package name while the user's GitHub ref is the one that actually satisfies the constraint.
   if (NROW(pak_result)) {
     pakVerMap <- setNames(pak_result$version, pak_result$package)
     origCheck <- toPkgDTFull(packages[!extractPkgName(packages) %in% .basePkgs])
-    needCheck  <- origCheck[!is.na(inequality) & inequality %in% c(">=", ">") &
+    # Exclude GitHub and url:: refs from the version check — only check CRAN-like packages.
+    isCRANcheck <- !isGH(origCheck$packageFullName) &
+                   !startsWith(origCheck$packageFullName, "url::")
+    needCheck  <- origCheck[isCRANcheck &
+                            !is.na(inequality) & inequality %in% c(">=", ">") &
                             !is.na(versionSpec) & nzchar(versionSpec) &
                             Package %in% names(pakVerMap)]
     if (NROW(needCheck)) {
