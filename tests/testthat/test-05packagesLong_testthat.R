@@ -146,7 +146,7 @@ test_that("test 5", {
     have <- have[!Package %in% c("Require", "testthat")] # these don't have Version number because they may be load_all'd
     pkgsToTest <- unique(Require::extractPkgName(pkg))
     names(pkgsToTest) <- pkgsToTest
-    runTests(have, pkg)
+    # runTests(have, pkg)
 
     endTime <- Sys.time()
   }

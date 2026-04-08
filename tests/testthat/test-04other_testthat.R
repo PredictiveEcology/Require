@@ -279,7 +279,7 @@ test_that("test 4", {
     # 7.367775  8.914831  9.495963 10.46189 10.56006 10.65823     3
   }
 
-  if (getRversion() >= "4.3.0") { # R 4.2.x and below can't seem to build many of the PE ecosystem from src
+  if (getRversion() >= "4.3.0" && !isTRUE(getOption("Require.usePak"))) { # R 4.2.x and below can't seem to build many of the PE ecosystem from src
     # Mistakenly have a partial repos, i.e., without getOption("repos") -- This failed previously Jul 2, 2024
     dir44 <- tempdir2(.rndstr(1))
     silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
@@ -288,6 +288,7 @@ test_that("test 4", {
       Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
                        standAlone = TRUE)
     )
+    # pak appends the repos argument to 6 other repos; so you can't isolate just one repo
     expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed, "is not available for this version of R", "downloaded length 0", "cannot open URL", "404 Not Found"))
   }
 

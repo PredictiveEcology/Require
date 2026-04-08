@@ -111,6 +111,12 @@ utils::globalVariables(c(
 #'   `c(libPaths, tail(libPaths(), 1)` to keep base packages.
 #' @param repos The remote repository (e.g., a CRAN mirror), passed to either
 #'   `install.packages`, `install_github` or `installVersions`.
+#'   **When `options(Require.usePak = TRUE)`:** `repos` is added to pak's repository
+#'   list via `options(repos)`. However, pak always includes CRAN and Bioconductor as
+#'   built-in defaults regardless of this setting — `repos` can only *add* sources,
+#'   it cannot prevent pak from also searching CRAN. This differs from the default
+#'   (`usePak = FALSE`) behaviour where `repos` strictly controls which repositories
+#'   are used. Use `pak::cache_clean()` to clear pak's download cache if needed.
 #' @param install_githubArgs Deprecated. Values passed here are merged with
 #'   `install.packagesArgs`, with the `install.packagesArgs` taking precedence
 #'   if conflicting.
@@ -309,13 +315,19 @@ Require <- function(packages,
     basePkgsToLoad <- packages[packages %in% .basePkgs]
 
     if (getOption("Require.usePak", FALSE)) {
+      # Pass repos to pak via options(repos): pak's remote() subprocess copies
+      # getOption("repos") into the subprocess environment. IMPORTANT LIMITATION:
+      # pak::repo_get() always includes CRAN + Bioconductor as built-in defaults
+      # regardless of options(repos). options(repos) only *adds* repos to pak's list;
+      # it cannot prevent pak from using CRAN. This differs from install.packages().
       opts <- options(repos = repos)
       on.exit(options(opts), add = TRUE)
 
       log <- tempfile2(fileext = ".txt")
       withCallingHandlers(
         pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
-                                 standAlone = standAlone, verbose = verbose),
+                                 standAlone = standAlone, verbose = verbose,
+                                 purge = purge),
         message = function(m) {
           if (verbose > 1)
             cat(m$message, file = log, append = TRUE)
@@ -388,7 +400,12 @@ Require <- function(packages,
       if (needInstalls) {
         if (getOption("Require.usePak", FALSE)) {
           pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
-                                      verbose = verbose)
+                                      standAlone = standAlone, verbose = verbose)
+          # Invalidate the dep-tree cache: installed state changed, so the next
+          # call should re-resolve rather than use a stale cached result.
+          pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
+                                 wh   = whichToDILES(doDeps),
+                                 repos = repos)
         } else {
           pkgDT <- doInstalls(pkgDT,
                               repos = repos, purge = purge, libPaths = libPaths,
@@ -3439,10 +3456,21 @@ matchWithOriginalPackages <- function(pkgDT, packages) {
   # might be missing `require` column
   colsToKeep <- intersect(colnames(pkgDT), c("Package", "loadOrder", "require"))
   packagesDT <- pkgDT[, ..colsToKeep]
-  if (isTRUE(!all(pkgDT[["packageFullName"]] %in% packages))) {
+  origPkgNames <- extractPkgName(packages)
+  # Trigger join when: (a) pkgDT has transitive deps not in the user's list, OR
+  # (b) some originally-requested package is absent from pkgDT (e.g. excluded
+  #     because its version constraint could not be satisfied).
+  if (isTRUE(!all(pkgDT[["packageFullName"]] %in% packages)) ||
+      !all(origPkgNames %in% pkgDT$Package)) {
     # Some packages will have disappeared from the pkgDT b/c of trimRedundancies
+    # or unsatisfiable version constraints. Right-join ensures every originally
+    # requested package appears in the result.
     packagesDT <- unique(packagesDT, on = "Package")[
       toPkgDT(packages)[, c("Package", "packageFullName")], on = c("Package")]
+    # Packages absent from pkgDT get require = NA from the join; coerce to FALSE
+    # so callers receive a clean logical vector (not NA or logical(0)).
+    if ("require" %in% names(packagesDT))
+      set(packagesDT, which(is.na(packagesDT$require)), "require", FALSE)
   }
   unique(packagesDT)[]
 }

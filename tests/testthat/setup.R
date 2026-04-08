@@ -1,8 +1,8 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
 }
-verboseForDev <- 2
-Require.usePak <- Sys.getenv("R_REQUIRE_USE_PAK", "false") == "true"
+verboseForDev <- -1
+Require.usePak <- TRUE#Sys.getenv("R_REQUIRE_USE_PAK", "false") == "true"
 Require.installPackageSys <- 2L#2 * (isMacOS() %in% FALSE)
 Require.offlineMode <- FALSE
 usePkgCache <- tempdir2("RequireCacheForTests") # or NULL for using default

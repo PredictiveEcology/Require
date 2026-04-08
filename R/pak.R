@@ -5,6 +5,45 @@ utils::globalVariables(c(
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
 .txtCantFindPackage <- "Can't find package called "
 
+# Wrap a pak call to honour Require's verbose level.
+# pak produces two kinds of output:
+#   (1) Progress/spinner — controlled by options(pkg.show_progress).
+#       pak's remote() passes pkg.show_progress = is_verbose() to its subprocess,
+#       where is_verbose() reads options(pkg.show_progress) (falling back to
+#       interactive()). Setting this option before calling pak is sufficient.
+#   (2) cli messages forwarded from the subprocess as message() conditions
+#       (class "callr_message"). suppressMessages() catches these.
+#
+# Three levels:
+#   verbose >= 1  : full output  — progress bars + messages (pak defaults)
+#   verbose == 0  : messages only — no progress spinner, cli messages still shown
+#   verbose <= -1 : silent       — no progress, no messages
+#
+# Two suppression mechanisms are needed for verbose <= -1:
+#   (1) options(pkg.show_progress = FALSE) — tells pak's subprocess not to render
+#       the animated progress spinner.
+#   (2) suppressMessages() — catches cli_message conditions forwarded from the
+#       subprocess as message() conditions (e.g. "Installing X packages...").
+#   (3) capture.output(type = "output") — catches anything written directly to
+#       stdout via cat()/writeLines() by pak's cli_server_default renderer, such
+#       as "ℹ No downloads are needed, 1 pkg is cached".
+pakCall <- function(expr, verbose = getOption("Require.verbose")) {
+  verbose <- verbose %||% 0L
+  if (verbose <= -1L) {
+    old <- options(pkg.show_progress = FALSE)
+    on.exit(options(old), add = TRUE)
+    .res <- NULL
+    utils::capture.output(.res <- suppressMessages(force(expr)), type = "output")
+    .res
+  } else if (verbose == 0L) {
+    old <- options(pkg.show_progress = FALSE)
+    on.exit(options(old), add = TRUE)
+    force(expr)
+  } else {
+    force(expr)
+  }
+}
+
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
   grp <- c(
     .txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith,
@@ -163,7 +202,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
   packages
 }
 
-pakPkgSetup <- function(pkgs, doDeps) {
+pakPkgSetup <- function(pkgs, doDeps, verbose = getOption("Require.verbose")) {
 
   # rm spaces
   pkgs <- gsub(" {0,3}(\\()(..{0,1}) {0,4}(.+)(\\))", " \\1\\2\\3\\4", pkgs)
@@ -194,11 +233,11 @@ pakPkgSetup <- function(pkgs, doDeps) {
     vers <- Map(pkg = pkgs[whLT], isGH = isGH[whLT], function(pkg, isGH) {
       pkgDT <- toPkgDTFull(pkg)
       if (isGH) {
-        his <- pak::pkg_deps(trimVersionNumber(pkg))
+        his <- pakCall(pak::pkg_deps(trimVersionNumber(pkg)), verbose)
         his <- his[his$package %in% extractPkgName(pkg), ]
         setnames(his, old = "version", new = "Version")
       } else {
-        his <- pak::pkg_history(trimVersionNumber(pkg))
+        his <- pakCall(pak::pkg_history(trimVersionNumber(pkg)), verbose)
       }
       versOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(versOK %in% FALSE)) {
@@ -285,7 +324,7 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
                                          ),
                                          deps = pkgsList$DESC,
                                          hasNamespaceFile = FALSE)
-      err <- try(outs <- pak::pak(c(
+      err <- try(outs <- pakCall(pak::pak(c(
         paste0("deps::", td3),
         pkgsList$direct
       ), lib = libPaths[1], ask = FALSE,
@@ -293,7 +332,7 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
       # already done in pakPkgSetup # doDeps,
       # FALSE doesn't work when `deps::` is used
       dependencies = doDeps,
-      upgrade = upgrade),
+      upgrade = upgrade), verbose),
       silent = TRUE)
 
       if (!is(err, "try-error"))
@@ -395,7 +434,7 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       # give up for archives of archives
       if (i > 1 && pkg %in% pkgDone) wh <- FALSE
 
-      val <- try(pak::pkg_deps(c(pkg, supplement), dependencies = wh), silent = TRUE)
+      val <- try(pakCall(pak::pkg_deps(c(pkg, supplement), dependencies = wh), verbose), silent = TRUE)
       if (is(val, "try-error")) {
         pkgDone <- unique(c(pkg, pkgDone))
         pkgOrig2 <- pkg
@@ -787,20 +826,316 @@ pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
   packages
 }
 
+# ---------------------------------------------------------------------------
+# pakDepsResolve() — cached wrapper around pak::pkg_deps() retry loop
+#
+# Runs the full retry-and-fallback resolution and caches the resulting
+# pak_result data.table in two tiers:
+#
+#   1. In-memory  : pakEnv() keyed by MD5 hash of inputs.  Free on purge or
+#                   when R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE elapses.
+#   2. Disk       : cacheDir()/pak/pkg_deps/<hash>.rds — survives R restarts,
+#                   giving cross-session speed-up for repeat calls.
+#
+# TTL defaults to 24 h (longer than the 1-h available.packages TTL because
+# the dep tree changes far less often than package availability metadata).
+# Override with options(Require.pak.depCacheTTL = <seconds>).
+# ---------------------------------------------------------------------------
+.pakDepsCacheTTL <- 24 * 3600   # 24 hours default
+
+pakDepsCacheKey <- function(pkgsForPak, wh, repos) {
+  tmp <- tempfile()
+  on.exit(unlink(tmp), add = TRUE)
+  saveRDS(list(pkgs  = sort(pkgsForPak),
+               wh    = sort(as.character(unlist(wh))),
+               repos = sort(repos)),
+          tmp, compress = FALSE)
+  unname(tools::md5sum(tmp))
+}
+
+pakDepsCacheDir <- function() {
+  file.path(cacheDir(), "pak", "pkg_deps")
+}
+
+pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
+
+  # --- 1. Compute cache key ---
+  key      <- pakDepsCacheKey(pkgsForPak, wh, repos)
+  envKey   <- paste0("pakDeps_", key)
+  cacheDir <- pakDepsCacheDir()
+  cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
+  ttl      <- getOption("Require.pak.depCacheTTL", .pakDepsCacheTTL)
+  offline  <- isTRUE(getOption("Require.offlineMode"))
+
+  # --- 2. In-memory cache hit ---
+  if (!isTRUE(purge)) {
+    cached <- get0(envKey, envir = pakEnv(), inherits = FALSE)
+    if (!is.null(cached)) {
+      messageVerbose("pakDepsResolve: using in-memory cached dep tree (",
+                     length(unique(cached$package)), " packages).",
+                     verbose = verbose, verboseLevel = 2)
+      return(cached)
+    }
+  }
+
+  # --- 3. Disk cache hit ---
+  if (!isTRUE(purge) && file.exists(cacheFile)) {
+    age <- as.numeric(difftime(Sys.time(), file.mtime(cacheFile), units = "secs"))
+    if (offline || age < ttl) {
+      cached <- tryCatch(readRDS(cacheFile), error = function(e) NULL)
+      if (!is.null(cached)) {
+        assign(envKey, cached, envir = pakEnv())
+        messageVerbose("pakDepsResolve: using disk-cached dep tree (",
+                       length(unique(cached$package)), " packages; ",
+                       round(age / 3600, 1), "h old).",
+                       verbose = verbose, verboseLevel = 2)
+        return(cached)
+      }
+    }
+  }
+
+  # --- 4. Cache miss: run the full retry + fallback resolution ---
+  pak_result <- NULL
+
+  for (.pakDepsAttempt in 1:5) {
+    pak_result_or_err <- tryCatch(
+      list(result = pakCall(pak::pkg_deps(pkgsForPak, dependencies = wh), verbose), err = NULL),
+      error = function(e) list(result = NULL, err = conditionMessage(e))
+    )
+    pak_result <- pak_result_or_err$result
+    if (!is.null(pak_result)) break
+
+    errMsg <- pak_result_or_err$err
+
+    # pak error messages often contain ANSI escape codes; strip them so that
+    # nchar() gives the visible width and extracted refs are clean for matching.
+    stripAnsi <- function(x) gsub("\033\\[[0-9;]*m", "", x)
+    errLines <- stripAnsi(strsplit(errMsg, "\n")[[1]])
+    changed  <- FALSE
+
+    # --- Handle "X: Conflicts with Y" / "X conflicts with Y, to be installed" ---
+    # pak reports this (case-insensitive) when two different refs resolve to the same
+    # package. Two formats are seen in practice:
+    #   "* owner/pkg@branch: Conflicts with pkg"            (format A)
+    #   "* owner/pkg@branch: owner/pkg@branch conflicts with pkg, to be installed" (format B)
+    # Strategy: keep the GitHub ref and remove the plain CRAN name from pkgsForPak.
+    conflictRows    <- list()  # accumulate rows for the summary table
+    conflictLines <- grep("(?i)conflicts with", errLines, value = TRUE, perl = TRUE)
+    if (length(conflictLines)) {
+      for (cl in conflictLines) {
+        cl  <- trimws(sub("^\\*\\s*", "", cl))           # strip leading "* "
+        lhs <- trimws(sub(":.*",  "", cl))               # before first ":"
+        # Extract the RHS (what it conflicts with), case-insensitive, strip trailing noise
+        rhs <- trimws(sub("(?i).*conflicts with\\s*", "", cl, perl = TRUE))
+        rhs <- trimws(sub(",.*$", "", rhs))              # strip ", to be installed" etc.
+        # Remove whichever is a plain CRAN ref (no @branch, no owner/);
+        # if both are GitHub, remove the one without a @branch spec
+        lhsGH <- isGH(lhs) || grepl("@", lhs)
+        rhsGH <- isGH(rhs) || grepl("@", rhs)
+        toRm  <- if (!rhsGH) rhs else if (!lhsGH) lhs else rhs
+        pkgNmToRm <- extractPkgName(toRm)
+        keep <- if (!rhsGH) lhs else rhs
+        # Remove every pkgsForPak entry for this package name that is NOT the winner.
+        # Only mark changed if something was actually removed — otherwise the same
+        # conflict will appear in the next attempt and we'll loop until attempt limit.
+        before <- length(pkgsForPak)
+        pkgsForPak <- pkgsForPak[
+          !(extractPkgName(pkgsForPak) == pkgNmToRm &
+              trimVersionNumber(pkgsForPak) != trimVersionNumber(keep))
+        ]
+        if (length(pkgsForPak) < before) {
+          changed <- TRUE
+          conflictRows[[length(conflictRows) + 1L]] <-
+            list(Package = pkgNmToRm,
+                 Conflict   = paste0(toRm, "  vs  ", keep),
+                 Resolution = paste0("keep ", keep))
+        }
+      }
+    }
+
+    # --- Handle "Can't find package called X" (archived packages) ---
+    cantLines <- grep(.txtCantFindPackage, errLines, value = TRUE)
+    cantPkgs  <- trimws(sub(paste0(".*", .txtCantFindPackage), "", cantLines))
+    cantPkgs  <- sub("\\.$", "", cantPkgs)
+    cantPkgs  <- cantPkgs[nzchar(cantPkgs) & !grepl("::", cantPkgs)]
+    if (length(cantPkgs)) {
+      newRefs <- character(0)
+      for (cp in cantPkgs) {
+        urlRef <- tryCatch(
+          pakGetArchive(cp, packages = cp, whRm = 1L),
+          error = function(e) cp
+        )
+        urlRef <- grep("^url::", urlRef, value = TRUE)
+        if (length(urlRef)) {
+          newRefs <- c(newRefs, urlRef[1L])
+          conflictRows[[length(conflictRows) + 1L]] <-
+            list(Package = cp,
+                 Conflict   = paste0(cp, " (not on CRAN)"),
+                 Resolution = paste0("use ", urlRef[1L]))
+        }
+      }
+      if (length(newRefs)) {
+        pkgsForPak <- pkgsForPak[!extractPkgName(pkgsForPak) %in% cantPkgs]
+        pkgsForPak <- c(pkgsForPak, newRefs)
+        changed <- TRUE
+      }
+    }
+
+    # --- Handle "X: dependency conflict" (Remotes-based CRAN/GitHub collision) ---
+    # pak reports "X: dependency conflict" when X is listed as a plain CRAN ref in
+    # pkgsForPak AND some GitHub package in the dep tree has "Remotes: owner/X" in its
+    # DESCRIPTION, causing pak to see two different refs for the same package.
+    # Unlike "Conflicts with" (where both refs are explicit), here only the CRAN ref
+    # is in pkgsForPak; the GitHub ref was added implicitly via Remotes following.
+    # Strategy: remove the plain CRAN ref from pkgsForPak so pak can resolve consistently
+    # through the Remotes path. Step 2b normalization then restores CRAN for any package
+    # the user originally requested from CRAN.
+    # Pattern: "* ggplot2: dependency conflict" — the leading "* " is NOT whitespace,
+    # so we must NOT anchor with [[:space:]]* at the start.
+    depConflictLines <- grep(":[[:space:]]*dependency conflict$", errLines, value = TRUE)
+    if (length(depConflictLines)) {
+      depConflictPkgs <- trimws(sub("^[[:space:]]*\\*[[:space:]]*", "", depConflictLines))
+      depConflictPkgs <- trimws(sub("[[:space:]]*:[[:space:]]*dependency conflict$", "", depConflictPkgs))
+      depConflictPkgs <- depConflictPkgs[nzchar(depConflictPkgs) & !grepl("[/:]", depConflictPkgs)]
+      for (dcp in depConflictPkgs) {
+        # Only remove plain CRAN-style refs (no /, no @, no ::)
+        crankIdx <- which(extractPkgName(pkgsForPak) == dcp &
+                          !isGH(pkgsForPak) & !grepl("::", pkgsForPak))
+        if (length(crankIdx)) {
+          pkgsForPak <- pkgsForPak[-crankIdx]
+          changed <- TRUE
+          # Try to find the GitHub ref pak saw via Remotes-following (may appear in
+          # the error lines as a "conflicts with" entry for the same package).
+          ghRef <- character(0)
+          conflictForDcp <- grep(paste0("(?i)", dcp, ".*conflicts with|conflicts with.*", dcp),
+                                 errLines, value = TRUE, perl = TRUE)
+          if (length(conflictForDcp)) {
+            cl2   <- trimws(sub("^\\*\\s*", "", conflictForDcp[1L]))
+            lhs2  <- trimws(sub(":.*", "", cl2))
+            rhs2  <- trimws(sub("(?i).*conflicts with\\s*", "", cl2, perl = TRUE))
+            rhs2  <- trimws(sub(",.*$", "", rhs2))
+            ghRef <- if (isGH(lhs2) || grepl("@", lhs2)) lhs2 else rhs2
+          }
+          conflictRows[[length(conflictRows) + 1L]] <-
+            list(Package = dcp,
+                 Conflict   = if (length(ghRef) && nzchar(ghRef))
+                                paste0(dcp, "  vs  ", ghRef)
+                              else
+                                paste0(dcp, " (CRAN)  vs  GitHub ref (via pkg Remotes)"),
+                 Resolution = "drop CRAN ref; resolve via GitHub Remotes")
+        }
+      }
+    }
+
+    # Print a summary table of what was found and how it will be resolved.
+    # Full error detail is available at verboseLevel >= 3 for debugging.
+    if (changed && length(conflictRows)) {
+      tbl <- rbindlist(conflictRows, fill = TRUE, use.names = TRUE)
+      w1 <- max(nchar(c("Package",    tbl$Package)))
+      w2 <- max(nchar(c("Conflict",   tbl$Conflict)))
+      w3 <- max(nchar(c("Resolution", tbl$Resolution)))
+      hdr  <- sprintf("  %-*s  %-*s  %-*s", w1, "Package", w2, "Conflict", w3, "Resolution")
+      sep  <- paste0("  ", strrep("-", w1), "  ", strrep("-", w2), "  ", strrep("-", w3))
+      rows <- sprintf("  %-*s  %-*s  %-*s",
+                      w1, tbl$Package, w2, tbl$Conflict, w3, tbl$Resolution)
+      messageVerbose(
+        "Note: pak detected conflicts/archived packages (attempt ", .pakDepsAttempt,
+        "); adjusting and retrying:\n",
+        paste(c(hdr, sep, rows), collapse = "\n"),
+        verbose = verbose, verboseLevel = 2)
+    }
+    messageVerbose("pak::pkg_deps full error (attempt ", .pakDepsAttempt, "):\n", errMsg,
+                   verbose = verbose, verboseLevel = 3)
+
+    if (!changed) break  # error is not one we know how to fix; give up
+  }
+
+  if (is.null(pak_result)) {
+    # Final fallback: resolve each package individually so pak never sees cross-package
+    # conflicts. Package A may list "SpaDES.tools" (CRAN) and package B may list
+    # "PredictiveEcology/SpaDES.tools@development" — resolving them separately avoids
+    # the conflict. We then merge all dep tables and let Require's conflict resolution
+    # (confirmEqualsDontViolateInequalitiesThenTrim + trimRedundancies) pick the winner.
+    # Also pass any accumulated url:: archive refs to each call, so packages with
+    # archived transitive deps (e.g. pryr) can still be resolved.
+    messageVerbose("Note: batch dependency resolution found unresolvable conflicts; ",
+                   "switching to per-package resolution. ",
+                   "This is normal when mixing CRAN and GitHub packages — Require will handle it.",
+                   verbose = verbose, verboseLevel = 1)
+    archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
+    nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
+    per_pkg_results <- lapply(nonArchivePkgs, function(pkg) {
+      # First try with archive refs (for packages with archived transitive deps).
+      # If that fails (e.g., archive refs introduce new CRAN/GitHub conflicts), retry
+      # without archive refs — it's better to get a partial dep tree than nothing.
+      query <- if (length(archiveRefs)) unique(c(pkg, archiveRefs)) else pkg
+      result <- tryCatch(pakCall(pak::pkg_deps(query, dependencies = wh), verbose), error = function(e) NULL)
+      if (is.null(result) && length(archiveRefs))
+        result <- tryCatch(pakCall(pak::pkg_deps(pkg, dependencies = wh), verbose), error = function(e) NULL)
+      result
+    })
+    per_pkg_results <- per_pkg_results[!sapply(per_pkg_results, is.null)]
+    if (length(per_pkg_results)) {
+      pak_result <- tryCatch(
+        rbindlist(per_pkg_results, fill = TRUE, use.names = TRUE),
+        error = function(e) NULL
+      )
+    }
+  }
+
+  # --- 5. Store successful result in both cache tiers ---
+  if (!is.null(pak_result)) {
+    assign(envKey, pak_result, envir = pakEnv())
+    tryCatch({
+      dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+      saveRDS(pak_result, cacheFile)
+    }, error = function(e) NULL)   # non-fatal if disk write fails
+  }
+
+  pak_result
+}
+
+# ---------------------------------------------------------------------------
+# Invalidate the pak dep-tree disk cache for a given set of inputs.
+# Called after successful installation so the next call re-resolves freshly
+# (installed state changed; cache key stays the same but should be revalidated
+# sooner than the normal TTL would allow).
+# ---------------------------------------------------------------------------
+pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos) {
+  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos), error = function(e) NULL)
+  if (is.null(key)) return(invisible(NULL))
+  envKey   <- paste0("pakDeps_", key)
+  cacheFile <- file.path(pakDepsCacheDir(), paste0(key, ".rds"))
+  rm(list = intersect(envKey, ls(envir = pakEnv())), envir = pakEnv())
+  if (file.exists(cacheFile)) unlink(cacheFile)
+  invisible(NULL)
+}
+
 # Resolve package dependencies using pak, returning a Require-format pkgDT.
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
-pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose) {
+pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
+                          purge = getOption("Require.purge", FALSE)) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
 
-  # pak spawns a subprocess that inherits .libPaths(). When Require is used with
-  # standAlone = TRUE, the user's library (where pak lives) may have been removed from
-  # .libPaths(). Temporarily add pak's own library back so the subprocess can load pak.
-  pakLib <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
-  if (!is.null(pakLib) && !pakLib %in% .libPaths()) {
-    origPaths <- .libPaths()
-    .libPaths(c(origPaths, pakLib))
-    on.exit(.libPaths(origPaths), add = TRUE)
+  # pak spawns a subprocess that inherits .libPaths(). Set .libPaths() to match
+  # Require's standAlone semantics before calling pak, then restore on exit.
+  #
+  # standAlone = TRUE  → c(libPaths[1], base_pkg_lib)   (isolated project library)
+  # standAlone = FALSE → c(libPaths[1], existing .libPaths())  (shared)
+  #
+  # In both cases, pak's own library must be present so the subprocess can load pak.
+  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  basePkgLib <- tail(.libPaths(), 1L)   # always the base R packages path
+  origPaths  <- .libPaths()
+  if (isTRUE(standAlone)) {
+    newPaths <- unique(c(libPaths[1L], basePkgLib))
+  } else {
+    newPaths <- unique(c(libPaths[1L], origPaths))
   }
+  if (!is.null(pakLib) && !pakLib %in% newPaths)
+    newPaths <- c(newPaths, pakLib)
+  .libPaths(newPaths)
+  on.exit(.libPaths(origPaths), add = TRUE)
 
   # pak uses logical: TRUE = include Suggests, NA = standard (Imports/Depends/LinkingTo)
   wh <- if (any(grepl("suggests", tolower(unlist(which))))) TRUE else NA
@@ -847,152 +1182,13 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose) {
 
   if (!length(pkgsForPak)) return(toPkgDTFull(character()))
 
-  # 1. pak resolves the full dep tree (fast, metadata-only, uses pak cache).
-  # We allow multiple retries to handle archived transitive deps ("Can't find package
-  # called X"): on each failure, extract the unresolvable package names, look up their
-  # CRAN archive URLs via pakGetArchive, add those url:: refs explicitly, and retry.
-  for (.pakDepsAttempt in 1:5) {
-    pak_result_or_err <- tryCatch(
-      list(result = pak::pkg_deps(pkgsForPak, dependencies = wh), err = NULL),
-      error = function(e) list(result = NULL, err = conditionMessage(e))
-    )
-    pak_result <- pak_result_or_err$result
-    if (!is.null(pak_result)) break
-
-    errMsg <- pak_result_or_err$err
-
-    errLines <- strsplit(errMsg, "\n")[[1]]
-    changed  <- FALSE
-
-    # --- Handle "X: Conflicts with Y" / "X conflicts with Y, to be installed" ---
-    # pak reports this (case-insensitive) when two different refs resolve to the same
-    # package. Two formats are seen in practice:
-    #   "* owner/pkg@branch: Conflicts with pkg"            (format A)
-    #   "* owner/pkg@branch: owner/pkg@branch conflicts with pkg, to be installed" (format B)
-    # Strategy: keep the GitHub ref and remove the plain CRAN name from pkgsForPak.
-    conflictLines <- grep("(?i)conflicts with", errLines, value = TRUE, perl = TRUE)
-    if (length(conflictLines)) {
-      for (cl in conflictLines) {
-        cl  <- trimws(sub("^\\*\\s*", "", cl))           # strip leading "* "
-        lhs <- trimws(sub(":.*",  "", cl))               # before first ":"
-        # Extract the RHS (what it conflicts with), case-insensitive, strip trailing noise
-        rhs <- trimws(sub("(?i).*conflicts with\\s*", "", cl, perl = TRUE))
-        rhs <- trimws(sub(",.*$", "", rhs))              # strip ", to be installed" etc.
-        # Remove whichever is a plain CRAN ref (no @branch, no owner/);
-        # if both are GitHub, remove the one without a @branch spec
-        lhsGH <- isGH(lhs) || grepl("@", lhs)
-        rhsGH <- isGH(rhs) || grepl("@", rhs)
-        toRm  <- if (!rhsGH) rhs else if (!lhsGH) lhs else rhs
-        pkgNmToRm <- extractPkgName(toRm)
-        keep <- if (!rhsGH) lhs else rhs
-        # Remove every pkgsForPak entry for this package name that is NOT the winner
-        pkgsForPak <- pkgsForPak[
-          !(extractPkgName(pkgsForPak) == pkgNmToRm &
-              trimVersionNumber(pkgsForPak) != trimVersionNumber(keep))
-        ]
-        changed <- TRUE
-      }
-    }
-
-    # --- Handle "Can't find package called X" (archived packages) ---
-    cantLines <- grep(.txtCantFindPackage, errLines, value = TRUE)
-    cantPkgs  <- trimws(sub(paste0(".*", .txtCantFindPackage), "", cantLines))
-    cantPkgs  <- sub("\\.$", "", cantPkgs)
-    cantPkgs  <- cantPkgs[nzchar(cantPkgs) & !grepl("::", cantPkgs)]
-    if (length(cantPkgs)) {
-      newRefs <- character(0)
-      for (cp in cantPkgs) {
-        urlRef <- tryCatch(
-          pakGetArchive(cp, packages = cp, whRm = 1L),
-          error = function(e) cp
-        )
-        urlRef <- grep("^url::", urlRef, value = TRUE)
-        if (length(urlRef)) newRefs <- c(newRefs, urlRef[1L])
-      }
-      if (length(newRefs)) {
-        pkgsForPak <- pkgsForPak[!extractPkgName(pkgsForPak) %in% cantPkgs]
-        pkgsForPak <- c(pkgsForPak, newRefs)
-        changed <- TRUE
-      }
-    }
-
-    # --- Handle "X: dependency conflict" (Remotes-based CRAN/GitHub collision) ---
-    # pak reports "X: dependency conflict" when X is listed as a plain CRAN ref in
-    # pkgsForPak AND some GitHub package in the dep tree has "Remotes: owner/X" in its
-    # DESCRIPTION, causing pak to see two different refs for the same package.
-    # Unlike "Conflicts with" (where both refs are explicit), here only the CRAN ref
-    # is in pkgsForPak; the GitHub ref was added implicitly via Remotes following.
-    # Strategy: remove the plain CRAN ref from pkgsForPak so pak can resolve consistently
-    # through the Remotes path. Step 2b normalization then restores CRAN for any package
-    # the user originally requested from CRAN.
-    # Pattern: "* ggplot2: dependency conflict" — the leading "* " is NOT whitespace,
-    # so we must NOT anchor with [[:space:]]* at the start.
-    depConflictLines <- grep(":[[:space:]]*dependency conflict$", errLines, value = TRUE)
-    if (length(depConflictLines)) {
-      depConflictPkgs <- trimws(sub("^[[:space:]]*\\*[[:space:]]*", "", depConflictLines))
-      depConflictPkgs <- trimws(sub("[[:space:]]*:[[:space:]]*dependency conflict$", "", depConflictPkgs))
-      depConflictPkgs <- depConflictPkgs[nzchar(depConflictPkgs) & !grepl("[/:]", depConflictPkgs)]
-      for (dcp in depConflictPkgs) {
-        # Only remove plain CRAN-style refs (no /, no @, no ::)
-        crankIdx <- which(extractPkgName(pkgsForPak) == dcp &
-                          !isGH(pkgsForPak) & !grepl("::", pkgsForPak))
-        if (length(crankIdx)) {
-          pkgsForPak <- pkgsForPak[-crankIdx]
-          changed <- TRUE
-        }
-      }
-    }
-
-    # Print a compact summary of what was found and is being resolved.
-    # Full error detail is available at verboseLevel >= 3 for debugging.
-    if (changed) {
-      nDepConflict <- length(depConflictLines) + length(conflictLines)
-      nArchived    <- length(cantPkgs)
-      parts <- character(0)
-      if (nDepConflict > 0) parts <- c(parts, paste0(nDepConflict, " CRAN/GitHub conflict(s)"))
-      if (nArchived    > 0) parts <- c(parts, paste0(nArchived, " archived package(s)"))
-      messageVerbose("Note: pak detected ", paste(parts, collapse = ", "),
-                     " (attempt ", .pakDepsAttempt, "); adjusting and retrying...",
-                     verbose = verbose, verboseLevel = 2)
-    }
-    messageVerbose("pak::pkg_deps full error (attempt ", .pakDepsAttempt, "):\n", errMsg,
-                   verbose = verbose, verboseLevel = 3)
-
-    if (!changed) break  # error is not one we know how to fix; give up
-  }
-
-  if (is.null(pak_result)) {
-    # Final fallback: resolve each package individually so pak never sees cross-package
-    # conflicts. Package A may list "SpaDES.tools" (CRAN) and package B may list
-    # "PredictiveEcology/SpaDES.tools@development" — resolving them separately avoids
-    # the conflict. We then merge all dep tables and let Require's conflict resolution
-    # (confirmEqualsDontViolateInequalitiesThenTrim + trimRedundancies) pick the winner.
-    # Also pass any accumulated url:: archive refs to each call, so packages with
-    # archived transitive deps (e.g. pryr) can still be resolved.
-    messageVerbose("Note: batch dependency resolution found unresolvable conflicts; ",
-                   "switching to per-package resolution. ",
-                   "This is normal when mixing CRAN and GitHub packages — Require will handle it.",
-                   verbose = verbose, verboseLevel = 1)
-    archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
-    nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
-    per_pkg_results <- lapply(nonArchivePkgs, function(pkg) {
-      # First try with archive refs (for packages with archived transitive deps).
-      # If that fails (e.g., archive refs introduce new CRAN/GitHub conflicts), retry
-      # without archive refs — it's better to get a partial dep tree than nothing.
-      query <- if (length(archiveRefs)) unique(c(pkg, archiveRefs)) else pkg
-      result <- tryCatch(pak::pkg_deps(query, dependencies = wh), error = function(e) NULL)
-      if (is.null(result) && length(archiveRefs))
-        result <- tryCatch(pak::pkg_deps(pkg, dependencies = wh), error = function(e) NULL)
-      result
-    })
-    per_pkg_results <- per_pkg_results[!sapply(per_pkg_results, is.null)]
-    if (length(per_pkg_results)) {
-      pak_result <- tryCatch(
-        rbindlist(per_pkg_results, fill = TRUE, use.names = TRUE),
-        error = function(e) NULL
-      )
-    }
-  }
+  # 1. Resolve the full dep tree via pak, with two-tier caching (in-memory + disk).
+  #    pakDepsResolve() handles the retry loop, conflict resolution, per-package
+  #    fallback, and cache read/write. Returns NULL only if all strategies fail.
+  pak_result <- pakDepsResolve(pkgsForPak, wh,
+                               repos   = getOption("repos"),
+                               verbose = verbose,
+                               purge   = purge)
 
   if (is.null(pak_result)) {
     messageVerbose("pak::pkg_deps: all strategies failed; using direct package list only.",
@@ -1057,6 +1253,28 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose) {
     )]
   }
 
+  # 3b. Check that pak's resolved versions can actually satisfy any >= / > constraints
+  # the user specified. pak silently installs the latest available version even when
+  # it doesn't satisfy the constraint (e.g., fpCompare 0.2.4 installed despite >=2.0.0).
+  # Catch these now: warn and remove the package so it is never passed to pakInstallFiltered.
+  if (NROW(pak_result)) {
+    pakVerMap <- setNames(pak_result$version, pak_result$package)
+    origCheck <- toPkgDTFull(packages[!extractPkgName(packages) %in% .basePkgs])
+    needCheck  <- origCheck[!is.na(inequality) & inequality %in% c(">=", ">") &
+                            !is.na(versionSpec) & nzchar(versionSpec) &
+                            Package %in% names(pakVerMap)]
+    if (NROW(needCheck)) {
+      canSatisfy <- compareVersion2(pakVerMap[needCheck$Package],
+                                    needCheck$versionSpec, needCheck$inequality)
+      badPkgs <- needCheck$Package[canSatisfy %in% FALSE]
+      if (length(badPkgs)) {
+        badFullNames <- needCheck$packageFullName[canSatisfy %in% FALSE]
+        warning(messageCantInstallNoVersion(badFullNames), call. = FALSE)
+        packages <- packages[!extractPkgName(packages) %in% badPkgs]
+      }
+    }
+  }
+
   # 4. Include the user's originally stated packages (with their version specs).
   # These may have stricter requirements than what DESCRIPTION files state.
   user_pkgFN <- packages[!extractPkgName(packages) %in% .basePkgs]
@@ -1112,16 +1330,23 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose) {
 
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
-pakInstallFiltered <- function(pkgDT, libPaths, repos, verbose) {
+pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
 
-  # pak spawns a subprocess; ensure pak's own library is in .libPaths() for the subprocess.
-  pakLib <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
-  if (!is.null(pakLib) && !pakLib %in% .libPaths()) {
-    origPaths <- .libPaths()
-    .libPaths(c(origPaths, pakLib))
-    on.exit(.libPaths(origPaths), add = TRUE)
+  # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
+  # sees the same library set that was used for dependency resolution.
+  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  basePkgLib <- tail(.libPaths(), 1L)
+  origPaths  <- .libPaths()
+  if (isTRUE(standAlone)) {
+    newPaths <- unique(c(libPaths[1L], basePkgLib))
+  } else {
+    newPaths <- unique(c(libPaths[1L], origPaths))
   }
+  if (!is.null(pakLib) && !pakLib %in% newPaths)
+    newPaths <- c(newPaths, pakLib)
+  .libPaths(newPaths)
+  on.exit(.libPaths(origPaths), add = TRUE)
 
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
@@ -1198,8 +1423,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, verbose) {
       pkgsIn <- packages
       opts <- options(repos = repos)
       err <- try(
-        pak::pak(packages, lib = libPaths[1], ask = FALSE,
-                 dependencies = FALSE, upgrade = FALSE),
+        pakCall(
+          pak::pak(packages, lib = libPaths[1], ask = FALSE,
+                   dependencies = FALSE, upgrade = FALSE),
+          verbose),
         silent = TRUE
       )
       options(opts)
