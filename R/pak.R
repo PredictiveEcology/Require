@@ -1324,7 +1324,11 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
     needCheck  <- origCheck[isCRANcheck &
                             !is.na(inequality) & inequality %in% c(">=", ">") &
                             !is.na(versionSpec) & nzchar(versionSpec) &
-                            Package %in% names(pakVerMap)]
+                            Package %in% names(pakVerMap) &
+                            # Skip packages where pak returned NA/empty version (e.g. some GitHub
+                            # deps resolved without metadata). compareVersion2("", ...) returns FALSE,
+                            # which would incorrectly flag them as unsatisfiable.
+                            nzchar(pakVerMap[Package]) & !is.na(pakVerMap[Package])]
     if (NROW(needCheck)) {
       canSatisfy <- compareVersion2(pakVerMap[needCheck$Package],
                                     needCheck$versionSpec, needCheck$inequality)
