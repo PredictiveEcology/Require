@@ -827,6 +827,53 @@ pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
 }
 
 # ---------------------------------------------------------------------------
+# pakWhoNeeds() — diagnostic: given a pak_result (from pak::pkg_deps()), show
+# which packages list `pkg` as a direct dependency (of any type), and flag any
+# that list it under a "remotes"-style ref.
+#
+# Usage:
+#   # After any Require call with usePak = TRUE (uses in-memory cache):
+#   Require:::pakWhoNeeds("BH")
+#
+#   # Or supply pak_result directly:
+#   pak_result <- pak::pkg_deps(c("SpaDES.core", "data.table"), dependencies = NA)
+#   Require:::pakWhoNeeds("BH", pak_result)
+# ---------------------------------------------------------------------------
+pakWhoNeeds <- function(pkg, pak_result = NULL) {
+  if (is.null(pak_result)) {
+    # Try to pull the most-recently stored result from the in-memory cache.
+    envKeys <- ls(envir = pakEnv(), pattern = "^pakDeps_")
+    if (!length(envKeys)) {
+      message("No cached pak_result found. Run Require::Install(...) with ",
+              "options(Require.usePak = TRUE) first, or supply pak_result directly.")
+      return(invisible(NULL))
+    }
+    # Use the most recently assigned key (last element of ls() is arbitrary, but
+    # for a single active session there is usually only one).
+    pak_result <- get(envKeys[length(envKeys)], envir = pakEnv(), inherits = FALSE)
+  }
+  if (is.null(pak_result) || !NROW(pak_result)) {
+    message("pak_result is NULL or empty.")
+    return(invisible(NULL))
+  }
+  hits <- lapply(seq_len(NROW(pak_result)), function(i) {
+    dep_tbl <- tryCatch(as.data.table(pak_result$deps[[i]]), error = function(e) NULL)
+    if (is.null(dep_tbl) || !NROW(dep_tbl)) return(NULL)
+    matched <- dep_tbl[package == pkg]
+    if (!NROW(matched)) return(NULL)
+    cbind(data.table(parent = pak_result$package[i],
+                     parent_ref = pak_result$ref[i]),
+          matched[, .(dep_type = type, dep_ref = ref, op, version)])
+  })
+  hits <- rbindlist(Filter(Negate(is.null), hits), fill = TRUE, use.names = TRUE)
+  if (!NROW(hits)) {
+    message(pkg, " is not listed as a direct dependency of any package in pak_result.")
+    return(invisible(hits))
+  }
+  hits[]
+}
+
+# ---------------------------------------------------------------------------
 # pakDepsResolve() — cached wrapper around pak::pkg_deps() retry loop
 #
 # Runs the full retry-and-fallback resolution and caches the resulting
@@ -1016,13 +1063,17 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
             rhs2  <- trimws(sub(",.*$", "", rhs2))
             ghRef <- if (isGH(lhs2) || grepl("@", lhs2)) lhs2 else rhs2
           }
-          conflictRows[[length(conflictRows) + 1L]] <-
-            list(Package = dcp,
-                 Conflict   = if (length(ghRef) && nzchar(ghRef))
-                                paste0(dcp, "  vs  ", ghRef)
-                              else
-                                paste0(dcp, " (CRAN)  vs  GitHub ref (via pkg Remotes)"),
-                 Resolution = "drop CRAN ref; resolve via GitHub Remotes")
+          # Only add a conflict table row when we have a concrete GitHub ref.
+          # Without one the error is most likely a version-solver conflict (two
+          # transitive deps require incompatible versions), NOT a Remotes clash.
+          # We still drop the CRAN ref above so pak gets another chance, but we
+          # don't pollute the table with a misleading "via pkg Remotes" entry.
+          if (length(ghRef) && nzchar(ghRef)) {
+            conflictRows[[length(conflictRows) + 1L]] <-
+              list(Package    = dcp,
+                   Conflict   = paste0(dcp, "  vs  ", ghRef),
+                   Resolution = "drop CRAN ref; resolve via GitHub Remotes")
+          }
         }
       }
     }
@@ -1315,7 +1366,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
     urlPkgNames <- extractPkgName(
       filenames = basename(sub("^url::", "", pkgDT$Package[urlPkgRows]))
     )
+    # Break any SEXP aliasing between Package and packageFullName before any := .
+    # toPkgDTFull() calls toDT(Package = extractPkgName(x), packageFullName = x).
+    # For url:: refs extractPkgName() returns its input unchanged (same R SEXP),
+    # so both columns end up pointing to the SAME character vector.  A := on either
+    # column would then silently modify the other column too — sequential := calls
+    # would interfere.  Forcing as.character() allocates a new vector, breaking the
+    # aliasing so the two columns become fully independent.
+    set(pkgDT, NULL, "packageFullName", as.character(pkgDT$packageFullName))
     pkgDT[urlPkgRows, Package := urlPkgNames]
+    # packageFullName still holds the original "url::..." strings for those rows.
     # Remove plain-name rows for packages that have a url:: ref — the url:: version
     # carries the correct install path and must be used for the actual installation.
     archivePkgs <- pkgDT[startsWith(packageFullName, "url::")]$Package
