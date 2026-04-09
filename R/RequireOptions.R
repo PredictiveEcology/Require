@@ -86,7 +86,7 @@ RequireOptions <- function() {
     ), # c("raster", "s2", "sf", "sp", "units")
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,
-    Require.usePak = FALSE,
+    Require.usePak = TRUE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
   )
