@@ -811,6 +811,30 @@ pakCheckGHversionOK <- function(pkg) {
   isOK
 }
 
+# Extract the most informative line(s) from a pak try-error string.
+# Strips ANSI codes, removes generic framing lines, and returns up to two
+# lines that explain WHY the build/install failed.
+pakBuildFailReason <- function(errStr) {
+  lines <- strsplit(as.character(errStr), "\n")[[1]]
+  lines <- gsub("\033\\[[0-9;]*m", "", lines)   # strip ANSI escape sequences
+  lines <- trimws(lines)
+  lines <- lines[nzchar(lines)]
+  # Remove generic R/pak framing lines that don't explain the root cause
+  lines <- grep("^Error in pak::|pakRetryLoop|^\\s*$|^Error$", lines,
+                value = TRUE, invert = TRUE)
+  # Prioritise lines that contain diagnostic keywords
+  diag <- grep(paste(
+    "namespace '[^']+' .+ is being loaded",
+    "invalid.*expression", "ERROR:", "permission denied",
+    "unable to move", "cannot remove", "compilation failed",
+    "lazy loading failed", "Execution halted",
+    sep = "|"), lines, value = TRUE, ignore.case = FALSE)
+  if (length(diag)) return(paste(head(unique(diag), 2L), collapse = "; "))
+  # Fallback: first non-"Error in" line
+  fb <- head(lines[!startsWith(lines, "Error in")], 1L)
+  if (length(fb) && nzchar(fb)) fb else ""
+}
+
 pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
   prevFail <- get0("failedPkgs", envir = pakEnv())
   pkg3 <- extractPkgName(pkg2)
@@ -1506,15 +1530,27 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       )
       options(opts)
       if (!is(err, "try-error")) break
+      alreadyWarned <- FALSE
       packages <- tryCatch(
         pakErrorHandling(as.character(err), pkgsIn, packages, verbose = verbose),
         error = function(e) {
           warning(.txtCouldNotBeInstalled, ": ", conditionMessage(e), call. = FALSE)
+          alreadyWarned <<- TRUE
           character(0)
         }
       )
       if (!length(packages)) {
-        warning(.txtCouldNotBeInstalled, call. = FALSE)
+        if (!alreadyWarned) {
+          # Include the actual build/install failure reason so the user knows
+          # why the package could not be installed (e.g. file locked on Windows,
+          # namespace version mismatch, bad regex in source, etc.).
+          reason <- pakBuildFailReason(as.character(err))
+          if (nzchar(reason)) {
+            warning(.txtCouldNotBeInstalled, ": ", reason, call. = FALSE)
+          } else {
+            warning(.txtCouldNotBeInstalled, call. = FALSE)
+          }
+        }
         break
       }
     }
