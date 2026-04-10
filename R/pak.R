@@ -1521,6 +1521,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     invisible(NULL)
   }
 
+  # Snapshot pre-install versions before pak runs so we can detect build failures:
+  # if a package's version is unchanged after the install attempt it means the
+  # install failed (build error, cancelled batch, etc.) rather than pak choosing
+  # an older version that doesn't satisfy the constraint.  The two cases require
+  # different user-facing messages.
+  preInstallVers <- setNames(as.character(toInstall$Version), toInstall$Package)
+
   pakRetryLoop(pkgs, repos, verbose)
 
   # Update pkgDT with installation results.
@@ -1541,7 +1548,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       if (!is.na(vSpec) && nzchar(vSpec) && !is.na(ineq) && nzchar(ineq)) {
         satisfies <- compareVersion2(installedVer, versionSpec = vSpec, inequality = ineq)
         if (!isTRUE(satisfies)) {
-          warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
+          # Only suggest "Please change required version" when pak actually installed a
+          # different (but still insufficient) version.  If the version is unchanged the
+          # install attempt failed (build error, cancelled batch, etc.) and
+          # pakRetryLoop already emitted .txtCouldNotBeInstalled — a second, misleading
+          # "Please change required version e.g., pkg (>=<old-ver>)" would tell the user
+          # to lower their requirement to the pre-existing version, which is wrong.
+          preVer <- preInstallVers[pkg]
+          versionChanged <- !isTRUE(!is.na(preVer) && identical(preVer, installedVer))
+          if (versionChanged)
+            warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
           set(pkgDT, wh, "installed",     FALSE)
           set(pkgDT, wh, "Version",       installedVer)
           set(pkgDT, wh, "LibPath",       nowRow$LibPath[1])
