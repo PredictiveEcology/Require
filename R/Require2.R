@@ -642,6 +642,21 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
             ipa <- ipaNext;
             next
           }
+          # Detect "namespace 'X' Y is being loaded, but >= Z is required" — the new
+          # version of the package being installed needs a newer dep than is currently
+          # installed.  Install that dep now, then retry the failing package.
+          nsLines <- grep(
+            "namespace '[^']+' [^ ]+ is being loaded, but >= [^ ]+ is required",
+            rl, value = TRUE)
+          if (length(nsLines)) {
+            reqPkg <- gsub(".*namespace '([^']+)' .+ is being loaded.*", "\\1", nsLines[1])
+            reqVer <- gsub(".*is being loaded, but >= ([^ ]+) is required.*", "\\1", nsLines[1])
+            pkgSpec <- paste0(reqPkg, " (>= ", reqVer, ")")
+            messageVerbose("  ", pkgSpec, " needs upgrading; installing before retry ...",
+                           verbose = verbose)
+            try(Install(pkgSpec, verbose = verbose - 1L))
+            next  # retry the original package now that the dep is satisfied
+          }
         }
       }
 
@@ -3633,7 +3648,7 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
       logFile <- basename(tempfile2(fileext = ".log")) # already in tmpdir
 
     if (installPackages) {
-      if (length(fullMess)) {
+      if (length(fullMess) && nzchar(trimws(fullMess))) {
         mess <- messInstallingOrDwnlding(preMess, fullMess)
         mess <- paste0WithLineFeed(mess)
         messageVerbose(mess, verbose = verbose)
@@ -3672,14 +3687,16 @@ sysInstallAndDownload <- function(args, splitOn = "pkgs",
         if (!file.exists(logFile))
           file.create(logFile)
         log <- readLines(logFile) # won't exist if `verbose < 1`
-        if (any(grepl(paste(.txtInstallationNonZeroExit, .txtInstallationPkgFailed, sep = "|"), log))) {
+        if (any(grepl(paste(.txtInstallationNonZeroExit, .txtInstallationPkgFailed,
+                            "lazy loading failed", sep = "|"), log))) {
           return(logFile)
         }
         aa <- Map(p = args$pkgs, function(p) as.character(packVer(p, args$lib)))
         # aa <- Map(p = args$pkgs, function(p) packVer(package = p, args$lib))
         dt <- data.table(pkg = names(aa), vers = unlist(aa, use.names = FALSE), versionSpec = args$available[, "Version"])
         # the "==" doesn't work directly because of e.g., 2.2.8 and 2.2-8 which should be equal
-        whFailed <- try(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="))
+        whFailed <- tryCatch(!compareVersion2(dt$vers, dt$versionSpec, inequality = "=="),
+                             error = function(e) rep(FALSE, NROW(dt)))
         whFailed <- whFailed %in% TRUE
         if (isTRUE(any(whFailed))) {
           pkgsFailed <- dt$pkg[whFailed]
