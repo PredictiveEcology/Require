@@ -1,14 +1,32 @@
-# Require 1.1.0.9002 (development version)
+# Require 1.1.0.9007 (development version)
 
 ## Enhancements
-* `pak` can now be used as both the dependency-resolver and install backend
-  (set `options(Require.usePak = TRUE)`). When enabled, `pak::pkg_deps()` replaces
+* `pak` is now the default dependency-resolver and install backend
+  (`options(Require.usePak = TRUE)` is set by default). `pak::pkg_deps()` replaces
   Require's internal `pkgDep()` pipeline for full transitive dependency resolution,
   while Require's version-priority logic (`whichToInstall`, `trimRedundancies`,
   `confirmEqualsDontViolateInequalitiesThenTrim`) still governs which packages
   actually get installed. Archived CRAN packages, GitHub references, and
   CRAN/GitHub conflicts are all handled via retry loops in `pakDepsToPkgDT()` and
   `pakInstallFiltered()`.
+* When pak fails to build or install a package, the warning now includes the
+  actual reason (e.g., namespace version mismatch, file locked on Windows,
+  compilation failure) rather than a bare "could not be installed" message.
+* Misleading "Please change required version" warnings are now suppressed when a
+  package build fails and the installed version is unchanged; the warning is only
+  shown when pak successfully installed a different (but still insufficient) version.
+* When pak detects a CRAN/GitHub conflict caused by a `Remotes:` entry in another
+  package's `DESCRIPTION` (e.g., `sp` vs `sp` via `SpaDES.core` Remotes), the
+  conflict table now clearly shows both sides:
+  `sp (CRAN)  vs  sp (via PredictiveEcology/SpaDES.core@development Remotes)`.
+  Previously this displayed the misleading `sp  vs  PredictiveEcology/SpaDES.core@development`.
+* The pak dependency-tree cache (in-memory and disk) now reports cache hits at the
+  default `verbose = 1` level, making it visible that subsequent `Require()` calls
+  are served from cache rather than querying pak/CRAN again.
+* When a non-pak install log contains a namespace version error
+  (`namespace 'X' Y is being loaded, but >= Z is required`), Require now
+  automatically installs the required version of `X` and retries, rather than
+  failing silently.
 
 ## Bugfixes
 * Fixed `file:////` URL error when downloading archived packages that were
