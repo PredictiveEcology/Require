@@ -811,6 +811,26 @@ pakCheckGHversionOK <- function(pkg) {
   isOK
 }
 
+# Build the conflict-table row for a "dependency conflict" case.
+# dcp  = plain CRAN package name (e.g. "sp")
+# cand = the candidate GitHub ref found in the "Conflicts with" error line
+#        (may be the same package, e.g. "r-spatial/sp@main",
+#         or a different package whose Remotes pulled in the clash,
+#         e.g. "PredictiveEcology/SpaDES.core@development")
+# Returns a named list suitable for rbindlist(), or NULL when no row should be added.
+pakDepConflictRow <- function(dcp, cand) {
+  if (!nzchar(cand)) return(NULL)
+  if (extractPkgName(cand) == dcp) {
+    list(Package    = dcp,
+         Conflict   = paste0(dcp, "  vs  ", cand),
+         Resolution = "drop CRAN ref; resolve via GitHub Remotes")
+  } else {
+    list(Package    = dcp,
+         Conflict   = paste0(dcp, " (CRAN)  vs  ", dcp, " (via ", cand, " Remotes)"),
+         Resolution = "drop CRAN ref; resolve via GitHub Remotes")
+  }
+}
+
 # Extract the most informative line(s) from a pak try-error string.
 # Strips ANSI codes, removes generic framing lines, and returns up to two
 # lines that explain WHY the build/install failed.
@@ -1077,41 +1097,21 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
           changed <- TRUE
           # Try to find the GitHub ref pak saw via Remotes-following (may appear in
           # the error lines as a "conflicts with" entry for the same package).
-          ghRef    <- character(0)
-          viaRef   <- character(0)  # the other-package whose Remotes caused the clash
+          cand <- character(0)
           conflictForDcp <- grep(paste0("(?i)", dcp, ".*conflicts with|conflicts with.*", dcp),
                                  errLines, value = TRUE, perl = TRUE)
           if (length(conflictForDcp)) {
-            cl2   <- trimws(sub("^\\*\\s*", "", conflictForDcp[1L]))
-            lhs2  <- trimws(sub(":.*", "", cl2))
-            rhs2  <- trimws(sub("(?i).*conflicts with\\s*", "", cl2, perl = TRUE))
-            rhs2  <- trimws(sub(",.*$", "", rhs2))
-            cand  <- if (isGH(lhs2) || grepl("@", lhs2)) lhs2 else rhs2
-            # Only accept cand as the GitHub ref for dcp when it is actually a ref
-            # FOR dcp (e.g. owner/sp@branch).  If cand is a different package
-            # (e.g. SpaDES.core "Conflicts with sp"), record it as the via-source
-            # instead so the message can say "via SpaDES.core Remotes".
-            if (nzchar(cand) && extractPkgName(cand) == dcp) {
-              ghRef  <- cand
-            } else if (nzchar(cand)) {
-              viaRef <- cand  # full GitHub ref, e.g. PredictiveEcology/SpaDES.core@development
-            }
+            cl2  <- trimws(sub("^\\*\\s*", "", conflictForDcp[1L]))
+            lhs2 <- trimws(sub(":.*", "", cl2))
+            rhs2 <- trimws(sub("(?i).*conflicts with\\s*", "", cl2, perl = TRUE))
+            rhs2 <- trimws(sub(",.*$", "", rhs2))
+            cand <- if (isGH(lhs2) || grepl("@", lhs2)) lhs2 else rhs2
           }
-          # Build the conflict table row.
-          # Case 1: we found a concrete GitHub ref for dcp itself → "dcp vs owner/dcp@branch"
-          # Case 2: we only know which other package's Remotes caused it → "dcp (via X Remotes)"
-          # Case 3: no context at all → skip row (avoid misleading entries)
-          if (length(ghRef) && nzchar(ghRef)) {
-            conflictRows[[length(conflictRows) + 1L]] <-
-              list(Package    = dcp,
-                   Conflict   = paste0(dcp, "  vs  ", ghRef),
-                   Resolution = "drop CRAN ref; resolve via GitHub Remotes")
-          } else if (length(viaRef) && nzchar(viaRef)) {
-            conflictRows[[length(conflictRows) + 1L]] <-
-              list(Package    = dcp,
-                   Conflict   = paste0(dcp, " (CRAN)  vs  ", dcp, " (via ", viaRef, " Remotes)"),
-                   Resolution = "drop CRAN ref; resolve via GitHub Remotes")
-          }
+          # pakDepConflictRow() returns NULL (no context), or a list with the
+          # appropriate Conflict string — either "dcp vs owner/dcp@branch" (same
+          # package) or "dcp (CRAN) vs dcp (via owner/other@branch Remotes)".
+          row <- pakDepConflictRow(dcp, cand)
+          if (!is.null(row)) conflictRows[[length(conflictRows) + 1L]] <- row
         }
       }
     }

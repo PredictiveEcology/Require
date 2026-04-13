@@ -5,7 +5,7 @@ test_that("RequireOptions functions", {
   testthat::expect_true("Require.verbose" %in% names(ro))
   testthat::expect_true("Require.usePak" %in% names(ro))
   testthat::expect_true("Require.cachePkgDir" %in% names(ro))
-  testthat::expect_identical(ro[["Require.usePak"]], FALSE)
+  testthat::expect_identical(ro[["Require.usePak"]], TRUE)
   testthat::expect_identical(ro[["Require.offlineMode"]], FALSE)
 
   gro <- getRequireOptions()
