@@ -1109,7 +1109,7 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
           } else if (length(viaRef) && nzchar(viaRef)) {
             conflictRows[[length(conflictRows) + 1L]] <-
               list(Package    = dcp,
-                   Conflict   = paste0(dcp, " (CRAN) via ", viaRef, " Remotes"),
+                   Conflict   = paste0(dcp, " (CRAN)  vs  ", dcp, " (via ", viaRef, " Remotes)"),
                    Resolution = "drop CRAN ref; resolve via GitHub Remotes")
           }
         }
