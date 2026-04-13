@@ -1077,7 +1077,8 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
           changed <- TRUE
           # Try to find the GitHub ref pak saw via Remotes-following (may appear in
           # the error lines as a "conflicts with" entry for the same package).
-          ghRef <- character(0)
+          ghRef    <- character(0)
+          viaRef   <- character(0)  # the other-package whose Remotes caused the clash
           conflictForDcp <- grep(paste0("(?i)", dcp, ".*conflicts with|conflicts with.*", dcp),
                                  errLines, value = TRUE, perl = TRUE)
           if (length(conflictForDcp)) {
@@ -1085,17 +1086,30 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
             lhs2  <- trimws(sub(":.*", "", cl2))
             rhs2  <- trimws(sub("(?i).*conflicts with\\s*", "", cl2, perl = TRUE))
             rhs2  <- trimws(sub(",.*$", "", rhs2))
-            ghRef <- if (isGH(lhs2) || grepl("@", lhs2)) lhs2 else rhs2
+            cand  <- if (isGH(lhs2) || grepl("@", lhs2)) lhs2 else rhs2
+            # Only accept cand as the GitHub ref for dcp when it is actually a ref
+            # FOR dcp (e.g. owner/sp@branch).  If cand is a different package
+            # (e.g. SpaDES.core "Conflicts with sp"), record it as the via-source
+            # instead so the message can say "via SpaDES.core Remotes".
+            if (nzchar(cand) && extractPkgName(cand) == dcp) {
+              ghRef  <- cand
+            } else if (nzchar(cand)) {
+              viaRef <- extractPkgName(cand)
+            }
           }
-          # Only add a conflict table row when we have a concrete GitHub ref.
-          # Without one the error is most likely a version-solver conflict (two
-          # transitive deps require incompatible versions), NOT a Remotes clash.
-          # We still drop the CRAN ref above so pak gets another chance, but we
-          # don't pollute the table with a misleading "via pkg Remotes" entry.
+          # Build the conflict table row.
+          # Case 1: we found a concrete GitHub ref for dcp itself → "dcp vs owner/dcp@branch"
+          # Case 2: we only know which other package's Remotes caused it → "dcp (via X Remotes)"
+          # Case 3: no context at all → skip row (avoid misleading entries)
           if (length(ghRef) && nzchar(ghRef)) {
             conflictRows[[length(conflictRows) + 1L]] <-
               list(Package    = dcp,
                    Conflict   = paste0(dcp, "  vs  ", ghRef),
+                   Resolution = "drop CRAN ref; resolve via GitHub Remotes")
+          } else if (length(viaRef) && nzchar(viaRef)) {
+            conflictRows[[length(conflictRows) + 1L]] <-
+              list(Package    = dcp,
+                   Conflict   = paste0(dcp, " (CRAN) via ", viaRef, " Remotes"),
                    Resolution = "drop CRAN ref; resolve via GitHub Remotes")
           }
         }
