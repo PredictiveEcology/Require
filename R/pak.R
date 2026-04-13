@@ -1094,7 +1094,7 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
             if (nzchar(cand) && extractPkgName(cand) == dcp) {
               ghRef  <- cand
             } else if (nzchar(cand)) {
-              viaRef <- extractPkgName(cand)
+              viaRef <- cand  # full GitHub ref, e.g. PredictiveEcology/SpaDES.core@development
             }
           }
           # Build the conflict table row.
