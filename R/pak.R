@@ -819,7 +819,7 @@ pakCheckGHversionOK <- function(pkg) {
 #         e.g. "PredictiveEcology/SpaDES.core@development")
 # Returns a named list suitable for rbindlist(), or NULL when no row should be added.
 pakDepConflictRow <- function(dcp, cand) {
-  if (!nzchar(cand)) return(NULL)
+  if (!length(cand) || !nzchar(cand)) return(NULL)
   if (extractPkgName(cand) == dcp) {
     list(Package    = dcp,
          Conflict   = paste0(dcp, "  vs  ", cand),

@@ -129,8 +129,12 @@ test_that("pakDepConflictRow: different package → 'dcp (CRAN)  vs  dcp (via X 
   testthat::expect_false(grepl("SpaDES.core  vs", row$Conflict, fixed = TRUE))
 })
 
-test_that("pakDepConflictRow: empty cand → NULL (no row added)", {
+test_that("pakDepConflictRow: empty string cand → NULL (no row added)", {
   testthat::expect_null(Require:::pakDepConflictRow("sp", ""))
+})
+
+test_that("pakDepConflictRow: zero-length cand → NULL (no row added)", {
+  testthat::expect_null(Require:::pakDepConflictRow("sp", character(0)))
 })
 
 # ---------------------------------------------------------------------------
