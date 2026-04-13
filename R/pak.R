@@ -944,7 +944,7 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
     if (!is.null(cached)) {
       messageVerbose("pakDepsResolve: using in-memory cached dep tree (",
                      length(unique(cached$package)), " packages).",
-                     verbose = verbose, verboseLevel = 2)
+                     verbose = verbose, verboseLevel = 1)
       return(cached)
     }
   }
@@ -959,7 +959,7 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
         messageVerbose("pakDepsResolve: using disk-cached dep tree (",
                        length(unique(cached$package)), " packages; ",
                        round(age / 3600, 1), "h old).",
-                       verbose = verbose, verboseLevel = 2)
+                       verbose = verbose, verboseLevel = 1)
         return(cached)
       }
     }
