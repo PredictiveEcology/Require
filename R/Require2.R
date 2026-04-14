@@ -1043,10 +1043,22 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
     setorderv(pkgDT, "loadOrder", na.last = TRUE)
     # rstudio intercepts `require` and doesn't work internally
     out[[1]] <- mapply(x = unique(pkgDT[["Package"]][pkgDT$require %in% TRUE]), function(x) {
-      res <- base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0)
-      if (!isTRUE(res) && isTRUE(verbose >= 1))
-        messageVerbose("require(\"", x, "\") returned FALSE — package may have failed to attach",
-                       verbose = verbose, verboseLevel = 1)
+      warn_msgs <- character(0L)
+      res <- withCallingHandlers(
+        base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0),
+        warning = function(w) {
+          warn_msgs <<- c(warn_msgs, conditionMessage(w))
+          invokeRestart("muffleWarning")
+        }
+      )
+      if (!isTRUE(res)) {
+        ## Always visible regardless of verbose: a silently-unloaded package causes
+        ## confusing downstream errors (e.g. "object 'sppEquivalencies_CA' not found").
+        hint <- if (length(warn_msgs)) paste0(" (", paste(warn_msgs, collapse = "; "), ")") else ""
+        warning("Require: require(\"", x, "\") returned FALSE — package will not be attached", hint,
+                "\n  Searched in: ", paste(libPaths, collapse = ", "),
+                call. = FALSE, immediate. = TRUE)
+      }
       res
     }, USE.NAMES = TRUE)
   }

@@ -1,3 +1,14 @@
+# Require 1.1.0.9008 (development version)
+
+## bug fixes
+
+* `require()` failures are now always visible regardless of `Require.verbose` setting.
+  Previously, when `Require.verbose <= 0`, a package that failed to attach (e.g. a
+  missing dependency, wrong library path) was silently ignored, producing confusing
+  downstream errors like "object 'sppEquivalencies_CA' not found". Now a `warning()`
+  with `immediate. = TRUE` is always emitted when `require()` returns FALSE, including
+  the underlying R message and the library paths that were searched.
+
 # Require 1.1.0.9007 (development version)
 
 ## Enhancements
