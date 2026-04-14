@@ -1,3 +1,13 @@
+# Require 1.1.0.9009 (development version)
+
+## bug fixes
+
+* When pak fails to install a newer version of a package but an older version is already
+  installed, Require now loads the installed version as a fallback (with a warning) instead
+  of refusing to load at all. Previously this produced confusing downstream errors (e.g.
+  "object 'sppEquivalencies_CA' not found") because the package was silently not attached,
+  even though a usable version was present in the library.
+
 # Require 1.1.0.9008 (development version)
 
 ## bug fixes

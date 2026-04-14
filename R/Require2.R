@@ -1008,13 +1008,33 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
 
   # override if version was not OK
   if (any(pkgDT$require %in% TRUE)) {
-    missingCols <- setdiff(c("installedVersionOK", "availableVersionOK", "installResult"), colnames(pkgDT))
+    missingCols <- setdiff(c("installedVersionOK", "availableVersionOK", "installResult", "installed"), colnames(pkgDT))
     if (length(missingCols)) set(pkgDT, NULL, missingCols, NA)
     pkgDT[require %in% TRUE, require := (installedVersionOK %in% TRUE | installResult %in% "OK")]
+
+    ## Fall-back: installation failed but an older version is present.
+    ## Load whatever is installed rather than leaving the package completely unattached.
+    ## Refusing to load is worse than loading a slightly-old version: the user has already
+    ## been warned about the failure; silently skipping the load produces confusing errors
+    ## (e.g. "object 'sppEquivalencies_CA' not found") with no hint about the real cause.
+    fallback <- pkgDT$require %in% FALSE &
+                pkgDT$installResult %in% .txtCouldNotBeInstalled &
+                pkgDT$installed %in% TRUE
+    if (any(fallback)) {
+      fbPkgs  <- pkgDT$Package[fallback]
+      fbVers  <- pkgDT$Version[fallback]
+      fbSpecs <- pkgDT$packageFullName[fallback]
+      warning(
+        "Installation failed; loading installed version as fallback:\n",
+        paste0("  ", fbPkgs, " (installed: ", fbVers,
+               ", required: ", fbSpecs, ")", collapse = "\n"),
+        call. = FALSE, immediate. = TRUE
+      )
+      set(pkgDT, which(fallback), "require", TRUE)
+    }
   }
 
-  # Diagnostic: report packages that have loadOrder set but will not be loaded,
-  # and the reason why (installedVersionOK = FALSE or installResult ≠ "OK").
+  # Diagnostic: report packages that have loadOrder set but will not be loaded.
   if (isTRUE(verbose >= 1)) {
     whLoad <- which(!is.na(pkgDT[["loadOrder"]]))
     if (length(whLoad)) {
