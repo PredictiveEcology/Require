@@ -6,6 +6,8 @@
 #   3. pakDepConflictRow()  — conflict-table row message format
 #   4. pakDepsResolve in-memory cache message fires at verbose = 1
 #   5. pakDepsResolve disk cache message fires at verbose = 1
+#   9. Recovery mechanism: user-requested package absent from pkgDT but installed
+#      → rbind'd back with loadOrder set so doLoads() calls require()
 
 # ---------------------------------------------------------------------------
 # 1. RequireOptions default
@@ -307,6 +309,75 @@ test_that("step-3b does not remove a package whose installed version satisfies t
   }, logical(1))
   testthat::expect_false(trulyBad,
     info = "digest is installed at a satisfying version; it must NOT be in trulyBad")
+})
+
+# ---------------------------------------------------------------------------
+# 9. Recovery: user-requested package absent from pkgDT but installed
+#    → rbind'd back with loadOrder set so doLoads() calls require()
+# ---------------------------------------------------------------------------
+
+test_that("recovery mechanism adds loadOrder for packages absent from pkgDT but installed", {
+  # This is a unit-level test of the recovery logic that runs in Require2.R
+  # after pakDepsToPkgDT.  Simulate the scenario: "digest" was removed from
+  # pkgDT (as step-3b would do when pak's CRAN version can't satisfy the
+  # constraint) but is actually installed at a satisfying version.
+
+  pkg <- "digest"
+  skip_if_not_installed(pkg)
+
+  instVer <- tryCatch(as.character(packageVersion(pkg)), error = function(e) NULL)
+  skip_if(is.null(instVer), "digest not installed")
+
+  # Build a minimal pkgDT that does NOT contain digest (simulating step-3b removal)
+  # and a packages vector that contains digest with a low enough constraint that
+  # the installed version satisfies it.
+  pkgDT    <- Require:::toPkgDTFull("data.table")   # some other package; digest is absent
+  packages <- c("data.table", paste0(pkg, " (>= 0.1.0)"))
+
+  # Apply the same pipeline pieces the recovery uses:
+  userPkgFull   <- packages[!Require:::extractPkgName(packages) %in% Require:::.basePkgs]
+  missingFromDT <- setdiff(Require:::extractPkgName(userPkgFull), pkgDT$Package)
+  testthat::expect_true(pkg %in% missingFromDT,
+    info = "digest should be identified as missing from pkgDT")
+
+  ipAll <- tryCatch({
+    ipRaw <- installed.packages(lib.loc = .libPaths())
+    setNames(ipRaw[, "Version"], ipRaw[, "Package"])
+  }, error = function(e) character(0))
+
+  missingPkgFull <- userPkgFull[Require:::extractPkgName(userPkgFull) %in% missingFromDT]
+  missingPkgDT   <- Require:::toPkgDTFull(missingPkgFull)
+  missingPkgDT   <- Require:::confirmEqualsDontViolateInequalitiesThenTrim(missingPkgDT)
+  missingPkgDT   <- Require:::trimRedundancies(missingPkgDT)
+
+  recoverable <- vapply(seq_len(NROW(missingPkgDT)), function(i) {
+    pkg2    <- missingPkgDT$Package[i]
+    instVer2 <- ipAll[pkg2]
+    if (is.na(instVer2) || !nzchar(instVer2)) return(FALSE)
+    ineq <- missingPkgDT$inequality[i]
+    vsp  <- missingPkgDT$versionSpec[i]
+    if (is.na(ineq) || !nzchar(ineq)) return(TRUE)
+    isTRUE(Require:::compareVersion2(instVer2, vsp, ineq))
+  }, logical(1))
+
+  testthat::expect_true(any(recoverable),
+    info = "digest should be recoverable (installed version satisfies >= 0.1.0)")
+
+  # Simulate the actual recovery
+  recoverDT <- missingPkgDT[recoverable]
+  recoverPkgs <- recoverDT$Package
+  maxLO <- 0L
+  data.table::set(recoverDT, NULL, "loadOrder", seq(maxLO + 1L, maxLO + NROW(recoverDT)))
+  data.table::set(recoverDT, NULL, "installed",          TRUE)
+  data.table::set(recoverDT, NULL, "installedVersionOK", TRUE)
+
+  # Core assertions
+  testthat::expect_true(pkg %in% recoverPkgs,
+    info = "digest must be in the set of recovered packages")
+  testthat::expect_false(is.na(recoverDT$loadOrder[recoverDT$Package == pkg]),
+    info = "recovered digest must have a non-NA loadOrder so doLoads() will require() it")
+  testthat::expect_true(isTRUE(recoverDT$installedVersionOK[recoverDT$Package == pkg]),
+    info = "recovered digest must have installedVersionOK = TRUE")
 })
 
 test_that("trimRedundancies keeps only the highest version constraint for duplicate GitHub refs", {

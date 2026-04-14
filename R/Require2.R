@@ -437,6 +437,63 @@ Require <- function(packages,
 
     }
 
+    # Recovery (pak path): a user-requested package may have been removed from
+    # pkgDT by step-3b inside pakDepsToPkgDT (pak's CRAN resolution can't satisfy
+    # a dev-version constraint) even though the installed version satisfies it.
+    # If such a package is absent from pkgDT but is installed at a satisfying
+    # version, add a minimal row back so doLoads() will call require() for it.
+    if (getOption("Require.usePak", FALSE) && exists("pkgDT", inherits = FALSE)) {
+      userPkgFull   <- packages[!extractPkgName(packages) %in% .basePkgs]
+      missingFromDT <- setdiff(extractPkgName(userPkgFull), pkgDT$Package)
+      if (length(missingFromDT)) {
+        ipAll <- tryCatch({
+          ipRaw <- installed.packages(lib.loc = libPaths)
+          setNames(ipRaw[, "Version"], ipRaw[, "Package"])
+        }, error = function(e) character(0))
+        # For each missing package, check installed version against user constraint
+        missingPkgFull <- userPkgFull[extractPkgName(userPkgFull) %in% missingFromDT]
+        missingPkgDT   <- toPkgDTFull(missingPkgFull)
+        missingPkgDT   <- confirmEqualsDontViolateInequalitiesThenTrim(missingPkgDT)
+        missingPkgDT   <- trimRedundancies(missingPkgDT)
+        recoverable <- vapply(seq_len(NROW(missingPkgDT)), function(i) {
+          pkg     <- missingPkgDT$Package[i]
+          instVer <- ipAll[pkg]
+          if (is.na(instVer) || !nzchar(instVer)) return(FALSE)
+          ineq <- missingPkgDT$inequality[i]
+          vsp  <- missingPkgDT$versionSpec[i]
+          if (is.na(ineq) || !nzchar(ineq)) return(TRUE)   # no constraint → any installed version OK
+          isTRUE(compareVersion2(instVer, vsp, ineq))
+        }, logical(1))
+        if (any(recoverable)) {
+          recoverDT <- missingPkgDT[recoverable]
+          recoverPkgs <- recoverDT$Package
+          set(recoverDT, NULL, "Version",            ipAll[recoverPkgs])
+          set(recoverDT, NULL, "installed",          TRUE)
+          set(recoverDT, NULL, "installedVersionOK", TRUE)
+          set(recoverDT, NULL, "needInstall",        .txtDontInstall)
+          # Assign loadOrder so doLoads() will call require() for these packages.
+          # Start numbering after the max existing loadOrder to avoid collisions.
+          maxLO <- if (!is.null(pkgDT$loadOrder) && any(!is.na(pkgDT$loadOrder)))
+            max(pkgDT$loadOrder, na.rm = TRUE) else 0L
+          set(recoverDT, NULL, "loadOrder", seq(maxLO + 1L, maxLO + NROW(recoverDT)))
+          pkgDT <- rbindlist(list(pkgDT, recoverDT), fill = TRUE, use.names = TRUE)
+          messageVerbose(
+            "pak path: recovering ", length(recoverPkgs),
+            " package(s) absent from dep tree but installed at satisfying version: ",
+            paste(recoverPkgs, collapse = ", "),
+            verbose = verbose, verboseLevel = 1
+          )
+        }
+        # Remaining truly-missing packages (not installed / wrong version) → diagnostic
+        trulyMissing <- missingFromDT[!missingFromDT %in% (if (any(recoverable)) recoverDT$Package else character(0))]
+        if (length(trulyMissing) && isTRUE(verbose >= 1))
+          messageVerbose("pak path: user-requested packages absent from dep tree and not ",
+                         "loadable (not installed or constraint not satisfied): ",
+                         paste(trulyMissing, collapse = ", "),
+                         verbose = verbose, verboseLevel = 1)
+      }
+    }
+
     # This only has access to "trimRedundancies", so it cannot know the right answer about which was loaded or not
     out <- doLoads(require, pkgDT, libPaths = libPaths, verbose = verbose)
 
@@ -956,12 +1013,41 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
     pkgDT[require %in% TRUE, require := (installedVersionOK %in% TRUE | installResult %in% "OK")]
   }
 
+  # Diagnostic: report packages that have loadOrder set but will not be loaded,
+  # and the reason why (installedVersionOK = FALSE or installResult ≠ "OK").
+  if (isTRUE(verbose >= 1)) {
+    whLoad <- which(!is.na(pkgDT[["loadOrder"]]))
+    if (length(whLoad)) {
+      willLoad <- pkgDT$require[whLoad] %in% TRUE
+      willSkip <- !willLoad
+      if (any(willSkip)) {
+        skipPkgs <- pkgDT$Package[whLoad][willSkip]
+        skipIVOK  <- pkgDT$installedVersionOK[whLoad][willSkip]
+        skipIR    <- pkgDT$installResult[whLoad][willSkip]
+        skipVer   <- pkgDT$Version[whLoad][willSkip]
+        skipSpec  <- pkgDT$packageFullName[whLoad][willSkip]
+        msgs <- paste0(skipPkgs,
+          " (installedVersionOK=", skipIVOK,
+          ", installResult=", skipIR,
+          ", installedVer=", skipVer,
+          ", spec=", skipSpec, ")")
+        messageVerbose("Packages with loadOrder set but require=FALSE (will NOT be loaded): ",
+                       paste(msgs, collapse = "; "),
+                       verbose = verbose, verboseLevel = 1)
+      }
+    }
+  }
+
   out <- list()
   if (any(pkgDT$require %in% TRUE)) {
     setorderv(pkgDT, "loadOrder", na.last = TRUE)
     # rstudio intercepts `require` and doesn't work internally
     out[[1]] <- mapply(x = unique(pkgDT[["Package"]][pkgDT$require %in% TRUE]), function(x) {
-      base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0)
+      res <- base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0)
+      if (!isTRUE(res) && isTRUE(verbose >= 1))
+        messageVerbose("require(\"", x, "\") returned FALSE — package may have failed to attach",
+                       verbose = verbose, verboseLevel = 1)
+      res
     }, USE.NAMES = TRUE)
   }
 

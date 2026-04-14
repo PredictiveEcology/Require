@@ -1381,8 +1381,12 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
         # require() would never be called — the package would not be attached
         # even though it is correctly installed.
         badCandidates <- needCheck[Package %in% badPkgs]
+        # Use the same libPaths that doLoads() / installedVers() will use, so that
+        # the "is it already installed?" check is consistent with the later loading
+        # step.  .libPaths() at this point has been changed to newPaths by the
+        # standAlone guard; using the `libPaths` argument avoids that discrepancy.
         instPkgVers <- tryCatch({
-          ipAll <- installed.packages(lib.loc = .libPaths())
+          ipAll <- installed.packages(lib.loc = libPaths)
           setNames(ipAll[, "Version"], ipAll[, "Package"])
         }, error = function(e) character(0))
         trulyBad <- vapply(badCandidates$Package, function(pkg) {
