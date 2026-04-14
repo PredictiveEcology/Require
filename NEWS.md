@@ -1,3 +1,18 @@
+# Require 1.1.0.9011 (development version)
+
+## bug fixes
+
+* `pak::pak()` is now called with `dependencies = NA` (pak's default) instead of
+  `dependencies = FALSE`. Previously, `dependencies = FALSE` caused installation
+  failures for GitHub dev packages whose latest DESCRIPTION had new or updated dep
+  requirements that were not captured in Require's earlier dep-tree snapshot. Using
+  `dependencies = NA` lets pak satisfy any such requirements automatically, matching
+  the behaviour of a direct `pak::pak()` call.
+* "Please change required version" is no longer emitted spuriously when pak fails to
+  install a package that was not previously present in the library (first-time install
+  failure). Previously, a `NA` pre-install version was compared with the post-attempt
+  installed version, incorrectly signalling that pak had installed a different version.
+
 # Require 1.1.0.9010 (development version)
 
 ## bug fixes

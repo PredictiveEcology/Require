@@ -1569,7 +1569,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       err <- try(
         pakCall(
           pak::pak(packages, lib = libPaths[1], ask = FALSE,
-                   dependencies = FALSE, upgrade = FALSE),
+                   dependencies = NA, upgrade = FALSE),
           verbose),
         silent = TRUE
       )
@@ -1670,7 +1670,12 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           # "Please change required version e.g., pkg (>=<old-ver>)" would tell the user
           # to lower their requirement to the pre-existing version, which is wrong.
           preVer <- preInstallVers[pkg]
-          versionChanged <- !isTRUE(!is.na(preVer) && identical(preVer, installedVer))
+          # Only warn if pak actually installed a *different* (but still insufficient)
+          # version.  If preVer is NA the package was absent from the library before the
+          # install attempt (first-time install); in that case the install simply failed
+          # and no version-change guidance is appropriate.  If preVer == installedVer the
+          # version is unchanged (build failure, not a wrong-version situation).
+          versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
           if (versionChanged)
             warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
           set(pkgDT, wh, "installed",     FALSE)
