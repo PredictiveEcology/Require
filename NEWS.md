@@ -29,6 +29,14 @@
   failing silently.
 
 ## Bugfixes
+* Fixed `require()` not being called for packages (e.g. `LandR`) when using
+  `Require.usePak = TRUE`. The root cause: `pakDepsToPkgDT()` step-3b compared
+  pak's CRAN-resolved version against the user's version constraint. When the
+  user had a dev version installed (satisfying the constraint) but pak's CRAN
+  resolution returned an older version, the package was incorrectly removed from
+  `pkgDT`. Because `recordLoadOrder()` could not find the package in `pkgDT`,
+  `base::require()` was never called. The fix checks the actually-installed version
+  before classifying a package as unsatisfiable.
 * Fixed `file:////` URL error when downloading archived packages that were
   previously cached locally; `basename()` is now used for `file://` repository
   URLs to match the flat cache layout.

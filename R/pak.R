@@ -1372,9 +1372,31 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                                     needCheck$versionSpec, needCheck$inequality)
       badPkgs <- needCheck$Package[canSatisfy %in% FALSE]
       if (length(badPkgs)) {
-        badFullNames <- needCheck$packageFullName[canSatisfy %in% FALSE]
-        warning(messageCantInstallNoVersion(badFullNames), call. = FALSE)
-        packages <- packages[!extractPkgName(packages) %in% badPkgs]
+        # Before flagging a package as unsatisfiable, check if the currently
+        # installed version already satisfies the constraint.  This is important
+        # for dev-version packages (e.g. LandR >= 1.1.5.9064) where the user has
+        # the dev version installed but pak's CRAN resolution returns an older
+        # version.  Removing such packages from `user_pkgFN` would prevent them
+        # from appearing in pkgDT, so recordLoadOrder() could not find them and
+        # require() would never be called — the package would not be attached
+        # even though it is correctly installed.
+        badCandidates <- needCheck[Package %in% badPkgs]
+        instPkgVers <- tryCatch({
+          ipAll <- installed.packages(lib.loc = .libPaths())
+          setNames(ipAll[, "Version"], ipAll[, "Package"])
+        }, error = function(e) character(0))
+        trulyBad <- vapply(badCandidates$Package, function(pkg) {
+          instVer <- instPkgVers[pkg]
+          if (is.na(instVer) || !nzchar(instVer)) return(TRUE)  # not installed → bad
+          row <- badCandidates[Package == pkg][1L]
+          !isTRUE(compareVersion2(instVer, row$versionSpec, row$inequality))
+        }, logical(1))
+        badPkgs <- badCandidates$Package[trulyBad]
+        if (length(badPkgs)) {
+          badFullNames <- badCandidates$packageFullName[trulyBad]
+          warning(messageCantInstallNoVersion(badFullNames), call. = FALSE)
+          packages <- packages[!extractPkgName(packages) %in% badPkgs]
+        }
       }
     }
   }
