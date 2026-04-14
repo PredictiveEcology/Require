@@ -1,14 +1,16 @@
-# Require 1.1.0.9012 (development version)
+# Require 1.1.0.9013 (development version)
 
 ## bug fixes
 
-* GitHub and `url::` packages are now installed with `upgrade = TRUE` so pak
-  always fetches the latest commit from the requested branch. Previously,
+* GitHub and `url::` packages are now installed with `upgrade = TRUE`,
+  `dependencies = FALSE` so pak always fetches the latest commit from the
+  requested branch without upgrading transitive CRAN dependencies. Previously,
   `upgrade = FALSE` caused pak to "keep" any already-installed version of a
   GitHub package even when a newer version was required, because pak treats a
   bare `owner/repo@branch` ref as satisfied by whatever version is already in
-  the library. CRAN-like packages are still installed with `upgrade = FALSE` to
-  avoid unnecessary upgrades of already-satisfied dependencies.
+  the library. CRAN-like packages are still installed with `upgrade = FALSE`,
+  `dependencies = FALSE` to avoid unnecessary upgrades of already-satisfied
+  dependencies.
 
 # Require 1.1.0.9011 (development version)
 
