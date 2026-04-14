@@ -1566,13 +1566,34 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     for (i in seq_len(15)) {
       pkgsIn <- packages
       opts <- options(repos = repos)
-      err <- try(
-        pakCall(
-          pak::pak(packages, lib = libPaths[1], ask = FALSE,
+      # GitHub / url:: refs: must use upgrade=TRUE so pak always fetches the
+      # latest commit from the branch rather than "keeping" the currently installed
+      # version.  With upgrade=FALSE, pak considers a bare "owner/repo@branch" ref
+      # satisfied by whatever version is already in the library — even if we need
+      # a newer one.
+      # CRAN-like refs: keep upgrade=FALSE to avoid upgrading already-satisfied deps.
+      ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
+      err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
+        # Two separate calls when both types are present
+        e1 <- try(pakCall(
+          pak::pak(packages[ghOrUrl],  lib = libPaths[1], ask = FALSE,
+                   dependencies = NA, upgrade = TRUE),
+          verbose), silent = TRUE)
+        e2 <- try(pakCall(
+          pak::pak(packages[!ghOrUrl], lib = libPaths[1], ask = FALSE,
                    dependencies = NA, upgrade = FALSE),
-          verbose),
-        silent = TRUE
-      )
+          verbose), silent = TRUE)
+        # Combine errors: prefer the first error if both fail; if only one
+        # fails return that one; if neither fails return non-try-error.
+        if (is(e1, "try-error")) e1 else if (is(e2, "try-error")) e2 else e2
+      } else {
+        up <- any(ghOrUrl)  # TRUE → upgrade=TRUE for all-GH batch
+        try(pakCall(
+          pak::pak(packages, lib = libPaths[1], ask = FALSE,
+                   dependencies = NA, upgrade = up),
+          verbose), silent = TRUE)
+      }
+      options(opts)
       options(opts)
       if (!is(err, "try-error")) break
       lastPakErr <<- as.character(err)
