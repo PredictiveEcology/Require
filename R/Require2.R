@@ -982,7 +982,15 @@ recordLoadOrder <- function(packages, pkgDT) {
   packagesWOVersion <- trimVersionNumber(packages)
   packagesWObase <- setdiff(packagesWOVersion, .basePkgs)
   pfn <- trimVersionNumber(pkgDT[["packageFullName"]])
-  wh <- pfn %in% packagesWObase
+  # Primary match: full packageFullName after stripping version specs.
+  # Fallback match by plain Package name: needed when the user supplied a GitHub
+  # ref (e.g. "owner/Pkg@branch", no version spec) that trimRedundantVersionAndNoVersion
+  # replaced with a CRAN version-spec ref (e.g. "Pkg (>= X)") because a transitive
+  # dep required a minimum version.  In that case pfn = "Pkg" but packagesWObase
+  # = "owner/Pkg@branch" — the packageFullName match fails even though it is the
+  # same package.  Matching by Package name catches this.
+  packagesWObaseNames <- extractPkgName(packagesWObase)
+  wh <- pfn %in% packagesWObase | pkgDT[["Package"]] %in% packagesWObaseNames
   out <- try(pkgDT[wh, loadOrder := seq(sum(wh))])
   pkgDT[, loadOrder := na.omit(unique(loadOrder))[1], by = "Package"]
 

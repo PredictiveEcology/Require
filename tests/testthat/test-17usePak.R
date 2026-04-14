@@ -207,3 +207,48 @@ test_that("pakDepsResolve disk cache hit emits message at verbose = 1", {
   )
   testthat::expect_true(any(grepl("disk-cached dep tree", msgs, fixed = TRUE)))
 })
+
+# ---------------------------------------------------------------------------
+# 6. recordLoadOrder: GitHub ref replaced by CRAN version-spec ref
+# ---------------------------------------------------------------------------
+
+test_that("recordLoadOrder sets loadOrder when GitHub ref is replaced by CRAN version-spec ref", {
+  # Regression: user supplies "owner/Pkg@branch" (no version spec).
+  # trimRedundantVersionAndNoVersion removes it in favour of a dep-table entry
+  # "Pkg (>= X.Y)" that has a version spec.  After this, pkgDT$packageFullName
+  # is "Pkg (>= X.Y)" not "owner/Pkg@branch", so the old pfn %in% packagesWObase
+  # match failed → loadOrder never set → base::require never called.
+  pkg_user <- "PredictiveEcology/SpaDES.core@development"
+  pkg_dep  <- "SpaDES.core (>= 2.0.0)"
+
+  pkgDT <- Require:::trimRedundancies(Require:::toPkgDTFull(c(pkg_user, pkg_dep)))
+  # After trimRedundancies only the CRAN version-spec row remains
+  testthat::expect_equal(nrow(pkgDT), 1L)
+  testthat::expect_match(pkgDT$packageFullName, "SpaDES.core \\(>= 2.0.0\\)")
+
+  pkgDT <- Require:::recordLoadOrder(pkg_user, pkgDT)
+  testthat::expect_false(is.na(pkgDT$loadOrder),
+    info = "loadOrder must be set even when GitHub ref was replaced by CRAN version-spec ref")
+})
+
+# ---------------------------------------------------------------------------
+# 7. trimRedundancies: multiple version specs for the same GitHub ref collapse
+#    to the highest (regression from production LandR Install() call)
+# ---------------------------------------------------------------------------
+
+test_that("trimRedundancies keeps only the highest version constraint for duplicate GitHub refs", {
+  # Production regression: Install() was called with three entries for the same
+  # GitHub ref at different minimum versions.  trimRedundancies must keep only
+  # the strictest (highest) constraint so that exactly one row remains and
+  # Require does not attempt three separate installs.
+  pkgs <- c(
+    "PredictiveEcology/LandR@development (>= 1.1.5.9064)",
+    "PredictiveEcology/LandR@development (>= 1.1.5.9100)",
+    "PredictiveEcology/LandR@development (>= 1.1.5.9016)"
+  )
+  pkgDT <- Require:::trimRedundancies(Require:::toPkgDTFull(pkgs))
+  # Only one row should remain
+  testthat::expect_equal(nrow(pkgDT), 1L)
+  # It must be the highest constraint
+  testthat::expect_equal(pkgDT$versionSpec, "1.1.5.9100")
+})
