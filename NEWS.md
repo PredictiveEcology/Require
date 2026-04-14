@@ -44,6 +44,17 @@
   `pkgDT`. Because `recordLoadOrder()` could not find the package in `pkgDT`,
   `base::require()` was never called. The fix checks the actually-installed version
   before classifying a package as unsatisfiable.
+* Fixed a second `require()` failure mode: a user-requested package (e.g.
+  `LandR`) could end up completely absent from `pkgDT` if step-3b removed it
+  from the local package list AND it was not a transitive dependency of any
+  other requested package. In this case `recordLoadOrder()` had no row to
+  match, so `loadOrder` was never set and `base::require()` was never called.
+  The fix adds a recovery pass after the main pipeline: any user-requested
+  package that is absent from `pkgDT` but installed at a satisfying version
+  is rbind-ed back with `loadOrder` set and `installedVersionOK = TRUE`.
+  Also adds verbose ≥ 1 diagnostics in `doLoads()` to report when packages
+  with `loadOrder` set are skipped (and why) or when `base::require()` itself
+  returns `FALSE`.
 * Fixed `file:////` URL error when downloading archived packages that were
   previously cached locally; `basename()` is now used for `file://` repository
   URLs to match the flat cache layout.
