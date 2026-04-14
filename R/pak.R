@@ -1560,6 +1560,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # Collect names of packages that pakRetryLoop explicitly warned about so
   # that the post-install update loop can skip them (avoid double-warning).
   warnedDropped <- character(0)
+  lastPakErr    <- ""   # last raw pak error string; used by silentlyFailed warning below
 
   pakRetryLoop <- function(packages, repos, verbose) {
     for (i in seq_len(15)) {
@@ -1574,6 +1575,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       )
       options(opts)
       if (!is(err, "try-error")) break
+      lastPakErr <<- as.character(err)
       alreadyWarned <- FALSE
       packages <- tryCatch(
         pakErrorHandling(as.character(err), pkgsIn, packages, verbose = verbose),
@@ -1600,6 +1602,19 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           warning(warnMsg, call. = FALSE, immediate. = TRUE)
           alreadyWarned <<- TRUE
           warnedDropped <<- c(warnedDropped, droppedPkgNames)
+        } else if (identical(packages, pkgsIn)) {
+          # pakErrorHandling did not recognise the error pattern and left the
+          # package list unchanged — there is no point retrying with the same
+          # packages.  Surface the raw pak reason and mark all remaining packages
+          # as failed so the post-install check doesn't double-warn.
+          reason <- pakBuildFailReason(as.character(err))
+          failedNames <- extractPkgName(packages)
+          warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
+                            paste(failedNames, collapse = ", "),
+                            if (nzchar(reason)) paste0("; ", reason) else "")
+          warning(warnMsg, call. = FALSE, immediate. = TRUE)
+          warnedDropped <<- c(warnedDropped, failedNames)
+          packages <- character(0)
         }
       }
       if (!length(packages)) {
@@ -1690,8 +1705,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     }, logical(1))
   ]
   if (length(silentlyFailed)) {
+    reason <- pakBuildFailReason(lastPakErr)
     warning(.txtCouldNotBeInstalled, ": ",
             paste(silentlyFailed, collapse = ", "),
+            if (nzchar(reason)) paste0("; ", reason) else "",
             call. = FALSE, immediate. = TRUE)
   }
 

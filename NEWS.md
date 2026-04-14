@@ -1,3 +1,14 @@
+# Require 1.1.0.9010 (development version)
+
+## bug fixes
+
+* When pak fails to install a package with an error that Require does not
+  recognise as retryable (e.g. a subprocess crash, network timeout, or GitHub
+  API error), the install attempt now stops immediately and the actual pak error
+  reason is included in the `"could not be installed"` warning.  Previously the
+  retry loop would silently repeat the same failed call 15 times and then emit
+  a bare `"could not be installed: <pkg>"` with no explanation.
+
 # Require 1.1.0.9009 (development version)
 
 ## bug fixes
