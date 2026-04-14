@@ -1553,6 +1553,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # right set. pak still reads DESCRIPTION files for topological install ordering
   # even with dependencies = FALSE, so LearnBayes-style ordering failures do not
   # occur as long as all required deps are present in toInstall.
+  # Collect names of packages that pakRetryLoop explicitly warned about so
+  # that the post-install update loop can skip them (avoid double-warning).
+  warnedDropped <- character(0)
+
   pakRetryLoop <- function(packages, repos, verbose) {
     for (i in seq_len(15)) {
       pkgsIn <- packages
@@ -1575,6 +1579,24 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           character(0)
         }
       )
+      # Warn immediately about any packages permanently dropped by pakErrorHandling
+      # (i.e., their second build failure — first attempt cleared the cache and
+      # retried; second attempt removes them from the list so other packages can
+      # still succeed).  Without this, a partial failure like "map fails to build
+      # but all other 62 packages install fine" produces zero user-visible output
+      # from Require, leaving the user confused about what went wrong.
+      if (!alreadyWarned) {
+        droppedPkgNames <- setdiff(extractPkgName(pkgsIn), extractPkgName(packages))
+        if (length(droppedPkgNames)) {
+          reason <- pakBuildFailReason(as.character(err))
+          warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
+                            paste(droppedPkgNames, collapse = ", "),
+                            if (nzchar(reason)) paste0("; ", reason) else "")
+          warning(warnMsg, call. = FALSE)
+          alreadyWarned <<- TRUE
+          warnedDropped <<- c(warnedDropped, droppedPkgNames)
+        }
+      }
       if (!length(packages)) {
         if (!alreadyWarned) {
           # Include the actual build/install failure reason so the user knows
@@ -1645,6 +1667,26 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       set(pkgDT, wh, "installed",      FALSE)
       set(pkgDT, wh, "installResult",  .txtCouldNotBeInstalled)
     }
+  }
+
+  # Warn about packages that were in toInstall but still not installed after all
+  # retries — and that pakRetryLoop did not already warn about.  The typical case
+  # is a cascade failure: package X fails to build → package Y (which Imports X)
+  # also fails to install because X isn't present when pak tries to package Y.
+  # Without this warning the user sees no output from Require at all, just a
+  # mysterious runtime error when they later try to use Y.
+  silentlyFailed <- toInstall$Package[
+    !toInstall$Package %in% warnedDropped &
+    vapply(toInstall$Package, function(pkg) {
+      wh <- which(pkgDT$Package == pkg)
+      length(wh) > 0 &&
+        isTRUE(pkgDT$installResult[wh[1L]] == .txtCouldNotBeInstalled)
+    }, logical(1))
+  ]
+  if (length(silentlyFailed)) {
+    warning(.txtCouldNotBeInstalled, ": ",
+            paste(silentlyFailed, collapse = ", "),
+            call. = FALSE)
   }
 
   pkgDT

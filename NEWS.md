@@ -29,6 +29,13 @@
   failing silently.
 
 ## Bugfixes
+* When a GitHub package fails to build (e.g. `map` compilation error) and is
+  permanently removed from the pak retry list, Require now emits a warning
+  naming the package and, where extractable, the reason (namespace mismatch,
+  compilation failure, etc.). Previously the failure was silent when other
+  packages succeeded. Cascade failures — packages that depend on the failed
+  package and therefore also fail to install — are similarly reported after
+  the update loop.
 * Fixed `require()` not being called for packages (e.g. `LandR`) when using
   `Require.usePak = TRUE`. The root cause: `pakDepsToPkgDT()` step-3b compared
   pak's CRAN-resolved version against the user's version constraint. When the
