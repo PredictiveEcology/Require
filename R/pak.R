@@ -1578,17 +1578,18 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       packages <- tryCatch(
         pakErrorHandling(as.character(err), pkgsIn, packages, verbose = verbose),
         error = function(e) {
-          warning(.txtCouldNotBeInstalled, ": ", conditionMessage(e), call. = FALSE)
+          warning(.txtCouldNotBeInstalled, ": ", conditionMessage(e),
+                  call. = FALSE, immediate. = TRUE)
           alreadyWarned <<- TRUE
           character(0)
         }
       )
-      # Warn immediately about any packages permanently dropped by pakErrorHandling
-      # (i.e., their second build failure — first attempt cleared the cache and
-      # retried; second attempt removes them from the list so other packages can
-      # still succeed).  Without this, a partial failure like "map fails to build
-      # but all other 62 packages install fine" produces zero user-visible output
-      # from Require, leaving the user confused about what went wrong.
+      # Warn immediately (immediate. = TRUE bypasses R's warning buffer so the
+      # message appears right when map fails, not buried in "There were N warnings"
+      # at the end of the session) about any packages permanently dropped by
+      # pakErrorHandling.  The typical scenario: "map fails to build → all other
+      # 62 packages install fine" should produce a visible notification for map
+      # (and any cascade failures like climateData that depend on map).
       if (!alreadyWarned) {
         droppedPkgNames <- setdiff(extractPkgName(pkgsIn), extractPkgName(packages))
         if (length(droppedPkgNames)) {
@@ -1596,7 +1597,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
                             paste(droppedPkgNames, collapse = ", "),
                             if (nzchar(reason)) paste0("; ", reason) else "")
-          warning(warnMsg, call. = FALSE)
+          warning(warnMsg, call. = FALSE, immediate. = TRUE)
           alreadyWarned <<- TRUE
           warnedDropped <<- c(warnedDropped, droppedPkgNames)
         }
@@ -1608,9 +1609,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           # namespace version mismatch, bad regex in source, etc.).
           reason <- pakBuildFailReason(as.character(err))
           if (nzchar(reason)) {
-            warning(.txtCouldNotBeInstalled, ": ", reason, call. = FALSE)
+            warning(.txtCouldNotBeInstalled, ": ", reason,
+                    call. = FALSE, immediate. = TRUE)
           } else {
-            warning(.txtCouldNotBeInstalled, call. = FALSE)
+            warning(.txtCouldNotBeInstalled, call. = FALSE, immediate. = TRUE)
           }
         }
         break
@@ -1690,7 +1692,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   if (length(silentlyFailed)) {
     warning(.txtCouldNotBeInstalled, ": ",
             paste(silentlyFailed, collapse = ", "),
-            call. = FALSE)
+            call. = FALSE, immediate. = TRUE)
   }
 
   pkgDT
