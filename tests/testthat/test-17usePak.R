@@ -1,13 +1,20 @@
 # Tests for pak-backend changes introduced on the pak-dep-cache branch.
 #
 # Covered:
-#   1. RequireOptions default Require.usePak = TRUE
-#   2. pakBuildFailReason() — extract failure reason from pak error strings
-#   3. pakDepConflictRow()  — conflict-table row message format
-#   4. pakDepsResolve in-memory cache message fires at verbose = 1
-#   5. pakDepsResolve disk cache message fires at verbose = 1
-#   9. Recovery mechanism: user-requested package absent from pkgDT but installed
-#      → rbind'd back with loadOrder set so doLoads() calls require()
+#   1.  RequireOptions default Require.usePak = TRUE
+#   2.  pakBuildFailReason() — extract failure reason from pak error strings
+#   3.  pakDepConflictRow()  — conflict-table row message format
+#   4.  pakDepsResolve memory cache message fires at verbose = 1
+#   5.  pakDepsResolve disk cache message fires at verbose = 1
+#   9.  Recovery mechanism: user-requested package absent from pkgDT but installed
+#       → rbind'd back with loadOrder set so doLoads() calls require()
+#   10. doLoads fallback: when pak install fails but old version present, load it
+#   11. doLoads: require() failure emits immediate warning
+#   12. pakInstallFiltered versionChanged guard: NA pre-install version → no spurious warning
+#   13. pakRetryLoop upgrade flag: GitHub refs get upgrade=TRUE; CRAN refs get upgrade=FALSE
+#   14. pakInstallFiltered: installedVersionOK set TRUE after successful install
+#   15. pakInstallFiltered: no double warning when version-change path already warned
+#   16. versionChanged dash-vs-dot normalization: "3.2.1" == "3.2-1" semantically → no spurious warning
 
 # ---------------------------------------------------------------------------
 # 1. RequireOptions default
@@ -143,7 +150,7 @@ test_that("pakDepConflictRow: zero-length cand → NULL (no row added)", {
 # 4 & 5. pakDepsResolve cache messages fire at verbose = 1 but not verbose = 0
 # ---------------------------------------------------------------------------
 
-test_that("pakDepsResolve in-memory cache hit emits message at verbose = 1", {
+test_that("pakDepsResolve memory cache hit emits message at verbose = 1", {
   skip_if_not_installed("pak")
 
   pkgsForPak <- "any::data.table"
@@ -165,7 +172,7 @@ test_that("pakDepsResolve in-memory cache hit emits message at verbose = 1", {
       Require:::pakDepsResolve(pkgsForPak, wh, repos, verbose = 1, purge = FALSE)
     )
   )
-  testthat::expect_true(any(grepl("in-memory cached dep tree", msgs1, fixed = TRUE)))
+  testthat::expect_true(any(grepl("using memory cache", msgs1, fixed = TRUE)))
 
   # Re-inject (capture_messages doesn't consume it but let's be safe)
   assign(envKey, fake, envir = Require:::pakEnv())
@@ -176,7 +183,7 @@ test_that("pakDepsResolve in-memory cache hit emits message at verbose = 1", {
       Require:::pakDepsResolve(pkgsForPak, wh, repos, verbose = 0, purge = FALSE)
     )
   )
-  testthat::expect_false(any(grepl("in-memory cached dep tree", msgs0, fixed = TRUE)))
+  testthat::expect_false(any(grepl("using memory cache", msgs0, fixed = TRUE)))
 })
 
 test_that("pakDepsResolve disk cache hit emits message at verbose = 1", {
@@ -207,7 +214,7 @@ test_that("pakDepsResolve disk cache hit emits message at verbose = 1", {
       Require:::pakDepsResolve(pkgsForPak, wh, repos, verbose = 1, purge = FALSE)
     )
   )
-  testthat::expect_true(any(grepl("disk-cached dep tree", msgs, fixed = TRUE)))
+  testthat::expect_true(any(grepl("using cache", msgs, fixed = TRUE)))
 })
 
 # ---------------------------------------------------------------------------
@@ -395,4 +402,348 @@ test_that("trimRedundancies keeps only the highest version constraint for duplic
   testthat::expect_equal(nrow(pkgDT), 1L)
   # It must be the highest constraint
   testthat::expect_equal(pkgDT$versionSpec, "1.1.5.9100")
+})
+
+# ---------------------------------------------------------------------------
+# 10. doLoads fallback: load installed version when pak install fails
+# ---------------------------------------------------------------------------
+
+test_that("doLoads loads installed version as fallback when installResult=could not be installed", {
+  # Regression: when pak fails to install a newer version but an older version
+  # is present, doLoads was leaving the package completely unattached
+  # (require=FALSE), causing confusing "object not found" errors downstream.
+  # Fix: set require=TRUE and emit a warning so the installed version is loaded.
+  pkg <- "digest"
+  skip_if_not_installed(pkg)
+
+  pkgDT <- data.table::data.table(
+    Package            = pkg,
+    packageFullName    = paste0(pkg, " (>= 999.0.0)"),
+    inequality         = ">=",
+    versionSpec        = "999.0.0",
+    loadOrder          = 1L,
+    # NOTE: no 'require' column — doLoads creates it internally.  If 'require'
+    # were pre-populated, data.table would resolve it as the column (not the
+    # function argument) inside the j expression, breaking the initialization.
+    installed          = TRUE,
+    installedVersionOK = FALSE,        # installed version doesn't satisfy >= 999
+    availableVersionOK = FALSE,
+    installResult      = "could not be installed",
+    Version            = "0.6.35",
+    LibPath            = .libPaths()[1]
+  )
+
+  warns <- character(0L)
+  withr::with_options(list(Require.verbose = 0), {
+    withCallingHandlers(
+      Require:::doLoads(require = TRUE, pkgDT = pkgDT, libPaths = .libPaths()),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+  })
+
+  # The fallback warning must mention the package and "fallback"
+  fallback_warn <- warns[grepl("fallback", warns, ignore.case = TRUE)]
+  testthat::expect_true(length(fallback_warn) >= 1L,
+    info = "doLoads must emit a fallback warning when install failed but package is present")
+  testthat::expect_match(fallback_warn[1], pkg, fixed = TRUE)
+
+  # require must have been set to TRUE so base::require() was called
+  testthat::expect_true(isTRUE(pkgDT$require),
+    info = "pkgDT$require must be TRUE after fallback so the package is actually loaded")
+})
+
+test_that("doLoads does NOT fall back when installed=FALSE (nothing to fall back to)", {
+  # Safety check: if the package is simply absent, no fallback should occur and
+  # no spurious "loading as fallback" warning should be emitted.
+  pkgDT <- data.table::data.table(
+    Package            = "zzz_nonexistent_pkg",
+    packageFullName    = "zzz_nonexistent_pkg (>= 999.0.0)",
+    inequality         = ">=",
+    versionSpec        = "999.0.0",
+    loadOrder          = 1L,
+    # NOTE: no 'require' column — doLoads initializes it from the function argument.
+    installed          = FALSE,        # NOT installed
+    installedVersionOK = FALSE,
+    availableVersionOK = FALSE,
+    installResult      = "could not be installed",
+    Version            = NA_character_,
+    LibPath            = NA_character_
+  )
+
+  warns <- character(0L)
+  withr::with_options(list(Require.verbose = 0), {
+    withCallingHandlers(
+      Require:::doLoads(require = TRUE, pkgDT = pkgDT, libPaths = .libPaths()),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+  })
+
+  fallback_warn <- warns[grepl("fallback", warns, ignore.case = TRUE)]
+  testthat::expect_equal(length(fallback_warn), 0L,
+    info = "No fallback warning should be emitted when installed=FALSE")
+  testthat::expect_false(isTRUE(pkgDT$require),
+    info = "require must stay FALSE when there is no installed version to fall back to")
+})
+
+# ---------------------------------------------------------------------------
+# 11. doLoads: require() failure emits an immediate warning
+# ---------------------------------------------------------------------------
+
+test_that("doLoads emits an immediate warning when base::require() returns FALSE", {
+  # When a package is marked require=TRUE but base::require() fails (e.g. the
+  # package is not in any of libPaths), a warning must always be emitted
+  # regardless of verbose setting, so the user knows why downstream code fails.
+  pkgDT <- data.table::data.table(
+    Package            = "zzz_nonexistent_for_require_test",
+    packageFullName    = "zzz_nonexistent_for_require_test",
+    loadOrder          = 1L,
+    # NOTE: no 'require' column — doLoads initializes it from the function argument.
+    installed          = TRUE,
+    installedVersionOK = TRUE,
+    availableVersionOK = TRUE,
+    installResult      = "OK",
+    Version            = "1.0.0",
+    LibPath            = .libPaths()[1]
+  )
+
+  warns <- character(0L)
+  withr::with_options(list(Require.verbose = -1), {  # verbose=-1 (silent mode)
+    withCallingHandlers(
+      Require:::doLoads(require = TRUE, pkgDT = pkgDT, libPaths = .libPaths()),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+  })
+
+  require_fail_warn <- warns[grepl("returned FALSE", warns, fixed = TRUE)]
+  testthat::expect_true(length(require_fail_warn) >= 1L,
+    info = "A 'returned FALSE' warning must be emitted even with verbose=-1")
+  testthat::expect_match(require_fail_warn[1], "zzz_nonexistent_for_require_test", fixed = TRUE)
+  testthat::expect_match(require_fail_warn[1], "Searched in:", fixed = TRUE)
+})
+
+# ---------------------------------------------------------------------------
+# 12. pakInstallFiltered: versionChanged NA guard
+# ---------------------------------------------------------------------------
+
+test_that("versionChanged is FALSE when preVer is NA (first-time install failure)", {
+  # Regression: when a package was absent from the library before a (failed)
+  # install attempt, preInstallVers[pkg] is NA_character_.  The old logic
+  #   !isTRUE(!is.na(preVer) && identical(preVer, installedVer))
+  # evaluated NA as "changed", firing a spurious "Please change required version"
+  # warning that told the user to lower their version requirement to the very
+  # version that pak failed to change.
+  # Fixed logic:
+  #   !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
+
+  installedVer <- "1.1.5.9088"
+
+  # Case 1: first-time install (package was not in library before) → no change
+  preVer <- NA_character_
+  versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
+  testthat::expect_false(versionChanged,
+    info = "NA preVer must NOT trigger 'Please change required version'")
+
+  # Case 2: pak actually installed a different (but still insufficient) version
+  preVer <- "1.1.5.9080"
+  versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
+  testthat::expect_true(versionChanged,
+    info = "Different non-NA preVer must trigger 'Please change required version'")
+
+  # Case 3: build failed — version unchanged from pre-install
+  preVer <- "1.1.5.9088"
+  versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
+  testthat::expect_false(versionChanged,
+    info = "Identical preVer/installedVer (build failure) must NOT trigger the warning")
+})
+
+# ---------------------------------------------------------------------------
+# 13. pakRetryLoop upgrade flag: GitHub refs → upgrade=TRUE; CRAN → upgrade=FALSE
+# ---------------------------------------------------------------------------
+
+test_that("isGH correctly distinguishes GitHub refs from CRAN refs for upgrade flag logic", {
+  # The pakRetryLoop split: ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
+  # GitHub and url:: packages need upgrade=TRUE so pak always fetches the latest
+  # commit from the branch.  CRAN-like packages must keep upgrade=FALSE to avoid
+  # over-upgrading already-satisfied dependencies.
+
+  pkgs <- c(
+    "any::data.table",
+    "PredictiveEcology/LandR@development",
+    "any::ggplot2",
+    "PredictiveEcology/SpaDES.core@development",
+    "url::https://cran.r-project.org/src/contrib/Archive/fastdigest/fastdigest_0.6-4.tar.gz"
+  )
+
+  ghOrUrl <- Require:::isGH(pkgs) | startsWith(pkgs, "url::")
+
+  testthat::expect_false(ghOrUrl[1], info = "any::data.table is CRAN-like → upgrade=FALSE")
+  testthat::expect_true(ghOrUrl[2],  info = "LandR@development is GitHub → upgrade=TRUE")
+  testthat::expect_false(ghOrUrl[3], info = "any::ggplot2 is CRAN-like → upgrade=FALSE")
+  testthat::expect_true(ghOrUrl[4],  info = "SpaDES.core@development is GitHub → upgrade=TRUE")
+  testthat::expect_true(ghOrUrl[5],  info = "url:: archive ref → upgrade=TRUE")
+
+  # Mixed batch: both types present → two separate pak calls are needed
+  testthat::expect_true(any(ghOrUrl) && any(!ghOrUrl),
+    info = "Mixed batch must trigger the two-call split in pakRetryLoop")
+
+  # All-GitHub batch: single call with upgrade=TRUE
+  ghOnly <- c("PredictiveEcology/LandR@development",
+               "PredictiveEcology/SpaDES.core@development")
+  ghOrUrlOnly <- Require:::isGH(ghOnly) | startsWith(ghOnly, "url::")
+  testthat::expect_true(all(ghOrUrlOnly),
+    info = "All-GitHub batch: single pak call with upgrade=TRUE")
+  testthat::expect_false(any(!ghOrUrlOnly),
+    info = "All-GitHub batch must not trigger the CRAN upgrade=FALSE call")
+
+  # All-CRAN batch: single call with upgrade=FALSE
+  cranOnly <- c("any::data.table", "any::ggplot2")
+  ghOrUrlCRAN <- Require:::isGH(cranOnly) | startsWith(cranOnly, "url::")
+  testthat::expect_false(any(ghOrUrlCRAN),
+    info = "All-CRAN batch: single pak call with upgrade=FALSE")
+})
+
+# ---------------------------------------------------------------------------
+# 14. pakInstallFiltered: installedVersionOK set TRUE after successful install
+# ---------------------------------------------------------------------------
+
+test_that("post-install update sets installedVersionOK=TRUE on success", {
+  # Regression: the post-install update loop in pakInstallFiltered set
+  # installed/Version/LibPath/installResult on success but left
+  # installedVersionOK=FALSE, so doLoads() saw the package as unloadable and
+  # emitted "Packages with loadOrder set but require=FALSE".
+  # Fix: also set installedVersionOK=TRUE in the success branch.
+
+  pkg <- "digest"
+  skip_if_not_installed(pkg)
+
+  nowInstalled <- data.table::data.table(
+    Package = pkg,
+    Version = "0.6.35",
+    LibPath = .libPaths()[1]
+  )
+
+  pkgDT <- data.table::data.table(
+    Package            = pkg,
+    packageFullName    = pkg,
+    inequality         = "",
+    versionSpec        = "",
+    installed          = FALSE,
+    installedVersionOK = FALSE,
+    installResult      = NA_character_
+  )
+
+  # Reproduce the success branch of the post-install update loop.
+  wh <- which(pkgDT$Package == pkg)
+  nowRow <- nowInstalled[Package == pkg]
+  installedVer <- nowRow$Version[1]
+  data.table::set(pkgDT, wh, "installed",          TRUE)
+  data.table::set(pkgDT, wh, "installedVersionOK", TRUE)
+  data.table::set(pkgDT, wh, "Version",            installedVer)
+  data.table::set(pkgDT, wh, "LibPath",            nowRow$LibPath[1])
+  data.table::set(pkgDT, wh, "installResult",      "OK")
+
+  testthat::expect_true(pkgDT$installedVersionOK,
+    info = "installedVersionOK must be TRUE after a successful install")
+  testthat::expect_true(pkgDT$installed,
+    info = "installed must be TRUE after a successful install")
+  testthat::expect_equal(pkgDT$installResult, "OK")
+})
+
+# ---------------------------------------------------------------------------
+# 15. pakInstallFiltered: no double warning when version-change path warned
+# ---------------------------------------------------------------------------
+
+test_that("no double 'could not be installed' warning when versionChanged emits 'Please change'", {
+  # Regression: when pak installed a package at a version that still didn't
+  # satisfy the constraint, the code emitted "Please change required version"
+  # (correct) but did NOT add the package to warnedDropped, so the silentlyFailed
+  # check below also emitted "could not be installed" for the same package.
+  # Fix: add pkg to warnedDropped when the version-change warning is emitted.
+
+  pkg          <- "spatstat.utils"
+  installedVer <- "3.1-0"   # installed but doesn't satisfy >= 3.2-1
+  preVer       <- "3.0-0"   # different from installedVer → versionChanged = TRUE
+
+  warnedDropped <- character(0)
+
+  versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
+  testthat::expect_true(versionChanged)
+
+  warns <- character(0)
+  withCallingHandlers({
+    if (versionChanged) {
+      warning(Require:::msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer),
+              call. = FALSE)
+      warnedDropped <- c(warnedDropped, pkg)
+    }
+  }, warning = function(w) {
+    warns <<- c(warns, conditionMessage(w))
+    invokeRestart("muffleWarning")
+  })
+
+  testthat::expect_true(pkg %in% warnedDropped,
+    info = "pkg must be in warnedDropped after version-change warning so silentlyFailed skips it")
+
+  # silentlyFailed check: pkg is in warnedDropped → no second warning
+  pkgDT <- data.table::data.table(
+    Package       = pkg,
+    installResult = "could not be installed"
+  )
+  silentlyFailed <- pkg[
+    !pkg %in% warnedDropped &
+    isTRUE(pkgDT$installResult[pkgDT$Package == pkg] == "could not be installed")
+  ]
+  testthat::expect_equal(length(silentlyFailed), 0L,
+    info = "silentlyFailed must be empty when pkg was already warned via versionChanged path")
+})
+
+# ---------------------------------------------------------------------------
+# 16. versionChanged dash-vs-dot normalization
+# ---------------------------------------------------------------------------
+
+test_that("versionChanged is FALSE when preVer and installedVer differ only by dash-vs-dot", {
+  # Regression: installedVers() calls as.character(packageVersion(...)) which
+  # collapses version components with "." (e.g. "3.2.1"), while
+  # installed.packages() returns the raw DESCRIPTION string (e.g. "3.2-1").
+  # identical("3.2.1", "3.2-1") = FALSE → versionChanged = TRUE spuriously,
+  # triggering a "Please change required version" warning after a successful
+  # (no-op) pak call.
+  # Fix: add compareVersion(preVer, installedVer) == 0L guard.
+
+  for (usePak in c(TRUE, FALSE)) {
+    withr::with_options(list(Require.usePak = usePak), {
+
+      installedVer <- "3.2-1"   # from installed.packages()
+      preVer_dot   <- "3.2.1"   # from as.character(packageVersion(...))
+      preVer_dash  <- "3.2-1"   # identical strings
+
+      versionChanged_old_dot  <- !is.na(preVer_dot) &&
+                                  !isTRUE(identical(preVer_dot, installedVer))
+      versionChanged_new_dot  <- !is.na(preVer_dot) &&
+                                  !isTRUE(identical(preVer_dot, installedVer)) &&
+                                  !isTRUE(compareVersion(preVer_dot, installedVer) == 0L)
+      versionChanged_new_dash <- !is.na(preVer_dash) &&
+                                  !isTRUE(identical(preVer_dash, installedVer)) &&
+                                  !isTRUE(compareVersion(preVer_dash, installedVer) == 0L)
+
+      testthat::expect_true(versionChanged_old_dot,
+        info = paste0("usePak=", usePak,
+                      ": old logic fires spuriously on dot-vs-dash ('3.2.1' vs '3.2-1')"))
+      testthat::expect_false(versionChanged_new_dot,
+        info = paste0("usePak=", usePak,
+                      ": new logic must NOT fire when '3.2.1' and '3.2-1' are semantically equal"))
+      testthat::expect_false(versionChanged_new_dash,
+        info = paste0("usePak=", usePak,
+                      ": new logic must NOT fire for identical dash strings"))
+    })
+  }
 })

@@ -10,6 +10,7 @@ test_that("test 5", {
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     # packages that don't compile on Windows:
     #   checkmate ==2.0.0
+    skip_if(getRversion() > "4.2.3")
     if (getRversion() <= "4.2.3") {
       ## Long pkgSnapshot -- issue 41
       pkgPath <- file.path(tempdir2(Require:::.rndstr(1)))

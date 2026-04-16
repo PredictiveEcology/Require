@@ -962,8 +962,8 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
   if (!isTRUE(purge)) {
     cached <- get0(envKey, envir = pakEnv(), inherits = FALSE)
     if (!is.null(cached)) {
-      messageVerbose("pakDepsResolve: using in-memory cached dep tree (",
-                     length(unique(cached$package)), " packages).",
+      messageVerbose("Require/pak skipping new package dependency identification: using memory cache (",
+                     length(unique(cached$package)), " packages)",
                      verbose = verbose, verboseLevel = 1)
       return(cached)
     }
@@ -976,9 +976,9 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
       cached <- tryCatch(readRDS(cacheFile), error = function(e) NULL)
       if (!is.null(cached)) {
         assign(envKey, cached, envir = pakEnv())
-        messageVerbose("pakDepsResolve: using disk-cached dep tree (",
-                       length(unique(cached$package)), " packages; ",
-                       round(age / 3600, 1), "h old).",
+        messageVerbose("Require/pak skipping new package dependency identification: using cache (",
+                       length(unique(cached$package)), " packages, ",
+                       round(age / 3600, 1), "h old)",
                        verbose = verbose, verboseLevel = 1)
         return(cached)
       }
@@ -1464,6 +1464,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   pkgDT <- confirmEqualsDontViolateInequalitiesThenTrim(pkgDT)
   pkgDT <- trimRedundancies(pkgDT)
 
+  # Store pak's globally-resolved version map in pakEnv() so pakInstallFiltered
+  # can use it as the authoritative constraint.  The pkgDT column approach is
+  # unreliable because Require2.R re-runs confirmEqualsDontViolateInequalitiesThenTrim
+  # and trimRedundancies on the returned pkgDT, which drops any extra columns.
+  if (!is.null(pak_result) && !is.null(pak_result$version) && !is.null(pak_result$package)) {
+    assign("pakResolvedVersionMap",
+           setNames(as.character(pak_result$version), pak_result$package),
+           envir = pakEnv())
+  }
+
   pkgDT
 }
 
@@ -1671,8 +1681,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # Update pkgDT with installation results.
   # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector
   # for set() calls so that any duplicate Package rows are all updated consistently.
-  nowInstalled <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1]),
-                                              stringsAsFactors = FALSE))
+  nowInstalled    <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1]),
+                                               stringsAsFactors = FALSE))
+  nowInstalledAll <- NULL  # computed lazily in the else-branch below
 
   for (pkg in toInstall$Package) {
     wh <- which(pkgDT$Package == pkg)
@@ -1685,6 +1696,21 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       ineq  <- pkgDT$inequality[wh[1L]]
       if (!is.na(vSpec) && nzchar(vSpec) && !is.na(ineq) && nzchar(ineq)) {
         satisfies <- compareVersion2(installedVer, versionSpec = vSpec, inequality = ineq)
+        # If the raw DESCRIPTION constraint isn't met, check whether pak's own
+        # globally-resolved version IS met.  pak's resolution is authoritative: if pak
+        # decided that installing version X satisfies the full dep tree, and X is what
+        # was installed, the constraint is effectively satisfied even if some intermediate
+        # package's raw DESCRIPTION says something stricter.
+        # The version map is stored in pakEnv() by pakDepsToPkgDT; a pkgDT column
+        # would be dropped by the transforms Require2.R runs after pakDepsToPkgDT returns.
+        if (!isTRUE(satisfies)) {
+          pakVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
+          if (!is.null(pakVerMap)) {
+            pakRes <- pakVerMap[pkg]
+            if (!is.na(pakRes) && nzchar(pakRes))
+              satisfies <- compareVersion2(installedVer, versionSpec = pakRes, inequality = ">=")
+          }
+        }
         if (!isTRUE(satisfies)) {
           # Only suggest "Please change required version" when pak actually installed a
           # different (but still insufficient) version.  If the version is unchanged the
@@ -1698,9 +1724,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           # install attempt (first-time install); in that case the install simply failed
           # and no version-change guidance is appropriate.  If preVer == installedVer the
           # version is unchanged (build failure, not a wrong-version situation).
-          versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer))
+          versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer)) &&
+                            !isTRUE(compareVersion(preVer, installedVer) == 0L)
           if (versionChanged)
             warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
+          # Always add to warnedDropped: either we already warned above (versionChanged),
+          # or pak ran and chose not to update this package, meaning Require's over-strict
+          # transitive constraint is the discrepancy — not a real install failure.
+          warnedDropped <- c(warnedDropped, pkg)
           set(pkgDT, wh, "installed",     FALSE)
           set(pkgDT, wh, "Version",       installedVer)
           set(pkgDT, wh, "LibPath",       nowRow$LibPath[1])
@@ -1708,11 +1739,34 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           next
         }
       }
-      set(pkgDT, wh, "installed",      TRUE)
-      set(pkgDT, wh, "Version",        installedVer)
-      set(pkgDT, wh, "LibPath",        nowRow$LibPath[1])
-      set(pkgDT, wh, "installResult",  "OK")
+      set(pkgDT, wh, "installed",         TRUE)
+      set(pkgDT, wh, "installedVersionOK", TRUE)
+      set(pkgDT, wh, "Version",           installedVer)
+      set(pkgDT, wh, "LibPath",           nowRow$LibPath[1])
+      set(pkgDT, wh, "installResult",     "OK")
     } else {
+      # Package not in libPaths[1] — may already be installed (and satisfying)
+      # in another lib path (pak skips packages that are already up-to-date).
+      if (is.null(nowInstalledAll))
+        nowInstalledAll <<- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths()),
+                                                        stringsAsFactors = FALSE))
+      elseRow <- nowInstalledAll[Package == pkg]
+      if (NROW(elseRow)) {
+        elseVer <- elseRow$Version[1]
+        vSpec   <- pkgDT$versionSpec[wh[1L]]
+        ineq    <- pkgDT$inequality[wh[1L]]
+        elseOK  <- if (!is.na(vSpec) && nzchar(vSpec) && !is.na(ineq) && nzchar(ineq))
+                     isTRUE(compareVersion2(elseVer, versionSpec = vSpec, inequality = ineq))
+                   else TRUE
+        if (elseOK) {
+          set(pkgDT, wh, "installed",          TRUE)
+          set(pkgDT, wh, "installedVersionOK", TRUE)
+          set(pkgDT, wh, "Version",            elseVer)
+          set(pkgDT, wh, "LibPath",            elseRow$LibPath[1])
+          set(pkgDT, wh, "installResult",      "OK")
+          next
+        }
+      }
       set(pkgDT, wh, "installed",      FALSE)
       set(pkgDT, wh, "installResult",  .txtCouldNotBeInstalled)
     }

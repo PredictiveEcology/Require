@@ -371,7 +371,8 @@ Require <- function(packages,
       pkgDT <- trimRedundancies(pkgDT)
 
       pkgDT <- updatePackagesWithNames(pkgDT, packages)
-      pkgDT <- recordLoadOrder(packages, pkgDT)
+      if (!isFALSE(require))
+        pkgDT <- recordLoadOrder(packages, pkgDT)
       if (!is.null(pkgDT[["Version"]]))
         setnames(pkgDT, old = "Version", new = "VersionOnRepos")
       pkgDT <- installedVers(pkgDT, libPaths = libPaths, standAlone = standAlone)
@@ -1034,7 +1035,6 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
     }
   }
 
-  # Diagnostic: report packages that have loadOrder set but will not be loaded.
   if (isTRUE(verbose >= 1)) {
     whLoad <- which(!is.na(pkgDT[["loadOrder"]]))
     if (length(whLoad)) {
