@@ -419,7 +419,7 @@ Require <- function(packages,
         messageVerbose("No packages to install/update", verbose = verbose)
       }
     }
-    if (length(basePkgsToLoad)) {
+    if (length(basePkgsToLoad) && !isFALSE(require)) {
       pkgDTBase <- toPkgDT(basePkgsToLoad)
       set(pkgDTBase, NULL, c("loadOrder", "installedVersionOK"), list(1L, TRUE))
       if (exists("pkgDT", inherits = FALSE)) {

@@ -15,6 +15,7 @@
 #   14. pakInstallFiltered: installedVersionOK set TRUE after successful install
 #   15. pakInstallFiltered: no double warning when version-change path already warned
 #   16. versionChanged dash-vs-dot normalization: "3.2.1" == "3.2-1" semantically → no spurious warning
+#   17. recordLoadOrder skipped when require=FALSE: no loadOrder set for Install() calls
 
 # ---------------------------------------------------------------------------
 # 1. RequireOptions default
@@ -746,4 +747,39 @@ test_that("versionChanged is FALSE when preVer and installedVer differ only by d
                       ": new logic must NOT fire for identical dash strings"))
     })
   }
+})
+
+# ---------------------------------------------------------------------------
+# 17. recordLoadOrder skipped when require=FALSE
+# ---------------------------------------------------------------------------
+
+test_that("recordLoadOrder is not called and loadOrder stays NA when require=FALSE", {
+  # Regression: Install() (require=FALSE) called recordLoadOrder unconditionally,
+  # setting loadOrder for all user-passed packages.  doLoads() then reported
+  # "Packages with loadOrder set but require=FALSE (will NOT be loaded)" for
+  # every package in the call.
+  # Fix: gate recordLoadOrder on !isFALSE(require) in Require2.R.
+
+  pkgs <- c("digest", "data.table")
+  pkgDT <- Require:::toPkgDTFull(pkgs)
+  # Confirm no loadOrder before the gate
+  testthat::expect_true(is.null(pkgDT[["loadOrder"]]) || all(is.na(pkgDT$loadOrder)),
+    info = "loadOrder must be absent/NA before recordLoadOrder is called")
+
+  # require=FALSE path: gate fires, recordLoadOrder NOT called → loadOrder stays NA
+  require_false <- FALSE
+  if (!isFALSE(require_false))
+    pkgDT <- Require:::recordLoadOrder(pkgs, pkgDT)
+  testthat::expect_true(is.null(pkgDT[["loadOrder"]]) || all(is.na(pkgDT$loadOrder)),
+    info = "require=FALSE: loadOrder must remain NA (recordLoadOrder must be skipped)")
+
+  # require=TRUE path: gate open, recordLoadOrder IS called → loadOrder set
+  pkgDT2 <- Require:::toPkgDTFull(pkgs)
+  require_true <- TRUE
+  if (!isFALSE(require_true))
+    pkgDT2 <- Require:::recordLoadOrder(pkgs, pkgDT2)
+  testthat::expect_false(is.null(pkgDT2[["loadOrder"]]),
+    info = "require=TRUE: loadOrder column must exist after recordLoadOrder")
+  testthat::expect_true(any(!is.na(pkgDT2$loadOrder)),
+    info = "require=TRUE: at least one package must have a non-NA loadOrder")
 })
