@@ -619,8 +619,7 @@ test_that("isGH correctly distinguishes GitHub refs from CRAN refs for upgrade f
 test_that("post-install update sets installedVersionOK=TRUE on success", {
   # Regression: the post-install update loop in pakInstallFiltered set
   # installed/Version/LibPath/installResult on success but left
-  # installedVersionOK=FALSE, so doLoads() saw the package as unloadable and
-  # emitted "Packages with loadOrder set but require=FALSE".
+  # installedVersionOK=FALSE, so doLoads() saw the package as unloadable.
   # Fix: also set installedVersionOK=TRUE in the success branch.
 
   pkg <- "digest"
@@ -755,9 +754,7 @@ test_that("versionChanged is FALSE when preVer and installedVer differ only by d
 
 test_that("recordLoadOrder is not called and loadOrder stays NA when require=FALSE", {
   # Regression: Install() (require=FALSE) called recordLoadOrder unconditionally,
-  # setting loadOrder for all user-passed packages.  doLoads() then reported
-  # "Packages with loadOrder set but require=FALSE (will NOT be loaded)" for
-  # every package in the call.
+  # setting loadOrder for all user-passed packages.
   # Fix: gate recordLoadOrder on !isFALSE(require) in Require2.R.
 
   pkgs <- c("digest", "data.table")

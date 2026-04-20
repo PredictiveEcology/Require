@@ -1035,28 +1035,6 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
     }
   }
 
-  if (isTRUE(verbose >= 1)) {
-    whLoad <- which(!is.na(pkgDT[["loadOrder"]]))
-    if (length(whLoad)) {
-      willLoad <- pkgDT$require[whLoad] %in% TRUE
-      willSkip <- !willLoad
-      if (any(willSkip)) {
-        skipPkgs <- pkgDT$Package[whLoad][willSkip]
-        skipIVOK  <- pkgDT$installedVersionOK[whLoad][willSkip]
-        skipIR    <- pkgDT$installResult[whLoad][willSkip]
-        skipVer   <- pkgDT$Version[whLoad][willSkip]
-        skipSpec  <- pkgDT$packageFullName[whLoad][willSkip]
-        msgs <- paste0(skipPkgs,
-          " (installedVersionOK=", skipIVOK,
-          ", installResult=", skipIR,
-          ", installedVer=", skipVer,
-          ", spec=", skipSpec, ")")
-        messageVerbose("Packages with loadOrder set but require=FALSE (will NOT be loaded): ",
-                       paste(msgs, collapse = "; "),
-                       verbose = verbose, verboseLevel = 1)
-      }
-    }
-  }
 
   out <- list()
   if (any(pkgDT$require %in% TRUE)) {
