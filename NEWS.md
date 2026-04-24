@@ -1,3 +1,16 @@
+# Require 1.1.0.9016 (development version)
+
+## bug fixes
+
+* CRAN-like packages installed via `pakInstall()` now use
+  `dependencies = NA` (was `FALSE`). With `dependencies = FALSE`, pak
+  parallelises source builds without waiting for build-time hard deps
+  to finish — e.g. `htmlwidgets` would start building while `htmltools`
+  was still mid-install and fail with "dependencies are not available".
+  `dependencies = NA` lets pak topologically order builds by the
+  hard-dep graph. Combined with `upgrade = FALSE`, this still avoids
+  upgrading already-installed packages beyond what Require requested.
+
 # Require 1.1.0.9015 (development version)
 
 ## dependencies

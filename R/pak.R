@@ -5,6 +5,15 @@ utils::globalVariables(c(
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
 .txtCantFindPackage <- "Can't find package called "
 
+# Escape regex metacharacters so an arbitrary string can be safely interpolated
+# into a regex pattern. Used when pak's error output (which can contain dots,
+# brackets, parentheses, or stray non-printable bytes) is spliced into grep
+# patterns inside pakErrorHandling.
+regexEscape <- function(x) {
+  if (!length(x)) return(x)
+  gsub("([][\\\\.|()*+?{}^$/-])", "\\\\\\1", x, perl = TRUE)
+}
+
 # Wrap a pak call to honour Require's verbose level.
 # pak produces two kinds of output:
 #   (1) Progress/spinner — controlled by options(pkg.show_progress).
@@ -106,8 +115,18 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         if (length(idx) == 0L || idx > length(x)) return("")
         x[[idx]]
       }), error = function(x) "")
-      whRm <- unlist(unname(lapply(
-        paste0("^", pkgNoVersion, ".*", vers, "|/", pkgNoVersion, ".*", vers), grep, x = pkg)))
+      # Defensive: pkgNoVersion / vers come from parsing pak's error output and may
+      # contain regex metacharacters or even non-printable bytes that, when spliced
+      # into a regex, produce an invalid pattern (e.g. TRE "Unknown collating
+      # element" from stray brackets).  Escape them so a malformed pak error
+      # message can never crash the parser.
+      pkgNoVersionEsc <- regexEscape(as.character(pkgNoVersion))
+      versEsc         <- regexEscape(as.character(unlist(vers)))
+      patVec <- paste0("^", pkgNoVersionEsc, ".*", versEsc, "|/",
+                              pkgNoVersionEsc, ".*", versEsc)
+      whRm <- unlist(unname(lapply(patVec, function(p) {
+        tryCatch(grep(p, pkg), error = function(e) integer(0))
+      })))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
         packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
@@ -1559,16 +1578,25 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
 
   if (!length(pkgs)) return(pkgDT)
 
-  # Install all packages in one call with dependencies = FALSE.
+  # Install all packages in one call.
   #
   # Require's philosophy: only install/update what the version specs require.
-  # dependencies = FALSE ensures pak does NOT upgrade already-installed packages
-  # beyond what Require determined is necessary (e.g. tibble 3.2.1 → 3.3.1 when
-  # no constraint requires it). pakDepsToPkgDT already resolved the complete
-  # transitive dep tree via pak::pkg_deps(), so toInstall contains exactly the
-  # right set. pak still reads DESCRIPTION files for topological install ordering
-  # even with dependencies = FALSE, so LearnBayes-style ordering failures do not
-  # occur as long as all required deps are present in toInstall.
+  # upgrade = FALSE ensures pak does NOT upgrade already-installed packages
+  # beyond what Require determined is necessary (e.g. tibble 3.2.1 → 3.3.1
+  # when no constraint requires it).
+  #
+  # CRAN-like refs use dependencies = NA (hard deps only). Earlier this was
+  # `dependencies = FALSE`, on the theory that pakDepsToPkgDT had already put
+  # the full transitive dep tree into toInstall and pak would topologically
+  # order the install. In practice, pak parallelises source builds and with
+  # `dependencies = FALSE` does NOT wait for one build's hard deps to finish
+  # before starting another's: htmlwidgets would attempt to build while
+  # htmltools was still mid-install and fail with "dependencies are not
+  # available". `dependencies = NA` lets pak compute the build-time hard-dep
+  # graph and order builds correctly. Combined with `upgrade = FALSE`, this
+  # still prevents unwanted upgrades of already-installed packages.
+  # GitHub/url:: refs use `dependencies = FALSE` so transitive CRAN deps
+  # are NOT re-resolved/upgraded — those go through the CRAN batch.
   # Collect names of packages that pakRetryLoop explicitly warned about so
   # that the post-install update loop can skip them (avoid double-warning).
   warnedDropped <- character(0)
@@ -1584,8 +1612,8 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       # satisfied by whatever version is already in the library — even if we need
       # a newer one.  Use dependencies=FALSE for GitHub packages: Require's dep
       # resolution already placed all necessary dep updates in the CRAN batch.
-      # CRAN-like refs: keep dependencies=FALSE, upgrade=FALSE to avoid installing
-      # packages beyond what Require's version-priority logic decided.
+      # CRAN-like refs: dependencies=NA so pak orders parallel source builds by
+      # the build-time hard-dep graph (see comment block above).
       ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
       err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
         # Two separate calls when both types are present
@@ -1595,16 +1623,17 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           verbose), silent = TRUE)
         e2 <- try(pakCall(
           pak::pak(packages[!ghOrUrl], lib = libPaths[1], ask = FALSE,
-                   dependencies = FALSE, upgrade = FALSE),
+                   dependencies = NA, upgrade = FALSE),
           verbose), silent = TRUE)
         # Combine errors: prefer the first error if both fail; if only one
         # fails return that one; if neither fails return non-try-error.
         if (is(e1, "try-error")) e1 else if (is(e2, "try-error")) e2 else e2
       } else {
         up <- any(ghOrUrl)  # TRUE → upgrade=TRUE for all-GH batch
+        deps <- if (up) FALSE else NA  # GH-only: FALSE; CRAN-only: NA
         try(pakCall(
           pak::pak(packages, lib = libPaths[1], ask = FALSE,
-                   dependencies = FALSE, upgrade = up),
+                   dependencies = deps, upgrade = up),
           verbose), silent = TRUE)
       }
       options(opts)
@@ -1615,8 +1644,22 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       packages <- tryCatch(
         pakErrorHandling(as.character(err), pkgsIn, packages, verbose = verbose),
         error = function(e) {
-          warning(.txtCouldNotBeInstalled, ": ", conditionMessage(e),
-                  call. = FALSE, immediate. = TRUE)
+          # pakErrorHandling crashed while trying to parse pak's error output
+          # (typically a regex compilation failure on garbled input).  Surface
+          # BOTH the parser error AND the underlying pak failure reason — the
+          # latter is what the user actually needs to debug the build, and
+          # without this it gets silently swallowed.
+          rawReason <- pakBuildFailReason(as.character(err))
+          msg <- paste0(.txtCouldNotBeInstalled, "; parser error: ",
+                        conditionMessage(e),
+                        if (nzchar(rawReason)) paste0("; pak reason: ", rawReason) else "")
+          warning(msg, call. = FALSE, immediate. = TRUE)
+          # Also dump the full raw pak error to stderr so nothing is lost — the
+          # condensed "reason" lines may miss the line that actually identifies
+          # the cause.  Truncate extremely long outputs to keep terminals sane.
+          rawFull <- as.character(err)
+          if (nchar(rawFull) > 8000L) rawFull <- paste0(substr(rawFull, 1L, 8000L), "\n...[truncated]")
+          message("--- pak raw error (full) ---\n", rawFull, "\n--- end pak raw error ---")
           alreadyWarned <<- TRUE
           character(0)
         }
@@ -1685,6 +1728,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # for set() calls so that any duplicate Package rows are all updated consistently.
   nowInstalled    <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1]),
                                                stringsAsFactors = FALSE))
+  # If installed.packages() returned an empty matrix without the expected
+  # columns (can happen when libPaths[1] doesn't exist yet or the install
+  # attempt failed before writing anything), the data.table[i, j] expressions
+  # below would error with "object 'Package' not found", masking the actual
+  # build failure.  Coerce to a known-empty schema so the loop falls through
+  # cleanly and the upstream pak error remains the visible cause.
+  if (!"Package" %in% names(nowInstalled)) {
+    nowInstalled <- data.table(Package = character(0), Version = character(0),
+                               LibPath = character(0))
+  }
   nowInstalledAll <- NULL  # computed lazily in the else-branch below
 
   for (pkg in toInstall$Package) {
