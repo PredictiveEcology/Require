@@ -937,9 +937,11 @@ pakWhoNeeds <- function(pkg, pak_result = NULL) {
 pakDepsCacheKey <- function(pkgsForPak, wh, repos) {
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
-  saveRDS(list(pkgs  = sort(pkgsForPak),
+  # coerce to character vectors: options(repos = list(...)) is a supported
+  # pattern, and sort() errors on list input with 'x must be atomic'
+  saveRDS(list(pkgs  = sort(as.character(unlist(pkgsForPak, use.names = FALSE))),
                wh    = sort(as.character(unlist(wh))),
-               repos = sort(repos)),
+               repos = sort(as.character(unlist(repos, use.names = FALSE)))),
           tmp, compress = FALSE)
   unname(tools::md5sum(tmp))
 }

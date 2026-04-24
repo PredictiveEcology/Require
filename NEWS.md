@@ -1,3 +1,13 @@
+# Require 1.1.0.9015 (development version)
+
+## dependencies
+
+* `pak` is now an `Imports` (was `Suggests`). The `usePak` branch requires `pak`
+  for all GitHub/url-style installs, and isolated project libraries (e.g., those
+  created by `SpaDES.project::setupProject()`) do not always inherit the user's
+  default library where `pak` might be installed. Declaring `pak` as a hard
+  dependency ensures it is present wherever Require is.
+
 # Require 1.1.0.9013 (development version)
 
 ## bug fixes
