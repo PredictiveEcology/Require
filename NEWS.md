@@ -1,3 +1,32 @@
+# Require 1.1.0.9017 (development version)
+
+## bug fixes
+
+* `pakErrorHandling()` no longer crashes when `pak`'s error output contains
+  characters that, when spliced into a regex, form an invalid pattern (e.g.
+  TRE "Unknown collating element" from stray brackets, or dots in package
+  names like `paws.application.integration`). Symptoms were a misleading
+  warning `could not be installed: invalid regular expression '...'`,
+  followed by `Error: object 'Package' not found` from
+  `pakInstallFiltered()`, with the real `pak` build-failure reason
+  silently swallowed. Three fixes:
+  * New `regexEscape()` helper escapes regex metacharacters in
+    `pkgNoVersion` / `vers` before splicing them into a `paste0()` pattern;
+    the surrounding `grep` is also wrapped in `tryCatch` so a still-malformed
+    pattern returns `integer(0)` rather than aborting.
+  * When `pakErrorHandling()` itself errors, the surrounding `tryCatch` in
+    `pakRetryLoop()` now also reports `pakBuildFailReason()` of the original
+    `pak` error and `message()`s the full raw `pak` error (truncated at
+    8 kB) so the underlying build-failure cause is no longer hidden.
+  * `pakInstallFiltered()`'s post-install loop guards against
+    `installed.packages()` returning an empty matrix without the expected
+    columns, which previously surfaced as `object 'Package' not found` and
+    masked the real build failure.
+
+  These fixes were already merged in the `dependencies=NA` commit
+  (1.1.0.9016) but were not separately documented; this entry records
+  them retroactively.
+
 # Require 1.1.0.9016 (development version)
 
 ## bug fixes
