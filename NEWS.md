@@ -1,3 +1,34 @@
+# Require 1.1.0.9019 (development version)
+
+## bug fixes
+
+* `pakInstallFiltered()` post-install loop: the lazy initialisation of
+  `nowInstalledAll` used `<<-` rather than `<-`, so the assignment leaked
+  into the global environment instead of updating the local variable
+  declared earlier in the function. Subsequent `nowInstalledAll[Package
+  == pkg]` then errored with "object 'Package' not found" when the
+  package wasn't in `libPaths[1]` (the common case after a partial
+  install with cascade casualties). Fixed by switching to `<-`.
+
+## new features
+
+* `pakInstallFiltered()` gains a fallback **serial install** path: when
+  the iterative identify-and-defer loop has packages still missing but
+  no further build-failure culprits are parseable from pak's output —
+  typically because pak's subprocess crashed during dep resolution on a
+  large casualty batch — Require now invokes `pakSerialInstall()` on the
+  remaining missing refs. Each per-ref pak call has a tiny dep graph
+  pak resolves cleanly, and a single ref's failure no longer aborts the
+  rest. Slow but reliable; usually the only step that gets full LandR-
+  scale workflows installable end-to-end.
+* New helper `pakResetSubprocess()` force-restarts pak's persistent
+  callr `r_session` (the one held in `pak:::pkg_data$remote`). Called
+  between identify-and-defer iterations and before the deferred-culprit
+  serial install, so each phase starts with a clean pak subprocess.
+  Necessary because pak can wedge after a large failed install plan in
+  a way that makes every subsequent call emit "Error : ! error in pak
+  subprocess" without naming a build culprit.
+
 # Require 1.1.0.9018 (development version)
 
 ## new features

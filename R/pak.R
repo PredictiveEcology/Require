@@ -1524,6 +1524,30 @@ extractBuildFailures <- function(output) {
 }
 
 # ---------------------------------------------------------------------------
+# pakResetSubprocess: force pak to spawn a fresh background R session on the
+# next pak::pak() call. pak holds a persistent callr r_session in
+# pak:::pkg_data$remote and reuses it across calls; if the previous call
+# pushed pak's subprocess into a wedged state (e.g. after a large failed
+# install plan, where pak emits "Error : ! error in pak subprocess" without
+# naming a build culprit), every subsequent call inherits the failure even
+# if the inputs change. Killing the r_session forces pak's
+# restart_remote_if_needed() to allocate a fresh one. Safe no-op if pak
+# isn't loaded or the remote isn't an r_session.
+# ---------------------------------------------------------------------------
+pakResetSubprocess <- function() {
+  if (!requireNamespace("pak", quietly = TRUE)) return(invisible())
+  rs <- tryCatch(
+    get("pkg_data", envir = asNamespace("pak"))$remote,
+    error = function(e) NULL)
+  if (inherits(rs, "r_session")) {
+    try(rs$interrupt(), silent = TRUE)
+    try(rs$wait(100), silent = TRUE)
+    try(rs$kill(), silent = TRUE)
+  }
+  invisible()
+}
+
+# ---------------------------------------------------------------------------
 # pakSerialInstall: install pak refs one at a time. Used by the "deferred"
 # pass of identify-and-defer for refs whose first parallel attempt failed.
 # Each call only sees a single ref's transitive subgraph, and the build-time
@@ -1824,6 +1848,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     deferred <- character(0)  # culprit refs (named with their full pak ref)
     maxIter  <- 8L
     for (iter in seq_len(maxIter)) {
+      # Force a fresh pak subprocess for every iteration after the first.
+      # pak holds a persistent r_session that, after a large failed install
+      # plan, can wedge into a state where every subsequent call emits
+      # "Error : ! error in pak subprocess" without naming a build culprit
+      # (so identify-and-defer has nothing parseable to defer and stalls).
+      # Restarting the subprocess gives the next iteration clean state.
+      if (iter > 1L) pakResetSubprocess()
       capturedMsgs <- character(0)
       withCallingHandlers(
         pakRetryLoop(passList, repos, verbose),
@@ -1850,14 +1881,21 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       culpritsIter <- intersect(extractBuildFailures(capturedMsgs),
                                 missingNamesIter)
       if (!length(culpritsIter)) {
-        # No new culprits identifiable — we can't make further progress
-        # via iteration. The remaining missing pkgs are either truly broken,
-        # or pak emitted an unparseable error.
+        # No new culprits parseable from pak output. Common cause: pak's
+        # subprocess crashes during dep resolution on large cascade-casualty
+        # batches (no per-package "Failed to build X" line, just a generic
+        # "Error : ! error in pak subprocess"). Fall back to serial install:
+        # each pak::pak(single_ref) call has a tiny dep graph that resolves
+        # fine, and a failure on one ref no longer abort the rest.
+        pkgsMissingFallback <- passList[match(missingNamesIter, passNames)]
+        pkgsMissingFallback <- pkgsMissingFallback[!is.na(pkgsMissingFallback)]
         messageVerbose(
           "identify-and-defer: ", length(missingNamesIter),
           " ref(s) still missing after iter ", iter,
-          " but no further culprits parseable; stopping iteration",
+          ", no parseable culprits; falling back to serial install",
           verbose = verbose, verboseLevel = 1)
+        pakResetSubprocess()
+        pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose)
         break
       }
 
@@ -1887,12 +1925,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       passList <- newPassList
     }
 
-    # Final phase: install the accumulated culprits serially.
+    # Final phase: install the accumulated culprits serially. Reset pak's
+    # subprocess first — the iteration loop may have left it in a wedged
+    # state from the failed plan(s), and each serial install benefits from
+    # a clean subprocess (see pakResetSubprocess() comment).
     if (length(deferred)) {
       messageVerbose(
         "identify-and-defer: installing ", length(deferred),
         " deferred culprit(s) one at a time",
         verbose = verbose, verboseLevel = 1)
+      pakResetSubprocess()
       pakSerialInstall(deferred, libPaths[1], repos, verbose)
     }
   }
@@ -1989,15 +2031,20 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       # Package not in libPaths[1] — may already be installed (and satisfying)
       # in another lib path (pak skips packages that are already up-to-date).
       if (is.null(nowInstalledAll)) {
-        nowInstalledAll <<- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths()),
-                                                        stringsAsFactors = FALSE))
+        # NB: must be `<-`, not `<<-`. This block runs in pakInstallFiltered's
+        # own frame (not a nested function), so `<<-` would assign to global
+        # rather than updating the local `nowInstalledAll` declared above —
+        # leaving the local NULL and producing "object 'Package' not found"
+        # when the next line indexes it.
+        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths()),
+                                                       stringsAsFactors = FALSE))
         # Same guard as nowInstalled above: when installed.packages() returns
         # an empty matrix the data.table[Package == pkg] expression errors with
         # "object 'Package' not found".
         if (!"Package" %in% names(nowInstalledAll)) {
-          nowInstalledAll <<- data.table(Package = character(0),
-                                         Version = character(0),
-                                         LibPath = character(0))
+          nowInstalledAll <- data.table(Package = character(0),
+                                        Version = character(0),
+                                        LibPath = character(0))
         }
       }
       elseRow <- nowInstalledAll[Package == pkg]
