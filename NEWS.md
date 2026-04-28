@@ -1,4 +1,29 @@
-# Require 1.1.0.9019 (development version)
+# Require 1.1.0.9020 (development version)
+
+## new features
+
+* `pakInstallFiltered()` now emits an end-of-install summary listing each
+  package that did not end up in the project library, with a parsed
+  reason where pak's output was specific enough to attribute one. The
+  reason is one of:
+    - `missing-build-deps` — R CMD INSTALL pre-flight check refused to
+      build the package because some `Imports` were not yet in the
+      library at build time (typical cascade culprit). Brief includes
+      the dep names parsed from pak's `ERROR: dependencies '...' are
+      not available for package '...'` line.
+    - `compile-error` — gcc/Fortran error during source build.
+    - `version-conflict` — pak refused with an unsatisfiable
+      version pin in the dep tree.
+    - `build-error` — generic "Failed to build" with no parseable
+      ERROR: line.
+    - `still-missing` — package wasn't in `.libPaths()` at the end of
+      all install passes, but pak emitted no specific failure for it
+      (typical cascade casualty when pak's subprocess crashed during
+      dep resolution).
+  The full structured table is also stored in
+  `pakEnv()$.lastInstallFailures` for programmatic access.
+* New helpers `extractInstallFailures()` and `reportInstallFailures()`
+  expose the parser and reporter independently of the install loop.
 
 ## bug fixes
 

@@ -1524,6 +1524,135 @@ extractBuildFailures <- function(output) {
 }
 
 # ---------------------------------------------------------------------------
+# Parse pak's captured stderr/messages for per-package install failure
+# diagnostics. Returns a data.table:
+#
+#   package       (chr)  ref / package name as pak referred to it
+#   reason_type   (chr)  one of:
+#                          "missing-build-deps"   build-time deps absent at
+#                                                 R CMD INSTALL pre-flight
+#                                                 check (typical cascade
+#                                                 culprit: e.g. PSPclean
+#                                                 needing sf/terra)
+#                          "compile-error"        gcc / Fortran error during
+#                                                 source build
+#                          "version-conflict"     pak refused: dep tree has
+#                                                 unsatisfiable version pin
+#                          "build-error"          generic "Failed to build"
+#                                                 with no ERROR: line we
+#                                                 could parse
+#                          "still-missing"        package wasn't in
+#                                                 project lib at the end
+#                                                 of all install passes,
+#                                                 but pak emitted no
+#                                                 specific failure for it
+#                                                 (e.g. cascade casualty
+#                                                 from a wedged subprocess)
+#   reason_brief  (chr)  one-line summary suitable for a status bar
+#   reason_detail (chr)  the actual pak error line(s) for context
+# ---------------------------------------------------------------------------
+extractInstallFailures <- function(output) {
+  empty <- data.table(package = character(0),
+                      reason_type = character(0),
+                      reason_brief = character(0),
+                      reason_detail = character(0))
+  if (!length(output) || !any(nzchar(output))) return(empty)
+  clean <- gsub("\033\\[[0-9;]*m", "", paste(output, collapse = "\n"))
+  lines <- strsplit(clean, "\n")[[1]]
+
+  results <- list()
+
+  # ✖ Failed to build PKG VER (TIME)  →  per-package culprit
+  buildFailIdx <- grep("Failed to build\\s+[A-Za-z0-9._]+", lines)
+  for (i in buildFailIdx) {
+    pkg <- sub(".*Failed to build\\s+([A-Za-z0-9._]+).*", "\\1", lines[i])
+    # Look up to 25 lines ahead for an ERROR: line that explains why.
+    window <- lines[i:min(i + 25L, length(lines))]
+    errLine <- grep("ERROR:|^\\* installing|fatal error|compilation failed|cannot remove",
+                    window, value = TRUE, perl = TRUE)
+    errLine <- if (length(errLine)) errLine[1] else NA_character_
+
+    if (is.na(errLine)) {
+      reasonType <- "build-error"
+      reasonBrief <- "build failed (no specific reason parsed)"
+      reasonDetail <- lines[i]
+    } else if (grepl("dependencies\\s+.+\\s+are not available for package", errLine)) {
+      missing <- sub(".*dependencies\\s+(.+?)\\s+are not available for package.*",
+                     "\\1", errLine)
+      reasonType <- "missing-build-deps"
+      reasonBrief <- paste0("build-time deps not yet in lib: ", missing)
+      reasonDetail <- errLine
+    } else if (grepl("compilation failed|fatal error", errLine, ignore.case = TRUE)) {
+      reasonType <- "compile-error"
+      reasonBrief <- sub("^\\s*", "", errLine)
+      reasonDetail <- errLine
+    } else {
+      reasonType <- "build-error"
+      reasonBrief <- sub("^\\s*ERROR:\\s*", "", errLine)
+      reasonDetail <- errLine
+    }
+    results[[length(results) + 1]] <- list(
+      package = pkg, reason_type = reasonType,
+      reason_brief = reasonBrief, reason_detail = reasonDetail)
+  }
+
+  # Conflicts: PKG depends on DEP == X but PKG2 depends on DEP == Y
+  conflictIdx <- grep("Conflicts:|Cannot install packages.*Conflicts", lines)
+  for (i in conflictIdx) {
+    detail <- lines[i]
+    m <- regmatches(detail, regexec("([A-Za-z0-9._]+)\\s+depends on", detail))[[1]]
+    pkg <- if (length(m) > 1) m[2] else NA_character_
+    if (is.na(pkg)) next
+    results[[length(results) + 1]] <- list(
+      package = pkg, reason_type = "version-conflict",
+      reason_brief = "version conflict in dep tree",
+      reason_detail = detail)
+  }
+
+  if (!length(results)) return(empty)
+  out <- rbindlist(results)
+  unique(out, by = c("package", "reason_type"))
+}
+
+# ---------------------------------------------------------------------------
+# Print a structured install summary: each package that didn't end up in the
+# project lib, with the reason (parsed from captured pak output) and a short
+# hint about what to do next. Returns the failure table invisibly so callers
+# can act on it programmatically.
+# ---------------------------------------------------------------------------
+reportInstallFailures <- function(failures, missingPkgNames = character(0),
+                                   verbose = getOption("Require.verbose", 1)) {
+  if (!is.data.table(failures))
+    failures <- as.data.table(failures)
+
+  reasoned <- failures$package
+  unexplained <- setdiff(missingPkgNames, reasoned)
+  if (length(unexplained)) {
+    failures <- rbind(failures, data.table(
+      package      = unexplained,
+      reason_type  = "still-missing",
+      reason_brief = "absent from project lib; pak did not emit a per-package error (likely cascade casualty of a wedged subprocess)",
+      reason_detail = ""), fill = TRUE)
+  }
+  if (NROW(failures) == 0L) return(invisible(failures))
+
+  if (verbose >= 0) {
+    n <- NROW(failures)
+    cat(sprintf("\n=== Install summary: %d package(s) not installed ===\n", n))
+    nameW <- max(nchar(failures$package), 8L)
+    typeW <- max(nchar(failures$reason_type), 12L)
+    for (i in seq_len(n)) {
+      cat(sprintf("  %-*s  [%-*s]  %s\n",
+                  nameW, failures$package[i],
+                  typeW, failures$reason_type[i],
+                  failures$reason_brief[i]))
+    }
+    cat("\n")
+  }
+  invisible(failures)
+}
+
+# ---------------------------------------------------------------------------
 # pakResetSubprocess: force pak to spawn a fresh background R session on the
 # next pak::pak() call. pak holds a persistent callr r_session in
 # pak:::pkg_data$remote and reuses it across calls; if the previous call
@@ -1838,12 +1967,29 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     strategy <- "identify-and-defer"
   }
   installTimings <- list(strategy = strategy, start = Sys.time())
+  # Accumulate pak's messages across every install pass so the final install
+  # report can attribute reasons to specific packages (e.g. "PSPclean —
+  # missing build-time deps: bit64, dplyr, ..."). Filled by withCallingHandlers
+  # wrappers around each pakRetryLoop / pakSerialInstall call below.
+  allCapturedMsgs <- character(0)
+  capturePak <- function(expr) {
+    withCallingHandlers(
+      expr,
+      message = function(m) {
+        allCapturedMsgs <<- c(allCapturedMsgs, conditionMessage(m))
+      })
+  }
 
+  # Strip pak's "any::" CRAN prefix and any leftover "owner/" GitHub prefix so
+  # `pkgNamesAll` matches what `installed.packages()` returns (bare package
+  # names). extractPkgName() handles owner/repo and "@branch" but leaves
+  # "any::" intact, so the install-summary check would otherwise misclassify
+  # every CRAN-style ref as still-missing.
+  pkgNamesAll <- sub("^any::", "", sub("^[^/]+/", "", extractPkgName(pkgs)))
   if (identical(strategy, "original")) {
-    pakRetryLoop(pkgs, repos, verbose)
+    capturePak(pakRetryLoop(pkgs, repos, verbose))
   } else {
     # Iterative identify-and-defer.
-    pkgNamesAll <- extractPkgName(pkgs)
     passList <- pkgs
     deferred <- character(0)  # culprit refs (named with their full pak ref)
     maxIter  <- 8L
@@ -1855,13 +2001,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       # (so identify-and-defer has nothing parseable to defer and stalls).
       # Restarting the subprocess gives the next iteration clean state.
       if (iter > 1L) pakResetSubprocess()
-      capturedMsgs <- character(0)
-      withCallingHandlers(
-        pakRetryLoop(passList, repos, verbose),
-        message = function(m) {
-          capturedMsgs <<- c(capturedMsgs, conditionMessage(m))
-        }
-      )
+      iterMsgsStart <- length(allCapturedMsgs) + 1L
+      capturePak(pakRetryLoop(passList, repos, verbose))
+      capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
 
       instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1])),
                           error = function(e) character(0))
@@ -1895,7 +2037,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           ", no parseable culprits; falling back to serial install",
           verbose = verbose, verboseLevel = 1)
         pakResetSubprocess()
-        pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose)
+        capturePak(pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose))
         break
       }
 
@@ -1935,7 +2077,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
         " deferred culprit(s) one at a time",
         verbose = verbose, verboseLevel = 1)
       pakResetSubprocess()
-      pakSerialInstall(deferred, libPaths[1], repos, verbose)
+      capturePak(pakSerialInstall(deferred, libPaths[1], repos, verbose))
     }
   }
 
@@ -1950,6 +2092,30 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
                    verbose = verbose, verboseLevel = 1)
   }
   assign(".lastPakInstallTimings", installTimings, envir = pakEnv())
+
+  # ---------------------------------------------------------------------------
+  # End-of-install summary: which packages actually didn't make it into the
+  # project lib, and (where parseable from pak's captured output) why.
+  # Stored in pakEnv() as `.lastInstallFailures` for programmatic access; a
+  # human-readable line-per-package report is printed when verbose >= 0.
+  # ---------------------------------------------------------------------------
+  installFailures <- tryCatch(
+    extractInstallFailures(allCapturedMsgs),
+    error = function(e) data.table(package = character(0),
+                                   reason_type = character(0),
+                                   reason_brief = character(0),
+                                   reason_detail = character(0)))
+  # Consider a package "missing" only if it can't be found in ANY active
+  # .libPaths() — not just in libPaths[1]. With upgrade = FALSE, pak
+  # legitimately skips packages already installed in user/site libs that
+  # are visible to the R session, even though they aren't physically copied
+  # to the project lib. Reporting those as missing would be a false alarm.
+  finalInstalled <- tryCatch(rownames(installed.packages(lib.loc = .libPaths())),
+                             error = function(e) character(0))
+  finalMissing   <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
+  installFailures <- reportInstallFailures(installFailures, finalMissing,
+                                           verbose = verbose)
+  assign(".lastInstallFailures", installFailures, envir = pakEnv())
 
   # Update pkgDT with installation results.
   # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector
