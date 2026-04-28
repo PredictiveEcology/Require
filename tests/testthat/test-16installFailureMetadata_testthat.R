@@ -1,0 +1,277 @@
+# Tests for the install-failure metadata path:
+#   * extractInstallFailures() parsing pak output
+#   * reportInstallFailures() formatting the per-package summary
+#   * pakInstallFiltered()'s end-of-install summary, including the
+#     CRAN-archive fallback for refs pak couldn't resolve as `any::pkg`
+#   * pakSerialInstall() basic shape
+#
+# The full LandR-scale cascade-recovery interaction (~200 ref install,
+# parallel-cascade abort, identify-and-defer + serial fallback) is too
+# heavy for default CRAN runs. It is gated on an env var so a developer
+# can opt in (`R_REQUIRE_RUN_LARGE_INTEGRATION=true`); see the last
+# test_that block.
+
+# ---------------------------------------------------------------------------
+# Unit: extractInstallFailures() parses pak's per-package failure lines.
+# ---------------------------------------------------------------------------
+test_that("extractInstallFailures parses 'Failed to build X' + ERROR lines", {
+  output <- c(
+    "ℹ Building PSPclean 1.0.0.9006",
+    "✖ Failed to build PSPclean 1.0.0.9006 (247ms)",
+    "WARN: could not be installed: any::DBI, any::sf, ...; ERROR: dependencies 'bit64', 'dplyr', 'sf', 'terra' are not available for package 'PSPclean'",
+    "✔ Installed cli 3.6.6 (60ms)"
+  )
+  fails <- Require:::extractInstallFailures(output)
+  expect_s3_class(fails, "data.table")
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "PSPclean")
+  expect_equal(fails$reason_type, "missing-build-deps")
+  expect_match(fails$reason_brief, "bit64", fixed = TRUE)
+  expect_match(fails$reason_brief, "sf", fixed = TRUE)
+  expect_match(fails$reason_brief, "terra", fixed = TRUE)
+})
+
+test_that("extractInstallFailures handles compile errors", {
+  output <- c(
+    "✖ Failed to build foo 1.0.0 (5s)",
+    "make: *** [foo.o] Error 1",
+    "ERROR: compilation failed for package 'foo'"
+  )
+  fails <- Require:::extractInstallFailures(output)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "foo")
+  expect_equal(fails$reason_type, "compile-error")
+})
+
+test_that("extractInstallFailures returns empty when nothing failed", {
+  output <- c(
+    "ℹ Building cli 3.6.6",
+    "✔ Installed cli 3.6.6 (60ms)",
+    "✔ 1 pkg: added 1 [1.6s]"
+  )
+  fails <- Require:::extractInstallFailures(output)
+  expect_s3_class(fails, "data.table")
+  expect_equal(NROW(fails), 0L)
+})
+
+test_that("extractInstallFailures strips ANSI color codes", {
+  output <- "\033[33m\033[33m✖ Failed to build foo 1.0 (1s)\033[39m"
+  fails <- Require:::extractInstallFailures(output)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "foo")
+})
+
+# ---------------------------------------------------------------------------
+# Unit: reportInstallFailures() supplements parser output with still-missing
+# entries and prints a one-line-per-package summary.
+# ---------------------------------------------------------------------------
+test_that("reportInstallFailures adds still-missing rows for unexplained pkgs", {
+  parsed <- data.table::data.table(
+    package      = "PSPclean",
+    reason_type  = "missing-build-deps",
+    reason_brief = "build-time deps not yet in lib: bit64, sf",
+    reason_detail = "ERROR: dependencies ..."
+  )
+  missing <- c("PSPclean", "disk.frame", "pryr")
+  out <- capture.output(
+    res <- Require:::reportInstallFailures(parsed, missingPkgNames = missing,
+                                           verbose = 1),
+    type = "output"
+  )
+  expect_equal(NROW(res), 3L)
+  expect_setequal(res$package, c("PSPclean", "disk.frame", "pryr"))
+  expect_equal(res[package == "PSPclean", reason_type],   "missing-build-deps")
+  expect_equal(res[package == "disk.frame", reason_type], "still-missing")
+  expect_equal(res[package == "pryr",       reason_type], "still-missing")
+  expect_match(paste(out, collapse = "\n"), "Install summary: 3 package")
+})
+
+test_that("reportInstallFailures returns invisibly with no output when nothing missing", {
+  empty <- data.table::data.table(
+    package = character(0), reason_type = character(0),
+    reason_brief = character(0), reason_detail = character(0))
+  out <- capture.output(
+    res <- Require:::reportInstallFailures(empty, missingPkgNames = character(0),
+                                           verbose = 1),
+    type = "output"
+  )
+  expect_equal(NROW(res), 0L)
+  expect_equal(length(out), 0L)
+})
+
+# ---------------------------------------------------------------------------
+# Integration: archive fallback for an archived-from-CRAN package.
+#
+# `pryr` was archived from CRAN; pak::pak("any::pryr") cannot resolve it
+# against the current CRAN mirror, so identify-and-defer reaches its
+# end-of-install summary with pryr as still-missing. The archive-fallback
+# pass should then build a `url::https://cran.../Archive/pryr_X.X.X.tar.gz`
+# ref and install successfully.
+# ---------------------------------------------------------------------------
+test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
+  # Lighter-weight check: the archive-URL-construction step works for a
+  # known archived-from-CRAN package. The full Require::Install("pryr")
+  # round-trip (which exercises the archive fallback path inside
+  # pakInstallFiltered) is environment-sensitive and runs in the larger
+  # integration test below.
+  skip_on_cran()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+
+  withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
+  ref <- tryCatch(
+    Require:::pakGetArchive("pryr", packages = "pryr", whRm = 1L),
+    error = function(e) e, warning = function(w) w)
+  if (inherits(ref, "condition")) skip(paste("pak subprocess unavailable:",
+                                              conditionMessage(ref)))
+  expect_match(ref, "^url::https?://.*Archive/pryr/pryr_.*\\.tar\\.gz$")
+})
+
+test_that("pak::pak installs an archived-CRAN ref via url::", {
+  # The lower-level pak call that the archive fallback ultimately makes;
+  # if this works, Require's archive fallback will work too (modulo pak's
+  # internal subprocess state, which is exercised in the big integration
+  # test).
+  skip_on_cran()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+
+  testlib <- file.path(tempdir(), paste0("rqlib_pryrurl_", sample(1e5, 1)))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  origLibPaths <- .libPaths()
+  on.exit(.libPaths(origLibPaths), add = TRUE)
+  for (p in c("pak", "withr", "fs", "filelock", "sys",
+              "data.table", "rprojroot", "rstudioapi")) {
+    src <- find.package(p, lib.loc = origLibPaths, quiet = TRUE)
+    if (length(src) && nzchar(src) && !file.exists(file.path(testlib, p))) {
+      file.copy(src, testlib, recursive = TRUE)
+    }
+  }
+  .libPaths(c(testlib, "/usr/lib/R/library"))
+  withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
+
+  ref <- "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz"
+  res <- try(pak::pak(ref, lib = testlib, ask = FALSE,
+                      dependencies = NA, upgrade = FALSE), silent = TRUE)
+  if (inherits(res, "try-error")) skip(paste("pak install failed:", as.character(res)))
+
+  expect_true("pryr" %in% rownames(installed.packages(testlib)),
+              info = "pryr should be installed via direct pak::pak(url::...)")
+})
+
+# ---------------------------------------------------------------------------
+# Integration: pakInstallFiltered emits an install summary with reasons
+# attributable to specific packages, and the structured table is exposed
+# in pakEnv()$.lastInstallFailures.
+# ---------------------------------------------------------------------------
+test_that("pakEnv()$.lastInstallFailures is populated after a successful install", {
+  skip_on_cran()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+
+  testlib <- file.path(tempdir(), paste0("rqlib_summary_", sample(1e5, 1)))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  origLibPaths <- .libPaths()
+  on.exit(.libPaths(origLibPaths), add = TRUE)
+  for (p in c("Require", "pak", "withr", "fs", "filelock", "sys",
+              "data.table", "rprojroot", "rstudioapi")) {
+    src <- find.package(p, lib.loc = origLibPaths, quiet = TRUE)
+    if (length(src) && nzchar(src) && !file.exists(file.path(testlib, p))) {
+      file.copy(src, testlib, recursive = TRUE)
+    }
+  }
+  .libPaths(c(testlib, "/usr/lib/R/library"))
+
+  withr::local_options(
+    repos = c(CRAN = "https://cran.rstudio.com"),
+    Require.verbose = -2
+  )
+
+  res <- tryCatch(Require::Install(c("R6", "cli")),
+                  error = function(e) e)
+  if (inherits(res, "error")) skip(paste("network or pak issue:", conditionMessage(res)))
+
+  pakEnv <- Require:::pakEnv()
+  expect_true(exists(".lastInstallFailures", envir = pakEnv))
+  failures <- get(".lastInstallFailures", envir = pakEnv)
+  # Either NULL (if no install was needed) or an empty/populated data.table
+  expect_true(is.null(failures) || data.table::is.data.table(failures))
+})
+
+# ---------------------------------------------------------------------------
+# Integration: full LandR-scale cascade-recovery exercise.
+#
+# Replicates the install pattern from the SpaDES training book's
+# LandRDemo_coreVeg.qmd: a setupProject with ~100+ refs that, when run
+# with a fresh project lib and the dev branches of Require/reproducible/
+# SpaDES.project/SpaDES.core, hits pak's parallel-build cascade abort.
+# Verifies that identify-and-defer's iterative pass + serial fallback
+# recover the install end-to-end and that the install summary correctly
+# attributes the surviving still-missing refs.
+#
+# Slow (3-15 min depending on package cache state) and network-heavy;
+# gated on R_REQUIRE_RUN_LARGE_INTEGRATION=true.
+# ---------------------------------------------------------------------------
+test_that("identify-and-defer recovers from PSPclean-style cascade", {
+  skip_on_cran()
+  skip_on_ci()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LARGE_INTEGRATION"))) {
+    skip("Set R_REQUIRE_RUN_LARGE_INTEGRATION=true to run; multi-minute install")
+  }
+  skip_if_not_installed("SpaDES.project")
+
+  testlib <- file.path(tempdir(), paste0("rqlib_landr_", sample(1e5, 1)))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  origLibPaths <- .libPaths()
+  on.exit(.libPaths(origLibPaths), add = TRUE)
+  for (p in c("Require", "pak", "withr", "fs", "filelock", "sys",
+              "data.table", "rprojroot", "rstudioapi", "SpaDES.project")) {
+    src <- find.package(p, lib.loc = origLibPaths, quiet = TRUE)
+    if (length(src) && nzchar(src) && !file.exists(file.path(testlib, p))) {
+      file.copy(src, testlib, recursive = TRUE)
+    }
+  }
+  .libPaths(c(testlib, "/usr/lib/R/library"))
+
+  withr::local_options(
+    repos = c("https://predictiveecology.r-universe.dev",
+              CRAN = "https://cran.rstudio.com"),
+    Require.verbose = -2
+  )
+
+  # The LandRDemo dep set: enough refs to trip pak's parallel cascade,
+  # including PSPclean (the historical culprit) via LandR's Remotes.
+  res <- tryCatch(
+    Require::Install(c(
+      "PredictiveEcology/LandR@main",
+      "PredictiveEcology/SpaDES.core@development",
+      "PredictiveEcology/reproducible@development"
+    )),
+    error = function(e) e)
+  if (inherits(res, "error")) skip(paste("install error:", conditionMessage(res)))
+
+  inst <- rownames(installed.packages(testlib))
+  expect_true("SpaDES.core" %in% inst,
+              info = "SpaDES.core must be in project lib after cascade recovery")
+  expect_true("LandR" %in% inst,
+              info = "LandR must be in project lib after cascade recovery")
+  expect_true("reproducible" %in% inst,
+              info = "reproducible must be in project lib after cascade recovery")
+
+  # If any packages didn't make it, every entry in the failure table should
+  # have a non-empty reason_type so users get actionable messaging.
+  pakEnv <- Require:::pakEnv()
+  failures <- get0(".lastInstallFailures", envir = pakEnv)
+  if (data.table::is.data.table(failures) && NROW(failures) > 0L) {
+    expect_true(all(nzchar(failures$reason_type)))
+    expect_true(all(nzchar(failures$reason_brief)))
+  }
+})

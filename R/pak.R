@@ -1694,9 +1694,23 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
   failed <- character(0)
   for (i in seq_along(pkgs)) {
     pkg <- pkgs[[i]]
-    isGHorUrl <- isGH(pkg) || startsWith(pkg, "url::")
-    deps <- if (isGHorUrl) FALSE else NA
-    up   <- isGHorUrl
+    isGH_  <- isGH(pkg)
+    isUrl_ <- startsWith(pkg, "url::")
+    # Per-ref dependency policy for this serial pass:
+    #   GitHub refs    : deps = FALSE, upgrade = TRUE  (transitive CRAN deps
+    #                    are handled in the parallel CRAN batch — see
+    #                    pakRetryLoop's main call. upgrade = TRUE ensures
+    #                    pak fetches the requested branch HEAD.)
+    #   url:: refs     : deps = NA,    upgrade = FALSE (typical case is the
+    #                    CRAN-archive fallback for an archived-from-CRAN
+    #                    package; its hard deps must be installed first or
+    #                    the source build's pre-flight check fails).
+    #   plain CRAN     : deps = NA,    upgrade = FALSE (some hard deps may
+    #                    not yet be in lib, e.g. when the cascade-casualty
+    #                    fallback installs refs whose deps were also
+    #                    casualties.)
+    deps <- if (isGH_) FALSE else NA
+    up   <- isGH_
     err <- try(pakCall(
       pak::pak(pkg, lib = lib, ask = FALSE,
                dependencies = deps, upgrade = up),
@@ -2113,6 +2127,46 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   finalInstalled <- tryCatch(rownames(installed.packages(lib.loc = .libPaths())),
                              error = function(e) character(0))
   finalMissing   <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
+
+  # ---------------------------------------------------------------------------
+  # Archive fallback: for packages that ended up still-missing AND have no
+  # parseable build-failure reason, try installing them from the CRAN archive.
+  # The typical case is packages that were archived from CRAN (e.g.
+  # disk.frame, pryr) where pak's "any::pkg" ref can't be resolved by the
+  # current CRAN mirror, and pak emits a generic subprocess error rather
+  # than a per-package "Failed to build" line. pakGetArchive() turns the
+  # bare package name into a `url::https://.../Archive/<pkg>/<pkg>_<ver>.tar.gz`
+  # ref that pak can install directly.
+  # ---------------------------------------------------------------------------
+  if (length(finalMissing)) {
+    explained <- installFailures$package
+    archiveCandidates <- setdiff(finalMissing, explained)
+    if (length(archiveCandidates)) {
+      messageVerbose(
+        "archive fallback: trying CRAN archive for ", length(archiveCandidates),
+        " still-missing ref(s): ",
+        paste(utils::head(archiveCandidates, 5L), collapse = ", "),
+        if (length(archiveCandidates) > 5L) ", ..." else "",
+        verbose = verbose, verboseLevel = 1)
+      pakResetSubprocess()
+      for (pkg in archiveCandidates) {
+        archiveRefs <- tryCatch(pakGetArchive(pkg, packages = pkg, whRm = 1L),
+                                error = function(e) character(0),
+                                warning = function(w) character(0))
+        if (!length(archiveRefs) || identical(archiveRefs, pkg)) next
+        # archiveRefs is the url:: ref(s) returned by pakGetArchive. Install
+        # via pakSerialInstall so we get the same per-ref isolation as the
+        # main fallback.
+        capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose))
+      }
+      # Recompute final-missing after the archive pass.
+      finalInstalled <- tryCatch(
+        rownames(installed.packages(lib.loc = .libPaths())),
+        error = function(e) character(0))
+      finalMissing <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
+    }
+  }
+
   installFailures <- reportInstallFailures(installFailures, finalMissing,
                                            verbose = verbose)
   assign(".lastInstallFailures", installFailures, envir = pakEnv())

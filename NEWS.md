@@ -1,3 +1,18 @@
+# Require 1.1.0.9021 (development version)
+
+## new features
+
+* `pakInstallFiltered()` now runs an *archive fallback* pass at the end of
+  install. For any still-missing packages whose failure pak did not
+  attribute (i.e. no per-package `Failed to build` line — typical of
+  archived-from-CRAN refs that the current CRAN mirror can't resolve),
+  Require constructs a `url::https://.../Archive/<pkg>/<pkg>_<ver>.tar.gz`
+  ref via the existing `pakGetArchive()` helper and attempts a serial
+  install of each. Confirmed working for archived CRAN packages such as
+  `pryr` that pak wouldn't resolve via `any::pryr`. Packages that still
+  fail (e.g. genuine source-build issues, transitive deps no longer
+  available) remain in the install-failure summary.
+
 # Require 1.1.0.9020 (development version)
 
 ## new features
