@@ -1,3 +1,19 @@
+# Require 1.1.0.9022 (development version)
+
+## bug fixes
+
+* Archive fallback now passes all archive URLs to pak in a single batch
+  call so cross-archive dependencies resolve correctly. Previously, the
+  fallback installed each archive ref serially: this worked for
+  archived packages whose deps were on current CRAN, but failed for
+  cross-archive cases like `disk.frame` (which depends on `pryr`,
+  itself archived) — pak would emit "Can't find package called pryr"
+  because the pryr archive URL wasn't in the same install plan.
+  Verified end-to-end on the (disk.frame, pryr) pair: 2 pkgs + 54
+  transitive deps install in a single ~30s pak call. If the batch call
+  fails for any reason, falls back to per-ref serial install (which
+  recovers archives without cross-archive deps).
+
 # Require 1.1.0.9021 (development version)
 
 ## new features

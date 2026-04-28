@@ -2137,6 +2137,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # than a per-package "Failed to build" line. pakGetArchive() turns the
   # bare package name into a `url::https://.../Archive/<pkg>/<pkg>_<ver>.tar.gz`
   # ref that pak can install directly.
+  #
+  # All archive refs are passed to pak together (single batch call) so that
+  # pak's resolver can satisfy cross-archive deps. e.g., disk.frame depends
+  # on pryr (>= 0.1.4); since pryr is itself archived, pak couldn't find it
+  # via "any::pryr" — it has to see pryr's archive URL in the same plan.
+  # If the batch call fails, we fall back to per-ref serial install (which
+  # at least installs the archives that don't have such cross-deps).
   # ---------------------------------------------------------------------------
   if (length(finalMissing)) {
     explained <- installFailures$package
@@ -2149,15 +2156,38 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
         if (length(archiveCandidates) > 5L) ", ..." else "",
         verbose = verbose, verboseLevel = 1)
       pakResetSubprocess()
+      # Collect archive URLs for every candidate first, then attempt a
+      # single batch install so pak's resolver can satisfy cross-archive
+      # deps (e.g. disk.frame -> pryr where both are archived).
+      archiveRefs <- character(0)
       for (pkg in archiveCandidates) {
-        archiveRefs <- tryCatch(pakGetArchive(pkg, packages = pkg, whRm = 1L),
-                                error = function(e) character(0),
-                                warning = function(w) character(0))
-        if (!length(archiveRefs) || identical(archiveRefs, pkg)) next
-        # archiveRefs is the url:: ref(s) returned by pakGetArchive. Install
-        # via pakSerialInstall so we get the same per-ref isolation as the
-        # main fallback.
-        capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose))
+        ref <- tryCatch(pakGetArchive(pkg, packages = pkg, whRm = 1L),
+                        error = function(e) character(0),
+                        warning = function(w) character(0))
+        if (length(ref) && !identical(ref, pkg)) {
+          archiveRefs <- c(archiveRefs, ref)
+        }
+      }
+      if (length(archiveRefs)) {
+        opts <- options(repos = repos)
+        on.exit(options(opts), add = TRUE)
+        # Single batch call: archive URLs only. dependencies = NA so pak
+        # resolves transitive CRAN deps; upgrade = FALSE so it doesn't
+        # re-install pkgs already in lib.
+        batchErr <- try(capturePak(pakCall(
+          pak::pak(archiveRefs, lib = libPaths[1], ask = FALSE,
+                   dependencies = NA, upgrade = FALSE),
+          verbose)), silent = TRUE)
+        options(opts)
+        # If the batch failed, try per-ref serial as a final fallback —
+        # archives without cross-archive deps will still install.
+        if (is(batchErr, "try-error")) {
+          messageVerbose(
+            "archive fallback: batch call failed; retrying serially",
+            verbose = verbose, verboseLevel = 1)
+          pakResetSubprocess()
+          capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose))
+        }
       }
       # Recompute final-missing after the archive pass.
       finalInstalled <- tryCatch(

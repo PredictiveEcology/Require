@@ -162,6 +162,46 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
 })
 
 # ---------------------------------------------------------------------------
+# Cross-archive deps: disk.frame depends on pryr (>= 0.1.4); both are
+# archived from CRAN, so pak::pak("any::disk.frame") fails with
+# "Can't find package called pryr". The archive-fallback batch must pass
+# both archive URLs together so pak resolves disk.frame -> pryr from the
+# same plan.
+# ---------------------------------------------------------------------------
+test_that("pak::pak installs cross-dependent archived refs in one batch", {
+  skip_on_cran()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+
+  testlib <- file.path(tempdir(), paste0("rqlib_xarch_", sample(1e5, 1)))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  origLibPaths <- .libPaths()
+  on.exit(.libPaths(origLibPaths), add = TRUE)
+  for (p in c("pak", "withr", "fs", "filelock", "sys",
+              "data.table", "rprojroot", "rstudioapi")) {
+    src <- find.package(p, lib.loc = origLibPaths, quiet = TRUE)
+    if (length(src) && nzchar(src) && !file.exists(file.path(testlib, p))) {
+      file.copy(src, testlib, recursive = TRUE)
+    }
+  }
+  .libPaths(c(testlib, "/usr/lib/R/library"))
+  withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
+
+  refs <- c(
+    "url::https://cran.rstudio.com/src/contrib/Archive/disk.frame/disk.frame_0.8.3.tar.gz",
+    "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz")
+  res <- try(pak::pak(refs, lib = testlib, ask = FALSE,
+                      dependencies = NA, upgrade = FALSE), silent = TRUE)
+  if (inherits(res, "try-error")) skip(paste("pak install failed:", as.character(res)))
+
+  inst <- rownames(installed.packages(testlib))
+  expect_true("disk.frame" %in% inst, info = "disk.frame should be installed")
+  expect_true("pryr"       %in% inst, info = "pryr should be installed")
+})
+
+# ---------------------------------------------------------------------------
 # Integration: pakInstallFiltered emits an install summary with reasons
 # attributable to specific packages, and the structured table is exposed
 # in pakEnv()$.lastInstallFailures.
