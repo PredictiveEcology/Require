@@ -1498,6 +1498,67 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   pkgDT
 }
 
+# ---------------------------------------------------------------------------
+# Extract package names from pak output that report a per-package build
+# failure. pak prints a line of the form
+#
+#   ✖ Failed to build <pkg> <version> (<elapsed>)
+#
+# (with a Unicode cross and possibly ANSI color codes) for each ref whose
+# R CMD INSTALL returned non-zero. The other broken refs in the same batch
+# are typically *cascade casualties* — they would have built fine on their
+# own, but pak aborted the rest of the install plan when one ref failed.
+# Identifying just the true culprits lets us retry the cascade casualties
+# successfully, then attempt the culprits at the end (when their build-time
+# deps are present in the project lib).
+# ---------------------------------------------------------------------------
+extractBuildFailures <- function(output) {
+  if (!length(output) || !any(nzchar(output))) return(character(0))
+  # Strip ANSI color codes so the regex doesn't have to consume them.
+  clean <- gsub("\033\\[[0-9;]*m", "", paste(output, collapse = "\n"))
+  m <- regmatches(clean,
+                  gregexpr("Failed to build\\s+([A-Za-z0-9._]+)",
+                           clean, perl = TRUE))[[1]]
+  if (!length(m)) return(character(0))
+  unique(sub("Failed to build\\s+", "", m, perl = TRUE))
+}
+
+# ---------------------------------------------------------------------------
+# pakSerialInstall: install pak refs one at a time. Used by the "deferred"
+# pass of identify-and-defer for refs whose first parallel attempt failed.
+# Each call only sees a single ref's transitive subgraph, and the build-time
+# deps are now in the project lib (installed during the cascade-casualty
+# retry pass), so the R CMD INSTALL pre-flight check passes.
+#
+# Each call uses dependencies = NA (CRAN-style) or FALSE (GitHub/url::), and
+# upgrade = FALSE for CRAN, TRUE for GitHub — same per-ref policy as the
+# parallel version. Failures are warned but don't abort the loop.
+# ---------------------------------------------------------------------------
+pakSerialInstall <- function(pkgs, lib, repos, verbose) {
+  if (!length(pkgs)) return(invisible(NULL))
+  opts <- options(repos = repos)
+  on.exit(options(opts), add = TRUE)
+  failed <- character(0)
+  for (i in seq_along(pkgs)) {
+    pkg <- pkgs[[i]]
+    isGHorUrl <- isGH(pkg) || startsWith(pkg, "url::")
+    deps <- if (isGHorUrl) FALSE else NA
+    up   <- isGHorUrl
+    err <- try(pakCall(
+      pak::pak(pkg, lib = lib, ask = FALSE,
+               dependencies = deps, upgrade = up),
+      verbose), silent = TRUE)
+    if (is(err, "try-error")) {
+      failed <- c(failed, pkg)
+      reason <- pakBuildFailReason(as.character(err))
+      warning(.txtCouldNotBeInstalled, ": ", pkg,
+              if (nzchar(reason)) paste0("; ", reason) else "",
+              call. = FALSE, immediate. = TRUE)
+    }
+  }
+  invisible(failed)
+}
+
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
@@ -1721,7 +1782,132 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # different user-facing messages.
   preInstallVers <- setNames(as.character(toInstall$Version), toInstall$Package)
 
-  pakRetryLoop(pkgs, repos, verbose)
+  # ---------------------------------------------------------------------------
+  # Install: iterative identify-and-defer
+  #
+  # Iterates a parallel pakRetryLoop pass while peeling off "culprit" packages
+  # — those that pak's per-package "Failed to build <pkg>" lines named. Each
+  # iteration:
+  #   1. Run pakRetryLoop on the current pass-list (parallel install) while
+  #      capturing pak's messages.
+  #   2. Check what's still missing in the project lib. If empty → done.
+  #   3. Parse captured output for "Failed to build X" → culprits.
+  #   4. Add culprits to a pending list, drop them from the pass-list, loop.
+  #
+  # Each iteration's pass-list is strictly smaller (or terminates) and contains
+  # only the previously-missing cascade casualties of the prior iteration. This
+  # handles nested cascades — when pass 2 itself has a different culprit than
+  # pass 1, that culprit is identified and deferred too.
+  #
+  # Final phase: install accumulated culprits one-by-one via pakSerialInstall.
+  # By this point all their CRAN/build-time deps have been installed by the
+  # iterations above, so R CMD INSTALL's pre-flight check passes.
+  #
+  # Behavior is selectable via options(Require.pakInstallStrategy):
+  #   "identify-and-defer" (default)
+  #   "original"           — single parallel pass, legacy behavior
+  # ---------------------------------------------------------------------------
+  strategy <- getOption("Require.pakInstallStrategy", "identify-and-defer")
+  if (!strategy %in% c("identify-and-defer", "original")) {
+    warning("Unknown Require.pakInstallStrategy '", strategy,
+            "'; falling back to 'identify-and-defer'", call. = FALSE)
+    strategy <- "identify-and-defer"
+  }
+  installTimings <- list(strategy = strategy, start = Sys.time())
+
+  if (identical(strategy, "original")) {
+    pakRetryLoop(pkgs, repos, verbose)
+  } else {
+    # Iterative identify-and-defer.
+    pkgNamesAll <- extractPkgName(pkgs)
+    passList <- pkgs
+    deferred <- character(0)  # culprit refs (named with their full pak ref)
+    maxIter  <- 8L
+    for (iter in seq_len(maxIter)) {
+      capturedMsgs <- character(0)
+      withCallingHandlers(
+        pakRetryLoop(passList, repos, verbose),
+        message = function(m) {
+          capturedMsgs <<- c(capturedMsgs, conditionMessage(m))
+        }
+      )
+
+      instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1])),
+                          error = function(e) character(0))
+      passNames <- extractPkgName(passList)
+      missingNamesIter <- passNames[!passNames %in% instNow]
+      if (!length(missingNamesIter)) {
+        if (iter > 1L) {
+          messageVerbose(
+            "identify-and-defer: cascade casualties resolved after ",
+            iter - 1L, " deferral pass(es); ", length(deferred),
+            " culprit(s) pending serial install",
+            verbose = verbose, verboseLevel = 1)
+        }
+        break
+      }
+
+      culpritsIter <- intersect(extractBuildFailures(capturedMsgs),
+                                missingNamesIter)
+      if (!length(culpritsIter)) {
+        # No new culprits identifiable — we can't make further progress
+        # via iteration. The remaining missing pkgs are either truly broken,
+        # or pak emitted an unparseable error.
+        messageVerbose(
+          "identify-and-defer: ", length(missingNamesIter),
+          " ref(s) still missing after iter ", iter,
+          " but no further culprits parseable; stopping iteration",
+          verbose = verbose, verboseLevel = 1)
+        break
+      }
+
+      pkgsCulpritIter <- passList[match(culpritsIter, passNames)]
+      pkgsCulpritIter <- pkgsCulpritIter[!is.na(pkgsCulpritIter)]
+      deferred <- c(deferred, pkgsCulpritIter)
+
+      # Next iteration: previously-missing minus the culprits.
+      pkgsMissingIter <- passList[match(missingNamesIter, passNames)]
+      pkgsMissingIter <- pkgsMissingIter[!is.na(pkgsMissingIter)]
+      newPassList <- pkgsMissingIter[!extractPkgName(pkgsMissingIter) %in% culpritsIter]
+
+      messageVerbose(
+        "identify-and-defer iter ", iter, ": ", length(culpritsIter),
+        " culprit(s) deferred (",
+        paste(utils::head(culpritsIter, 5L), collapse = ", "),
+        if (length(culpritsIter) > 5L) ", ..." else "",
+        "); ", length(newPassList),
+        " cascade casualt", if (length(newPassList) == 1L) "y" else "ies",
+        " queued for next pass",
+        verbose = verbose, verboseLevel = 1)
+
+      if (!length(newPassList) || identical(sort(newPassList), sort(passList))) {
+        # No-progress guard.
+        break
+      }
+      passList <- newPassList
+    }
+
+    # Final phase: install the accumulated culprits serially.
+    if (length(deferred)) {
+      messageVerbose(
+        "identify-and-defer: installing ", length(deferred),
+        " deferred culprit(s) one at a time",
+        verbose = verbose, verboseLevel = 1)
+      pakSerialInstall(deferred, libPaths[1], repos, verbose)
+    }
+  }
+
+  installTimings$end     <- Sys.time()
+  installTimings$elapsed <- as.numeric(difftime(installTimings$end,
+                                                installTimings$start,
+                                                units = "secs"))
+  if (verbose >= 1) {
+    messageVerbose("pak install strategy '", strategy, "' took ",
+                   round(installTimings$elapsed, 1L), "s for ",
+                   length(pkgs), " requested ref(s)",
+                   verbose = verbose, verboseLevel = 1)
+  }
+  assign(".lastPakInstallTimings", installTimings, envir = pakEnv())
 
   # Update pkgDT with installation results.
   # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector
@@ -1802,9 +1988,18 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     } else {
       # Package not in libPaths[1] — may already be installed (and satisfying)
       # in another lib path (pak skips packages that are already up-to-date).
-      if (is.null(nowInstalledAll))
+      if (is.null(nowInstalledAll)) {
         nowInstalledAll <<- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths()),
                                                         stringsAsFactors = FALSE))
+        # Same guard as nowInstalled above: when installed.packages() returns
+        # an empty matrix the data.table[Package == pkg] expression errors with
+        # "object 'Package' not found".
+        if (!"Package" %in% names(nowInstalledAll)) {
+          nowInstalledAll <<- data.table(Package = character(0),
+                                         Version = character(0),
+                                         LibPath = character(0))
+        }
+      }
       elseRow <- nowInstalledAll[Package == pkg]
       if (NROW(elseRow)) {
         elseVer <- elseRow$Version[1]

@@ -1,3 +1,33 @@
+# Require 1.1.0.9018 (development version)
+
+## new features
+
+* `pakInstallFiltered()` gains an iterative *identify-and-defer* install
+  strategy (now the default) that handles pak's cascade-abort behaviour on
+  large transitive dep graphs. When pak emits per-package `Failed to build
+  <pkg>` lines, those packages are treated as the authoritative culprits;
+  the rest of the unbuilt packages — cascade casualties from pak aborting
+  the install plan — get a clean parallel retry without the culprits in
+  the batch. Culprits are then installed one-by-one at the end via the
+  new `pakSerialInstall()`, when their build-time deps are present in the
+  project lib so R CMD INSTALL's pre-flight check passes.
+* New helper `extractBuildFailures(output)` parses pak's stderr/messages
+  for `Failed to build <pkg>` lines.
+* New helper `pakSerialInstall(pkgs, lib, repos, verbose)` installs refs
+  one at a time; used by the deferred phase of identify-and-defer.
+* Strategy is selectable via `options(Require.pakInstallStrategy = ...)`:
+  - `"identify-and-defer"` (default)
+  - `"original"` (legacy single-pass behaviour)
+* Per-call install timing is recorded in `pakEnv()$.lastPakInstallTimings`.
+
+## bug fixes
+
+* `pakInstallFiltered()` post-install loop: `nowInstalledAll` now gets the
+  same empty-matrix guard as `nowInstalled` (it could previously error
+  "object 'Package' not found" when `installed.packages(.libPaths())`
+  returned a matrix without expected columns, masking the upstream
+  install failure).
+
 # Require 1.1.0.9017 (development version)
 
 ## bug fixes
