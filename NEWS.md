@@ -1,3 +1,16 @@
+# Require 1.1.0.9023 (development version)
+
+## bug fixes
+
+* `pakGetArchive()` now returns the input `packages` unchanged when
+  `options(repos)` has no concrete CRAN URL (e.g. only an r-universe is
+  configured, or only `@CRAN@` placeholder). Previously,
+  `paste0("url::", character(0))` collapsed to a length-1 `"url::"`
+  string; downstream `pak::pak("url::")` then aborted the whole archive
+  batch with an opaque "All URLs failed". The archive-fallback call
+  site additionally rejects any ref that is not a fully-formed
+  `url::https?://...` URL.
+
 # Require 1.1.0.9022 (development version)
 
 ## bug fixes

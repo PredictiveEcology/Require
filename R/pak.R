@@ -797,6 +797,14 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
     }
     if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
     pth <- paste0("url::",file.path(contrib.url(isCRAN, type = type), pth))
+    # Guard against malformed refs: when isCRAN is empty (e.g. repos has no
+    # concrete CRAN URL, only @CRAN@ placeholder or only r-universe), paste0
+    # collapses to a bare "url::" string. Returning that downstream causes
+    # pak to abort the whole batch with "All URLs failed". Return packages
+    # unchanged so the caller can skip the malformed entry.
+    if (!length(pth) || any(!grepl("^url::https?://.+", pth))) {
+      return(packages)
+    }
     if (length(whRm) > 0L) {
       packages[whRm] <- pth
     } else {

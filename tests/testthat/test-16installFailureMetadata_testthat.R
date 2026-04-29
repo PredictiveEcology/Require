@@ -127,6 +127,46 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
   expect_match(ref, "^url::https?://.*Archive/pryr/pryr_.*\\.tar\\.gz$")
 })
 
+# ---------------------------------------------------------------------------
+# Regression: when options(repos) has no concrete CRAN URL (only @CRAN@
+# placeholder, or only a non-CRAN repo like an r-universe), pakGetArchive
+# previously returned a bare "url::" string (paste0("url::", character(0))
+# yields a length-1 "url::"). Downstream pak::pak("url::") then aborted the
+# whole batch with "All URLs failed", masking the real situation.
+# pakGetArchive must now return the input `packages` unchanged in this case
+# so the caller can skip cleanly.
+# ---------------------------------------------------------------------------
+test_that("pakGetArchive returns unchanged packages when no concrete CRAN repo", {
+  skip_on_cran()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+
+  for (rep in list(
+    c("https://predictiveecology.r-universe.dev"),
+    c("https://predictiveecology.r-universe.dev", CRAN = "@CRAN@")
+  )) {
+    withr::local_options(repos = rep)
+    ref <- tryCatch(
+      Require:::pakGetArchive("disk.frame", packages = "disk.frame", whRm = 1L),
+      error = function(e) e, warning = function(w) w)
+    if (inherits(ref, "condition")) {
+      skip(paste("pak subprocess unavailable:", conditionMessage(ref)))
+    }
+    # Must NOT be a bare "url::" or anything starting "url::" without a host.
+    expect_false(any(grepl("^url::$", ref)),
+                 info = sprintf("repos=%s", paste(rep, collapse = ", ")))
+    expect_false(any(grepl("^url::[^h]", ref)),
+                 info = sprintf("repos=%s", paste(rep, collapse = ", ")))
+    # Either unchanged input (caller will skip), or a fully-formed archive URL.
+    ok <- identical(ref, "disk.frame") ||
+          all(grepl("^url::https?://.+", ref))
+    expect_true(ok,
+                info = sprintf("ref=%s repos=%s",
+                               paste(ref, collapse=","),
+                               paste(rep, collapse = ", ")))
+  }
+})
+
 test_that("pak::pak installs an archived-CRAN ref via url::", {
   # The lower-level pak call that the archive fallback ultimately makes;
   # if this works, Require's archive fallback will work too (modulo pak's
