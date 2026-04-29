@@ -389,6 +389,15 @@ Require <- function(packages,
       pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
       pkgDT <- whichToInstall(pkgDT, install, verbose)
 
+      # If a candidate is already loaded in this session with a version that
+      # satisfies the constraint, skip reinstall — both to avoid pak's
+      # "namespace 'X' is imported by 'Y' so cannot be unloaded" failure mode
+      # and because there is no work to do.  Honoured even for HEAD-checked
+      # GitHub refs: the user's intent in pinning a `(>= X.Y.Z)` constraint
+      # is the version, not whichever commit happens to be at HEAD right now.
+      if (!identical(install, "force"))
+        pkgDT <- useLoadedIfSufficient(pkgDT, verbose = verbose)
+
       # Deal with "force" installs
       set(pkgDT, NULL, "forceInstall", FALSE)
       if (install %in% "force") {
@@ -1039,11 +1048,29 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
   out <- list()
   if (any(pkgDT$require %in% TRUE)) {
     setorderv(pkgDT, "loadOrder", na.last = TRUE)
+    loadedSufficientByPkg <- if ("loadedSufficient" %in% names(pkgDT)) {
+      tmp <- pkgDT[require %in% TRUE,
+                   list(loadedSufficient = isTRUE(any(loadedSufficient %in% TRUE))),
+                   by = "Package"]
+      setNames(tmp$loadedSufficient, tmp$Package)
+    } else {
+      character(0)
+    }
     # rstudio intercepts `require` and doesn't work internally
     out[[1]] <- mapply(x = unique(pkgDT[["Package"]][pkgDT$require %in% TRUE]), function(x) {
       warn_msgs <- character(0L)
+      # When the package is already loaded with a sufficient version
+      # (flagged by useLoadedIfSufficient), call require() WITHOUT lib.loc
+      # so R simply attaches the live namespace.  Passing lib.loc would make
+      # require() try to resolve the package from libPaths, which can hit
+      # the "cannot be unloaded because <X> is imported by <Y>" error path
+      # when libPaths has a different version.
+      isLoadedSuff <- isTRUE(loadedSufficientByPkg[x])
       res <- withCallingHandlers(
-        base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0),
+        if (isLoadedSuff)
+          base::require(x, character.only = TRUE, quietly = verbose <= 0)
+        else
+          base::require(x, lib.loc = libPaths, character.only = TRUE, quietly = verbose <= 0),
         warning = function(w) {
           warn_msgs <<- c(warn_msgs, conditionMessage(w))
           invokeRestart("muffleWarning")

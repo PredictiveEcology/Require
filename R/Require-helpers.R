@@ -415,6 +415,71 @@ installedVers <- function(pkgDT, libPaths, standAlone = FALSE) {
   pkgDT
 }
 
+# When a package is already loaded in the current R session with a version
+# that satisfies the user's version constraint, mark it as installed so the
+# downstream gate skips reinstall. Trying to upgrade a loaded package whose
+# namespace is imported by another loaded package (e.g. `reproducible` ->
+# `climateData`) is the most common cause of pak's
+# "Error : ! error in pak subprocess" — pak can't unload the live namespace
+# to swap in the new version, the subprocess aborts, and the user is left
+# with a useless generic error. If the loaded version already meets the
+# requested constraint, there is no reason to reinstall in the first place.
+#
+# Side-effect: also flags `loadedSufficient = TRUE` so doLoads() can attach
+# via `require(x, character.only = TRUE)` without `lib.loc`, avoiding R's
+# "cannot be unloaded because <X> is imported by <Y>" error path.
+useLoadedIfSufficient <- function(pkgDT,
+                                  verbose = getOption("Require.verbose")) {
+  if (!NROW(pkgDT)) return(pkgDT)
+  if (!"needInstall" %in% names(pkgDT)) return(pkgDT)
+  candidates <- which(pkgDT[["needInstall"]] %in% .txtInstall)
+  if (!length(candidates)) return(pkgDT)
+  loaded <- loadedNamespaces()
+  loaded <- setdiff(loaded, .basePkgs)
+  if (!length(loaded)) return(pkgDT)
+  if (!"loadedSufficient" %in% names(pkgDT))
+    set(pkgDT, NULL, "loadedSufficient", FALSE)
+  intercepted <- character(0)
+  reasons <- character(0)
+  for (i in candidates) {
+    pkg <- pkgDT[["Package"]][i]
+    if (!pkg %in% loaded) next
+    loadedVer <- tryCatch(as.character(getNamespaceVersion(pkg)),
+                          error = function(e) NA_character_)
+    if (is.na(loadedVer) || !nzchar(loadedVer)) next
+    vSpec <- pkgDT[["versionSpec"]][i]
+    ineq  <- pkgDT[["inequality"]][i]
+    hasConstraint <- !is.na(vSpec) && nzchar(vSpec) &&
+                     !is.na(ineq) && nzchar(ineq)
+    if (hasConstraint) {
+      ok <- isTRUE(compareVersion2(loadedVer, vSpec, ineq))
+      if (!ok) next
+    }
+    lp <- tryCatch(dirname(system.file(package = pkg)),
+                   error = function(e) NA_character_)
+    if (!nzchar(lp)) lp <- NA_character_
+    set(pkgDT, i, "installed",          TRUE)
+    set(pkgDT, i, "installedVersionOK", TRUE)
+    set(pkgDT, i, "needInstall",        .txtDontInstall)
+    set(pkgDT, i, "Version",            loadedVer)
+    if (!is.na(lp)) set(pkgDT, i, "LibPath", lp)
+    set(pkgDT, i, "loadedSufficient",   TRUE)
+    intercepted <- c(intercepted, pkg)
+    reasons <- c(reasons,
+                 if (hasConstraint)
+                   paste0(pkg, " ", loadedVer, " satisfies ", ineq, " ", vSpec)
+                 else
+                   paste0(pkg, " ", loadedVer, " (no version constraint)"))
+  }
+  if (length(intercepted)) {
+    messageVerbose(
+      "Already loaded with sufficient version, skipping reinstall: ",
+      paste(unique(reasons), collapse = "; "),
+      verbose = verbose, verboseLevel = 1)
+  }
+  pkgDT
+}
+
 #' @importFrom utils available.packages
 #' @rdname availableVersions
 #' @param returnDataTable Logical. If `TRUE`, the default, then the return

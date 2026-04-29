@@ -1,3 +1,26 @@
+# Require 1.1.0.9026 (development version)
+
+## new features
+
+* `Require()` now skips reinstall when a package is already loaded in the
+  current R session with a version that satisfies the requested
+  constraint. Previously, even when the loaded version was sufficient,
+  Require would still ask pak (or `install.packages()`) to install/upgrade
+  the package — which fails when the loaded namespace is imported by
+  another loaded package (e.g. `reproducible` <- `climateData`),
+  surfacing as the generic "Error : ! error in pak subprocess".  The new
+  `useLoadedIfSufficient()` helper runs after `whichToInstall()` and, for
+  any candidate flagged for install, checks `getNamespaceVersion()` and
+  `compareVersion2()` against the row's `versionSpec`/`inequality`. When
+  the loaded version satisfies, the row is marked `installed = TRUE`,
+  `installedVersionOK = TRUE`, `needInstall = .txtDontInstall`, plus a
+  new `loadedSufficient = TRUE` flag. `doLoads()` consults the flag and
+  attaches via `require(x, character.only = TRUE)` (no `lib.loc`) to
+  avoid R's "cannot be unloaded because <X> is imported by <Y>" error
+  path. Honoured for HEAD-checked GitHub refs too — version pin trumps
+  HEAD when the user's spec is a `(>= ...)` constraint. Skipped when
+  `install = "force"`, since that explicitly asks for reinstall.
+
 # Require 1.1.0.9025 (development version)
 
 ## bug fixes
