@@ -1,3 +1,17 @@
+# Require 1.1.0.9027 (development version)
+
+## bug fixes
+
+* Post-install `installed.packages()` checks now pass `noCache = TRUE`.
+  pak runs each install in a subprocess; the parent R session's
+  `installed.packages()` cache is not invalidated when the subprocess
+  writes to the lib. Without this, freshly-installed packages looked
+  "still missing" to the strategy loop in `pakInstallFiltered`, falling
+  into the "no parseable culprits; falling back to serial install"
+  branch and re-running pak unnecessarily — visible as e.g. a simple
+  `Require::Install(pkgload)` taking ~12s instead of ~3s, with bogus
+  "still missing after iter 1" messages.
+
 # Require 1.1.0.9026 (development version)
 
 ## new features

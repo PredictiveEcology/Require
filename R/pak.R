@@ -2061,7 +2061,12 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       capturePak(pakRetryLoop(passList, repos, verbose))
       capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
 
-      instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1])),
+      # noCache = TRUE: pak just installed these packages in a subprocess; the
+      # parent R session's installed.packages() cache is still pre-install.
+      # Without this, even successfully-installed packages look "still missing"
+      # and the loop falls into the no-parseable-culprits serial fallback for
+      # no reason, doubling install time.
+      instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
                           error = function(e) character(0))
       passNames <- extractPkgName(passList)
       missingNamesIter <- passNames[!passNames %in% instNow]
@@ -2166,7 +2171,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # legitimately skips packages already installed in user/site libs that
   # are visible to the R session, even though they aren't physically copied
   # to the project lib. Reporting those as missing would be a false alarm.
-  finalInstalled <- tryCatch(rownames(installed.packages(lib.loc = .libPaths())),
+  finalInstalled <- tryCatch(rownames(installed.packages(lib.loc = .libPaths(), noCache = TRUE)),
                              error = function(e) character(0))
   finalMissing   <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
 
@@ -2237,7 +2242,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       }
       # Recompute final-missing after the archive pass.
       finalInstalled <- tryCatch(
-        rownames(installed.packages(lib.loc = .libPaths())),
+        rownames(installed.packages(lib.loc = .libPaths(), noCache = TRUE)),
         error = function(e) character(0))
       finalMissing <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
     }
@@ -2250,7 +2255,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # Update pkgDT with installation results.
   # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector
   # for set() calls so that any duplicate Package rows are all updated consistently.
-  nowInstalled    <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1]),
+  nowInstalled    <- as.data.table(as.data.frame(installed.packages(lib.loc = libPaths[1], noCache = TRUE),
                                                stringsAsFactors = FALSE))
   # If installed.packages() returned an empty matrix without the expected
   # columns (can happen when libPaths[1] doesn't exist yet or the install
@@ -2332,7 +2337,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
         # rather than updating the local `nowInstalledAll` declared above —
         # leaving the local NULL and producing "object 'Package' not found"
         # when the next line indexes it.
-        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths()),
+        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths(), noCache = TRUE),
                                                        stringsAsFactors = FALSE))
         # Same guard as nowInstalled above: when installed.packages() returns
         # an empty matrix the data.table[Package == pkg] expression errors with
