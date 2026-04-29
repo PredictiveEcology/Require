@@ -861,8 +861,14 @@ pakDepConflictRow <- function(dcp, cand) {
 # Extract the most informative line(s) from a pak try-error string.
 # Strips ANSI codes, removes generic framing lines, and returns up to two
 # lines that explain WHY the build/install failed.
-pakBuildFailReason <- function(errStr) {
-  lines <- strsplit(as.character(errStr), "\n")[[1]]
+pakBuildFailReason <- function(errStr, capturedMsgs = character(0)) {
+  # Combine the try() exception text (which is usually the generic
+  # "Error : ! error in pak subprocess") with anything pak's subprocess
+  # streamed via message() during the failed call. The real cause is almost
+  # always in the latter — the wrapper exception loses it.
+  rawText <- paste(c(as.character(errStr), as.character(capturedMsgs)),
+                   collapse = "\n")
+  lines <- strsplit(rawText, "\n")[[1]]
   lines <- gsub("\033\\[[0-9;]*m", "", lines)   # strip ANSI escape sequences
   lines <- trimws(lines)
   lines <- lines[nzchar(lines)]
@@ -872,6 +878,10 @@ pakBuildFailReason <- function(errStr) {
   # Prioritise lines that contain diagnostic keywords
   diag <- grep(paste(
     "namespace '[^']+' .+ is being loaded",
+    "namespace '[^']+' is imported by",
+    "cannot be unloaded",
+    "is locked by package",
+    "package .+ is already loaded",
     "invalid.*expression", "ERROR:", "permission denied",
     "unable to move", "cannot remove", "compilation failed",
     "lazy loading failed", "Execution halted",
@@ -1719,13 +1729,22 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
     #                    casualties.)
     deps <- if (isGH_) FALSE else NA
     up   <- isGH_
-    err <- try(pakCall(
-      pak::pak(pkg, lib = lib, ask = FALSE,
-               dependencies = deps, upgrade = up),
-      verbose), silent = TRUE)
+    # Capture pak's subprocess messages for this single ref so the warning
+    # below can surface the actual root cause (e.g. "namespace 'X' is
+    # imported by 'Y' so cannot be unloaded") instead of pak's generic
+    # wrapper exception "Error : ! error in pak subprocess".
+    pkgMsgs <- character(0)
+    err <- try(withCallingHandlers(
+      pakCall(
+        pak::pak(pkg, lib = lib, ask = FALSE,
+                 dependencies = deps, upgrade = up),
+        verbose),
+      message = function(m) {
+        pkgMsgs <<- c(pkgMsgs, conditionMessage(m))
+      }), silent = TRUE)
     if (is(err, "try-error")) {
       failed <- c(failed, pkg)
-      reason <- pakBuildFailReason(as.character(err))
+      reason <- pakBuildFailReason(as.character(err), pkgMsgs)
       warning(.txtCouldNotBeInstalled, ": ", pkg,
               if (nzchar(reason)) paste0("; ", reason) else "",
               call. = FALSE, immediate. = TRUE)
@@ -1841,6 +1860,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   pakRetryLoop <- function(packages, repos, verbose) {
     for (i in seq_len(15)) {
       pkgsIn <- packages
+      # Snapshot the captured-messages buffer so we can slice out exactly the
+      # lines pak's subprocess emitted during *this* attempt. The outer
+      # capturePak(pakRetryLoop(...)) wraps the whole call in a calling
+      # handler that pushes pak's message() output into allCapturedMsgs;
+      # withCallingHandlers propagates through nested frames, so the
+      # subprocess messages land in the same buffer and we can recover them.
+      attemptStart <- length(allCapturedMsgs)
       opts <- options(repos = repos)
       # GitHub / url:: refs: must use upgrade=TRUE so pak always fetches the
       # latest commit from the branch rather than "keeping" the currently installed
@@ -1876,6 +1902,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       options(opts)
       if (!is(err, "try-error")) break
       lastPakErr <<- as.character(err)
+      # Slice this attempt's captured pak-subprocess messages so error
+      # reporters can mine them for the actual root cause (the try() exception
+      # is just the generic wrapper "Error : ! error in pak subprocess").
+      attemptMsgs <- if (length(allCapturedMsgs) > attemptStart)
+        allCapturedMsgs[(attemptStart + 1L):length(allCapturedMsgs)]
+      else
+        character(0)
       alreadyWarned <- FALSE
       packages <- tryCatch(
         pakErrorHandling(as.character(err), pkgsIn, packages, verbose = verbose),
@@ -1885,7 +1918,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           # BOTH the parser error AND the underlying pak failure reason — the
           # latter is what the user actually needs to debug the build, and
           # without this it gets silently swallowed.
-          rawReason <- pakBuildFailReason(as.character(err))
+          rawReason <- pakBuildFailReason(as.character(err), attemptMsgs)
           msg <- paste0(.txtCouldNotBeInstalled, "; parser error: ",
                         conditionMessage(e),
                         if (nzchar(rawReason)) paste0("; pak reason: ", rawReason) else "")
@@ -1909,7 +1942,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       if (!alreadyWarned) {
         droppedPkgNames <- setdiff(extractPkgName(pkgsIn), extractPkgName(packages))
         if (length(droppedPkgNames)) {
-          reason <- pakBuildFailReason(as.character(err))
+          reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
                             paste(droppedPkgNames, collapse = ", "),
                             if (nzchar(reason)) paste0("; ", reason) else "")
@@ -1921,12 +1954,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           # package list unchanged — there is no point retrying with the same
           # packages.  Surface the raw pak reason and mark all remaining packages
           # as failed so the post-install check doesn't double-warn.
-          reason <- pakBuildFailReason(as.character(err))
+          reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           failedNames <- extractPkgName(packages)
           warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
                             paste(failedNames, collapse = ", "),
                             if (nzchar(reason)) paste0("; ", reason) else "")
           warning(warnMsg, call. = FALSE, immediate. = TRUE)
+          alreadyWarned <<- TRUE
           warnedDropped <<- c(warnedDropped, failedNames)
           packages <- character(0)
         }
@@ -1936,7 +1970,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           # Include the actual build/install failure reason so the user knows
           # why the package could not be installed (e.g. file locked on Windows,
           # namespace version mismatch, bad regex in source, etc.).
-          reason <- pakBuildFailReason(as.character(err))
+          reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           if (nzchar(reason)) {
             warning(.txtCouldNotBeInstalled, ": ", reason,
                     call. = FALSE, immediate. = TRUE)
@@ -2172,7 +2206,11 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
         ref <- tryCatch(pakGetArchive(pkg, packages = pkg, whRm = 1L),
                         error = function(e) character(0),
                         warning = function(w) character(0))
-        if (length(ref) && !identical(ref, pkg)) {
+        # Only accept fully-formed CRAN-archive URL refs. Anything else
+        # (unchanged pkg name, bare "url::", non-http path) would derail
+        # the pak::pak() batch with an opaque "All URLs failed" error.
+        if (length(ref) && !identical(ref, pkg) &&
+            all(grepl("^url::https?://.+", ref))) {
           archiveRefs <- c(archiveRefs, ref)
         }
       }

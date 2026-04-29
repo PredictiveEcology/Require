@@ -1,3 +1,20 @@
+# Require 1.1.0.9025 (development version)
+
+## bug fixes
+
+* pak install warnings now surface the actual subprocess failure reason
+  instead of the generic "Error : ! error in pak subprocess" wrapper.
+  `pakBuildFailReason()` now also accepts the captured pak-subprocess
+  message stream and `pakRetryLoop()` / `pakSerialInstall()` slice and
+  pass it through, so warnings include the real cause — e.g. "namespace
+  'reproducible' is imported by 'climateData' so cannot be unloaded".
+  The reason-extractor's diagnostic regex was extended to recognise
+  unload-blocked-by-import and locked-package patterns. Also fixed a
+  duplicate-warning bug: the `identical(packages, pkgsIn)` branch in
+  `pakRetryLoop` warned without setting `alreadyWarned`, so the
+  post-loop `!alreadyWarned` block fired a second, less-informative
+  warning with no package names.
+
 # Require 1.1.0.9024 (development version)
 
 ## bug fixes
