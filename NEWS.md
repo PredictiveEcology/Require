@@ -1,3 +1,23 @@
+# Require 1.1.0.9024 (development version)
+
+## bug fixes
+
+* `Require()` now recovers from R's "cannot be unloaded because <pkg> is
+  imported by <others>" failure. Previously, when `require(x, lib.loc =
+  libPaths)` failed for this reason — typical when a package (e.g.
+  `reproducible`, `Rcpp`, `dplyr`) is already loaded from a different lib
+  and its dependents (`SpaDES.core`, `LandR`, `terra`, ...) have imported
+  it — Require warned "package will not be attached" and left `x` off the
+  search path. Modules calling unqualified functions from `x` (e.g.
+  `prepInputs(...)` inside a SpaDES `init` event) then failed with
+  "object 'prepInputs' not found". The recovery detects the situation via
+  `loadedNamespaces()` (the failed-unload kept the namespace loaded) and
+  retries `require(x, character.only = TRUE)` *without* `lib.loc`, which
+  attaches the already-loaded namespace to `search()`. R prints the
+  "Failed with error: ... cannot be unloaded" text directly to stderr
+  rather than as a condition, so a `withCallingHandlers(warning=...)`
+  capture would not have seen it.
+
 # Require 1.1.0.9023 (development version)
 
 ## bug fixes

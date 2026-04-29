@@ -1049,6 +1049,19 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
           invokeRestart("muffleWarning")
         }
       )
+      # Recover the common "cannot be unloaded because <package> is imported
+      # by <other-pkgs>" failure: R prints that text directly (not as a
+      # condition), then require() returns FALSE — but the namespace IS still
+      # loaded (unload failed, so it stayed). Detect via loadedNamespaces()
+      # and force-attach via require() without lib.loc, so unqualified calls
+      # to functions from this package (e.g., `prepInputs()` from
+      # reproducible inside a SpaDES module's `init` event) succeed.
+      if (!isTRUE(res) && x %in% loadedNamespaces()) {
+        res <- suppressWarnings(suppressMessages(
+          base::require(x, character.only = TRUE, quietly = TRUE)
+        ))
+        if (isTRUE(res)) warn_msgs <- character(0L)
+      }
       if (!isTRUE(res)) {
         ## Always visible regardless of verbose: a silently-unloaded package causes
         ## confusing downstream errors (e.g. "object 'sppEquivalencies_CA' not found").
