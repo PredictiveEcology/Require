@@ -863,18 +863,29 @@ pakDepConflictRow <- function(dcp, cand) {
 # lines that explain WHY the build/install failed.
 pakBuildFailReason <- function(errStr, capturedMsgs = character(0)) {
   # Combine the try() exception text (which is usually the generic
-  # "Error : ! error in pak subprocess") with anything pak's subprocess
-  # streamed via message() during the failed call. The real cause is almost
-  # always in the latter — the wrapper exception loses it.
+  # "Error : ! error in pak subprocess" optionally chained with
+  # "Caused by error: ! <real reason>") with anything pak's subprocess
+  # streamed via message() during the failed call. The real cause is
+  # often inside the chain or buried in the captured stream — the
+  # outer wrapper exception line on its own says nothing useful.
   rawText <- paste(c(as.character(errStr), as.character(capturedMsgs)),
                    collapse = "\n")
   lines <- strsplit(rawText, "\n")[[1]]
   lines <- gsub("\033\\[[0-9;]*m", "", lines)   # strip ANSI escape sequences
   lines <- trimws(lines)
   lines <- lines[nzchar(lines)]
-  # Remove generic R/pak framing lines that don't explain the root cause
-  lines <- grep("^Error in pak::|pakRetryLoop|^\\s*$|^Error$", lines,
-                value = TRUE, invert = TRUE)
+  # Remove generic R/pak framing lines that don't explain the root cause.
+  # Crucially, this includes pak's own wrapper "Error : ! error in pak
+  # subprocess" and the "Caused by error:" chain delimiter — keeping those
+  # would cause the fallback below to return them and hide the actual cause.
+  lines <- grep(paste(
+    "^Error in pak::",
+    "pakRetryLoop",
+    "^\\s*$",
+    "^Error$",
+    "^Error : ! error in pak subprocess$",
+    "^Caused by error:?$",
+    sep = "|"), lines, value = TRUE, invert = TRUE)
   # Prioritise lines that contain diagnostic keywords
   diag <- grep(paste(
     "namespace '[^']+' .+ is being loaded",
@@ -882,14 +893,17 @@ pakBuildFailReason <- function(errStr, capturedMsgs = character(0)) {
     "cannot be unloaded",
     "is locked by package",
     "package .+ is already loaded",
+    "Could not solve package dependencies",
+    "Can't find package called",
     "invalid.*expression", "ERROR:", "permission denied",
     "unable to move", "cannot remove", "compilation failed",
     "lazy loading failed", "Execution halted",
     sep = "|"), lines, value = TRUE, ignore.case = FALSE)
   if (length(diag)) return(paste(head(unique(diag), 2L), collapse = "; "))
-  # Fallback: first non-"Error in" line
+  # Fallback: first non-"Error in" line; strip pak's "! " bullet prefix so
+  # the warning reads cleanly (e.g. "! Could not foo" → "Could not foo").
   fb <- head(lines[!startsWith(lines, "Error in")], 1L)
-  if (length(fb) && nzchar(fb)) fb else ""
+  if (length(fb) && nzchar(fb)) sub("^!\\s*", "", fb) else ""
 }
 
 pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
@@ -1947,7 +1961,15 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
                             paste(droppedPkgNames, collapse = ", "),
                             if (nzchar(reason)) paste0("; ", reason) else "")
           warning(warnMsg, call. = FALSE, immediate. = TRUE)
-          alreadyWarned <<- TRUE
+          # Use `<-` (not `<<-`): we are in pakRetryLoop's own body, where
+          # `alreadyWarned` is declared as a local. `<<-` from this frame
+          # skips the local and walks to pakInstallFiltered's enclosing
+          # scope, which has no `alreadyWarned` — so the local stays FALSE
+          # and the post-loop `if (!alreadyWarned)` block fires a redundant
+          # second warning. `warnedDropped` is genuinely an enclosing
+          # variable (defined in pakInstallFiltered above) so `<<-` is
+          # correct for it.
+          alreadyWarned <- TRUE
           warnedDropped <<- c(warnedDropped, droppedPkgNames)
         } else if (identical(packages, pkgsIn)) {
           # pakErrorHandling did not recognise the error pattern and left the
@@ -1960,7 +1982,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
                             paste(failedNames, collapse = ", "),
                             if (nzchar(reason)) paste0("; ", reason) else "")
           warning(warnMsg, call. = FALSE, immediate. = TRUE)
-          alreadyWarned <<- TRUE
+          # `<-` not `<<-` — see explanation above; updates the local
+          # `alreadyWarned` so the post-loop fallback warning is suppressed.
+          alreadyWarned <- TRUE
           warnedDropped <<- c(warnedDropped, failedNames)
           packages <- character(0)
         }

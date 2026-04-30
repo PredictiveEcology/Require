@@ -1,3 +1,29 @@
+# Require 1.1.0.9028 (development version)
+
+## bug fixes
+
+* `pakBuildFailReason()` now actually surfaces pak's real failure cause.
+  Two issues in 1.1.0.9025: (a) the filter did not strip pak's own
+  wrapper line `Error : ! error in pak subprocess` or the `Caused by
+  error:` chain delimiter, so when pak's `try()`-string already chained
+  to the real reason, the fallback returned the wrapper line and the
+  cause was never seen; (b) the diagnostic regex did not include
+  `Could not solve package dependencies` or `Can't find package
+  called`, two of pak's most common cause-line patterns. Both fixed.
+  The bullet `! ` prefix that pak adds is now stripped from the
+  fallback line so the warning reads cleanly.
+
+* `pakRetryLoop()` no longer fires the duplicate "could not be installed:"
+  warning. The `alreadyWarned <<- TRUE` super-assignment in
+  `pakRetryLoop`'s own body walked past the local declaration to
+  `pakInstallFiltered`'s enclosing scope (where no such variable
+  exists), leaving the local `FALSE` and triggering the post-loop
+  fallback warning every time. Changed to `alreadyWarned <-` so the
+  local actually gets set. (`warnedDropped` legitimately uses `<<-`
+  because it really is in the enclosing scope — only `alreadyWarned`
+  was wrong.) This was a pre-existing bug that 1.1.0.9025 reproduced
+  in the new `identical(packages, pkgsIn)` branch.
+
 # Require 1.1.0.9027 (development version)
 
 ## bug fixes
