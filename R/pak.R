@@ -2092,7 +2092,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       # no reason, doubling install time.
       instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
                           error = function(e) character(0))
-      passNames <- extractPkgName(passList)
+      # Strip pak's "any::" CRAN prefix and any leftover "owner/" GitHub prefix
+      # so the names line up with what installed.packages() returns (bare
+      # package names). Without this, every CRAN-style ref ("any::cli") looks
+      # "still missing" because instNow contains "cli" not "any::cli", and the
+      # loop falls into the no-parseable-culprits serial fallback every time —
+      # turning a clean 3-minute install into a 6-minute one with bogus
+      # "still missing after iter 1" messages. Same transformation as the
+      # final pkgNamesAll computation above (line ~2068).
+      passNames <- sub("^any::", "", sub("^[^/]+/", "",
+                                         extractPkgName(passList)))
       missingNamesIter <- passNames[!passNames %in% instNow]
       if (!length(missingNamesIter)) {
         if (iter > 1L) {

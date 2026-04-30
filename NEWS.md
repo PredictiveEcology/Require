@@ -1,3 +1,22 @@
+# Require 1.1.0.9029 (development version)
+
+## bug fixes
+
+* identify-and-defer iter check now strips pak's `any::` CRAN prefix
+  (and `owner/` GitHub prefix) from `passNames` before comparing with
+  `installed.packages()`. Without this, `extractPkgName("any::cli")`
+  returns `"any::cli"` while `installed.packages()` returns `"cli"`, so
+  every successfully-installed CRAN ref in the iter pass-list looked
+  "still missing" — sending the loop into the no-parseable-culprits
+  serial-install fallback every single time, even on a clean
+  `Require::Install(devtools)` with all CRAN deps. Symptom: a 3-minute
+  parallel install followed by another 3 minutes of pointless serial
+  pak calls that all report "kept N". Same transformation as the
+  `pkgNamesAll` computation in the final-missing check above; the iter
+  check just forgot to apply it. The 1.1.0.9027 `noCache = TRUE` fix
+  was real but secondary — the cache wasn't the problem; the prefix
+  mismatch was.
+
 # Require 1.1.0.9028 (development version)
 
 ## bug fixes
