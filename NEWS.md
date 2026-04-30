@@ -1,3 +1,85 @@
+# Require 1.1.0.9030 (development version)
+
+## bug fixes
+
+* `Require::Install()` with `==` / `<=` version pins now actually installs
+  the requested version. Five interacting bugs in the pak install path
+  caused `Install(c("stringfish (<= 0.15.8)", "qs (== 0.27.3)"))` to
+  silently install stringfish 0.19.0 (ignoring the upper bound) and
+  report qs as `[still-missing]` in the install summary even after the
+  archive-fallback pass had successfully installed it. Fixes:
+
+  * **@-version ref normalization.** New `pakRefToBareName()` helper
+    (`R/pak.R`) reduces any pak ref to the bare package name that
+    `installed.packages()` returns. `extractPkgName()` only strips
+    parenthetical `(>=X)` version specs — it does NOT strip pak's
+    `pkg@X` exact-pin form that `equalsToAt()` / `lessThanToAt()`
+    introduce. Consequence pre-fix: `qs@0.27.3` survived through
+    `pkgNamesAll` and `passNames`, never matched
+    `installed.packages()`'s bare `"qs"`, and every version-pinned
+    install looked "still missing" to the iter-loop / archive-fallback /
+    install-summary checks — even right after a successful install.
+
+  * **Cache key now respects user-supplied version constraints.**
+    `pakDepsCacheKey()` previously hashed only the version-stripped
+    `pkgsForPak`, so two calls differing only in constraints shared a
+    cache entry. The cached `pak_result` was reused by downstream
+    `pakDepsToPkgDT` processing whose behavior DOES branch on the
+    user-supplied constraints (`trimRedundancies` + `lessThanToAt`
+    rely on constraint rows actually being present in `pkgDT`); a stale
+    entry from a different constraint set silently corrupted the next
+    install plan. Fix: thread a `userPkgs` parameter through
+    `pakDepsCacheKey` / `pakDepsResolve` / `pakDepsCacheInvalidate`,
+    pass `resolvedPkgs` (constraint-bearing form) at the call site.
+
+  * **`pakInstallFiltered` dedup keeps the strictest constraint row.**
+    When pkgDT had two rows for the same Package (e.g. user's
+    `(<= 0.15.8)` upper bound and a transitive dep's `(>= 0.15.1)`
+    lower bound, both correctly kept by `trimRedundancies` because
+    they're complementary, not redundant), `unique(by = "Package")`
+    arbitrarily kept whichever sorted first — typically the `>=` row
+    from the dep tree. The user's `<=` pin was then dropped, the
+    downstream `gsub("\\(>=...\\)")` stripped to bare name, the `any::`
+    prefix made it `any::stringfish`, and pak silently installed the
+    latest. Fix: sort by inequality priority
+    (`==` > `<=` > `<` > `>=` > `>` > none) before unique-by-Package
+    so the strictest row wins. `equalsToAt()` / `lessThanToAt()` then
+    translate the surviving `==` / `<=` / `<` row into pak's exact
+    `@version` pin form.
+
+  * **No more empty `Warning message: could not be installed:`.**
+    `pakGetArchive()` was being called by `pakErrorHandling` with an
+    empty `pkgNoVersion` when pak emitted an internal error that
+    didn't match any known parse pattern (e.g.
+    `if (!version_satisfies(...))`). The downstream warning then fired
+    with no package name and no reason. Fix: early-return at
+    `pakGetArchive` entry when `pkg2` is empty; `nzchar()` guard at
+    the warn site as belt-and-braces.
+
+  * **Mid-pipeline retry warnings demoted to debug messages.**
+    `pakRetryLoop` and `pakSerialInstall` were emitting
+    `warning(... immediate. = TRUE)` for every transient install
+    failure — but those layers are early stages of a multi-layer retry
+    pipeline (parallel batch → identify-and-defer → serial →
+    CRAN-archive fallback) and the failure is routinely repaired by a
+    downstream layer. Users were told inline
+    `Warning: could not be installed: qs@0.27.3` then watched qs
+    install successfully via the archive pass two seconds later.
+    Those emissions are now `messageVerbose(... verboseLevel = 2)`
+    prefixed with the source layer (`pakRetryLoop:` /
+    `pakSerialInstall:`) for diagnostics. The post-install
+    `silentlyFailed` warning remains the authoritative end-state
+    report — it inspects the actual lib state and only fires for
+    packages that did NOT make it in by the end.
+
+* Install summary's canonical `installFailures` parse now runs AFTER
+  the archive-fallback pass so per-package `Failed to build X` lines
+  emitted during the archive pass are picked up rather than falling
+  through to the catch-all `still-missing` branch. Rows are also
+  filtered by `finalMissing`, so packages that failed in iter 1 but
+  succeeded in a deferred-culprit serial pass don't leak into the
+  summary as build-errors when in fact they ended up installed.
+
 # Require 1.1.0.9029 (development version)
 
 ## bug fixes
