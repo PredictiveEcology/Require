@@ -780,3 +780,212 @@ test_that("recordLoadOrder is not called and loadOrder stays NA when require=FAL
   testthat::expect_true(any(!is.na(pkgDT2$loadOrder)),
     info = "require=TRUE: at least one package must have a non-NA loadOrder")
 })
+
+# ---------------------------------------------------------------------------
+# 18. pakRefToBareName: bookkeeping bug for "@version" exact-pin refs
+# ---------------------------------------------------------------------------
+# Regression: Require::Install(c("stringfish (<= 0.15.8)", "qs (== 0.27.3)"))
+# was reported with both packages flagged "still-missing" in the install
+# summary even though stringfish DID install. Root cause:
+# equalsToAt()/lessThanToAt() rewrite "pkg (== X)" / "pkg (<= X)" to pak's
+# "pkg@X" exact-pin syntax, but the iter-loop / install-summary used
+# `sub("^any::", "", sub("^[^/]+/", "", extractPkgName(pkgs)))` to derive
+# the bare names. extractPkgName() only strips parenthetical "(>=X)" via
+# trimVersionNumber(), NOT "@X" — so "qs@0.27.3" survived intact and never
+# matched rownames(installed.packages())'s bare "qs".  Every version-pinned
+# install was therefore reported as missing, the archive-fallback ran on
+# already-installed refs, and the summary printed bogus "still-missing"
+# entries.  The fix: pakRefToBareName() strips all three of any:: / owner/
+# / @ver in one helper used everywhere a pak ref needs to match
+# installed.packages().
+
+test_that("pakRefToBareName strips @version, any::, and owner/ prefixes", {
+  cases <- c(
+    "qs@0.27.3"               , # CRAN exact-pin via equalsToAt()
+    "stringfish@0.15.8"       , # CRAN <=ver pin via lessThanToAt()
+    "any::cli"                , # plain CRAN with any:: prefix
+    "any::dplyr"              ,
+    "tidyverse/ggplot2"       , # GitHub owner/repo
+    "tidyverse/ggplot2@main"  , # GitHub owner/repo@branch
+    "owner-with-hyphen/pkg"   , # owner with hyphen (not caught by extractPkgGitHub's [:alnum:])
+    "stringfish (<= 0.15.8)"  , # not yet rewritten — extractPkgName parens-strip
+    "qs (== 0.27.3)"          ,
+    "Require (>= 0.0.1)"
+  )
+  expected <- c(
+    "qs", "stringfish", "cli", "dplyr",
+    "ggplot2", "ggplot2", "pkg",
+    "stringfish", "qs", "Require"
+  )
+  testthat::expect_identical(Require:::pakRefToBareName(cases), expected)
+})
+
+test_that("pakRefToBareName output matches installed.packages() rownames", {
+  # The contract this helper has to honor: for any pak ref the install-summary
+  # / iter-loop / archive-fallback uses, pakRefToBareName(ref) must equal what
+  # rownames(installed.packages()) would return for that package once
+  # installed.  Without the @-version strip, the %in% check is always FALSE
+  # and the bookkeeping reports successfully-installed packages as missing.
+  refs       <- c("qs@0.27.3", "stringfish@0.15.8", "any::cli")
+  bareNames  <- Require:::pakRefToBareName(refs)
+  pretendInstalled <- c("qs", "stringfish", "cli", "Rcpp", "data.table")
+  testthat::expect_true(all(bareNames %in% pretendInstalled),
+    info = paste0("bareNames = (",
+                  paste(bareNames, collapse = ", "),
+                  ") must all be present in pretendInstalled — if any survive",
+                  " as 'pkg@ver' the iter-loop will misclassify them as missing"))
+})
+
+# ---------------------------------------------------------------------------
+# 19. pakDepsCacheKey: user-supplied version constraints are part of the key
+# ---------------------------------------------------------------------------
+# Regression: pakDepsToPkgDT() strips version specs from `pkgsForPak` before
+# calling pak::pkg_deps() (line ~1322: `pkgsForPak <- trimVersionNumber(...)`).
+# That's intentional — pak's resolver only takes bare refs — but it meant the
+# cache key was identical for any two calls whose package *names* matched, no
+# matter how their version constraints differed. The cached pak_result is
+# used downstream by pakDepsToPkgDT to build pkgDT (whose `packageFullName`
+# rows then drive trimRedundancies, lessThanToAt, equalsToAt, and ultimately
+# what pak::pak() is asked to install). Reusing a cached entry from a call
+# with different constraints can therefore produce the wrong install plan —
+# field symptom: after `remove.packages("stringfish")` followed by
+# `Install("stringfish (<= 0.15.8)")`, pak was asked for `any::stringfish`
+# (no pin) and silently installed 0.19.0 instead of 0.15.8.
+#
+# Fix: pakDepsCacheKey() now hashes a `userPkgs` argument carrying the
+# version-bearing refs, so different constraint sets get distinct cache
+# entries. Backward-compat: when `userPkgs` is NULL the key omits it
+# (matches old call-sites that haven't been updated).
+
+test_that("pakDepsCacheKey distinguishes calls by user-supplied version constraints", {
+  pkgs  <- c("stringfish", "qs")  # version-stripped form pak::pkg_deps() sees
+  wh    <- NA
+  repos <- c(CRAN = "https://cran.r-project.org")
+
+  k_none <- Require:::pakDepsCacheKey(pkgs, wh, repos,
+                                      userPkgs = c("stringfish", "qs"))
+  k_le   <- Require:::pakDepsCacheKey(pkgs, wh, repos,
+                                      userPkgs = c("stringfish (<= 0.15.8)",
+                                                   "qs (== 0.27.3)"))
+  k_eq   <- Require:::pakDepsCacheKey(pkgs, wh, repos,
+                                      userPkgs = c("stringfish (== 0.16.0)",
+                                                   "qs (== 0.27.3)"))
+
+  # All three must be distinct. The pre-fix code produced a single key for
+  # all three because pkgs+wh+repos are identical.
+  testthat::expect_false(identical(k_none, k_le),
+    info = "no-constraint key must differ from (<=) constraint key")
+  testthat::expect_false(identical(k_le, k_eq),
+    info = "(<=) and (==) constraint keys must differ")
+  testthat::expect_false(identical(k_none, k_eq),
+    info = "no-constraint key must differ from (==) constraint key")
+})
+
+test_that("pakDepsCacheKey is stable across reorderings and repeated calls", {
+  pkgs  <- c("stringfish", "qs")
+  wh    <- NA
+  repos <- c(CRAN = "https://cran.r-project.org")
+
+  k1 <- Require:::pakDepsCacheKey(pkgs, wh, repos,
+                                  userPkgs = c("stringfish (<= 0.15.8)",
+                                               "qs (== 0.27.3)"))
+  # Same content, different vector order — pakDepsCacheKey sorts internally
+  # so the key must be invariant.
+  k2 <- Require:::pakDepsCacheKey(pkgs, wh, repos,
+                                  userPkgs = c("qs (== 0.27.3)",
+                                               "stringfish (<= 0.15.8)"))
+  testthat::expect_identical(k1, k2,
+    info = "key must be order-invariant: same constraint set → same key")
+
+  # Repeated identical calls return identical keys (no temp-file or
+  # md5 instability).
+  k3 <- Require:::pakDepsCacheKey(pkgs, wh, repos,
+                                  userPkgs = c("stringfish (<= 0.15.8)",
+                                               "qs (== 0.27.3)"))
+  testthat::expect_identical(k1, k3,
+    info = "repeated identical call must return the same key")
+})
+
+# ---------------------------------------------------------------------------
+# 20. pakInstallFiltered dedup: prefer strictest constraint
+# ---------------------------------------------------------------------------
+# Regression: when the same Package appeared in pkgDT under two plain-CRAN
+# rows — typically the user's "(<= X)" upper-bound and a transitive dep's
+# "(>= Y)" lower-bound (both kept by trimRedundancies because they're
+# complementary, not redundant) — pakInstallFiltered's dedup did
+# `unique(toInstall, by = "Package")` and arbitrarily kept whichever row sorted
+# first.  In practice the ">=" row tends to come second from pkgDepsToPkgDT,
+# but the previous-call's pkgDT can leave them in either order; either way the
+# user's "<=" pin would be silently dropped, the downstream gsub("\\(>=...\\)")
+# step would strip the row to a bare name, the any:: prefix would yield
+# `any::pkg`, and pak would install the latest (constraint-violating) version.
+# Field symptom: `Install("stringfish (<= 0.15.8)")` produced stringfish 0.19.0
+# even though the user explicitly requested an upper-bound version.
+#
+# Fix: before unique-by-Package, sort by inequality priority
+# (==, <=, <, >=, >, none) so the strictest row wins.  equalsToAt() and
+# lessThanToAt() (called downstream) translate the surviving == / <= / <
+# constraint into pak's exact "@version" pin form, and the install proceeds
+# with the right version.
+
+test_that("pakInstallFiltered dedup keeps the row with the strictest version constraint", {
+  # We test the dedup logic in isolation against a synthetic pkgDT shape
+  # (the actual pakInstallFiltered runs install actions we can't sandbox).
+  # Mirror the dedup branch from pak.R verbatim.
+  ti <- data.table::data.table(
+    Package         = c("qs",                "stringfish",            "stringfish"),
+    packageFullName = c("qs (== 0.27.3)",    "stringfish (>= 0.15.1)", "stringfish (<= 0.15.8)"),
+    Version         = c("0.27.3",            "0.15.1",                "0.15.8"),
+    versionSpec     = c("0.27.3",            "0.15.1",                "0.15.8"),
+    inequality      = c("==",                ">=",                    "<=")
+  )
+  ti[, isNonCRAN := Require:::isGH(packageFullName) | startsWith(packageFullName, "url::")]
+  ti[, hasNonCRAN := any(isNonCRAN), by = Package]
+  ti <- ti[!(hasNonCRAN == TRUE & isNonCRAN == FALSE)]
+  ti[, .versionSpecPrio := match(inequality, c("==","<=","<",">=",">"), nomatch = 6L)]
+  data.table::setorderv(ti, c("Package", ".versionSpecPrio"))
+  ti <- unique(ti, by = "Package")
+
+  # The "<=" row must win, NOT the ">=" row.
+  testthat::expect_identical(ti[Package == "stringfish"]$inequality, "<=",
+    info = "dedup must keep the user's `(<= X)` upper-bound row over the transitive `(>= Y)` row")
+  testthat::expect_identical(ti[Package == "stringfish"]$packageFullName,
+                             "stringfish (<= 0.15.8)")
+  # qs has only one row; it survives unchanged.
+  testthat::expect_identical(ti[Package == "qs"]$packageFullName, "qs (== 0.27.3)")
+})
+
+test_that("pakInstallFiltered dedup priority order is == > <= > < > >= > > > none", {
+  # Six rows, all for the same fake Package "X", spanning every inequality
+  # operator and one bare row. After dedup the survivor must be the one with
+  # `==` (the highest-priority constraint).
+  ti <- data.table::data.table(
+    Package         = rep("X", 6L),
+    packageFullName = c("X", "X (> 1.0)", "X (>= 2.0)", "X (< 3.0)", "X (<= 4.0)", "X (== 5.0)"),
+    inequality      = c(NA_character_, ">",        ">=",        "<",         "<=",        "==")
+  )
+  ti[, isNonCRAN := FALSE]
+  ti[, hasNonCRAN := FALSE]
+  ti[, .versionSpecPrio := match(inequality, c("==","<=","<",">=",">"), nomatch = 6L)]
+  data.table::setorderv(ti, c("Package", ".versionSpecPrio"))
+  survivor <- unique(ti, by = "Package")
+  testthat::expect_identical(survivor$packageFullName, "X (== 5.0)",
+    info = "with all 6 inequality forms present, `==` must win")
+})
+
+test_that("pakDepsCacheKey omits userPkgs when not supplied (back-compat)", {
+  # Old call sites that haven't been updated should still get a stable key
+  # that doesn't include userPkgs. This means an old call gets a different
+  # key than a new call that supplies userPkgs == pkgsForPak — that's the
+  # intended behavior: rather than treating "no userPkgs" as "userPkgs ==
+  # pkgsForPak", we want them to be distinct so cache entries from the new
+  # path don't accidentally collide with entries from the old path.
+  pkgs  <- c("stringfish", "qs")
+  wh    <- NA
+  repos <- c(CRAN = "https://cran.r-project.org")
+
+  k_old <- Require:::pakDepsCacheKey(pkgs, wh, repos)
+  k_new_same <- Require:::pakDepsCacheKey(pkgs, wh, repos, userPkgs = pkgs)
+  testthat::expect_false(identical(k_old, k_new_same),
+    info = "key with userPkgs supplied must differ from key with userPkgs omitted")
+})

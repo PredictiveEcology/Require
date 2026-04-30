@@ -86,6 +86,79 @@ test_that("reportInstallFailures adds still-missing rows for unexplained pkgs", 
   expect_match(paste(out, collapse = "\n"), "Install summary: 3 package")
 })
 
+# ---------------------------------------------------------------------------
+# Regression: pakInstallFiltered's end-of-install summary used to produce
+# spurious entries for packages that failed in pak's first parallel pass but
+# built successfully in the deferred-culprit serial pass.
+#
+# Concrete scenario from the field: install a GitHub HEAD package
+# (`PredictiveEcology/reproducible@HEAD`) whose build-time deps (digest,
+# fpCompare, lobstr) aren't in the project lib yet. pak emits
+# "✖ Failed to build reproducible 3.0.0.9050" in iter 1; identify-and-defer
+# treats it as a culprit, deferring to a final serial pass that succeeds
+# (deps now in lib). reproducible IS in installed.packages() at the end,
+# but the iter-1 "Failed to build" line is still in allCapturedMsgs — and
+# the summary used to print it as a build-error anyway.
+#
+# Independently, when `qs` (archived from CRAN) hits the archive-fallback
+# and its source build genuinely fails to compile, the per-package
+# "Failed to build qs" line is emitted DURING the archive pass. The summary
+# used to be computed BEFORE the archive pass ran, so qs would appear as
+# the catch-all "still-missing" / "cascade casualty of a wedged subprocess"
+# — even though pak did emit a real per-package error for it.
+#
+# Both bugs share the same fix shape: parse failure metadata once, after
+# every install pass has finished, AND drop entries for packages that ended
+# up installed (i.e. filter by finalMissing).
+# ---------------------------------------------------------------------------
+test_that("install summary drops resolved culprits and labels archive-pass build errors", {
+  # A captured-messages buffer that includes BOTH:
+  #   * an iter-1 "Failed to build reproducible" that was later resolved
+  #     by the deferred-culprit serial pass (so reproducible IS installed);
+  #   * an archive-pass "Failed to build qs" + ERROR: compilation failed
+  #     line emitted DURING the archive fallback (so qs is genuinely missing).
+  msgs <- c(
+    "✖ Failed to build reproducible 3.0.0.9050 (395ms)",
+    "Warning: could not be installed: ...; ERROR: dependencies 'digest', 'fpCompare', 'lobstr' are not available for package 'reproducible'",
+    "✔ Installed digest 0.6.39 (219ms)",
+    "✔ Installed fpCompare 0.2.4 (260ms)",
+    "✔ Installed lobstr 1.2.1 (222ms)",
+    "ℹ Building reproducible 3.0.0.9050",
+    "✔ Built reproducible 3.0.0.9050 (8.6s)",
+    "✔ Installed reproducible 3.0.0.9050",
+    # Archive-fallback pass (runs AFTER iter-loop finishes):
+    "archive fallback: trying CRAN archive for 1 still-missing ref(s): qs",
+    "ℹ Building qs 0.27.3",
+    "✖ Failed to build qs 0.27.3 (7.2s)",
+    "ERROR: compilation failed for package 'qs'"
+  )
+  parsed <- Require:::extractInstallFailures(msgs)
+  expect_setequal(parsed$package, c("reproducible", "qs"))
+
+  # The fix: filter by finalMissing (only packages NOT in installed.packages())
+  # before passing to reportInstallFailures.
+  finalMissing <- c("qs")  # reproducible succeeded in deferred pass
+  filtered <- parsed[package %in% finalMissing]
+  expect_equal(NROW(filtered), 1L)
+  expect_equal(filtered$package, "qs")
+  expect_equal(filtered$reason_type, "compile-error")
+
+  out <- capture.output(
+    res <- Require:::reportInstallFailures(filtered, missingPkgNames = finalMissing,
+                                           verbose = 1),
+    type = "output"
+  )
+  # reproducible should NOT appear (it actually installed)
+  expect_false(any(grepl("reproducible", out)))
+  # qs should appear with the compile-error label, not still-missing /
+  # "cascade casualty of a wedged subprocess".
+  joined <- paste(out, collapse = "\n")
+  expect_match(joined, "qs")
+  expect_match(joined, "compile-error")
+  expect_false(grepl("still-missing", joined))
+  expect_false(grepl("cascade casualty", joined))
+})
+
 test_that("reportInstallFailures returns invisibly with no output when nothing missing", {
   empty <- data.table::data.table(
     package = character(0), reason_type = character(0),

@@ -695,6 +695,22 @@ equalsToAt <- function(pkgs) {
   gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs)
 }
 
+# Reduce a vector of pak refs to the bare package names that line up with
+# rownames(installed.packages()). Three things to strip:
+#   * "any::"  prefix on plain CRAN refs   (any::cli           → cli)
+#   * "owner/" prefix on GitHub refs       (tidyverse/ggplot2  → ggplot2)
+#   * "@version" suffix on exact-pin refs  (qs@0.27.3          → qs)
+# extractPkgName() handles owner/repo and (>=X) parenthetical version specs,
+# but does NOT strip pak's "@version" exact-pin form (introduced upstream by
+# equalsToAt() / lessThanToAt() to translate "pkg (== X)" / "pkg (<= X)"
+# into pak's `pkg@X` syntax). Without the @-strip every version-pinned ref
+# survives as "pkg@X" and the install-summary / iter-loop / archive-fallback
+# checks all misclassify it as still-missing — even right after a successful
+# install — because installed.packages() returns "pkg".
+pakRefToBareName <- function(refs) {
+  sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
+}
+
 lessThanToAt <- function(pkgs) {
   hasLT <- grepl("<", pkgs) # only < not <=
   if (any(hasLT %in% TRUE)) {
@@ -758,6 +774,15 @@ HEADtoNone <- function(pkgs) {
 isGT <- function(pkgs) grepl(">", pkgs)
 
 pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
+  # Guard against being called with no package to look up. pakErrorHandling
+  # parses pak's error output and can pass through an empty `pkgNoVersion`
+  # when the parse yields no packages (e.g. a pak-internal error like
+  # `if (!version_satisfies(...))` that doesn't match any known pattern).
+  # Without this guard, pkgNoVer below also becomes character(0), and the
+  # downstream `warning(.txtCouldNotBeInstalled, ": ", pkgNoVer)` fires with
+  # an empty body — surfacing as the noise warning
+  # `Warning message: could not be installed:` (no package name, no reason).
+  if (!length(pkg2) || all(!nzchar(pkg2))) return(packages)
   pkg2Orig <- pkg2
   # Strip pak source prefixes (any::, cran::, url::, etc.) to get the bare package name
   pkg2 <- gsub("^[A-Za-z][A-Za-z0-9+.-]*::", "", pkg2)
@@ -787,9 +812,16 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
       pth <- file.path(paste0(onCurrent$Package, "_", onCurrent$Version, fileext))
     } else {
       if (is(his, "try-error")) {
-        # Package not found in archive either — remove it and warn
+        # Package not found in archive either — remove it and warn.
+        # Belt-and-braces: even if an upstream parse handed us an empty
+        # `pkgNoVer`, the early-return at the top of pakGetArchive should
+        # have caught it; guard the warning anyway so we never emit an
+        # empty `could not be installed:` message.
         packages <- packages[-whRm]
-        warning(.txtCouldNotBeInstalled, ": ", pkgNoVer, call. = FALSE)
+        if (any(nzchar(pkgNoVer)))
+          warning(.txtCouldNotBeInstalled, ": ",
+                  paste(pkgNoVer[nzchar(pkgNoVer)], collapse = ", "),
+                  call. = FALSE)
         return(packages)
       }
       type <- "source"
@@ -985,15 +1017,30 @@ pakWhoNeeds <- function(pkg, pak_result = NULL) {
 # ---------------------------------------------------------------------------
 .pakDepsCacheTTL <- 24 * 3600   # 24 hours default
 
-pakDepsCacheKey <- function(pkgsForPak, wh, repos) {
+pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   # coerce to character vectors: options(repos = list(...)) is a supported
   # pattern, and sort() errors on list input with 'x must be atomic'
-  saveRDS(list(pkgs  = sort(as.character(unlist(pkgsForPak, use.names = FALSE))),
-               wh    = sort(as.character(unlist(wh))),
-               repos = sort(as.character(unlist(repos, use.names = FALSE)))),
-          tmp, compress = FALSE)
+  payload <- list(pkgs  = sort(as.character(unlist(pkgsForPak, use.names = FALSE))),
+                  wh    = sort(as.character(unlist(wh))),
+                  repos = sort(as.character(unlist(repos, use.names = FALSE))))
+  # `userPkgs` (when supplied) carries the user's original version-bearing
+  # refs, e.g. c("stringfish (<= 0.15.8)", "qs (== 0.27.3)"). pak::pkg_deps()
+  # only sees `pkgsForPak` — the version-stripped form — so without folding
+  # the constraints into the cache key, two calls with the same package
+  # *names* but different constraints (e.g. `... (<= 0.15.8)` vs no spec at
+  # all) would share a cache entry. The cached pak_result is then reused by
+  # downstream pakDepsToPkgDT processing whose behavior DOES branch on the
+  # user-supplied constraints (e.g. trimRedundancies + lessThanToAt rely on
+  # constraint rows actually being present in pkgDT) — so a stale cached
+  # entry from a different constraint set silently corrupts the next install
+  # plan. Symptom: a second call after `remove.packages(pkg)` would see pak
+  # asked for `any::pkg` instead of the user's pinned `pkg@ver` ref and
+  # quietly install the wrong (latest) version.
+  if (!is.null(userPkgs))
+    payload$userPkgs <- sort(as.character(unlist(userPkgs, use.names = FALSE)))
+  saveRDS(payload, tmp, compress = FALSE)
   unname(tools::md5sum(tmp))
 }
 
@@ -1001,10 +1048,10 @@ pakDepsCacheDir <- function() {
   file.path(cacheDir(), "pak", "pkg_deps")
 }
 
-pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
+pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL) {
 
   # --- 1. Compute cache key ---
-  key      <- pakDepsCacheKey(pkgsForPak, wh, repos)
+  key      <- pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs)
   envKey   <- paste0("pakDeps_", key)
   cacheDir <- pakDepsCacheDir()
   cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
@@ -1243,8 +1290,9 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge) {
 # (installed state changed; cache key stays the same but should be revalidated
 # sooner than the normal TTL would allow).
 # ---------------------------------------------------------------------------
-pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos) {
-  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos), error = function(e) NULL)
+pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
+  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs),
+                       error = function(e) NULL)
   if (is.null(key)) return(invisible(NULL))
   envKey   <- paste0("pakDeps_", key)
   cacheFile <- file.path(pakDepsCacheDir(), paste0(key, ".rds"))
@@ -1327,10 +1375,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # 1. Resolve the full dep tree via pak, with two-tier caching (in-memory + disk).
   #    pakDepsResolve() handles the retry loop, conflict resolution, per-package
   #    fallback, and cache read/write. Returns NULL only if all strategies fail.
+  #    `userPkgs = resolvedPkgs` keys the cache on the user's version-bearing
+  #    refs (e.g. "stringfish (<= 0.15.8)") in addition to the version-stripped
+  #    `pkgsForPak`. Without this, calls that differ only in constraints share
+  #    the same entry and downstream pkgDT construction misuses the cached
+  #    dep tree — see pakDepsCacheKey() for the failure mode this prevents.
   pak_result <- pakDepsResolve(pkgsForPak, wh,
-                               repos   = getOption("repos"),
-                               verbose = verbose,
-                               purge   = purge)
+                               repos    = getOption("repos"),
+                               verbose  = verbose,
+                               purge    = purge,
+                               userPkgs = resolvedPkgs)
 
   if (is.null(pak_result)) {
     messageVerbose("pak::pkg_deps: all strategies failed; using direct package list only.",
@@ -1759,9 +1813,21 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
     if (is(err, "try-error")) {
       failed <- c(failed, pkg)
       reason <- pakBuildFailReason(as.character(err), pkgMsgs)
-      warning(.txtCouldNotBeInstalled, ": ", pkg,
-              if (nzchar(reason)) paste0("; ", reason) else "",
-              call. = FALSE, immediate. = TRUE)
+      # NOT a warning: pakSerialInstall is one of several retry layers
+      # (parallel batch → identify-and-defer iter → serial fallback →
+      # CRAN-archive fallback). A failure here may still be resolved by
+      # the archive-fallback pass downstream — for example, an exact-pin
+      # ref like `qs@0.27.3` that pak can't resolve via its current CRAN
+      # mirror typically succeeds when pakInstallFiltered's archive pass
+      # retries it as `url::https://.../Archive/qs/qs_0.27.3.tar.gz`.
+      # Emitting an immediate warning here would scare the user mid-install
+      # about a failure that's about to be repaired. Truly final failures
+      # are surfaced by the post-install `silentlyFailed` warning at the
+      # end of pakInstallFiltered, which checks the actual lib state and
+      # only fires for packages that did NOT make it in by the end.
+      messageVerbose("pakSerialInstall: ", .txtCouldNotBeInstalled, ": ", pkg,
+                     if (nzchar(reason)) paste0("; ", reason) else "",
+                     verbose = verbose, verboseLevel = 2)
     }
   }
   invisible(failed)
@@ -1799,9 +1865,29 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     toInstall[, hasNonCRAN := any(isNonCRAN), by = Package]
     # Remove plain CRAN rows when a non-CRAN ref exists for the same package
     toInstall <- toInstall[!(hasNonCRAN == TRUE & isNonCRAN == FALSE)]
+    # Among multiple plain-CRAN rows for the same Package (e.g. one row carries
+    # the user's "(<= 0.15.8)" upper-bound and a separate row carries a
+    # transitive dep's "(>= 0.15.1)" lower-bound — trimRedundancies keeps both
+    # because they are complementary, not redundant), pick the row with the
+    # strictest constraint before unique(by = "Package") collapses them.
+    # Without this sort, unique() arbitrarily keeps whichever row sorted first
+    # in pkgDT — typically the transitive ">=" row, since dep tree rows are
+    # appended after user rows. The user's "<=" pin is then dropped, the
+    # downstream gsub("\\(>=...\\)", "") strips the row to a bare name, the
+    # any:: prefix turns it into "any::stringfish", and pak silently installs
+    # the latest (constraint-violating) version — symptom seen in the field
+    # as `Install("stringfish (<= 0.15.8)")` producing stringfish 0.19.0.
+    # Strictness order:  ==  >  <=  >  <  >  >=  >  >  >  none.
+    # equalsToAt() and lessThanToAt() (called below) translate ==/<=/< into
+    # exact "@version" pins; >= and > get stripped to bare names so any::pkg
+    # ends up resolving to latest.  Keeping the strictest row therefore
+    # ensures the install is correctly pinned where the user asked for one.
+    toInstall[, .versionSpecPrio := match(
+      inequality, c("==", "<=", "<", ">=", ">"), nomatch = 6L)]
+    setorderv(toInstall, c("Package", ".versionSpecPrio"))
     # If duplicates still remain (e.g., two GitHub branches), keep first
     toInstall <- unique(toInstall, by = "Package")
-    toInstall[, c("isNonCRAN", "hasNonCRAN") := NULL]
+    toInstall[, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio") := NULL]
   }
 
   # Convert Require's package specs to pak format
@@ -1947,59 +2033,67 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           character(0)
         }
       )
-      # Warn immediately (immediate. = TRUE bypasses R's warning buffer so the
-      # message appears right when map fails, not buried in "There were N warnings"
-      # at the end of the session) about any packages permanently dropped by
-      # pakErrorHandling.  The typical scenario: "map fails to build → all other
-      # 62 packages install fine" should produce a visible notification for map
-      # (and any cascade failures like climateData that depend on map).
+      # NOT a warning here — emit at verboseLevel = 2 only.
+      # pakRetryLoop is one layer in a multi-layer retry pipeline: a failure
+      # this iteration may still be repaired by a subsequent iter (different
+      # subprocess state, different ref form), by the identify-and-defer
+      # serial fallback in pakInstallFiltered, or by the CRAN-archive
+      # fallback. Emitting an inline `Warning: could not be installed: ...`
+      # mid-retry routinely scares the user about a failure that is then
+      # repaired silently — most visibly when an exact-pin ref triggers
+      # pak's `if (!version_satisfies(...))` resolver bug on the first
+      # attempt but installs cleanly on the deferred retry. The truly final
+      # outcome is reported by pakInstallFiltered's `silentlyFailed`
+      # warning at the end (which inspects the actual lib state) and by
+      # the install summary table — both of which only fire for packages
+      # that did NOT make it in by the end of all retries.
+      # We update `alreadyWarned` (a local) so the post-loop fallback at
+      # line ~2095 doesn't fire a duplicate debug message for this same
+      # iteration. We do NOT update `warnedDropped` — that suppresses the
+      # post-install `silentlyFailed` warning, which is the user-visible
+      # end-state report. Pre-fix, in-loop warnings updated warnedDropped
+      # to dedupe with silentlyFailed; now that the in-loop emission is a
+      # debug-only message (not a warning), we want silentlyFailed to be
+      # the authoritative source of user-visible failure warnings, even
+      # for packages that pakErrorHandling dropped earlier.
       if (!alreadyWarned) {
         droppedPkgNames <- setdiff(extractPkgName(pkgsIn), extractPkgName(packages))
         if (length(droppedPkgNames)) {
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
-          warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
-                            paste(droppedPkgNames, collapse = ", "),
-                            if (nzchar(reason)) paste0("; ", reason) else "")
-          warning(warnMsg, call. = FALSE, immediate. = TRUE)
-          # Use `<-` (not `<<-`): we are in pakRetryLoop's own body, where
-          # `alreadyWarned` is declared as a local. `<<-` from this frame
-          # skips the local and walks to pakInstallFiltered's enclosing
-          # scope, which has no `alreadyWarned` — so the local stays FALSE
-          # and the post-loop `if (!alreadyWarned)` block fires a redundant
-          # second warning. `warnedDropped` is genuinely an enclosing
-          # variable (defined in pakInstallFiltered above) so `<<-` is
-          # correct for it.
+          msg <- paste0("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ",
+                        paste(droppedPkgNames, collapse = ", "),
+                        if (nzchar(reason)) paste0("; ", reason) else "")
+          messageVerbose(msg, verbose = verbose, verboseLevel = 2)
           alreadyWarned <- TRUE
-          warnedDropped <<- c(warnedDropped, droppedPkgNames)
         } else if (identical(packages, pkgsIn)) {
           # pakErrorHandling did not recognise the error pattern and left the
           # package list unchanged — there is no point retrying with the same
-          # packages.  Surface the raw pak reason and mark all remaining packages
-          # as failed so the post-install check doesn't double-warn.
+          # packages. Mark all remaining packages as failed for this loop;
+          # the outer iter will fall through to serial / archive fallback.
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           failedNames <- extractPkgName(packages)
-          warnMsg <- paste0(.txtCouldNotBeInstalled, ": ",
-                            paste(failedNames, collapse = ", "),
-                            if (nzchar(reason)) paste0("; ", reason) else "")
-          warning(warnMsg, call. = FALSE, immediate. = TRUE)
-          # `<-` not `<<-` — see explanation above; updates the local
-          # `alreadyWarned` so the post-loop fallback warning is suppressed.
+          msg <- paste0("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ",
+                        paste(failedNames, collapse = ", "),
+                        if (nzchar(reason)) paste0("; ", reason) else "")
+          messageVerbose(msg, verbose = verbose, verboseLevel = 2)
           alreadyWarned <- TRUE
-          warnedDropped <<- c(warnedDropped, failedNames)
           packages <- character(0)
         }
       }
       if (!length(packages)) {
         if (!alreadyWarned) {
-          # Include the actual build/install failure reason so the user knows
-          # why the package could not be installed (e.g. file locked on Windows,
-          # namespace version mismatch, bad regex in source, etc.).
+          # Include the actual build/install failure reason for diagnostics.
+          # Same rationale as the per-iter messageVerbose calls above:
+          # pakRetryLoop is mid-pipeline, so a failure here may still be
+          # repaired by serial / archive fallbacks. The post-install
+          # `silentlyFailed` warning is the authoritative end-state report.
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           if (nzchar(reason)) {
-            warning(.txtCouldNotBeInstalled, ": ", reason,
-                    call. = FALSE, immediate. = TRUE)
+            messageVerbose("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ", reason,
+                           verbose = verbose, verboseLevel = 2)
           } else {
-            warning(.txtCouldNotBeInstalled, call. = FALSE, immediate. = TRUE)
+            messageVerbose("pakRetryLoop: ", .txtCouldNotBeInstalled,
+                           verbose = verbose, verboseLevel = 2)
           }
         }
         break
@@ -2060,12 +2154,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       })
   }
 
-  # Strip pak's "any::" CRAN prefix and any leftover "owner/" GitHub prefix so
-  # `pkgNamesAll` matches what `installed.packages()` returns (bare package
-  # names). extractPkgName() handles owner/repo and "@branch" but leaves
-  # "any::" intact, so the install-summary check would otherwise misclassify
-  # every CRAN-style ref as still-missing.
-  pkgNamesAll <- sub("^any::", "", sub("^[^/]+/", "", extractPkgName(pkgs)))
+  # See pakRefToBareName() — strips "any::" / "owner/" / "@version" so the
+  # resulting names line up with rownames(installed.packages()). The post-loop
+  # install-summary check, archive-fallback decision, and iter-loop's
+  # "still-missing" comparison all depend on this normalization; without it
+  # every version-pinned ref ("qs@0.27.3") is misclassified as missing
+  # because installed.packages() returns the bare name ("qs").
+  pkgNamesAll <- pakRefToBareName(pkgs)
   if (identical(strategy, "original")) {
     capturePak(pakRetryLoop(pkgs, repos, verbose))
   } else {
@@ -2092,16 +2187,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       # no reason, doubling install time.
       instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
                           error = function(e) character(0))
-      # Strip pak's "any::" CRAN prefix and any leftover "owner/" GitHub prefix
-      # so the names line up with what installed.packages() returns (bare
-      # package names). Without this, every CRAN-style ref ("any::cli") looks
-      # "still missing" because instNow contains "cli" not "any::cli", and the
-      # loop falls into the no-parseable-culprits serial fallback every time —
-      # turning a clean 3-minute install into a 6-minute one with bogus
-      # "still missing after iter 1" messages. Same transformation as the
-      # final pkgNamesAll computation above (line ~2068).
-      passNames <- sub("^any::", "", sub("^[^/]+/", "",
-                                         extractPkgName(passList)))
+      # Same bare-name reduction as pkgNamesAll above. Without stripping
+      # "any::" / "owner/" / "@version", instNow's bare names ("cli", "qs")
+      # never match passNames' decorated form ("any::cli", "qs@0.27.3") and
+      # every iteration's "still missing" check returns the full pass-list —
+      # which then falls into the no-parseable-culprits serial fallback,
+      # doubling install time and emitting bogus "still missing after iter 1"
+      # messages for packages that pak in fact already installed.
+      passNames <- pakRefToBareName(passList)
       missingNamesIter <- passNames[!passNames %in% instNow]
       if (!length(missingNamesIter)) {
         if (iter > 1L) {
@@ -2192,13 +2285,25 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # project lib, and (where parseable from pak's captured output) why.
   # Stored in pakEnv() as `.lastInstallFailures` for programmatic access; a
   # human-readable line-per-package report is printed when verbose >= 0.
+  #
+  # The canonical `installFailures` parse happens AFTER the archive fallback
+  # below, so that any per-package "Failed to build X" line emitted during the
+  # archive pass (e.g. an archived CRAN package whose source build fails to
+  # compile) is included rather than fall through to the catch-all
+  # "still-missing" branch in reportInstallFailures.
+  #
+  # We do an early lightweight parse purely to identify which still-missing
+  # refs have NO parseable reason yet — those are the only ones worth retrying
+  # via the CRAN archive (refs that pak already named as build failures won't
+  # build any better from an archive URL).
   # ---------------------------------------------------------------------------
-  installFailures <- tryCatch(
+  emptyFailuresDT <- data.table(package = character(0),
+                                reason_type = character(0),
+                                reason_brief = character(0),
+                                reason_detail = character(0))
+  preArchiveFailures <- tryCatch(
     extractInstallFailures(allCapturedMsgs),
-    error = function(e) data.table(package = character(0),
-                                   reason_type = character(0),
-                                   reason_brief = character(0),
-                                   reason_detail = character(0)))
+    error = function(e) emptyFailuresDT)
   # Consider a package "missing" only if it can't be found in ANY active
   # .libPaths() — not just in libPaths[1]. With upgrade = FALSE, pak
   # legitimately skips packages already installed in user/site libs that
@@ -2226,7 +2331,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
   # at least installs the archives that don't have such cross-deps).
   # ---------------------------------------------------------------------------
   if (length(finalMissing)) {
-    explained <- installFailures$package
+    explained <- preArchiveFailures$package
     archiveCandidates <- setdiff(finalMissing, explained)
     if (length(archiveCandidates)) {
       messageVerbose(
@@ -2280,6 +2385,20 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       finalMissing <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
     }
   }
+
+  # Canonical failure parse: re-read allCapturedMsgs *after* every install
+  # pass (iterative + serial-deferred + archive fallback) so per-package
+  # "Failed to build X" lines emitted by the archive pass are captured.
+  # Then drop any rows for packages that did end up installed — a package
+  # that failed in iter 1 but built successfully in the deferred-culprit
+  # serial pass (e.g. reproducible@HEAD whose build-time deps weren't yet
+  # in lib during iter 1) would otherwise be reported as a build-error in
+  # the install summary even though it's present in the lib.
+  installFailures <- tryCatch(
+    extractInstallFailures(allCapturedMsgs),
+    error = function(e) emptyFailuresDT)
+  if (NROW(installFailures))
+    installFailures <- installFailures[package %in% finalMissing]
 
   installFailures <- reportInstallFailures(installFailures, finalMissing,
                                            verbose = verbose)
