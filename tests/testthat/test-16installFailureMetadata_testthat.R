@@ -183,21 +183,24 @@ test_that("reportInstallFailures returns invisibly with no output when nothing m
 # ---------------------------------------------------------------------------
 test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
   # Lighter-weight check: the archive-URL-construction step works for a
-  # known archived-from-CRAN package. The full Require::Install("pryr")
-  # round-trip (which exercises the archive fallback path inside
-  # pakInstallFiltered) is environment-sensitive and runs in the larger
-  # integration test below.
+  # known archived-from-CRAN package. The full Require::Install round-trip
+  # (which exercises the archive fallback path inside pakInstallFiltered)
+  # is environment-sensitive and runs in the larger integration test below.
+  # Use `fastdigest` because it is archived from CRAN with no Mac/Windows
+  # binary still on the mirror; `pryr` and `disk.frame` are archived from
+  # source but their Mac binaries linger, making pakGetArchive correctly
+  # return the binary URL on macOS rather than the Archive tar.gz.
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
 
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
   ref <- tryCatch(
-    Require:::pakGetArchive("pryr", packages = "pryr", whRm = 1L),
+    Require:::pakGetArchive("fastdigest", packages = "fastdigest", whRm = 1L),
     error = function(e) e, warning = function(w) w)
   if (inherits(ref, "condition")) skip(paste("pak subprocess unavailable:",
                                               conditionMessage(ref)))
-  expect_match(ref, "^url::https?://.*Archive/pryr/pryr_.*\\.tar\\.gz$")
+  expect_match(ref, "^url::https?://.*Archive/fastdigest/fastdigest_.*\\.tar\\.gz$")
 })
 
 # ---------------------------------------------------------------------------
