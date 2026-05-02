@@ -429,6 +429,8 @@ installedVers <- function(pkgDT, libPaths, standAlone = FALSE) {
 # via `require(x, character.only = TRUE)` without `lib.loc`, avoiding R's
 # "cannot be unloaded because <X> is imported by <Y>" error path.
 useLoadedIfSufficient <- function(pkgDT,
+                                  libPaths = .libPaths(),
+                                  standAlone = FALSE,
                                   verbose = getOption("Require.verbose")) {
   if (!NROW(pkgDT)) return(pkgDT)
   if (!"needInstall" %in% names(pkgDT)) return(pkgDT)
@@ -439,6 +441,10 @@ useLoadedIfSufficient <- function(pkgDT,
   if (!length(loaded)) return(pkgDT)
   if (!"loadedSufficient" %in% names(pkgDT))
     set(pkgDT, NULL, "loadedSufficient", FALSE)
+  # standAlone = TRUE means the user wants the package physically present in
+  # libPaths[1]; a namespace loaded from another library does NOT satisfy that.
+  effectiveLibPaths <- if (isTRUE(standAlone))
+    normPath(libPaths[1L]) else normPath(libPaths)
   intercepted <- character(0)
   reasons <- character(0)
   for (i in candidates) {
@@ -458,6 +464,7 @@ useLoadedIfSufficient <- function(pkgDT,
     lp <- tryCatch(dirname(system.file(package = pkg)),
                    error = function(e) NA_character_)
     if (!nzchar(lp)) lp <- NA_character_
+    if (!is.na(lp) && !normPath(lp) %in% effectiveLibPaths) next
     set(pkgDT, i, "installed",          TRUE)
     set(pkgDT, i, "installedVersionOK", TRUE)
     set(pkgDT, i, "needInstall",        .txtDontInstall)

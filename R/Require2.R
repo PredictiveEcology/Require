@@ -396,7 +396,8 @@ Require <- function(packages,
       # GitHub refs: the user's intent in pinning a `(>= X.Y.Z)` constraint
       # is the version, not whichever commit happens to be at HEAD right now.
       if (!identical(install, "force"))
-        pkgDT <- useLoadedIfSufficient(pkgDT, verbose = verbose)
+        pkgDT <- useLoadedIfSufficient(pkgDT, libPaths = libPaths,
+                                       standAlone = standAlone, verbose = verbose)
 
       # Deal with "force" installs
       set(pkgDT, NULL, "forceInstall", FALSE)
