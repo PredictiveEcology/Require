@@ -12,9 +12,10 @@ test_that("test 11", {
   if (!isTRUE(getOption("Require.usePak"))) {
     expect_match(err$message, regexp = .txtDidYouSpell)
   } else {
-    # pak surfaces a misspelled GitHub user as a "could not be installed"
-    # warning instead of an error. Assert pak's surface signal reaches the user.
-    expect_true(any(grepl(.txtCouldNotBeInstalled, warns)),
+    # pak surfaces a misspelled GitHub user as a warning, not an error.
+    # Require's pak-path archive fallback now appends the same spelling hint
+    # the non-pak path emits, so the user gets actionable guidance.
+    expect_true(any(grepl(.txtDidYouSpell, warns, fixed = TRUE)),
                 info = paste("warns =", paste(warns, collapse = " | ")))
   }
 

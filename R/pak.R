@@ -809,10 +809,19 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
       # have caught it; guard the warning anyway so we never emit an
       # empty `could not be installed:` message.
       packages <- packages[-whRm]
-      if (any(nzchar(pkgNoVer)))
+      if (any(nzchar(pkgNoVer))) {
+        nz <- pkgNoVer[nzchar(pkgNoVer)]
+        # If a failed ref looks like an owner/repo GitHub form, the most likely
+        # cause is a typo in the owner or repo name (pak silently treats a 404
+        # GitHub URL as "not on CRAN, no archive either"). Surface the same
+        # spelling-hint that the non-pak path emits so users get an actionable
+        # message instead of opaque "could not be installed".
+        ghFailed <- grepl("/", nz, fixed = TRUE)
+        suffix <- if (any(ghFailed)) paste0("\n", .txtDidYouSpell) else ""
         warning(.txtCouldNotBeInstalled, ": ",
-                paste(pkgNoVer[nzchar(pkgNoVer)], collapse = ", "),
+                paste(nz, collapse = ", "), suffix,
                 call. = FALSE)
+      }
       return(packages)
     }
     # pakGetArchive is the FALLBACK path: pak's primary resolution already
