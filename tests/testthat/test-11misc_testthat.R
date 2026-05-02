@@ -9,8 +9,14 @@ test_that("test 11", {
       warns <- capture_warnings(
         Install("kevanrastelle/MPBforecasting")
       )))
-  if (!isTRUE(getOption("Require.usePak")))
+  if (!isTRUE(getOption("Require.usePak"))) {
     expect_match(err$message, regexp = .txtDidYouSpell)
+  } else {
+    # pak surfaces a misspelled GitHub user as a "could not be installed"
+    # warning instead of an error. Assert pak's surface signal reaches the user.
+    expect_true(any(grepl(.txtCouldNotBeInstalled, warns)),
+                info = paste("warns =", paste(warns, collapse = " | ")))
+  }
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
