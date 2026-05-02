@@ -2102,12 +2102,26 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
     invisible(NULL)
   }
 
-  # Snapshot pre-install versions before pak runs so we can detect build failures:
-  # if a package's version is unchanged after the install attempt it means the
-  # install failed (build error, cancelled batch, etc.) rather than pak choosing
-  # an older version that doesn't satisfy the constraint.  The two cases require
-  # different user-facing messages.
-  preInstallVers <- setNames(as.character(toInstall$Version), toInstall$Package)
+  # Snapshot pre-install versions IN libPaths[1] (the install target) before pak
+  # runs so we can detect build failures: if a package's version in libPaths[1]
+  # is unchanged after the install attempt it means the install failed (build
+  # error, cancelled batch, etc.) rather than pak choosing an older version
+  # that doesn't satisfy the constraint. pkgDT$Version reflects whatever was
+  # found across .libPaths(), which can be a different copy in another library —
+  # using that as preVer would suppress the version-mismatch warning when
+  # libPaths[1] was empty pre-call but a different libPath had a copy.
+  preInstallVers <- {
+    ipPre <- tryCatch(
+      as.data.frame(installed.packages(lib.loc = libPaths[1L], noCache = TRUE),
+                    stringsAsFactors = FALSE),
+      error = function(e) data.frame(Package = character(0), Version = character(0)))
+    pv <- setNames(rep(NA_character_, length(toInstall$Package)), toInstall$Package)
+    if (NROW(ipPre)) {
+      have <- intersect(toInstall$Package, ipPre$Package)
+      for (.p in have) pv[.p] <- ipPre$Version[ipPre$Package == .p][1L]
+    }
+    pv
+  }
 
   # ---------------------------------------------------------------------------
   # Install: iterative identify-and-defer
@@ -2439,30 +2453,35 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
         # package's raw DESCRIPTION says something stricter.
         # The version map is stored in pakEnv() by pakDepsToPkgDT; a pkgDT column
         # would be dropped by the transforms Require2.R runs after pakDepsToPkgDT returns.
+        pakRes <- NA_character_
         if (!isTRUE(satisfies)) {
           pakVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
           if (!is.null(pakVerMap)) {
-            pakRes <- pakVerMap[pkg]
-            if (!is.na(pakRes) && nzchar(pakRes))
-              satisfies <- compareVersion2(installedVer, versionSpec = pakRes, inequality = ">=")
+            cand <- pakVerMap[pkg]
+            if (!is.na(cand) && nzchar(cand)) {
+              pakRes <- unname(cand)
+              satisfies <- isTRUE(compareVersion2(pakRes, versionSpec = vSpec, inequality = ineq))
+            }
           }
         }
         if (!isTRUE(satisfies)) {
-          # Only suggest "Please change required version" when pak actually installed a
-          # different (but still insufficient) version.  If the version is unchanged the
-          # install attempt failed (build error, cancelled batch, etc.) and
-          # pakRetryLoop already emitted .txtCouldNotBeInstalled — a second, misleading
-          # "Please change required version e.g., pkg (>=<old-ver>)" would tell the user
-          # to lower their requirement to the pre-existing version, which is wrong.
+          # We are inside `if (NROW(nowRow))`, i.e. pak HAS something installed
+          # for `pkg` post-call — but `installedVer` doesn't satisfy the user's
+          # constraint. Three scenarios warrant the "Please change required
+          # version" warning; only "build failure leaving the pre-existing
+          # version untouched" suppresses it.
           preVer <- preInstallVers[pkg]
-          # Only warn if pak actually installed a *different* (but still insufficient)
-          # version.  If preVer is NA the package was absent from the library before the
-          # install attempt (first-time install); in that case the install simply failed
-          # and no version-change guidance is appropriate.  If preVer == installedVer the
-          # version is unchanged (build failure, not a wrong-version situation).
           versionChanged <- !is.na(preVer) && !isTRUE(identical(preVer, installedVer)) &&
                             !isTRUE(compareVersion(preVer, installedVer) == 0L)
-          if (versionChanged)
+          firstTimeInsufficient <- is.na(preVer)
+          # pak intentionally chose installedVer (its resolved version matches
+          # what's on disk): the install was a success, the version just doesn't
+          # meet the user's constraint. This is distinct from a build failure
+          # (where pakRes would be a different/newer version pak failed to put
+          # on disk) and warrants the "please change required version" guidance
+          # even when preVer == installedVer (e.g. on a re-Require() call).
+          pakChoseInstalled <- !is.na(pakRes) && identical(pakRes, installedVer)
+          if (versionChanged || firstTimeInsufficient || pakChoseInstalled)
             warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
           # Always add to warnedDropped: either we already warned above (versionChanged),
           # or pak ran and chose not to update this package, meaning Require's over-strict
