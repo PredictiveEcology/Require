@@ -4,7 +4,10 @@ test_that("test 10", {
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
-  if (isDevAndInteractive && !isMacOS()) { ## TODO: source installs failing on macOS
+  # Use isDev (R_REQUIRE_RUN_ALL_TESTS=true) and drop the !isMacOS() guard:
+  # source-install issues on macOS were addressed by pakGetArchive's
+  # source-Archive fallback and pak's own binary preference.
+  if (isDev) {
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgs <- c('reproducible',
               'SpaDES.core (>= 2.0.3)',
