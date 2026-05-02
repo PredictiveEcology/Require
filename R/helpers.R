@@ -640,6 +640,12 @@ SysInfo <-
 }
 
 .runLongExamples <- function() {
+  # Never run on CI: with `--run-dontrun --run-donttest` (default in
+  # r-lib/actions/check-r-package), enabling the long examples runs the
+  # full Require::Install() cascade for every example in Require.Rd —
+  # which on a cold CI runner takes hours and routinely times out.
+  # Devs can opt in locally via R_REQUIRE_RUN_ALL_EXAMPLES=true.
+  if (tolower(Sys.getenv("CI")) == "true") return(FALSE)
   .isDevelVersion() ||
     Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
 }
