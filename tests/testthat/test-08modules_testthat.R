@@ -6,9 +6,10 @@ test_that("test 8", {
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
-  # Use isDev (R_REQUIRE_RUN_ALL_TESTS=true) instead of isDevAndInteractive: the
-  # test body has no `browser()` calls and shouldn't require an interactive
-  # session — it just needs the dev opt-in.
+  # Skip on CI: this test installs ~100 packages (incl. heavy LandR/SpaDES
+  # transitive dep tree) which routinely takes >2h on GH-hosted runners and
+  # times out. Runs locally for devs via R_REQUIRE_RUN_ALL_TESTS=true.
+  skip_on_ci()
   if (isDev) {
     projectDir <- Require:::tempdir2(Require:::.rndstr(1))
     # setLinuxBinaryRepo()
