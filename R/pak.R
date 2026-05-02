@@ -802,31 +802,30 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
     }
   }
   if (!is(his, "try-error") || length(isCRAN) > 0) {
-    # opt <- options(repos = isCRAN)
-    # on.exit(options(opt))
-    type <- if (isWindows() || isMacOS()) "binary" else "source"
-    ap <- available.packagesWithCallingHandlers(isCRAN, type = type) |> as.data.table()
-    onCurrent <- ap[Package %in% pkg2]
-    if (NROW(onCurrent)) {
-      fileext <- if (identical(type, "binary")) ".zip" else ".tar.gz"
-      pth <- file.path(paste0(onCurrent$Package, "_", onCurrent$Version, fileext))
-    } else {
-      if (is(his, "try-error")) {
-        # Package not found in archive either — remove it and warn.
-        # Belt-and-braces: even if an upstream parse handed us an empty
-        # `pkgNoVer`, the early-return at the top of pakGetArchive should
-        # have caught it; guard the warning anyway so we never emit an
-        # empty `could not be installed:` message.
-        packages <- packages[-whRm]
-        if (any(nzchar(pkgNoVer)))
-          warning(.txtCouldNotBeInstalled, ": ",
-                  paste(pkgNoVer[nzchar(pkgNoVer)], collapse = ", "),
-                  call. = FALSE)
-        return(packages)
-      }
-      type <- "source"
-      pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
+    if (is(his, "try-error")) {
+      # Package not found in archive either — remove it and warn.
+      # Belt-and-braces: even if an upstream parse handed us an empty
+      # `pkgNoVer`, the early-return at the top of pakGetArchive should
+      # have caught it; guard the warning anyway so we never emit an
+      # empty `could not be installed:` message.
+      packages <- packages[-whRm]
+      if (any(nzchar(pkgNoVer)))
+        warning(.txtCouldNotBeInstalled, ": ",
+                paste(pkgNoVer[nzchar(pkgNoVer)], collapse = ", "),
+                call. = FALSE)
+      return(packages)
     }
+    # pakGetArchive is the FALLBACK path: pak's primary resolution already
+    # failed for `pkg2`. Always return the source Archive URL (not the current
+    # binary URL) — the binary URL is the one pak just tried and failed on
+    # (typically because available.packages(type="binary") still indexes the
+    # package even after CRAN removed the binary file, e.g. archived-from-source
+    # packages whose Mac/Windows binaries were also pruned). The source Archive
+    # URL is the authoritative location for any version pak::pkg_history() lists,
+    # so it works for both truly-archived packages and transient binary-fetch
+    # failures.
+    type <- "source"
+    pth <- file.path("Archive", his$Package, paste0(his$Package, "_", his$Version, ".tar.gz"))
     if (isTRUE(!startsWith(isCRAN, "https"))) isCRAN <- paste0("https://", isCRAN)
     pth <- paste0("url::",file.path(contrib.url(isCRAN, type = type), pth))
     # Guard against malformed refs: when isCRAN is empty (e.g. repos has no
