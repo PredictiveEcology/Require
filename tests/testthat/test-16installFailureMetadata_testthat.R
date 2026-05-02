@@ -265,7 +265,7 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
       file.copy(src, testlib, recursive = TRUE)
     }
   }
-  .libPaths(c(testlib, "/usr/lib/R/library"))
+  .libPaths(c(testlib, .Library))  # .Library is the cross-platform base R lib
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
 
   ref <- "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz"
@@ -302,7 +302,7 @@ test_that("pak::pak installs cross-dependent archived refs in one batch", {
       file.copy(src, testlib, recursive = TRUE)
     }
   }
-  .libPaths(c(testlib, "/usr/lib/R/library"))
+  .libPaths(c(testlib, .Library))  # .Library is the cross-platform base R lib
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
 
   refs <- c(
@@ -340,7 +340,7 @@ test_that("pakEnv()$.lastInstallFailures is populated after a successful install
       file.copy(src, testlib, recursive = TRUE)
     }
   }
-  .libPaths(c(testlib, "/usr/lib/R/library"))
+  .libPaths(c(testlib, .Library))  # .Library is the cross-platform base R lib
 
   withr::local_options(
     repos = c(CRAN = "https://cran.rstudio.com"),
@@ -395,7 +395,7 @@ test_that("identify-and-defer recovers from PSPclean-style cascade", {
       file.copy(src, testlib, recursive = TRUE)
     }
   }
-  .libPaths(c(testlib, "/usr/lib/R/library"))
+  .libPaths(c(testlib, .Library))  # .Library is the cross-platform base R lib
 
   withr::local_options(
     repos = c("https://predictiveecology.r-universe.dev",
