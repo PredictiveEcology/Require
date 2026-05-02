@@ -6,7 +6,10 @@ test_that("test 8", {
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
-  if (isDevAndInteractive) {
+  # Use isDev (R_REQUIRE_RUN_ALL_TESTS=true) instead of isDevAndInteractive: the
+  # test body has no `browser()` calls and shouldn't require an interactive
+  # session — it just needs the dev opt-in.
+  if (isDev) {
     projectDir <- Require:::tempdir2(Require:::.rndstr(1))
     # setLinuxBinaryRepo()
     pkgDir <- file.path(projectDir, "R")
