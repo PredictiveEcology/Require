@@ -51,11 +51,10 @@ test_that("Require.offlineMode installs from pak cache, fails cleanly when cache
 
   # ---- 3. Wipe testlib AND pak cache + offline → install fails cleanly ----
   suppressMessages(remove.packages(pkg, lib = testlib))
-  cl <- pak::cache_list()
-  pakCachedPaths <- cl$fullpath[!is.na(cl$package) & cl$package == pkg]
-  unlink(pakCachedPaths)
-  # cache_list() can be index-cached; a refresh is not strictly needed because
-  # pakCachedTarball() guards the entries with file.exists().
+  # Use pak's official API: cache_delete drops both the file and the index entry,
+  # whereas plain unlink leaves index rows that downstream lookups still see.
+  invisible(tryCatch(pak::cache_delete(package = pkg),
+                     error = function(e) NULL))
 
   warns3 <- capture_warnings(
     Require::Install(pkg, libPaths = testlib, standAlone = TRUE)

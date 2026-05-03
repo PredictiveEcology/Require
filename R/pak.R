@@ -724,9 +724,15 @@ pakCachedTarball <- function(pkg) {
     return(NA_character_)
   rows <- cl[!is.na(cl$package) & cl$package == pkg, , drop = FALSE]
   if (NROW(rows) == 0L) return(NA_character_)
-  # Prefer the platform-matching binary; fall back to source.  Binary entries
-  # have non-NA `platform`; source entries have platform == "source" or NA.
-  thisPlat <- R.version$platform
+  # Reject pak intermediate files: extracted directories, platform-suffixed
+  # build artifacts (e.g. `_X.tar.gz-aarch64-apple-darwin20-4.5.2`), and
+  # `.tar.gz-t` partial-download stubs. Only accept paths ending in a real
+  # installable archive extension that pak::pak("local::path") can resolve.
+  isInstallable <- grepl("\\.(tar\\.gz|tgz|zip)$", rows$fullpath)
+  rows <- rows[isInstallable, , drop = FALSE]
+  if (NROW(rows) == 0L) return(NA_character_)
+  # Prefer the platform-matching binary (has non-NA, arch-matching `platform`);
+  # fall back to source.
   isPlat <- !is.na(rows$platform) & grepl(R.version$arch, rows$platform, fixed = TRUE)
   if (any(isPlat)) rows <- rows[isPlat, , drop = FALSE]
   # Newest by mtime
