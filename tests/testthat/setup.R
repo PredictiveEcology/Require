@@ -8,9 +8,11 @@ Require.offlineMode <- FALSE
 usePkgCache <- tempdir2("RequireCacheForTests") # or NULL for using default
 
 if (isTRUE(Require.usePak)) {
-  if (requireNamespace("pak")) {
-    existingCacheDir <- pak::cache_summary()$cachepath
-  }
+  # Just probe that pak is loadable; do NOT call pak::cache_summary() here —
+  # under R CMD check it errors with "R_USER_CACHE_DIR env var not set during
+  # package check" (pkgcache CRAN policy), and the returned `cachepath` was
+  # never used anywhere downstream.
+  requireNamespace("pak")
 }
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&

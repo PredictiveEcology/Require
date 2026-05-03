@@ -22,12 +22,13 @@ envPkgCreate()
 
   # if (FALSE) {
   if (isTRUE(getOption("Require.usePak"))) {
-    if (requireNamespace("pak")) {
-      existingCacheDir <- pak::cache_summary()$cachepath
+    if (requireNamespace("pak", quietly = TRUE)) {
+      # tryCatch: under R CMD check, pak::cache_summary() errors with
+      # "R_USER_CACHE_DIR env var not set during package check" (pkgcache
+      # CRAN policy). The probed value isn't used downstream — the call is
+      # only here to warm pak — so swallow the error.
+      tryCatch(pak::cache_summary(), error = function(e) NULL)
     }
-    # if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
-    #   Sys.setenv("R_REQUIRE_CACHE" = tempdir3())
-    # }
   }
 
   opts.Require <- RequireOptions()
