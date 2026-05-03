@@ -410,13 +410,21 @@ Require <- function(packages,
       needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
       if (needInstalls) {
         if (getOption("Require.usePak", FALSE)) {
-          pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
-                                      standAlone = standAlone, verbose = verbose)
-          # Invalidate the dep-tree cache: installed state changed, so the next
-          # call should re-resolve rather than use a stale cached result.
-          pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
-                                 wh   = whichToDILES(doDeps),
-                                 repos = repos)
+          if (isTRUE(getOption("Require.offlineMode"))) {
+            # Offline mode: pak's normal install path makes network calls
+            # (metadata refresh, conflict resolution, downloads). Bypass it by
+            # resolving each requested package to a `local::` ref into pak's
+            # download cache and installing those directly.
+            pkgDT <- pakOfflineInstall(pkgDT, libPaths = libPaths, verbose = verbose)
+          } else {
+            pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
+                                        standAlone = standAlone, verbose = verbose)
+            # Invalidate the dep-tree cache: installed state changed, so the next
+            # call should re-resolve rather than use a stale cached result.
+            pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
+                                   wh   = whichToDILES(doDeps),
+                                   repos = repos)
+          }
         } else {
           pkgDT <- doInstalls(pkgDT,
                               repos = repos, purge = purge, libPaths = libPaths,

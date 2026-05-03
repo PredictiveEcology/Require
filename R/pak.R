@@ -711,6 +711,101 @@ pakRefToBareName <- function(refs) {
   sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
 }
 
+# Look up `pkg` (bare name) in pak's local download cache and return the path
+# to the most-recent matching tarball, or NA_character_ if not present.
+# Prefers a binary file matching the current platform when available, else the
+# newest source tarball.  Used by the offline-mode install path so that
+# `Install("fpCompare")` can succeed without any network access as long as
+# pak previously downloaded the package.
+pakCachedTarball <- function(pkg) {
+  if (!requireNamespace("pak", quietly = TRUE)) return(NA_character_)
+  cl <- tryCatch(pak::cache_list(), error = function(e) NULL)
+  if (is.null(cl) || NROW(cl) == 0L || !"package" %in% names(cl))
+    return(NA_character_)
+  rows <- cl[!is.na(cl$package) & cl$package == pkg, , drop = FALSE]
+  if (NROW(rows) == 0L) return(NA_character_)
+  # Prefer the platform-matching binary; fall back to source.  Binary entries
+  # have non-NA `platform`; source entries have platform == "source" or NA.
+  thisPlat <- R.version$platform
+  isPlat <- !is.na(rows$platform) & grepl(R.version$arch, rows$platform, fixed = TRUE)
+  if (any(isPlat)) rows <- rows[isPlat, , drop = FALSE]
+  # Newest by mtime
+  paths <- rows$fullpath
+  paths <- paths[file.exists(paths)]
+  if (!length(paths)) return(NA_character_)
+  paths[which.max(file.mtime(paths))]
+}
+
+# Offline install via pak: resolve each user package to a local tarball in
+# pak's cache and install via `local::path` refs (which require no network).
+# Returns the (possibly-modified) pkgDT with `installed`, `Version`,
+# `LibPath`, and `installResult` updated for each row.  Packages absent from
+# pak's cache are flagged as `.txtCouldNotBeInstalled` (just like the online
+# path's `silentlyFailed` warning).
+pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verbose")) {
+  if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+  toInstall <- pkgDT[needInstall == .txtInstall]
+  if (!NROW(toInstall)) return(pkgDT)
+
+  resolvedRefs <- character(0)
+  resolvedPkgs <- character(0)
+  missingPkgs  <- character(0)
+  for (pkg in toInstall$Package) {
+    tarball <- pakCachedTarball(pkg)
+    if (is.na(tarball)) {
+      missingPkgs <- c(missingPkgs, pkg)
+    } else {
+      resolvedRefs <- c(resolvedRefs, paste0("local::", tarball))
+      resolvedPkgs <- c(resolvedPkgs, pkg)
+    }
+  }
+
+  if (length(resolvedRefs)) {
+    messageVerbose("offline mode: installing ", length(resolvedRefs),
+                   " package(s) from pak cache: ",
+                   paste(resolvedPkgs, collapse = ", "),
+                   verbose = verbose, verboseLevel = 1)
+    err <- try(pakCall(
+      pak::pak(resolvedRefs, lib = libPaths[1], ask = FALSE,
+               dependencies = FALSE, upgrade = FALSE),
+      verbose), silent = TRUE)
+    if (is(err, "try-error")) {
+      warning(.txtCouldNotBeInstalled, ": offline install via pak failed: ",
+              as.character(err), call. = FALSE)
+      missingPkgs <- c(missingPkgs, resolvedPkgs)
+    } else {
+      ipNow <- tryCatch(installed.packages(lib.loc = libPaths[1L], noCache = TRUE),
+                        error = function(e) NULL)
+      for (pkg in resolvedPkgs) {
+        wh <- which(pkgDT$Package == pkg)
+        if (!length(wh)) next
+        if (!is.null(ipNow) && pkg %in% rownames(ipNow)) {
+          set(pkgDT, wh, "installed",          TRUE)
+          set(pkgDT, wh, "installedVersionOK", TRUE)
+          set(pkgDT, wh, "Version",            unname(ipNow[pkg, "Version"]))
+          set(pkgDT, wh, "LibPath",            unname(ipNow[pkg, "LibPath"]))
+          set(pkgDT, wh, "installResult",      "OK")
+        } else {
+          missingPkgs <- c(missingPkgs, pkg)
+        }
+      }
+    }
+  }
+
+  if (length(missingPkgs)) {
+    missingPkgs <- unique(missingPkgs)
+    for (pkg in missingPkgs) {
+      wh <- which(pkgDT$Package == pkg)
+      if (length(wh)) set(pkgDT, wh, "installResult", .txtCouldNotBeInstalled)
+    }
+    warning(.txtCouldNotBeInstalled, ": ",
+            paste(missingPkgs, collapse = ", "),
+            "; offline mode and not in pak cache",
+            call. = FALSE)
+  }
+  pkgDT
+}
+
 lessThanToAt <- function(pkgs) {
   hasLT <- grepl("<", pkgs) # only < not <=
   if (any(hasLT %in% TRUE)) {
