@@ -7,13 +7,13 @@ Require.installPackageSys <- 2L#2 * (isMacOS() %in% FALSE)
 Require.offlineMode <- FALSE
 usePkgCache <- tempdir2("RequireCacheForTests") # or NULL for using default
 
-if (isTRUE(Require.usePak)) {
-  # Just probe that pak is loadable; do NOT call pak::cache_summary() here —
-  # under R CMD check it errors with "R_USER_CACHE_DIR env var not set during
-  # package check" (pkgcache CRAN policy), and the returned `cachepath` was
-  # never used anywhere downstream.
-  requireNamespace("pak")
-}
+## pak namespace is loaded lazily by code paths that need it. Eagerly loading
+## here had two issues:
+## 1. pak::cache_summary() errored under R CMD check (pkgcache "R_USER_CACHE_DIR
+##    env var not set during package check" policy).
+## 2. requireNamespace("pak") in a fresh `R --vanilla` test subprocess
+##    occasionally hung indefinitely on cold pak/pkgcache state — the same
+##    hang we observed in the 6-hour CI matrix timeouts.
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
