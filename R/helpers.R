@@ -640,14 +640,13 @@ SysInfo <-
 }
 
 .runLongExamples <- function() {
-  # Never run on CI: with `--run-dontrun --run-donttest` (default in
-  # r-lib/actions/check-r-package), enabling the long examples runs the
-  # full Require::Install() cascade for every example in Require.Rd —
-  # which on a cold CI runner takes hours and routinely times out.
-  # Devs can opt in locally via R_REQUIRE_RUN_ALL_EXAMPLES=true.
-  if (tolower(Sys.getenv("CI")) == "true") return(FALSE)
-  .isDevelVersion() ||
-    Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
+  # Auto-enable based on .isDevelVersion() is unsafe: with
+  # `--run-dontrun --run-donttest` (default in r-lib/actions/check-r-package),
+  # every dev-version R CMD check runs the full Require::Install() cascade
+  # for every example in Require.Rd — hours on a cold CI runner.
+  # Require explicit opt-in (R_REQUIRE_RUN_ALL_EXAMPLES=true) regardless of
+  # version. Devs can set it in .Renviron locally.
+  Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
 }
 
 doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
