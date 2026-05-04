@@ -59,11 +59,23 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
     .txtCantFindPackage, .txtMissingValueWhereTFNeeded, .txtCldNotSlvPkgDeps,
     .txtFailedToDLFrom, .txtPakNoPkgCalledPak, .txtUnknownArchiveType
   )
+  ## All grp entries are plain literals except .txtFailedToDLFrom (index 7),
+  ## which is a regex containing ".+". fixed=TRUE is several times faster
+  ## than full regex matching, and these greps fire on every pak error.
+  grpFixed <- c(TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE)
   spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\. ", "NULL", "NULL", "NULL", "NULL", "NULL")
   pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL", "NULL", "NULL", "NULL")
   splitStr <- strsplit(err, split = "\n")[[1]]
-  for (i in seq_along(grp)) {
-    a <- grep(grp[i], splitStr, value = TRUE)
+  ## Pre-screen: pakErrorHandling is called once per failed pak::pkg_deps,
+  ## which can be hundreds of times during a snapshot install. Skip the
+  ## entire 9-pattern loop when none match (very common for benign errors).
+  errStr <- paste(splitStr, collapse = "\n")
+  hasAny <- vapply(seq_along(grp), function(j) {
+    grepl(grp[j], errStr, fixed = grpFixed[j])
+  }, logical(1))
+  if (!any(hasAny)) return(packages)
+  for (i in which(hasAny)) {
+    a <- grep(grp[i], splitStr, value = TRUE, fixed = grpFixed[i])
     if (length(a)) {
       a1 <- gsub("\\.$", "", a)
 
@@ -453,7 +465,22 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       # give up for archives of archives
       if (i > 1 && pkg %in% pkgDone) wh <- FALSE
 
-      val <- try(pakCall(pak::pkg_deps(c(pkg, supplement), dependencies = wh), verbose), silent = TRUE)
+      ## Memory-only cache so repeated lookups within a session avoid the
+      ## per-call ~5-15s callr subprocess cost. pakDepsCacheKey() uses
+      ## tempfile/saveRDS/md5sum for collision-proof hashing of large
+      ## batch inputs -- too heavy when called per-package in this hot
+      ## loop. Plain paste suffices since the inputs are short.
+      ppMemKey <- paste0("pakPkgDep_",
+                         paste(c(pkg, supplement), collapse = "\x01"),
+                         "\x02",
+                         paste(unlist(wh), collapse = ","))
+      val <- get0(ppMemKey, envir = pakEnv(), inherits = FALSE)
+      if (is.null(val)) {
+        val <- try(pakCall(pak::pkg_deps(c(pkg, supplement), dependencies = wh), verbose), silent = TRUE)
+        if (!is(val, "try-error")) {
+          assign(ppMemKey, val, envir = pakEnv())
+        }
+      }
       if (is(val, "try-error")) {
         pkgDone <- unique(c(pkg, pkgDone))
         pkgOrig2 <- pkg
