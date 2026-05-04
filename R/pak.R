@@ -892,7 +892,13 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
 
   isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
   his <- try(tail(pak::pkg_history(pkgNoVer), 1), silent = TRUE)
-  if (any(pkgNoVer != packages[whRm])) {
+  # pak::pkg_history is single-package; called with a vector (or with a URL/GH
+  # ref it can't parse) it errors and `his` is a try-error. Without this guard,
+  # `his$Version` below blows up with "$ operator is invalid for atomic vectors".
+  # When we can't establish a version, skip the version-pin warning block and
+  # let the try-error handling at line ~906 below remove the package cleanly.
+  hisHasVersion <- inherits(his, "data.frame") && !is.null(his$Version)
+  if (hisHasVersion && any(pkgNoVer != packages[whRm])) {
     vers <- extractVersionNumber(packages[whRm][hasVer])
     ineq <- "=="
     hasOKVersion <- compareVersion2(his$Version, versionSpec = vers, ineq)
