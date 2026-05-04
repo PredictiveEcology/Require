@@ -1,7 +1,20 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
 }
-verboseForDev <- -1
+
+## pak's pkgcache refuses to use the system cache during R CMD check (CRAN
+## policy: pkgcache aborts with "R_USER_CACHE_DIR env var not set during
+## package check"). Without this, every pak::pak() call inside the test suite
+## errors out with `get_user_cache_dir()`, the install fails, identify-and-defer
+## retries, and the suite stalls under R CMD check on CI for hours.
+## Point pak at a per-session temp dir so it can write its cache.
+if (!nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
+  withr::local_envvar(
+    R_USER_CACHE_DIR = tempfile("RequireUserCache_"),
+    .local_envir = teardown_env()
+  )
+}
+verboseForDev <- 2
 Require.usePak <- TRUE#Sys.getenv("R_REQUIRE_USE_PAK", "false") == "true"
 Require.installPackageSys <- 2L#2 * (isMacOS() %in% FALSE)
 Require.offlineMode <- FALSE
