@@ -4,16 +4,17 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   if (needRequireInNewLib) {
     linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
   }
-  ## Force-load pak + Require BEFORE narrowing .libPaths(): once a namespace
-  ## is loaded, R remembers where it came from even if the lib is no longer on
-  ## .libPaths(). This lets us narrow the path to c(newLib, .Library) so that
-  ## `installed.packages()` returns clean per-test results, while still being
-  ## able to call pak/Require functions inside tests. Replacing the path
-  ## without this preload hides pak under R CMD check (it lives in a temporary
-  ## RLIBS dir); leaving the wider path in causes duplicate rows from packages
-  ## like fpCompare that exist in multiple libs, which break version-pin tests.
-  loadNamespace("pak")
-  loadNamespace("Require")
+  ## Force-load pak BEFORE narrowing .libPaths(): once a namespace is loaded,
+  ## R remembers where it came from even if the lib is no longer on .libPaths().
+  ## This lets us narrow the path to c(newLib, .Library) so `installed.packages()`
+  ## returns clean per-test results, while still being able to call pak inside
+  ## tests. Replacing the path without this preload hides pak under R CMD check
+  ## (it lives in a temporary RLIBS dir); leaving the wider path in causes
+  ## duplicate rows from packages like fpCompare that exist in multiple libs,
+  ## which break version-pin tests.
+  ## Don't preload Require: under covr, Require's namespace is the instrumented
+  ## copy and re-loading via loadNamespace can interfere with coverage tracking.
+  tryCatch(loadNamespace("pak"), error = function(e) NULL)
   withr::local_libpaths(c(newLib, .Library), .local_envir = envir)
 
   ## Always use temporary package cache for tests (#128):
