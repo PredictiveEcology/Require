@@ -1414,7 +1414,12 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
 pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                           purge = getOption("Require.purge", FALSE)) {
-  if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+  pakLoad <- tryCatch(loadNamespace("pak"),
+                      error = function(e) e)
+  if (inherits(pakLoad, "error")) {
+    stop("Please install pak (loadNamespace('pak') failed: ",
+         conditionMessage(pakLoad), ")", call. = FALSE)
+  }
 
   # pak spawns a subprocess that inherits .libPaths(). Set .libPaths() to match
   # Require's standAlone semantics before calling pak, then restore on exit.
