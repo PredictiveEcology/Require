@@ -4,7 +4,12 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   if (needRequireInNewLib) {
     linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
   }
-  withr::local_libpaths(newLib, .local_envir = envir)
+  ## prefix newLib onto .libPaths() rather than replacing the path entirely:
+  ## under R CMD check, pak (and Require's other Imports) live in a temporary
+  ## RLIBS dir that the standard `.libPaths()` resolves to; replacing the path
+  ## hides those packages, so subsequent Install() calls error out with
+  ## "Please install pak" mid-suite.
+  withr::local_libpaths(c(newLib, .libPaths()), .local_envir = envir)
 
   ## Always use temporary package cache for tests (#128):
   ## - we don't want to modify the user's cache;
