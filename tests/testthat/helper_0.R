@@ -4,12 +4,20 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   if (needRequireInNewLib) {
     linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
   }
-  ## prefix newLib onto .libPaths() rather than replacing the path entirely:
-  ## under R CMD check, pak (and Require's other Imports) live in a temporary
-  ## RLIBS dir that the standard `.libPaths()` resolves to; replacing the path
-  ## hides those packages, so subsequent Install() calls error out with
-  ## "Please install pak" mid-suite.
-  withr::local_libpaths(c(newLib, .libPaths()), .local_envir = envir)
+  ## .libPaths() = c(newLib, libs that hold pak/Require's Imports). Replacing
+  ## .libPaths() entirely (the previous behaviour) hides pak under R CMD check,
+  ## where pak lives in a temporary RLIBS dir; including the *full* `.libPaths()`
+  ## (which also contains other versions of test-installed packages) makes
+  ## `installed.packages()` return duplicate rows that break version-pin tests.
+  ## So include only the libs that hold pak / Require / their Imports — i.e.
+  ## the libs already needed for the test session to function.
+  .keepLib <- unique(c(
+    dirname(find.package("pak",     quiet = TRUE)),
+    dirname(find.package("Require", quiet = TRUE)),
+    .Library
+  ))
+  .keepLib <- .keepLib[nzchar(.keepLib) & file.exists(.keepLib)]
+  withr::local_libpaths(c(newLib, .keepLib), .local_envir = envir)
 
   ## Always use temporary package cache for tests (#128):
   ## - we don't want to modify the user's cache;
