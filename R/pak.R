@@ -2676,9 +2676,17 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   ]
   if (length(silentlyFailed)) {
     reason <- pakBuildFailReason(lastPakErr)
+    # If any failed ref is owner/repo-style, the most likely cause is a typo in
+    # the GitHub user/repo (pak surfaces a 404 as a generic "Could not solve").
+    # Append the same spelling-hint that the non-pak path emits so the user
+    # gets actionable guidance without having to dig through pak's wrapper.
+    failedFullPaths <- toInstall$packageFullName[toInstall$Package %in% silentlyFailed]
+    ghHint <- if (any(grepl("/", failedFullPaths, fixed = TRUE)))
+      paste0("\n", .txtDidYouSpell) else ""
     warning(.txtCouldNotBeInstalled, ": ",
             paste(silentlyFailed, collapse = ", "),
             if (nzchar(reason)) paste0("; ", reason) else "",
+            ghHint,
             call. = FALSE, immediate. = TRUE)
   }
 
