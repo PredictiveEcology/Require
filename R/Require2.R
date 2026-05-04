@@ -2802,16 +2802,20 @@ HEADgrepWithParentheses <- " *\\(HEAD\\)"
 hasHEADtxt <- "hasHEAD"
 
 packageFullNameFromSnapshot <- function(snapshot) {
-  out <- ifelse(!is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo),
+  isGH <- !is.na(snapshot$GithubRepo) & nzchar(snapshot$GithubRepo)
+  out <- ifelse(isGH,
                 paste0(
                   snapshot$GithubUsername, "/", snapshot$GithubRepo, "@",
                   snapshot$GithubSHA1
                 ), snapshot[["Package"]]
   )
-  out <- paste0(
-    out,
-    " (==", snapshot[["Version"]], ")"
-  )
+  ## Only append "(==Version)" for non-GitHub rows with a Version. A GH ref
+  ## already has its identity locked by the SHA; appending "(==NA)" produces
+  ## a malformed ref like "owner/repo@sha@NA" downstream and pak fails to
+  ## resolve it.
+  hasVersion <- !is.na(snapshot[["Version"]]) & nzchar(snapshot[["Version"]])
+  appendVer <- hasVersion & !isGH
+  out[appendVer] <- paste0(out[appendVer], " (==", snapshot[["Version"]][appendVer], ")")
   out <- addNamesToPackageFullName(out, snapshot[["Package"]])
   out
 }
