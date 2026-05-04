@@ -8,8 +8,6 @@ test_that("test 09", {
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
 
-  if (isDevAndInteractive && isMacOS()) { ## TODO: source installs failing on macOS
-    # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)
     snapshotFiles <- "../../inst/snapshot.txt"
@@ -169,7 +167,6 @@ test_that("test 09", {
       rr <- data.table::fread(snfTmp)
       qq <- rr[!ee, on = c("Package")]
 
-      browser()
       test <- testWarnsInUsePleaseChange(warns)
       expect_true(test)
 
@@ -178,7 +175,6 @@ test_that("test 09", {
         out11 <- pkgDep(unname(packageFullName)[-1], recursive = TRUE, simplify = FALSE)
       )
       # expect_true(sum(grepl("Please change required.*NLMR", warns)) <=1 )
-      browser()
       expect_identical(warns, character(0))
 
       # if (FALSE) {
@@ -250,7 +246,6 @@ test_that("test 09", {
       # and visualTest which is missing GitHub info for some reason --
 
       skip_if_offline2()
-      browser()
       expect_true(identical(missingPackages$Package, character(0)))
       # expect_true(identical(setdiff(missingPackages$Package, knownFails), character(0)))
       warns <- capture_warnings(
@@ -263,7 +258,6 @@ test_that("test 09", {
       )
 
       test <- testWarnsInUsePleaseChange(warns)
-      browser()
       expect_true(test)
 
       att <- attr(out2, "Require")
@@ -277,12 +271,10 @@ test_that("test 09", {
       allDone <- setdiff(didnt$Package, c(versionViolation, testthatDeps, looksLikeGHPkgWithoutGitInfo,
                                           noneAvailable, c("Require", "data.table")))
       allDone <- setdiff(allDone, knownFails)
-      browser()
       expect_identical(allDone, character(0))
 
 
     }
-  }
 
 
 })
