@@ -1,5 +1,9 @@
 test_that("test 09", {
 
+  # 380-pkg snapshot install + recursive pkgDep takes >1h end-to-end on
+  # a 30-pkg slice profile -- way past CI budget. Run locally only via
+  # R_REQUIRE_RUN_ALL_TESTS=true.
+  skip_on_ci()
   # skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
   skip_if(getRversion() > "4.4.3", "test09 only runs on R4.4")
   setupInitial <- setupTest(needRequireInNewLib = FALSE)
