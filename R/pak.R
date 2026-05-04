@@ -61,8 +61,8 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
   )
   spl <- c(" |\\)", "\033\\[..{0,1}m", "\033\\[..{0,1}m| |@", " |\\. ", "NULL", "NULL", "NULL", "NULL", "NULL")
   pat <- c("dependency", grp[2], "with", "called", "NULL", "NULL", "NULL", "NULL", "NULL")
+  splitStr <- strsplit(err, split = "\n")[[1]]
   for (i in seq_along(grp)) {
-    splitStr <- strsplit(err, split = "\n")[[1]]
     a <- grep(grp[i], splitStr, value = TRUE)
     if (length(a)) {
       a1 <- gsub("\\.$", "", a)
