@@ -7,12 +7,17 @@ if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
 ## package check"). Without this, every pak::pak() call inside the test suite
 ## errors out with `get_user_cache_dir()`, the install fails, identify-and-defer
 ## retries, and the suite stalls under R CMD check on CI for hours.
-## Point pak at a per-session temp dir so it can write its cache.
+## Point pak at a per-session temp dir so it can write its cache. The dir
+## must exist before pak::cache_summary() / loadNamespace("pak") runs, so
+## create it eagerly here rather than relying on pak to mkdir.
 if (!nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
+  .userCacheDir <- tempfile("RequireUserCache_")
+  dir.create(.userCacheDir, recursive = TRUE, showWarnings = FALSE)
   withr::local_envvar(
-    R_USER_CACHE_DIR = tempfile("RequireUserCache_"),
+    R_USER_CACHE_DIR = .userCacheDir,
     .local_envir = teardown_env()
   )
+  rm(.userCacheDir)
 }
 verboseForDev <- 2
 Require.usePak <- TRUE#Sys.getenv("R_REQUIRE_USE_PAK", "false") == "true"
