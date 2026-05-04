@@ -1949,7 +1949,8 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
 
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
-pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
+pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
+                                forceUpgrade = FALSE) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
@@ -2091,6 +2092,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
       # CRAN-like refs: dependencies=NA so pak orders parallel source builds by
       # the build-time hard-dep graph (see comment block above).
       ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
+      # CRAN-batch upgrade: TRUE when caller passed install = "force" (else
+      # pak keeps the cached version even if it doesn't satisfy a `(>=X)` pin
+      # the user explicitly asked Require to force-reinstall).
+      cranUp <- isTRUE(forceUpgrade)
       err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
         # Two separate calls when both types are present
         e1 <- try(pakCall(
@@ -2099,14 +2104,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose) {
           verbose), silent = TRUE)
         e2 <- try(pakCall(
           pak::pak(packages[!ghOrUrl], lib = libPaths[1], ask = FALSE,
-                   dependencies = NA, upgrade = FALSE),
+                   dependencies = NA, upgrade = cranUp),
           verbose), silent = TRUE)
         # Combine errors: prefer the first error if both fail; if only one
         # fails return that one; if neither fails return non-try-error.
         if (is(e1, "try-error")) e1 else if (is(e2, "try-error")) e2 else e2
       } else {
-        up <- any(ghOrUrl)  # TRUE -> upgrade=TRUE for all-GH batch
-        deps <- if (up) FALSE else NA  # GH-only: FALSE; CRAN-only: NA
+        up <- any(ghOrUrl) || cranUp  # TRUE -> upgrade=TRUE
+        deps <- if (any(ghOrUrl)) FALSE else NA  # GH-only: FALSE; CRAN-only: NA
         try(pakCall(
           pak::pak(packages, lib = libPaths[1], ask = FALSE,
                    dependencies = deps, upgrade = up),

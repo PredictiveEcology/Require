@@ -418,7 +418,8 @@ Require <- function(packages,
             pkgDT <- pakOfflineInstall(pkgDT, libPaths = libPaths, verbose = verbose)
           } else {
             pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
-                                        standAlone = standAlone, verbose = verbose)
+                                        standAlone = standAlone, verbose = verbose,
+                                        forceUpgrade = identical(install, "force"))
             # Invalidate the dep-tree cache: installed state changed, so the next
             # call should re-resolve rather than use a stale cached result.
             pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
