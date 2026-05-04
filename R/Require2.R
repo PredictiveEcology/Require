@@ -113,7 +113,7 @@ utils::globalVariables(c(
 #'   `install.packages`, `install_github` or `installVersions`.
 #'   **When `options(Require.usePak = TRUE)`:** `repos` is added to pak's repository
 #'   list via `options(repos)`. However, pak always includes CRAN and Bioconductor as
-#'   built-in defaults regardless of this setting — `repos` can only *add* sources,
+#'   built-in defaults regardless of this setting -- `repos` can only *add* sources,
 #'   it cannot prevent pak from also searching CRAN. This differs from the default
 #'   (`usePak = FALSE`) behaviour where `repos` strictly controls which repositories
 #'   are used. Use `pak::cache_clean()` to clear pak's download cache if needed.
@@ -390,7 +390,7 @@ Require <- function(packages,
       pkgDT <- whichToInstall(pkgDT, install, verbose)
 
       # If a candidate is already loaded in this session with a version that
-      # satisfies the constraint, skip reinstall — both to avoid pak's
+      # satisfies the constraint, skip reinstall -- both to avoid pak's
       # "namespace 'X' is imported by 'Y' so cannot be unloaded" failure mode
       # and because there is no work to do.  Honoured even for HEAD-checked
       # GitHub refs: the user's intent in pinning a `(>= X.Y.Z)` constraint
@@ -480,7 +480,7 @@ Require <- function(packages,
           if (is.na(instVer) || !nzchar(instVer)) return(FALSE)
           ineq <- missingPkgDT$inequality[i]
           vsp  <- missingPkgDT$versionSpec[i]
-          if (is.na(ineq) || !nzchar(ineq)) return(TRUE)   # no constraint → any installed version OK
+          if (is.na(ineq) || !nzchar(ineq)) return(TRUE)   # no constraint -> any installed version OK
           isTRUE(compareVersion2(instVer, vsp, ineq))
         }, logical(1))
         if (any(recoverable)) {
@@ -503,7 +503,7 @@ Require <- function(packages,
             verbose = verbose, verboseLevel = 1
           )
         }
-        # Remaining truly-missing packages (not installed / wrong version) → diagnostic
+        # Remaining truly-missing packages (not installed / wrong version) -> diagnostic
         trulyMissing <- missingFromDT[!missingFromDT %in% (if (any(recoverable)) recoverDT$Package else character(0))]
         if (length(trulyMissing) && isTRUE(verbose >= 1))
           messageVerbose("pak path: user-requested packages absent from dep tree and not ",
@@ -718,7 +718,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
             ipa <- ipaNext;
             next
           }
-          # Detect "namespace 'X' Y is being loaded, but >= Z is required" — the new
+          # Detect "namespace 'X' Y is being loaded, but >= Z is required" -- the new
           # version of the package being installed needs a newer dep than is currently
           # installed.  Install that dep now, then retry the failing package.
           nsLines <- grep(
@@ -1087,7 +1087,7 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
       )
       # Recover the common "cannot be unloaded because <package> is imported
       # by <other-pkgs>" failure: R prints that text directly (not as a
-      # condition), then require() returns FALSE — but the namespace IS still
+      # condition), then require() returns FALSE -- but the namespace IS still
       # loaded (unload failed, so it stayed). Detect via loadedNamespaces()
       # and force-attach via require() without lib.loc, so unqualified calls
       # to functions from this package (e.g., `prepInputs()` from
@@ -1102,7 +1102,7 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
         ## Always visible regardless of verbose: a silently-unloaded package causes
         ## confusing downstream errors (e.g. "object 'sppEquivalencies_CA' not found").
         hint <- if (length(warn_msgs)) paste0(" (", paste(warn_msgs, collapse = "; "), ")") else ""
-        warning("Require: require(\"", x, "\") returned FALSE — package will not be attached", hint,
+        warning("Require: require(\"", x, "\") returned FALSE -- package will not be attached", hint,
                 "\n  Searched in: ", paste(libPaths, collapse = ", "),
                 call. = FALSE, immediate. = TRUE)
       }
@@ -1132,7 +1132,7 @@ recordLoadOrder <- function(packages, pkgDT) {
   # ref (e.g. "owner/Pkg@branch", no version spec) that trimRedundantVersionAndNoVersion
   # replaced with a CRAN version-spec ref (e.g. "Pkg (>= X)") because a transitive
   # dep required a minimum version.  In that case pfn = "Pkg" but packagesWObase
-  # = "owner/Pkg@branch" — the packageFullName match fails even though it is the
+  # = "owner/Pkg@branch" -- the packageFullName match fails even though it is the
   # same package.  Matching by Package name catches this.
   packagesWObaseNames <- extractPkgName(packagesWObase)
   wh <- pfn %in% packagesWObase | pkgDT[["Package"]] %in% packagesWObaseNames
