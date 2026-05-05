@@ -37,7 +37,11 @@ regexEscape <- function(x) {
 #       stdout via cat()/writeLines() by pak's cli_server_default renderer, such
 #       as "i No downloads are needed, 1 pkg is cached".
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
-  verbose <- verbose %||% 0L
+  ## Inline null-coalesce: `%||%` is base in R 4.4+ but not 4.3, and Require
+  ## doesn't import it from rlang. Without this, pakCall errors on R 4.3
+  ## (silently, since try() in callers swallows it), turning every pak
+  ## install attempt into a "could not be installed" no-op.
+  if (is.null(verbose)) verbose <- 0L
   if (verbose <= -1L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
@@ -912,19 +916,32 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   # `Warning message: could not be installed:` (no package name, no reason).
   if (!length(pkg2) || all(!nzchar(pkg2))) return(packages)
   pkg2Orig <- pkg2
-  # Strip pak source prefixes (any::, cran::, url::, etc.) to get the bare package name
-  pkg2 <- gsub("^[A-Za-z][A-Za-z0-9+.-]*::", "", pkg2)
+  ## trimVersionNumber (with usePak) now handles both pak prefixes
+  ## (any::, cran::) and the "pkg@ver" form, so a snapshot ref like
+  ## "BH@1.81.0-1" reduces cleanly to "BH" for pak::pkg_history below.
   pkgNoVer <- trimVersionNumber(pkg2)
   hasVer <- pkgNoVer != packages[whRm]
 
   isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
-  his <- try(tail(pak::pkg_history(pkgNoVer), 1), silent = TRUE)
-  # pak::pkg_history is single-package; called with a vector (or with a URL/GH
-  # ref it can't parse) it errors and `his` is a try-error. Without this guard,
-  # `his$Version` below blows up with "$ operator is invalid for atomic vectors".
-  # When we can't establish a version, skip the version-pin warning block and
-  # let the try-error handling at line ~906 below remove the package cleanly.
-  hisHasVersion <- inherits(his, "data.frame") && !is.null(his$Version)
+  hisAll <- try(pak::pkg_history(pkgNoVer), silent = TRUE)
+  ## Was previously `tail(..., 1)` (the LATEST archive entry). That broke
+  ## snapshot installs that pin a specific older version: a snapshot ref
+  ## like "BH@1.81.0-1" produced an Archive URL for the latest BH version
+  ## instead of 1.81.0-1, and pak then failed to install the wrong file.
+  ## Extract the requested version from the input ref and pick the matching
+  ## row from pkg_history; only fall through to "latest" when no version
+  ## is pinned.
+  reqVer <- extractVersionNumber(packages[whRm])
+  hisHasVersion <- inherits(hisAll, "data.frame") && !is.null(hisAll$Version)
+  his <- if (hisHasVersion) {
+    if (length(reqVer) == 1L && !is.na(reqVer) && reqVer %in% hisAll$Version) {
+      hisAll[hisAll$Version == reqVer, , drop = FALSE]
+    } else {
+      utils::tail(hisAll, 1)
+    }
+  } else {
+    hisAll
+  }
   if (hisHasVersion && any(pkgNoVer != packages[whRm])) {
     vers <- extractVersionNumber(packages[whRm][hasVer])
     ineq <- "=="
@@ -1975,6 +1992,13 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
       messageVerbose("pakSerialInstall: ", .txtCouldNotBeInstalled, ": ", pkg,
                      if (nzchar(reason)) paste0("; ", reason) else "",
                      verbose = verbose, verboseLevel = 2)
+      ## A failed pak::pak() can leave pak's persistent r_session in a
+      ## wedged state where every subsequent call returns instantly with
+      ## an error -- without this reset, a single early failure cascades
+      ## into "could not be installed" for every remaining ref in the
+      ## loop (observed on 250+ ref archive-fallback runs where 0 actual
+      ## install attempts happened after the first failure).
+      pakResetSubprocess()
     }
   }
   invisible(failed)
@@ -2507,12 +2531,19 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         if (length(archiveCandidates) > 5L) ", ..." else "",
         verbose = verbose, verboseLevel = 1)
       pakResetSubprocess()
+      # Map bare names back to their version-pinned refs in the install set
+      # so pakGetArchive can build an Archive URL for the EXACT requested
+      # version (snapshot installs pin specific older versions; without this
+      # mapping pakGetArchive would fall back to the latest archive entry).
+      verRefMap <- setNames(pkgs, pakRefToBareName(pkgs))
       # Collect archive URLs for every candidate first, then attempt a
       # single batch install so pak's resolver can satisfy cross-archive
       # deps (e.g. disk.frame -> pryr where both are archived).
       archiveRefs <- character(0)
       for (pkg in archiveCandidates) {
-        ref <- tryCatch(pakGetArchive(pkg, packages = pkg, whRm = 1L),
+        origRef <- verRefMap[[pkg]]
+        if (is.null(origRef) || !nzchar(origRef)) origRef <- pkg
+        ref <- tryCatch(pakGetArchive(origRef, packages = origRef, whRm = 1L),
                         error = function(e) character(0),
                         warning = function(w) character(0))
         # Only accept fully-formed CRAN-archive URL refs. Anything else
