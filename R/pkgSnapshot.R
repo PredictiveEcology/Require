@@ -304,6 +304,25 @@ installSnapshotViaInstallPackages <- function(snapshot,
   if (!dir.exists(dlDir)) dir.create(dlDir, recursive = TRUE)
   on.exit(unlink(dlDir, recursive = TRUE), add = TRUE)
 
+  ## Prefer PPM Linux binaries when available: PPM serves pre-compiled
+  ## tarballs indexed by distro, and pak honours options(repos), so prepending
+  ## a PPM URL means recent versions skip compilation entirely. Older archived
+  ## versions silently fall back to source. Opt out with
+  ## options(Require.snapshotInstallerUsePPM = FALSE).
+  if (isTRUE(getOption("Require.snapshotInstallerUsePPM", TRUE))) {
+    ppm <- detectPPMLinuxRepo()
+    if (!is.null(ppm)) {
+      origRepos <- getOption("repos")
+      hasPPM <- any(grepl("packagemanager.posit.co", origRepos, fixed = TRUE))
+      if (!hasPPM) {
+        options(repos = c(PPM = ppm, origRepos))
+        on.exit(options(repos = origRepos), add = TRUE)
+        messageVerbose("Using PPM Linux binaries: ", ppm,
+                       verbose = verbose, verboseLevel = 1)
+      }
+    }
+  }
+
   messageVerbose("Downloading ", length(refs),
                  " snapshot tarballs (pak cache reused if present)",
                  verbose = verbose, verboseLevel = 1)
@@ -410,4 +429,22 @@ installSnapshotViaInstallPackages <- function(snapshot,
                    quiet = isTRUE(verbose < 1))
 
   invisible(TRUE)
+}
+
+## Detect a Posit Package Manager Linux binary repo URL for the running
+## distro by reading /etc/os-release. Returns NULL on non-Linux or when the
+## codename is missing. PPM URL form: __linux__/<codename> triggers binary
+## serving; trailing /latest gives whatever versions are current. Older
+## archived versions are still resolvable via this URL but pak will fall
+## back to source for those that PPM didn't pre-build.
+detectPPMLinuxRepo <- function() {
+  if (!identical(Sys.info()[["sysname"]], "Linux")) return(NULL)
+  f <- "/etc/os-release"
+  if (!file.exists(f)) return(NULL)
+  ll <- tryCatch(readLines(f, warn = FALSE), error = function(e) character())
+  m <- grep("^VERSION_CODENAME=", ll, value = TRUE)
+  if (!length(m)) return(NULL)
+  codename <- sub('^VERSION_CODENAME=["]?([^"]+)["]?$', "\\1", m[1])
+  if (!nzchar(codename)) return(NULL)
+  paste0("https://packagemanager.posit.co/cran/__linux__/", codename, "/latest")
 }
