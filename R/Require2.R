@@ -1658,14 +1658,28 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     ## Optional fast-path: bypass pak's solver entirely for snapshot installs.
     ## Snapshots already pin exact versions, so resolution is wasted work.
     ## Gated on options(Require.snapshotInstaller = "install.packages").
+    ##
+    ## Currently restricted to Linux: macOS+Windows source compiles depend on
+    ## system libraries discovered via paths that vary widely (homebrew under
+    ## /opt/homebrew vs /usr/local, mingw, etc.); install.packages with
+    ## dependencies = FALSE punts that discovery to each package's configure
+    ## script, which fails opaquely. On Linux apt's headers land at /usr/include
+    ## where everything looks. On non-Linux we silently fall back to pak.
     installer <- getOption("Require.snapshotInstaller", "pak")
     if (identical(installer, "install.packages")) {
-      out <- installSnapshotViaInstallPackages(packages, libPaths = libPaths,
-                                               verbose = verbose)
-      messageVerbose(
-        "PLEASE RESTART R using the correct library to start using the installed snapshot",
-        verbose = verbose)
-      return(invisible(out))
+      if (!identical(Sys.info()[["sysname"]], "Linux")) {
+        messageVerbose(
+          "Require.snapshotInstaller = 'install.packages' is only supported on Linux; ",
+          "falling back to pak on ", Sys.info()[["sysname"]],
+          verbose = verbose, verboseLevel = 1)
+      } else {
+        out <- installSnapshotViaInstallPackages(packages, libPaths = libPaths,
+                                                 verbose = verbose)
+        messageVerbose(
+          "PLEASE RESTART R using the correct library to start using the installed snapshot",
+          verbose = verbose)
+        return(invisible(out))
+      }
     }
 
     packages <- dealWithSnapshotViolations(packages,
