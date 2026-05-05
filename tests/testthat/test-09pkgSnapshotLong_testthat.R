@@ -5,12 +5,14 @@ test_that("test 09", {
   # R_REQUIRE_RUN_ALL_TESTS=true.
   skip_on_ci()
   # skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
-  skip_if(getRversion() > "4.4.3", "test09 only runs on R4.4")
+  ## blocking removed: was `skip_if(getRversion() > "4.4.3")`
   setupInitial <- setupTest(needRequireInNewLib = FALSE)
   # on.exit(endTest(setupInitial))
 
   isDev <- getOption("Require.isDev")
   isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+
+  skip_if_offline2()
 
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)

@@ -111,12 +111,15 @@ test_that("reportInstallFailures adds still-missing rows for unexplained pkgs", 
 # every install pass has finished, AND drop entries for packages that ended
 # up installed (i.e. filter by finalMissing).
 # ---------------------------------------------------------------------------
-test_that("install summary drops resolved culprits and labels archive-pass build errors", {
-  # A captured-messages buffer that includes BOTH:
-  #   * an iter-1 "Failed to build reproducible" that was later resolved
-  #     by the deferred-culprit serial pass (so reproducible IS installed);
-  #   * an archive-pass "Failed to build qs" + ERROR: compilation failed
-  #     line emitted DURING the archive fallback (so qs is genuinely missing).
+test_that("install summary drops culprits resolved by the deferred serial pass", {
+  # Concrete scenario from the field: install a GitHub HEAD package
+  # (`PredictiveEcology/reproducible@HEAD`) whose build-time deps (digest,
+  # fpCompare, lobstr) aren't in the project lib yet during iter 1. pak emits
+  # "✖ Failed to build reproducible 3.0.0.9050" in iter 1; identify-and-defer
+  # treats it as a culprit and the final serial pass installs it after the
+  # missing deps land. reproducible IS in installed.packages() at the end,
+  # but the iter-1 "Failed to build" line is still in allCapturedMsgs — and
+  # the summary used to print it as a build-error anyway.
   msgs <- c(
     "✖ Failed to build reproducible 3.0.0.9050 (395ms)",
     "Warning: could not be installed: ...; ERROR: dependencies 'digest', 'fpCompare', 'lobstr' are not available for package 'reproducible'",
@@ -125,36 +128,60 @@ test_that("install summary drops resolved culprits and labels archive-pass build
     "✔ Installed lobstr 1.2.1 (222ms)",
     "ℹ Building reproducible 3.0.0.9050",
     "✔ Built reproducible 3.0.0.9050 (8.6s)",
-    "✔ Installed reproducible 3.0.0.9050",
-    # Archive-fallback pass (runs AFTER iter-loop finishes):
+    "✔ Installed reproducible 3.0.0.9050"
+  )
+  parsed <- Require:::extractInstallFailures(msgs)
+  # Sanity: the iter-1 failure IS captured by the parser.
+  expect_true("reproducible" %in% parsed$package)
+
+  # The fix: filter by finalMissing (packages NOT in installed.packages())
+  # before reporting. reproducible installed successfully in the deferred
+  # pass, so it should not appear in finalMissing.
+  finalMissing <- character(0)
+  filtered <- parsed[package %in% finalMissing]
+  expect_equal(NROW(filtered), 0L)
+
+  out <- capture.output(
+    Require:::reportInstallFailures(filtered, missingPkgNames = finalMissing,
+                                    verbose = 1),
+    type = "output"
+  )
+  # No summary should be printed when nothing is genuinely missing — and
+  # in particular reproducible must not be listed.
+  expect_false(any(grepl("reproducible", out)))
+  expect_false(any(grepl("Install summary", out)))
+})
+
+test_that("archive-pass build errors are labeled (not 'still-missing')", {
+  # When `qs` (archived from CRAN) hits the archive-fallback path and its
+  # source build genuinely fails to compile, pak emits a per-package
+  # "✖ Failed to build qs" line DURING the archive pass. The summary used
+  # to be parsed BEFORE the archive pass ran, so qs would fall through to
+  # the catch-all "still-missing" / "cascade casualty of a wedged
+  # subprocess" branch — even though pak emitted a real build failure for
+  # it. The fix moves the canonical parse to AFTER archive fallback.
+  msgs <- c(
     "archive fallback: trying CRAN archive for 1 still-missing ref(s): qs",
     "ℹ Building qs 0.27.3",
     "✖ Failed to build qs 0.27.3 (7.2s)",
     "ERROR: compilation failed for package 'qs'"
   )
   parsed <- Require:::extractInstallFailures(msgs)
-  expect_setequal(parsed$package, c("reproducible", "qs"))
+  expect_equal(NROW(parsed), 1L)
+  expect_equal(parsed$package, "qs")
+  expect_equal(parsed$reason_type, "compile-error")
 
-  # The fix: filter by finalMissing (only packages NOT in installed.packages())
-  # before passing to reportInstallFailures.
-  finalMissing <- c("qs")  # reproducible succeeded in deferred pass
+  finalMissing <- "qs"
   filtered <- parsed[package %in% finalMissing]
-  expect_equal(NROW(filtered), 1L)
-  expect_equal(filtered$package, "qs")
-  expect_equal(filtered$reason_type, "compile-error")
-
   out <- capture.output(
-    res <- Require:::reportInstallFailures(filtered, missingPkgNames = finalMissing,
-                                           verbose = 1),
+    Require:::reportInstallFailures(filtered, missingPkgNames = finalMissing,
+                                    verbose = 1),
     type = "output"
   )
-  # reproducible should NOT appear (it actually installed)
-  expect_false(any(grepl("reproducible", out)))
-  # qs should appear with the compile-error label, not still-missing /
-  # "cascade casualty of a wedged subprocess".
   joined <- paste(out, collapse = "\n")
   expect_match(joined, "qs")
   expect_match(joined, "compile-error")
+  # The whole point: NOT the catch-all label.
   expect_false(grepl("still-missing", joined))
   expect_false(grepl("cascade casualty", joined))
 })
