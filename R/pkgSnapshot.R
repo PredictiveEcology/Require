@@ -304,23 +304,41 @@ installSnapshotViaInstallPackages <- function(snapshot,
   if (!dir.exists(dlDir)) dir.create(dlDir, recursive = TRUE)
   on.exit(unlink(dlDir, recursive = TRUE), add = TRUE)
 
+  ## Honour the snapshot's Repository column: rows like visualTest, NLMR can
+  ## point at non-CRAN CRAN-style mirrors (e.g., r-universe.dev). Without
+  ## these, pak's resolver only checks the default repos and 404s on packages
+  ## that never lived on CRAN.
+  reposFromSnapshot <- character()
+  if (!is.null(snapshot$Repository)) {
+    rfs <- unique(snapshot$Repository[!is.na(snapshot$Repository)])
+    rfs <- rfs[grepl("^https?://", rfs)]
+    if (length(rfs)) reposFromSnapshot <- rfs
+  }
+
   ## Prefer PPM Linux binaries when available: PPM serves pre-compiled
   ## tarballs indexed by distro, and pak honours options(repos), so prepending
   ## a PPM URL means recent versions skip compilation entirely. Older archived
   ## versions silently fall back to source. Opt out with
   ## options(Require.snapshotInstallerUsePPM = FALSE).
+  origRepos <- getOption("repos")
+  newRepos <- origRepos
+  if (length(reposFromSnapshot)) {
+    newRepos <- c(newRepos, setNames(reposFromSnapshot, paste0("snap", seq_along(reposFromSnapshot))))
+    messageVerbose("Adding ", length(reposFromSnapshot),
+                   " repo(s) from snapshot Repository column",
+                   verbose = verbose, verboseLevel = 1)
+  }
   if (isTRUE(getOption("Require.snapshotInstallerUsePPM", TRUE))) {
     ppm <- detectPPMLinuxRepo()
-    if (!is.null(ppm)) {
-      origRepos <- getOption("repos")
-      hasPPM <- any(grepl("packagemanager.posit.co", origRepos, fixed = TRUE))
-      if (!hasPPM) {
-        options(repos = c(PPM = ppm, origRepos))
-        on.exit(options(repos = origRepos), add = TRUE)
-        messageVerbose("Using PPM Linux binaries: ", ppm,
-                       verbose = verbose, verboseLevel = 1)
-      }
+    if (!is.null(ppm) && !any(grepl("packagemanager.posit.co", newRepos, fixed = TRUE))) {
+      newRepos <- c(PPM = ppm, newRepos)
+      messageVerbose("Using PPM Linux binaries: ", ppm,
+                     verbose = verbose, verboseLevel = 1)
     }
+  }
+  if (!identical(newRepos, origRepos)) {
+    options(repos = newRepos)
+    on.exit(options(repos = origRepos), add = TRUE)
   }
 
   messageVerbose("Downloading ", length(refs),
