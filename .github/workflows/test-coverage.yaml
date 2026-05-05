@@ -34,17 +34,9 @@ jobs:
 
       - name: Test coverage
         run: |
-          out <- tryCatch(covr::codecov(), error = function(e) e)
-          if (inherits(out, "error")) {
-            cat("\n========== covr failed; surfacing testthat.Rout.fail ==========\n")
-            failPath <- regmatches(conditionMessage(out),
-              regexpr("/[^`]*testthat\\.Rout\\.fail", conditionMessage(out)))
-            if (length(failPath) && file.exists(failPath)) {
-              cat(readLines(failPath), sep = "\n")
-            } else {
-              cat("(could not locate .Rout.fail; raw error follows)\n",
-                  conditionMessage(out), "\n", sep = "")
-            }
-            stop(conditionMessage(out), call. = FALSE)
-          }
+          ## Run tests directly first so failures surface with names; covr
+          ## otherwise hides them inside a temp .Rout.fail it then deletes.
+          devtools::load_all()
+          testthat::test_local(reporter = "summary")
+          covr::codecov()
         shell: Rscript {0}
