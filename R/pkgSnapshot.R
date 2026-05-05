@@ -207,3 +207,207 @@ doInstalledPackages <- function(libPaths, purge, includeBase) {
 
   ip
 }
+
+## Snapshot install path that bypasses pak's solver. The premise: a snapshot
+## already pins exact versions, so dep resolution is wasted work. We download
+## each pinned tarball into pak's content-addressed cache (idempotent), stage
+## the tarballs as a local mini-repo via tools::write_PACKAGES, then call
+## install.packages with type="source", dependencies=FALSE, Ncpus=N.
+## install.packages reads the synthesized PACKAGES, builds a topo order over
+## the explicit list, and parallelizes independent branches.
+##
+## Why dependencies=FALSE is safe here: the snapshot is the dep set. There is
+## nothing to *add*. Topo ordering among the listed packages still works
+## (install.packages always honours inter-dep order regardless of the
+## dependencies arg). Internal version-mismatch in a snapshot (pkg A wants
+## foo>=2 but snapshot pins foo@1) is not detected by install.packages with
+## dependencies=FALSE -- but the same is true with pak under the same flag,
+## and snapshot authors have already accepted that state by pinning what they
+## pinned.
+installSnapshotViaInstallPackages <- function(snapshot,
+                                              libPaths = .libPaths()[1],
+                                              Ncpus = max(1L, parallel::detectCores() - 1L),
+                                              verbose = getOption("Require.verbose", 1)) {
+  pkgs <- as.data.table(snapshot)
+  pkgs <- pkgs[!Package %in% .basePkgs]
+  if (!nrow(pkgs)) {
+    messageVerbose("Snapshot has no non-base packages to install",
+                   verbose = verbose, verboseLevel = 1)
+    return(invisible(TRUE))
+  }
+
+  ## Skip pkgs already installed at the requested version in libPaths[1].
+  ## CRAN pin: match Version exactly.
+  ## GH pin: match RemoteSha (if recorded) against GithubSHA1.
+  destLib <- libPaths[1]
+  ip <- tryCatch(
+    as.data.table(installed.packages(lib.loc = destLib, noCache = TRUE)),
+    error = function(e) data.table(Package = character(), Version = character()))
+  ipDesc <- function(p) {
+    f <- file.path(destLib, p, "DESCRIPTION")
+    if (!file.exists(f)) return(NA_character_)
+    dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha", "GithubSHA1")),
+                    error = function(e) NULL)
+    if (is.null(dcf) || nrow(dcf) == 0) return(NA_character_)
+    sha <- dcf[1, "RemoteSha"]
+    if (is.na(sha) || !nzchar(sha)) sha <- dcf[1, "GithubSHA1"]
+    sha
+  }
+
+  isGH <- !is.na(pkgs$GithubRepo) & nzchar(pkgs$GithubRepo)
+  alreadyOK <- logical(nrow(pkgs))
+  for (i in seq_len(nrow(pkgs))) {
+    p <- pkgs$Package[i]
+    ipRow <- ip[Package == p]
+    if (!nrow(ipRow)) next
+    if (isGH[i]) {
+      sha <- ipDesc(p)
+      alreadyOK[i] <- !is.na(sha) && identical(sha, pkgs$GithubSHA1[i])
+    } else {
+      alreadyOK[i] <- !is.na(pkgs$Version[i]) &&
+        identical(ipRow$Version[1], pkgs$Version[i])
+    }
+  }
+  if (any(alreadyOK)) {
+    messageVerbose(sum(alreadyOK), " of ", nrow(pkgs),
+                   " snapshot packages already installed at requested version; skipping",
+                   verbose = verbose, verboseLevel = 1)
+    pkgs <- pkgs[!alreadyOK]
+    isGH <- isGH[!alreadyOK]
+  }
+  if (!nrow(pkgs)) return(invisible(TRUE))
+
+  refs <- ifelse(isGH,
+                 paste0(pkgs$GithubUsername, "/", pkgs$GithubRepo, "@", pkgs$GithubSHA1),
+                 paste0(pkgs$Package, "@", pkgs$Version))
+
+  ## pak may live outside destLib (especially under standAlone); make sure
+  ## it's on the search path long enough to call pkg_download. find.package
+  ## only searches .libPaths(); under standAlone it won't see the user lib,
+  ## so fall back to R_LIBS_USER.
+  pakLib <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  if (is.null(pakLib)) {
+    for (lp in strsplit(Sys.getenv("R_LIBS_USER"), .Platform$path.sep,
+                        fixed = TRUE)[[1]]) {
+      if (nzchar(lp) && file.exists(file.path(path.expand(lp), "pak", "DESCRIPTION"))) {
+        pakLib <- path.expand(lp); break
+      }
+    }
+  }
+  origPaths <- .libPaths()
+  if (!is.null(pakLib) && !pakLib %in% origPaths) {
+    .libPaths(c(origPaths, pakLib))
+    on.exit(.libPaths(origPaths), add = TRUE)
+  }
+
+  dlDir <- tempfile2("snapInstall_dl_")
+  if (!dir.exists(dlDir)) dir.create(dlDir, recursive = TRUE)
+  on.exit(unlink(dlDir, recursive = TRUE), add = TRUE)
+
+  messageVerbose("Downloading ", length(refs),
+                 " snapshot tarballs (pak cache reused if present)",
+                 verbose = verbose, verboseLevel = 1)
+  ## pak::pkg_download is all-or-nothing on the batch: if any single ref
+  ## fails to resolve (CRAN-archive 404, deleted version, etc.) the whole
+  ## call errors. Try batch first for speed; on failure, fall back to
+  ## per-ref so we still install whatever IS resolvable, and report the
+  ## rest. This is consistent with the "install closest, runnable" stance.
+  dl <- tryCatch(pak::pkg_download(refs, dest_dir = dlDir),
+                 error = function(e) e)
+  if (inherits(dl, "error")) {
+    messageVerbose("Batch resolution failed (",
+                   sub("\n.*$", "", conditionMessage(dl)),
+                   "); falling back to per-ref download",
+                   verbose = verbose, verboseLevel = 1)
+    rows <- vector("list", length(refs))
+    failed <- character()
+    for (i in seq_along(refs)) {
+      r <- tryCatch(pak::pkg_download(refs[i], dest_dir = dlDir),
+                    error = function(e) e)
+      if (inherits(r, "error")) {
+        failed <- c(failed, refs[i])
+        next
+      }
+      rows[[i]] <- r
+    }
+    rows <- rows[lengths(rows) > 0]
+    if (!length(rows)) stop("All snapshot refs failed to resolve via pak")
+    dl <- do.call(rbind, rows)
+    if (length(failed)) {
+      messageVerbose(length(failed), " of ", length(refs),
+                     " refs failed to resolve and will be skipped",
+                     verbose = verbose, verboseLevel = 1)
+      if (verbose >= 1) {
+        cat("[snapshotInstaller] unresolvable refs:\n")
+        cat(paste0("  ", failed), sep = "\n")
+      }
+    }
+  }
+  if (!is.data.frame(dl) || !"fulltarget" %in% names(dl)) {
+    stop("pak::pkg_download returned an unexpected structure")
+  }
+
+  ## pak::pkg_download returns extra rows beyond the requested ref (e.g., the
+  ## *current* CRAN version in addition to an archived pin). If we stage all
+  ## of them, write_PACKAGES picks the newest and install.packages installs
+  ## the wrong version. Filter to only the rows matching what we asked for:
+  ## for CRAN pins that is (package, version); for GH SHA pins that is the
+  ## row of type "github".
+  pkgCol <- if ("package" %in% names(dl)) "package" else "Package"
+  verCol <- if ("version" %in% names(dl)) "version" else "Version"
+  typeCol <- if ("type" %in% names(dl)) "type" else NA_character_
+  keep <- logical(nrow(dl))
+  for (i in seq_len(nrow(pkgs))) {
+    if (isGH[i]) {
+      hit <- dl[[pkgCol]] == pkgs$Package[i] &
+        (if (!is.na(typeCol)) dl[[typeCol]] == "github" else TRUE)
+    } else {
+      hit <- dl[[pkgCol]] == pkgs$Package[i] & dl[[verCol]] == pkgs$Version[i]
+    }
+    keep <- keep | hit
+  }
+  if (!any(keep)) {
+    stop("Could not match any pak::pkg_download rows back to the snapshot refs")
+  }
+  dl <- dl[keep, , drop = FALSE]
+
+  ## Stage filtered tarballs as a local source repo. write_PACKAGES then
+  ## synthesizes the PACKAGES index from each tarball's DESCRIPTION.
+  repoDir <- tempfile2("snapInstall_repo_")
+  contribDir <- file.path(repoDir, "src", "contrib")
+  if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+  on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+
+  ## On cache hits, pak does not materialise the file at `fulltarget`; the
+  ## actual tarball lives in pak's cache at <cachepath>/src/contrib/<basename>.
+  ## Fall back to that location when fulltarget is missing.
+  pakCacheRoot <- tryCatch(pak::cache_summary()$cachepath,
+                           error = function(e) NULL)
+  pakCacheContrib <- if (!is.null(pakCacheRoot))
+    file.path(pakCacheRoot, "src", "contrib") else NA_character_
+
+  for (i in seq_len(nrow(dl))) {
+    src <- dl$fulltarget[i]
+    if (!file.exists(src) && !is.na(pakCacheContrib)) {
+      alt <- file.path(pakCacheContrib, basename(src))
+      if (file.exists(alt)) src <- alt
+    }
+    if (!file.exists(src)) next
+    dest <- file.path(contribDir,
+                      paste0(dl[[pkgCol]][i], "_", dl[[verCol]][i], ".tar.gz"))
+    file.copy(src, dest, overwrite = TRUE)
+  }
+  tools::write_PACKAGES(contribDir, type = "source")
+
+  reposURL <- paste0("file://", repoDir)
+  messageVerbose("Installing ", nrow(pkgs),
+                 " packages via install.packages(Ncpus=", Ncpus,
+                 ", dependencies=FALSE)",
+                 verbose = verbose, verboseLevel = 1)
+
+  install.packages(pkgs$Package, lib = destLib, repos = reposURL,
+                   type = "source", dependencies = FALSE, Ncpus = Ncpus,
+                   quiet = isTRUE(verbose < 1))
+
+  invisible(TRUE)
+}

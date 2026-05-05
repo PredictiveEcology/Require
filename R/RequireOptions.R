@@ -84,6 +84,7 @@ RequireOptions <- function() {
       "terra",
       "units"
     ), # c("raster", "s2", "sf", "sp", "units")
+    Require.snapshotInstaller = "pak",
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,
     Require.usePak = TRUE,

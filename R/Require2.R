@@ -1654,6 +1654,20 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
                        verbose = verbose)
       packages <- packages[-1, ]
     }
+
+    ## Optional fast-path: bypass pak's solver entirely for snapshot installs.
+    ## Snapshots already pin exact versions, so resolution is wasted work.
+    ## Gated on options(Require.snapshotInstaller = "install.packages").
+    installer <- getOption("Require.snapshotInstaller", "pak")
+    if (identical(installer, "install.packages")) {
+      out <- installSnapshotViaInstallPackages(packages, libPaths = libPaths,
+                                               verbose = verbose)
+      messageVerbose(
+        "PLEASE RESTART R using the correct library to start using the installed snapshot",
+        verbose = verbose)
+      return(invisible(out))
+    }
+
     packages <- dealWithSnapshotViolations(packages,
                                            verbose = verbose, purge = purge,
                                            libPaths = libPaths, type = type, install_githubArgs = install_githubArgs,
