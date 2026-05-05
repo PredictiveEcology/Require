@@ -340,10 +340,34 @@ installSnapshotViaInstallPackages <- function(snapshot,
                    verbose = verbose, verboseLevel = 1)
     rows <- vector("list", length(refs))
     failed <- character()
+    substituted <- character()
     for (i in seq_along(refs)) {
       r <- tryCatch(pak::pkg_download(refs[i], dest_dir = dlDir),
                     error = function(e) e)
       if (inherits(r, "error")) {
+        ## Pinned version is gone from CRAN archive. Find the nearest
+        ## archived version (prefer older, which is more likely still
+        ## available) and try that instead. Only for CRAN pins; GH SHAs
+        ## are immutable so a missing one means the repo/SHA is gone.
+        if (!isGH[i]) {
+          sub <- findNearestArchivedVersion(pkgs$Package[i], pkgs$Version[i],
+                                            verbose = verbose)
+          if (!is.null(sub) && nzchar(sub)) {
+            ref2 <- paste0(pkgs$Package[i], "@", sub)
+            r2 <- tryCatch(pak::pkg_download(ref2, dest_dir = dlDir),
+                           error = function(e) e)
+            if (!inherits(r2, "error")) {
+              rows[[i]] <- r2
+              substituted <- c(substituted,
+                               sprintf("%s: %s -> %s", pkgs$Package[i],
+                                       pkgs$Version[i], sub))
+              ## Update pkgs so downstream filtering/install see the
+              ## substituted version, not the unresolvable original.
+              pkgs$Version[i] <- sub
+              next
+            }
+          }
+        }
         failed <- c(failed, refs[i])
         next
       }
@@ -352,6 +376,14 @@ installSnapshotViaInstallPackages <- function(snapshot,
     rows <- rows[lengths(rows) > 0]
     if (!length(rows)) stop("All snapshot refs failed to resolve via pak")
     dl <- do.call(rbind, rows)
+    if (length(substituted)) {
+      messageVerbose(length(substituted),
+                     " refs substituted with nearest available archived version:",
+                     verbose = verbose, verboseLevel = 1)
+      if (verbose >= 1) {
+        cat(paste0("  ", substituted), sep = "\n")
+      }
+    }
     if (length(failed)) {
       messageVerbose(length(failed), " of ", length(refs),
                      " refs failed to resolve and will be skipped",
@@ -429,6 +461,47 @@ installSnapshotViaInstallPackages <- function(snapshot,
                    quiet = isTRUE(verbose < 1))
 
   invisible(TRUE)
+}
+
+## Pick the nearest archived version available on CRAN when the snapshot
+## pinned version is gone (404). Prefer the latest version <= requested
+## (older versions are more likely still in the archive); fall back to the
+## earliest version > requested. Returns NULL when nothing is available.
+##
+## Uses the existing `dlArchiveVersionsAvailable` helper that fetches CRAN's
+## Meta/archive.rds and `extractVersionNumber` to parse versions out of the
+## tarball filenames.
+findNearestArchivedVersion <- function(pkg, requested,
+                                       repos = getOption("repos"),
+                                       verbose = getOption("Require.verbose", 0)) {
+  ## CRAN's Meta/archive.rds lives only at the canonical CRAN mirror
+  ## (and a handful of clones); PPM/RSPM URLs don't host it. Force a
+  ## fallback to cloud.r-project.org so the lookup actually succeeds.
+  cranLike <- repos[grepl("^https?://(cran\\.|cloud\\.r-)", repos)]
+  if (!length(cranLike)) {
+    cranLike <- "https://cloud.r-project.org"
+  }
+  ava <- tryCatch(dlArchiveVersionsAvailable(pkg, repos = cranLike, verbose = verbose),
+                  error = function(e) NULL)
+  if (is.null(ava) || !length(ava) || is.null(ava[[1]]) ||
+      !is.data.frame(ava[[1]]) || !nrow(ava[[1]])) {
+    return(NULL)
+  }
+  vers <- extractVersionNumber(filenames = basename(ava[[1]][["PackageUrl"]]))
+  vers <- vers[!is.na(vers) & nzchar(vers)]
+  if (!length(vers)) return(NULL)
+  cmp <- vapply(vers, function(v) tryCatch(as.integer(utils::compareVersion(v, requested)),
+                                            error = function(e) NA_integer_),
+                integer(1))
+  earlier <- vers[!is.na(cmp) & cmp < 0]
+  later   <- vers[!is.na(cmp) & cmp > 0]
+  if (length(earlier)) {
+    return(tail(earlier[order(numeric_version(earlier))], 1))
+  }
+  if (length(later)) {
+    return(head(later[order(numeric_version(later))], 1))
+  }
+  NULL
 }
 
 ## Detect a Posit Package Manager Linux binary repo URL for the running
