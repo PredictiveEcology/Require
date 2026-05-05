@@ -33,11 +33,5 @@ jobs:
             any::covr
 
       - name: Test coverage
-        run: |
-          ## Run tests directly first so failures surface with names; covr
-          ## otherwise hides them inside a temp .Rout.fail it then deletes.
-          ## pkgload is in covr's own deps so it's reliably present here.
-          pkgload::load_all()
-          testthat::test_local(reporter = "summary")
-          covr::codecov()
+        run: covr::codecov()
         shell: Rscript {0}
