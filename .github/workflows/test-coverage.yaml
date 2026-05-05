@@ -33,5 +33,18 @@ jobs:
             any::covr
 
       - name: Test coverage
-        run: covr::codecov()
+        run: |
+          out <- tryCatch(covr::codecov(), error = function(e) e)
+          if (inherits(out, "error")) {
+            cat("\n========== covr failed; surfacing testthat.Rout.fail ==========\n")
+            failPath <- regmatches(conditionMessage(out),
+              regexpr("/[^`]*testthat\\.Rout\\.fail", conditionMessage(out)))
+            if (length(failPath) && file.exists(failPath)) {
+              cat(readLines(failPath), sep = "\n")
+            } else {
+              cat("(could not locate .Rout.fail; raw error follows)\n",
+                  conditionMessage(out), "\n", sep = "")
+            }
+            stop(conditionMessage(out), call. = FALSE)
+          }
         shell: Rscript {0}
