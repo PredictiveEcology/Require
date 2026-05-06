@@ -240,6 +240,97 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## CRAN pin: match Version exactly.
   ## GH pin: match RemoteSha (if recorded) against GithubSHA1.
   destLib <- libPaths[1]
+
+  ## Cache the just-built binaries in pkgcache. Registered via on.exit
+  ## so an interrupted run (Ctrl-C during compile, error mid-install,
+  ## pak crash, etc.) still saves whatever binaries DID land in
+  ## destLib — partial progress accumulates across restarts.
+  ##
+  ## Each installed package directory under destLib IS already a binary
+  ## (libs/.so compiled, R/ byte-compiled, Meta/Rd.rds, DESCRIPTION).
+  ## Tar with `tar czf - -C destLib <pkg>` and register in pkgcache with
+  ## built = TRUE + matching platform + rversion under a synthetic
+  ## require-snapshot-bin:// URL. The pre-filter above prefers these
+  ## (priority "ourBinary > source") so the next install of the same
+  ## pin just unpacks (~50ms) instead of recompiling (minutes).
+  ##
+  ## Skip refs already cached as our-platform binaries to avoid
+  ## re-tarring on every run (pkgcache add isn't idempotent).
+  cacheBuiltBinaries <- function() {
+    if (!requireNamespace("pkgcache", quietly = TRUE)) return(invisible())
+    if (!nzchar(Sys.which("tar"))) return(invisible())
+    ipForBin <- tryCatch(
+      rownames(installed.packages(lib.loc = destLib, noCache = TRUE)),
+      error = function(e) character())
+    installedSnapshotPkgs <- intersect(snapshot$Package, ipForBin)
+    if (!length(installedSnapshotPkgs)) return(invisible())
+    rverShort <- paste0(R.version$major, ".",
+                        strsplit(R.version$minor, "\\.")[[1]][1])
+    binRelpath <- file.path("Require/snapshot/bin",
+                             R.version$platform, rverShort)
+    cacheNow <- tryCatch(pkgcache::pkg_cache_list(),
+                         error = function(e) NULL)
+    binStaging <- tempfile2("snapInstall_bins_")
+    dir.create(binStaging, recursive = TRUE, showWarnings = FALSE)
+    on.exit(unlink(binStaging, recursive = TRUE), add = TRUE)
+    binAdded <- 0L; binSkipped <- 0L
+    for (p in installedSnapshotPkgs) {
+      pkgDir <- file.path(destLib, p)
+      if (!dir.exists(pkgDir)) next
+      desc <- tryCatch(
+        read.dcf(file.path(pkgDir, "DESCRIPTION"), fields = "Version"),
+        error = function(e) NULL)
+      if (is.null(desc) || nrow(desc) == 0L ||
+          is.na(desc[1, "Version"])) next
+      ver <- desc[1, "Version"]
+      ## Skip if a binary for this pkg+ver+platform+rversion already
+      ## sits in pkgcache (pak's own entry, or one we wrote earlier).
+      if (!is.null(cacheNow) && nrow(cacheNow) > 0) {
+        already <- !is.na(cacheNow$package) &
+                   cacheNow$package == p &
+                   !is.na(cacheNow$version) &
+                   cacheNow$version == ver &
+                   !is.na(cacheNow$built) & as.logical(cacheNow$built) &
+                   !is.na(cacheNow$platform) &
+                   cacheNow$platform == R.version$platform &
+                   !is.na(cacheNow$rversion) &
+                   cacheNow$rversion == rverShort
+        if (any(already, na.rm = TRUE)) {
+          fp <- cacheNow$fullpath[already][1]
+          if (!is.na(fp) && file.exists(fp)) {
+            binSkipped <- binSkipped + 1L
+            next
+          }
+        }
+      }
+      binFile <- file.path(binStaging, paste0(p, "_", ver, ".tgz"))
+      rc <- tryCatch(
+        system2("tar",
+                c("czf", shQuote(binFile),
+                  "-C", shQuote(destLib), shQuote(p)),
+                stdout = FALSE, stderr = FALSE),
+        error = function(e) -1L)
+      if (!identical(as.integer(rc), 0L) || !file.exists(binFile)) next
+      fakeUrl <- paste0("require-snapshot-bin://",
+                        R.version$platform, "/", rverShort, "/",
+                        p, "_", ver, ".tgz")
+      addRes <- tryCatch(
+        pkgcache::pkg_cache_add_file(
+          file = binFile, relpath = binRelpath,
+          url = fakeUrl, package = p, version = ver,
+          platform = R.version$platform, built = TRUE,
+          rversion = rverShort),
+        error = function(e) e)
+      if (!inherits(addRes, "error")) binAdded <- binAdded + 1L
+    }
+    if (verbose >= 1 && (binAdded > 0L || binSkipped > 0L))
+      cat("[snapshotInstaller] cached ", binAdded, " new + ",
+          binSkipped, " already-present built-binary tarball(s) in ",
+          "pkgcache (", R.version$platform, " R ", rverShort, ")\n",
+          sep = "")
+    invisible()
+  }
+  on.exit(cacheBuiltBinaries(), add = TRUE)
   ip <- tryCatch(
     as.data.table(installed.packages(lib.loc = destLib, noCache = TRUE)),
     error = function(e) data.table(Package = character(), Version = character()))
@@ -928,77 +1019,10 @@ installSnapshotViaInstallPackages <- function(snapshot,
                                     c(ipForFill, snapshot$Package, .basePkgs))))
   }
 
-  ## Cache the just-built binaries in pkgcache. install.packages from a
-  ## file:// repo of source tarballs compiles each package fresh — minutes
-  ## of ./configure && make per package — and there's no built-in way to
-  ## reuse those compiled artifacts on the next install. By tarring up
-  ## each installed package directory in destLib (which IS the binary:
-  ## already-compiled DSOs in libs/, byte-compiled R/, Meta/Rd.rds, etc.)
-  ## and registering it in pkgcache with built = TRUE + matching platform
-  ## + rversion, the next snapshot install of the same pin can fetch the
-  ## binary from cache and just unpack it (~50ms) instead of rebuilding.
-  ## pak::pkg_install would also discover these on URL match if it ever
-  ## fetched the same ref from CRAN/PPM directly.
-  if (requireNamespace("pkgcache", quietly = TRUE)) {
-    ipForBin <- tryCatch(
-      rownames(installed.packages(lib.loc = destLib, noCache = TRUE)),
-      error = function(e) character())
-    installedSnapshotPkgs <- intersect(snapshot$Package, ipForBin)
-    haveTar <- nzchar(Sys.which("tar"))
-    if (length(installedSnapshotPkgs) && haveTar) {
-      binStaging <- tempfile2("snapInstall_bins_")
-      dir.create(binStaging, recursive = TRUE, showWarnings = FALSE)
-      on.exit(unlink(binStaging, recursive = TRUE), add = TRUE)
-      rverShort <- paste0(R.version$major, ".",
-                          strsplit(R.version$minor, "\\.")[[1]][1])
-      binRelpath <- file.path("Require/snapshot/bin",
-                              R.version$platform, rverShort)
-      binAdded <- 0L
-      for (p in installedSnapshotPkgs) {
-        pkgDir <- file.path(destLib, p)
-        if (!dir.exists(pkgDir)) next
-        desc <- tryCatch(
-          read.dcf(file.path(pkgDir, "DESCRIPTION"), fields = "Version"),
-          error = function(e) NULL)
-        if (is.null(desc) || nrow(desc) == 0L ||
-            is.na(desc[1, "Version"])) next
-        ver <- desc[1, "Version"]
-        binFile <- file.path(binStaging, paste0(p, "_", ver, ".tgz"))
-        ## tar -C destLib pkg : creates a binary tarball with `<pkg>/`
-        ## as top-level dir (R CMD INSTALL recognizes the binary by
-        ## structure — Meta/, libs/ with .so already built).
-        rc <- tryCatch(
-          system2("tar",
-                  c("czf", shQuote(binFile),
-                    "-C", shQuote(destLib), shQuote(p)),
-                  stdout = FALSE, stderr = FALSE),
-          error = function(e) -1L)
-        if (!identical(as.integer(rc), 0L) || !file.exists(binFile)) next
-        ## URL: a synthetic scheme so subsequent pre-filter matches by
-        ## package + version + platform without colliding with pak's
-        ## own URL-keyed entries (different URL, same pkg+ver match).
-        fakeUrl <- paste0("require-snapshot-bin://",
-                          R.version$platform, "/",
-                          rverShort, "/",
-                          p, "_", ver, ".tgz")
-        addRes <- tryCatch(
-          pkgcache::pkg_cache_add_file(
-            file = binFile, relpath = binRelpath,
-            url = fakeUrl, package = p, version = ver,
-            platform = R.version$platform, built = TRUE,
-            rversion = rverShort),
-          error = function(e) e)
-        if (!inherits(addRes, "error")) binAdded <- binAdded + 1L
-      }
-      if (verbose >= 1)
-        messageVerbose(
-          "Cached ", binAdded, "/", length(installedSnapshotPkgs),
-          " built-binary tarball(s) in pkgcache (",
-          R.version$platform, " R ", rverShort,
-          ") for future reuse",
-          verbose = verbose, verboseLevel = 1)
-    }
-  }
+  ## (Binary caching is now registered via on.exit earlier in this
+  ## function so partial installs — pak crash, install.packages
+  ## interrupt, error in auto-fill — still get the binaries that DID
+  ## land in destLib cached for next time.)
 
   ## Self-diagnose: cross-check what's actually installed in destLib against
   ## the snapshot, then explain each gap with a concrete fix the user can
