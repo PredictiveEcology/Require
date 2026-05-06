@@ -704,92 +704,123 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
   if (!nrow(pkgs)) stop("All snapshot refs failed to download")
 
-  ## Repackage GitHub-archive tarballs into proper R source tarballs.
-  ## GitHub's archive/<sha>.tar.gz (what `git archive` wraps) is broken
-  ## as an R-package source tarball in two ways:
-  ##   1. Starts with a `pax_global_header` tar entry (git's per-archive
-  ##      metadata). pak's internal pkgdepends tar reader chokes:
-  ##        "! Line starting 'pax_global_header ...' is malformed!"
-  ##      → pak refuses the whole install plan (it's all-or-nothing).
-  ##   2. Top-level dir is `<repo>-<sha>/` not `<pkg>/`, so install.packages
-  ##      via a file:// repo path fails: `tar: <pkg>/DESCRIPTION not found`.
+  ## Repackage any tarball whose contents don't have <pkg>/DESCRIPTION
+  ## at top level into a proper R source tarball.
   ##
-  ## We tried `tar -czf` to repackage but pak still rejects with
-  ## "Line starting 'visualTest/DESCRIPTI ...' is malformed" — pak's
-  ## tar reader is fussier than ustar requires. Use `R CMD build`
-  ## instead: it produces a canonical R source tarball that pak
-  ## accepts (also strips .Rbuildignore'd files, computes MD5, etc.
-  ## — all the things make a proper CRAN-style package).
-  ghIdxs <- which(isGH)
-  if (length(ghIdxs) && nzchar(Sys.which("tar"))) {
-    repacked <- 0L
-    Rbin <- file.path(R.home("bin"), "R")
-    for (i in ghIdxs) {
-      if (!file.exists(destPaths[i]) || !isGoodTarball(destPaths[i])) next
+  ## Source tarballs from `git archive` (GitHub archive endpoint, OR
+  ## r-universe / r-builders that use `git archive` internally) are
+  ## broken as R-package source tarballs in two ways:
+  ##   1. Start with a `pax_global_header` tar entry (git's metadata).
+  ##      pak's pkgdepends tar reader chokes:
+  ##        "! Line starting 'pax_global_header ...' is malformed!"
+  ##      → pak refuses the whole install plan (all-or-nothing).
+  ##   2. Top-level dir is `<repo>-<sha>/` (or similar) not `<pkg>/`,
+  ##      so install.packages via a file:// repo path fails:
+  ##        `tar: <pkg>/DESCRIPTION not found in archive`.
+  ##
+  ## Affected packages aren't always GH-coord rows — fastdigest, knn,
+  ## spatstat.core etc. came from CRAN-archive style sources but their
+  ## tarballs were also git-archive built. So we DETECT (any tarball
+  ## whose tar listing doesn't include `<pkg>/DESCRIPTION` at top) and
+  ## REPACKAGE via R CMD build (canonical R source tarball, no pax,
+  ## proper inner dir).
+  ##
+  ## We also rename to `<pkg>_<DescriptionVersion>.tar.gz` because
+  ## pak's resolver validates filename version against DESCRIPTION
+  ## Version and emits the misleading "Line starting '<pkg>/DESCRIPTI
+  ## ...' is malformed!" on mismatch — actually a version-mismatch error.
+  if (nzchar(Sys.which("tar"))) {
+    needsRepack <- vapply(seq_len(nrow(pkgs)), function(i) {
+      if (!file.exists(destPaths[i]) || !isGoodTarball(destPaths[i]))
+        return(FALSE)
       pkgName <- pkgs$Package[i]
-      workDir <- tempfile2("snapInstall_repack_")
-      dir.create(workDir, recursive = TRUE, showWarnings = FALSE)
-      rcExtract <- tryCatch(
-        system2("tar", c("xzf", shQuote(destPaths[i]),
-                         "-C", shQuote(workDir)),
-                stdout = FALSE, stderr = FALSE),
-        error = function(e) -1L)
-      if (!identical(as.integer(rcExtract), 0L)) {
-        unlink(workDir, recursive = TRUE); next
-      }
-      inner <- list.files(workDir, full.names = TRUE)
-      isDir <- file.info(inner)$isdir
-      isDir[is.na(isDir)] <- FALSE
-      inner <- inner[isDir]
-      if (!length(inner)) {
-        unlink(workDir, recursive = TRUE); next
-      }
-      target <- file.path(workDir, pkgName)
-      if (!identical(basename(inner[1]), pkgName)) {
-        if (!file.rename(inner[1], target)) {
+      ## Cheap check: does the tar listing include `<pkg>/DESCRIPTION`?
+      files <- tryCatch(
+        suppressWarnings(utils::untar(destPaths[i], list = TRUE)),
+        error = function(e) character())
+      !any(files == paste0(pkgName, "/DESCRIPTION"))
+    }, logical(1))
+    needIdxs <- which(needsRepack)
+    if (length(needIdxs)) {
+      repacked <- 0L
+      Rbin <- file.path(R.home("bin"), "R")
+      for (i in needIdxs) {
+        pkgName <- pkgs$Package[i]
+        workDir <- tempfile2("snapInstall_repack_")
+        dir.create(workDir, recursive = TRUE, showWarnings = FALSE)
+        rcExtract <- tryCatch(
+          system2("tar", c("xzf", shQuote(destPaths[i]),
+                           "-C", shQuote(workDir)),
+                  stdout = FALSE, stderr = FALSE),
+          error = function(e) -1L)
+        if (!identical(as.integer(rcExtract), 0L)) {
+          if (verbose >= 1)
+            cat("[snapshotInstaller] tar extract failed for ",
+                pkgName, "\n", sep = "")
           unlink(workDir, recursive = TRUE); next
         }
-      }
-      ## R CMD build writes <pkg>_<ver>.tar.gz to its current working
-      ## directory. Run with cwd = workDir; collect the output tarball
-      ## from there. CRITICAL: pak's local:: resolver validates that
-      ## the tarball's filename version matches DESCRIPTION's Version
-      ## field, otherwise it errors with the misleading "Line starting
-      ## '<pkg>/DESCRIPTI ...' is malformed!" — actually a version
-      ## mismatch error. Our destPaths uses <pkg>_<sha7>.tar.gz for GH
-      ## refs (sha != version), so we must REPLACE destPaths[i] with
-      ## the version-named output, not just copy contents.
-      oldwd <- setwd(workDir)
-      rcBuild <- tryCatch(
-        system2(Rbin, c("CMD", "build", "--no-build-vignettes",
-                        "--no-manual", shQuote(pkgName)),
-                stdout = FALSE, stderr = FALSE),
-        error = function(e) -1L)
-      setwd(oldwd)
-      if (identical(as.integer(rcBuild), 0L)) {
+        inner <- list.files(workDir, full.names = TRUE)
+        isDir <- file.info(inner)$isdir
+        isDir[is.na(isDir)] <- FALSE
+        inner <- inner[isDir]
+        if (!length(inner)) {
+          if (verbose >= 1)
+            cat("[snapshotInstaller] no inner dir found in ",
+                pkgName, " tarball\n", sep = "")
+          unlink(workDir, recursive = TRUE); next
+        }
+        target <- file.path(workDir, pkgName)
+        if (!identical(basename(inner[1]), pkgName)) {
+          if (!file.rename(inner[1], target)) {
+            if (verbose >= 1)
+              cat("[snapshotInstaller] rename inner dir failed for ",
+                  pkgName, " (", basename(inner[1]), " -> ", pkgName,
+                  ")\n", sep = "")
+            unlink(workDir, recursive = TRUE); next
+          }
+        }
+        oldwd <- setwd(workDir)
+        rcBuild <- tryCatch(
+          system2(Rbin, c("CMD", "build", "--no-build-vignettes",
+                          "--no-manual", shQuote(pkgName)),
+                  stdout = FALSE, stderr = FALSE),
+          error = function(e) -1L)
+        setwd(oldwd)
+        if (!identical(as.integer(rcBuild), 0L)) {
+          if (verbose >= 1)
+            cat("[snapshotInstaller] R CMD build failed for ",
+                pkgName, " (rc=", rcBuild, ")\n", sep = "")
+          unlink(workDir, recursive = TRUE); next
+        }
         built <- list.files(workDir, pattern = paste0("^",
                                                        pkgName,
                                                        "_.*\\.tar\\.gz$"),
                             full.names = TRUE)
-        if (length(built)) {
-          ## Move (not copy) into dlDir under R-build's filename.
-          ## destPaths[i] = "<dlDir>/<pkg>_<sha7>.tar.gz" → discard;
-          ## new destPaths[i] = "<dlDir>/<pkg>_<DescriptionVersion>.tar.gz".
-          newDest <- file.path(dirname(destPaths[i]), basename(built[1]))
-          if (file.copy(built[1], newDest, overwrite = TRUE)) {
-            unlink(destPaths[i])  # remove original sha-named copy
-            destPaths[i] <- newDest
-            if (isGoodTarball(destPaths[i])) repacked <- repacked + 1L
-          }
+        if (!length(built)) {
+          if (verbose >= 1)
+            cat("[snapshotInstaller] R CMD build produced no tarball for ",
+                pkgName, "\n", sep = "")
+          unlink(workDir, recursive = TRUE); next
         }
+        newDest <- file.path(dirname(destPaths[i]), basename(built[1]))
+        if (!file.copy(built[1], newDest, overwrite = TRUE)) {
+          unlink(workDir, recursive = TRUE); next
+        }
+        if (newDest != destPaths[i]) {
+          unlink(destPaths[i])  # discard old sha- or version-mismatched copy
+          destPaths[i] <- newDest
+        }
+        if (isGoodTarball(destPaths[i])) repacked <- repacked + 1L
+        unlink(workDir, recursive = TRUE)
       }
-      unlink(workDir, recursive = TRUE)
+      if (verbose >= 1)
+        messageVerbose(
+          "Repackaged ", repacked, "/", length(needIdxs),
+          " tarball(s) with non-standard top-level dir via R CMD build ",
+          "(needed for pak's resolver and install.packages's file:// ",
+          "repo path)",
+          verbose = verbose, verboseLevel = 1)
     }
-    if (verbose >= 1)
-      messageVerbose("Repackaged ", repacked, "/", length(ghIdxs),
-                     " GitHub-archive tarball(s) via R CMD build ",
-                     "so pak's resolver accepts them",
-                     verbose = verbose, verboseLevel = 1)
   }
 
   ## Populate pkgcache (pak's cache) with anything we just downloaded so
