@@ -277,9 +277,22 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
   if (!nrow(pkgs)) return(invisible(TRUE))
 
-  dlDir <- tempfile2("snapInstall_dl_")
+  ## Persistent download cache: re-running the same snapshot install
+  ## shouldn't re-fetch 378 tarballs from CRAN/PPM every time. Use
+  ## R_REQUIRE_CACHE (Require's existing cache root) keyed by R version
+  ## so tarballs built against R 4.3 don't pollute a 4.4 install dir.
+  ## Files are reused via isGoodTarball(); stale/corrupt files get
+  ## re-downloaded automatically (pre-filter happens before pullBatch).
+  ## Note: pak's cache (~/.cache/.../pak/cache) is keyed by URL+content
+  ## hash and only consulted when pak fetches; our pipeline uses
+  ## libcurl-multi → local:: refs, which bypass pak's cache entirely.
+  ## So a Require-side cache is the right tool here.
+  cacheRoot <- Sys.getenv("R_REQUIRE_CACHE", unset = "")
+  if (!nzchar(cacheRoot)) cacheRoot <- tools::R_user_dir("Require", "cache")
+  dlDir <- file.path(cacheRoot, "snapshot_tarballs",
+                     paste0("R-", getRversion()))
   if (!dir.exists(dlDir)) dir.create(dlDir, recursive = TRUE)
-  on.exit(unlink(dlDir, recursive = TRUE), add = TRUE)
+  ## Intentionally NOT unlinked on exit — that's the whole point.
 
   ## Honour the snapshot's Repository column: rows like visualTest, NLMR can
   ## point at non-CRAN CRAN-style mirrors (e.g., r-universe.dev). Without
@@ -423,7 +436,20 @@ installSnapshotViaInstallPackages <- function(snapshot,
     vapply(idx, function(i) isGoodTarball(destPaths[i]), logical(1))
   }
 
-  needed <- seq_len(nrow(pkgs))
+  ## Pre-filter against the persistent download cache: any destPath
+  ## that already exists from a previous run AND passes isGoodTarball
+  ## (gzip stream intact, tar listable) skips the priority download
+  ## loop entirely. Stale / corrupt files get re-downloaded.
+  cachedHits <- vapply(seq_len(nrow(pkgs)),
+                       function(i) isGoodTarball(destPaths[i]),
+                       logical(1))
+  if (any(cachedHits)) {
+    messageVerbose(sum(cachedHits), " of ", nrow(pkgs),
+                   " snapshot tarballs already cached at ", dlDir,
+                   "; skipping download for those",
+                   verbose = verbose, verboseLevel = 1)
+  }
+  needed <- which(!cachedHits)
   maxPriority <- max(lengths(candidates))
   ## Retry the full priority loop up to maxAttempts times. Each attempt
   ## walks every priority URL for every still-missing ref. For users on
