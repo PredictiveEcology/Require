@@ -178,6 +178,19 @@ try(pak::pkg_install("knn"))
 Require::Install("knn")
 ```
 
+## Installing from a snapshot
+
+A snapshot is a flat list of exact pins (CRAN versions and GitHub SHAs). On paper, that's the easiest possible install — every version is already chosen. In practice, handing the same list to `pak::pkg_install()` runs into trouble that doesn't apply to a "just install the latest" workflow:
+
+* **All-or-nothing solving.** `pak`'s resolver evaluates every pin together. If *one* pin is unsolvable (an archived version, a sub-dep that contradicts another pin), it refuses to install anything. `Require`'s snapshot installer goes pin-by-pin with `install.packages(dependencies = NA)` against a synthesized local repo, so a bad row removes one package, not all of them.
+* **Archived / disappeared versions.** Snapshots routinely pin versions that have since left CRAN. `pak` 404s. `Require` substitutes the nearest available archived version and reports the substitution.
+* **Non-CRAN homes.** Rows that came from r-universe, RSPM, or another CRAN-alike carry a `Repository` URL. `pak`'s resolver only consults `options(repos)`, so those rows fail to resolve. `Require` honours each row's `Repository` column.
+* **Incomplete snapshots.** A snapshot built from a session that already had a transitive dep loaded from another `libPath` can be missing that dep. `pak` errors with `dependency 'X' is not available`. `Require` auto-fills the missing dep from CRAN/PPM and flags it so the user can add it to the snapshot for full reproducibility.
+* **Opaque failures.** When `pak` does fail, the user sees `! error in pak subprocess`. `Require` keeps per-package install logs and prints a structured report: status (`download-failed` / `version-conflict` / `missing-dep` / `compile-failed` / `cascade` / `substituted` / `auto-filled`), the reason, and a concrete fix.
+* **Speed on Linux/macOS.** Tarballs are fetched in parallel via `libcurl` multi, with PPM binaries preferred (and the right `User-Agent` set so PPM actually serves binaries). The cache is `pkgcache` — the same cache `pak` uses — so anything downloaded here is reusable by `pak` next time, and vice versa.
+
+Snapshot installs are the default path of `Require::Install()` when an `inst/snapshot.txt`-style file is supplied; the behaviour above is what makes "snapshot from one machine, restore on another a year later" actually work.
+
 ## Summary of differences
 
 | *What*                                          | `Require`                              | `pak` (called directly)                                |
@@ -190,7 +203,12 @@ Require::Install("knn")
 | Archived CRAN package (as a dependency)         | Automatic                              | Often fails even with workarounds                      |
 | `Additional_repositories` in `DESCRIPTION`      | Honoured                               | Not honoured                                           |
 | User-controlled override per package            | `(HEAD)` to force latest               | Not exposed                                            |
-| Snapshot mechanism                              | `pkgSnapshot()` / `pkgSnapshot2()`     | None (use `renv` separately)                           |
+| Snapshot creation                               | `pkgSnapshot()` / `pkgSnapshot2()`     | None (use `renv` separately)                           |
+| Snapshot install (per-row tolerant)             | Yes — bad row removed, rest installs   | No — one unsolvable pin aborts the whole install       |
+| Substitute archived version when pin is gone    | Yes (nearest available)                | No (fails)                                             |
+| Honour snapshot row's `Repository` column       | Yes                                    | No (only `options(repos)`)                             |
+| Auto-fill missing transitive deps in snapshot   | Yes, with diagnostic                   | No (errors)                                            |
+| Per-package failure diagnostic                  | Status / reason / fix per package      | `! error in pak subprocess`                            |
 
 The "installation engine" rows that used to appear here (parallel downloads, parallel installs, local cache) are no longer differences: `Require` uses `pak` for those.
 
