@@ -519,7 +519,10 @@ installSnapshotViaInstallPackages <- function(snapshot,
     desc <- tryCatch(read.dcf(descFile, fields = "Package"),
                      error = function(e) NULL)
     if (is.null(desc) || nrow(desc) == 0L) return(FALSE)
-    identical(desc[1, "Package"], expectedPkg)
+    ## desc[1, "Package"] is a named character (matrix indexing), so
+    ## identical() against a plain expectedPkg returns FALSE even when
+    ## the values match. Compare via as.character + == instead.
+    isTRUE(as.character(desc[1, "Package"]) == as.character(expectedPkg))
   }
 
   ## quiet = TRUE is mandatory for libcurl-multi to actually run downloads in
