@@ -484,6 +484,44 @@ installSnapshotViaInstallPackages <- function(snapshot,
     is.character(files) && length(files) > 0L
   }
 
+  ## Validate that a cached tarball actually contains the package we expect.
+  ## pkgcache entries can be wrong/stale — we've seen entries indexed under
+  ## (package = "fastdigest", version = "0.6-3") whose actual file content
+  ## was a `pscl 1.5.9` tarball. Without this check, we'd accept the
+  ## mismatch, blindly rename its inner dir to "fastdigest", run R CMD
+  ## build, and produce a `pscl_1.5.9.tar.gz` (because R CMD build reads
+  ## DESCRIPTION). Then no `fastdigest_*.tar.gz` exists, our destPaths
+  ## update fails silently, and downstream install errors with
+  ## `tar: fastdigest/DESCRIPTION: Not found in archive`.
+  ##
+  ## Cheap check: tar list the file, look for a `<dir>/DESCRIPTION` entry
+  ## (any top-level dir is OK — it'll get renamed in the repack step),
+  ## then read just that DESCRIPTION via untar(files = ...) and check the
+  ## Package: field. If mismatch, the cache hit is corrupt and the caller
+  ## should skip it (re-download or use a different cache entry).
+  cacheTarballMatchesPkg <- function(cachedFile, expectedPkg) {
+    files <- tryCatch(suppressWarnings(utils::untar(cachedFile, list = TRUE)),
+                      error = function(e) character())
+    if (!length(files)) return(FALSE)
+    descIdx <- which(grepl("^[^/]+/DESCRIPTION$", files))
+    if (!length(descIdx)) return(FALSE)
+    descPath <- files[descIdx[1]]
+    extractTo <- tempfile2("snapInstall_descPeek_")
+    dir.create(extractTo, recursive = TRUE, showWarnings = FALSE)
+    on.exit(unlink(extractTo, recursive = TRUE), add = TRUE)
+    rc <- tryCatch(
+      suppressWarnings(utils::untar(cachedFile, files = descPath,
+                                    exdir = extractTo)),
+      error = function(e) 1L)
+    descFile <- file.path(extractTo, descPath)
+    if (!identical(as.integer(rc), 0L) || !file.exists(descFile))
+      return(FALSE)
+    desc <- tryCatch(read.dcf(descFile, fields = "Package"),
+                     error = function(e) NULL)
+    if (is.null(desc) || nrow(desc) == 0L) return(FALSE)
+    identical(desc[1, "Package"], expectedPkg)
+  }
+
   ## quiet = TRUE is mandatory for libcurl-multi to actually run downloads in
   ## parallel. With quiet = FALSE, R serializes the URLs through libcurl one
   ## at a time so it can attribute progress lines to individual files —
@@ -577,7 +615,8 @@ installSnapshotViaInstallPackages <- function(snapshot,
           ## Prefer our-platform binary over source: skips compile.
           hit <- hit[order(-as.integer(isOurBin)), , drop = FALSE]
           cached <- hit$fullpath[1]
-          if (file.exists(cached) && isGoodTarball(cached)) {
+          if (file.exists(cached) && isGoodTarball(cached) &&
+              cacheTarballMatchesPkg(cached, pkgs$Package[i])) {
             file.copy(cached, destPaths[i], overwrite = TRUE)
             cachedHits[i] <- TRUE
           }
