@@ -431,9 +431,20 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## skip the download. This is the same cache pak's own pkg_install
   ## populates and reads from, so we share state with pak's flow.
   cachedHits <- logical(nrow(pkgs))
+  cacheList <- NULL
   if (requireNamespace("pkgcache", quietly = TRUE)) {
     cacheList <- tryCatch(pkgcache::pkg_cache_list(),
                           error = function(e) NULL)
+    if (verbose >= 1) {
+      cacheRoot <- tryCatch(
+        tools::R_user_dir("pkgcache", "cache"),
+        error = function(e) NA_character_)
+      messageVerbose(
+        "pkgcache state: ",
+        if (is.null(cacheList)) "unavailable"
+        else paste0(nrow(cacheList), " entries at ", cacheRoot),
+        verbose = verbose, verboseLevel = 1)
+    }
     if (!is.null(cacheList) && nrow(cacheList) > 0) {
       for (i in seq_len(nrow(pkgs))) {
         if (isGH[i]) {
@@ -464,6 +475,19 @@ installSnapshotViaInstallPackages <- function(snapshot,
                    " snapshot tarballs hit pkgcache (pak's cache); ",
                    "skipping download for those",
                    verbose = verbose, verboseLevel = 1)
+  } else if (verbose >= 1 && !is.null(cacheList) && nrow(cacheList) > 0) {
+    ## Cache has entries but none matched our snapshot. Show a sample
+    ## so the user can spot mismatches (e.g., URL format differences,
+    ## missing package/version columns).
+    sampleN <- min(3L, nrow(cacheList))
+    cat("[snapshotInstaller] no cache hits for snapshot. Sample of ",
+        sampleN, " cache entries (of ", nrow(cacheList), "):\n", sep = "")
+    safeNA <- function(x) if (is.null(x) || is.na(x)) "NA" else as.character(x)
+    for (k in seq_len(sampleN)) {
+      cat("  pkg=", safeNA(cacheList$package[k]),
+          " ver=", safeNA(cacheList$version[k]),
+          " url=", safeNA(cacheList$url[k]), "\n", sep = "")
+    }
   }
   needed <- which(!cachedHits)
   maxPriority <- max(lengths(candidates))
@@ -603,18 +627,32 @@ installSnapshotViaInstallPackages <- function(snapshot,
         any(file.exists(nowCacheList$fullpath[
               !is.na(nowCacheList$url) & nowCacheList$url == url]), na.rm = TRUE)
       if (already) next
-      tryCatch(
+      ## Pass relpath = "Require/snapshot" so the cached copies live at
+      ## a stable predictable path (<cache>/Require/snapshot/<filename>)
+      ## rather than under whatever tempdir destPaths happens to come
+      ## from. Without an explicit relpath, pkgcache defaults to
+      ## dirname(file) which is our scratch tempdir — fine functionally
+      ## (file_copy still works) but the recorded fullpath is brittle.
+      addRes <- tryCatch(
         pkgcache::pkg_cache_add_file(
           file = destPaths[i],
+          relpath = "Require/snapshot",
           url = url,
           package = pkgs$Package[i],
           version = pkgs$Version[i]),
-        error = function(e) NULL)
-      addedCount <- addedCount + 1L
+        error = function(e) e)
+      if (inherits(addRes, "error")) {
+        if (verbose >= 1)
+          cat("[snapshotInstaller] pkg_cache_add_file failed for ",
+              pkgs$Package[i], ": ",
+              conditionMessage(addRes), "\n", sep = "")
+      } else {
+        addedCount <- addedCount + 1L
+      }
     }
-    if (addedCount > 0L)
-      messageVerbose("Added ", addedCount,
-                     " tarball(s) to pkgcache (pak's cache) for future reuse",
+    if (verbose >= 1)
+      messageVerbose("Added ", addedCount, "/", nrow(pkgs),
+                     " tarball(s) to pkgcache for future reuse",
                      verbose = verbose, verboseLevel = 1)
   }
 
