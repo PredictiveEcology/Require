@@ -752,7 +752,13 @@ installSnapshotViaInstallPackages <- function(snapshot,
       }
       ## R CMD build writes <pkg>_<ver>.tar.gz to its current working
       ## directory. Run with cwd = workDir; collect the output tarball
-      ## from there.
+      ## from there. CRITICAL: pak's local:: resolver validates that
+      ## the tarball's filename version matches DESCRIPTION's Version
+      ## field, otherwise it errors with the misleading "Line starting
+      ## '<pkg>/DESCRIPTI ...' is malformed!" — actually a version
+      ## mismatch error. Our destPaths uses <pkg>_<sha7>.tar.gz for GH
+      ## refs (sha != version), so we must REPLACE destPaths[i] with
+      ## the version-named output, not just copy contents.
       oldwd <- setwd(workDir)
       rcBuild <- tryCatch(
         system2(Rbin, c("CMD", "build", "--no-build-vignettes",
@@ -766,8 +772,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
                                                        "_.*\\.tar\\.gz$"),
                             full.names = TRUE)
         if (length(built)) {
-          file.copy(built[1], destPaths[i], overwrite = TRUE)
-          if (isGoodTarball(destPaths[i])) repacked <- repacked + 1L
+          ## Move (not copy) into dlDir under R-build's filename.
+          ## destPaths[i] = "<dlDir>/<pkg>_<sha7>.tar.gz" → discard;
+          ## new destPaths[i] = "<dlDir>/<pkg>_<DescriptionVersion>.tar.gz".
+          newDest <- file.path(dirname(destPaths[i]), basename(built[1]))
+          if (file.copy(built[1], newDest, overwrite = TRUE)) {
+            unlink(destPaths[i])  # remove original sha-named copy
+            destPaths[i] <- newDest
+            if (isGoodTarball(destPaths[i])) repacked <- repacked + 1L
+          }
         }
       }
       unlink(workDir, recursive = TRUE)
