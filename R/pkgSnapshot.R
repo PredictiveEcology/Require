@@ -624,63 +624,62 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## dramatically speeding up repeat runs of the same snapshot. Plain
   ## install.packages has no such cache.
   ##
-  ## However: pak's resolver re-walks every local:: ref's DESCRIPTION
-  ## against CRAN/PPM (downloading metadata, "Found N deps for M/M pkgs",
-  ## etc.) even for local refs. Under testthat's sink that output renders
-  ## as a wall of static spinner lines instead of a redrawing progress
-  ## bar. We sink pak's output to a tempfile during the attempt so the
-  ## user doesn't see the noise; on failure we surface the last few
-  ## captured lines for diagnostics, which is more actionable than pak's
-  ## generic "error in pak subprocess" wrapper exception.
+  ## Run pak::pkg_install live (no sink) by default — while we're
+  ## still figuring out why the snapshot makes pak's solver refuse,
+  ## hiding the output means we can't see anything actionable.
+  ## setup.R's options(pkg.show_progress = FALSE) already kills the
+  ## spinner / progress-bar storm during interactive dev test runs,
+  ## so live output here means: "Will install N packages", "✔
+  ## Installed X", and most importantly any error/warning text pak
+  ## writes before the subprocess crash. Set
+  ## options(Require.snapshotInstallerPakSilent = TRUE) to revert to
+  ## the sink-and-filter mode once pak's behavior is understood.
   ##
   ## install.packages is the fallback: pak's solver is all-or-nothing and
   ## refuses on any unsolvable snapshot constraint. install.packages
   ## (with dependencies = NA + file:// repo) is permissive — installs
   ## what it can in topological order, fails per-package on broken deps.
   localRefs <- paste0("local::", destPaths)
-  pakLogPath <- tempfile2("pak_log_")
   pakLogTail <- character()
   pakErr <- NULL
   if (requireNamespace("pak", quietly = TRUE)) {
     messageVerbose("Trying pak::pkg_install (binary cache; ",
                    "fallback: install.packages)",
                    verbose = verbose, verboseLevel = 1)
-    pakLogCon <- file(pakLogPath, "w")
-    pakErr <- tryCatch({
-      sink(pakLogCon, type = "output")
-      sink(pakLogCon, type = "message")
-      pak::pkg_install(localRefs, lib = destLib,
-                       dependencies = NA, upgrade = FALSE, ask = FALSE)
-      NULL
-    }, error = function(e) e, finally = {
-      try(sink(NULL, type = "message"), silent = TRUE)
-      try(sink(NULL, type = "output"), silent = TRUE)
-      try(close(pakLogCon), silent = TRUE)
-    })
-    if (file.exists(pakLogPath)) {
-      pakLog <- tryCatch(readLines(pakLogPath, warn = FALSE),
-                         error = function(e) character())
-      ## Strip ALL ANSI escape sequences via cli::ansi_strip — our hand-
-      ## rolled regex missed control sequences like `\033[?25l`
-      ## (hide-cursor) that pak emits before the unicode glyphs, so the
-      ## `^` anchor in the keep-out regex below failed to match.
-      ## ansi_strip handles every CSI/OSC variant.
-      if (requireNamespace("cli", quietly = TRUE))
-        pakLog <- cli::ansi_strip(pakLog)
-      pakLog <- gsub("\r", "", pakLog)
-      ## Drop empty lines and pak's spinner / progress lines (they start
-      ## with `⸨` brackets, braille spinner chars `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, or the
-      ## unicode status glyphs cli uses for headers — `✔ ℹ → ✖`). Also
-      ## drop pak's progress headers ("Found N deps for", etc.) so the
-      ## tail surfaces the actual error message that pak emitted right
-      ## before the subprocess crashed, not just decorative pre-failure
-      ## progress.
-      pakLog <- pakLog[nzchar(trimws(pakLog))]
-      pakLog <- pakLog[!grepl("^[[:space:]]*[✨⚖→✖ℹ✔⠇⠈-⠏⢨⢹⣨⣩]", pakLog)]
-      pakLog <- pakLog[!grepl(
-        "^[[:space:]]*(Found|Resolving|Updating metadata|Downloading|Will install|Will download|Getting|Installing|Got |Installed |Will update|Checking installed|Checking for [0-9]+)",
-        pakLog)]
-      pakLogTail <- utils::tail(pakLog, 8)
+    silent <- isTRUE(getOption("Require.snapshotInstallerPakSilent", FALSE))
+    if (silent) {
+      pakLogPath <- tempfile2("pak_log_")
+      pakLogCon <- file(pakLogPath, "w")
+      pakErr <- tryCatch({
+        sink(pakLogCon, type = "output")
+        sink(pakLogCon, type = "message")
+        pak::pkg_install(localRefs, lib = destLib,
+                         dependencies = NA, upgrade = FALSE, ask = FALSE)
+        NULL
+      }, error = function(e) e, finally = {
+        try(sink(NULL, type = "message"), silent = TRUE)
+        try(sink(NULL, type = "output"), silent = TRUE)
+        try(close(pakLogCon), silent = TRUE)
+      })
+      if (file.exists(pakLogPath)) {
+        pakLog <- tryCatch(readLines(pakLogPath, warn = FALSE),
+                           error = function(e) character())
+        if (requireNamespace("cli", quietly = TRUE))
+          pakLog <- cli::ansi_strip(pakLog)
+        pakLog <- gsub("\r", "", pakLog)
+        pakLog <- pakLog[nzchar(trimws(pakLog))]
+        pakLog <- pakLog[!grepl("^[[:space:]]*[✨⚖→✖ℹ✔⠇⠈-⠏⢨⢹⣨⣩]", pakLog)]
+        pakLog <- pakLog[!grepl(
+          "^[[:space:]]*(Found|Resolving|Updating metadata|Downloading|Will install|Will download|Getting|Installing|Got |Installed |Will update|Checking installed|Checking for [0-9]+)",
+          pakLog)]
+        pakLogTail <- utils::tail(pakLog, 8)
+      }
+    } else {
+      pakErr <- tryCatch({
+        pak::pkg_install(localRefs, lib = destLib,
+                         dependencies = NA, upgrade = FALSE, ask = FALSE)
+        NULL
+      }, error = function(e) e)
     }
     ## Pull pak's structured detailed error (the wrapper exception
     ## "! error in pak subprocess" hides it). pak::last_error() returns
