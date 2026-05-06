@@ -1966,14 +1966,28 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
     # imported by 'Y' so cannot be unloaded") instead of pak's generic
     # wrapper exception "Error : ! error in pak subprocess".
     pkgMsgs <- character(0)
-    err <- try(withCallingHandlers(
-      pakCall(
+    ## Only install a calling handler when we're suppressing output anyway
+    ## (verbose < 1). At verbose >= 1, the handler's mere presence in cli's
+    ## condition chain breaks cli's dynamic-vs-static redraw heuristic and
+    ## every progress tick spews as a fresh line. Trade-off: at verbose >= 1
+    ## we lose the per-package message capture, so pakBuildFailReason has
+    ## only the err string to work with — fine, because the user already saw
+    ## the messages live on console at verbose >= 1.
+    if (verbose < 1) {
+      err <- try(withCallingHandlers(
+        pakCall(
+          pak::pak(pkg, lib = lib, ask = FALSE,
+                   dependencies = deps, upgrade = up),
+          verbose),
+        message = function(m) {
+          pkgMsgs <<- c(pkgMsgs, conditionMessage(m))
+        }), silent = TRUE)
+    } else {
+      err <- try(pakCall(
         pak::pak(pkg, lib = lib, ask = FALSE,
                  dependencies = deps, upgrade = up),
-        verbose),
-      message = function(m) {
-        pkgMsgs <<- c(pkgMsgs, conditionMessage(m))
-      }), silent = TRUE)
+        verbose), silent = TRUE)
+    }
     if (is(err, "try-error")) {
       failed <- c(failed, pkg)
       reason <- pakBuildFailReason(as.character(err), pkgMsgs)
@@ -2336,12 +2350,21 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # missing build-time deps: bit64, dplyr, ..."). Filled by withCallingHandlers
   # wrappers around each pakRetryLoop / pakSerialInstall call below.
   allCapturedMsgs <- character(0)
+  ## Only capture when we're suppressing console output (verbose < 1). At
+  ## verbose >= 1 a no-op calling handler in cli's condition chain breaks
+  ## cli's dynamic redraw — every progress tick spews as a fresh line. The
+  ## downstream parser (extractBuildFailures, pakBuildFailReason) gets less
+  ## detail at verbose >= 1, but the user already saw failures on console.
   capturePak <- function(expr) {
-    withCallingHandlers(
-      expr,
-      message = function(m) {
-        allCapturedMsgs <<- c(allCapturedMsgs, conditionMessage(m))
-      })
+    if (verbose < 1) {
+      withCallingHandlers(
+        expr,
+        message = function(m) {
+          allCapturedMsgs <<- c(allCapturedMsgs, conditionMessage(m))
+        })
+    } else {
+      expr
+    }
   }
 
   # See pakRefToBareName() -- strips "any::" / "owner/" / "@version" so the
