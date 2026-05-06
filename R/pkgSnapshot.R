@@ -704,6 +704,81 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
   if (!nrow(pkgs)) stop("All snapshot refs failed to download")
 
+  ## Repackage GitHub-archive tarballs into proper R source tarballs.
+  ## GitHub's archive/<sha>.tar.gz (what `git archive` wraps) is broken
+  ## as an R-package source tarball in two ways:
+  ##   1. Starts with a `pax_global_header` tar entry (git's per-archive
+  ##      metadata). pak's internal pkgdepends tar reader chokes:
+  ##        "! Line starting 'pax_global_header ...' is malformed!"
+  ##      → pak refuses the whole install plan (it's all-or-nothing).
+  ##   2. Top-level dir is `<repo>-<sha>/` not `<pkg>/`, so install.packages
+  ##      via a file:// repo path fails: `tar: <pkg>/DESCRIPTION not found`.
+  ##
+  ## We tried `tar -czf` to repackage but pak still rejects with
+  ## "Line starting 'visualTest/DESCRIPTI ...' is malformed" — pak's
+  ## tar reader is fussier than ustar requires. Use `R CMD build`
+  ## instead: it produces a canonical R source tarball that pak
+  ## accepts (also strips .Rbuildignore'd files, computes MD5, etc.
+  ## — all the things make a proper CRAN-style package).
+  ghIdxs <- which(isGH)
+  if (length(ghIdxs) && nzchar(Sys.which("tar"))) {
+    repacked <- 0L
+    Rbin <- file.path(R.home("bin"), "R")
+    for (i in ghIdxs) {
+      if (!file.exists(destPaths[i]) || !isGoodTarball(destPaths[i])) next
+      pkgName <- pkgs$Package[i]
+      workDir <- tempfile2("snapInstall_repack_")
+      dir.create(workDir, recursive = TRUE, showWarnings = FALSE)
+      rcExtract <- tryCatch(
+        system2("tar", c("xzf", shQuote(destPaths[i]),
+                         "-C", shQuote(workDir)),
+                stdout = FALSE, stderr = FALSE),
+        error = function(e) -1L)
+      if (!identical(as.integer(rcExtract), 0L)) {
+        unlink(workDir, recursive = TRUE); next
+      }
+      inner <- list.files(workDir, full.names = TRUE)
+      isDir <- file.info(inner)$isdir
+      isDir[is.na(isDir)] <- FALSE
+      inner <- inner[isDir]
+      if (!length(inner)) {
+        unlink(workDir, recursive = TRUE); next
+      }
+      target <- file.path(workDir, pkgName)
+      if (!identical(basename(inner[1]), pkgName)) {
+        if (!file.rename(inner[1], target)) {
+          unlink(workDir, recursive = TRUE); next
+        }
+      }
+      ## R CMD build writes <pkg>_<ver>.tar.gz to its current working
+      ## directory. Run with cwd = workDir; collect the output tarball
+      ## from there.
+      oldwd <- setwd(workDir)
+      rcBuild <- tryCatch(
+        system2(Rbin, c("CMD", "build", "--no-build-vignettes",
+                        "--no-manual", shQuote(pkgName)),
+                stdout = FALSE, stderr = FALSE),
+        error = function(e) -1L)
+      setwd(oldwd)
+      if (identical(as.integer(rcBuild), 0L)) {
+        built <- list.files(workDir, pattern = paste0("^",
+                                                       pkgName,
+                                                       "_.*\\.tar\\.gz$"),
+                            full.names = TRUE)
+        if (length(built)) {
+          file.copy(built[1], destPaths[i], overwrite = TRUE)
+          if (isGoodTarball(destPaths[i])) repacked <- repacked + 1L
+        }
+      }
+      unlink(workDir, recursive = TRUE)
+    }
+    if (verbose >= 1)
+      messageVerbose("Repackaged ", repacked, "/", length(ghIdxs),
+                     " GitHub-archive tarball(s) via R CMD build ",
+                     "so pak's resolver accepts them",
+                     verbose = verbose, verboseLevel = 1)
+  }
+
   ## Populate pkgcache (pak's cache) with anything we just downloaded so
   ## subsequent runs hit the cache pre-filter above. Skip refs that
   ## already had a cache hit (cachedHits — they're already there) and
@@ -880,77 +955,47 @@ installSnapshotViaInstallPackages <- function(snapshot,
       else "",
       verbose = verbose, verboseLevel = 1)
 
-    ## GitHub-sourced tarballs have `<repo>-<sha>/` as their top-level
-    ## directory (that's how `git archive` formats them), not `<pkg>/`.
-    ## install.packages via a file:// repo path uses R CMD INSTALL on the
-    ## tarball name, which then fails with `tar: <pkg>/DESCRIPTION: not
-    ## found in archive`. Split GH refs out: install them by direct file
-    ## path (R CMD INSTALL handles non-standard top-level dirs that way),
-    ## CRAN-style refs go through the file:// repo so install.packages
-    ## can resolve dependencies = NA topo order from PACKAGES.
-    nonGhIdx <- which(!isGH)
-    ghIdx <- which(isGH)
-
-    if (length(nonGhIdx)) {
-      repoDir <- tempfile2("snapInstall_repo_")
-      contribDir <- file.path(repoDir, "src", "contrib")
-      if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
-      on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
-      for (i in nonGhIdx) {
-        dest <- file.path(contribDir, basename(destPaths[i]))
-        file.copy(destPaths[i], dest, overwrite = TRUE)
-      }
-      tools::write_PACKAGES(contribDir, type = "source")
-      reposURL <- paste0("file://", repoDir)
-      suppressWarnings(utils::install.packages(
-        pkgs$Package[nonGhIdx], lib = destLib, repos = reposURL,
-        type = "source", dependencies = NA, Ncpus = Ncpus,
-        keep_outputs = outDir,
-        quiet = isTRUE(verbose < 1)))
+    ## All tarballs (including repackaged GH ones) now have <pkg>/ as
+    ## their top-level dir, so install.packages via a single file://
+    ## repo handles them uniformly. dependencies = NA computes topo
+    ## order from the PACKAGES index.
+    repoDir <- tempfile2("snapInstall_repo_")
+    contribDir <- file.path(repoDir, "src", "contrib")
+    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+    for (i in seq_len(nrow(pkgs))) {
+      dest <- file.path(contribDir, basename(destPaths[i]))
+      file.copy(destPaths[i], dest, overwrite = TRUE)
     }
-    if (length(ghIdx)) {
-      ## install.packages with repos = NULL + a vector of file paths
-      ## installs each via R CMD INSTALL <path>, which is tolerant of
-      ## non-standard top-level dirs in the tarball (it reads
-      ## DESCRIPTION wherever it finds it).
-      suppressWarnings(utils::install.packages(
-        destPaths[ghIdx], lib = destLib, repos = NULL,
-        type = "source", dependencies = NA, Ncpus = Ncpus,
-        keep_outputs = outDir,
-        quiet = isTRUE(verbose < 1)))
-    }
+    tools::write_PACKAGES(contribDir, type = "source")
+    reposURL <- paste0("file://", repoDir)
+    suppressWarnings(utils::install.packages(
+      pkgs$Package, lib = destLib, repos = reposURL,
+      type = "source", dependencies = NA, Ncpus = Ncpus,
+      keep_outputs = outDir,
+      quiet = isTRUE(verbose < 1)))
   } else if (requireNamespace("pak", quietly = TRUE)) {
     messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
                    verbose = verbose, verboseLevel = 1)
   } else {
     ## pak isn't installed at all — go directly to install.packages.
-    ## Same GH-vs-non-GH split as the pak-failed branch above.
-    nonGhIdx <- which(!isGH)
-    ghIdx <- which(isGH)
-    if (length(nonGhIdx)) {
-      repoDir <- tempfile2("snapInstall_repo_")
-      contribDir <- file.path(repoDir, "src", "contrib")
-      if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
-      on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
-      for (i in nonGhIdx) {
-        dest <- file.path(contribDir, basename(destPaths[i]))
-        file.copy(destPaths[i], dest, overwrite = TRUE)
-      }
-      tools::write_PACKAGES(contribDir, type = "source")
-      reposURL <- paste0("file://", repoDir)
-      suppressWarnings(utils::install.packages(
-        pkgs$Package[nonGhIdx], lib = destLib, repos = reposURL,
-        type = "source", dependencies = NA, Ncpus = Ncpus,
-        keep_outputs = outDir,
-        quiet = isTRUE(verbose < 1)))
+    ## Repackaged GH tarballs already have <pkg>/ at top level, so
+    ## one file:// repo handles everything.
+    repoDir <- tempfile2("snapInstall_repo_")
+    contribDir <- file.path(repoDir, "src", "contrib")
+    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+    for (i in seq_len(nrow(pkgs))) {
+      dest <- file.path(contribDir, basename(destPaths[i]))
+      file.copy(destPaths[i], dest, overwrite = TRUE)
     }
-    if (length(ghIdx)) {
-      suppressWarnings(utils::install.packages(
-        destPaths[ghIdx], lib = destLib, repos = NULL,
-        type = "source", dependencies = NA, Ncpus = Ncpus,
-        keep_outputs = outDir,
-        quiet = isTRUE(verbose < 1)))
-    }
+    tools::write_PACKAGES(contribDir, type = "source")
+    reposURL <- paste0("file://", repoDir)
+    suppressWarnings(utils::install.packages(
+      pkgs$Package, lib = destLib, repos = reposURL,
+      type = "source", dependencies = NA, Ncpus = Ncpus,
+      keep_outputs = outDir,
+      quiet = isTRUE(verbose < 1)))
   }
 
   ## Auto-fill missing transitive deps. Snapshots are sometimes incomplete:
