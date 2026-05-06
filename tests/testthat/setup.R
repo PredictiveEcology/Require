@@ -10,7 +10,16 @@ if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
 ## Point pak at a per-session temp dir so it can write its cache. The dir
 ## must exist before pak::cache_summary() / loadNamespace("pak") runs, so
 ## create it eagerly here rather than relying on pak to mkdir.
-if (!nzchar(Sys.getenv("R_USER_CACHE_DIR"))) {
+##
+## Gate this override on `!interactive()` so dev runs of
+## testthat::test_local() use the user's real pkgcache rather than a
+## throwaway tempdir per session. Require's snapshot installer
+## populates pkgcache after each download (pkg_cache_add_file), so a
+## persistent cache means a second test_local() invocation hits all
+## 378 tarballs and skips the libcurl-multi download phase entirely.
+## Under R CMD check / CI / batch usage, interactive() is FALSE and the
+## tempdir override still applies.
+if (!nzchar(Sys.getenv("R_USER_CACHE_DIR")) && !interactive()) {
   .userCacheDir <- tempfile("RequireUserCache_")
   dir.create(.userCacheDir, recursive = TRUE, showWarnings = FALSE)
   withr::local_envvar(
