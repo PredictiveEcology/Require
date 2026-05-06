@@ -49,6 +49,7 @@ Suggests:
     gitcreds,
     httr,
     parallel,
+    pkgcache,
     rematch2,
     rmarkdown,
     knitr,
