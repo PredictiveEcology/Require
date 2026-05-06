@@ -347,8 +347,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
                     pkgs$GithubRepo[i], "/archive/", pkgs$GithubSHA1[i], ".tar.gz"))
     }
     pkg <- pkgs$Package[i]; ver <- pkgs$Version[i]
+    ## A snapshot row's own Repository URL takes priority: rows pinning
+    ## packages from r-universe / RSPM / etc. tell us exactly where the
+    ## tarball lives, and PPM/CRAN won't have it. Try the row repo first;
+    ## fall through to PPM/CRAN if it 404s (covers re-pointing later).
+    rowRepo <- pkgs$Repository[i]
+    rowRepos <- if (!is.na(rowRepo) && grepl("^https?://", rowRepo)) rowRepo
+                else character()
     out <- character()
-    for (r in c(ppmRepos, cranRepos)) {
+    for (r in c(rowRepos, ppmRepos, cranRepos)) {
       out <- c(out,
                paste0(r, "/src/contrib/", pkg, "_", ver, ".tar.gz"),
                paste0(r, "/src/contrib/Archive/", pkg, "/", pkg, "_", ver, ".tar.gz"))
@@ -472,6 +479,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
                    verbose = verbose, verboseLevel = 1)
     if (verbose >= 1) cat(paste0("  ", substituted), sep = "\n")
   }
+  unresolvedRefs <- character()
   if (length(needed)) {
     messageVerbose(length(needed), " of ", nrow(pkgs),
                    " refs failed to download and will be skipped",
@@ -481,6 +489,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
       cat(paste0("  ", pkgs$Package[needed], "@", pkgs$Version[needed]),
           sep = "\n")
     }
+    ## Capture the unresolved set before mutating pkgs so the post-install
+    ## diagnostic can distinguish "couldn't download" from "failed to build".
+    unresolvedRefs <- setNames(pkgs$Version[needed], pkgs$Package[needed])
     pkgs   <- pkgs[-needed, , drop = FALSE]
     isGH   <- isGH[-needed]
     destPaths <- destPaths[-needed]
@@ -513,6 +524,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     NULL
   }, error = function(e) e)
 
+  outDir <- character()
   if (!is.null(pakErr)) {
     ## pak's solver is all-or-nothing: any unsolvable constraint in the
     ## snapshot (e.g., a version pin that doesn't satisfy a transitive
@@ -535,13 +547,198 @@ installSnapshotViaInstallPackages <- function(snapshot,
     }
     tools::write_PACKAGES(contribDir, type = "source")
     reposURL <- paste0("file://", repoDir)
+    ## keep_outputs = <dir> tells install.packages to retain the per-package
+    ## R CMD INSTALL log as <pkg>.out; the diagnostic helper parses these
+    ## structurally to attribute each failure to a concrete root cause.
+    ## Without keep_outputs the logs are interleaved on parent stdout and
+    ## the per-package context is lost.
+    outDir <- tempfile2("snapInstall_outs_")
+    dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
+    on.exit(unlink(outDir, recursive = TRUE), add = TRUE)
     suppressWarnings(utils::install.packages(
       pkgs$Package, lib = destLib, repos = reposURL,
       type = "source", dependencies = FALSE, Ncpus = Ncpus,
+      keep_outputs = outDir,
       quiet = isTRUE(verbose < 1)))
   }
 
+  ## Self-diagnose: cross-check what's actually installed in destLib against
+  ## the snapshot, then explain each gap with a concrete fix the user can
+  ## apply to the snapshot file. This is the difference between a cryptic
+  ## "ERROR: dependency 'X' is not available" and an actionable
+  ## "X failed to compile because R 4.5 removed Calloc/Free; bump X to >= Y".
+  diagnoseSnapshotInstallFailures(
+    snapshot = snapshot, destLib = destLib,
+    unresolvedRefs = unresolvedRefs, substituted = substituted,
+    outDir = outDir, verbose = verbose)
+
   invisible(TRUE)
+}
+
+## Post-install introspection: classify every snapshot package that didn't
+## land in destLib and emit a structured report (status, why, fix). Reads
+## per-package R CMD INSTALL logs (written by install.packages with
+## keep_outputs) and matches against known failure patterns.
+##
+## Patterns recognised:
+##  * version-conflict   "namespace 'X' V is being loaded, but >= W is required"
+##  * missing-dep        "ERROR: dependency 'X' is not available for package"
+##  * compile-failed     "ERROR: compilation failed" / "non-zero exit status"
+##  * download-failed    couldn't fetch tarball from any candidate URL
+##  * substituted        installed, but at a different version than pinned
+diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
+                                            unresolvedRefs = character(),
+                                            substituted = character(),
+                                            outDir = character(),
+                                            verbose = 1) {
+  ip <- tryCatch(
+    rownames(installed.packages(lib.loc = destLib, noCache = TRUE)),
+    error = function(e) character())
+  expected <- snapshot$Package[!snapshot$Package %in% .basePkgs]
+  expected <- expected[nzchar(expected) & !is.na(expected)]
+  missing  <- setdiff(expected, ip)
+
+  ## Map snapshot Package -> Version for fix suggestions.
+  snapVer <- setNames(snapshot$Version, snapshot$Package)
+
+  diagnostics <- list()
+
+  ## Download-stage failures: tarball never reached install.packages.
+  for (p in names(unresolvedRefs)) {
+    diagnostics[[p]] <- list(
+      pkg = p, status = "download-failed",
+      reason = sprintf("version %s not found on PPM, CRAN, or any candidate URL",
+                       unresolvedRefs[[p]]),
+      fix = paste0(
+        "options: (a) bump the pin to a version on CRAN; ",
+        "(b) set the snapshot Repository column to the package's home repo ",
+        "(e.g. r-universe URL); ",
+        "(c) provide GithubRepo / GithubUsername / GithubSHA1"))
+  }
+
+  ## Read per-package install logs (only present after install.packages
+  ## fallback ran with keep_outputs).
+  outText <- list()
+  if (length(outDir) && nzchar(outDir) && dir.exists(outDir)) {
+    for (f in list.files(outDir, pattern = "\\.out$", full.names = TRUE)) {
+      p <- sub("\\.out$", "", basename(f))
+      outText[[p]] <- tryCatch(readLines(f, warn = FALSE),
+                                error = function(e) character())
+    }
+  }
+
+  ## Classify install-stage failures (already missing, not in unresolved).
+  failed <- setdiff(missing, names(unresolvedRefs))
+  for (p in failed) {
+    txt <- if (!is.null(outText[[p]])) outText[[p]] else character()
+
+    ## namespace 'X' V is being loaded, but >= W is required
+    m <- regmatches(txt, regexec(
+      "namespace [‘']?(.+?)[’']? ([0-9.\\-]+) is being loaded, but >=? ([0-9.\\-]+) is required",
+      txt))
+    m <- m[lengths(m) > 0]
+    if (length(m)) {
+      hit <- m[[1]]
+      diagnostics[[p]] <- list(
+        pkg = p, status = "version-conflict",
+        reason = sprintf("'%s' %s loaded, but %s requires >= %s",
+                         hit[2], hit[3], p, hit[4]),
+        fix = sprintf("bump %s to >= %s in the snapshot",
+                      hit[2], hit[4]))
+      next
+    }
+
+    ## ERROR: dependency 'X' is not available for package 'Y'
+    m <- regmatches(txt, regexec(
+      "ERROR: dependency [‘']?(.+?)[’']? is not available for package",
+      txt))
+    m <- m[lengths(m) > 0]
+    if (length(m)) {
+      depPkg <- m[[1]][2]
+      cascading <- depPkg %in% failed || depPkg %in% names(unresolvedRefs)
+      diagnostics[[p]] <- list(
+        pkg = p, status = "missing-dep",
+        reason = sprintf("requires '%s' which %s",
+                         depPkg,
+                         if (cascading) "also failed (cascade)"
+                         else "isn't installed"),
+        fix = if (cascading)
+                sprintf("fix the upstream cause for '%s' (see its diagnostic)",
+                        depPkg)
+              else
+                sprintf("add %s to the snapshot, or pin %s at a version that doesn't require it",
+                        depPkg, p))
+      next
+    }
+
+    ## ERROR: compilation failed for package
+    if (any(grepl("ERROR: compilation failed|non-zero exit status",
+                  txt))) {
+      lastLines <- utils::tail(txt[nzchar(txt)], 6)
+      diagnostics[[p]] <- list(
+        pkg = p, status = "compile-failed",
+        reason = "compilation failed (system lib mismatch or R API change)",
+        fix = paste0(
+          "common causes: missing system library (apt/brew install ...), ",
+          "R API change (e.g. R 4.5 removed Calloc/Free), or wrong toolchain. ",
+          "Try a newer pin, a binary repo (PPM), or install the system lib. ",
+          "Last log lines:\n        ",
+          paste(lastLines, collapse = "\n        ")))
+      next
+    }
+
+    ## Fallthrough: missing without a recognised pattern. Could be that
+    ## install.packages skipped the package due to an upstream dep failure
+    ## without writing a .out file, or pak's path was used and didn't write
+    ## logs at all.
+    diagnostics[[p]] <- list(
+      pkg = p, status = "unknown",
+      reason = if (length(txt))
+                 "no recognised failure pattern in install log"
+               else
+                 "no install log captured",
+      fix = if (length(outDir) && nzchar(outDir))
+              sprintf("inspect %s for any leftover logs", outDir)
+            else
+              "rerun with options(Require.snapshotInstaller = 'install.packages') to capture per-package logs")
+  }
+
+  ## Substituted versions: not failures, but worth surfacing.
+  substInfo <- list()
+  for (s in substituted) {
+    parts <- strsplit(s, ": | -> ")[[1]]
+    if (length(parts) == 3 && parts[1] %in% ip) {
+      substInfo[[parts[1]]] <- list(
+        pkg = parts[1], status = "substituted",
+        reason = sprintf("requested %s unavailable; installed %s instead",
+                         parts[2], parts[3]),
+        fix = sprintf("if exact version %s required, locate it on a custom repo or GitHub",
+                      parts[2]))
+    }
+  }
+
+  if (!length(diagnostics) && !length(substInfo)) {
+    if (verbose >= 1)
+      messageVerbose("[snapshotInstaller] all snapshot packages installed cleanly",
+                     verbose = verbose, verboseLevel = 1)
+    return(invisible(list()))
+  }
+
+  if (verbose >= 1) {
+    cat("\n[snapshotInstaller] diagnostic report\n",
+        "  installed: ", length(intersect(expected, ip)), " / ",
+        length(expected), "\n",
+        "  issues   : ", length(diagnostics),
+        if (length(substInfo)) paste0(" (+ ", length(substInfo),
+                                       " substitution(s))") else "",
+        "\n", sep = "")
+    for (d in c(diagnostics, substInfo)) {
+      cat(sprintf("  - %s [%s]\n    why: %s\n    fix: %s\n",
+                  d$pkg, d$status, d$reason, d$fix))
+    }
+  }
+
+  invisible(c(diagnostics, substInfo))
 }
 
 ## Pick the nearest archived version available on CRAN when the snapshot
