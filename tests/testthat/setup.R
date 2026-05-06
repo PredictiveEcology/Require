@@ -91,18 +91,21 @@ withr::local_options(
     Require.offlineMode = Require.offlineMode,
     Require.Home = "~/GitHub/Require",
     ## Force cli's dynamic redraw during interactive dev test runs.
-    ## testthat installs an output sink via evaluate::evaluate around
-    ## each test_that block, so cli's auto-detection
-    ## (isatty(stderr()) || ...) returns FALSE inside tests and falls
-    ## back to one-line-per-tick "static" output. The result is that
-    ## pak / cli progress bars spew hundreds of near-identical lines
-    ## instead of redrawing in place. Override that during interactive
-    ## dev runs; leave NULL during CI / R CMD check so terminal-unaware
-    ## harnesses continue to get static output. The companion
-    ## R_CLI_DYNAMIC env var (set in the local_envvar call below)
-    ## carries this into pak's r_session subprocess, where the option
-    ## doesn't reach.
-    cli.dynamic = if (isDevAndInteractive) TRUE else NULL
+    ## testthat's evaluate::evaluate sink makes cli's auto-detection
+    ## (isatty(stderr()) || ...) return FALSE inside tests and fall
+    ## back to one-line-per-tick "static" output. Override here for
+    ## any *direct* cli use in Require / our test code; the
+    ## R_CLI_DYNAMIC env var (in local_envvar below) carries this
+    ## into subprocesses.
+    cli.dynamic = if (isDevAndInteractive) TRUE else NULL,
+    ## pak vendors its own progress renderer that ignores cli.dynamic.
+    ## Even with the option set, pak's pkgdepends progress bar emits
+    ## its spinner ticks as separate lines under testthat's sink.
+    ## Disable pak's progress entirely during tests — user still sees
+    ## informational headers ("Will install N packages", "✔ Installed
+    ## X") and the per-package install confirmations, just no spinner
+    ## storm. Same logic as cli.dynamic: only during interactive dev.
+    pkg.show_progress = if (isDevAndInteractive) FALSE else NULL
   ),
   .local_envir = teardown_env()
 )
