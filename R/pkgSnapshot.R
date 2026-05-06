@@ -393,10 +393,16 @@ installSnapshotViaInstallPackages <- function(snapshot,
     is.character(files) && length(files) > 0L
   }
 
+  ## quiet = TRUE is mandatory for libcurl-multi to actually run downloads in
+  ## parallel. With quiet = FALSE, R serializes the URLs through libcurl one
+  ## at a time so it can attribute progress lines to individual files —
+  ## defeating the whole point of the multi handle. Per-file progress is
+  ## useless inside a 378-URL batch anyway; we print one "Downloading N
+  ## tarballs" announcement above and that's all the user needs.
   pullBatch <- function(idx, urls) {
     suppressWarnings(tryCatch(
       utils::download.file(urls, destPaths[idx], method = "libcurl",
-                           quiet = verbose < 2, mode = "wb"),
+                           quiet = TRUE, mode = "wb"),
       error = function(e) NULL))
     vapply(idx, function(i) isGoodTarball(destPaths[i]), logical(1))
   }
