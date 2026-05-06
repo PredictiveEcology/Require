@@ -523,69 +523,46 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
   if (!nrow(pkgs)) stop("All snapshot refs failed to download")
 
-  ## Hand the local tarballs to pak via `local::<path>` refs. pak reads each
-  ## tarball's DESCRIPTION to compute build-time topological order, runs
-  ## parallel installs with its CLI progress, and reuses its on-disk binary
-  ## cache where applicable.
-  ##
-  ## dependencies = NA (hard deps only) lets pak see each ref's Depends /
-  ## Imports / LinkingTo and order builds accordingly. With dependencies =
-  ## FALSE, pak treats every ref as standalone, so e.g. `arm` can start
-  ## building before `coda` finishes and dies with "dependency 'coda' is
-  ## not available for package 'arm'". A closed snapshot already contains
-  ## every hard dep as another local:: ref, so pak resolves them within
-  ## the input set and doesn't reach out to CRAN/PPM — no cascade-casualty
-  ## risk. Soft deps (Suggests/Enhances) are still skipped since the
-  ## snapshot is not guaranteed to include them.
-  if (!requireNamespace("pak", quietly = TRUE))
-    stop("pak is required for installSnapshotViaInstallPackages")
-  localRefs <- paste0("local::", destPaths)
-  messageVerbose("Installing ", length(localRefs),
-                 " packages via pak::pkg_install(local::..., dependencies = NA)",
-                 verbose = verbose, verboseLevel = 1)
-  pakErr <- tryCatch({
-    pak::pkg_install(localRefs, lib = destLib,
-                     dependencies = NA, upgrade = FALSE, ask = FALSE)
-    NULL
-  }, error = function(e) e)
-
-  outDir <- character()
-  if (!is.null(pakErr)) {
-    ## pak's solver is all-or-nothing: any unsolvable constraint in the
-    ## snapshot (e.g., a version pin that doesn't satisfy a transitive
-    ## dependent's `(>= X)` requirement, or a missing archived dep) blocks
-    ## every package. Fall back to install.packages, which is permissive:
-    ## it installs what it can and fails per-package on broken deps. The
-    ## pak diagnostic is preserved so the user can see what to fix in the
-    ## snapshot for a clean future run.
-    messageVerbose(
-      "pak refused: ", sub("\n.*$", "", conditionMessage(pakErr)),
-      "\n  falling back to install.packages for partial install",
-      verbose = verbose, verboseLevel = 1)
-    repoDir <- tempfile2("snapInstall_repo_")
-    contribDir <- file.path(repoDir, "src", "contrib")
-    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
-    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
-    for (i in seq_along(destPaths)) {
-      dest <- file.path(contribDir, basename(destPaths[i]))
-      file.copy(destPaths[i], dest, overwrite = TRUE)
-    }
-    tools::write_PACKAGES(contribDir, type = "source")
-    reposURL <- paste0("file://", repoDir)
-    ## keep_outputs = <dir> tells install.packages to retain the per-package
-    ## R CMD INSTALL log as <pkg>.out; the diagnostic helper parses these
-    ## structurally to attribute each failure to a concrete root cause.
-    ## Without keep_outputs the logs are interleaved on parent stdout and
-    ## the per-package context is lost.
-    outDir <- tempfile2("snapInstall_outs_")
-    dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
-    on.exit(unlink(outDir, recursive = TRUE), add = TRUE)
-    suppressWarnings(utils::install.packages(
-      pkgs$Package, lib = destLib, repos = reposURL,
-      type = "source", dependencies = FALSE, Ncpus = Ncpus,
-      keep_outputs = outDir,
-      quiet = isTRUE(verbose < 1)))
+  ## Install directly via install.packages from a file:// repo built from
+  ## the downloaded tarballs. We previously routed through
+  ## pak::pkg_install(local::<path>, dependencies = NA) for parallel
+  ## topological install, but pak's planner re-resolves every ref's
+  ## DESCRIPTION against CRAN/PPM ("Found N deps for M/M pkgs ...
+  ## Updating metadata database [k/n] | Downloading [...]") even for
+  ## local:: refs, then refuses on the first unsolvable snapshot
+  ## constraint and we fall through to install.packages anyway. Skipping
+  ## pak entirely:
+  ##   - no 30-second cli metadata-db dance against CRAN/PPM,
+  ##   - no spinner spew that fights cli's redraw heuristic on macOS,
+  ##   - install.packages computes topological install order from
+  ##     dependencies = NA + the file:// PACKAGES index (closed snapshot
+  ##     guarantees all hard deps are in the same repo),
+  ##   - Ncpus runs parallel make for source builds.
+  repoDir <- tempfile2("snapInstall_repo_")
+  contribDir <- file.path(repoDir, "src", "contrib")
+  if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+  on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+  for (i in seq_along(destPaths)) {
+    dest <- file.path(contribDir, basename(destPaths[i]))
+    file.copy(destPaths[i], dest, overwrite = TRUE)
   }
+  tools::write_PACKAGES(contribDir, type = "source")
+  reposURL <- paste0("file://", repoDir)
+  ## keep_outputs = <dir> tells install.packages to retain the per-package
+  ## R CMD INSTALL log as <pkg>.out; the diagnostic helper parses these
+  ## structurally to attribute each failure to a concrete root cause.
+  outDir <- tempfile2("snapInstall_outs_")
+  dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
+  on.exit(unlink(outDir, recursive = TRUE), add = TRUE)
+  messageVerbose("Installing ", nrow(pkgs),
+                 " packages via install.packages (file:// repo, ",
+                 "dependencies = NA, Ncpus = ", Ncpus, ")",
+                 verbose = verbose, verboseLevel = 1)
+  suppressWarnings(utils::install.packages(
+    pkgs$Package, lib = destLib, repos = reposURL,
+    type = "source", dependencies = NA, Ncpus = Ncpus,
+    keep_outputs = outDir,
+    quiet = isTRUE(verbose < 1)))
 
   ## Auto-fill missing transitive deps. Snapshots are sometimes incomplete:
   ## a package that genuinely needs (Imports / Depends / LinkingTo) some
