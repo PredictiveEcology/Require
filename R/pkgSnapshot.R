@@ -568,6 +568,72 @@ installSnapshotViaInstallPackages <- function(snapshot,
       quiet = isTRUE(verbose < 1)))
   }
 
+  ## Auto-fill missing transitive deps. Snapshots are sometimes incomplete:
+  ## a package that genuinely needs (Imports / Depends / LinkingTo) some
+  ## other package didn't make it into inst/snapshot.txt because the
+  ## snapshot was built from a session that already had the dep loaded
+  ## from another libPath. Without auto-fill, install.packages errors
+  ## with "ERROR: dependency 'X' is not available" and cascades into a
+  ## wall of failures. Walk each just-installed snapshot package's
+  ## DESCRIPTION, collect names referenced by hard-dep fields that
+  ## aren't in destLib + .basePkgs, then `install.packages(..., dependencies = NA)`
+  ## from CRAN/PPM (NOT the local file:// repo, since the snapshot
+  ## doesn't have these). Result is reported as [auto-filled] in the
+  ## diagnostic so the user can decide whether to add them to the
+  ## snapshot for a deterministic future run.
+  autoFilled <- character()
+  ipForFill <- tryCatch(
+    rownames(installed.packages(lib.loc = destLib, noCache = TRUE)),
+    error = function(e) character())
+  installedSnapshotPkgs <- intersect(snapshot$Package, ipForFill)
+  neededDeps <- character()
+  for (p in installedSnapshotPkgs) {
+    descFile <- file.path(destLib, p, "DESCRIPTION")
+    if (!file.exists(descFile)) next
+    desc <- tryCatch(
+      read.dcf(descFile, fields = c("Depends", "Imports", "LinkingTo")),
+      error = function(e) NULL)
+    if (is.null(desc) || !nrow(desc)) next
+    txt <- paste(unlist(desc), collapse = ", ")
+    if (!nzchar(txt)) next
+    refs <- unlist(strsplit(txt, ",\\s*"))
+    refs <- refs[nzchar(refs) & !is.na(refs)]
+    nms <- extractPkgName(refs)
+    nms <- nms[nzchar(nms) & !is.na(nms) & nms != "R"]
+    neededDeps <- c(neededDeps,
+                    setdiff(nms, c(ipForFill, .basePkgs, snapshot$Package)))
+  }
+  neededDeps <- unique(neededDeps)
+  if (length(neededDeps)) {
+    messageVerbose(
+      "[snapshotInstaller] auto-filling ", length(neededDeps),
+      " transitive dep(s) not in snapshot: ",
+      paste(neededDeps, collapse = ", "),
+      verbose = verbose, verboseLevel = 1)
+    fillOutDir <- tempfile2("snapInstall_fill_outs_")
+    dir.create(fillOutDir, recursive = TRUE, showWarnings = FALSE)
+    on.exit(unlink(fillOutDir, recursive = TRUE), add = TRUE)
+    ## getOption("repos") here still has PPM + CRAN + any snapshot repos;
+    ## the local file:// repo (if it was created in the install.packages
+    ## fallback) isn't in options(repos) — install.packages got it via the
+    ## `repos` arg only — so we don't need to filter.
+    suppressWarnings(utils::install.packages(
+      neededDeps, lib = destLib, type = "source",
+      dependencies = NA, Ncpus = Ncpus,
+      keep_outputs = fillOutDir,
+      quiet = isTRUE(verbose < 1)))
+    ipAfter <- tryCatch(
+      rownames(installed.packages(lib.loc = destLib, noCache = TRUE)),
+      error = function(e) character())
+    autoFilled <- intersect(neededDeps, ipAfter)
+    ## Also include any TRANSITIVE deps install.packages pulled in along
+    ## the way (dependencies = NA recurses), so the diagnostic report
+    ## attributes them correctly rather than flagging them as rogue.
+    autoFilled <- unique(c(autoFilled,
+                            setdiff(ipAfter,
+                                    c(ipForFill, snapshot$Package, .basePkgs))))
+  }
+
   ## Self-diagnose: cross-check what's actually installed in destLib against
   ## the snapshot, then explain each gap with a concrete fix the user can
   ## apply to the snapshot file. This is the difference between a cryptic
@@ -576,6 +642,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   diagnoseSnapshotInstallFailures(
     snapshot = snapshot, destLib = destLib,
     unresolvedRefs = unresolvedRefs, substituted = substituted,
+    autoFilled = autoFilled,
     outDir = outDir, verbose = verbose)
 
   invisible(TRUE)
@@ -595,6 +662,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
 diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
                                             unresolvedRefs = character(),
                                             substituted = character(),
+                                            autoFilled = character(),
                                             outDir = character(),
                                             verbose = 1) {
   ip <- tryCatch(
@@ -746,7 +814,21 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
     }
   }
 
-  if (!length(diagnostics) && !length(substInfo)) {
+  ## Auto-filled deps: not failures either. The snapshot was incomplete
+  ## (a needed transitive dep wasn't pinned); installer fetched it from
+  ## CRAN/PPM. Surfacing them lets the user decide whether to add them
+  ## to inst/snapshot.txt for a fully reproducible future run.
+  fillInfo <- list()
+  for (p in autoFilled) {
+    fillInfo[[p]] <- list(
+      pkg = p, status = "auto-filled",
+      reason = "needed transitive dep not in snapshot; installed from CRAN/PPM",
+      fix = sprintf(
+        "for a fully reproducible snapshot, add %s to inst/snapshot.txt with its current installed version",
+        p))
+  }
+
+  if (!length(diagnostics) && !length(substInfo) && !length(fillInfo)) {
     if (verbose >= 1)
       messageVerbose("[snapshotInstaller] all snapshot packages installed cleanly",
                      verbose = verbose, verboseLevel = 1)
@@ -760,14 +842,16 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
         "  issues   : ", length(diagnostics),
         if (length(substInfo)) paste0(" (+ ", length(substInfo),
                                        " substitution(s))") else "",
+        if (length(fillInfo)) paste0(" (+ ", length(fillInfo),
+                                       " auto-filled)") else "",
         "\n", sep = "")
-    for (d in c(diagnostics, substInfo)) {
+    for (d in c(diagnostics, substInfo, fillInfo)) {
       cat(sprintf("  - %s [%s]\n    why: %s\n    fix: %s\n",
                   d$pkg, d$status, d$reason, d$fix))
     }
   }
 
-  invisible(c(diagnostics, substInfo))
+  invisible(c(diagnostics, substInfo, fillInfo))
 }
 
 ## Pick the nearest archived version available on CRAN when the snapshot
