@@ -277,22 +277,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
   if (!nrow(pkgs)) return(invisible(TRUE))
 
-  ## Persistent download cache: re-running the same snapshot install
-  ## shouldn't re-fetch 378 tarballs from CRAN/PPM every time. Use
-  ## R_REQUIRE_CACHE (Require's existing cache root) keyed by R version
-  ## so tarballs built against R 4.3 don't pollute a 4.4 install dir.
-  ## Files are reused via isGoodTarball(); stale/corrupt files get
-  ## re-downloaded automatically (pre-filter happens before pullBatch).
-  ## Note: pak's cache (~/.cache/.../pak/cache) is keyed by URL+content
-  ## hash and only consulted when pak fetches; our pipeline uses
-  ## libcurl-multi → local:: refs, which bypass pak's cache entirely.
-  ## So a Require-side cache is the right tool here.
-  cacheRoot <- Sys.getenv("R_REQUIRE_CACHE", unset = "")
-  if (!nzchar(cacheRoot)) cacheRoot <- tools::R_user_dir("Require", "cache")
-  dlDir <- file.path(cacheRoot, "snapshot_tarballs",
-                     paste0("R-", getRversion()))
+  dlDir <- tempfile2("snapInstall_dl_")
   if (!dir.exists(dlDir)) dir.create(dlDir, recursive = TRUE)
-  ## Intentionally NOT unlinked on exit — that's the whole point.
+  on.exit(unlink(dlDir, recursive = TRUE), add = TRUE)
 
   ## Honour the snapshot's Repository column: rows like visualTest, NLMR can
   ## point at non-CRAN CRAN-style mirrors (e.g., r-universe.dev). Without
@@ -436,17 +423,46 @@ installSnapshotViaInstallPackages <- function(snapshot,
     vapply(idx, function(i) isGoodTarball(destPaths[i]), logical(1))
   }
 
-  ## Pre-filter against the persistent download cache: any destPath
-  ## that already exists from a previous run AND passes isGoodTarball
-  ## (gzip stream intact, tar listable) skips the priority download
-  ## loop entirely. Stale / corrupt files get re-downloaded.
-  cachedHits <- vapply(seq_len(nrow(pkgs)),
-                       function(i) isGoodTarball(destPaths[i]),
-                       logical(1))
+  ## Pre-filter via pkgcache (pak's content-addressed cache, kept at
+  ## tools::R_user_dir("pkgcache", "cache")). For each ref, look up an
+  ## entry whose package + version matches the snapshot pin (or whose
+  ## URL contains the GH SHA for a GH ref) and whose stored file still
+  ## passes isGoodTarball. On hit, copy from the cache into dlDir and
+  ## skip the download. This is the same cache pak's own pkg_install
+  ## populates and reads from, so we share state with pak's flow.
+  cachedHits <- logical(nrow(pkgs))
+  if (requireNamespace("pkgcache", quietly = TRUE)) {
+    cacheList <- tryCatch(pkgcache::pkg_cache_list(),
+                          error = function(e) NULL)
+    if (!is.null(cacheList) && nrow(cacheList) > 0) {
+      for (i in seq_len(nrow(pkgs))) {
+        if (isGH[i]) {
+          urlNeedle <- paste0(pkgs$GithubUsername[i], "/",
+                              pkgs$GithubRepo[i], "/archive/",
+                              pkgs$GithubSHA1[i])
+          hit <- cacheList[grepl(urlNeedle, cacheList$url, fixed = TRUE) &
+                            !is.na(cacheList$fullpath), , drop = FALSE]
+        } else {
+          hit <- cacheList[!is.na(cacheList$package) &
+                            !is.na(cacheList$version) &
+                            cacheList$package == pkgs$Package[i] &
+                            cacheList$version == pkgs$Version[i] &
+                            !is.na(cacheList$fullpath), , drop = FALSE]
+        }
+        if (nrow(hit)) {
+          cached <- hit$fullpath[1]
+          if (file.exists(cached) && isGoodTarball(cached)) {
+            file.copy(cached, destPaths[i], overwrite = TRUE)
+            cachedHits[i] <- TRUE
+          }
+        }
+      }
+    }
+  }
   if (any(cachedHits)) {
     messageVerbose(sum(cachedHits), " of ", nrow(pkgs),
-                   " snapshot tarballs already cached at ", dlDir,
-                   "; skipping download for those",
+                   " snapshot tarballs hit pkgcache (pak's cache); ",
+                   "skipping download for those",
                    verbose = verbose, verboseLevel = 1)
   }
   needed <- which(!cachedHits)
@@ -548,6 +564,59 @@ installSnapshotViaInstallPackages <- function(snapshot,
     destPaths <- destPaths[-needed]
   }
   if (!nrow(pkgs)) stop("All snapshot refs failed to download")
+
+  ## Populate pkgcache (pak's cache) with anything we just downloaded so
+  ## subsequent runs hit the cache pre-filter above. Skip refs that
+  ## already had a cache hit (cachedHits — they're already there) and
+  ## skip if pkgcache is unavailable. Best-effort: a failed cache_add
+  ## should NEVER block the install.
+  if (requireNamespace("pkgcache", quietly = TRUE)) {
+    ## cachedHits was indexed against the original pre-filter pkgs;
+    ## by here pkgs has been trimmed for unresolved refs. Recompute
+    ## new-vs-existing per current row by checking the cache list once.
+    nowCacheList <- tryCatch(pkgcache::pkg_cache_list(),
+                             error = function(e) NULL)
+    addedCount <- 0L
+    for (i in seq_len(nrow(pkgs))) {
+      if (!file.exists(destPaths[i]) || !isGoodTarball(destPaths[i])) next
+      ## URL we should record: prefer the row's Repository, else the
+      ## first PPM/CRAN candidate we'd have used. For GH, the canonical
+      ## archive URL.
+      url <- if (isGH[i]) {
+        paste0("https://github.com/", pkgs$GithubUsername[i], "/",
+               pkgs$GithubRepo[i], "/archive/",
+               pkgs$GithubSHA1[i], ".tar.gz")
+      } else {
+        rowRepo <- pkgs$Repository[i]
+        baseRepo <- if (!is.na(rowRepo) && grepl("^https?://", rowRepo))
+                      rowRepo
+                    else if (length(ppmRepos)) ppmRepos[1]
+                    else cranRepos[1]
+        paste0(baseRepo, "/src/contrib/", pkgs$Package[i],
+               "_", pkgs$Version[i], ".tar.gz")
+      }
+      ## Skip if a hit for this URL is already in the cache (this run's
+      ## download supplied it, e.g.) — pkg_cache_add_file would dedupe
+      ## anyway but checking saves a copy.
+      already <- !is.null(nowCacheList) && nrow(nowCacheList) &&
+        any(nowCacheList$url == url, na.rm = TRUE) &&
+        any(file.exists(nowCacheList$fullpath[
+              !is.na(nowCacheList$url) & nowCacheList$url == url]), na.rm = TRUE)
+      if (already) next
+      tryCatch(
+        pkgcache::pkg_cache_add_file(
+          file = destPaths[i],
+          url = url,
+          package = pkgs$Package[i],
+          version = pkgs$Version[i]),
+        error = function(e) NULL)
+      addedCount <- addedCount + 1L
+    }
+    if (addedCount > 0L)
+      messageVerbose("Added ", addedCount,
+                     " tarball(s) to pkgcache (pak's cache) for future reuse",
+                     verbose = verbose, verboseLevel = 1)
+  }
 
   ## Install. pak::pkg_install(local::..., dependencies = NA) is preferred
   ## as the primary path because pak maintains a binary cache (~/.cache/...
