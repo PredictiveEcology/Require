@@ -399,11 +399,27 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## defeating the whole point of the multi handle. Per-file progress is
   ## useless inside a 378-URL batch anyway; we print one "Downloading N
   ## tarballs" announcement above and that's all the user needs.
+  ##
+  ## Chunk the batch: libcurl multi opens a socket per URL. macOS's default
+  ## file-descriptor limit is ~256, so a 378-URL single multi call exhausts
+  ## the limit and fails *all* downloads silently (the user's symptom: 4
+  ## retries each report "for 378 ref(s)" — zero succeeded). Linux's higher
+  ## default (≥1024) masks this. Chunking to 50 URLs per multi call keeps
+  ## us comfortably under any platform's FD limit while preserving
+  ## meaningful parallelism. Configurable via Require.snapshotDownloadChunk.
+  chunkSize <- max(1L, as.integer(getOption(
+    "Require.snapshotDownloadChunk", 50L)))
   pullBatch <- function(idx, urls) {
-    suppressWarnings(tryCatch(
-      utils::download.file(urls, destPaths[idx], method = "libcurl",
-                           quiet = TRUE, mode = "wb"),
-      error = function(e) NULL))
+    starts <- seq.int(1L, length(idx), by = chunkSize)
+    for (s in starts) {
+      e <- min(s + chunkSize - 1L, length(idx))
+      ci <- idx[s:e]
+      cu <- urls[s:e]
+      suppressWarnings(tryCatch(
+        utils::download.file(cu, destPaths[ci], method = "libcurl",
+                             quiet = TRUE, mode = "wb"),
+        error = function(err) NULL))
+    }
     vapply(idx, function(i) isGoodTarball(destPaths[i]), logical(1))
   }
 
@@ -463,9 +479,12 @@ installSnapshotViaInstallPackages <- function(snapshot,
       newDest <- file.path(dlDir, paste0(pkgs$Package[i], "_", sub, ".tar.gz"))
       hit <- FALSE
       for (u in tryUrls) {
+        ## quiet = TRUE: per-URL "trying URL" spam at verbose = 2 doesn't
+        ## help the user — we already log per-package substitution status
+        ## via the messageVerbose calls below.
         suppressWarnings(tryCatch(
           utils::download.file(u, newDest, method = "libcurl",
-                               quiet = verbose < 2, mode = "wb"),
+                               quiet = TRUE, mode = "wb"),
           error = function(e) NULL))
         if (isGoodTarball(newDest)) { hit <- TRUE; break }
       }
