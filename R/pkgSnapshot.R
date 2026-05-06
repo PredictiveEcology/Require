@@ -565,21 +565,49 @@ installSnapshotViaInstallPackages <- function(snapshot,
     if (file.exists(pakLogPath)) {
       pakLog <- tryCatch(readLines(pakLogPath, warn = FALSE),
                          error = function(e) character())
-      ## Strip cli redraw escape sequences (color codes, cursor moves,
-      ## carriage returns) so what we surface to the user is readable.
-      pakLog <- gsub("\033\\[[^m]*m|\033\\[[0-9]*[A-K]|\r", "", pakLog)
-      ## Drop empty lines and pak's spinner / progress lines (they all
-      ## start with the unicode brackets `⸨` or have spinner characters
-      ## like ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏). Without this filter, the tail is just the
-      ## last few spinner ticks before pak crashed — useless. We want
-      ## the actual error message that came after, or the last
-      ## informational line before the crash.
+      ## Strip ALL ANSI escape sequences via cli::ansi_strip — our hand-
+      ## rolled regex missed control sequences like `\033[?25l`
+      ## (hide-cursor) that pak emits before the unicode glyphs, so the
+      ## `^` anchor in the keep-out regex below failed to match.
+      ## ansi_strip handles every CSI/OSC variant.
+      if (requireNamespace("cli", quietly = TRUE))
+        pakLog <- cli::ansi_strip(pakLog)
+      pakLog <- gsub("\r", "", pakLog)
+      ## Drop empty lines and pak's spinner / progress lines (they start
+      ## with `⸨` brackets, braille spinner chars `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`, or the
+      ## unicode status glyphs cli uses for headers — `✔ ℹ → ✖`). Also
+      ## drop pak's progress headers ("Found N deps for", etc.) so the
+      ## tail surfaces the actual error message that pak emitted right
+      ## before the subprocess crashed, not just decorative pre-failure
+      ## progress.
       pakLog <- pakLog[nzchar(trimws(pakLog))]
-      pakLog <- pakLog[!grepl("^[[:space:]]*[⸨]", pakLog)]
+      pakLog <- pakLog[!grepl("^[[:space:]]*[✨⚖→✖ℹ✔⠇⠈-⠏⢨⢹⣨⣩]", pakLog)]
       pakLog <- pakLog[!grepl(
-        "^[[:space:]]*(Found|Resolving|Updating metadata|Downloading|Will install|Will download|Getting|Installing|Got |Installed |Will update|Checking installed|Checking for [0-9]+|✔|ℹ|→)",
+        "^[[:space:]]*(Found|Resolving|Updating metadata|Downloading|Will install|Will download|Getting|Installing|Got |Installed |Will update|Checking installed|Checking for [0-9]+)",
         pakLog)]
       pakLogTail <- utils::tail(pakLog, 8)
+    }
+    ## Pull pak's structured detailed error (the wrapper exception
+    ## "! error in pak subprocess" hides it). pak::last_error() returns
+    ## the most recent error with the actual subprocess message and call
+    ## stack — far more actionable than the wrapper.
+    pakDetail <- character()
+    if (requireNamespace("pak", quietly = TRUE)) {
+      le <- tryCatch(pak::last_error(), error = function(e) NULL)
+      if (!is.null(le)) {
+        msg <- tryCatch(conditionMessage(le), error = function(e) "")
+        if (nzchar(msg)) pakDetail <- strsplit(msg, "\n", fixed = TRUE)[[1]]
+        ## Also include the chained parent's message, where pak typically
+        ## stashes the actual subprocess error.
+        parentMsg <- tryCatch(conditionMessage(le$parent),
+                              error = function(e) "")
+        if (nzchar(parentMsg))
+          pakDetail <- c(pakDetail,
+                         strsplit(parentMsg, "\n", fixed = TRUE)[[1]])
+        if (requireNamespace("cli", quietly = TRUE))
+          pakDetail <- cli::ansi_strip(pakDetail)
+        pakDetail <- pakDetail[nzchar(trimws(pakDetail))]
+      }
     }
     on.exit(unlink(pakLogPath), add = TRUE)
   }
@@ -593,9 +621,14 @@ installSnapshotViaInstallPackages <- function(snapshot,
       "pak refused (",
       sub("\n.*$", "", conditionMessage(pakErr)), "); ",
       "falling back to install.packages",
+      if (length(pakDetail))
+        paste0(
+          "\n  pak's detailed error:\n    ",
+          paste(pakDetail, collapse = "\n    "))
+      else "",
       if (length(pakLogTail))
         paste0(
-          "\n  pak's last messages:\n    ",
+          "\n  pak's last log lines:\n    ",
           paste(pakLogTail, collapse = "\n    "))
       else "",
       verbose = verbose, verboseLevel = 1)
