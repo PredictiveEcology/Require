@@ -779,17 +779,31 @@ installSnapshotViaInstallPackages <- function(snapshot,
             unlink(workDir, recursive = TRUE); next
           }
         }
+        ## Capture R CMD build stdout+stderr to diagnose silent failures.
         oldwd <- setwd(workDir)
         rcBuild <- tryCatch(
           system2(Rbin, c("CMD", "build", "--no-build-vignettes",
                           "--no-manual", shQuote(pkgName)),
-                  stdout = FALSE, stderr = FALSE),
-          error = function(e) -1L)
+                  stdout = TRUE, stderr = TRUE),
+          error = function(e) e)
         setwd(oldwd)
-        if (!identical(as.integer(rcBuild), 0L)) {
+        ## With stdout=TRUE+stderr=TRUE, system2 returns the captured
+        ## output (character vector) plus an attribute "status" if exit
+        ## was non-zero. error from tryCatch covers spawn failure.
+        if (inherits(rcBuild, "error")) {
           if (verbose >= 1)
-            cat("[snapshotInstaller] R CMD build failed for ",
-                pkgName, " (rc=", rcBuild, ")\n", sep = "")
+            cat("[snapshotInstaller] R CMD build spawn failed for ",
+                pkgName, ": ", conditionMessage(rcBuild), "\n", sep = "")
+          unlink(workDir, recursive = TRUE); next
+        }
+        rcStatus <- attr(rcBuild, "status")
+        if (!is.null(rcStatus) && !identical(as.integer(rcStatus), 0L)) {
+          if (verbose >= 1) {
+            tail6 <- utils::tail(rcBuild, 6)
+            cat("[snapshotInstaller] R CMD build failed for ", pkgName,
+                " (rc=", rcStatus, "). Last lines:\n  ",
+                paste(tail6, collapse = "\n  "), "\n", sep = "")
+          }
           unlink(workDir, recursive = TRUE); next
         }
         built <- list.files(workDir, pattern = paste0("^",
@@ -797,9 +811,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
                                                        "_.*\\.tar\\.gz$"),
                             full.names = TRUE)
         if (!length(built)) {
-          if (verbose >= 1)
+          if (verbose >= 1) {
+            allFiles <- list.files(workDir, recursive = FALSE)
+            tail6 <- utils::tail(rcBuild, 6)
             cat("[snapshotInstaller] R CMD build produced no tarball for ",
-                pkgName, "\n", sep = "")
+                pkgName, ". workDir contents: ",
+                paste(allFiles, collapse = ", "),
+                "\n  R CMD build output (last 6 lines):\n  ",
+                paste(tail6, collapse = "\n  "), "\n", sep = "")
+          }
           unlink(workDir, recursive = TRUE); next
         }
         newDest <- file.path(dirname(destPaths[i]), basename(built[1]))
