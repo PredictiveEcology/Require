@@ -347,8 +347,6 @@ Require <- function(packages,
        }
     } else {
       if (length(which)) {
-        if (exists("aaaa", envir = .GlobalEnv)) browser()
-
         # "Rdpack"     "S7"         "rbibutils"  "reformulas"
         deps <- pkgDep(packages, simplify = FALSE,
                        purge = purge, libPaths = libPaths, recursive = TRUE,

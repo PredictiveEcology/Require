@@ -168,7 +168,6 @@ test_that("test 09", {
         Ncpus = max(1L, parallel::detectCores() - 1L))
 
       # THE INSTALL #
-      aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
       warns <- capture_warnings(
           out <- Require(packageVersionFile = snfTmp, require = FALSE, # purge = TRUE,
                          returnDetails = TRUE)
