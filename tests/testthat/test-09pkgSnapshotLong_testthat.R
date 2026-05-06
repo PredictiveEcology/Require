@@ -149,6 +149,24 @@ test_that("test 09", {
       names(packageFullName) <- packageFullName
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
+      ## Pin the snapshot install to the fast pipeline. Without this, the
+      ## test goes through pak's solver which:
+      ##   - all-or-nothings the install (any unsatisfiable transitive
+      ##     constraint blocks every package),
+      ##   - falls back to *serial* per-ref installs after a batch failure,
+      ##   - doesn't reliably negotiate PPM binaries (pak's UA logic
+      ##     occasionally serves source even when binaries exist).
+      ## installSnapshotViaInstallPackages instead does libcurl-multi
+      ## parallel downloads with R-style UA for PPM binary negotiation,
+      ## gzip-t validated tarballs, retry on flaky network, then parallel
+      ## install via install.packages(Ncpus = ...) with keep_outputs for
+      ## the post-install diagnostic report.
+      withr::local_options(.local_envir = teardown_env(),
+        Require.snapshotInstaller = "install.packages",
+        Require.snapshotInstallerUsePPM = TRUE,
+        Require.snapshotDownloadAttempts = 4L,
+        Ncpus = max(1L, parallel::detectCores() - 1L))
+
       # THE INSTALL #
       aaaa <<- 1; on.exit(rm(aaaa, envir = .GlobalEnv))
       warns <- capture_warnings(
