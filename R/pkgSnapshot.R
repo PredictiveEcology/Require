@@ -523,46 +523,112 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
   if (!nrow(pkgs)) stop("All snapshot refs failed to download")
 
-  ## Install directly via install.packages from a file:// repo built from
-  ## the downloaded tarballs. We previously routed through
-  ## pak::pkg_install(local::<path>, dependencies = NA) for parallel
-  ## topological install, but pak's planner re-resolves every ref's
-  ## DESCRIPTION against CRAN/PPM ("Found N deps for M/M pkgs ...
-  ## Updating metadata database [k/n] | Downloading [...]") even for
-  ## local:: refs, then refuses on the first unsolvable snapshot
-  ## constraint and we fall through to install.packages anyway. Skipping
-  ## pak entirely:
-  ##   - no 30-second cli metadata-db dance against CRAN/PPM,
-  ##   - no spinner spew that fights cli's redraw heuristic on macOS,
-  ##   - install.packages computes topological install order from
-  ##     dependencies = NA + the file:// PACKAGES index (closed snapshot
-  ##     guarantees all hard deps are in the same repo),
-  ##   - Ncpus runs parallel make for source builds.
-  repoDir <- tempfile2("snapInstall_repo_")
-  contribDir <- file.path(repoDir, "src", "contrib")
-  if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
-  on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
-  for (i in seq_along(destPaths)) {
-    dest <- file.path(contribDir, basename(destPaths[i]))
-    file.copy(destPaths[i], dest, overwrite = TRUE)
+  ## Install. pak::pkg_install(local::..., dependencies = NA) is preferred
+  ## as the primary path because pak maintains a binary cache (~/.cache/...
+  ## /pak/cache/) that reuses compiled tarballs from previous source builds,
+  ## dramatically speeding up repeat runs of the same snapshot. Plain
+  ## install.packages has no such cache.
+  ##
+  ## However: pak's resolver re-walks every local:: ref's DESCRIPTION
+  ## against CRAN/PPM (downloading metadata, "Found N deps for M/M pkgs",
+  ## etc.) even for local refs. Under testthat's sink that output renders
+  ## as a wall of static spinner lines instead of a redrawing progress
+  ## bar. We sink pak's output to a tempfile during the attempt so the
+  ## user doesn't see the noise; on failure we surface the last few
+  ## captured lines for diagnostics, which is more actionable than pak's
+  ## generic "error in pak subprocess" wrapper exception.
+  ##
+  ## install.packages is the fallback: pak's solver is all-or-nothing and
+  ## refuses on any unsolvable snapshot constraint. install.packages
+  ## (with dependencies = NA + file:// repo) is permissive — installs
+  ## what it can in topological order, fails per-package on broken deps.
+  localRefs <- paste0("local::", destPaths)
+  pakLogPath <- tempfile2("pak_log_")
+  pakLogTail <- character()
+  pakErr <- NULL
+  if (requireNamespace("pak", quietly = TRUE)) {
+    messageVerbose("Trying pak::pkg_install (binary cache; ",
+                   "fallback: install.packages)",
+                   verbose = verbose, verboseLevel = 1)
+    pakLogCon <- file(pakLogPath, "w")
+    pakErr <- tryCatch({
+      sink(pakLogCon, type = "output")
+      sink(pakLogCon, type = "message")
+      pak::pkg_install(localRefs, lib = destLib,
+                       dependencies = NA, upgrade = FALSE, ask = FALSE)
+      NULL
+    }, error = function(e) e, finally = {
+      try(sink(NULL, type = "message"), silent = TRUE)
+      try(sink(NULL, type = "output"), silent = TRUE)
+      try(close(pakLogCon), silent = TRUE)
+    })
+    if (file.exists(pakLogPath)) {
+      pakLog <- tryCatch(readLines(pakLogPath, warn = FALSE),
+                         error = function(e) character())
+      ## Strip cli redraw escape sequences and empty lines so the tail
+      ## we surface to the user is readable.
+      pakLog <- gsub("\033\\[[^m]*m|\033\\[[0-9]*[A-K]|\r", "", pakLog)
+      pakLog <- pakLog[nzchar(trimws(pakLog))]
+      pakLogTail <- utils::tail(pakLog, 8)
+    }
+    on.exit(unlink(pakLogPath), add = TRUE)
   }
-  tools::write_PACKAGES(contribDir, type = "source")
-  reposURL <- paste0("file://", repoDir)
-  ## keep_outputs = <dir> tells install.packages to retain the per-package
-  ## R CMD INSTALL log as <pkg>.out; the diagnostic helper parses these
-  ## structurally to attribute each failure to a concrete root cause.
+
   outDir <- tempfile2("snapInstall_outs_")
   dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
   on.exit(unlink(outDir, recursive = TRUE), add = TRUE)
-  messageVerbose("Installing ", nrow(pkgs),
-                 " packages via install.packages (file:// repo, ",
-                 "dependencies = NA, Ncpus = ", Ncpus, ")",
-                 verbose = verbose, verboseLevel = 1)
-  suppressWarnings(utils::install.packages(
-    pkgs$Package, lib = destLib, repos = reposURL,
-    type = "source", dependencies = NA, Ncpus = Ncpus,
-    keep_outputs = outDir,
-    quiet = isTRUE(verbose < 1)))
+
+  if (!is.null(pakErr)) {
+    messageVerbose(
+      "pak refused (",
+      sub("\n.*$", "", conditionMessage(pakErr)), "); ",
+      "falling back to install.packages",
+      if (length(pakLogTail))
+        paste0(
+          "\n  pak's last messages:\n    ",
+          paste(pakLogTail, collapse = "\n    "))
+      else "",
+      verbose = verbose, verboseLevel = 1)
+    repoDir <- tempfile2("snapInstall_repo_")
+    contribDir <- file.path(repoDir, "src", "contrib")
+    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+    for (i in seq_along(destPaths)) {
+      dest <- file.path(contribDir, basename(destPaths[i]))
+      file.copy(destPaths[i], dest, overwrite = TRUE)
+    }
+    tools::write_PACKAGES(contribDir, type = "source")
+    reposURL <- paste0("file://", repoDir)
+    ## keep_outputs writes per-package R CMD INSTALL logs the diagnostic
+    ## helper parses structurally; dependencies = NA gets topo order from
+    ## the file:// PACKAGES index (closed snapshot guarantees all hard
+    ## deps are present); Ncpus runs parallel make.
+    suppressWarnings(utils::install.packages(
+      pkgs$Package, lib = destLib, repos = reposURL,
+      type = "source", dependencies = NA, Ncpus = Ncpus,
+      keep_outputs = outDir,
+      quiet = isTRUE(verbose < 1)))
+  } else if (requireNamespace("pak", quietly = TRUE)) {
+    messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
+                   verbose = verbose, verboseLevel = 1)
+  } else {
+    ## pak isn't installed at all — go directly to install.packages.
+    repoDir <- tempfile2("snapInstall_repo_")
+    contribDir <- file.path(repoDir, "src", "contrib")
+    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+    for (i in seq_along(destPaths)) {
+      dest <- file.path(contribDir, basename(destPaths[i]))
+      file.copy(destPaths[i], dest, overwrite = TRUE)
+    }
+    tools::write_PACKAGES(contribDir, type = "source")
+    reposURL <- paste0("file://", repoDir)
+    suppressWarnings(utils::install.packages(
+      pkgs$Package, lib = destLib, repos = reposURL,
+      type = "source", dependencies = NA, Ncpus = Ncpus,
+      keep_outputs = outDir,
+      quiet = isTRUE(verbose < 1)))
+  }
 
   ## Auto-fill missing transitive deps. Snapshots are sometimes incomplete:
   ## a package that genuinely needs (Imports / Depends / LinkingTo) some

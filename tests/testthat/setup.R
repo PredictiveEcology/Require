@@ -89,7 +89,18 @@ withr::local_options(
     install.packages.compile.from.source = "never",
     Require.unloadNamespaces = TRUE,
     Require.offlineMode = Require.offlineMode,
-    Require.Home = "~/GitHub/Require"
+    Require.Home = "~/GitHub/Require",
+    ## Force cli's dynamic redraw during interactive dev test runs.
+    ## testthat installs an output sink via evaluate::evaluate around
+    ## each test_that block, so cli's auto-detection
+    ## (isatty(stderr()) || ...) returns FALSE inside tests and falls
+    ## back to one-line-per-tick "static" output. The result is that
+    ## pak / cli progress bars (during setupTest's Install(curl, httr,
+    ## waldo), etc.) spew hundreds of near-identical lines instead of
+    ## redrawing in place. Override that during interactive dev runs;
+    ## leave NULL during CI / R CMD check so terminal-unaware harnesses
+    ## continue to get static output.
+    cli.dynamic = if (isDevAndInteractive) TRUE else NULL
   ),
   .local_envir = teardown_env()
 )
