@@ -323,18 +323,28 @@ Require <- function(packages,
       opts <- options(repos = repos)
       on.exit(options(opts), add = TRUE)
 
-      log <- tempfile2(fileext = ".txt")
-      withCallingHandlers(
-        pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
-                                 standAlone = standAlone, verbose = verbose,
-                                 purge = purge),
-        message = function(m) {
-          if (verbose > 1)
-            cat(m$message, file = log, append = TRUE)
-          if (verbose < 1)
-            invokeRestart("muffleMessage")
-        }
-      )
+      ## Only install a message-condition handler when we actually need to
+       ## suppress output. Installing a calling handler that doesn't muffle
+       ## (the previous "tee to log file at verbose>1" path) sat in cli's
+       ## condition chain and broke cli's progress redraw heuristic — every
+       ## tick rendered as a fresh line instead of overwriting in place. cli
+       ## decides between dynamic redraw and static emission partly based on
+       ## whether an upstream handler will consume cliMessage; a no-op
+       ## handler that just teed to a file flipped that decision. Skipping
+       ## the wrap entirely at verbose >= 1 lets cli see the unobstructed
+       ## chain and use its own redraw handler.
+       if (verbose < 1) {
+         withCallingHandlers(
+           pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
+                                    standAlone = standAlone, verbose = verbose,
+                                    purge = purge),
+           message = function(m) invokeRestart("muffleMessage")
+         )
+       } else {
+         pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
+                                  standAlone = standAlone, verbose = verbose,
+                                  purge = purge)
+       }
     } else {
       if (length(which)) {
         if (exists("aaaa", envir = .GlobalEnv)) browser()
