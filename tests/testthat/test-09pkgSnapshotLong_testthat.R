@@ -167,6 +167,17 @@ test_that("test 09", {
         'robustbase', 'slam', 'stringi', 'svglite', 'terra', 'wk')
 
       aa <- attr(out, "Require")
+      if (is.null(aa)) {
+        ## installSnapshotViaInstallPackages (the install.packages installer)
+        ## returns invisible(TRUE) without an "Require" attribute. Synthesize
+        ## the legacy schema from installed.packages so the rest of the test
+        ## works for both code paths.
+        ip0 <- data.table::as.data.table(
+          installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
+        aa <- data.table::copy(pkgs)
+        aa[, installResult := data.table::fifelse(
+          Package %in% ip0$Package, "OK", "couldn't be installed")]
+      }
       bb <- aa[!installResult %in% "OK"]
       ee <- aa[installResult %in% "OK"]
       cc <- bb[!Package %in% extractPkgName(RequireDependencies())]
