@@ -1659,27 +1659,22 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     ## Snapshots already pin exact versions, so resolution is wasted work.
     ## Gated on options(Require.snapshotInstaller = "install.packages").
     ##
-    ## Currently restricted to Linux: macOS+Windows source compiles depend on
-    ## system libraries discovered via paths that vary widely (homebrew under
-    ## /opt/homebrew vs /usr/local, mingw, etc.); install.packages with
-    ## dependencies = FALSE punts that discovery to each package's configure
-    ## script, which fails opaquely. On Linux apt's headers land at /usr/include
-    ## where everything looks. On non-Linux we silently fall back to pak.
+    ## Cross-platform: Linux uses PPM __linux__/<codename> binaries (set via
+    ## detectPPMRepo()); macOS uses PPM /cran/latest with User-Agent
+    ## content-negotiation for Mac binaries; Windows falls through to source
+    ## from CRAN. macOS sysreqs (homebrew under /opt/homebrew vs /usr/local)
+    ## are handled by install.packages's per-package configure scripts —
+    ## any genuine compile failure surfaces in the post-install diagnostic
+    ## report with the offending package and last log lines, instead of an
+    ## opaque hang. Windows isn't routinely tested but the same path runs.
     installer <- getOption("Require.snapshotInstaller", "pak")
     if (identical(installer, "install.packages")) {
-      if (!identical(Sys.info()[["sysname"]], "Linux")) {
-        messageVerbose(
-          "Require.snapshotInstaller = 'install.packages' is only supported on Linux; ",
-          "falling back to pak on ", Sys.info()[["sysname"]],
-          verbose = verbose, verboseLevel = 1)
-      } else {
-        out <- installSnapshotViaInstallPackages(packages, libPaths = libPaths,
-                                                 verbose = verbose)
-        messageVerbose(
-          "PLEASE RESTART R using the correct library to start using the installed snapshot",
-          verbose = verbose)
-        return(invisible(out))
-      }
+      out <- installSnapshotViaInstallPackages(packages, libPaths = libPaths,
+                                               verbose = verbose)
+      messageVerbose(
+        "PLEASE RESTART R using the correct library to start using the installed snapshot",
+        verbose = verbose)
+      return(invisible(out))
     }
 
     packages <- dealWithSnapshotViolations(packages,

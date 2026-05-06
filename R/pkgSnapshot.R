@@ -292,7 +292,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     if (length(rfs)) reposFromSnapshot <- rfs
   }
 
-  ## Prefer PPM Linux binaries when available: PPM serves pre-compiled
+  ## Prefer PPM binaries when available: PPM serves pre-compiled
   ## tarballs indexed by distro, and pak honours options(repos), so prepending
   ## a PPM URL means recent versions skip compilation entirely. Older archived
   ## versions silently fall back to source. Opt out with
@@ -306,10 +306,10 @@ installSnapshotViaInstallPackages <- function(snapshot,
                    verbose = verbose, verboseLevel = 1)
   }
   if (isTRUE(getOption("Require.snapshotInstallerUsePPM", TRUE))) {
-    ppm <- detectPPMLinuxRepo()
+    ppm <- detectPPMRepo()
     if (!is.null(ppm) && !any(grepl("packagemanager.posit.co", newRepos, fixed = TRUE))) {
       newRepos <- c(PPM = ppm, newRepos)
-      messageVerbose("Using PPM Linux binaries: ", ppm,
+      messageVerbose("Using PPM binaries: ", ppm,
                      verbose = verbose, verboseLevel = 1)
     }
   }
@@ -811,14 +811,30 @@ findNearestArchivedVersion <- function(pkg, requested,
 ## serving; trailing /latest gives whatever versions are current. Older
 ## archived versions are still resolvable via this URL but pak will fall
 ## back to source for those that PPM didn't pre-build.
-detectPPMLinuxRepo <- function() {
-  if (!identical(Sys.info()[["sysname"]], "Linux")) return(NULL)
-  f <- "/etc/os-release"
-  if (!file.exists(f)) return(NULL)
-  ll <- tryCatch(readLines(f, warn = FALSE), error = function(e) character())
-  m <- grep("^VERSION_CODENAME=", ll, value = TRUE)
-  if (!length(m)) return(NULL)
-  codename <- sub('^VERSION_CODENAME=["]?([^"]+)["]?$', "\\1", m[1])
-  if (!nzchar(codename)) return(NULL)
-  paste0("https://packagemanager.posit.co/cran/__linux__/", codename, "/latest")
+detectPPMLinuxRepo <- function() detectPPMRepo()
+
+## Cross-platform PPM repo URL resolver. Linux uses the
+## __linux__/<codename> path so PPM serves prebuilt-against-distro
+## binaries; macOS hits the plain /cran/latest base where PPM
+## content-negotiates Mac binaries off the User-Agent we set in
+## installSnapshotViaInstallPackages. Windows isn't covered (PPM can
+## serve Windows binaries but we don't run snapshot installs from
+## Windows in practice). Returns NULL when the platform isn't
+## supported, callers can ignore PPM in that case.
+detectPPMRepo <- function() {
+  sys <- Sys.info()[["sysname"]]
+  if (identical(sys, "Linux")) {
+    f <- "/etc/os-release"
+    if (!file.exists(f)) return(NULL)
+    ll <- tryCatch(readLines(f, warn = FALSE), error = function(e) character())
+    m <- grep("^VERSION_CODENAME=", ll, value = TRUE)
+    if (!length(m)) return(NULL)
+    codename <- sub('^VERSION_CODENAME=["]?([^"]+)["]?$', "\\1", m[1])
+    if (!nzchar(codename)) return(NULL)
+    return(paste0("https://packagemanager.posit.co/cran/__linux__/", codename, "/latest"))
+  }
+  if (identical(sys, "Darwin")) {
+    return("https://packagemanager.posit.co/cran/latest")
+  }
+  NULL
 }
