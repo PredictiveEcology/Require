@@ -859,27 +859,40 @@ installSnapshotViaInstallPackages <- function(snapshot,
                      verbose = verbose, verboseLevel = 1)
   }
 
-  ## Install. pak::pkg_install(local::..., dependencies = NA) is preferred
-  ## as the primary path because pak maintains a binary cache (~/.cache/...
-  ## /pak/cache/) that reuses compiled tarballs from previous source builds,
-  ## dramatically speeding up repeat runs of the same snapshot. Plain
-  ## install.packages has no such cache.
+  ## Install. pak::pkg_install(local::..., dependencies = NA) is the
+  ## primary path because pak maintains a binary cache that reuses
+  ## compiled tarballs from previous source builds. We populate the
+  ## same cache (pkgcache::pkg_cache_add_file above + cacheBuiltBinaries
+  ## via on.exit) so pak finds binaries even for refs it didn't fetch
+  ## itself.
   ##
-  ## Run pak::pkg_install live (no sink) by default — while we're
-  ## still figuring out why the snapshot makes pak's solver refuse,
-  ## hiding the output means we can't see anything actionable.
-  ## setup.R's options(pkg.show_progress = FALSE) already kills the
-  ## spinner / progress-bar storm during interactive dev test runs,
-  ## so live output here means: "Will install N packages", "✔
-  ## Installed X", and most importantly any error/warning text pak
-  ## writes before the subprocess crash. Set
-  ## options(Require.snapshotInstallerPakSilent = TRUE) to revert to
-  ## the sink-and-filter mode once pak's behavior is understood.
+  ## EMPIRICAL NOTE: pak's resolver doesn't fully respect local:: refs
+  ## as the closed graph for transitive deps. Even with all 378 refs
+  ## passed in, pak's pkgdepends queries CRAN/PPM for each transitive
+  ## dependency name and may pick a NEWER version (e.g. snapshot pins
+  ## ggplot2_3.4.4 but PPM has 4.0.3 → pak tries to fetch 4.0.3 instead
+  ## of using our local 3.4.4). When transitively-needed packages have
+  ## "future" pin versions on PPM that pak considers but can't actually
+  ## fetch (URL exists but version mismatch with another constraint),
+  ## the whole solve fails with "! error in pak subprocess".
   ##
-  ## install.packages is the fallback: pak's solver is all-or-nothing and
-  ## refuses on any unsolvable snapshot constraint. install.packages
-  ## (with dependencies = NA + file:// repo) is permissive — installs
-  ## what it can in topological order, fails per-package on broken deps.
+  ## install.packages is the fallback. It's permissive: with
+  ## dependencies = NA + a closed file:// repo containing every
+  ## snapshot ref, it computes topological order from PACKAGES and
+  ## installs without re-resolving against external repos. Works
+  ## reliably for closed snapshots even when pak refuses.
+  ##
+  ## Diagnosed pak failures we DID fix (in this commit history):
+  ##   - visualTest GH archive's pax_global_header → repackage via R
+  ##     CMD build (above)
+  ##   - GH tarball filename version != DESCRIPTION Version → rename
+  ##     destPaths[i] to <pkg>_<DescriptionVersion>.tar.gz (above)
+  ## Remaining "pak refused" is the version-resolver quirk noted above
+  ## and is fundamental to how pak's pkgdepends works; the install.packages
+  ## fallback is correct for our closed-snapshot use case.
+  ##
+  ## Set options(Require.snapshotInstallerPakSilent = TRUE) to sink
+  ## pak's noisy resolver output to a tempfile during the attempt.
   localRefs <- paste0("local::", destPaths)
   pakLogTail <- character()
   pakErr <- NULL
