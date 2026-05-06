@@ -565,10 +565,20 @@ installSnapshotViaInstallPackages <- function(snapshot,
     if (file.exists(pakLogPath)) {
       pakLog <- tryCatch(readLines(pakLogPath, warn = FALSE),
                          error = function(e) character())
-      ## Strip cli redraw escape sequences and empty lines so the tail
-      ## we surface to the user is readable.
+      ## Strip cli redraw escape sequences (color codes, cursor moves,
+      ## carriage returns) so what we surface to the user is readable.
       pakLog <- gsub("\033\\[[^m]*m|\033\\[[0-9]*[A-K]|\r", "", pakLog)
+      ## Drop empty lines and pak's spinner / progress lines (they all
+      ## start with the unicode brackets `⸨` or have spinner characters
+      ## like ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏). Without this filter, the tail is just the
+      ## last few spinner ticks before pak crashed — useless. We want
+      ## the actual error message that came after, or the last
+      ## informational line before the crash.
       pakLog <- pakLog[nzchar(trimws(pakLog))]
+      pakLog <- pakLog[!grepl("^[[:space:]]*[⸨]", pakLog)]
+      pakLog <- pakLog[!grepl(
+        "^[[:space:]]*(Found|Resolving|Updating metadata|Downloading|Will install|Will download|Getting|Installing|Got |Installed |Will update|Checking installed|Checking for [0-9]+|✔|ℹ|→)",
+        pakLog)]
       pakLogTail <- utils::tail(pakLog, 8)
     }
     on.exit(unlink(pakLogPath), add = TRUE)
@@ -589,45 +599,78 @@ installSnapshotViaInstallPackages <- function(snapshot,
           paste(pakLogTail, collapse = "\n    "))
       else "",
       verbose = verbose, verboseLevel = 1)
-    repoDir <- tempfile2("snapInstall_repo_")
-    contribDir <- file.path(repoDir, "src", "contrib")
-    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
-    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
-    for (i in seq_along(destPaths)) {
-      dest <- file.path(contribDir, basename(destPaths[i]))
-      file.copy(destPaths[i], dest, overwrite = TRUE)
+
+    ## GitHub-sourced tarballs have `<repo>-<sha>/` as their top-level
+    ## directory (that's how `git archive` formats them), not `<pkg>/`.
+    ## install.packages via a file:// repo path uses R CMD INSTALL on the
+    ## tarball name, which then fails with `tar: <pkg>/DESCRIPTION: not
+    ## found in archive`. Split GH refs out: install them by direct file
+    ## path (R CMD INSTALL handles non-standard top-level dirs that way),
+    ## CRAN-style refs go through the file:// repo so install.packages
+    ## can resolve dependencies = NA topo order from PACKAGES.
+    nonGhIdx <- which(!isGH)
+    ghIdx <- which(isGH)
+
+    if (length(nonGhIdx)) {
+      repoDir <- tempfile2("snapInstall_repo_")
+      contribDir <- file.path(repoDir, "src", "contrib")
+      if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+      on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+      for (i in nonGhIdx) {
+        dest <- file.path(contribDir, basename(destPaths[i]))
+        file.copy(destPaths[i], dest, overwrite = TRUE)
+      }
+      tools::write_PACKAGES(contribDir, type = "source")
+      reposURL <- paste0("file://", repoDir)
+      suppressWarnings(utils::install.packages(
+        pkgs$Package[nonGhIdx], lib = destLib, repos = reposURL,
+        type = "source", dependencies = NA, Ncpus = Ncpus,
+        keep_outputs = outDir,
+        quiet = isTRUE(verbose < 1)))
     }
-    tools::write_PACKAGES(contribDir, type = "source")
-    reposURL <- paste0("file://", repoDir)
-    ## keep_outputs writes per-package R CMD INSTALL logs the diagnostic
-    ## helper parses structurally; dependencies = NA gets topo order from
-    ## the file:// PACKAGES index (closed snapshot guarantees all hard
-    ## deps are present); Ncpus runs parallel make.
-    suppressWarnings(utils::install.packages(
-      pkgs$Package, lib = destLib, repos = reposURL,
-      type = "source", dependencies = NA, Ncpus = Ncpus,
-      keep_outputs = outDir,
-      quiet = isTRUE(verbose < 1)))
+    if (length(ghIdx)) {
+      ## install.packages with repos = NULL + a vector of file paths
+      ## installs each via R CMD INSTALL <path>, which is tolerant of
+      ## non-standard top-level dirs in the tarball (it reads
+      ## DESCRIPTION wherever it finds it).
+      suppressWarnings(utils::install.packages(
+        destPaths[ghIdx], lib = destLib, repos = NULL,
+        type = "source", dependencies = NA, Ncpus = Ncpus,
+        keep_outputs = outDir,
+        quiet = isTRUE(verbose < 1)))
+    }
   } else if (requireNamespace("pak", quietly = TRUE)) {
     messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
                    verbose = verbose, verboseLevel = 1)
   } else {
     ## pak isn't installed at all — go directly to install.packages.
-    repoDir <- tempfile2("snapInstall_repo_")
-    contribDir <- file.path(repoDir, "src", "contrib")
-    if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
-    on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
-    for (i in seq_along(destPaths)) {
-      dest <- file.path(contribDir, basename(destPaths[i]))
-      file.copy(destPaths[i], dest, overwrite = TRUE)
+    ## Same GH-vs-non-GH split as the pak-failed branch above.
+    nonGhIdx <- which(!isGH)
+    ghIdx <- which(isGH)
+    if (length(nonGhIdx)) {
+      repoDir <- tempfile2("snapInstall_repo_")
+      contribDir <- file.path(repoDir, "src", "contrib")
+      if (!dir.exists(contribDir)) dir.create(contribDir, recursive = TRUE)
+      on.exit(unlink(repoDir, recursive = TRUE), add = TRUE)
+      for (i in nonGhIdx) {
+        dest <- file.path(contribDir, basename(destPaths[i]))
+        file.copy(destPaths[i], dest, overwrite = TRUE)
+      }
+      tools::write_PACKAGES(contribDir, type = "source")
+      reposURL <- paste0("file://", repoDir)
+      suppressWarnings(utils::install.packages(
+        pkgs$Package[nonGhIdx], lib = destLib, repos = reposURL,
+        type = "source", dependencies = NA, Ncpus = Ncpus,
+        keep_outputs = outDir,
+        quiet = isTRUE(verbose < 1)))
     }
-    tools::write_PACKAGES(contribDir, type = "source")
-    reposURL <- paste0("file://", repoDir)
-    suppressWarnings(utils::install.packages(
-      pkgs$Package, lib = destLib, repos = reposURL,
-      type = "source", dependencies = NA, Ncpus = Ncpus,
-      keep_outputs = outDir,
-      quiet = isTRUE(verbose < 1)))
+    if (length(ghIdx)) {
+      suppressWarnings(utils::install.packages(
+        destPaths[ghIdx], lib = destLib, repos = NULL,
+        type = "source", dependencies = NA, Ncpus = Ncpus,
+        keep_outputs = outDir,
+        quiet = isTRUE(verbose < 1)))
+    }
   }
 
   ## Auto-fill missing transitive deps. Snapshots are sometimes incomplete:

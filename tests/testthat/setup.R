@@ -95,11 +95,13 @@ withr::local_options(
     ## each test_that block, so cli's auto-detection
     ## (isatty(stderr()) || ...) returns FALSE inside tests and falls
     ## back to one-line-per-tick "static" output. The result is that
-    ## pak / cli progress bars (during setupTest's Install(curl, httr,
-    ## waldo), etc.) spew hundreds of near-identical lines instead of
-    ## redrawing in place. Override that during interactive dev runs;
-    ## leave NULL during CI / R CMD check so terminal-unaware harnesses
-    ## continue to get static output.
+    ## pak / cli progress bars spew hundreds of near-identical lines
+    ## instead of redrawing in place. Override that during interactive
+    ## dev runs; leave NULL during CI / R CMD check so terminal-unaware
+    ## harnesses continue to get static output. The companion
+    ## R_CLI_DYNAMIC env var (set in the local_envvar call below)
+    ## carries this into pak's r_session subprocess, where the option
+    ## doesn't reach.
     cli.dynamic = if (isDevAndInteractive) TRUE else NULL
   ),
   .local_envir = teardown_env()
@@ -109,7 +111,16 @@ withr::local_envvar(
   .new = list(
     "R_TESTS" = "",
     "R_REMOTES_UPGRADE" = "never",
-    "CRANCACHE_DISABLE" = TRUE
+    "CRANCACHE_DISABLE" = TRUE,
+    ## Companion to options(cli.dynamic) above. Options live only in
+    ## the parent R session; pak runs in an r_session callr subprocess
+    ## that doesn't inherit them, so cli's auto-detection there still
+    ## falls back to static and we get the same one-line-per-tick spew.
+    ## Env vars DO propagate to the subprocess, and cli's
+    ## is_dynamic_tty() reads R_CLI_DYNAMIC after getOption("cli.dynamic")
+    ## but before isatty(). Empty string (NA via setting NA) leaves it
+    ## untouched in CI / R CMD check.
+    "R_CLI_DYNAMIC" = if (isDevAndInteractive) "true" else NA
   ),
   .local_envir = teardown_env()
 )
