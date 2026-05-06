@@ -687,16 +687,39 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
       next
     }
 
-    ## Fallthrough: missing without a recognised pattern. Could be that
-    ## install.packages skipped the package due to an upstream dep failure
-    ## without writing a .out file, or pak's path was used and didn't write
-    ## logs at all.
+    ## Fallthrough: missing without a recognised pattern. The most common
+    ## cause is a cascade — install.packages refused to even attempt the
+    ## install because a hard dep already failed, so no .out file exists.
+    ## Walk the snapshot's declared Depends/Imports/LinkingTo for this pkg
+    ## and see which of them are in the failure set. If any are, this isn't
+    ## the root cause; redirect the user to the upstream diagnostic.
+    upstreamFailed <- character()
+    snapRow <- snapshot[snapshot$Package == p, , drop = FALSE]
+    if (NROW(snapRow)) {
+      depCols <- intersect(c("Depends", "Imports", "LinkingTo"),
+                           colnames(snapRow))
+      depTxt <- paste(unlist(lapply(depCols, function(cc) snapRow[[cc]][1])),
+                      collapse = ", ")
+      depPkgs <- unique(extractPkgName(strsplit(depTxt, ",\\s*")[[1]]))
+      depPkgs <- depPkgs[nzchar(depPkgs) & !depPkgs %in% .basePkgs]
+      upstreamFailed <- intersect(depPkgs,
+                                  c(failed, names(unresolvedRefs)))
+    }
+    if (length(upstreamFailed)) {
+      diagnostics[[p]] <- list(
+        pkg = p, status = "cascade",
+        reason = sprintf("blocked by upstream failure of: %s",
+                         paste(upstreamFailed, collapse = ", ")),
+        fix = sprintf("fix the upstream cause(s): %s",
+                      paste(upstreamFailed, collapse = ", ")))
+      next
+    }
     diagnostics[[p]] <- list(
       pkg = p, status = "unknown",
       reason = if (length(txt))
                  "no recognised failure pattern in install log"
                else
-                 "no install log captured",
+                 "no install log captured (likely deeper transitive cascade)",
       fix = if (length(outDir) && nzchar(outDir))
               sprintf("inspect %s for any leftover logs", outDir)
             else
