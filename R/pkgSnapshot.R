@@ -1472,17 +1472,16 @@ installSnapshotViaInstallPackages <- function(snapshot,
     }
     pakRefIdx <- pakRefIdx[!badPath]
   }
-  localRefs <- paste0("local::", destPaths[pakRefIdx])
-  ## Diagnostic: list the refs going to pak — without this an empty
-  ## "local::" in pak's error gives us nothing to chase.
-  if (verbose >= 1 && length(pakRefIdx)) {
-    refSummary <- paste0(pkgs$Package[pakRefIdx], "@",
-                          ifelse(is.na(pkgs$Version[pakRefIdx]), "?",
-                                 pkgs$Version[pakRefIdx]),
-                          collapse = ", ")
-    messageVerbose("pak input refs: ", refSummary,
-                   verbose = verbose, verboseLevel = 1)
-  }
+  ## paste0 in R is NOT length-zero-preserving: `paste0("local::",
+  ## character(0))` returns `c("local::")` length 1, not character(0).
+  ## (R recycles the zero-length operand to "" — the max-length arg
+  ## wins.) Without the explicit empty-case guard below, pak gets a
+  ## bogus single ref "local::" with no file → spurious failure that
+  ## install.packages fallback then has to clean up.
+  localRefs <- if (length(pakRefIdx))
+                 paste0("local::", destPaths[pakRefIdx])
+               else
+                 character(0)
   if (verbose >= 1 && sum(alreadyAtTarget) > 0)
     messageVerbose("Excluding ", sum(alreadyAtTarget),
                    " already-installed refs from pak's input ",
