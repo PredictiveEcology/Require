@@ -1598,11 +1598,35 @@ installSnapshotViaInstallPackages <- function(snapshot,
     }
     tools::write_PACKAGES(contribDir, type = "source")
     reposURL <- paste0("file://", repoDir)
-    suppressWarnings(utils::install.packages(
-      pkgs$Package, lib = destLib, repos = reposURL,
-      type = "source", dependencies = NA, Ncpus = Ncpus,
-      keep_outputs = outDir,
-      quiet = isTRUE(verbose < 1)))
+    ## Skip refs already installed at the snapshot's pinned version.
+    ## install.packages with `pkgs$Package` would otherwise "update" them
+    ## from the file:// repo's source tarball — which on packages with
+    ## SystemRequirements (cmake, nlopt, etc.) means a needless source
+    ## compile that fails when those system libs aren't installed. The
+    ## hybrid pre-install above already put the right binary in destLib;
+    ## don't redo it.
+    ipForFB <- tryCatch(as.data.frame(
+      installed.packages(lib.loc = destLib, noCache = TRUE)),
+      error = function(e) data.frame(Package = character(),
+                                     Version = character()))
+    needsFB <- vapply(seq_len(nrow(pkgs)), function(i) {
+      row <- ipForFB[ipForFB$Package == pkgs$Package[i], , drop = FALSE]
+      if (!nrow(row)) return(TRUE)
+      !isTRUE(as.character(row$Version[1]) ==
+              as.character(pkgs$Version[i]))
+    }, logical(1))
+    pkgsForFB <- pkgs$Package[needsFB]
+    if (verbose >= 1)
+      messageVerbose("install.packages fallback: skipping ",
+                     sum(!needsFB), " refs already at target version, ",
+                     "installing ", length(pkgsForFB),
+                     verbose = verbose, verboseLevel = 1)
+    if (length(pkgsForFB))
+      suppressWarnings(utils::install.packages(
+        pkgsForFB, lib = destLib, repos = reposURL,
+        type = "source", dependencies = NA, Ncpus = Ncpus,
+        keep_outputs = outDir,
+        quiet = isTRUE(verbose < 1)))
   } else if (requireNamespace("pak", quietly = TRUE)) {
     messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
                    verbose = verbose, verboseLevel = 1)

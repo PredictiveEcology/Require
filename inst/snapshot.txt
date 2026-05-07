@@ -5,7 +5,7 @@ animation,2.7,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir3248
 ape,5.7-1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","nlme, lattice, graphics, methods, stats, utils, parallel, Rcpp        (>= 0.12.0), digest",,,,,,,,CRAN,
 archive,1.1.7,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","cli, glue, rlang, tibble",,,,,,,,CRAN,
 arm,1.13-1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"MASS, Matrix (>= 1.0), stats, lme4 (>= 1.0)","abind, coda, graphics, grDevices, methods, nlme, utils",,,,,,,,CRAN,
-arrow,15.0.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","assertthat, bit64 (>= 0.9-7), glue, methods, purrr, R6, rlang        (>= 1.0.0), stats, tidyselect (>= 1.0.0), utils, vctrs",,,,,,,,CRAN,
+arrow,23.0.1.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","assertthat, bit64 (>= 0.9-7), glue, methods, purrr, R6, rlang        (>= 1.0.0), stats, tidyselect (>= 1.0.0), utils, vctrs",,,,,,,,CRAN,
 askpass,1.2.0,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"",sys (>= 2.1),,,,,,,,CRAN,
 assertthat,0.2.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"",tools,,,,,,,,CRAN,
 backports,1.4.1,C:/Users/emcintir/AppData/Local/Temp/RtmpaaIwDT/Require/tmpdir324859d83fd,"","",,,,,,,,CRAN,
