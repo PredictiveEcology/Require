@@ -572,6 +572,13 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## skip the download. This is the same cache pak's own pkg_install
   ## populates and reads from, so we share state with pak's flow.
   cachedHits <- logical(nrow(pkgs))
+  ## Track our-platform binary hits separately for the binary-first
+  ## hybrid pre-install. We can't feed binaries to pak via local:: refs
+  ## (proven empirically: pak rejects those as "Platform mismatch"), but
+  ## install.packages(type=binary) handles them fine — and pre-installing
+  ## binaries skips compilation entirely for the matching refs and
+  ## reduces pak's parallel-build workload (where pak is fragile).
+  binaryHits <- rep(NA_character_, nrow(pkgs))
   cacheList <- NULL
   ## Eviction list: URLs (or fullpaths when URL is NA) of cache entries
   ## that fail validation during pre-filter — fullpath missing on disk,
@@ -700,11 +707,13 @@ installSnapshotViaInstallPackages <- function(snapshot,
         ## Filter: pak's `local::<file>` ref handling is SOURCE-ONLY.
         ## Binaries (any platform, any rversion) trigger "Platform
         ## mismatch" in pak's resolver — confirmed empirically with a
-        ## minimal reproducer. So drop binary entries from the cache
-        ## pre-filter even when they match our platform; only source
-        ## tarballs feed local:: refs cleanly. (Binaries from cache
-        ## are still useful for pak's NON-local install path, but that
-        ## path isn't what we drive here.)
+        ## minimal reproducer. So drop binary entries from the local::
+        ## pipeline; only source tarballs feed local:: refs cleanly.
+        ##
+        ## BUT: our-platform R-version-matching binaries are useful for
+        ## the install.packages(type=binary) hybrid pre-install path —
+        ## those skip compilation entirely. Track them separately in
+        ## `binaryHits[i]`. The hybrid kicks in below, before pak runs.
         ##
         ## Detection combines all available signals: trust the `built`
         ## column when populated, then path layout (bin/ prefix or
@@ -713,6 +722,28 @@ installSnapshotViaInstallPackages <- function(snapshot,
         builtCol <- !is.na(hit$built) & as.logical(hit$built)
         isBinPath <- isBinFromPath(hit$path, hit$fullpath)
         isBin <- builtCol | isBinPath
+        ## Identify our-platform binary candidates among isBin rows.
+        rverEff <- ifelse(!is.na(hit$rversion), hit$rversion,
+                          rverFromPath(hit$path))
+        ourArchPrefix <- sub("^([^-]+-[^-]+)-.*", "\\1",
+                              R.version$platform)
+        platMatchesOur <- !is.na(hit$platform) & (
+          hit$platform == R.version$platform |
+          startsWith(hit$platform, paste0(ourArchPrefix, "-")))
+        ourBin <- isBin & !is.na(rverEff) & rverEff == ourRverShort &
+                  platMatchesOur
+        if (any(ourBin)) {
+          ## Pick the first usable our-platform binary. Validate it the
+          ## same way as source hits (gzip-t + DESCRIPTION Package match).
+          for (k in which(ourBin)) {
+            cb <- hit$fullpath[k]
+            if (file.exists(cb) && isGoodTarball(cb) &&
+                cacheTarballMatchesPkg(cb, pkgs$Package[i])) {
+              binaryHits[i] <- cb
+              break
+            }
+          }
+        }
         keep <- !isBin
         hit <- hit[keep, , drop = FALSE]
         if (!nrow(hit)) next
@@ -1230,6 +1261,86 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ##
   ## Set options(Require.snapshotInstallerPakSilent = TRUE) to sink
   ## pak's noisy resolver output to a tempfile during the attempt.
+  ## Hybrid binary-first pre-install. For refs where pkgcache has an
+  ## our-platform R-version-matching binary, install via
+  ## install.packages(type=binary) BEFORE pak. This:
+  ##   1) skips compilation entirely for those refs (fast),
+  ##   2) reduces pak's parallel-build workload (pak aborts the whole
+  ##      install on a single build failure — fewer compiles in pak's
+  ##      hands = fewer chances to hit that abort),
+  ##   3) populates destLib so pak's `upgrade = FALSE` short-circuits
+  ##      those refs as "already installed at requested version".
+  ## Disable with options(Require.snapshotInstallerHybrid = FALSE).
+  preInstalled <- character()
+  hybridOn <- isTRUE(getOption("Require.snapshotInstallerHybrid", TRUE))
+  if (hybridOn) {
+    binIdx <- which(!is.na(binaryHits) & !cachedHits[seq_along(binaryHits)] |
+                     !is.na(binaryHits))
+    binIdx <- which(!is.na(binaryHits))
+    if (length(binIdx)) {
+      ## Skip refs that are ALREADY installed at the requested version
+      ## (no point reinstalling). Use installed.packages() against destLib
+      ## directly (cheap, already done implicitly above).
+      ipNow <- tryCatch(as.data.frame(
+        installed.packages(lib.loc = destLib, noCache = TRUE)),
+        error = function(e) data.frame(Package = character(),
+                                       Version = character()))
+      alreadyInLib <- vapply(binIdx, function(i) {
+        row <- ipNow[ipNow$Package == pkgs$Package[i], , drop = FALSE]
+        nrow(row) > 0 && identical(as.character(row$Version[1]),
+                                    as.character(pkgs$Version[i]))
+      }, logical(1))
+      binIdx <- binIdx[!alreadyInLib]
+    }
+    if (length(binIdx)) {
+      if (verbose >= 1)
+        messageVerbose("Hybrid pre-install: ", length(binIdx),
+                       " of ", nrow(pkgs),
+                       " refs have an our-platform binary in pkgcache; ",
+                       "installing those via install.packages(type=binary) ",
+                       "to skip compilation",
+                       verbose = verbose, verboseLevel = 1)
+      hybridT0 <- Sys.time()
+      ## install.packages with file paths + repos = NULL + type = "binary"
+      ## treats each path as a binary tarball and unpacks. On Mac, this
+      ## handles `.tgz` natively. We loop in chunks to avoid arg-list
+      ## limits and to allow per-file failure isolation (one bad binary
+      ## shouldn't kill the whole batch).
+      binFiles <- binaryHits[binIdx]
+      binPkgs  <- pkgs$Package[binIdx]
+      origRepos2 <- getOption("repos")
+      options(repos = c(CRAN = "https://cloud.r-project.org"))  # placeholder
+      installedOK <- character()
+      for (j in seq_along(binFiles)) {
+        rc <- tryCatch({
+          suppressMessages(suppressWarnings(
+            utils::install.packages(
+              pkgs = binFiles[j], lib = destLib, repos = NULL,
+              type = "binary", dependencies = FALSE,
+              quiet = isTRUE(verbose < 1))))
+          ## Verify the install actually landed in destLib.
+          installed <- file.exists(file.path(destLib, binPkgs[j], "DESCRIPTION"))
+          if (installed) installedOK <- c(installedOK, binPkgs[j])
+          installed
+        }, error = function(e) FALSE)
+      }
+      options(repos = origRepos2)
+      preInstalled <- installedOK
+      if (verbose >= 1) {
+        hybridSecs <- as.numeric(difftime(Sys.time(), hybridT0,
+                                          units = "secs"))
+        messageVerbose(sprintf(
+          "  ... pre-installed %d/%d binaries in %.1fs (%s)",
+          length(installedOK), length(binIdx), hybridSecs,
+          if (length(installedOK) < length(binIdx))
+            sprintf("%d failed; pak will pick those up from source",
+                    length(binIdx) - length(installedOK))
+          else "all OK"),
+          verbose = verbose, verboseLevel = 1)
+      }
+    }
+  }
+
   localRefs <- paste0("local::", destPaths)
   pakLogTail <- character()
   pakErr <- NULL
@@ -1532,6 +1643,160 @@ installSnapshotViaInstallPackages <- function(snapshot,
 ##  * compile-failed     "ERROR: compilation failed" / "non-zero exit status"
 ##  * download-failed    couldn't fetch tarball from any candidate URL
 ##  * substituted        installed, but at a different version than pinned
+## classifyCompileFailure: scan the captured `R CMD INSTALL` output of a
+## failed compile and return a specific (reason, fix) pair when the error
+## matches a known pattern. Pak's diagnostic showed terse messages like
+## "compilation failed" — useless for the user. The actual cause is
+## usually the FIRST clang error, which encodes whether the issue is:
+##   - a missing system header (jpeglib.h, glpk.h, gdal.h, ...)
+##   - a missing link-time library (-lX not found)
+##   - an Rcpp template-arity mismatch (newer pkg, older Rcpp)
+##   - a GDAL ABI change (sf / terra vs GDAL >= 3.10's const SRS)
+##   - an R API change (R 4.5 removed Calloc/Free)
+## Each pattern resolves to a concrete user-facing fix (brew install X,
+## bump pkg pin to >= Y).
+classifyCompileFailure <- function(txt, pkg) {
+  txtNonEmpty <- txt[nzchar(txt)]
+  ## First compile error is usually more informative than the last 6
+  ## lines — the tail is often "make: *** Error 1" cleanup.
+  errIdx <- grep("error:|fatal error:", txt)
+  firstErr <- if (length(errIdx)) txt[errIdx[1]] else ""
+  ## Window around the first error so the user sees what code triggered
+  ## it (usually the source line + caret).
+  errCtx <- if (length(errIdx))
+              txt[seq(max(1L, errIdx[1] - 1L), min(length(txt),
+                                                    errIdx[1] + 4L))]
+            else character()
+
+  ## Pattern: missing system header. Maps the header to a common
+  ## brew/apt package name when we know it; falls back to suggesting
+  ## the user install the matching dev package.
+  m <- regmatches(txt, regexec(
+    "fatal error: ['<\"]?([A-Za-z0-9._/+-]+\\.h)['>\"]? file not found",
+    txt))
+  m <- m[lengths(m) > 0]
+  if (length(m)) {
+    hdr <- m[[1]][2]
+    pkgHints <- list(
+      "jpeglib.h"   = "brew install jpeg-turbo (or libjpeg)",
+      "png.h"       = "brew install libpng",
+      "gdal.h"      = "brew install gdal",
+      "geos_c.h"    = "brew install geos",
+      "proj.h"      = "brew install proj",
+      "glpk.h"      = "brew install glpk",
+      "ft2build.h"  = "brew install freetype",
+      "freetype.h"  = "brew install freetype",
+      "sodium.h"    = "brew install libsodium",
+      "archive.h"   = "brew install libarchive",
+      "secret.h"    = "brew install libsecret (Linux) — macOS keychain is built-in",
+      "magick/api.h" = "brew install imagemagick",
+      "MagickWand/MagickWand.h" = "brew install imagemagick",
+      "openssl/ssl.h" = "brew install openssl",
+      "curl/curl.h" = "brew install curl",
+      "tbb/tbb.h"   = "brew install tbb",
+      "udunits2.h"  = "brew install udunits",
+      "fftw3.h"     = "brew install fftw",
+      "gsl/gsl_vector.h" = "brew install gsl",
+      "boost/version.hpp" = "brew install boost",
+      "X11/Xlib.h"  = "brew install --cask xquartz",
+      "Rmpi.h"      = "brew install open-mpi (and configure R to find it)")
+    fixHint <- pkgHints[[hdr]]
+    if (is.null(fixHint))
+      fixHint <- paste0("install the system library that provides ", hdr,
+                        " (then add `-I/path/to/include` via ~/.R/Makevars ",
+                        "if R doesn't find it on its default search path)")
+    return(list(
+      reason = sprintf("missing system header '%s'", hdr),
+      fix = paste0(
+        fixHint,
+        ". Verify with: ls $(brew --prefix)/include/", hdr)))
+  }
+
+  ## Pattern: linker can't find -lX.
+  m <- regmatches(txt, regexec(
+    "ld: library (?:'[^']+' )?not found for ?-l([A-Za-z0-9._+-]+)",
+    txt))
+  m <- m[lengths(m) > 0]
+  if (length(m)) {
+    lib <- m[[1]][2]
+    return(list(
+      reason = sprintf("linker can't find library '-l%s'", lib),
+      fix = paste0(
+        "install the system library and add `-L/path/to/lib` via ",
+        "~/.R/Makevars (or equivalent). Try: brew install ", lib)))
+  }
+
+  ## Pattern: Rcpp class_::constructor<> template arity exceeded —
+  ## terra 1.8+ uses 10-arg constructor, Rcpp <= 1.0.13 only supports up
+  ## to 7. Bump Rcpp.
+  if (any(grepl("no matching member function for call to 'constructor'",
+                txt)) &&
+      any(grepl("too many template arguments for function template 'constructor'",
+                txt))) {
+    return(list(
+      reason = paste0(pkg,
+        "'s RcppModule uses class_::constructor<> with more template ",
+        "arguments than the snapshot's Rcpp supports"),
+      fix = paste0(
+        "bump Rcpp in the snapshot to a newer version (>= 1.0.14 typically). ",
+        "Note: ", pkg, "'s DESCRIPTION may declare a too-lenient ",
+        "Rcpp constraint (e.g. >= 1.0-10) that doesn't catch this at resolve")))
+  }
+
+  ## Pattern: GDAL >= 3.10 made OGRLayer::GetSpatialRef() return
+  ## const OGRSpatialReference*. Older sf / terra source code stores it
+  ## in a non-const pointer → compile error.
+  if (any(grepl(
+    "cannot initialize a variable of type 'OGRSpatialReference \\*' with an rvalue of type 'const OGRSpatialReference \\*'",
+    txt))) {
+    return(list(
+      reason = paste0(pkg,
+        "'s source uses non-const OGRSpatialReference* but GDAL >= 3.10 ",
+        "returns const (ABI break)"),
+      fix = paste0(
+        "bump ", pkg, " to a version released after GDAL 3.10 (Nov 2024) — ",
+        "e.g. terra >= 1.7-83 or sf >= 1.0-17")))
+  }
+
+  ## Pattern: R 4.5 removed Calloc/Free from R headers (now require S/R
+  ## prefix). Older C/C++ packages built against R 4.4 source headers
+  ## fail at R 4.5.
+  if (any(grepl("(?:'Calloc'|'Free'|'Realloc')(?: was not declared| undeclared)",
+                txt)) ||
+      any(grepl("error: use of undeclared identifier 'Calloc'", txt))) {
+    return(list(
+      reason = paste0(pkg,
+        " uses Calloc/Free which R 4.5 renamed to R_Calloc/R_Free"),
+      fix = paste0(
+        "bump ", pkg, " to a version that uses R_Calloc/R_Free (or run ",
+        "the install on R 4.4)")))
+  }
+
+  ## Pattern: -lz / zlib missing (common Linux issue).
+  if (any(grepl("zlib\\.h.*file not found", txt))) {
+    return(list(
+      reason = "missing zlib development headers",
+      fix = "Linux: apt install zlib1g-dev / yum install zlib-devel; macOS: zlib is normally bundled — check Xcode CLT install"))
+  }
+
+  ## Generic compile-failed fallback: give the user the FIRST error and
+  ## a few surrounding lines (more informative than the last 6).
+  reason <- if (length(firstErr)) {
+    cleaned <- sub("^[^:]+:[0-9]+:[0-9]+: ", "", firstErr)
+    paste0("compile error: ", trimws(cleaned))
+  } else {
+    "compilation failed (no specific error pattern matched)"
+  }
+  list(
+    reason = reason,
+    fix = paste0(
+      "first compile error context:\n        ",
+      paste(errCtx, collapse = "\n        "),
+      "\n      common remedies: install a missing system lib ",
+      "(brew/apt), bump the package pin to a newer version compatible ",
+      "with your R/system, or use a binary repo (PPM)."))
+}
+
 diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
                                             unresolvedRefs = character(),
                                             substituted = character(),
@@ -1621,16 +1886,11 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
     ## ERROR: compilation failed for package
     if (any(grepl("ERROR: compilation failed|non-zero exit status",
                   txt))) {
-      lastLines <- utils::tail(txt[nzchar(txt)], 6)
+      cls <- classifyCompileFailure(txt, p)
       diagnostics[[p]] <- list(
         pkg = p, status = "compile-failed",
-        reason = "compilation failed (system lib mismatch or R API change)",
-        fix = paste0(
-          "common causes: missing system library (apt/brew install ...), ",
-          "R API change (e.g. R 4.5 removed Calloc/Free), or wrong toolchain. ",
-          "Try a newer pin, a binary repo (PPM), or install the system lib. ",
-          "Last log lines:\n        ",
-          paste(lastLines, collapse = "\n        ")))
+        reason = cls$reason,
+        fix = cls$fix)
       next
     }
 
