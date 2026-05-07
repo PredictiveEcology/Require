@@ -1,5 +1,9 @@
 utils::globalVariables(c(
-  "..keepCols", "op", "package", "ref"
+  "..keepCols", "op", "package", "ref",
+  ## data.table NSE in pakInstallFiltered's deduplication block:
+  "isNonCRAN", "hasNonCRAN", ".versionSpecPrio",
+  ## data.table NSE in pakDepsToPkgDT:
+  "src_type"
 ))
 
 .txtFailedToBuildSrcPkg <- "Failed to build source package"
