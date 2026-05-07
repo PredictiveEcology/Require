@@ -1442,6 +1442,31 @@ installSnapshotViaInstallPackages <- function(snapshot,
     }
   }, logical(1))
   pakRefIdx <- which(!alreadyAtTarget)
+  ## Defensive: drop refs whose destPath is empty, NA, or doesn't point
+  ## to an existing tarball. Without this, an empty-string destPath gets
+  ## passed as `local::` to pak, which fails with `is_existing_file(file)
+  ## is not TRUE`. Empty destPaths can creep in if some upstream code
+  ## path leaves the slot unset (e.g. a ref that the cache pre-filter
+  ## marked as cached but whose copy step silently failed). Filter and
+  ## warn with the offending ref names so we can chase the upstream bug.
+  badPath <- vapply(pakRefIdx, function(i) {
+    p <- destPaths[i]
+    is.na(p) || !nzchar(p) || !file.exists(p)
+  }, logical(1))
+  if (any(badPath)) {
+    if (verbose >= 1) {
+      bad <- pakRefIdx[badPath]
+      messageVerbose(
+        "Dropping ", length(bad),
+        " ref(s) from pak's input — destPath empty/missing for: ",
+        paste0(pkgs$Package[bad], "@",
+               ifelse(is.na(pkgs$Version[bad]), "?", pkgs$Version[bad]),
+               " (path='", destPaths[bad], "')",
+               collapse = "; "),
+        verbose = verbose, verboseLevel = 1)
+    }
+    pakRefIdx <- pakRefIdx[!badPath]
+  }
   localRefs <- paste0("local::", destPaths[pakRefIdx])
   if (verbose >= 1 && sum(alreadyAtTarget) > 0)
     messageVerbose("Excluding ", sum(alreadyAtTarget),
