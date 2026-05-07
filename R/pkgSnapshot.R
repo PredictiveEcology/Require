@@ -1677,12 +1677,19 @@ installSnapshotViaInstallPackages <- function(snapshot,
       read.dcf(descFile, fields = c("Depends", "Imports", "LinkingTo")),
       error = function(e) NULL)
     if (is.null(desc) || !nrow(desc)) next
-    txt <- paste(unlist(desc), collapse = ", ")
-    if (!nzchar(txt)) next
+    ## Filter NA fields BEFORE pasting — read.dcf returns NA for missing
+    ## fields, and `paste(unlist(c(NA, "...")), collapse=", ")` yields a
+    ## literal "NA, ..." which extractPkgName then turns into a fake "NA"
+    ## ref, leading to "auto-filling 1 transitive dep(s) not in snapshot:
+    ## NA" in the diagnostic.
+    fields <- unlist(desc)
+    fields <- fields[!is.na(fields) & nzchar(fields)]
+    if (!length(fields)) next
+    txt <- paste(fields, collapse = ", ")
     refs <- unlist(strsplit(txt, ",\\s*"))
     refs <- refs[nzchar(refs) & !is.na(refs)]
     nms <- extractPkgName(refs)
-    nms <- nms[nzchar(nms) & !is.na(nms) & nms != "R"]
+    nms <- nms[nzchar(nms) & !is.na(nms) & nms != "R" & nms != "NA"]
     neededDeps <- c(neededDeps,
                     setdiff(nms, c(ipForFill, .basePkgs, snapshot$Package)))
   }
