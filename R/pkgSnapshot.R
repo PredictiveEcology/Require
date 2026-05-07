@@ -1415,15 +1415,28 @@ installSnapshotViaInstallPackages <- function(snapshot,
     row <- ipForRefs[ipForRefs$Package == pkgs$Package[i], , drop = FALSE]
     if (!nrow(row)) return(FALSE)
     if (isGH[i]) {
-      ## GH ref: compare RemoteSha / GithubSHA1 in installed DESCRIPTION.
+      ## GH ref: prefer SHA-based check; fall back to Version when the
+      ## installed DESCRIPTION has no RemoteSha/GithubSHA1 fields. The
+      ## hybrid binary pre-install (install.packages(type=binary)) just
+      ## unpacks the cached .tgz, which doesn't write remotes-style SHA
+      ## fields. Without the fallback, every GH ref appears "not at
+      ## target" after binary install → pak reinstalls it on every run
+      ## ("+ visualTest 1.0.0 → 1.0.0" update-to-itself churn).
       f <- file.path(destLib, pkgs$Package[i], "DESCRIPTION")
-      if (!file.exists(f)) return(FALSE)
-      dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha","GithubSHA1")),
-                      error = function(e) NULL)
-      if (is.null(dcf) || nrow(dcf) == 0) return(FALSE)
-      sha <- dcf[1, "RemoteSha"]
-      if (is.na(sha) || !nzchar(sha)) sha <- dcf[1, "GithubSHA1"]
-      isTRUE(as.character(sha) == as.character(pkgs$GithubSHA1[i]))
+      if (file.exists(f)) {
+        dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha","GithubSHA1")),
+                        error = function(e) NULL)
+        if (!is.null(dcf) && nrow(dcf) > 0) {
+          sha <- dcf[1, "RemoteSha"]
+          if (is.na(sha) || !nzchar(sha)) sha <- dcf[1, "GithubSHA1"]
+          if (!is.na(sha) && nzchar(sha))
+            return(isTRUE(as.character(sha) ==
+                          as.character(pkgs$GithubSHA1[i])))
+        }
+      }
+      ## Fallback: version match. Snapshot's Version pin is enough when
+      ## the installed copy doesn't carry SHA metadata.
+      isTRUE(as.character(row$Version[1]) == as.character(pkgs$Version[i]))
     } else {
       isTRUE(as.character(row$Version[1]) == as.character(pkgs$Version[i]))
     }
