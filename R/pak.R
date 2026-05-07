@@ -2563,12 +2563,17 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   preArchiveFailures <- tryCatch(
     extractInstallFailures(allCapturedMsgs),
     error = function(e) emptyFailuresDT)
-  # Consider a package "missing" only if it can't be found in ANY active
-  # .libPaths() -- not just in libPaths[1]. With upgrade = FALSE, pak
-  # legitimately skips packages already installed in user/site libs that
-  # are visible to the R session, even though they aren't physically copied
-  # to the project lib. Reporting those as missing would be a false alarm.
-  finalInstalled <- tryCatch(rownames(installed.packages(lib.loc = .libPaths(), noCache = TRUE)),
+  # standAlone = TRUE: only libPaths[1] counts as "installed" -- the user
+  # explicitly asked for an isolated lib, so finding a copy elsewhere on
+  # .libPaths() does NOT satisfy the request. Without this guard, archive
+  # fallback was skipped for archived-from-CRAN packages whose only on-disk
+  # copy lived in the user library (e.g. pryr 0.1.6 after CRAN archive on
+  # 2026-01-30 -- pak's binary URL 404s and finalInstalled saw the user-lib
+  # copy, so finalMissing was empty and archive fallback never fired).
+  # standAlone = FALSE: with upgrade = FALSE pak legitimately skips packages
+  # visible elsewhere on .libPaths(), so we honor that as installed.
+  checkLibs <- if (isTRUE(standAlone)) libPaths[1L] else .libPaths()
+  finalInstalled <- tryCatch(rownames(installed.packages(lib.loc = checkLibs, noCache = TRUE)),
                              error = function(e) character(0))
   finalMissing   <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
 
@@ -2646,7 +2651,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       }
       # Recompute final-missing after the archive pass.
       finalInstalled <- tryCatch(
-        rownames(installed.packages(lib.loc = .libPaths(), noCache = TRUE)),
+        rownames(installed.packages(lib.loc = checkLibs, noCache = TRUE)),
         error = function(e) character(0))
       finalMissing <- pkgNamesAll[!pkgNamesAll %in% finalInstalled]
     }
