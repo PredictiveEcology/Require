@@ -367,10 +367,8 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
       break
     unlink(mirrorsLocalFile)
     if (attempt == 2) {
-      SSLout <- SSLmodsWithFails(a, SSLwarns = TRUE, warns = character(), attempt,
-                       verbose = getOption("Require.verbose"), otherwarns = character())
-      if (!is.null(SSLout))
-        eval(parse(text = SSLout)) # will be next or break
+      # https://stackoverflow.com/a/76684292/3890027
+      enableSSLWorkaround()
     }
     if (attempt == 3) {
       optsHere <- options(download.file.method = "curl")
