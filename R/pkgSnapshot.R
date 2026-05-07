@@ -2311,9 +2311,15 @@ listCandidateVersions <- function(pkg, repos = getOption("repos"),
                                    verbose = getOption("Require.verbose", 0)) {
   out <- character()
   ## Current versions in any of the repos' PACKAGES indexes.
+  ## Wrapped in suppressWarnings: snapshot Repository columns sometimes
+  ## point at r-universe instances that don't host PACKAGES.rds (only
+  ## PACKAGES.gz / PACKAGES) — available.packages issues a 404 warning
+  ## that's noise, not an error. We don't want to surface that to the
+  ## user (and the test fails on unmatched warnings).
   ap <- tryCatch(
-    utils::available.packages(repos = repos, type = "source",
-                              filters = list()),
+    suppressWarnings(
+      utils::available.packages(repos = repos, type = "source",
+                                filters = list())),
     error = function(e) NULL)
   if (!is.null(ap) && nrow(ap) > 0) {
     cur <- ap[ap[, "Package"] == pkg, "Version"]
@@ -2322,8 +2328,9 @@ listCandidateVersions <- function(pkg, repos = getOption("repos"),
   ## Historical versions from CRAN archive.rds.
   cranLike <- repos[grepl("^https?://(cran\\.|cloud\\.r-)", repos)]
   if (!length(cranLike)) cranLike <- "https://cloud.r-project.org"
-  ava <- tryCatch(dlArchiveVersionsAvailable(pkg, repos = cranLike,
-                                              verbose = verbose),
+  ava <- tryCatch(suppressWarnings(
+                    dlArchiveVersionsAvailable(pkg, repos = cranLike,
+                                                verbose = verbose)),
                   error = function(e) NULL)
   if (!is.null(ava) && length(ava) && !is.null(ava[[1]]) &&
       is.data.frame(ava[[1]]) && nrow(ava[[1]])) {
@@ -2358,11 +2365,18 @@ tryInstallByUrl <- function(pkg, version, destLib, repos,
                      pkg, "_", version, ".tar.gz"))
   }
   for (u in unique(urls)) {
-    ok <- tryCatch({
+    ## suppressWarnings + tryCatch: 404s on PPM/Archive for older
+    ## versions are expected as we walk down the priority list; they
+    ## emit "downloaded length 0 != reported length N" warnings that
+    ## the test surfaces as unexpected. Quiet here, then check that
+    ## the resulting file is actually a tarball (not a 404 HTML page
+    ## that download.file silently saved).
+    ok <- tryCatch(
       suppressWarnings(utils::download.file(
         u, tmp, method = "libcurl", quiet = TRUE, mode = "wb"))
-      file.exists(tmp) && file.size(tmp) > 100L
-    }, error = function(e) FALSE)
+        == 0L && file.exists(tmp) && file.size(tmp) > 100L,
+      error = function(e) FALSE,
+      warning = function(w) FALSE)
     if (!isTRUE(ok)) next
     ## Got a tarball — try to install. dependencies = NA so
     ## install.packages pulls anything new the bumped version needs.

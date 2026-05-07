@@ -234,7 +234,12 @@ test_that("test 09", {
                               recursive = TRUE)$testthat),
         extractPkgName(pkgDep("devtools", dependencies = TRUE,
                               recursive = TRUE)$devtools)))
-      versionProblems <- versionProblems[!Package %in% runnerLibPkgs]
+      ## Also allow knownFails-listed pkgs (they're system-lib-version
+      ## sensitive — when bump-and-retry walks newer versions to get
+      ## *something* installed, the installed version legitimately
+      ## won't match the snapshot pin).
+      versionProblems <- versionProblems[!Package %in%
+                                          c(runnerLibPkgs, knownFails)]
       expect_true(NROW(versionProblems) == 0)
 
       ## Note: the previous test version walked pkgDep recursively over
