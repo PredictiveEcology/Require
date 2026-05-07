@@ -1800,6 +1800,56 @@ installSnapshotViaInstallPackages <- function(snapshot,
                                     c(ipForFill, snapshot$Package, .basePkgs))))
   }
 
+  ## Bump-and-retry: walk newer-than-snapshot versions for any refs
+  ## that didn't make it into destLib. install.packages-fallback's
+  ## "best-effort" mode already tolerates per-package compile failures
+  ## (so ONE bad ref doesn't kill the rest), but a still-missing ref
+  ## leaves the user with a half-installed snapshot. For some packages
+  ## (notably arrow's bundled-libarrow source build, or any pkg whose
+  ## pinned version's source has bit-rotted under newer toolchains),
+  ## the snapshot's exact pin won't compile, but a slightly newer
+  ## version will. Walk the archive ascending; first install that
+  ## sticks wins, with the substitution recorded in the diagnostic.
+  ##
+  ## Bumping moves AWAY from the snapshot's exact pin, which violates
+  ## the reproducibility goal — gate behind an option, default on, but
+  ## clearly surfaced in the report so users see the drift.
+  bumpedSubst <- character()
+  if (isTRUE(getOption("Require.snapshotInstallerBumpOnFail", TRUE))) {
+    ipNow <- tryCatch(
+      rownames(installed.packages(lib.loc = destLib, noCache = TRUE)),
+      error = function(e) character())
+    expectedNow <- snapshot$Package[!is.na(snapshot$Package) &
+                                     nzchar(snapshot$Package) &
+                                     !snapshot$Package %in% c("R", .basePkgs)]
+    stillMissing <- setdiff(expectedNow, ipNow)
+    ## Don't bother bumping refs that the user has flagged as
+    ## environment-dependent via Require.snapshotInstallerKnownFails
+    ## (matches the test's `knownFails` semantically — they're
+    ## system-lib-version-dependent, bumping won't help).
+    knownFailsOpt <- getOption("Require.snapshotInstallerKnownFails",
+                               character())
+    if (length(knownFailsOpt))
+      stillMissing <- setdiff(stillMissing, knownFailsOpt)
+    if (length(stillMissing)) {
+      if (verbose >= 1)
+        messageVerbose(
+          "Bump-retry: ", length(stillMissing),
+          " ref(s) failed at snapshot pin; trying newer versions ",
+          "from CRAN/PPM/Archive: ",
+          paste(utils::head(stillMissing, 10), collapse = ", "),
+          if (length(stillMissing) > 10) " ..." else "",
+          verbose = verbose, verboseLevel = 1)
+      bumpRes <- bumpAndRetryFailed(
+        stillMissing = stillMissing, snapshot = snapshot,
+        destLib = destLib, repos = getOption("repos"),
+        verbose = verbose)
+      bumpedSubst <- bumpRes$bumped
+      ## bumped refs count as substitutions for the diagnostic
+      substituted <- c(substituted, bumpedSubst)
+    }
+  }
+
   ## (Binary caching is now registered via on.exit earlier in this
   ## function so partial installs — pak crash, install.packages
   ## interrupt, error in auto-fill — still get the binaries that DID
@@ -2182,6 +2232,154 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
 ## Uses the existing `dlArchiveVersionsAvailable` helper that fetches CRAN's
 ## Meta/archive.rds and `extractVersionNumber` to parse versions out of the
 ## tarball filenames.
+## Walk newer-than-pin versions for each still-missing ref until one
+## installs cleanly. Drives the "bump-and-retry" stage of
+## installSnapshotViaInstallPackages. Returns a list with `bumped`
+## (character vector of "pkg: oldVer -> newVer" entries) and
+## `stillMissing` (refs we couldn't recover).
+##
+## Strategy:
+##   1. For each missing pkg, list candidate versions: the CURRENT
+##      version on PPM/CRAN (from `available.packages()`) plus all
+##      historical versions from CRAN's archive.rds. Sort ascending.
+##   2. Filter to versions strictly newer than the snapshot's pin.
+##   3. For each candidate (lowest first → least drift), download the
+##      source tarball directly (PPM → CRAN → CRAN/Archive), then
+##      `install.packages(<file>, repos = NULL, dependencies = NA)`.
+##      `dependencies = NA` so install.packages backfills any new
+##      dep that the bumped version requires (and that other snapshot
+##      pins don't provide).
+##   4. First success wins. Record the substitution and continue.
+##
+## Bound the search: cap at 20 candidate versions per package — past
+## that the drift is too large to call a "snapshot install" anymore.
+bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
+                                repos = getOption("repos"),
+                                maxCandidates = 20L,
+                                verbose = getOption("Require.verbose", 0)) {
+  bumped <- character()
+  remaining <- character()
+  for (pkg in stillMissing) {
+    snapVer <- snapshot$Version[snapshot$Package == pkg][1]
+    if (is.na(snapVer) || !nzchar(snapVer)) snapVer <- "0.0"
+    candidates <- listCandidateVersions(pkg, repos = repos,
+                                        verbose = verbose)
+    if (!length(candidates)) {
+      remaining <- c(remaining, pkg)
+      next
+    }
+    cmp <- vapply(candidates, function(v)
+                  tryCatch(as.integer(utils::compareVersion(v, snapVer)),
+                           error = function(e) NA_integer_),
+                  integer(1))
+    candidates <- candidates[!is.na(cmp) & cmp > 0]
+    if (!length(candidates)) {
+      remaining <- c(remaining, pkg)
+      next
+    }
+    candidates <- candidates[order(numeric_version(candidates))]
+    candidates <- utils::head(candidates, maxCandidates)
+    if (verbose >= 1)
+      messageVerbose(
+        "  - ", pkg, " (snapshot pin: ", snapVer,
+        "): trying ", length(candidates),
+        " newer version(s) -> ",
+        paste(utils::head(candidates, 5), collapse = ", "),
+        if (length(candidates) > 5) " ..." else "",
+        verbose = verbose, verboseLevel = 1)
+    installed <- FALSE
+    for (v in candidates) {
+      if (tryInstallByUrl(pkg = pkg, version = v, destLib = destLib,
+                          repos = repos, verbose = verbose)) {
+        bumped <- c(bumped,
+                    sprintf("%s: %s -> %s (bumped)", pkg, snapVer, v))
+        installed <- TRUE
+        if (verbose >= 1)
+          messageVerbose("    ✓ ", pkg, " ", v, " installed",
+                         verbose = verbose, verboseLevel = 1)
+        break
+      }
+    }
+    if (!installed) remaining <- c(remaining, pkg)
+  }
+  list(bumped = bumped, stillMissing = remaining)
+}
+
+## List ALL known versions of a package (current + historical) across
+## the repos. Returns a unique character vector of version strings.
+listCandidateVersions <- function(pkg, repos = getOption("repos"),
+                                   verbose = getOption("Require.verbose", 0)) {
+  out <- character()
+  ## Current versions in any of the repos' PACKAGES indexes.
+  ap <- tryCatch(
+    utils::available.packages(repos = repos, type = "source",
+                              filters = list()),
+    error = function(e) NULL)
+  if (!is.null(ap) && nrow(ap) > 0) {
+    cur <- ap[ap[, "Package"] == pkg, "Version"]
+    out <- c(out, unique(unname(cur)))
+  }
+  ## Historical versions from CRAN archive.rds.
+  cranLike <- repos[grepl("^https?://(cran\\.|cloud\\.r-)", repos)]
+  if (!length(cranLike)) cranLike <- "https://cloud.r-project.org"
+  ava <- tryCatch(dlArchiveVersionsAvailable(pkg, repos = cranLike,
+                                              verbose = verbose),
+                  error = function(e) NULL)
+  if (!is.null(ava) && length(ava) && !is.null(ava[[1]]) &&
+      is.data.frame(ava[[1]]) && nrow(ava[[1]])) {
+    histVer <- extractVersionNumber(
+      filenames = basename(ava[[1]][["PackageUrl"]]))
+    histVer <- histVer[!is.na(histVer) & nzchar(histVer)]
+    out <- c(out, unique(histVer))
+  }
+  unique(out)
+}
+
+## Download <pkg>_<version>.tar.gz from PPM/CRAN/Archive (in priority
+## order) and install via install.packages. Returns TRUE on success
+## (DESCRIPTION lands in destLib). Best-effort: silent on download or
+## compile failure — caller decides whether to keep walking versions.
+tryInstallByUrl <- function(pkg, version, destLib, repos,
+                             verbose = getOption("Require.verbose", 0)) {
+  tmp <- tempfile(paste0(pkg, "_", version, "_"), fileext = ".tar.gz")
+  on.exit(unlink(tmp), add = TRUE)
+  ## Build candidate URLs in priority order: PPM (if present, may serve
+  ## binaries), CRAN /src/contrib (current), CRAN /src/contrib/Archive
+  ## (older). PPM URLs may 404 for older versions; CRAN /src/contrib
+  ## only has the latest; CRAN/Archive has everything else.
+  ppm <- repos[grepl("packagemanager.posit.co", repos, fixed = TRUE)]
+  cranLike <- repos[grepl("^https?://(cran\\.|cloud\\.r-)", repos)]
+  if (!length(cranLike)) cranLike <- "https://cloud.r-project.org"
+  urls <- character()
+  for (r in c(ppm, cranLike)) {
+    urls <- c(urls,
+              paste0(r, "/src/contrib/", pkg, "_", version, ".tar.gz"),
+              paste0(r, "/src/contrib/Archive/", pkg, "/",
+                     pkg, "_", version, ".tar.gz"))
+  }
+  for (u in unique(urls)) {
+    ok <- tryCatch({
+      suppressWarnings(utils::download.file(
+        u, tmp, method = "libcurl", quiet = TRUE, mode = "wb"))
+      file.exists(tmp) && file.size(tmp) > 100L
+    }, error = function(e) FALSE)
+    if (!isTRUE(ok)) next
+    ## Got a tarball — try to install. dependencies = NA so
+    ## install.packages pulls anything new the bumped version needs.
+    tryCatch({
+      suppressMessages(suppressWarnings(
+        utils::install.packages(tmp, lib = destLib, repos = NULL,
+                                type = "source", dependencies = NA,
+                                quiet = isTRUE(verbose < 2))))
+    }, error = function(e) invisible())
+    if (file.exists(file.path(destLib, pkg, "DESCRIPTION")))
+      return(TRUE)
+    ## install failed; reset the file for next URL attempt
+    unlink(tmp)
+  }
+  FALSE
+}
+
 findNearestArchivedVersion <- function(pkg, requested,
                                        repos = getOption("repos"),
                                        verbose = getOption("Require.verbose", 0)) {
