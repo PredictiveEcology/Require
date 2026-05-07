@@ -714,10 +714,21 @@ installSnapshotViaInstallPackages <- function(snapshot,
       }
       for (i in seq_len(nrow(pkgs))) {
         if (isGH[i]) {
+          ## GH refs match BOTH (a) URL containing the GH SHA needle
+          ## (catches the original GH archive download cached by pak)
+          ## AND (b) package + version (catches built-binary entries
+          ## added by our cacheBuiltBinaries — those have URL like
+          ## `require-snapshot-bin://...` with no GH needle but populated
+          ## package/version columns). Without (b), every run rebuilds
+          ## visualTest from source even though the binary IS cached.
           urlNeedle <- paste0(pkgs$GithubUsername[i], "/",
                               pkgs$GithubRepo[i], "/archive/",
                               pkgs$GithubSHA1[i])
-          hit <- cacheList[grepl(urlNeedle, cacheList$url, fixed = TRUE) &
+          hit <- cacheList[(grepl(urlNeedle, cacheList$url, fixed = TRUE) |
+                            (!is.na(cacheList$package) &
+                             !is.na(cacheList$version) &
+                             cacheList$package == pkgs$Package[i] &
+                             cacheList$version == pkgs$Version[i])) &
                             !is.na(cacheList$fullpath), , drop = FALSE]
         } else {
           hit <- cacheList[!is.na(cacheList$package) &
