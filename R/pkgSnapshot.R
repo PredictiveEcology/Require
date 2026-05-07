@@ -2136,6 +2136,61 @@ classifyCompileFailure <- function(txt, pkg) {
       fix = "Linux: apt install zlib1g-dev / yum install zlib-devel; macOS: zlib is normally bundled — check Xcode CLT install"))
   }
 
+  ## Pattern: post-compile load test failure with "symbol not found in
+  ## flat namespace" — the package's .so links against a symbol that
+  ## the loaded C++ library doesn't export. Common with arrow-style
+  ## packages that bundle their own C++ lib but fall back to a system
+  ## one (or vice versa) at link time. Compile succeeded but dyn.load
+  ## failed in the post-install test_load_package step.
+  m <- regmatches(txt, regexec(
+    "symbol not found in flat namespace[ '`]+([_A-Za-z0-9]+)", txt))
+  m <- m[lengths(m) > 0]
+  if (length(m)) {
+    sym <- m[[1]][2]
+    return(list(
+      reason = paste0(pkg, " compiled OK but dyn.load failed: missing ",
+                      "symbol '", sym, "' (ABI mismatch between the ",
+                      "package and its C++ library)"),
+      fix = paste0(
+        "the package's bundled C++ lib doesn't match what .so was ",
+        "linked against. For arrow specifically: bump ", pkg,
+        " to match your host's brew apache-arrow version (or ",
+        "`brew uninstall apache-arrow` to force the package to use ",
+        "its own bundled libarrow). For sf/terra: bump to a version ",
+        "compatible with your host GDAL/PROJ/GEOS.")))
+  }
+
+  ## Pattern: bundled-libarrow build failure (arrow-specific). The
+  ## build retrieves libarrow tarball, then compiles a HUGE C++
+  ## bundle inside libuv/. If a sub-build fails, the whole arrow
+  ## install fails with `make[1]: *** [...] Error 1`.
+  if (any(grepl("Trying Arrow C\\+\\+ found by pkg-config", txt)) &&
+      any(grepl("Successfully retrieved libarrow", txt)) &&
+      any(grepl("make.*\\*\\*\\* .* Error 1", txt))) {
+    return(list(
+      reason = paste0(pkg, "'s bundled libarrow source build failed ",
+                      "(host has incompatible apache-arrow brew version)"),
+      fix = paste0(
+        "bump ", pkg, " to match the host's `pkg-config --modversion ",
+        "arrow` (so configure uses the system lib instead of bundling). ",
+        "Bump-and-retry will try to do this automatically if enabled.")))
+  }
+
+  ## Pattern: post-install test_load_package failure (generic). The
+  ## .so loaded but R's library() check failed. Often ABI mismatch
+  ## with a previously-installed dep that's now incompatible.
+  if (any(grepl("test_load_package", txt)) &&
+      any(grepl("package or namespace load failed", txt))) {
+    return(list(
+      reason = paste0(pkg, " compiled OK but failed the post-install ",
+                      "load test (likely ABI mismatch with a dep)"),
+      fix = paste0(
+        "a previously-installed dependency (in destLib or .libPaths) ",
+        "may be ABI-incompatible with this build of ", pkg, ". Try ",
+        "removing the dep and reinstalling, or bumping ", pkg,
+        " to a version compatible with the dep.")))
+  }
+
   ## Generic compile-failed fallback: give the user the FIRST error and
   ## a few surrounding lines (more informative than the last 6).
   reason <- if (length(firstErr)) {
