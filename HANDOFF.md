@@ -31,8 +31,10 @@ The snapshot at `inst/snapshot.txt` has been bumped to be coherent for pak's str
 - `arrow 15.0.1 → 23.0.1.1` (newer arrow has more recent bundled libarrow)
 
 Two refs are in `knownFails` (not Require's fault — system-library version mismatch):
-- `arrow` — bundled libarrow source build fragile when host has a different apache-arrow brew version. Cascades to `disk.frame`.
+- `arrow` — bundled libarrow source build fragile when host has a different apache-arrow brew version. Bump-and-retry usually recovers (e.g., 23.0.1.1 → 24.0.0 to match the host's brew apache-arrow). Cascades to `disk.frame` (which currently has no newer version on CRAN).
 - (legacy: `archive`, `DiagrammeR`, `keyring`, `mapview`, `readr`, `servr`, `sodium`, `vroom`)
+
+`knownFails` is now also exempted from the `versionProblems` test assertion — bump-and-retry intentionally moves these refs OFF the snapshot pin to get them installed. The drift is by design; the test still verifies the pin for refs that aren't environment-fragile.
 
 ## The snapshot install pipeline (`R/pkgSnapshot.R::installSnapshotViaInstallPackages`)
 
@@ -62,8 +64,9 @@ Two refs are in `knownFails` (not Require's fault — system-library version mis
     - generic fallback: first compile error + context
 14. **Fall back to `install.packages(repos = file://, dependencies = NA, Ncpus = N)`** — best-effort closed-snapshot install. Skips refs already-installed-at-target-version (so e.g. nloptr binary doesn't get re-attempted from source which needs cmake).
 15. **Auto-fill missing transitive deps** from CRAN/PPM (NA-safe — was reporting "NA" as a transitive dep).
-16. **`cacheBuiltBinaries()`** registered via `on.exit` — tar's each successfully-installed package and adds to pkgcache with `relpath = file.path("Require/snapshot/bin", platform, rverShort, paste0(p, "_", ver, ".tgz"))`. **Filename in relpath** — the same bug that produced corrupt source entries existed here too.
-17. **Diagnostic report** — classified status with concrete `fix:` lines.
+16. **Bump-and-retry** for refs that ENDED UP missing — walk newer-than-pin versions from CRAN/PPM/Archive in ascending order and try each. First install that sticks wins, with the substitution recorded in the diagnostic. Capped at 20 candidates per package; opt out via `options(Require.snapshotInstallerBumpOnFail = FALSE)`. Empirically recovers `arrow` (snapshot 23.0.1.1 → 24.0.0 to match a host's brew apache-arrow). `disk.frame` won't bump (no newer CRAN version) but stays in knownFails.
+17. **`cacheBuiltBinaries()`** registered via `on.exit` — tar's each successfully-installed package and adds to pkgcache with `relpath = file.path("Require/snapshot/bin", platform, rverShort, paste0(p, "_", ver, ".tgz"))`. **Filename in relpath** — the same bug that produced corrupt source entries existed here too.
+18. **Diagnostic report** — classified status with concrete `fix:` lines.
 
 ## Bugs found and fixed (this session)
 
@@ -112,6 +115,8 @@ First-run output should include:
 - `Require.snapshotInstallerUsePPM`: TRUE to prepend PPM binary repo (default TRUE).
 - `Require.snapshotInstallerHybrid`: TRUE to enable binary-first hybrid pre-install via install.packages (default TRUE).
 - `Require.snapshotInstallerPakSilent`: FALSE so pak's resolver output reaches the user (default FALSE).
+- `Require.snapshotInstallerBumpOnFail`: TRUE to walk newer-than-pin versions for refs that fail at the pin (default TRUE). Set FALSE for strict reproducibility (no drift, fail loudly).
+- `Require.snapshotInstallerKnownFails`: character vector of pkg names to skip in bump-retry (e.g. those that need a system lib that isn't installable from R). Defaults to empty.
 - `Require.snapshotDownloadAttempts`: number of retry passes for libcurl-multi downloads (default 4).
 - `Require.snapshotDownloadChunk`: chunk size per libcurl call to stay under FD limits (default 50).
 
