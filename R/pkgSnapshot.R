@@ -723,8 +723,13 @@ installSnapshotViaInstallPackages <- function(snapshot,
         isBinPath <- isBinFromPath(hit$path, hit$fullpath)
         isBin <- builtCol | isBinPath
         ## Identify our-platform binary candidates among isBin rows.
+        ## Normalize rverEff to major.minor: pkgcache stores some built-
+        ## binary entries with rversion="4.4.3" (full R.version$minor),
+        ## others with the path-derived "4.4". A strict equality of "4.4"
+        ## misses ~80% of valid R-4.4-family binaries. Strip patch level.
         rverEff <- ifelse(!is.na(hit$rversion), hit$rversion,
                           rverFromPath(hit$path))
+        rverEff <- sub("^(\\d+\\.\\d+).*$", "\\1", rverEff)
         ourArchPrefix <- sub("^([^-]+-[^-]+)-.*", "\\1",
                               R.version$platform)
         platMatchesOur <- !is.na(hit$platform) & (
@@ -735,12 +740,32 @@ installSnapshotViaInstallPackages <- function(snapshot,
         if (any(ourBin)) {
           ## Pick the first usable our-platform binary. Validate it the
           ## same way as source hits (gzip-t + DESCRIPTION Package match).
+          ## Queue rotten ones for eviction so future runs hit cleanly —
+          ## ~138 cache entries empirically had pkg-name mismatches (the
+          ## tarball's DESCRIPTION names a different package than the
+          ## index claims), residue from older buggy adds.
           for (k in which(ourBin)) {
             cb <- hit$fullpath[k]
-            if (file.exists(cb) && isGoodTarball(cb) &&
-                cacheTarballMatchesPkg(cb, pkgs$Package[i])) {
+            reasonBin <- NA_character_
+            if (!file.exists(cb))                    reasonBin <- "fullpath-missing"
+            else if (!isGoodTarball(cb))             reasonBin <- "tarball-corrupt"
+            else if (!cacheTarballMatchesPkg(cb,
+                       pkgs$Package[i]))             reasonBin <- "pkg-name-mismatch"
+            if (is.na(reasonBin)) {
               binaryHits[i] <- cb
               break
+            }
+            u <- hit$url[k]
+            if (!is.na(u) && nzchar(u)) {
+              evictUrls    <- c(evictUrls, u)
+              evictReasons <- c(evictReasons,
+                                paste0(pkgs$Package[i], " (binary): ",
+                                       reasonBin))
+            } else {
+              evictFiles   <- c(evictFiles, cb)
+              evictReasons <- c(evictReasons,
+                                paste0(pkgs$Package[i], " (binary): ",
+                                       reasonBin, " (no url)"))
             }
           }
         }
