@@ -266,8 +266,14 @@ installSnapshotViaInstallPackages <- function(snapshot,
     if (!length(installedSnapshotPkgs)) return(invisible())
     rverShort <- paste0(R.version$major, ".",
                         strsplit(R.version$minor, "\\.")[[1]][1])
-    binRelpath <- file.path("Require/snapshot/bin",
-                             R.version$platform, rverShort)
+    ## binRelpath is computed PER-PACKAGE inside the loop below — it
+    ## must include the file's basename, otherwise every call to
+    ## pkg_cache_add_file() overwrites the same single file at
+    ## <cache>/<binRelpath>, leaving the cache index full of rows that
+    ## all alias the same fullpath (the "Require/snapshot/bin/<plat>/
+    ## <rver>" residue this comment exists to prevent). Fixed in
+    ## c93b2... after diagnosing 142 cache rows pointing at the same
+    ## directory-shaped fullpath.
     cacheNow <- tryCatch(pkgcache::pkg_cache_list(),
                          error = function(e) NULL)
     binStaging <- tempfile2("snapInstall_bins_")
@@ -314,6 +320,12 @@ installSnapshotViaInstallPackages <- function(snapshot,
       fakeUrl <- paste0("require-snapshot-bin://",
                         R.version$platform, "/", rverShort, "/",
                         p, "_", ver, ".tgz")
+      ## relpath MUST include the filename — otherwise every add
+      ## overwrites the same single file (see comment at the top of
+      ## this function). Compose per-package.
+      binRelpath <- file.path("Require/snapshot/bin",
+                              R.version$platform, rverShort,
+                              paste0(p, "_", ver, ".tgz"))
       addRes <- tryCatch(
         pkgcache::pkg_cache_add_file(
           file = binFile, relpath = binRelpath,
@@ -603,8 +615,16 @@ installSnapshotViaInstallPackages <- function(snapshot,
     ## resolver (it sees package X version Y indexed and may use that in
     ## preference to our local:: ref). Clean them in one sweep.
     if (!is.null(cacheList) && nrow(cacheList) > 0) {
-      legacyIdx <- !is.na(cacheList$path) &
-                    cacheList$path == "Require/snapshot"
+      ## Match BOTH legacy patterns:
+      ##   "Require/snapshot"                                 (source bug)
+      ##   "Require/snapshot/bin/<platform>/<rverShort>"      (binary bug
+      ##      fixed in same session — cacheBuiltBinaries had identical
+      ##      relpath-without-filename issue, producing 142 rows aliasing
+      ##      the same directory-shaped fullpath)
+      legacyIdx <- !is.na(cacheList$path) & (
+        cacheList$path == "Require/snapshot" |
+        grepl("^Require/snapshot/bin/[^/]+/\\d+\\.\\d+$",
+              cacheList$path))
       if (any(legacyIdx)) {
         legacyN <- sum(legacyIdx)
         if (verbose >= 1)
