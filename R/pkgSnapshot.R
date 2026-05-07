@@ -693,23 +693,28 @@ installSnapshotViaInstallPackages <- function(snapshot,
         )
       }
       rverFromPath <- function(path) {
+        ## Use `sub()` (vectorised, returns same-length output as input)
+        ## instead of `regmatches(path, regexpr(...))` which DROPS
+        ## non-matching elements and leaves us with mismatched-length
+        ## logical masks that R recycles — the source of 299 spurious
+        ## "longer object length is not a multiple..." warnings on
+        ## every snapshot install. With `sub`: when the pattern doesn't
+        ## match, the input element passes through unchanged; pair with
+        ## a separate `grepl` test to detect "matched vs not".
         out <- rep(NA_character_, length(path))
-        m <- regmatches(path, regexpr("/contrib/(\\d+\\.\\d+)/", path))
-        sub <- sub(".*/contrib/(\\d+\\.\\d+)/.*", "\\1", m)
-        ok <- nzchar(sub) & !is.na(sub)
-        out[ok] <- sub[ok]
-        ## `__linux__/<distro>/<rver>/` PPM layout.
-        m2 <- regmatches(path, regexpr("/__linux__/[^/]+/(\\d+\\.\\d+)/",
-                                       path))
-        sub2 <- sub(".*/__linux__/[^/]+/(\\d+\\.\\d+)/.*", "\\1", m2)
-        ok2 <- nzchar(sub2) & !is.na(sub2) & is.na(out)
-        out[ok2] <- sub2[ok2]
-        ## Built-binary suffix: `-<platform>-<rver>` at end of path.
-        m3 <- regmatches(path,
-                         regexpr("-[^/]+-(\\d+\\.\\d+)(\\.\\d+)?$", path))
-        sub3 <- sub(".*-(\\d+\\.\\d+)(\\.\\d+)?$", "\\1", m3)
-        ok3 <- nzchar(sub3) & !is.na(sub3) & is.na(out)
-        out[ok3] <- sub3[ok3]
+        ## /contrib/<rver>/<file>
+        m1 <- grepl("/contrib/\\d+\\.\\d+/", path)
+        if (any(m1))
+          out[m1] <- sub(".*/contrib/(\\d+\\.\\d+)/.*", "\\1", path[m1])
+        ## /__linux__/<distro>/<rver>/<file>
+        m2 <- is.na(out) & grepl("/__linux__/[^/]+/\\d+\\.\\d+/", path)
+        if (any(m2))
+          out[m2] <- sub(".*/__linux__/[^/]+/(\\d+\\.\\d+)/.*", "\\1",
+                         path[m2])
+        ## Built-binary suffix at end: -<platform>-<rver>(.<patch>)?
+        m3 <- is.na(out) & grepl("-[^/]+-\\d+\\.\\d+(\\.\\d+)?$", path)
+        if (any(m3))
+          out[m3] <- sub(".*-(\\d+\\.\\d+)(\\.\\d+)?$", "\\1", path[m3])
         out
       }
       for (i in seq_len(nrow(pkgs))) {
