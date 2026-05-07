@@ -87,6 +87,39 @@ test_that("extractInstallFailures recognizes missing VignetteBuilder", {
   expect_match(fails$reason_brief, "knitr", fixed = TRUE)
 })
 
+# Field case (PredictiveEcology/fireSenseUtils@development, after the
+# initial vignette-builder fix landed): once knitr/rmarkdown were present,
+# the build progressed further and failed at lazy-load. pak's stream had
+# both "* installing *source* package 'fireSenseUtils' ..." (a generic
+# progress line) AND "ERROR: lazy loading failed for package 'fireSenseUtils'"
+# in the same 25-line window. The original first-match-wins regex picked
+# the generic line, so the install summary printed "* installing *source*
+# package 'fireSenseUtils' ..." as the reason. Priority-ordered scanning
+# must surface the lazy-load failure (and ideally the preceding "Error:"
+# line that names the actual cause).
+test_that("extractInstallFailures recognizes lazy loading failed (priority over generic)", {
+  output <- c(
+    "ℹ Building fireSenseUtils 0.1.8",
+    "✖ Failed to build fireSenseUtils 0.1.8 (3.1s)",
+    "* installing *source* package 'fireSenseUtils' ...",
+    "** using staged installation",
+    "** R",
+    "** byte-compile and prepare package for lazy loading",
+    "Error in eval(ei, envir) : object 'foo' not found",
+    "ERROR: lazy loading failed for package 'fireSenseUtils'",
+    "* removing '/tmp/X/fireSenseUtils'"
+  )
+  fails <- Require:::extractInstallFailures(output)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "fireSenseUtils")
+  expect_equal(fails$reason_type, "build-error")
+  # Must NOT pick the generic progress line.
+  expect_false(grepl("\\* installing \\*source\\*", fails$reason_brief))
+  # Must mention lazy loading and ideally the preceding Error line.
+  expect_match(fails$reason_brief, "lazy loading", fixed = TRUE)
+  expect_match(fails$reason_brief, "object 'foo' not found", fixed = TRUE)
+})
+
 test_that("extractInstallFailures recognizes missing build-time package", {
   # R uses Unicode ‘/’ single quotes in this error message;
   # the recognizer must accept both ASCII ' and the typographic forms.

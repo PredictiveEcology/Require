@@ -1916,44 +1916,81 @@ extractInstallFailures <- function(output) {
   buildFailIdx <- grep("Failed to build\\s+[A-Za-z0-9._]+", lines)
   for (i in buildFailIdx) {
     pkg <- sub(".*Failed to build\\s+([A-Za-z0-9._]+).*", "\\1", lines[i])
-    # Look up to 25 lines ahead for an ERROR: / missing-builder / missing-pkg
-    # line that explains why. Order matters: the more-specific patterns must
-    # appear here so the if/else chain below can dispatch on them.
+    # Look up to 25 lines ahead for the line that explains WHY the build
+    # failed. We scan the window in priority order (most specific first)
+    # rather than picking the first match of a single combined regex,
+    # because a generic line like "* installing *source* package 'X'..."
+    # almost always appears BEFORE the actual ERROR: / vignette-builder /
+    # lazy-loading line in pak's stream — so first-match-wins drops the
+    # informative line in favor of the noise.
     window <- lines[i:min(i + 25L, length(lines))]
-    errLine <- grep(paste(
-                      "ERROR:", "^\\* installing", "fatal error",
-                      "compilation failed", "cannot remove",
-                      "vignette builder ['‘][^'’]+['’] not found",
-                      "there is no package called ['‘][^'’]+['’]",
-                      sep = "|"),
-                    window, value = TRUE, perl = TRUE)
-    errLine <- if (length(errLine)) errLine[1] else NA_character_
+    # Each entry: c(<key>, <perl regex>, <ignore.case "T"/"F">). Order = priority.
+    patternList <- list(
+      c("vignette-builder",
+        "vignette builder ['‘][^'’]+['’] not found", "F"),
+      c("no-package-called",
+        "there is no package called ['‘][^'’]+['’]", "F"),
+      c("deps-not-available",
+        "dependencies\\s+.+\\s+are not available for package",        "F"),
+      c("lazy-load-failed",
+        "lazy loading failed for package",                              "F"),
+      c("compile-error",
+        "compilation failed|fatal error",                               "T"),
+      c("cannot-remove",
+        "cannot remove",                                                "F"),
+      # Generic ERROR: line — only used when none of the specific patterns
+      # above matched anywhere in the window.
+      c("generic-error",  "^\\s*ERROR:",                                "F")
+    )
+    errLine <- NA_character_
+    errKind <- NA_character_
+    for (pat in patternList) {
+      hit <- grep(pat[2], window, value = TRUE, perl = TRUE,
+                  ignore.case = identical(pat[3], "T"))
+      if (length(hit)) { errLine <- hit[1]; errKind <- pat[1]; break }
+    }
 
     if (is.na(errLine)) {
       reasonType <- "build-error"
       reasonBrief <- "build failed (no specific reason parsed)"
       reasonDetail <- lines[i]
-    } else if (grepl("vignette builder ['‘]([^'’]+)['’] not found",
-                     errLine, perl = TRUE)) {
+    } else if (identical(errKind, "vignette-builder")) {
       vb <- sub(".*vignette builder ['‘]([^'’]+)['’] not found.*",
                 "\\1", errLine, perl = TRUE)
       reasonType <- "missing-build-deps"
       reasonBrief <- paste0("missing VignetteBuilder package: ", vb)
       reasonDetail <- errLine
-    } else if (grepl("there is no package called ['‘]([^'’]+)['’]",
-                     errLine, perl = TRUE)) {
+    } else if (identical(errKind, "no-package-called")) {
       pk <- sub(".*there is no package called ['‘]([^'’]+)['’].*",
                 "\\1", errLine, perl = TRUE)
       reasonType <- "missing-build-deps"
       reasonBrief <- paste0("missing build-time package: ", pk)
       reasonDetail <- errLine
-    } else if (grepl("dependencies\\s+.+\\s+are not available for package", errLine)) {
+    } else if (identical(errKind, "deps-not-available")) {
       missing <- sub(".*dependencies\\s+(.+?)\\s+are not available for package.*",
                      "\\1", errLine)
       reasonType <- "missing-build-deps"
       reasonBrief <- paste0("build-time deps not yet in lib: ", missing)
       reasonDetail <- errLine
-    } else if (grepl("compilation failed|fatal error", errLine, ignore.case = TRUE)) {
+    } else if (identical(errKind, "lazy-load-failed")) {
+      # "lazy loading failed for package 'X'" is itself a downstream symptom
+      # — the actual cause was emitted earlier in the build (e.g. an error
+      # in .onLoad, an evaluation error in package R code, a missing
+      # dependency referenced at top level). Try to surface the preceding
+      # "Error:" / "Error in" line; otherwise fall back to the symptom.
+      windowIdx <- which(window == errLine)[1]
+      preceding <- if (!is.na(windowIdx) && windowIdx > 1L)
+        rev(window[seq_len(windowIdx - 1L)]) else character(0)
+      cause <- grep("^\\s*(Error[: ]|in method for)",
+                    preceding, value = TRUE, perl = TRUE)
+      cause <- if (length(cause)) trimws(cause[1]) else ""
+      reasonType <- "build-error"
+      reasonBrief <- if (nzchar(cause))
+        paste0("lazy loading failed: ", cause)
+      else
+        sub("^\\s*ERROR:\\s*", "", errLine)
+      reasonDetail <- if (nzchar(cause)) paste(cause, errLine, sep = " | ") else errLine
+    } else if (identical(errKind, "compile-error")) {
       reasonType <- "compile-error"
       reasonBrief <- sub("^\\s*", "", errLine)
       reasonDetail <- errLine
