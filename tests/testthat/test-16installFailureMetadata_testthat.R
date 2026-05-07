@@ -62,6 +62,136 @@ test_that("extractInstallFailures strips ANSI color codes", {
 })
 
 # ---------------------------------------------------------------------------
+# Field case (PredictiveEcology/fireSenseUtils@development): package's
+# DESCRIPTION declares `VignetteBuilder: knitr, rmarkdown` but neither is
+# in the active library. R CMD build halts at loadVignetteBuilder() with
+# "vignette builder 'knitr' not found" -- and pak's console stream emits
+# only the "✖ Failed to build" summary, dropping the actual cause. With the
+# structured-error capture (pakConditionLog), the parent condition's
+# message lands in allCapturedMsgs and this test verifies the parser
+# attributes it correctly rather than falling through to the catch-all
+# "still-missing — cascade casualty" branch.
+# ---------------------------------------------------------------------------
+test_that("extractInstallFailures recognizes missing VignetteBuilder", {
+  output <- c(
+    "✖ Failed to build fireSenseUtils 0.1.8 (3.1s)",
+    "Error in loadVignetteBuilder(pkgdir, TRUE, lib.loc = c(libdir, .libPaths())) :",
+    "  vignette builder 'knitr' not found",
+    "Execution halted"
+  )
+  fails <- Require:::extractInstallFailures(output)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "fireSenseUtils")
+  expect_equal(fails$reason_type, "missing-build-deps")
+  expect_match(fails$reason_brief, "VignetteBuilder", fixed = TRUE)
+  expect_match(fails$reason_brief, "knitr", fixed = TRUE)
+})
+
+test_that("extractInstallFailures recognizes missing build-time package", {
+  # R uses Unicode ‘/’ single quotes in this error message;
+  # the recognizer must accept both ASCII ' and the typographic forms.
+  outputAscii <- c(
+    "✖ Failed to build foo 1.0.0 (200ms)",
+    "Error: there is no package called 'bar'"
+  )
+  outputUnicode <- c(
+    "✖ Failed to build foo 1.0.0 (200ms)",
+    "Error: there is no package called ‘bar’"
+  )
+  for (out in list(outputAscii, outputUnicode)) {
+    fails <- Require:::extractInstallFailures(out)
+    expect_equal(NROW(fails), 1L)
+    expect_equal(fails$package, "foo")
+    expect_equal(fails$reason_type, "missing-build-deps")
+    expect_match(fails$reason_brief, "bar", fixed = TRUE)
+  }
+})
+
+# ---------------------------------------------------------------------------
+# pakConditionLog(): given a try-error whose condition chain carries a
+# `package_build_error` parent (pak's structured form for an R CMD INSTALL
+# failure), return a character vector that downstream regex parsers can
+# attribute to the right ref. Without this helper, pak's parent$message
+# (which contains the actual ERROR text) is invisible to allCapturedMsgs.
+# ---------------------------------------------------------------------------
+test_that("pakConditionLog extracts package_build_error data from try-error", {
+  parent <- structure(
+    list(
+      message = "Failed to build source package fireSenseUtils.\nFull installation output:\nERROR: dependencies 'sf', 'terra' are not available for package 'fireSenseUtils'\n",
+      package = "fireSenseUtils",
+      version = "0.1.8",
+      stdout  = "* checking for file 'DESCRIPTION' ... OK\n"),
+    class = c("package_build_error", "rlib_error_3_0", "rlib_error",
+              "error", "condition"))
+  outer <- structure(
+    list(message = "error in pak subprocess", parent = parent),
+    class = c("callr_error", "rlib_error_3_0", "rlib_error",
+              "error", "condition"))
+  # Mimic try()'s wrapping: the top-level value is a try-error string with
+  # the condition stashed on `attr(., "condition")`.
+  errStr <- structure("Error : ! error in pak subprocess\n",
+                      class = "try-error", condition = outer)
+
+  log <- Require:::pakConditionLog(errStr)
+  expect_true(length(log) > 0L)
+  joined <- paste(log, collapse = "\n")
+  # Synthetic line lets extractBuildFailures attribute to the right ref.
+  expect_match(joined, "Failed to build fireSenseUtils 0.1.8", fixed = TRUE)
+  # The actual root cause must be present.
+  expect_match(joined, "dependencies", fixed = TRUE)
+  expect_match(joined, "sf", fixed = TRUE)
+  expect_match(joined, "terra", fixed = TRUE)
+
+  # End-to-end: the spliced log must drive extractInstallFailures to a
+  # specific reason_type rather than the generic "build-error" fallback.
+  fails <- Require:::extractInstallFailures(log)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "fireSenseUtils")
+  expect_equal(fails$reason_type, "missing-build-deps")
+})
+
+test_that("pakConditionLog handles a vignette-builder failure end-to-end", {
+  # Same shape, but the parent message carries the loadVignetteBuilder
+  # error instead of a missing-deps line. This is the exact field case
+  # from the user's failing fireSenseUtils@development install.
+  parent <- structure(
+    list(
+      message = paste0(
+        "Failed to build source package fireSenseUtils.\n",
+        "Full installation output:\n",
+        "* checking for file '.../DESCRIPTION' ... OK\n",
+        "* preparing 'fireSenseUtils':\n",
+        "* checking DESCRIPTION meta-information ... OK\n",
+        "Error in loadVignetteBuilder(pkgdir, TRUE, lib.loc = c(libdir, .libPaths())) :\n",
+        "  vignette builder 'knitr' not found\n",
+        "Execution halted\n"),
+      package = "fireSenseUtils",
+      version = "0.1.8"),
+    class = c("package_build_error", "error", "condition"))
+  outer <- structure(list(message = "error in pak subprocess", parent = parent),
+                     class = c("callr_error", "error", "condition"))
+  errStr <- structure("Error : ! error in pak subprocess\n",
+                      class = "try-error", condition = outer)
+
+  log <- Require:::pakConditionLog(errStr)
+  fails <- Require:::extractInstallFailures(log)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "fireSenseUtils")
+  expect_equal(fails$reason_type, "missing-build-deps")
+  expect_match(fails$reason_brief, "VignetteBuilder", fixed = TRUE)
+  expect_match(fails$reason_brief, "knitr", fixed = TRUE)
+})
+
+test_that("pakConditionLog returns empty when no package_build_error present", {
+  # Plain error condition with no chain -- nothing structured to recover.
+  cond <- simpleError("generic failure")
+  errStr <- structure("Error : generic failure\n",
+                      class = "try-error", condition = cond)
+  log <- Require:::pakConditionLog(errStr)
+  expect_equal(length(log), 0L)
+})
+
+# ---------------------------------------------------------------------------
 # Unit: reportInstallFailures() supplements parser output with still-missing
 # entries and prints a one-line-per-package summary.
 # ---------------------------------------------------------------------------

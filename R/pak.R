@@ -1143,6 +1143,60 @@ pakBuildFailReason <- function(errStr, capturedMsgs = character(0)) {
   if (length(fb) && nzchar(fb)) sub("^!\\s*", "", fb) else ""
 }
 
+# ---------------------------------------------------------------------------
+# pakConditionLog(): recover structured failure data from a pak error.
+#
+# When pak::pak() throws on a build failure, the condition chain attaches the
+# real R CMD INSTALL output to a `package_build_error` parent (fields
+# `package`, `version`, `message`, `stdout`). pak's console stream only
+# emits a one-line "✖ Failed to build <pkg> <ver>" summary and discards the
+# rest, so Require's text parsers (extractInstallFailures /
+# extractBuildFailures) never see the actual root cause -- which leads to
+# the "no parseable culprits" / "still-missing — cascade casualty"
+# diagnostic dead-end even though pak DOES know what went wrong.
+#
+# Given a try-error or condition, walks the condition chain (capped depth)
+# looking for any `package_build_error` node, and returns character lines
+# suitable to splice into allCapturedMsgs so the existing parsers can
+# extract a real reason. The synthetic "✖ Failed to build <pkg> <ver>" line
+# ensures extractBuildFailures (regex `Failed to build\s+([A-Za-z0-9._]+)`)
+# can attribute the failure to the right ref.
+# ---------------------------------------------------------------------------
+pakConditionLog <- function(err) {
+  cond <- if (inherits(err, "try-error")) attr(err, "condition") else err
+  if (!inherits(cond, "condition")) return(character(0))
+  out <- character(0)
+  # Cap depth to avoid runaway on a self-referential / deeply chained cond.
+  for (i in seq_len(10L)) {
+    if (inherits(cond, "package_build_error")) {
+      pkg <- cond$package; if (is.null(pkg)) pkg <- ""
+      ver <- cond$version; if (is.null(ver)) ver <- ""
+      msg <- cond$message; if (is.null(msg)) msg <- ""
+      stdo <- cond$stdout; if (is.null(stdo)) stdo <- character(0)
+      if (nzchar(pkg)) {
+        out <- c(out, sprintf("✖ Failed to build %s %s", pkg, ver))
+      }
+      # Drop pak's own "Failed to build source package <pkg>." preamble:
+      # the regex `Failed to build\s+([A-Za-z0-9._]+)` would capture
+      # "source" as a phantom package name, polluting downstream parsing.
+      # We've already synthesized a properly-formatted line above.
+      msgLines <- strsplit(msg, "\n", fixed = TRUE)[[1]]
+      msgLines <- msgLines[!grepl("^Failed to build source package",
+                                  msgLines, perl = TRUE)]
+      if (length(msgLines)) out <- c(out, msgLines)
+      if (length(stdo) && any(nzchar(stdo))) {
+        out <- c(out,
+                 strsplit(paste(stdo, collapse = "\n"),
+                          "\n", fixed = TRUE)[[1]])
+      }
+      break
+    }
+    cond <- cond$parent
+    if (is.null(cond)) break
+  }
+  out
+}
+
 pakCacheDeleteTryAgain <- function(pkg2, packages, whRm) {
   prevFail <- get0("failedPkgs", envir = pakEnv())
   pkg3 <- extractPkgName(pkg2)
@@ -1862,9 +1916,16 @@ extractInstallFailures <- function(output) {
   buildFailIdx <- grep("Failed to build\\s+[A-Za-z0-9._]+", lines)
   for (i in buildFailIdx) {
     pkg <- sub(".*Failed to build\\s+([A-Za-z0-9._]+).*", "\\1", lines[i])
-    # Look up to 25 lines ahead for an ERROR: line that explains why.
+    # Look up to 25 lines ahead for an ERROR: / missing-builder / missing-pkg
+    # line that explains why. Order matters: the more-specific patterns must
+    # appear here so the if/else chain below can dispatch on them.
     window <- lines[i:min(i + 25L, length(lines))]
-    errLine <- grep("ERROR:|^\\* installing|fatal error|compilation failed|cannot remove",
+    errLine <- grep(paste(
+                      "ERROR:", "^\\* installing", "fatal error",
+                      "compilation failed", "cannot remove",
+                      "vignette builder ['‘][^'’]+['’] not found",
+                      "there is no package called ['‘][^'’]+['’]",
+                      sep = "|"),
                     window, value = TRUE, perl = TRUE)
     errLine <- if (length(errLine)) errLine[1] else NA_character_
 
@@ -1872,6 +1933,20 @@ extractInstallFailures <- function(output) {
       reasonType <- "build-error"
       reasonBrief <- "build failed (no specific reason parsed)"
       reasonDetail <- lines[i]
+    } else if (grepl("vignette builder ['‘]([^'’]+)['’] not found",
+                     errLine, perl = TRUE)) {
+      vb <- sub(".*vignette builder ['‘]([^'’]+)['’] not found.*",
+                "\\1", errLine, perl = TRUE)
+      reasonType <- "missing-build-deps"
+      reasonBrief <- paste0("missing VignetteBuilder package: ", vb)
+      reasonDetail <- errLine
+    } else if (grepl("there is no package called ['‘]([^'’]+)['’]",
+                     errLine, perl = TRUE)) {
+      pk <- sub(".*there is no package called ['‘]([^'’]+)['’].*",
+                "\\1", errLine, perl = TRUE)
+      reasonType <- "missing-build-deps"
+      reasonBrief <- paste0("missing build-time package: ", pk)
+      reasonDetail <- errLine
     } else if (grepl("dependencies\\s+.+\\s+are not available for package", errLine)) {
       missing <- sub(".*dependencies\\s+(.+?)\\s+are not available for package.*",
                      "\\1", errLine)
@@ -2238,6 +2313,17 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       options(opts)
       if (!is(err, "try-error")) break
       lastPakErr <<- as.character(err)
+      # Splice pak's structured failure log (from the error condition's
+      # `package_build_error` child) into allCapturedMsgs BEFORE we slice
+      # attemptMsgs, so both per-attempt reasoning (pakBuildFailReason) and
+      # the global parsers (extractBuildFailures / extractInstallFailures)
+      # see the actual R CMD INSTALL output. Without this, pak's one-line
+      # "Failed to build X" console summary is all the regex-based parsers
+      # ever see -- the underlying ERROR text (e.g. "vignette builder 'knitr'
+      # not found", "dependencies '...' are not available", etc.) lives only
+      # on the condition object and is otherwise discarded.
+      condLog <- pakConditionLog(err)
+      if (length(condLog)) allCapturedMsgs <<- c(allCapturedMsgs, condLog)
       # Slice this attempt's captured pak-subprocess messages so error
       # reporters can mine them for the actual root cause (the try() exception
       # is just the generic wrapper "Error : ! error in pak subprocess").
