@@ -1482,6 +1482,16 @@ installSnapshotViaInstallPackages <- function(snapshot,
                  paste0("local::", destPaths[pakRefIdx])
                else
                  character(0)
+  if (verbose >= 2 && length(pakRefIdx)) {
+    refLines <- vapply(pakRefIdx, function(k) {
+      sprintf("  %s@%s",
+              pkgs$Package[k],
+              if (is.na(pkgs$Version[k])) "?" else pkgs$Version[k])
+    }, character(1))
+    messageVerbose("pak input refs (", length(pakRefIdx), "):\n",
+                   paste(refLines, collapse = "\n"),
+                   verbose = verbose, verboseLevel = 2)
+  }
   if (verbose >= 1 && sum(alreadyAtTarget) > 0)
     messageVerbose("Excluding ", sum(alreadyAtTarget),
                    " already-installed refs from pak's input ",
