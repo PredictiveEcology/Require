@@ -108,7 +108,8 @@ test_that("test 09", {
 
       }
       # remove some specifics for tests that are not expected to work
-      skips <- c("rJava", "Require", "SpaDES.install")
+      # "R" is a snapshot row recording the R version, not a package — skip it
+      skips <- c("R", "rJava", "Require", "SpaDES.install")
 
       # Can't compile on R 4.4
       ubuntuSkips <- c("RandomFields", "RandomFieldsUtils", "maptools")

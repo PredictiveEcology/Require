@@ -229,7 +229,10 @@ installSnapshotViaInstallPackages <- function(snapshot,
                                               Ncpus = max(1L, parallel::detectCores() - 1L),
                                               verbose = getOption("Require.verbose", 1)) {
   pkgs <- as.data.table(snapshot)
-  pkgs <- pkgs[!Package %in% .basePkgs]
+  ## "R" is a snapshot row recording the required R version, not a real
+  ## package — exclude it alongside base packages so the installer doesn't
+  ## try to "install R" (and so the diagnostic doesn't report it missing).
+  pkgs <- pkgs[!Package %in% c("R", .basePkgs)]
   if (!nrow(pkgs)) {
     messageVerbose("Snapshot has no non-base packages to install",
                    verbose = verbose, verboseLevel = 1)
