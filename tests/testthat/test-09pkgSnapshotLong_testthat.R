@@ -180,6 +180,22 @@ test_that("test 09", {
 
       ## Snapshot is self-consistent: no "please change required version"
       ## warnings emitted during the install.
+      if (!testWarnsInUsePleaseChange(warns) && length(warns)) {
+        ## Make the failure surfaceable: when warnings DON'T all match the
+        ## expected patterns, print which ones don't so we know what to
+        ## chase. Without this the assertion just says FALSE != TRUE.
+        knownPats <- paste(c(.txtPleaseRestart, .txtPleaseChangeReqdVers,
+                              .txtMsgIsInUse, .txtCouldNotBeInstalled,
+                              .txtInstallationNonZeroExit,
+                              .txtInstallationPkgFailed),
+                            collapse = "|")
+        unmatched <- warns[!grepl(knownPats, warns)]
+        cat("\n\n=== test 09: unexpected warnings (",
+            length(unmatched), " of ", length(warns), " total) ===\n",
+            sep = "")
+        for (w in utils::head(unmatched, 20))
+          cat("  ", substr(w, 1, 200), "\n", sep = "")
+      }
       expect_true(testWarnsInUsePleaseChange(warns))
 
       ## Core invariant: every package the snapshot asked for ended up in
