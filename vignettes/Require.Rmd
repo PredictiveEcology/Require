@@ -189,6 +189,29 @@ A snapshot is a flat list of exact pins (CRAN versions and GitHub SHAs). On pape
 * **Opaque failures.** When `pak` does fail, the user sees `! error in pak subprocess`. `Require` keeps per-package install logs and prints a structured report: status (`download-failed` / `version-conflict` / `missing-dep` / `compile-failed` / `cascade` / `substituted` / `auto-filled`), the reason, and a concrete fix.
 * **Speed on Linux/macOS.** Tarballs are fetched in parallel via `libcurl` multi, with PPM binaries preferred (and the right `User-Agent` set so PPM actually serves binaries). The cache is `pkgcache` — the same cache `pak` uses — so anything downloaded here is reusable by `pak` next time, and vice versa.
 
+### Why snapshot install needs Require's plumbing on top of `pak`
+
+It is tempting to assume `pak`'s own cache would handle a snapshot install end-to-end — hand `pak` a list of `cran::pkg@version` refs and let `pkgcache` deduplicate. We measured this directly. Result, on a 379-package snapshot, cache-warm:
+
+| Strategy                                                           | Cache-warm time | Outcome                                                         |
+| ------------------------------------------------------------------ | :-------------: | :-------------------------------------------------------------- |
+| `Require` snapshot installer (`local::` source + `install.packages(type = "binary")`) | **~60 s**       | All pins installed at the snapshot's exact version              |
+| `pak::pkg_install(c("cran::pkgA@verA", "cran::pkgB@verB", …))`       | **~1240 s** (≈18×) | All packages eventually installed, but several pins *bumped* away from the snapshot version (forced source recompile) |
+
+The reason is structural, not a bug in `pak`. CRAN only builds binaries for the **current** version of each package; older versions live in `src/contrib/Archive/` as source only. So when `pak`'s resolver sees `pkgA@<archived-version>`, it constructs the source-Archive URL — it never tries a binary URL, because no binary URL exists. Even if a binary for that exact pin is sitting in `pkgcache` (because we built it on a previous run), `pak` rebuilds from source. Snapshot installs are dominated by archived-version pins, so this is the common case, not the edge case.
+
+`Require`'s snapshot installer works around this with two mechanisms `pak` does not expose:
+
+| Layer                   | What `Require` does                                                                                            | What `pak` alone would do                                              |
+| ----------------------- | :------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| Cached binary for an archived pin | `install.packages(type = "binary", repos = NULL)` against the cached `.tgz`/`.zip` (skips compile entirely) | Rebuild from source archive (no binary URL exists for non-current versions) |
+| Source tarball for an archived pin | `pak::pkg_install("local::<file>")` — bypasses `pak`'s resolver, installs the on-disk file directly      | Re-download from `src/contrib/Archive/...` even if the file is in `pkgcache` under a different URL key |
+| Binary `local::` ref     | n/a — Require routes binaries through `install.packages` instead                                              | Refuses with "Platform mismatch" — `pak`'s `local::` is source-only     |
+| GitHub `@SHA` pin        | Built once, then cached as a binary tarball under a synthetic `require-snapshot-bin://` URL so subsequent runs unpack instead of rebuilding | Rebuild on every run (the synthetic URL key is not part of `pak`'s resolver vocabulary) |
+| Bump-and-retry for a pin that won't compile | Walks the CRAN Archive listing for newer versions, tries each, records the substitution in the diagnostic report | All-or-nothing: one unsolvable pin aborts the whole install            |
+
+So `Require` is using `pak` for everything `pak` is good at — parallel downloads, the install subprocess, the `pkgcache` cache layout — and adding the orchestration layer that turns "snapshot of mostly-archived pinned versions" into a workflow that actually finishes in a minute instead of twenty.
+
 Snapshot installs are the default path of `Require::Install()` when an `inst/snapshot.txt`-style file is supplied; the behaviour above is what makes "snapshot from one machine, restore on another a year later" actually work.
 
 ## Summary of differences
