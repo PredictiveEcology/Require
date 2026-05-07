@@ -206,7 +206,15 @@ test_that("test 09", {
       ## knownFails are packages with system-library prerequisites we don't
       ## guarantee are present on every test host (libsodium, libarchive,
       ## libsecret, ImageMagick, etc.).
-      knownFails <- c("archive", "DiagrammeR", "keyring", "mapview", "readr", "servr",
+      ## arrow + disk.frame: arrow's bundled libarrow source build is
+      ## fragile and depends on the host having a compatible
+      ## apache-arrow brew install (version match) — the snapshot pins
+      ## arrow 23.0.1.1 but a host with apache-arrow 24.x will fall
+      ## through to bundled libarrow which doesn't always compile
+      ## cleanly under modern clang/MacOSX SDK. disk.frame Imports arrow
+      ## so it cascades.
+      knownFails <- c("archive", "arrow", "disk.frame", "DiagrammeR",
+                      "keyring", "mapview", "readr", "servr",
                       "sodium", "vroom")
       ip <- data.table::as.data.table(
         installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
