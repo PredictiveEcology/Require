@@ -1341,12 +1341,47 @@ installSnapshotViaInstallPackages <- function(snapshot,
     }
   }
 
-  localRefs <- paste0("local::", destPaths)
+  ## Exclude already-installed-at-target-version refs from localRefs.
+  ## pak treats `local::<file>` as an explicit install request and
+  ## reinstalls regardless of destLib state — even when the installed
+  ## version matches the snapshot pin (the plan shows entries like
+  ## `+ DEoptim 2.2-8 → 2.2-8`, "updating" to itself, which is wasted
+  ## compile time). Trim these so pak only resolves+installs what's
+  ## genuinely missing or wrong-version.
+  ipForRefs <- tryCatch(as.data.frame(
+    installed.packages(lib.loc = destLib, noCache = TRUE)),
+    error = function(e) data.frame(Package = character(),
+                                   Version = character()))
+  alreadyAtTarget <- vapply(seq_len(nrow(pkgs)), function(i) {
+    row <- ipForRefs[ipForRefs$Package == pkgs$Package[i], , drop = FALSE]
+    if (!nrow(row)) return(FALSE)
+    if (isGH[i]) {
+      ## GH ref: compare RemoteSha / GithubSHA1 in installed DESCRIPTION.
+      f <- file.path(destLib, pkgs$Package[i], "DESCRIPTION")
+      if (!file.exists(f)) return(FALSE)
+      dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha","GithubSHA1")),
+                      error = function(e) NULL)
+      if (is.null(dcf) || nrow(dcf) == 0) return(FALSE)
+      sha <- dcf[1, "RemoteSha"]
+      if (is.na(sha) || !nzchar(sha)) sha <- dcf[1, "GithubSHA1"]
+      isTRUE(as.character(sha) == as.character(pkgs$GithubSHA1[i]))
+    } else {
+      isTRUE(as.character(row$Version[1]) == as.character(pkgs$Version[i]))
+    }
+  }, logical(1))
+  pakRefIdx <- which(!alreadyAtTarget)
+  localRefs <- paste0("local::", destPaths[pakRefIdx])
+  if (verbose >= 1 && sum(alreadyAtTarget) > 0)
+    messageVerbose("Excluding ", sum(alreadyAtTarget),
+                   " already-installed refs from pak's input ",
+                   "(pre-installed binaries + test-runner-installed); ",
+                   "passing ", length(localRefs), " to pak",
+                   verbose = verbose, verboseLevel = 1)
   pakLogTail <- character()
   pakErr <- NULL
   pakDetail <- character()
   pakPlanInfo <- character()
-  if (requireNamespace("pak", quietly = TRUE)) {
+  if (requireNamespace("pak", quietly = TRUE) && length(localRefs)) {
     messageVerbose("Trying pak::pkg_install with ", length(localRefs),
                    " local:: refs, lib=", destLib,
                    " (fallback: install.packages)",
