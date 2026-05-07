@@ -9,6 +9,125 @@
 #' `pkgSnapshot2` returns a vector of package names and versions, with no file output. See
 #' examples.
 #'
+#' @section Installing from a snapshot file:
+#' Pass the snapshot file to `Require()` via `packageVersionFile = "snapshot.txt"`.
+#' By default this routes through a multi-stage installer (gated by
+#' `options(Require.snapshotInstaller = "install.packages")`) that:
+#'
+#' 1. **Skips already-installed-at-target-version refs.**
+#' 2. **Cache pre-filter** via `pkgcache::pkg_cache_list()`. Source tarballs feed
+#'    `pak::pkg_install(local::...)`; binaries are reserved for step (4). Rotten
+#'    cache rows (missing fullpath, gzip-corrupt, DESCRIPTION mismatch) are
+#'    auto-evicted via `pkgcache::pkg_cache_delete_files()` so future runs
+#'    don't keep tripping on them.
+#' 3. **Parallel libcurl-multi download** for refs not in cache, chunked at 50
+#'    URLs per call (macOS file-descriptor limit). Walks priority URLs: row's
+#'    `Repository` -> PPM -> CRAN -> CRAN/Archive. Up to 4 retries with
+#'    exponential backoff (`Require.snapshotDownloadAttempts`).
+#' 4. **Hybrid binary-first install** via `install.packages(type = "binary")`
+#'    for any ref that has a cache binary matching this R session
+#'    (`R.version$platform`, `<major>.<minor>`). Skips compilation, reduces
+#'    pak's parallel-build workload. Disable via
+#'    `options(Require.snapshotInstallerHybrid = FALSE)`.
+#' 5. **`pak::pkg_install(local::...)` for the rest** with `dependencies = NA`,
+#'    `upgrade = FALSE`. Refs already-installed-at-target-version are excluded
+#'    upfront so pak doesn't reinstall-to-self.
+#' 6. **`install.packages(repos = file://...)` fallback** if pak refuses (its
+#'    solver is strict; `install.packages` is best-effort and tolerates
+#'    per-package compile failures).
+#' 7. **Bump-and-retry**: for any ref still missing, walks newer-than-pin
+#'    versions from CRAN/PPM/Archive ascending and tries each until one
+#'    installs (capped at 20 candidates). Disable via
+#'    `options(Require.snapshotInstallerBumpOnFail = FALSE)` for strict
+#'    reproducibility (no drift, fail loudly).
+#' 8. **Diagnostic report** classifying each gap with a concrete `fix:` line.
+#'
+#' Built binaries from this run are added back to `pkgcache` via
+#' `cacheBuiltBinaries()` (registered on `on.exit`), so a subsequent run hits
+#' step (4) instead of recompiling.
+#'
+#' @section Common snapshot pitfalls:
+#'
+#' \describe{
+#'   \item{Version-coherence (the snapshot's own pins disagree)}{
+#'     A ref's `DESCRIPTION` declares `Imports: X (>= V)` but the snapshot
+#'     pins `X` at a version that doesn't satisfy it. `pak`'s strict solver
+#'     refuses to install. The installer runs a coherence pre-check before
+#'     handing off to pak and prints any unsatisfied constraint with a fix
+#'     suggestion (e.g., `servr 0.30 requires xfun (>= 0.42); snapshot pins
+#'     xfun = 0.40 -> bump xfun`).
+#'   }
+#'   \item{`R` pseudo-package}{
+#'     `pkgSnapshot()` writes a row recording the running R version
+#'     (e.g., `R,4.4,...`). The installer skips this row alongside base
+#'     packages.
+#'   }
+#'   \item{System library mismatches (compile failures)}{
+#'     Source builds need the host's system libs to match what the package
+#'     expects. The installer's `classifyCompileFailure()` recognises
+#'     missing-header errors (jpeglib.h, gdal.h, geos_c.h, glpk.h,
+#'     ft2build.h, sodium.h, ...) and prints the corresponding
+#'     `brew install ...` (or apt) suggestion. R 4.5's removal of
+#'     `Calloc/Free`, GDAL >= 3.10's `const OGRSpatialReference*` ABI
+#'     change, and Rcpp's `class_::constructor<>` template-arity limit are
+#'     each pattern-matched and reported with a "bump <pkg>" suggestion.
+#'   }
+#'   \item{Mac toolchain — `~/.R/Makevars`}{
+#'     R's default compile flags only search `/opt/R/arm64/include`. To pick
+#'     up Homebrew headers (libjpeg, glpk, freetype, etc.), add to
+#'     `~/.R/Makevars`:
+#'     \preformatted{
+#'       CPPFLAGS += -I/opt/homebrew/include
+#'       LDFLAGS  += -L/opt/homebrew/lib
+#'     }
+#'   }
+#'   \item{Stale `pkgcache` index}{
+#'     `pkgcache` shares state across R versions and architectures. Cache
+#'     rows tagged with platform/rversion that don't match this session
+#'     are filtered out (e.g., R-4.5 binaries when running R-4.4); validation
+#'     also catches index rows whose file content disagrees with the index
+#'     (a known historical bug-class). Both kinds get auto-evicted, so
+#'     `pak::cache_clean()` is rarely needed.
+#'   }
+#'   \item{Pak's `local::` is source-only}{
+#'     Confirmed empirically that pak's `pkg_install("local::<file>")`
+#'     rejects binary tarballs (`.tgz` / `.zip` content) with
+#'     "Platform mismatch" — even when the binary is for the current
+#'     platform. The hybrid stage installs binaries via
+#'     `install.packages(type = "binary")` BEFORE pak runs, so pak only
+#'     sees source refs.
+#'   }
+#'   \item{Pak strict-aborts on first build failure}{
+#'     `install.packages` continues past per-package compile failures;
+#'     `pak::pkg_install` does not. The fallback to `install.packages` and
+#'     the bump-and-retry stage together provide a best-effort completion
+#'     guarantee even when individual refs are environment-fragile.
+#'   }
+#' }
+#'
+#' @section Snapshot-installer options:
+#' \describe{
+#'   \item{`Require.snapshotInstaller`}{`"install.packages"` to use the
+#'     pipeline above; `"pak"` for the legacy direct-pak path.}
+#'   \item{`Require.snapshotInstallerUsePPM`}{TRUE (default) to prepend a PPM
+#'     binary repo. PPM serves Mac binaries by content-negotiating the
+#'     `R/<version>` User-Agent.}
+#'   \item{`Require.snapshotInstallerHybrid`}{TRUE (default) — pre-install
+#'     cache binaries via `install.packages(type = "binary")` before pak.}
+#'   \item{`Require.snapshotInstallerBumpOnFail`}{TRUE (default) — walk newer
+#'     versions for refs that fail at the pin. FALSE for strict
+#'     reproducibility.}
+#'   \item{`Require.snapshotInstallerKnownFails`}{character vector of pkg
+#'     names to skip in bump-retry (e.g. environment-dependent refs whose
+#'     newer versions also won't help).}
+#'   \item{`Require.snapshotInstallerPakSilent`}{FALSE (default) — pak's
+#'     resolver output reaches the user.}
+#'   \item{`Require.snapshotDownloadAttempts`}{Retry count for libcurl-multi
+#'     downloads. Default 4.}
+#'   \item{`Require.snapshotDownloadChunk`}{URLs per `download.file()` call.
+#'     Default 50 (stays under macOS's ~256 file-descriptor ulimit).}
+#' }
+#'
 #' @return
 #' Will both write a file, and (invisibly) return a vector of packages with the
 #' version numbers. This vector can be used directly in `Require`, though it should likely
@@ -2257,51 +2376,80 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
 bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
                                 repos = getOption("repos"),
                                 maxCandidates = 20L,
+                                maxIters = 3L,
                                 verbose = getOption("Require.verbose", 0)) {
   bumped <- character()
-  remaining <- character()
-  for (pkg in stillMissing) {
-    snapVer <- snapshot$Version[snapshot$Package == pkg][1]
-    if (is.na(snapVer) || !nzchar(snapVer)) snapVer <- "0.0"
-    candidates <- listCandidateVersions(pkg, repos = repos,
-                                        verbose = verbose)
-    if (!length(candidates)) {
-      remaining <- c(remaining, pkg)
-      next
-    }
-    cmp <- vapply(candidates, function(v)
-                  tryCatch(as.integer(utils::compareVersion(v, snapVer)),
-                           error = function(e) NA_integer_),
-                  integer(1))
-    candidates <- candidates[!is.na(cmp) & cmp > 0]
-    if (!length(candidates)) {
-      remaining <- c(remaining, pkg)
-      next
-    }
-    candidates <- candidates[order(numeric_version(candidates))]
-    candidates <- utils::head(candidates, maxCandidates)
-    if (verbose >= 1)
-      messageVerbose(
-        "  - ", pkg, " (snapshot pin: ", snapVer,
-        "): trying ", length(candidates),
-        " newer version(s) -> ",
-        paste(utils::head(candidates, 5), collapse = ", "),
-        if (length(candidates) > 5) " ..." else "",
-        verbose = verbose, verboseLevel = 1)
-    installed <- FALSE
-    for (v in candidates) {
-      if (tryInstallByUrl(pkg = pkg, version = v, destLib = destLib,
-                          repos = repos, verbose = verbose)) {
-        bumped <- c(bumped,
-                    sprintf("%s: %s -> %s (bumped)", pkg, snapVer, v))
-        installed <- TRUE
-        if (verbose >= 1)
-          messageVerbose("    ✓ ", pkg, " ", v, " installed",
-                         verbose = verbose, verboseLevel = 1)
-        break
+  ## Iterate: a successful install of one ref (e.g., arrow bumped from
+  ## 23.0.1.1 to 24.0.0) may UNBLOCK another ref that was failing only
+  ## because that dep was missing (e.g., disk.frame@0.8.3 fails when
+  ## arrow is missing, succeeds once arrow is installed). Loop until a
+  ## pass makes no progress, capped at maxIters. Per pass, each pkg
+  ## tries its snapshot pin FIRST (cheap, no drift) — only walks newer
+  ## versions if the pin still fails.
+  remaining <- stillMissing
+  for (iter in seq_len(maxIters)) {
+    if (!length(remaining)) break
+    progressed <- character()
+    for (pkg in remaining) {
+      snapVer <- snapshot$Version[snapshot$Package == pkg][1]
+      if (is.na(snapVer) || !nzchar(snapVer)) snapVer <- NA_character_
+      newer <- listCandidateVersions(pkg, repos = repos, verbose = verbose)
+      if (!is.na(snapVer) && length(newer)) {
+        cmp <- vapply(newer, function(v)
+                      tryCatch(as.integer(utils::compareVersion(v, snapVer)),
+                               error = function(e) NA_integer_),
+                      integer(1))
+        newer <- newer[!is.na(cmp) & cmp > 0]
+        newer <- newer[order(numeric_version(newer))]
+        newer <- utils::head(newer, maxCandidates)
+      } else if (length(newer)) {
+        newer <- newer[order(numeric_version(newer))]
+        newer <- utils::head(newer, maxCandidates)
+      }
+      ## Try snapshot pin first (just-in-case its deps are now resolved
+      ## by an earlier bump in this or a prior pass), then newer versions.
+      candidates <- if (is.na(snapVer)) newer else c(snapVer, newer)
+      if (!length(candidates)) next
+      if (verbose >= 1 && iter == 1L)
+        messageVerbose(
+          "  - ", pkg, " (snapshot pin: ",
+          if (is.na(snapVer)) "?" else snapVer,
+          "): trying ", length(candidates),
+          " version(s) -> ",
+          paste(utils::head(candidates, 5), collapse = ", "),
+          if (length(candidates) > 5) " ..." else "",
+          verbose = verbose, verboseLevel = 1)
+      for (v in candidates) {
+        if (tryInstallByUrl(pkg = pkg, version = v, destLib = destLib,
+                            repos = repos, verbose = verbose)) {
+          if (!is.na(snapVer) && identical(v, snapVer)) {
+            ## Ref installed at the snapshot pin (no drift) — this
+            ## happens when an earlier bump unblocked its deps. Don't
+            ## record as a "bump" since version matches the snapshot.
+            if (verbose >= 1)
+              messageVerbose("    ✓ ", pkg, " ", v,
+                             " installed at snapshot pin (deps resolved)",
+                             verbose = verbose, verboseLevel = 1)
+          } else {
+            bumped <- c(bumped,
+                        sprintf("%s: %s -> %s (bumped)",
+                                pkg, snapVer, v))
+            if (verbose >= 1)
+              messageVerbose("    ✓ ", pkg, " ", v, " installed (bumped)",
+                             verbose = verbose, verboseLevel = 1)
+          }
+          progressed <- c(progressed, pkg)
+          break
+        }
       }
     }
-    if (!installed) remaining <- c(remaining, pkg)
+    remaining <- setdiff(remaining, progressed)
+    if (!length(progressed)) break  # no progress -> further iters won't help
+    if (verbose >= 1 && length(remaining) && iter < maxIters)
+      messageVerbose("  iter ", iter, ": ", length(progressed),
+                     " recovered, ", length(remaining),
+                     " still missing — retrying (deps may be unblocked)",
+                     verbose = verbose, verboseLevel = 1)
   }
   list(bumped = bumped, stillMissing = remaining)
 }

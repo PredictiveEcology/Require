@@ -90,6 +90,131 @@ This can later be passed to \code{Require}.
 \code{pkgSnapshot2} returns a vector of package names and versions, with no file output. See
 examples.
 }
+\section{Installing from a snapshot file}{
+
+Pass the snapshot file to \code{Require()} via \code{packageVersionFile = "snapshot.txt"}.
+By default this routes through a multi-stage installer (gated by
+\code{options(Require.snapshotInstaller = "install.packages")}) that:
+\enumerate{
+\item \strong{Skips already-installed-at-target-version refs.}
+\item \strong{Cache pre-filter} via \code{pkgcache::pkg_cache_list()}. Source tarballs feed
+\code{pak::pkg_install(local::...)}; binaries are reserved for step (4). Rotten
+cache rows (missing fullpath, gzip-corrupt, DESCRIPTION mismatch) are
+auto-evicted via \code{pkgcache::pkg_cache_delete_files()} so future runs
+don't keep tripping on them.
+\item \strong{Parallel libcurl-multi download} for refs not in cache, chunked at 50
+URLs per call (macOS file-descriptor limit). Walks priority URLs: row's
+\code{Repository} -> PPM -> CRAN -> CRAN/Archive. Up to 4 retries with
+exponential backoff (\code{Require.snapshotDownloadAttempts}).
+\item \strong{Hybrid binary-first install} via \code{install.packages(type = "binary")}
+for any ref that has a cache binary matching this R session
+(\code{R.version$platform}, \verb{<major>.<minor>}). Skips compilation, reduces
+pak's parallel-build workload. Disable via
+\code{options(Require.snapshotInstallerHybrid = FALSE)}.
+\item \strong{\code{pak::pkg_install(local::...)} for the rest} with \code{dependencies = NA},
+\code{upgrade = FALSE}. Refs already-installed-at-target-version are excluded
+upfront so pak doesn't reinstall-to-self.
+\item \strong{\verb{install.packages(repos = file://...)} fallback} if pak refuses (its
+solver is strict; \code{install.packages} is best-effort and tolerates
+per-package compile failures).
+\item \strong{Bump-and-retry}: for any ref still missing, walks newer-than-pin
+versions from CRAN/PPM/Archive ascending and tries each until one
+installs (capped at 20 candidates). Disable via
+\code{options(Require.snapshotInstallerBumpOnFail = FALSE)} for strict
+reproducibility (no drift, fail loudly).
+\item \strong{Diagnostic report} classifying each gap with a concrete \verb{fix:} line.
+}
+
+Built binaries from this run are added back to \code{pkgcache} via
+\code{cacheBuiltBinaries()} (registered on \code{on.exit}), so a subsequent run hits
+step (4) instead of recompiling.
+}
+
+\section{Common snapshot pitfalls}{
+
+
+\describe{
+\item{Version-coherence (the snapshot's own pins disagree)}{
+A ref's \code{DESCRIPTION} declares \verb{Imports: X (>= V)} but the snapshot
+pins \code{X} at a version that doesn't satisfy it. \code{pak}'s strict solver
+refuses to install. The installer runs a coherence pre-check before
+handing off to pak and prints any unsatisfied constraint with a fix
+suggestion (e.g., \verb{servr 0.30 requires xfun (>= 0.42); snapshot pins xfun = 0.40 -> bump xfun}).
+}
+\item{\code{R} pseudo-package}{
+\code{pkgSnapshot()} writes a row recording the running R version
+(e.g., \verb{R,4.4,...}). The installer skips this row alongside base
+packages.
+}
+\item{System library mismatches (compile failures)}{
+Source builds need the host's system libs to match what the package
+expects. The installer's \code{classifyCompileFailure()} recognises
+missing-header errors (jpeglib.h, gdal.h, geos_c.h, glpk.h,
+ft2build.h, sodium.h, ...) and prints the corresponding
+\verb{brew install ...} (or apt) suggestion. R 4.5's removal of
+\code{Calloc/Free}, GDAL >= 3.10's \verb{const OGRSpatialReference*} ABI
+change, and Rcpp's \verb{class_::constructor<>} template-arity limit are
+each pattern-matched and reported with a "bump \if{html}{\out{<pkg>}}" suggestion.
+}
+\item{Mac toolchain — \verb{~/.R/Makevars}}{
+R's default compile flags only search \verb{/opt/R/arm64/include}. To pick
+up Homebrew headers (libjpeg, glpk, freetype, etc.), add to
+\verb{~/.R/Makevars}:
+\preformatted{
+      CPPFLAGS += -I/opt/homebrew/include
+      LDFLAGS  += -L/opt/homebrew/lib
+    }
+}
+\item{Stale \code{pkgcache} index}{
+\code{pkgcache} shares state across R versions and architectures. Cache
+rows tagged with platform/rversion that don't match this session
+are filtered out (e.g., R-4.5 binaries when running R-4.4); validation
+also catches index rows whose file content disagrees with the index
+(a known historical bug-class). Both kinds get auto-evicted, so
+\code{pak::cache_clean()} is rarely needed.
+}
+\item{Pak's \verb{local::} is source-only}{
+Confirmed empirically that pak's \code{pkg_install("local::<file>")}
+rejects binary tarballs (\code{.tgz} / \code{.zip} content) with
+"Platform mismatch" — even when the binary is for the current
+platform. The hybrid stage installs binaries via
+\code{install.packages(type = "binary")} BEFORE pak runs, so pak only
+sees source refs.
+}
+\item{Pak strict-aborts on first build failure}{
+\code{install.packages} continues past per-package compile failures;
+\code{pak::pkg_install} does not. The fallback to \code{install.packages} and
+the bump-and-retry stage together provide a best-effort completion
+guarantee even when individual refs are environment-fragile.
+}
+}
+}
+
+\section{Snapshot-installer options}{
+
+\describe{
+\item{\code{Require.snapshotInstaller}}{\code{"install.packages"} to use the
+pipeline above; \code{"pak"} for the legacy direct-pak path.}
+\item{\code{Require.snapshotInstallerUsePPM}}{TRUE (default) to prepend a PPM
+binary repo. PPM serves Mac binaries by content-negotiating the
+\verb{R/<version>} User-Agent.}
+\item{\code{Require.snapshotInstallerHybrid}}{TRUE (default) — pre-install
+cache binaries via \code{install.packages(type = "binary")} before pak.}
+\item{\code{Require.snapshotInstallerBumpOnFail}}{TRUE (default) — walk newer
+versions for refs that fail at the pin. FALSE for strict
+reproducibility.}
+\item{\code{Require.snapshotInstallerKnownFails}}{character vector of pkg
+names to skip in bump-retry (e.g. environment-dependent refs whose
+newer versions also won't help).}
+\item{\code{Require.snapshotInstallerPakSilent}}{FALSE (default) — pak's
+resolver output reaches the user.}
+\item{\code{Require.snapshotDownloadAttempts}}{Retry count for libcurl-multi
+downloads. Default 4.}
+\item{\code{Require.snapshotDownloadChunk}}{URLs per \code{download.file()} call.
+Default 50 (stays under macOS's ~256 file-descriptor ulimit).}
+}
+}
+
 \examples{
 \dontrun{
 if (Require:::.runLongExamples()) {
