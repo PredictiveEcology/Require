@@ -576,8 +576,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
     ## packages from r-universe / RSPM / etc. tell us exactly where the
     ## tarball lives, and PPM/CRAN won't have it. Try the row repo first;
     ## fall through to PPM/CRAN if it 404s (covers re-pointing later).
-    rowRepo <- pkgs$Repository[i]
-    rowRepos <- if (!is.na(rowRepo) && grepl("^https?://", rowRepo)) rowRepo
+    rowRepo <- if (!is.null(pkgs$Repository)) pkgs$Repository[i] else NA_character_
+    rowRepos <- if (length(rowRepo) && !is.na(rowRepo) &&
+                    grepl("^https?://", rowRepo)) rowRepo
                 else character()
     out <- character()
     for (r in c(rowRepos, ppmRepos, cranRepos)) {

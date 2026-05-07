@@ -187,8 +187,9 @@ test_that("test 4", {
                                      which = c("Suggests", "Imports", "Depends"))
     locals <- setdiff(extractPkgName(localDeps), .basePkgs)
     testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
-    # not sure why roxygen2 was not in it before; fpCompare is new, not yet on PEUniverse
-    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown", "fpCompare"))
+    # not sure why roxygen2 was not in it before; fpCompare is new, not yet on PEUniverse;
+    # pkgcache is added for offline-mode pak introspection (no upstream module deps)
+    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown", "fpCompare", "pkgcache"))
     testthat::expect_identical(testArgs, character())
   }
   if (isDev) {

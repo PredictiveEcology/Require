@@ -784,6 +784,25 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
+  ## Pak's `local::<file>` ref handling is SOURCE-ONLY: it rejects binary
+  ## tarballs (e.g. `.tgz` on macOS, `.zip` on Windows, or PPM-style
+  ## platform-suffixed `.tar.gz` binaries) with "Platform mismatch" even
+  ## when the binary matches the current R/arch. Mirror the snapshot-install
+  ## hybrid pattern: install binaries via install.packages(repos = NULL,
+  ## type = "binary"), and only feed source tarballs to pak as `local::` refs.
+  isBinaryTarball <- function(p) {
+    if (is.na(p) || !nzchar(p)) return(FALSE)
+    bn <- basename(p)
+    if (grepl("\\.(tgz|zip)$", bn)) return(TRUE)              # mac / windows
+    ## linux PPM binary tarballs are `.tar.gz` BUT carry a platform suffix
+    ## in the filename or live under a `bin/linux/...` subpath in pak's
+    ## cache; the pak::cache_list `platform` column pins this down — but
+    ## we only have the path here, so use the platform-suffix heuristic.
+    grepl("-(x86_64|aarch64|arm64)-(linux|apple|w64)", bn)
+  }
+
+  binaryPaths <- character(0)
+  binaryPkgs  <- character(0)
   resolvedRefs <- character(0)
   resolvedPkgs <- character(0)
   missingPkgs  <- character(0)
@@ -791,15 +810,36 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
     tarball <- pakCachedTarball(pkg)
     if (is.na(tarball)) {
       missingPkgs <- c(missingPkgs, pkg)
+    } else if (isBinaryTarball(tarball)) {
+      binaryPaths <- c(binaryPaths, tarball)
+      binaryPkgs  <- c(binaryPkgs,  pkg)
     } else {
       resolvedRefs <- c(resolvedRefs, paste0("local::", tarball))
       resolvedPkgs <- c(resolvedPkgs, pkg)
     }
   }
 
+  if (length(binaryPaths)) {
+    messageVerbose("offline mode: installing ", length(binaryPaths),
+                   " binary package(s) from pak cache via install.packages: ",
+                   paste(binaryPkgs, collapse = ", "),
+                   verbose = verbose, verboseLevel = 1)
+    err <- try(suppressWarnings(
+      install.packages(binaryPaths, repos = NULL, type = "binary",
+                       lib = libPaths[1], dependencies = FALSE,
+                       quiet = TRUE)
+    ), silent = TRUE)
+    if (is(err, "try-error")) {
+      warning(.txtCouldNotBeInstalled,
+              ": offline binary install via install.packages failed: ",
+              as.character(err), call. = FALSE)
+      missingPkgs <- c(missingPkgs, binaryPkgs)
+    }
+  }
+
   if (length(resolvedRefs)) {
     messageVerbose("offline mode: installing ", length(resolvedRefs),
-                   " package(s) from pak cache: ",
+                   " source package(s) from pak cache: ",
                    paste(resolvedPkgs, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
     err <- try(pakCall(
@@ -810,21 +850,27 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       warning(.txtCouldNotBeInstalled, ": offline install via pak failed: ",
               as.character(err), call. = FALSE)
       missingPkgs <- c(missingPkgs, resolvedPkgs)
-    } else {
-      ipNow <- tryCatch(installed.packages(lib.loc = libPaths[1L], noCache = TRUE),
-                        error = function(e) NULL)
-      for (pkg in resolvedPkgs) {
-        wh <- which(pkgDT$Package == pkg)
-        if (!length(wh)) next
-        if (!is.null(ipNow) && pkg %in% rownames(ipNow)) {
-          set(pkgDT, wh, "installed",          TRUE)
-          set(pkgDT, wh, "installedVersionOK", TRUE)
-          set(pkgDT, wh, "Version",            unname(ipNow[pkg, "Version"]))
-          set(pkgDT, wh, "LibPath",            unname(ipNow[pkg, "LibPath"]))
-          set(pkgDT, wh, "installResult",      "OK")
-        } else {
-          missingPkgs <- c(missingPkgs, pkg)
-        }
+    }
+  }
+
+  ## Verify final state on disk for everything we tried (binary + source) and
+  ## update pkgDT accordingly. This is the ground truth — a successful pak
+  ## or install.packages call doesn't guarantee the package landed in libPaths.
+  triedPkgs <- c(binaryPkgs, resolvedPkgs)
+  if (length(triedPkgs)) {
+    ipNow <- tryCatch(installed.packages(lib.loc = libPaths[1L], noCache = TRUE),
+                      error = function(e) NULL)
+    for (pkg in triedPkgs) {
+      wh <- which(pkgDT$Package == pkg)
+      if (!length(wh)) next
+      if (!is.null(ipNow) && pkg %in% rownames(ipNow)) {
+        set(pkgDT, wh, "installed",          TRUE)
+        set(pkgDT, wh, "installedVersionOK", TRUE)
+        set(pkgDT, wh, "Version",            unname(ipNow[pkg, "Version"]))
+        set(pkgDT, wh, "LibPath",            unname(ipNow[pkg, "LibPath"]))
+        set(pkgDT, wh, "installResult",      "OK")
+      } else {
+        missingPkgs <- c(missingPkgs, pkg)
       }
     }
   }
