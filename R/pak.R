@@ -796,7 +796,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
     if (grepl("\\.(tgz|zip)$", bn)) return(TRUE)              # mac / windows
     ## linux PPM binary tarballs are `.tar.gz` BUT carry a platform suffix
     ## in the filename or live under a `bin/linux/...` subpath in pak's
-    ## cache; the pak::cache_list `platform` column pins this down — but
+    ## cache; the pak::cache_list `platform` column pins this down -- but
     ## we only have the path here, so use the platform-suffix heuristic.
     grepl("-(x86_64|aarch64|arm64)-(linux|apple|w64)", bn)
   }
@@ -854,7 +854,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   }
 
   ## Verify final state on disk for everything we tried (binary + source) and
-  ## update pkgDT accordingly. This is the ground truth — a successful pak
+  ## update pkgDT accordingly. This is the ground truth -- a successful pak
   ## or install.packages call doesn't guarantee the package landed in libPaths.
   triedPkgs <- c(binaryPkgs, resolvedPkgs)
   if (length(triedPkgs)) {
@@ -1149,16 +1149,16 @@ pakBuildFailReason <- function(errStr, capturedMsgs = character(0)) {
 # When pak::pak() throws on a build failure, the condition chain attaches the
 # real R CMD INSTALL output to a `package_build_error` parent (fields
 # `package`, `version`, `message`, `stdout`). pak's console stream only
-# emits a one-line "✖ Failed to build <pkg> <ver>" summary and discards the
+# emits a one-line "X Failed to build <pkg> <ver>" summary and discards the
 # rest, so Require's text parsers (extractInstallFailures /
 # extractBuildFailures) never see the actual root cause -- which leads to
-# the "no parseable culprits" / "still-missing — cascade casualty"
+# the "no parseable culprits" / "still-missing -- cascade casualty"
 # diagnostic dead-end even though pak DOES know what went wrong.
 #
 # Given a try-error or condition, walks the condition chain (capped depth)
 # looking for any `package_build_error` node, and returns character lines
 # suitable to splice into allCapturedMsgs so the existing parsers can
-# extract a real reason. The synthetic "✖ Failed to build <pkg> <ver>" line
+# extract a real reason. The synthetic "X Failed to build <pkg> <ver>" line
 # ensures extractBuildFailures (regex `Failed to build\s+([A-Za-z0-9._]+)`)
 # can attribute the failure to the right ref.
 # ---------------------------------------------------------------------------
@@ -1174,7 +1174,7 @@ pakConditionLog <- function(err) {
       msg <- cond$message; if (is.null(msg)) msg <- ""
       stdo <- cond$stdout; if (is.null(stdo)) stdo <- character(0)
       if (nzchar(pkg)) {
-        out <- c(out, sprintf("✖ Failed to build %s %s", pkg, ver))
+        out <- c(out, sprintf("X Failed to build %s %s", pkg, ver))
       }
       # Drop pak's own "Failed to build source package <pkg>." preamble:
       # the regex `Failed to build\s+([A-Za-z0-9._]+)` would capture
@@ -1921,15 +1921,19 @@ extractInstallFailures <- function(output) {
     # rather than picking the first match of a single combined regex,
     # because a generic line like "* installing *source* package 'X'..."
     # almost always appears BEFORE the actual ERROR: / vignette-builder /
-    # lazy-loading line in pak's stream — so first-match-wins drops the
+    # lazy-loading line in pak's stream -- so first-match-wins drops the
     # informative line in favor of the noise.
     window <- lines[i:min(i + 25L, length(lines))]
     # Each entry: c(<key>, <perl regex>, <ignore.case "T"/"F">). Order = priority.
+    # ['\u2018] / [\u2019'] character classes match BOTH a straight ASCII
+    # quote AND the unicode left/right single quotation marks pak's output
+    # uses. \u escapes keep this file ASCII (R CMD check requires) while
+    # the runtime regex still matches both forms.
     patternList <- list(
       c("vignette-builder",
-        "vignette builder ['‘][^'’]+['’] not found", "F"),
+        "vignette builder ['\u2018][^'\u2019]+['\u2019] not found", "F"),
       c("no-package-called",
-        "there is no package called ['‘][^'’]+['’]", "F"),
+        "there is no package called ['\u2018][^'\u2019]+['\u2019]", "F"),
       c("deps-not-available",
         "dependencies\\s+.+\\s+are not available for package",        "F"),
       c("lazy-load-failed",
@@ -1938,7 +1942,7 @@ extractInstallFailures <- function(output) {
         "compilation failed|fatal error",                               "T"),
       c("cannot-remove",
         "cannot remove",                                                "F"),
-      # Generic ERROR: line — only used when none of the specific patterns
+      # Generic ERROR: line -- only used when none of the specific patterns
       # above matched anywhere in the window.
       c("generic-error",  "^\\s*ERROR:",                                "F")
     )
@@ -1955,13 +1959,13 @@ extractInstallFailures <- function(output) {
       reasonBrief <- "build failed (no specific reason parsed)"
       reasonDetail <- lines[i]
     } else if (identical(errKind, "vignette-builder")) {
-      vb <- sub(".*vignette builder ['‘]([^'’]+)['’] not found.*",
+      vb <- sub(".*vignette builder ['\u2018]([^'\u2019]+)['\u2019] not found.*",
                 "\\1", errLine, perl = TRUE)
       reasonType <- "missing-build-deps"
       reasonBrief <- paste0("missing VignetteBuilder package: ", vb)
       reasonDetail <- errLine
     } else if (identical(errKind, "no-package-called")) {
-      pk <- sub(".*there is no package called ['‘]([^'’]+)['’].*",
+      pk <- sub(".*there is no package called ['\u2018]([^'\u2019]+)['\u2019].*",
                 "\\1", errLine, perl = TRUE)
       reasonType <- "missing-build-deps"
       reasonBrief <- paste0("missing build-time package: ", pk)
@@ -1974,7 +1978,7 @@ extractInstallFailures <- function(output) {
       reasonDetail <- errLine
     } else if (identical(errKind, "lazy-load-failed")) {
       # "lazy loading failed for package 'X'" is itself a downstream symptom
-      # — the actual cause was emitted earlier in the build (e.g. an error
+      # -- the actual cause was emitted earlier in the build (e.g. an error
       # in .onLoad, an evaluation error in package R code, a missing
       # dependency referenced at top level). Try to surface the preceding
       # "Error:" / "Error in" line; otherwise fall back to the symptom.
@@ -2129,7 +2133,7 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
     ## condition chain breaks cli's dynamic-vs-static redraw heuristic and
     ## every progress tick spews as a fresh line. Trade-off: at verbose >= 1
     ## we lose the per-package message capture, so pakBuildFailReason has
-    ## only the err string to work with — fine, because the user already saw
+    ## only the err string to work with -- fine, because the user already saw
     ## the messages live on console at verbose >= 1.
     if (verbose < 1) {
       err <- try(withCallingHandlers(
@@ -2521,7 +2525,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   allCapturedMsgs <- character(0)
   ## Only capture when we're suppressing console output (verbose < 1). At
   ## verbose >= 1 a no-op calling handler in cli's condition chain breaks
-  ## cli's dynamic redraw — every progress tick spews as a fresh line. The
+  ## cli's dynamic redraw -- every progress tick spews as a fresh line. The
   ## downstream parser (extractBuildFailures, pakBuildFailReason) gets less
   ## detail at verbose >= 1, but the user already saw failures on console.
   capturePak <- function(expr) {

@@ -5,8 +5,8 @@ utils::globalVariables(c(
   "fullGit", "github", "groupCRANtogether", "groupCRANtogetherChange",
   "groupCRANtogetherDif", "hasVersionSpec", "i.neededFiles",
   "inequality", "installFrom", "installFromFac", "installOrder",
-  "installResult", "isGitPkg", "keep", "keep2", "lastRow", "localFileName",
-  "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
+  "installResult", "isGitPkg", "keep", "keep2", "lastRow", "loadedSufficient",
+  "localFileName", "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
   "needLaterDate", "nextRow", "Package", "packageFullName", "repoLocation",
   "RepoWBranch", "tmpOrder", "type", "version", "VersionFromPV", "violations"
 ))

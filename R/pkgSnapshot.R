@@ -72,7 +72,7 @@
 #'     change, and Rcpp's `class_::constructor<>` template-arity limit are
 #'     each pattern-matched and reported with a "bump <pkg>" suggestion.
 #'   }
-#'   \item{Mac toolchain — `~/.R/Makevars`}{
+#'   \item{Mac toolchain -- `~/.R/Makevars`}{
 #'     R's default compile flags only search `/opt/R/arm64/include`. To pick
 #'     up Homebrew headers (libjpeg, glpk, freetype, etc.), add to
 #'     `~/.R/Makevars`:
@@ -92,7 +92,7 @@
 #'   \item{Pak's `local::` is source-only}{
 #'     Confirmed empirically that pak's `pkg_install("local::<file>")`
 #'     rejects binary tarballs (`.tgz` / `.zip` content) with
-#'     "Platform mismatch" — even when the binary is for the current
+#'     "Platform mismatch" -- even when the binary is for the current
 #'     platform. The hybrid stage installs binaries via
 #'     `install.packages(type = "binary")` BEFORE pak runs, so pak only
 #'     sees source refs.
@@ -112,15 +112,15 @@
 #'   \item{`Require.snapshotInstallerUsePPM`}{TRUE (default) to prepend a PPM
 #'     binary repo. PPM serves Mac binaries by content-negotiating the
 #'     `R/<version>` User-Agent.}
-#'   \item{`Require.snapshotInstallerHybrid`}{TRUE (default) — pre-install
+#'   \item{`Require.snapshotInstallerHybrid`}{TRUE (default) -- pre-install
 #'     cache binaries via `install.packages(type = "binary")` before pak.}
-#'   \item{`Require.snapshotInstallerBumpOnFail`}{TRUE (default) — walk newer
+#'   \item{`Require.snapshotInstallerBumpOnFail`}{TRUE (default) -- walk newer
 #'     versions for refs that fail at the pin. FALSE for strict
 #'     reproducibility.}
 #'   \item{`Require.snapshotInstallerKnownFails`}{character vector of pkg
 #'     names to skip in bump-retry (e.g. environment-dependent refs whose
 #'     newer versions also won't help).}
-#'   \item{`Require.snapshotInstallerPakSilent`}{FALSE (default) — pak's
+#'   \item{`Require.snapshotInstallerPakSilent`}{FALSE (default) -- pak's
 #'     resolver output reaches the user.}
 #'   \item{`Require.snapshotDownloadAttempts`}{Retry count for libcurl-multi
 #'     downloads. Default 4.}
@@ -349,7 +349,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
                                               verbose = getOption("Require.verbose", 1)) {
   pkgs <- as.data.table(snapshot)
   ## "R" is a snapshot row recording the required R version, not a real
-  ## package — exclude it alongside base packages so the installer doesn't
+  ## package -- exclude it alongside base packages so the installer doesn't
   ## try to "install R" (and so the diagnostic doesn't report it missing).
   pkgs <- pkgs[!Package %in% c("R", .basePkgs)]
   if (!nrow(pkgs)) {
@@ -366,7 +366,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## Cache the just-built binaries in pkgcache. Registered via on.exit
   ## so an interrupted run (Ctrl-C during compile, error mid-install,
   ## pak crash, etc.) still saves whatever binaries DID land in
-  ## destLib — partial progress accumulates across restarts.
+  ## destLib -- partial progress accumulates across restarts.
   ##
   ## Each installed package directory under destLib IS already a binary
   ## (libs/.so compiled, R/ byte-compiled, Meta/Rd.rds, DESCRIPTION).
@@ -388,7 +388,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     if (!length(installedSnapshotPkgs)) return(invisible())
     rverShort <- paste0(R.version$major, ".",
                         strsplit(R.version$minor, "\\.")[[1]][1])
-    ## binRelpath is computed PER-PACKAGE inside the loop below — it
+    ## binRelpath is computed PER-PACKAGE inside the loop below -- it
     ## must include the file's basename, otherwise every call to
     ## pkg_cache_add_file() overwrites the same single file at
     ## <cache>/<binRelpath>, leaving the cache index full of rows that
@@ -442,7 +442,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       fakeUrl <- paste0("require-snapshot-bin://",
                         R.version$platform, "/", rverShort, "/",
                         p, "_", ver, ".tgz")
-      ## relpath MUST include the filename — otherwise every add
+      ## relpath MUST include the filename -- otherwise every add
       ## overwrites the same single file (see comment at the top of
       ## this function). Compose per-package.
       binRelpath <- file.path("Require/snapshot/bin",
@@ -592,10 +592,10 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## destPath naming: pak's pkgdepends parses the package version out of
   ## the FILE NAME (`<pkg>_<version>.tar.gz`) and validates it against
   ## DESCRIPTION's Version field. If the snapshot row has a Version pin
-  ## (which it usually does — even GH rows have it for readability),
+  ## (which it usually does -- even GH rows have it for readability),
   ## use that. Falling back to the SHA-prefix for unversioned GH refs
   ## leaves us with `visualTest_9b835a7.tar.gz` -> filename version
-  ## "9b835a7" != DESCRIPTION's "1.0.0" → pak emits the misleading
+  ## "9b835a7" != DESCRIPTION's "1.0.0" -> pak emits the misleading
   ## "Line starting 'visualTest/DESCRIPTI ...' is malformed!" error.
   destVersion <- ifelse(!is.na(pkgs$Version) & nzchar(pkgs$Version),
                         pkgs$Version,
@@ -605,7 +605,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
 
   ## Parallel multi-pass downloader. Each pass: take the next candidate URL
   ## for every still-missing ref and pass them all to one libcurl multi call.
-  ## libcurl multi can intermittently drop bytes mid-stream — the file ends
+  ## libcurl multi can intermittently drop bytes mid-stream -- the file ends
   ## up with a valid `1f 8b` gzip header and even a complete tar header
   ## section (so `untar(list = TRUE)` happily lists files), but the gzip
   ## stream is truncated below the headers. pak's pkgdepends catches this
@@ -629,7 +629,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
 
   ## Validate that a cached tarball actually contains the package we expect.
-  ## pkgcache entries can be wrong/stale — we've seen entries indexed under
+  ## pkgcache entries can be wrong/stale -- we've seen entries indexed under
   ## (package = "fastdigest", version = "0.6-3") whose actual file content
   ## was a `pscl 1.5.9` tarball. Without this check, we'd accept the
   ## mismatch, blindly rename its inner dir to "fastdigest", run R CMD
@@ -639,7 +639,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## `tar: fastdigest/DESCRIPTION: Not found in archive`.
   ##
   ## Cheap check: tar list the file, look for a `<dir>/DESCRIPTION` entry
-  ## (any top-level dir is OK — it'll get renamed in the repack step),
+  ## (any top-level dir is OK -- it'll get renamed in the repack step),
   ## then read just that DESCRIPTION via untar(files = ...) and check the
   ## Package: field. If mismatch, the cache hit is corrupt and the caller
   ## should skip it (re-download or use a different cache entry).
@@ -671,7 +671,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
 
   ## quiet = TRUE is mandatory for libcurl-multi to actually run downloads in
   ## parallel. With quiet = FALSE, R serializes the URLs through libcurl one
-  ## at a time so it can attribute progress lines to individual files —
+  ## at a time so it can attribute progress lines to individual files --
   ## defeating the whole point of the multi handle. Per-file progress is
   ## useless inside a 378-URL batch anyway; we print one "Downloading N
   ## tarballs" announcement above and that's all the user needs.
@@ -679,8 +679,8 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## Chunk the batch: libcurl multi opens a socket per URL. macOS's default
   ## file-descriptor limit is ~256, so a 378-URL single multi call exhausts
   ## the limit and fails *all* downloads silently (the user's symptom: 4
-  ## retries each report "for 378 ref(s)" — zero succeeded). Linux's higher
-  ## default (≥1024) masks this. Chunking to 50 URLs per multi call keeps
+  ## retries each report "for 378 ref(s)" -- zero succeeded). Linux's higher
+  ## default (>=1024) masks this. Chunking to 50 URLs per multi call keeps
   ## us comfortably under any platform's FD limit while preserving
   ## meaningful parallelism. Configurable via Require.snapshotDownloadChunk.
   chunkSize <- max(1L, as.integer(getOption(
@@ -710,13 +710,13 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## Track our-platform binary hits separately for the binary-first
   ## hybrid pre-install. We can't feed binaries to pak via local:: refs
   ## (proven empirically: pak rejects those as "Platform mismatch"), but
-  ## install.packages(type=binary) handles them fine — and pre-installing
+  ## install.packages(type=binary) handles them fine -- and pre-installing
   ## binaries skips compilation entirely for the matching refs and
   ## reduces pak's parallel-build workload (where pak is fragile).
   binaryHits <- rep(NA_character_, nrow(pkgs))
   cacheList <- NULL
   ## Eviction list: URLs (or fullpaths when URL is NA) of cache entries
-  ## that fail validation during pre-filter — fullpath missing on disk,
+  ## that fail validation during pre-filter -- fullpath missing on disk,
   ## tarball corrupt by gzip-t, or DESCRIPTION's Package field doesn't
   ## match what the index claims. Without eviction these rotten entries
   ## persist across runs and force the same 6 packages to re-download
@@ -731,7 +731,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     ## Bulk-evict legacy entries whose `path` is exactly "Require/snapshot"
     ## (no trailing filename). These are residue from a now-fixed bug where
     ## `pkg_cache_add_file(relpath = "Require/snapshot")` was called
-    ## without including the filename — every add silently overwrote the
+    ## without including the filename -- every add silently overwrote the
     ## same single file at <cache>/Require/snapshot, leaving an index
     ## entry per package pointing at the same fullpath. Even after we
     ## fixed relpath, those legacy index rows persist and confuse pak's
@@ -741,7 +741,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       ## Match BOTH legacy patterns:
       ##   "Require/snapshot"                                 (source bug)
       ##   "Require/snapshot/bin/<platform>/<rverShort>"      (binary bug
-      ##      fixed in same session — cacheBuiltBinaries had identical
+      ##      fixed in same session -- cacheBuiltBinaries had identical
       ##      relpath-without-filename issue, producing 142 rows aliasing
       ##      the same directory-shaped fullpath)
       legacyIdx <- !is.na(cacheList$path) & (
@@ -754,7 +754,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
           messageVerbose("Evicting ", legacyN,
                          " legacy 'Require/snapshot' cache entries ",
                          "(filename-stripped relpath, all aliasing the ",
-                         "same single file — pre-fix residue)",
+                         "same single file -- pre-fix residue)",
                          verbose = verbose, verboseLevel = 1)
         legacyRows <- cacheList[legacyIdx, , drop = FALSE]
         for (i in seq_len(nrow(legacyRows))) {
@@ -816,7 +816,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
         ## Use `sub()` (vectorised, returns same-length output as input)
         ## instead of `regmatches(path, regexpr(...))` which DROPS
         ## non-matching elements and leaves us with mismatched-length
-        ## logical masks that R recycles — the source of 299 spurious
+        ## logical masks that R recycles -- the source of 299 spurious
         ## "longer object length is not a multiple..." warnings on
         ## every snapshot install. With `sub`: when the pattern doesn't
         ## match, the input element passes through unchanged; pair with
@@ -842,7 +842,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
           ## GH refs match BOTH (a) URL containing the GH SHA needle
           ## (catches the original GH archive download cached by pak)
           ## AND (b) package + version (catches built-binary entries
-          ## added by our cacheBuiltBinaries — those have URL like
+          ## added by our cacheBuiltBinaries -- those have URL like
           ## `require-snapshot-bin://...` with no GH needle but populated
           ## package/version columns). Without (b), every run rebuilds
           ## visualTest from source even though the binary IS cached.
@@ -865,12 +865,12 @@ installSnapshotViaInstallPackages <- function(snapshot,
         if (!nrow(hit)) next
         ## Filter: pak's `local::<file>` ref handling is SOURCE-ONLY.
         ## Binaries (any platform, any rversion) trigger "Platform
-        ## mismatch" in pak's resolver — confirmed empirically with a
+        ## mismatch" in pak's resolver -- confirmed empirically with a
         ## minimal reproducer. So drop binary entries from the local::
         ## pipeline; only source tarballs feed local:: refs cleanly.
         ##
         ## BUT: our-platform R-version-matching binaries are useful for
-        ## the install.packages(type=binary) hybrid pre-install path —
+        ## the install.packages(type=binary) hybrid pre-install path --
         ## those skip compilation entirely. Track them separately in
         ## `binaryHits[i]`. The hybrid kicks in below, before pak runs.
         ##
@@ -899,7 +899,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
         if (any(ourBin)) {
           ## Pick the first usable our-platform binary. Validate it the
           ## same way as source hits (gzip-t + DESCRIPTION Package match).
-          ## Queue rotten ones for eviction so future runs hit cleanly —
+          ## Queue rotten ones for eviction so future runs hit cleanly --
           ## ~138 cache entries empirically had pkg-name mismatches (the
           ## tarball's DESCRIPTION names a different package than the
           ## index claims), residue from older buggy adds.
@@ -1049,7 +1049,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       "  ... downloaded %d/%d in %.1fs (%.1fs/pkg)%s",
       gotN, origNeeded, dlSecs,
       if (gotN > 0L) dlSecs / gotN else 0,
-      if (length(needed)) paste0(" — ", length(needed),
+      if (length(needed)) paste0(" -- ", length(needed),
                                   " still missing, trying archived versions next")
       else ""),
       verbose = verbose, verboseLevel = 1)
@@ -1075,7 +1075,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       hit <- FALSE
       for (u in tryUrls) {
         ## quiet = TRUE: per-URL "trying URL" spam at verbose = 2 doesn't
-        ## help the user — we already log per-package substitution status
+        ## help the user -- we already log per-package substitution status
         ## via the messageVerbose calls below.
         suppressWarnings(tryCatch(
           utils::download.file(u, newDest, method = "libcurl",
@@ -1129,12 +1129,12 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ##   1. Start with a `pax_global_header` tar entry (git's metadata).
   ##      pak's pkgdepends tar reader chokes:
   ##        "! Line starting 'pax_global_header ...' is malformed!"
-  ##      → pak refuses the whole install plan (all-or-nothing).
+  ##      -> pak refuses the whole install plan (all-or-nothing).
   ##   2. Top-level dir is `<repo>-<sha>/` (or similar) not `<pkg>/`,
   ##      so install.packages via a file:// repo path fails:
   ##        `tar: <pkg>/DESCRIPTION not found in archive`.
   ##
-  ## Affected packages aren't always GH-coord rows — fastdigest, knn,
+  ## Affected packages aren't always GH-coord rows -- fastdigest, knn,
   ## spatstat.core etc. came from CRAN-archive style sources but their
   ## tarballs were also git-archive built. So we DETECT (any tarball
   ## whose tar listing doesn't include `<pkg>/DESCRIPTION` at top) and
@@ -1144,7 +1144,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## We also rename to `<pkg>_<DescriptionVersion>.tar.gz` because
   ## pak's resolver validates filename version against DESCRIPTION
   ## Version and emits the misleading "Line starting '<pkg>/DESCRIPTI
-  ## ...' is malformed!" on mismatch — actually a version-mismatch error.
+  ## ...' is malformed!" on mismatch -- actually a version-mismatch error.
   if (nzchar(Sys.which("tar"))) {
     needsRepack <- vapply(seq_len(nrow(pkgs)), function(i) {
       if (!file.exists(destPaths[i]) || !isGoodTarball(destPaths[i]))
@@ -1260,7 +1260,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
           "Repackaged ", repacked, "/", length(needIdxs),
           " tarball(s) with non-standard top-level dir via R CMD build ",
           "(", nrow(pkgs) - length(needIdxs), " tarballs already had ",
-          "<pkg>/DESCRIPTION top-level — no repack needed). ",
+          "<pkg>/DESCRIPTION top-level -- no repack needed). ",
           "Repacking is required for pak's resolver and install.packages's ",
           "file:// repo path.",
           verbose = verbose, verboseLevel = 1)
@@ -1275,11 +1275,11 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## build had cachedHits[i] reset to FALSE, so they get re-added here.
   ##
   ## CRITICAL: relpath must be the FULL relative path INCLUDING filename.
-  ## pkgcache's add() copies the file to file.path(<cache>, relpath) — so
+  ## pkgcache's add() copies the file to file.path(<cache>, relpath) -- so
   ## passing "Require/snapshot" as relpath (without filename) means every
   ## call overwrites the same single file at <cache>/Require/snapshot.
   ## That's how this cache accumulated corrupt entries (e.g. fastdigest's
-  ## index row pointing at a file whose DESCRIPTION says pscl 1.5.9 — the
+  ## index row pointing at a file whose DESCRIPTION says pscl 1.5.9 -- the
   ## "last writer wins" produces silent corruption). Always include
   ## basename(destPaths[i]) so each ref gets its own file.
   ## Best-effort: a failed cache_add should NEVER block the install.
@@ -1333,7 +1333,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## for Imports/Depends/LinkingTo version constraints that the
   ## snapshot's other pins don't satisfy. The classic failure mode for
   ## a manually-curated snapshot is "we bumped servr but not its
-  ## dependency xfun" — pak then can't solve and refuses everything.
+  ## dependency xfun" -- pak then can't solve and refuses everything.
   ## install.packages is permissive about this and installs anyway, but
   ## pak is strict, so a single missed bump blocks the whole snapshot.
   ## Surface these conflicts up front so the user can patch the
@@ -1422,7 +1422,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## as the closed graph for transitive deps. Even with all 378 refs
   ## passed in, pak's pkgdepends queries CRAN/PPM for each transitive
   ## dependency name and may pick a NEWER version (e.g. snapshot pins
-  ## ggplot2_3.4.4 but PPM has 4.0.3 → pak tries to fetch 4.0.3 instead
+  ## ggplot2_3.4.4 but PPM has 4.0.3 -> pak tries to fetch 4.0.3 instead
   ## of using our local 3.4.4). When transitively-needed packages have
   ## "future" pin versions on PPM that pak considers but can't actually
   ## fetch (URL exists but version mismatch with another constraint),
@@ -1435,9 +1435,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## reliably for closed snapshots even when pak refuses.
   ##
   ## Diagnosed pak failures we DID fix (in this commit history):
-  ##   - visualTest GH archive's pax_global_header → repackage via R
+  ##   - visualTest GH archive's pax_global_header -> repackage via R
   ##     CMD build (above)
-  ##   - GH tarball filename version != DESCRIPTION Version → rename
+  ##   - GH tarball filename version != DESCRIPTION Version -> rename
   ##     destPaths[i] to <pkg>_<DescriptionVersion>.tar.gz (above)
   ## Remaining "pak refused" is the version-resolver quirk noted above
   ## and is fundamental to how pak's pkgdepends works; the install.packages
@@ -1450,7 +1450,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## install.packages(type=binary) BEFORE pak. This:
   ##   1) skips compilation entirely for those refs (fast),
   ##   2) reduces pak's parallel-build workload (pak aborts the whole
-  ##      install on a single build failure — fewer compiles in pak's
+  ##      install on a single build failure -- fewer compiles in pak's
   ##      hands = fewer chances to hit that abort),
   ##   3) populates destLib so pak's `upgrade = FALSE` short-circuits
   ##      those refs as "already installed at requested version".
@@ -1459,12 +1459,12 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## NOTE on why we don't pass `cran::pkg@version` refs to pak instead:
   ## an experiment (see commit notes & tag pre-pak-url-refactor) confirmed
   ## that for archived-version refs (e.g. arrow@23.0.1.1, where 24.0.0 is
-  ## current), pak's resolver only constructs SOURCE-Archive URLs — it
+  ## current), pak's resolver only constructs SOURCE-Archive URLs -- it
   ## never tries a binary URL because CRAN never builds binaries for
   ## non-current versions. So even with our binary in pkgcache, pak would
   ## rebuild from source. Snapshot installs are dominated by archived
   ## versions, so the install.packages(type=binary) hybrid is what makes
-  ## binaries usable at all — it's not redundant. local:: refs play the
+  ## binaries usable at all -- it's not redundant. local:: refs play the
   ## same role for source: they bypass pak's resolver (which would also
   ## attempt a fresh download from the Archive URL).
   preInstalled <- character()
@@ -1540,9 +1540,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
 
   ## Exclude already-installed-at-target-version refs from localRefs.
   ## pak treats `local::<file>` as an explicit install request and
-  ## reinstalls regardless of destLib state — even when the installed
+  ## reinstalls regardless of destLib state -- even when the installed
   ## version matches the snapshot pin (the plan shows entries like
-  ## `+ DEoptim 2.2-8 → 2.2-8`, "updating" to itself, which is wasted
+  ## `+ DEoptim 2.2-8 -> 2.2-8`, "updating" to itself, which is wasted
   ## compile time). Trim these so pak only resolves+installs what's
   ## genuinely missing or wrong-version.
   ipForRefs <- tryCatch(as.data.frame(
@@ -1558,8 +1558,8 @@ installSnapshotViaInstallPackages <- function(snapshot,
       ## hybrid binary pre-install (install.packages(type=binary)) just
       ## unpacks the cached .tgz, which doesn't write remotes-style SHA
       ## fields. Without the fallback, every GH ref appears "not at
-      ## target" after binary install → pak reinstalls it on every run
-      ## ("+ visualTest 1.0.0 → 1.0.0" update-to-itself churn).
+      ## target" after binary install -> pak reinstalls it on every run
+      ## ("+ visualTest 1.0.0 -> 1.0.0" update-to-itself churn).
       f <- file.path(destLib, pkgs$Package[i], "DESCRIPTION")
       if (file.exists(f)) {
         dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha","GithubSHA1")),
@@ -1596,7 +1596,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       bad <- pakRefIdx[badPath]
       messageVerbose(
         "Dropping ", length(bad),
-        " ref(s) from pak's input — destPath empty/missing for: ",
+        " ref(s) from pak's input -- destPath empty/missing for: ",
         paste0(pkgs$Package[bad], "@",
                ifelse(is.na(pkgs$Version[bad]), "?", pkgs$Version[bad]),
                " (path='", destPaths[bad], "')",
@@ -1609,7 +1609,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ##
   ## Why not canonical pak refs (cran::pkg@version, url::URL)? See the
   ## "NOTE on why we don't pass cran:: refs" comment above the hybrid
-  ## block — measured 18x slower because pak's resolver rebuilds archived
+  ## block -- measured 18x slower because pak's resolver rebuilds archived
   ## versions from source even when the binary is cached. local:: bypasses
   ## the resolver entirely.
   ##
@@ -1663,7 +1663,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       })
     } else {
       ## Capture pak's stdout/stderr to a tempfile in parallel with letting
-      ## it print to the console — informational lines (resolver progress,
+      ## it print to the console -- informational lines (resolver progress,
       ## "Will install N", first compile errors) reach the user normally,
       ## AND we get a copy to surface as `pakLogTail` if pak refuses with
       ## a wrapper-only error like "! error in pak subprocess".
@@ -1684,7 +1684,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     ## style chained errors) to surface the inner cause. pak versions
     ## differ in API: `pak::last_error()` was added in 0.10+; older 0.9
     ## doesn't export it. The condition chain on `pakErr` is independent
-    ## of that — it's set by the `chain_error()` call inside pak.
+    ## of that -- it's set by the `chain_error()` call inside pak.
     if (!is.null(pakErr)) {
       cur <- pakErr
       depth <- 0L
@@ -1701,10 +1701,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
         depth <- depth + 1L
       }
       ## Newer pak (>= 0.10) adds last_error() / last_error_trace().
-      ## Try them defensively — they often surface a slightly different
+      ## Try them defensively -- they often surface a slightly different
       ## (more structured) view of the same error than the chain above.
       if ("last_error" %in% getNamespaceExports("pak")) {
-        le <- tryCatch(pak::last_error(), error = function(e) NULL)
+        ## getNamespace lookup instead of pak::last_error: older pak (<0.10)
+        ## does not export last_error, which R CMD check would flag as a
+        ## missing object. The getNamespaceExports gate above already
+        ## ensures this branch only runs when the symbol exists.
+        pakLastError <- getNamespace("pak")[["last_error"]]
+        le <- tryCatch(pakLastError(), error = function(e) NULL)
         if (!is.null(le)) {
           msg <- tryCatch(conditionMessage(le), error = function(e) "")
           if (nzchar(msg))
@@ -1732,7 +1737,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
         pakPlanInfo <- c("pkg_deps probe (resolver-only) also errored:",
                          strsplit(conditionMessage(probeRes), "\n",
                                   fixed = TRUE)[[1]])
-        ## Walk that probe's chain too — same pattern.
+        ## Walk that probe's chain too -- same pattern.
         cur <- probeRes$parent
         depth <- 0L
         while (!is.null(cur) && depth < 6L) {
@@ -1749,7 +1754,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
         }
       } else if (is.data.frame(probeRes)) {
         pakPlanInfo <- paste0("pkg_deps probe (resolver-only) succeeded with ",
-                              nrow(probeRes), " refs — failure is at install ",
+                              nrow(probeRes), " refs -- failure is at install ",
                               "stage, not resolve. Inspect the per-package ",
                               "log tail above for the actual cause.")
       }
@@ -1763,7 +1768,12 @@ installSnapshotViaInstallPackages <- function(snapshot,
         pakLog <- cli::ansi_strip(pakLog)
       pakLog <- gsub("\r", "", pakLog)
       pakLog <- pakLog[nzchar(trimws(pakLog))]
-      pakLog <- pakLog[!grepl("^[[:space:]]*[✨⚖→✖ℹ✔⠇⠈-⠏⢨⢹⣨⣩]", pakLog)]
+      ## Strip pak's spinner / glyph lines (sparkles, scales, arrows, ticks,
+      ## braille spinners). \u escapes keep this file ASCII while the runtime
+      ## regex still matches the original UTF-8 glyphs from pak's output.
+      pakLog <- pakLog[!grepl(
+        "^[[:space:]]*[\u2728\u2696\u2192\u2716\u2139\u2714\u2807\u2808-\u280F\u28A8\u28B9\u28E8\u28E9]",
+        pakLog)]
       pakLog <- pakLog[!grepl(
         "^[[:space:]]*(Found|Resolving|Updating metadata|Downloading|Will install|Will download|Getting|Installing|Got |Installed |Will update|Checking installed|Checking for [0-9]+)",
         pakLog)]
@@ -1814,7 +1824,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     reposURL <- paste0("file://", repoDir)
     ## Skip refs already installed at the snapshot's pinned version.
     ## install.packages with `pkgs$Package` would otherwise "update" them
-    ## from the file:// repo's source tarball — which on packages with
+    ## from the file:// repo's source tarball -- which on packages with
     ## SystemRequirements (cmake, nlopt, etc.) means a needless source
     ## compile that fails when those system libs aren't installed. The
     ## hybrid pre-install above already put the right binary in destLib;
@@ -1845,7 +1855,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
                    verbose = verbose, verboseLevel = 1)
   } else {
-    ## pak isn't installed at all — go directly to install.packages.
+    ## pak isn't installed at all -- go directly to install.packages.
     ## Repackaged GH tarballs already have <pkg>/ at top level, so
     ## one file:// repo handles everything.
     repoDir <- tempfile2("snapInstall_repo_")
@@ -1891,7 +1901,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       read.dcf(descFile, fields = c("Depends", "Imports", "LinkingTo")),
       error = function(e) NULL)
     if (is.null(desc) || !nrow(desc)) next
-    ## Filter NA fields BEFORE pasting — read.dcf returns NA for missing
+    ## Filter NA fields BEFORE pasting -- read.dcf returns NA for missing
     ## fields, and `paste(unlist(c(NA, "...")), collapse=", ")` yields a
     ## literal "NA, ..." which extractPkgName then turns into a fake "NA"
     ## ref, leading to "auto-filling 1 transitive dep(s) not in snapshot:
@@ -1919,8 +1929,8 @@ installSnapshotViaInstallPackages <- function(snapshot,
     on.exit(unlink(fillOutDir, recursive = TRUE), add = TRUE)
     ## getOption("repos") here still has PPM + CRAN + any snapshot repos;
     ## the local file:// repo (if it was created in the install.packages
-    ## fallback) isn't in options(repos) — install.packages got it via the
-    ## `repos` arg only — so we don't need to filter.
+    ## fallback) isn't in options(repos) -- install.packages got it via the
+    ## `repos` arg only -- so we don't need to filter.
     suppressWarnings(utils::install.packages(
       neededDeps, lib = destLib, type = "source",
       dependencies = NA, Ncpus = Ncpus,
@@ -1950,7 +1960,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## sticks wins, with the substitution recorded in the diagnostic.
   ##
   ## Bumping moves AWAY from the snapshot's exact pin, which violates
-  ## the reproducibility goal — gate behind an option, default on, but
+  ## the reproducibility goal -- gate behind an option, default on, but
   ## clearly surfaced in the report so users see the drift.
   bumpedSubst <- character()
   if (isTRUE(getOption("Require.snapshotInstallerBumpOnFail", TRUE))) {
@@ -1963,7 +1973,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
     stillMissing <- setdiff(expectedNow, ipNow)
     ## Don't bother bumping refs that the user has flagged as
     ## environment-dependent via Require.snapshotInstallerKnownFails
-    ## (matches the test's `knownFails` semantically — they're
+    ## (matches the test's `knownFails` semantically -- they're
     ## system-lib-version-dependent, bumping won't help).
     knownFailsOpt <- getOption("Require.snapshotInstallerKnownFails",
                                character())
@@ -1989,8 +1999,8 @@ installSnapshotViaInstallPackages <- function(snapshot,
   }
 
   ## (Binary caching is now registered via on.exit earlier in this
-  ## function so partial installs — pak crash, install.packages
-  ## interrupt, error in auto-fill — still get the binaries that DID
+  ## function so partial installs -- pak crash, install.packages
+  ## interrupt, error in auto-fill -- still get the binaries that DID
   ## land in destLib cached for next time.)
 
   ## Self-diagnose: cross-check what's actually installed in destLib against
@@ -2021,7 +2031,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
 ## classifyCompileFailure: scan the captured `R CMD INSTALL` output of a
 ## failed compile and return a specific (reason, fix) pair when the error
 ## matches a known pattern. Pak's diagnostic showed terse messages like
-## "compilation failed" — useless for the user. The actual cause is
+## "compilation failed" -- useless for the user. The actual cause is
 ## usually the FIRST clang error, which encodes whether the issue is:
 ##   - a missing system header (jpeglib.h, glpk.h, gdal.h, ...)
 ##   - a missing link-time library (-lX not found)
@@ -2033,7 +2043,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
 classifyCompileFailure <- function(txt, pkg) {
   txtNonEmpty <- txt[nzchar(txt)]
   ## First compile error is usually more informative than the last 6
-  ## lines — the tail is often "make: *** Error 1" cleanup.
+  ## lines -- the tail is often "make: *** Error 1" cleanup.
   errIdx <- grep("error:|fatal error:", txt)
   firstErr <- if (length(errIdx)) txt[errIdx[1]] else ""
   ## Window around the first error so the user sees what code triggered
@@ -2063,7 +2073,7 @@ classifyCompileFailure <- function(txt, pkg) {
       "freetype.h"  = "brew install freetype",
       "sodium.h"    = "brew install libsodium",
       "archive.h"   = "brew install libarchive",
-      "secret.h"    = "brew install libsecret (Linux) — macOS keychain is built-in",
+      "secret.h"    = "brew install libsecret (Linux) -- macOS keychain is built-in",
       "magick/api.h" = "brew install imagemagick",
       "MagickWand/MagickWand.h" = "brew install imagemagick",
       "openssl/ssl.h" = "brew install openssl",
@@ -2101,7 +2111,7 @@ classifyCompileFailure <- function(txt, pkg) {
         "~/.R/Makevars (or equivalent). Try: brew install ", lib)))
   }
 
-  ## Pattern: Rcpp class_::constructor<> template arity exceeded —
+  ## Pattern: Rcpp class_::constructor<> template arity exceeded --
   ## terra 1.8+ uses 10-arg constructor, Rcpp <= 1.0.13 only supports up
   ## to 7. Bump Rcpp.
   if (any(grepl("no matching member function for call to 'constructor'",
@@ -2120,7 +2130,7 @@ classifyCompileFailure <- function(txt, pkg) {
 
   ## Pattern: GDAL >= 3.10 made OGRLayer::GetSpatialRef() return
   ## const OGRSpatialReference*. Older sf / terra source code stores it
-  ## in a non-const pointer → compile error.
+  ## in a non-const pointer -> compile error.
   if (any(grepl(
     "cannot initialize a variable of type 'OGRSpatialReference \\*' with an rvalue of type 'const OGRSpatialReference \\*'",
     txt))) {
@@ -2129,7 +2139,7 @@ classifyCompileFailure <- function(txt, pkg) {
         "'s source uses non-const OGRSpatialReference* but GDAL >= 3.10 ",
         "returns const (ABI break)"),
       fix = paste0(
-        "bump ", pkg, " to a version released after GDAL 3.10 (Nov 2024) — ",
+        "bump ", pkg, " to a version released after GDAL 3.10 (Nov 2024) -- ",
         "e.g. terra >= 1.7-83 or sf >= 1.0-17")))
   }
 
@@ -2151,11 +2161,11 @@ classifyCompileFailure <- function(txt, pkg) {
   if (any(grepl("zlib\\.h.*file not found", txt))) {
     return(list(
       reason = "missing zlib development headers",
-      fix = "Linux: apt install zlib1g-dev / yum install zlib-devel; macOS: zlib is normally bundled — check Xcode CLT install"))
+      fix = "Linux: apt install zlib1g-dev / yum install zlib-devel; macOS: zlib is normally bundled -- check Xcode CLT install"))
   }
 
   ## Pattern: post-compile load test failure with "symbol not found in
-  ## flat namespace" — the package's .so links against a symbol that
+  ## flat namespace" -- the package's .so links against a symbol that
   ## the loaded C++ library doesn't export. Common with arrow-style
   ## packages that bundle their own C++ lib but fall back to a system
   ## one (or vice versa) at link time. Compile succeeded but dyn.load
@@ -2276,7 +2286,7 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
 
     ## namespace 'X' V is being loaded, but >= W is required
     m <- regmatches(txt, regexec(
-      "namespace [‘']?(.+?)[’']? ([0-9.\\-]+) is being loaded, but >=? ([0-9.\\-]+) is required",
+      "namespace ['']?(.+?)['']? ([0-9.\\-]+) is being loaded, but >=? ([0-9.\\-]+) is required",
       txt))
     m <- m[lengths(m) > 0]
     if (length(m)) {
@@ -2292,7 +2302,7 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
 
     ## ERROR: dependency 'X' is not available for package 'Y'
     m <- regmatches(txt, regexec(
-      "ERROR: dependency [‘']?(.+?)[’']? is not available for package",
+      "ERROR: dependency ['']?(.+?)['']? is not available for package",
       txt))
     m <- m[lengths(m) > 0]
     if (length(m)) {
@@ -2325,7 +2335,7 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
     }
 
     ## Fallthrough: missing without a recognised pattern. The most common
-    ## cause is a cascade — install.packages refused to even attempt the
+    ## cause is a cascade -- install.packages refused to even attempt the
     ## install because a hard dep already failed, so no .out file exists.
     ## Walk the snapshot's declared Depends/Imports/LinkingTo for this pkg
     ## and see which of them are in the failure set. If any are, this isn't
@@ -2436,15 +2446,15 @@ diagnoseSnapshotInstallFailures <- function(snapshot, destLib,
 ##      version on PPM/CRAN (from `available.packages()`) plus all
 ##      historical versions from CRAN's archive.rds. Sort ascending.
 ##   2. Filter to versions strictly newer than the snapshot's pin.
-##   3. For each candidate (lowest first → least drift), download the
-##      source tarball directly (PPM → CRAN → CRAN/Archive), then
+##   3. For each candidate (lowest first -> least drift), download the
+##      source tarball directly (PPM -> CRAN -> CRAN/Archive), then
 ##      `install.packages(<file>, repos = NULL, dependencies = NA)`.
 ##      `dependencies = NA` so install.packages backfills any new
 ##      dep that the bumped version requires (and that other snapshot
 ##      pins don't provide).
 ##   4. First success wins. Record the substitution and continue.
 ##
-## Bound the search: cap at 20 candidate versions per package — past
+## Bound the search: cap at 20 candidate versions per package -- past
 ## that the drift is too large to call a "snapshot install" anymore.
 bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
                                 repos = getOption("repos"),
@@ -2457,7 +2467,7 @@ bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
   ## because that dep was missing (e.g., disk.frame@0.8.3 fails when
   ## arrow is missing, succeeds once arrow is installed). Loop until a
   ## pass makes no progress, capped at maxIters. Per pass, each pkg
-  ## tries its snapshot pin FIRST (cheap, no drift) — only walks newer
+  ## tries its snapshot pin FIRST (cheap, no drift) -- only walks newer
   ## versions if the pin still fails.
   remaining <- stillMissing
   for (iter in seq_len(maxIters)) {
@@ -2496,11 +2506,11 @@ bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
         if (tryInstallByUrl(pkg = pkg, version = v, destLib = destLib,
                             repos = repos, verbose = verbose)) {
           if (!is.na(snapVer) && identical(v, snapVer)) {
-            ## Ref installed at the snapshot pin (no drift) — this
+            ## Ref installed at the snapshot pin (no drift) -- this
             ## happens when an earlier bump unblocked its deps. Don't
             ## record as a "bump" since version matches the snapshot.
             if (verbose >= 1)
-              messageVerbose("    ✓ ", pkg, " ", v,
+              messageVerbose("    (OK) ", pkg, " ", v,
                              " installed at snapshot pin (deps resolved)",
                              verbose = verbose, verboseLevel = 1)
           } else {
@@ -2508,7 +2518,7 @@ bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
                         sprintf("%s: %s -> %s (bumped)",
                                 pkg, snapVer, v))
             if (verbose >= 1)
-              messageVerbose("    ✓ ", pkg, " ", v, " installed (bumped)",
+              messageVerbose("    (OK) ", pkg, " ", v, " installed (bumped)",
                              verbose = verbose, verboseLevel = 1)
           }
           progressed <- c(progressed, pkg)
@@ -2521,7 +2531,7 @@ bumpAndRetryFailed <- function(stillMissing, snapshot, destLib,
     if (verbose >= 1 && length(remaining) && iter < maxIters)
       messageVerbose("  iter ", iter, ": ", length(progressed),
                      " recovered, ", length(remaining),
-                     " still missing — retrying (deps may be unblocked)",
+                     " still missing -- retrying (deps may be unblocked)",
                      verbose = verbose, verboseLevel = 1)
   }
   list(bumped = bumped, stillMissing = remaining)
@@ -2535,7 +2545,7 @@ listCandidateVersions <- function(pkg, repos = getOption("repos"),
   ## Current versions in any of the repos' PACKAGES indexes.
   ## Wrapped in suppressWarnings: snapshot Repository columns sometimes
   ## point at r-universe instances that don't host PACKAGES.rds (only
-  ## PACKAGES.gz / PACKAGES) — available.packages issues a 404 warning
+  ## PACKAGES.gz / PACKAGES) -- available.packages issues a 404 warning
   ## that's noise, not an error. We don't want to surface that to the
   ## user (and the test fails on unmatched warnings).
   ap <- tryCatch(
@@ -2567,7 +2577,7 @@ listCandidateVersions <- function(pkg, repos = getOption("repos"),
 ## Download <pkg>_<version>.tar.gz from PPM/CRAN/Archive (in priority
 ## order) and install via install.packages. Returns TRUE on success
 ## (DESCRIPTION lands in destLib). Best-effort: silent on download or
-## compile failure — caller decides whether to keep walking versions.
+## compile failure -- caller decides whether to keep walking versions.
 tryInstallByUrl <- function(pkg, version, destLib, repos,
                              verbose = getOption("Require.verbose", 0)) {
   tmp <- tempfile(paste0(pkg, "_", version, "_"), fileext = ".tar.gz")
@@ -2600,7 +2610,7 @@ tryInstallByUrl <- function(pkg, version, destLib, repos,
       error = function(e) FALSE,
       warning = function(w) FALSE)
     if (!isTRUE(ok)) next
-    ## Got a tarball — try to install. dependencies = NA so
+    ## Got a tarball -- try to install. dependencies = NA so
     ## install.packages pulls anything new the bumped version needs.
     tryCatch({
       suppressMessages(suppressWarnings(
