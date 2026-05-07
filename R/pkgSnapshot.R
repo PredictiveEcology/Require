@@ -1455,6 +1455,18 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ##   3) populates destLib so pak's `upgrade = FALSE` short-circuits
   ##      those refs as "already installed at requested version".
   ## Disable with options(Require.snapshotInstallerHybrid = FALSE).
+  ##
+  ## NOTE on why we don't pass `cran::pkg@version` refs to pak instead:
+  ## an experiment (see commit notes & tag pre-pak-url-refactor) confirmed
+  ## that for archived-version refs (e.g. arrow@23.0.1.1, where 24.0.0 is
+  ## current), pak's resolver only constructs SOURCE-Archive URLs — it
+  ## never tries a binary URL because CRAN never builds binaries for
+  ## non-current versions. So even with our binary in pkgcache, pak would
+  ## rebuild from source. Snapshot installs are dominated by archived
+  ## versions, so the install.packages(type=binary) hybrid is what makes
+  ## binaries usable at all — it's not redundant. local:: refs play the
+  ## same role for source: they bypass pak's resolver (which would also
+  ## attempt a fresh download from the Archive URL).
   preInstalled <- character()
   hybridOn <- isTRUE(getOption("Require.snapshotInstallerHybrid", TRUE))
   if (hybridOn) {
@@ -1593,16 +1605,21 @@ installSnapshotViaInstallPackages <- function(snapshot,
     }
     pakRefIdx <- pakRefIdx[!badPath]
   }
-  ## paste0 in R is NOT length-zero-preserving: `paste0("local::",
-  ## character(0))` returns `c("local::")` length 1, not character(0).
-  ## (R recycles the zero-length operand to "" — the max-length arg
-  ## wins.) Without the explicit empty-case guard below, pak gets a
-  ## bogus single ref "local::" with no file → spurious failure that
-  ## install.packages fallback then has to clean up.
-  localRefs <- if (length(pakRefIdx))
-                 paste0("local::", destPaths[pakRefIdx])
-               else
-                 character(0)
+  ## Build local:: refs from on-disk source tarballs.
+  ##
+  ## Why not canonical pak refs (cran::pkg@version, url::URL)? See the
+  ## "NOTE on why we don't pass cran:: refs" comment above the hybrid
+  ## block — measured 18x slower because pak's resolver rebuilds archived
+  ## versions from source even when the binary is cached. local:: bypasses
+  ## the resolver entirely.
+  ##
+  ## paste0 caveat: paste0("local::", character(0)) returns c("local::")
+  ## length 1, not character(0), because R recycles the zero-length
+  ## operand. Explicit empty-case guard below.
+  pakInputRefs <- if (length(pakRefIdx))
+                    paste0("local::", destPaths[pakRefIdx])
+                  else character(0)
+  refStrategyLabel <- "local::"
   if (verbose >= 2 && length(pakRefIdx)) {
     refLines <- vapply(pakRefIdx, function(k) {
       sprintf("  %s@%s",
@@ -1617,15 +1634,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
     messageVerbose("Excluding ", sum(alreadyAtTarget),
                    " already-installed refs from pak's input ",
                    "(pre-installed binaries + test-runner-installed); ",
-                   "passing ", length(localRefs), " to pak",
+                   "passing ", length(pakInputRefs), " to pak",
                    verbose = verbose, verboseLevel = 1)
   pakLogTail <- character()
   pakErr <- NULL
   pakDetail <- character()
   pakPlanInfo <- character()
-  if (requireNamespace("pak", quietly = TRUE) && length(localRefs)) {
-    messageVerbose("Trying pak::pkg_install with ", length(localRefs),
-                   " local:: refs, lib=", destLib,
+  if (requireNamespace("pak", quietly = TRUE) && length(pakInputRefs)) {
+    messageVerbose("Trying pak::pkg_install with ", length(pakInputRefs),
+                   " ", refStrategyLabel, " refs, lib=", destLib,
                    " (fallback: install.packages)",
                    verbose = verbose, verboseLevel = 1)
     pakT0 <- Sys.time()
@@ -1636,7 +1653,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       pakErr <- tryCatch({
         sink(pakLogCon, type = "output")
         sink(pakLogCon, type = "message")
-        pak::pkg_install(localRefs, lib = destLib,
+        pak::pkg_install(pakInputRefs, lib = destLib,
                          dependencies = NA, upgrade = FALSE, ask = FALSE)
         NULL
       }, error = function(e) e, finally = {
@@ -1651,7 +1668,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       ## AND we get a copy to surface as `pakLogTail` if pak refuses with
       ## a wrapper-only error like "! error in pak subprocess".
       pakErr <- tryCatch({
-        pak::pkg_install(localRefs, lib = destLib,
+        pak::pkg_install(pakInputRefs, lib = destLib,
                          dependencies = NA, upgrade = FALSE, ask = FALSE)
         NULL
       }, error = function(e) e)
@@ -1709,7 +1726,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
       ## Use `dependencies = NA` (Depends/Imports/LinkingTo) to match
       ## what pkg_install would resolve.
       probeRes <- tryCatch(
-        pak::pkg_deps(localRefs, dependencies = NA, upgrade = FALSE),
+        pak::pkg_deps(pakInputRefs, dependencies = NA, upgrade = FALSE),
         error = function(e) e)
       if (inherits(probeRes, "error")) {
         pakPlanInfo <- c("pkg_deps probe (resolver-only) also errored:",
