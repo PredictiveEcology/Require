@@ -1360,8 +1360,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
       if (verbose >= 1)
         messageVerbose("Hybrid pre-install: ", length(binIdx),
                        " of ", nrow(pkgs),
-                       " refs have an our-platform binary in pkgcache; ",
-                       "installing those via install.packages(type=binary) ",
+                       " refs have a cached binary matching this R session (",
+                       R.version$platform, ", R ", ourRverShort,
+                       "); installing those via install.packages(type=binary) ",
                        "to skip compilation",
                        verbose = verbose, verboseLevel = 1)
       hybridT0 <- Sys.time()
