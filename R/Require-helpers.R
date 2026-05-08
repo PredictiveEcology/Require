@@ -441,6 +441,14 @@ useLoadedIfSufficient <- function(pkgDT,
   if (!length(loaded)) return(pkgDT)
   if (!"loadedSufficient" %in% names(pkgDT))
     set(pkgDT, NULL, "loadedSufficient", FALSE)
+  # `(HEAD)` is a Require-specific pin that means "the latest commit of the
+  # branch in the ref" (e.g. `account/repo@somebranch (HEAD)` -> always fetch
+  # the tip of `somebranch`). It is not encoded in versionSpec/inequality, so
+  # the constraint check below would treat it as unconstrained and skip
+  # reinstall on whatever stale version happens to be loaded. Populate the
+  # `hasHEAD` column up front so we can keep those refs out of the
+  # already-loaded fast path.
+  pkgDT <- checkHEAD(pkgDT)
   # standAlone = TRUE means the user wants the package physically present in
   # libPaths[1]; a namespace loaded from another library does NOT satisfy that.
   effectiveLibPaths <- if (isTRUE(standAlone))
@@ -450,6 +458,10 @@ useLoadedIfSufficient <- function(pkgDT,
   for (i in candidates) {
     pkg <- pkgDT[["Package"]][i]
     if (!pkg %in% loaded) next
+    # Skip refs pinned to HEAD: a loaded namespace can never satisfy "must be
+    # the current tip of branch X" because we have no commit hash to compare.
+    # Forward to the normal install path, which lets pak fetch the tip.
+    if (isTRUE(pkgDT[[hasHEADtxt]][i])) next
     loadedVer <- tryCatch(as.character(getNamespaceVersion(pkg)),
                           error = function(e) NA_character_)
     if (is.na(loadedVer) || !nzchar(loadedVer)) next

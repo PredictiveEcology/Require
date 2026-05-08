@@ -145,3 +145,40 @@ test_that(".DESCFileFull uses basename for file:// Repository URLs", {
   testthat::expect_true(file.exists(result))
   testthat::expect_match(basename(result), "DESCRIPTION")
 })
+
+test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
+  # `(HEAD)` in a Require ref means "the current tip of the named branch",
+  # e.g. `account/repo@somebranch (HEAD)`. A loaded namespace cannot satisfy
+  # that — there's no commit hash to compare. Without this guard the loaded
+  # version is treated as "no version constraint" and the install is silently
+  # skipped, masking missing-branch / out-of-date situations.
+  #
+  # `testthat` is loaded by virtue of running these tests, so we use it as a
+  # synthetic ref for both branches of the check (with and without HEAD).
+  pkgDT <- data.table::data.table(
+    Package         = c("testthat",                       "testthat"),
+    packageFullName = c("rstudio/testthat@main (HEAD)",   "testthat"),
+    needInstall     = c(Require:::.txtInstall,            Require:::.txtInstall),
+    versionSpec     = c(NA_character_,                    NA_character_),
+    inequality      = c(NA_character_,                    NA_character_),
+    Version         = c(NA_character_,                    NA_character_),
+    LibPath         = c(NA_character_,                    NA_character_),
+    installed       = c(FALSE,                            FALSE),
+    installedVersionOK = c(NA,                            NA),
+    loadedSufficient   = c(FALSE,                         FALSE)
+  )
+
+  out <- Require:::useLoadedIfSufficient(pkgDT, verbose = -2)
+
+  # Row 1: HEAD-pinned -> NOT short-circuited; install path proceeds.
+  testthat::expect_false(isTRUE(out$loadedSufficient[1]),
+    info = "Row pinned to `(HEAD)` must NOT be marked loadedSufficient")
+  testthat::expect_identical(out$needInstall[1], Require:::.txtInstall,
+    info = "Row pinned to `(HEAD)` must keep needInstall == .txtInstall")
+
+  # Row 2: no constraint -> existing fast-path still works.
+  testthat::expect_true(isTRUE(out$loadedSufficient[2]),
+    info = "Row with no constraint should still be marked loadedSufficient")
+  testthat::expect_identical(out$needInstall[2], Require:::.txtDontInstall,
+    info = "Row with no constraint should be marked .txtDontInstall")
+})
