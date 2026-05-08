@@ -24,7 +24,7 @@ comma <- ", "
 # these warnings fire on every successful r-universe fetch.
 .txtBenignAvailPkgsWarns <- paste(
   "cannot open URL .*PACKAGES\\.rds.*404",
-  "downloaded length 0 != reported length 0",
+  "downloaded length 0 != reported length [0-9]+",
   sep = "|"
 )
 .txtGitHub <- "GitHub"

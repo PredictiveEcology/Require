@@ -29,7 +29,11 @@ test_that("test 5", {
     length(pkgDepTest1) == 1
   })
   testthat::expect_true({
-    any(sort(pkgDepTest1[[1]]) %in% c("data.table (>= 1.10.4)"))
+    # r-universe's PACKAGES file strips version constraints (`data.table` not
+    # `data.table (>= 1.10.4)`) even though the source tarball's DESCRIPTION
+    # carries them. pak::pkg_deps reflects whatever is in the resolved repo's
+    # PACKAGES, so accept either form.
+    any(grepl("^data\\.table( |$)", sort(pkgDepTest1[[1]])))
   })
 
   testthat::expect_true({
