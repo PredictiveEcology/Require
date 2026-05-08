@@ -1,4 +1,13 @@
 test_that("test 1", {
+  # This test does ~18 real CRAN / GitHub installs and dominates Require's
+  # CI wall-time. Run it locally always, but on CI only when the workflow
+  # explicitly opts in via R_REQUIRE_RUN_LONG_CI=true (currently set on a
+  # single matrix entry: ubuntu-latest, R release). All other CI entries
+  # skip this so the 11-job matrix doesn't saturate GHA's 20-job concurrency
+  # cap. Set R_REQUIRE_RUN_LONG_CI=true locally too if you want to mirror
+  # the gated CI entry's behaviour.
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
+
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
