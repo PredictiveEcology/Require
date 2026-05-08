@@ -1136,6 +1136,12 @@ pakBuildFailReason <- function(errStr, capturedMsgs = character(0)) {
     "package .+ is already loaded",
     "Could not solve package dependencies",
     "Can't find package called",
+    # `Can't find reference @<branch> in GitHub repo <owner>/<repo>` is the
+    # specific dep-resolution error pak emits when a user pins a GitHub
+    # ref to a branch that doesn't exist on the remote (typo, or branch
+    # never pushed). More informative than the generic "Could not solve
+    # package dependencies" wrapper above.
+    "Can't find reference @[^ ]+ in GitHub repo",
     "invalid.*expression", "ERROR:", "permission denied",
     "unable to move", "cannot remove", "compilation failed",
     "lazy loading failed", "Execution halted",
@@ -1170,13 +1176,19 @@ pakConditionLog <- function(err) {
   cond <- if (inherits(err, "try-error")) attr(err, "condition") else err
   if (!inherits(cond, "condition")) return(character(0))
   out <- character(0)
-  # Cap depth to avoid runaway on a self-referential / deeply chained cond.
+  # Walk the condition chain twice: first looking for package_build_error
+  # (build-time failures); if none found, fall back to dumping the full
+  # condition message (covers dep-resolution failures like "Can't find
+  # reference @<branch> in GitHub repo <owner>/<repo>" which happen before
+  # any per-package build is attempted and therefore don't have a
+  # package_build_error attached).
+  cur <- cond
   for (i in seq_len(10L)) {
-    if (inherits(cond, "package_build_error")) {
-      pkg <- cond$package; if (is.null(pkg)) pkg <- ""
-      ver <- cond$version; if (is.null(ver)) ver <- ""
-      msg <- cond$message; if (is.null(msg)) msg <- ""
-      stdo <- cond$stdout; if (is.null(stdo)) stdo <- character(0)
+    if (inherits(cur, "package_build_error")) {
+      pkg <- cur$package; if (is.null(pkg)) pkg <- ""
+      ver <- cur$version; if (is.null(ver)) ver <- ""
+      msg <- cur$message; if (is.null(msg)) msg <- ""
+      stdo <- cur$stdout; if (is.null(stdo)) stdo <- character(0)
       if (nzchar(pkg)) {
         out <- c(out, sprintf("X Failed to build %s %s", pkg, ver))
       }
@@ -1193,10 +1205,40 @@ pakConditionLog <- function(err) {
                  strsplit(paste(stdo, collapse = "\n"),
                           "\n", fixed = TRUE)[[1]])
       }
-      break
+      return(out)
     }
-    cond <- cond$parent
-    if (is.null(cond)) break
+    cur <- cur$parent
+    if (is.null(cur)) break
+  }
+  # No build-error parent. Walk the chain again concatenating messages so the
+  # outer parsers (extractInstallFailures, pakBuildFailReason) see the
+  # underlying cause. For a "Can't find reference @X in GitHub repo Y/Z"
+  # failure, also synthesize a "X Failed to build <Z>" anchor so
+  # extractInstallFailures' per-package iteration attributes the row to the
+  # right package name.
+  cur <- cond
+  msgs <- character(0)
+  for (i in seq_len(10L)) {
+    m <- cur$message
+    if (!is.null(m) && nzchar(m))
+      msgs <- c(msgs, strsplit(m, "\n", fixed = TRUE)[[1]])
+    cur <- cur$parent
+    if (is.null(cur)) break
+  }
+  if (length(msgs)) {
+    # Trailing punctuation (most often a period: "in GitHub repo a/b.")
+    # gets greedily captured by `[A-Za-z0-9._-]+`; strip it.
+    refRx <- "Can't find reference @[^ ]+ in GitHub repo ([A-Za-z0-9._-]+/[A-Za-z0-9._-]+)"
+    refHit <- regmatches(msgs, regexec(refRx, msgs, perl = TRUE))
+    for (m in refHit) {
+      if (length(m) >= 2L && nzchar(m[2])) {
+        ownerRepo <- sub("\\.+$", "", m[2])
+        pkg <- sub("\\.+$", "", sub(".*/", "", ownerRepo))
+        out <- c(out, sprintf("X Failed to build %s", pkg))
+        break
+      }
+    }
+    out <- c(out, msgs)
   }
   out
 }
@@ -1934,6 +1976,8 @@ extractInstallFailures <- function(output) {
     # uses. \u escapes keep this file ASCII (R CMD check requires) while
     # the runtime regex still matches both forms.
     patternList <- list(
+      c("missing-github-branch",
+        "Can't find reference @[^ ]+ in GitHub repo [A-Za-z0-9._-]+/[A-Za-z0-9._-]+", "F"),
       c("vignette-builder",
         "vignette builder ['\u2018][^'\u2019]+['\u2019] not found", "F"),
       c("no-package-called",
@@ -1962,6 +2006,20 @@ extractInstallFailures <- function(output) {
       reasonType <- "build-error"
       reasonBrief <- "build failed (no specific reason parsed)"
       reasonDetail <- lines[i]
+    } else if (identical(errKind, "missing-github-branch")) {
+      # Pull out branch and owner/repo from
+      #   Can't find reference @<branch> in GitHub repo <owner>/<repo>
+      # Trailing punctuation (most commonly a period in pak's emitted
+      # message) gets greedily captured -- strip it.
+      branch <- sub(".*Can't find reference @([^ ]+) in GitHub repo .*",
+                    "\\1", errLine, perl = TRUE)
+      ownerRepo <- sub(".*in GitHub repo ([A-Za-z0-9._-]+/[A-Za-z0-9._-]+).*",
+                       "\\1", errLine, perl = TRUE)
+      ownerRepo <- sub("\\.+$", "", ownerRepo)
+      reasonType <- "missing-github-branch"
+      reasonBrief <- paste0("GitHub branch '", branch, "' not found in ",
+                            ownerRepo, " (did you push it?)")
+      reasonDetail <- errLine
     } else if (identical(errKind, "vignette-builder")) {
       vb <- sub(".*vignette builder ['\u2018]([^'\u2019]+)['\u2019] not found.*",
                 "\\1", errLine, perl = TRUE)

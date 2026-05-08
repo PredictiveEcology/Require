@@ -97,6 +97,68 @@ test_that("extractInstallFailures recognizes missing VignetteBuilder", {
 # package 'fireSenseUtils' ..." as the reason. Priority-ordered scanning
 # must surface the lazy-load failure (and ideally the preceding "Error:"
 # line that names the actual cause).
+test_that("extractInstallFailures recognizes missing GitHub branch", {
+  # When a user pins `account/repo@somebranch (HEAD)` and `somebranch`
+  # doesn't exist on the remote (typo, or never pushed), pak emits at
+  # dep-resolution time:
+  #   Can't find reference @somebranch in GitHub repo account/repo.
+  # This must be surfaced as a `missing-github-branch` reason with both
+  # the branch name and owner/repo named, plus the actionable hint
+  # "did you push it?". Without this, the failure either falls through
+  # to the catch-all "still-missing" or — worse — gets masked entirely
+  # by useLoadedIfSufficient's "no version constraint" short-circuit.
+  output <- c(
+    "X Failed to build reproducible",
+    "Could not solve package dependencies:",
+    "* PredictiveEcology/reproducible@useCloudPullPushTest: ! pkgdepends resolution error",
+    "Caused by error:",
+    "! Can't find reference @useCloudPullPushTest in GitHub repo PredictiveEcology/reproducible.",
+    ""
+  )
+  fails <- Require:::extractInstallFailures(output)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "reproducible")
+  expect_equal(fails$reason_type, "missing-github-branch")
+  expect_match(fails$reason_brief, "useCloudPullPushTest", fixed = TRUE)
+  expect_match(fails$reason_brief, "PredictiveEcology/reproducible", fixed = TRUE)
+  expect_match(fails$reason_brief, "did you push it?", fixed = TRUE)
+})
+
+test_that("pakConditionLog synthesizes Failed-to-build anchor for missing GitHub branch", {
+  # The dep-resolution failure has NO package_build_error parent, so the
+  # build-error walk returns nothing. The fallback path must produce a
+  # synthetic "Failed to build <pkg>" anchor (so extractInstallFailures
+  # attributes the row to the right ref) plus the actual error lines.
+  parent <- structure(
+    list(message = paste0(
+      "Could not solve package dependencies:\n",
+      "* PredictiveEcology/reproducible@thisBranchDoesNotExist: ! ",
+      "pkgdepends resolution error for ",
+      "PredictiveEcology/reproducible@thisBranchDoesNotExist.\n",
+      "Caused by error: \n",
+      "! Can't find reference @thisBranchDoesNotExist in GitHub repo ",
+      "PredictiveEcology/reproducible.")),
+    class = c("simpleError", "error", "condition"))
+  outer <- structure(
+    list(message = "error in pak subprocess", parent = parent),
+    class = c("callr_status_error", "callr_error", "rlib_error_3_0",
+              "rlib_error", "error", "condition"))
+  errStr <- structure("Error : ! error in pak subprocess\n",
+                      class = "try-error", condition = outer)
+
+  log <- Require:::pakConditionLog(errStr)
+  joined <- paste(log, collapse = "\n")
+  expect_match(joined, "Failed to build reproducible", fixed = TRUE)
+  expect_match(joined, "Can't find reference @thisBranchDoesNotExist", fixed = TRUE)
+
+  # End-to-end: log routes through the parser to a clean row.
+  fails <- Require:::extractInstallFailures(log)
+  expect_equal(NROW(fails), 1L)
+  expect_equal(fails$package, "reproducible")
+  expect_equal(fails$reason_type, "missing-github-branch")
+  expect_match(fails$reason_brief, "thisBranchDoesNotExist", fixed = TRUE)
+})
+
 test_that("extractInstallFailures recognizes lazy loading failed (priority over generic)", {
   output <- c(
     "ℹ Building fireSenseUtils 0.1.8",
