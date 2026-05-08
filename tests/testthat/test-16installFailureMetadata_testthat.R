@@ -439,6 +439,7 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
   # round-trip (which exercises the archive fallback path inside
   # pakInstallFiltered) is environment-sensitive and runs in the larger
   # integration test below.
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -462,6 +463,7 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
 # so the caller can skip cleanly.
 # ---------------------------------------------------------------------------
 test_that("pakGetArchive returns unchanged packages when no concrete CRAN repo", {
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -497,6 +499,7 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
   # if this works, Require's archive fallback will work too (modulo pak's
   # internal subprocess state, which is exercised in the big integration
   # test).
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -534,6 +537,7 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
 # same plan.
 # ---------------------------------------------------------------------------
 test_that("pak::pak installs cross-dependent archived refs in one batch", {
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -572,6 +576,7 @@ test_that("pak::pak installs cross-dependent archived refs in one batch", {
 # in pakEnv()$.lastInstallFailures.
 # ---------------------------------------------------------------------------
 test_that("pakEnv()$.lastInstallFailures is populated after a successful install", {
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
