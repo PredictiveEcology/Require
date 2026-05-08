@@ -10,6 +10,9 @@ on:
 
 name: test-coverage
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test-coverage:
     if: "!contains(github.event.commits[0].message, '[skip-ci]')"

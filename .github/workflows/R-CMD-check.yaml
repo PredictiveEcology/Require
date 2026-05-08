@@ -10,6 +10,9 @@ on:
 
 name: R-CMD-check
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   R-CMD-check:
     if: "!contains(github.event.commits[0].message, '[skip-ci]')"
