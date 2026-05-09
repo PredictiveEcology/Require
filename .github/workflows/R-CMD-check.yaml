@@ -74,5 +74,13 @@ jobs:
 
       - uses: r-lib/actions/check-r-package@v2
         with:
-          args: 'c("--no-manual", "--as-cran", "--run-dontrun", "--run-donttest")'
+          # Dropped --run-dontrun --run-donttest: man/Require.Rd has a
+          # \dontrun{} block that does ~11 real CRAN/GitHub installs
+          # (crayon, cli, R6, rlang, ellipsis, fpCompare, plus a
+          # multi-package Require() loop). With those flags every matrix
+          # entry on a cold pak cache spent multi-hour wall time on
+          # dep-install storm and routinely wedged through GHA's 6h cap.
+          # Examples are still syntax-checked. Use the runLong flag +
+          # tests for live exercise of those code paths.
+          args: 'c("--no-manual", "--as-cran")'
           upload-snapshots: true
