@@ -39,30 +39,35 @@ jobs:
       - id: covr
         name: Test coverage
         continue-on-error: true
-        # Wrap covr in tryCatch so the per-session tempdir's
-        # `testthat.Rout.fail` is dumped to the GHA log _before_ R exits and
-        # the tempdir is cleaned up. Without this, a covr failure surfaces
-        # only as an opaque "Failure in <path>/testthat.Rout.fail" with the
-        # actual failing test names and tracebacks lost.
+        # Dump testthat.Rout.fail to the GHA log via withCallingHandlers so
+        # the dump runs WHILE covr's call frame is still alive (i.e. before
+        # covr's withr-registered tempdir cleanup unwinds). The previous
+        # tryCatch-only version printed nothing because by the time the
+        # error handler ran the tempdir was already wiped. The outer
+        # tryCatch then converts the error to a value so we can stop()
+        # cleanly with the original condition.
         run: |
           res <- tryCatch(
-            covr::codecov(token = Sys.getenv("CODECOV_TOKEN")),
+            withCallingHandlers(
+              covr::codecov(token = Sys.getenv("CODECOV_TOKEN")),
+              error = function(e) {
+                files <- list.files(
+                  tempdir(),
+                  pattern = "testthat\\.Rout\\.fail$|test-all\\.Rout\\.fail$",
+                  recursive = TRUE, full.names = TRUE
+                )
+                for (f in files) {
+                  cat("==========================================\n")
+                  cat("=== ", f, " ===\n", sep = "")
+                  cat("==========================================\n")
+                  cat(readLines(f, warn = FALSE), sep = "\n")
+                  cat("\n")
+                }
+              }
+            ),
             error = function(e) e
           )
-          if (inherits(res, "error")) {
-            files <- list.files(
-              tempdir(), pattern = "testthat\\.Rout\\.fail$|test-all\\.Rout\\.fail$",
-              recursive = TRUE, full.names = TRUE
-            )
-            for (f in files) {
-              cat("==========================================\n")
-              cat("=== ", f, " ===\n", sep = "")
-              cat("==========================================\n")
-              cat(readLines(f, warn = FALSE), sep = "\n")
-              cat("\n")
-            }
-            stop(res)
-          }
+          if (inherits(res, "error")) stop(res)
         shell: Rscript {0}
 
       - if: steps.covr.outcome == 'failure'
