@@ -277,13 +277,19 @@ test_that("pakConditionLog handles a vignette-builder failure end-to-end", {
   expect_match(fails$reason_brief, "knitr", fixed = TRUE)
 })
 
-test_that("pakConditionLog returns empty when no package_build_error present", {
-  # Plain error condition with no chain -- nothing structured to recover.
+test_that("pakConditionLog dumps the chain message when no package_build_error present", {
+  # Plain error condition with no package_build_error parent: pakConditionLog
+  # falls back to dumping the condition message so the outer parsers
+  # (extractInstallFailures / pakBuildFailReason) at least see the underlying
+  # cause, even if it's not a per-package build failure. Original assertion
+  # was "returns empty" — that became wrong when we extended the function to
+  # surface dep-resolution errors like "Can't find reference @branch in
+  # GitHub repo owner/repo" (which lack a package_build_error parent).
   cond <- simpleError("generic failure")
   errStr <- structure("Error : generic failure\n",
                       class = "try-error", condition = cond)
   log <- Require:::pakConditionLog(errStr)
-  expect_equal(length(log), 0L)
+  expect_true(any(grepl("generic failure", log, fixed = TRUE)))
 })
 
 # ---------------------------------------------------------------------------
