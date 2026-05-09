@@ -36,6 +36,35 @@ jobs:
           extra-packages: |
             any::covr
 
-      - name: Test coverage
-        run: covr::codecov()
+      - id: covr
+        name: Test coverage
+        continue-on-error: true
+        # Wrap covr in tryCatch so the per-session tempdir's
+        # `testthat.Rout.fail` is dumped to the GHA log _before_ R exits and
+        # the tempdir is cleaned up. Without this, a covr failure surfaces
+        # only as an opaque "Failure in <path>/testthat.Rout.fail" with the
+        # actual failing test names and tracebacks lost.
+        run: |
+          res <- tryCatch(
+            covr::codecov(token = Sys.getenv("CODECOV_TOKEN")),
+            error = function(e) e
+          )
+          if (inherits(res, "error")) {
+            files <- list.files(
+              tempdir(), pattern = "testthat\\.Rout\\.fail$|test-all\\.Rout\\.fail$",
+              recursive = TRUE, full.names = TRUE
+            )
+            for (f in files) {
+              cat("==========================================\n")
+              cat("=== ", f, " ===\n", sep = "")
+              cat("==========================================\n")
+              cat(readLines(f, warn = FALSE), sep = "\n")
+              cat("\n")
+            }
+            stop(res)
+          }
         shell: Rscript {0}
+
+      - if: steps.covr.outcome == 'failure'
+        name: Re-fail the job
+        run: exit 1
