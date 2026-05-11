@@ -16,7 +16,13 @@ test_that("test 09", {
 
     pkgPath <- paste0(file.path(tempdir2(Require:::.rndstr(1))), "/")
     a <- checkPath(pkgPath, create = TRUE)
-    snapshotFiles <- "../../inst/snapshot.txt"
+    ## R CMD check runs tests from <pkg>.Rcheck/tests/testthat/, so the old
+    ## "../../inst/snapshot.txt" path (which works under devtools::test())
+    ## resolves outside the installed package tree and fails. system.file()
+    ## works in both contexts.
+    snapshotFiles <- system.file("snapshot.txt", package = "Require")
+    if (!nzchar(snapshotFiles) || !file.exists(snapshotFiles))
+      skip("inst/snapshot.txt not available in this build")
     # if (getRversion() <= "4.2.3") {
     #
     #   snapshotFiles <- rev(
