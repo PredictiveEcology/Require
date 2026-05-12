@@ -65,3 +65,69 @@ test_that("Require.offlineMode installs from pak cache, fails cleanly when cache
               info = paste("expected 'could not be installed' warning; warns3 =",
                            paste(warns3, collapse = " | ")))
 })
+
+test_that("Require.offlineMode installs AND loads from pak cache via Require()", {
+  # Companion to the install-only test above: exercises the full Require()
+  # flow (install + library()) under offlineMode, confirming that after
+  # pakOfflineInstall writes the package to disk, doLoads() successfully
+  # loads it without any network. The install-only test uses Install()
+  # which sets require = FALSE; this one uses Require() so the load branch
+  # is on the critical path.
+  skip_on_cran()
+  skip_if_offline2()
+  skip_if_not_installed("pak")
+
+  withr::local_options(Require.usePak = TRUE)
+  pkg <- "fpCompare"
+
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_offline_load_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  isInTestlib <- function() {
+    pkg %in% rownames(installed.packages(lib.loc = testlib, noCache = TRUE))
+  }
+  unloadIfLoaded <- function() {
+    if (paste0("package:", pkg) %in% search()) {
+      suppressWarnings(detach(paste0("package:", pkg), unload = TRUE,
+                              character.only = TRUE))
+    }
+    if (pkg %in% loadedNamespaces()) {
+      suppressWarnings(unloadNamespace(pkg))
+    }
+  }
+  on.exit(unloadIfLoaded(), add = TRUE)
+
+  # Start from a clean slate so the load assertion below is meaningful:
+  # a parent libPath may already have fpCompare loaded from prior tests.
+  unloadIfLoaded()
+
+  # ---- Seed pak's download cache online + put pkg in testlib ----
+  withr::local_options(Require.offlineMode = FALSE)
+  Require::Install(pkg, libPaths = testlib, standAlone = TRUE)
+  expect_true(isInTestlib(),
+              info = "online seed must put pkg in testlib")
+
+  # Wipe testlib so the offline Require() call has to *actually* install
+  # (not be a no-op satisfied by an existing testlib copy). Unload too so
+  # the load assertion is genuine.
+  suppressMessages(remove.packages(pkg, lib = testlib))
+  unloadIfLoaded()
+  expect_false(isInTestlib(),
+               info = "after remove.packages, pkg must be gone from testlib")
+  expect_false(pkg %in% loadedNamespaces(),
+               info = "after unload, pkg namespace must be unregistered")
+
+  # ---- Offline Require(): install from pak cache + load ----
+  withr::local_options(Require.offlineMode = TRUE)
+  res <- Require::Require(pkg, libPaths = testlib, standAlone = TRUE)
+
+  expect_true(all(res),
+              info = paste("Require() under offlineMode returned a FALSE; res =",
+                           paste(res, collapse = ", ")))
+  expect_true(isInTestlib(),
+              info = "Require() under offlineMode must install pkg from pak cache to testlib")
+  expect_true(pkg %in% loadedNamespaces(),
+              info = "Require() under offlineMode must load pkg via doLoads()")
+})
