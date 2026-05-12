@@ -192,21 +192,18 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
-test_that("pakOfflineInstall strips parenthetical version specs before pak", {
-  # Regression: pak rejects Require-internal refs of the form
-  # `pkg (>= 1.3.2)` with "Cannot parse package: glue (>= 1.3.2)". The
-  # offline install path was passing packageFullName verbatim, so any
-  # dep that came back from pakDepsResolve with a parenthetical constraint
-  # killed the entire install silently (every package was reported as
-  # "tarball was in pak cache but offline install failed").
-  #
-  # Verify pakOfflineInstall now passes a bare/trimmed ref to pak by
-  # spying on the refs argument via a mocked pakCall.
+test_that("pakOfflineInstall calls install.packages on the cached tarball (no pak::pak)", {
+  # The offline path bypasses `pak::pak()` entirely: pak gives us the cache
+  # location, install.packages does the local install. This avoids both
+  # pak's R-CMD-build-rebuilds-vignettes failure mode AND pak's Windows
+  # cache-key-mismatch that triggered a re-download even with
+  # `PKG_METADATA_UPDATE_AFTER=365d`. Verify the file path and type by
+  # spying on install.packages.
   skip_if_not_installed("pak")
   skip_if_not_installed("data.table")
 
   testlib <- file.path(tempdir(),
-                       paste0("rqlib_parsable_refs_", as.integer(Sys.time())))
+                       paste0("rqlib_offline_local_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
 
@@ -215,7 +212,7 @@ test_that("pakOfflineInstall strips parenthetical version specs before pak", {
 
   pkgDT <- data.table::data.table(
     Package         = "glue",
-    packageFullName = "glue (>= 1.3.2)",  # the form that broke pak
+    packageFullName = "glue (>= 1.3.2)",  # the historical pak-incompatible form
     needInstall     = Require:::.txtInstall,
     installResult   = NA_character_,
     installed       = FALSE,
@@ -224,15 +221,19 @@ test_that("pakOfflineInstall strips parenthetical version specs before pak", {
     LibPath         = NA_character_
   )
 
-  captured_refs <- NULL
+  captured_pkgs <- NULL
+  captured_repos <- NULL
+  captured_type  <- NULL
+  # `Require` imports `install.packages` from `utils` (NAMESPACE), so Require's
+  # namespace has its own binding. Mock that binding directly.
   testthat::with_mocked_bindings(
-    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = TRUE),
-    pakCall = function(expr, verbose) {
-      # Extract the refs argument from the unevaluated expression.
-      cl <- substitute(expr)
-      captured_refs <<- eval(cl[[2L]], envir = parent.frame())
+    install.packages = function(pkgs, repos = NULL, type = NULL, ...) {
+      captured_pkgs  <<- pkgs
+      captured_repos <<- repos
+      captured_type  <<- type
       invisible(NULL)
     },
+    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = TRUE),
     .package = "Require",
     {
       suppressWarnings(suppressMessages(
@@ -241,13 +242,12 @@ test_that("pakOfflineInstall strips parenthetical version specs before pak", {
     }
   )
 
-  expect_false(any(grepl("\\(", captured_refs %||% "")),
-               info = paste("ref passed to pak::pak must not carry the",
-                            "parenthetical version constraint; got:",
-                            paste(captured_refs, collapse = ", ")))
-  expect_identical(captured_refs, "glue",
-                   info = paste("expected bare ref 'glue'; got:",
-                                paste(captured_refs, collapse = ", ")))
+  expect_identical(captured_pkgs, fakeTar,
+                   info = "install.packages must be called with the cached tarball path")
+  expect_null(captured_repos,
+              info = "repos must be NULL (no resolver, no network)")
+  expect_true(captured_type %in% c("binary", "source"),
+              info = paste("type must be platform-appropriate; got:", captured_type))
 })
 
 test_that("useLoadedIfSufficient refuses to short-circuit when files were removed", {
@@ -473,91 +473,6 @@ test_that("Require.downloadTimeout raises options(timeout) during GH download (i
                    info = "options(timeout) must be restored on exit")
 })
 
-test_that("pakOfflineInstall sets metadata + bioc env vars to suppress pak probes", {
-  # The user-reported failure mode: pak's subprocess hits the network at
-  # startup (Bioc config probe, PPM metadata refresh). Suppress via env
-  # vars pak/pkgcache already respect: PKG_METADATA_UPDATE_AFTER tells
-  # pak the cached metadata is fresh enough to skip refresh; R_BIOC_*
-  # short-circuits the Bioc config fetch. Verify the env vars are set
-  # during the pak call and restored afterwards.
-  skip_if_not_installed("pak")
-  pakDir <- tryCatch(find.package("pak"), error = function(e) "")
-  biocFixture <- if (length(pakDir) && nzchar(pakDir)) {
-    f <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
-    if (file.exists(f)) f else ""
-  } else ""
-  if (!nzchar(biocFixture))
-    testthat::skip("pkgcache bioc-config.yaml fixture not found inside pak")
-
-  observed_bioc_ver <- NULL
-  observed_bioc_url <- NULL
-  observed_meta_after <- NULL
-  observed_extra_opt <- NULL
-  pre_env <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
-                          "PKG_METADATA_UPDATE_AFTER"),
-                        names = TRUE, unset = NA)
-  on.exit({
-    for (nm in names(pre_env)) {
-      v <- pre_env[[nm]]
-      if (is.na(v)) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(v), nm))
-    }
-  }, add = TRUE)
-  Sys.unsetenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
-                 "PKG_METADATA_UPDATE_AFTER"))
-
-  fakeTar <- tempfile(fileext = ".tar.gz")
-  file.create(fakeTar)
-  on.exit(unlink(fakeTar), add = TRUE)
-
-  pkgDT <- data.table::data.table(
-    Package = "zzzfakepkg",
-    packageFullName = "zzzfakepkg",
-    needInstall = Require:::.txtInstall,
-    installResult = NA_character_,
-    installed = FALSE,
-    installedVersionOK = FALSE,
-    Version = NA_character_,
-    LibPath = NA_character_
-  )
-
-  testlib <- file.path(tempdir(),
-                       paste0("rqlib_envprobe_", as.integer(Sys.time())))
-  dir.create(testlib, recursive = TRUE)
-  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
-
-  testthat::with_mocked_bindings(
-    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = FALSE),
-    pakCall          = function(expr, verbose) {
-      observed_bioc_ver <<- Sys.getenv("R_BIOC_VERSION", unset = NA)
-      observed_bioc_url <<- Sys.getenv("R_BIOC_CONFIG_URL", unset = NA)
-      observed_meta_after <<- Sys.getenv("PKG_METADATA_UPDATE_AFTER", unset = NA)
-      observed_extra_opt <<- getOption("pak.no_extra_messages", NA)
-      invisible(NULL)
-    },
-    .package = "Require",
-    {
-      suppressWarnings(
-        Require:::pakOfflineInstall(pkgDT, libPaths = testlib, verbose = -1)
-      )
-    }
-  )
-
-  expect_true(nzchar(observed_bioc_ver) && !is.na(observed_bioc_ver),
-              info = "R_BIOC_VERSION must be set during pak::pak()")
-  expect_true(grepl("^file://.+bioc-config\\.yaml$", observed_bioc_url %||% ""),
-              info = paste("R_BIOC_CONFIG_URL must point at the bundled fixture; got:",
-                           observed_bioc_url))
-  expect_identical(observed_meta_after, "365d",
-                   info = "PKG_METADATA_UPDATE_AFTER must defer pak's metadata refresh")
-  expect_true(isTRUE(observed_extra_opt),
-              info = "pak.no_extra_messages must be set so pak skips the pillar hint")
-
-  # All env vars restored to their prior (unset) state.
-  expect_identical(Sys.getenv("R_BIOC_VERSION", unset = NA), NA_character_)
-  expect_identical(Sys.getenv("R_BIOC_CONFIG_URL", unset = NA), NA_character_)
-  expect_identical(Sys.getenv("PKG_METADATA_UPDATE_AFTER", unset = NA), NA_character_)
-})
-
 test_that("setOfflineModeTRUE(force = TRUE) flips offlineMode when no internet", {
   # Recovery hook: Require() calls this AFTER an install attempt fails, so
   # we pay the 2s probe only on the sad path. force = TRUE bypasses the
@@ -710,14 +625,15 @@ test_that("pakOfflineInstall distinguishes 'not in cache' from 'install failed'"
   )
 
   warnings_seen <- character()
+  # Make install.packages a no-op so the ground-truth check below finds the
+  # supposedly-cached pkg still missing on disk -- the "install failed"
+  # branch we want to exercise.
   testthat::with_mocked_bindings(
+    install.packages = function(...) invisible(NULL),
     pakCachedTarball = function(pkg) {
       if (pkg == "inCache")    list(path = fakeTar, is_binary = FALSE)
       else                     NULL
     },
-    # Pretend pak ran but installed nothing -- so ground-truth check below
-    # finds the supposedly-cached pkg still missing on disk.
-    pakCall = function(expr, verbose) invisible(NULL),
     .package = "Require",
     {
       withCallingHandlers(
