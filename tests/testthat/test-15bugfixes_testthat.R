@@ -322,3 +322,41 @@ test_that("pkgDepTopoSort's first arg is `packages` (consistent with Require)", 
   expect_identical(out_named, out_pos)
   expect_true("data.table" %in% names(out_named))
 })
+
+test_that("Require.downloadTimeout raises options(timeout) during GH download (issue #140)", {
+  # Verify the timeout is set when .downloadFileMasterMainAuth runs and
+  # restored afterwards. We don't need a real network: a bogus URL fails
+  # fast inside download.file(), but the option mutation still happens.
+  oldTimeout <- getOption("timeout")
+  observed <- NULL
+  # Force a token-less code path (the `download.file` branch) by ensuring
+  # checkForToken() returns NULL. Tokens go through httr::GET instead.
+  withr::with_options(
+    list(
+      Require.downloadTimeout = 1234L,
+      Require.offlineMode = FALSE,
+      Require.verbose = -1
+    ),
+    {
+      with_mocked_bindings(
+        download.file = function(...) {
+          observed <<- getOption("timeout")
+          stop("synthetic failure")
+        },
+        checkForToken = function() NULL,
+        .package = "Require",
+        {
+          try(Require:::.downloadFileMasterMainAuth(
+            url      = "https://example.invalid/Require/archive/main.zip",
+            destfile = tempfile(fileext = ".zip"),
+            need     = "master"
+          ), silent = TRUE)
+        }
+      )
+    }
+  )
+  expect_identical(observed, 1234L,
+                   info = "Require.downloadTimeout should override options(timeout) inside the download")
+  expect_identical(getOption("timeout"), oldTimeout,
+                   info = "options(timeout) must be restored on exit")
+})

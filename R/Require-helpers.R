@@ -1442,6 +1442,16 @@ masterMainHEAD <- function(url, need) {
 #' @export
 .downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                         verbose = getOption("Require.verbose"), verboseLevel = 2) {
+  ## Issue #140: R's default `options("timeout")` is 60s, which is too short
+  ## for slow connections fetching a multi-MB GitHub source zip (the bare
+  ## `download.file` calls below inherit it). Raise it for the duration of
+  ## this call, with `Require.downloadTimeout` (seconds) as the user-facing
+  ## knob. The legacy non-pak path is the only one that reaches here; under
+  ## `Require.usePak = TRUE` pak's own libcurl downloader is used instead.
+  oldTimeout <- getOption("timeout")
+  options(timeout = max(oldTimeout, getOption("Require.downloadTimeout", 300L)))
+  on.exit(options(timeout = oldTimeout), add = TRUE)
+
   if (!dir.exists(dirname(destfile)))
     silent <- checkPath(dirname(destfile), create = TRUE)
   hasMasterMain <- grepl(masterMainGrep, url)

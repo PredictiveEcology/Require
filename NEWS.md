@@ -2,6 +2,13 @@
 
 ## enhancements
 
+* New `Require.downloadTimeout` option (default `300L` seconds). Raises
+  `options("timeout")` for the duration of GitHub source-archive downloads
+  in the legacy (non-pak) install path, where R's stock 60s default can
+  abort multi-MB fetches on slow connections (issue #140). Has no effect
+  under `Require.usePak = TRUE`, which uses pak's own libcurl downloader
+  with its own retry/timeout.
+
 * `Require()` now accepts a multi-line string of packages -- newlines split
   into one package per line, whitespace is trimmed, and blank or
   `#`-prefixed lines are dropped (issue #147). An unquoted `{...}` block
@@ -13,7 +20,6 @@
 
 * `pkgDepTopoSort()` first argument renamed from `pkgs` to `packages` for
   consistency with `Require()`, `Install()`, and `pkgDep()`.
-
 
 ## bug fixes
 
