@@ -1,4 +1,18 @@
-# Require 1.1.0.9048 (development version)
+# Require 1.1.0.9049 (development version)
+
+## bug fixes
+
+* Removed the `pakResetSubprocess()` call from the top of
+  `pakOfflineInstall()`. On Windows the kill-and-wait race against
+  pak's auto-respawn broke the very next `pak::cache_list()` call, so
+  immediately after the cache shortcut reported "all requested packages
+  are in the pak download cache", `pakCachedTarball()` returned NULL
+  for every package with "no rows in pak::cache_list()". Visible thanks
+  to the diagnostic logging added in .9047. The reset was intended for
+  the recovery-after-failure path but is unnecessary on the cache-
+  shortcut path (no wedged subprocess to recover from), and on Windows
+  it was actively destructive. Leaving the subprocess alone in both
+  cases.
 
 ## enhancements
 

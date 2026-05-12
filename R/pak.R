@@ -857,14 +857,17 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
-  ## When this runs as the recovery hook after a failed `pakInstallFiltered`
-  ## (no internet), pak's persistent subprocess can be in a wedged state
-  ## from the failed plan. `pak::cache_list()` is executed in that same
-  ## subprocess (see pak::cache_list source), so a wedged subprocess can
-  ## return stale or empty rows -- making us falsely conclude "not in pak
-  ## cache" for packages that are actually present on disk. Kill the
-  ## subprocess so pak spawns a fresh one for the cache lookup.
-  pakResetSubprocess()
+  ## We used to call `pakResetSubprocess()` here, hoping that a wedged
+  ## subprocess after a failed `pakInstallFiltered` plan would otherwise
+  ## return stale rows from `pak::cache_list()`. On Windows the reset
+  ## itself broke the next `pak::cache_list()` call (interrupt+kill
+  ## raced against pak's auto-respawn, so the subsequent query returned
+  ## "no rows" even when the cache was fully populated -- visible in the
+  ## diagnostic log as `pakCachedTarball(<pkg>) returned NULL; no rows
+  ## in pak::cache_list()` immediately after the cache shortcut had
+  ## just confirmed the same rows were present). Leaving the subprocess
+  ## alone is safer; the cache-shortcut path enters here BEFORE any
+  ## failed install so there's no wedge to recover from.
 
   ## Strategy: keep pak as the installer (so its resolver, dep-ordering,
   ## sysreqs, build, and progress UI all apply). Pass it bare/cleaned-up
