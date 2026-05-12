@@ -360,7 +360,6 @@ test_that("Require.downloadTimeout raises options(timeout) during GH download (i
   expect_identical(getOption("timeout"), oldTimeout,
                    info = "options(timeout) must be restored on exit")
 })
-})
 
 test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe", {
   # The user-reported failure mode: pak::pak() in offline mode still hits the
@@ -438,4 +437,69 @@ test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe
   # state (unset, in this test).
   expect_identical(Sys.getenv("R_BIOC_VERSION", unset = NA), NA_character_)
   expect_identical(Sys.getenv("R_BIOC_CONFIG_URL", unset = NA), NA_character_)
+})
+
+test_that("setOfflineModeTRUE(force = TRUE) flips offlineMode when no internet", {
+  # Recovery hook: Require() calls this AFTER an install attempt fails, so
+  # we pay the 2s probe only on the sad path. force = TRUE bypasses the
+  # `Require.checkInternet` gate (which is off by default) for these
+  # strategic recovery points.
+  skip_if_not_installed("Require")
+
+  withr::local_options(
+    Require.offlineMode = FALSE,
+    Require.checkInternet = FALSE,
+    Require.verbose = -1
+  )
+  # Clear any cached probe result so we actually call urlExists().
+  pe <- Require:::pkgEnv()
+  rm(list = intersect(c(Require:::.txtInternetExistsTime,
+                        Require:::.txtInternetExists),
+                      ls(pe, all.names = TRUE)), envir = pe)
+
+  testthat::with_mocked_bindings(
+    urlExists = function(url, ...) FALSE,
+    .package = "Require",
+    {
+      Require:::setOfflineModeTRUE(verbose = -1, force = TRUE)
+    }
+  )
+  expect_true(isTRUE(getOption("Require.offlineMode")))
+  expect_true(isTRUE(getOption("Require.offlineModeSetAutomatically")))
+
+  # And the cleanup hook unsets it again.
+  Require:::checkAutomaticOfflineMode()
+  expect_false(isTRUE(getOption("Require.offlineMode")))
+})
+
+test_that("internetExists(force = TRUE) bypasses the Require.checkInternet gate", {
+  # Without force, internetExists returns TRUE unconditionally when
+  # checkInternet is off (the default), which would defeat the recovery
+  # hook above. With force = TRUE the probe runs regardless.
+  skip_if_not_installed("Require")
+  withr::local_options(
+    Require.offlineMode = FALSE,
+    Require.checkInternet = FALSE
+  )
+  pe <- Require:::pkgEnv()
+  rm(list = intersect(c(Require:::.txtInternetExistsTime,
+                        Require:::.txtInternetExists),
+                      ls(pe, all.names = TRUE)), envir = pe)
+
+  res_default <- Require:::internetExists()
+  expect_true(res_default,
+              info = "default-gated call should return TRUE (no probe)")
+
+  testthat::with_mocked_bindings(
+    urlExists = function(url, ...) FALSE,
+    .package = "Require",
+    {
+      rm(list = intersect(c(Require:::.txtInternetExistsTime,
+                            Require:::.txtInternetExists),
+                          ls(pe, all.names = TRUE)), envir = pe)
+      res_forced <- Require:::internetExists(force = TRUE)
+    }
+  )
+  expect_false(res_forced,
+               info = "forced call should probe and return FALSE when offline")
 })

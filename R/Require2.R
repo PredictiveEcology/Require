@@ -458,6 +458,27 @@ Require <- function(packages,
             pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
                                    wh   = whichToDILES(doDeps),
                                    repos = repos)
+            ## Recovery: if pakInstallFiltered left any rows flagged
+            ## .txtCouldNotBeInstalled, probe internet once. If missing,
+            ## switch to offlineMode and retry those rows via the pak
+            ## download cache. This pays the 2-second probe only on the
+            ## sad path (install failed); the happy path stays untouched.
+            ## The auto-set offlineMode flag is cleared by
+            ## checkAutomaticOfflineMode() on Require()'s on.exit so the
+            ## user's explicit setting is preserved.
+            failedRows <- which(pkgDT$installResult %in% .txtCouldNotBeInstalled)
+            if (length(failedRows)) {
+              setOfflineModeTRUE(verbose = verbose, force = TRUE)
+              if (isTRUE(getOption("Require.offlineMode"))) {
+                messageVerbose("Install failed and no internet detected; ",
+                               "retrying via local pak download cache",
+                               verbose = verbose, verboseLevel = 1)
+                set(pkgDT, failedRows, "needInstall", .txtInstall)
+                set(pkgDT, failedRows, "installResult", NA_character_)
+                pkgDT <- pakOfflineInstall(pkgDT, libPaths = libPaths,
+                                            verbose = verbose)
+              }
+            }
           }
         } else {
           pkgDT <- doInstalls(pkgDT,

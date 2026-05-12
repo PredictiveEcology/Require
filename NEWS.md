@@ -14,6 +14,20 @@
   ground-truth `installed.packages()` check decides whether the install
   actually landed.
 
+* New auto-recovery when an online pak install fails because the network
+  is unreachable. If `pakInstallFiltered()` leaves any row flagged
+  "could not be installed", `Require()` now probes the network once (2
+  seconds) and, if missing, flips `Require.offlineMode = TRUE` and
+  retries the still-missing packages via `pakOfflineInstall()` against
+  the local pak download cache. The happy path is unchanged -- the
+  probe is paid only on the sad path. The auto-set state is cleared on
+  `Require()`'s on.exit so the user's explicit setting is preserved.
+
+* `internetExists()` and `setOfflineModeTRUE()` gained a `force` parameter
+  that probes regardless of `options("Require.checkInternet")`. Default
+  remains `FALSE`, so non-install code paths still respect the user's
+  opt-in.
+
 * New `Require.downloadTimeout` option (default `300L` seconds). Raises
   `options("timeout")` for the duration of GitHub source-archive downloads
   in the legacy (non-pak) install path, where R's stock 60s default can

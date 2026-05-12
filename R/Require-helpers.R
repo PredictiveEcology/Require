@@ -1318,9 +1318,15 @@ urlExists <- function(url) {
 }
 
 #' @inheritParams Require
-internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
+#' @param force If `TRUE`, probe even when `options("Require.checkInternet")`
+#'   is `FALSE`. Used at points where we're about to do real work (e.g.,
+#'   install dispatch) and a 2-second probe is cheap relative to the cost
+#'   of failing late. Defaults to `FALSE` to preserve the no-probe default
+#'   behaviour for all other call sites.
+internetExists <- function(mess = "", verbose = getOption("Require.verbose"),
+                           force = FALSE) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
-    if (getOption("Require.checkInternet", FALSE)) {
+    if (force || getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
       checkNow <- TRUE
@@ -1740,9 +1746,10 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
 }
 
 
-setOfflineModeTRUE <- function(verbose = getOption("Require.verbose")) {
+setOfflineModeTRUE <- function(verbose = getOption("Require.verbose"),
+                               force = FALSE) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
-    if (!internetExists()) {
+    if (!internetExists(force = force)) {
       options(
         "Require.offlineMode" = TRUE,
         "Require.offlineModeSetAutomatically" = TRUE
