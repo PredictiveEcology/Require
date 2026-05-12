@@ -218,3 +218,97 @@ test_that("Require(install = FALSE) skips pak/CRAN dep resolution", {
   )
   expect_true(res2)
 })
+
+test_that("parseMultiLinePackages expands heredoc-style multi-line strings", {
+  # Issue #147: accept a pasted block of packages, ignoring blank lines and
+  # `#` comments so users don't have to quote-and-comma every entry.
+  f <- Require:::parseMultiLinePackages
+
+  block <- "
+# ...........................................
+# Requirements
+# ...........................................
+  dplyr
+  lme4
+  # ggplot2
+  PredictiveEcology/LandR@development
+"
+  expect_identical(
+    f(block),
+    c("dplyr", "lme4", "PredictiveEcology/LandR@development")
+  )
+
+  # No newlines anywhere → identity (the common case must not be perturbed)
+  pkgs <- c("dplyr", "lme4")
+  expect_identical(f(pkgs), pkgs)
+
+  # Named vector with no newlines → names preserved, untouched
+  named <- c(SpaDES = "PredictiveEcology/SpaDES@development", "dplyr")
+  expect_identical(f(named), named)
+
+  # Mixed: a multi-line entry alongside a normal entry inside a vector
+  mixed <- c("dplyr\n# skip\nlme4", "ggplot2")
+  expect_identical(f(mixed), c("dplyr", "lme4", "ggplot2"))
+
+  # All lines stripped → empty character (not NULL), so downstream NROW()==0
+  expect_identical(f("\n# only a comment\n\n"), character(0))
+
+  # Non-character (e.g. NULL or numeric) passes through unchanged
+  expect_null(f(NULL))
+})
+
+test_that("Require accepts a multi-line string of packages (issue #147)", {
+  skip_if_not_installed("Require")
+  # Build a block that includes blank lines, indentation, and `#` comments;
+  # `install = FALSE` keeps this offline -- we only need to confirm the parse
+  # path reaches the installed/load pipeline as if the user had typed
+  # c("Require", "data.table").
+  block <- "
+    # core
+    Require
+    data.table
+    # ggplot2 (intentionally commented out)
+  "
+  res <- withr::with_options(
+    list(Require.usePak = FALSE),
+    Require::Require(block, install = FALSE)
+  )
+  # Both packages reach the load step (`install = FALSE`, both already installed)
+  expect_length(res, 2L)
+  expect_true(all(res))
+})
+
+test_that("substitutePackages turns a `{...}` block into a character vector", {
+  # The user-visible win is that `Require({ dplyr; lme4 })` doesn't require
+  # quotes around each name. The parser strips comments before our code runs,
+  # so deleting a line and commenting it out have the same effect.
+  f <- Require:::substitutePackages
+
+  expect_identical(
+    f(quote({
+      dplyr
+      lme4
+      PredictiveEcology/LandR@development
+    })),
+    c("dplyr", "lme4", "PredictiveEcology/LandR@development")
+  )
+
+  # Single-element block still returns length-1 character (not unwrapped)
+  expect_identical(f(quote({ dplyr })), "dplyr")
+
+  # Non-`{` calls fall through to the existing path -- regression check
+  expect_identical(f(quote(c("dplyr", "lme4"))), c("dplyr", "lme4"))
+})
+
+test_that("Require accepts an unquoted `{...}` block", {
+  skip_if_not_installed("Require")
+  res <- withr::with_options(
+    list(Require.usePak = FALSE),
+    Require::Require({
+      Require
+      data.table
+    }, install = FALSE)
+  )
+  expect_length(res, 2L)
+  expect_true(all(res))
+})

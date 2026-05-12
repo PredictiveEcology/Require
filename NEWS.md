@@ -1,5 +1,17 @@
 # Require 1.1.0.9030 (development version)
 
+## enhancements
+
+* `Require()` now accepts a multi-line string of packages -- newlines split
+  into one package per line, whitespace is trimmed, and blank or
+  `#`-prefixed lines are dropped (issue #147). An unquoted `{...}` block
+  form is also accepted, e.g.
+  `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`;
+  comments inside `{...}` are stripped by R's parser before this function
+  runs, and version constraints like `pkg (>= 1.0)` don't parse in that
+  form -- use the quoted/multi-line-string form for those.
+
+
 ## bug fixes
 
 * `Require::Install()` with `==` / `<=` version pins now actually installs

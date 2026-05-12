@@ -68,6 +68,7 @@ pkgDepTopoSort <- function(pkgs,
                            verbose = getOption("Require.verbose"), ...) {
 
   libPaths <- dealWithMissingLibPaths(libPaths, ...)
+  pkgs <- parseMultiLinePackages(pkgs)
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {

@@ -20,13 +20,26 @@ In the case of a GitHub package, it
 will be assumed that the name of the repository is the name of the package.
 If this is not the case, then pass a \emph{named} character vector here, where the
 names are the package names that could be different than the GitHub
-repository name.}
+repository name.
+As a convenience for copy-pasting long lists, any character element that
+contains newlines is split into one package per line, with whitespace
+trimmed and blank or \verb{#}-prefixed lines dropped. For example,
+\code{Require("\\n  dplyr\\n  # ggplot2\\n  PredictiveEcology/LandR@development\\n")}
+is equivalent to
+\code{Require(c("dplyr", "PredictiveEcology/LandR@development"))}.
+Alternatively, an unquoted \code{{...}} block is accepted, with each line
+treated as one package spec, e.g.
+\code{Require({ dplyr; lme4; PredictiveEcology/LandR@development })}.
+Note that R's parser strips comments inside \code{{...}} before this function
+runs, so to omit a package delete the line (or comment it out -- both
+have the same effect). Version constraints such as \verb{pkg (>= 1.0)} do
+not parse inside \code{{...}} and must use the quoted string form.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
 \code{install.packages}, \code{install_github} or \code{installVersions}.
 \strong{When \code{options(Require.usePak = TRUE)}:} \code{repos} is added to pak's repository
 list via \code{options(repos)}. However, pak always includes CRAN and Bioconductor as
-built-in defaults regardless of this setting — \code{repos} can only \emph{add} sources,
+built-in defaults regardless of this setting -- \code{repos} can only \emph{add} sources,
 it cannot prevent pak from also searching CRAN. This differs from the default
 (\code{usePak = FALSE}) behaviour where \code{repos} strictly controls which repositories
 are used. Use \code{pak::cache_clean()} to clear pak's download cache if needed.}

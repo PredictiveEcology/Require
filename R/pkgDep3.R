@@ -110,6 +110,7 @@ pkgDep <- function(packages,
 
   stPkgDep <- Sys.time()
   libPaths <- dealWithMissingLibPaths(libPaths, ...)
+  packages <- parseMultiLinePackages(packages)
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NULL
   if (!is.null(doDeps))

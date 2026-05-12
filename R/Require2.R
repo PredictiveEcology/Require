@@ -93,6 +93,19 @@ utils::globalVariables(c(
 #'   If this is not the case, then pass a *named* character vector here, where the
 #'   names are the package names that could be different than the GitHub
 #'   repository name.
+#'   As a convenience for copy-pasting long lists, any character element that
+#'   contains newlines is split into one package per line, with whitespace
+#'   trimmed and blank or `#`-prefixed lines dropped. For example,
+#'   `Require("\n  dplyr\n  # ggplot2\n  PredictiveEcology/LandR@development\n")`
+#'   is equivalent to
+#'   `Require(c("dplyr", "PredictiveEcology/LandR@development"))`.
+#'   Alternatively, an unquoted `{...}` block is accepted, with each line
+#'   treated as one package spec, e.g.
+#'   `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`.
+#'   Note that R's parser strips comments inside `{...}` before this function
+#'   runs, so to omit a package delete the line (or comment it out -- both
+#'   have the same effect). Version constraints such as `pkg (>= 1.0)` do
+#'   not parse inside `{...}` and must use the quoted string form.
 #' @param packageVersionFile  Character string of a file name or logical. If
 #'   `TRUE`, then this function will load the default file,
 #'   `getOption("Require.packageVersionFile")`. If this argument is provided,
@@ -302,6 +315,7 @@ Require <- function(packages,
 
   packagesSubstituted <- substitute(packages) # can be c(xx), list(xx), "hi", a$b is a call, but it is likely already evaluated
   packages <- substitutePackages(packagesSubstituted, envir = parent.frame())
+  packages <- parseMultiLinePackages(packages)
 
   hasInitSlash <- grepl("^\\\"", packages)
   if (any(hasInitSlash))
@@ -3322,7 +3336,64 @@ needRebuildAndInstall <- function(needRebuild, pkgInstall, libPaths, install.pac
   pkgInstall
 }
 
+## Expand any character element containing newlines into one element per line,
+## trimming whitespace and dropping blank or `#`-commented lines. Lets users
+## paste a heredoc-style block into `Require()`, e.g.
+##   Require("
+##     dplyr
+##     lme4
+##     # ggplot2
+##     PredictiveEcology/LandR@development
+##   ")
+## Single-line strings and named vectors (which can't contain newlines in
+## practice) pass through untouched. If a named element somehow expands to
+## more than one package the name is dropped, since one alias cannot map to
+## several packages.
+parseMultiLinePackages <- function(packages) {
+  if (!is.character(packages) || !any(grepl("\n", packages, fixed = TRUE))) {
+    return(packages)
+  }
+  hadNames <- !is.null(names(packages))
+  nms <- if (hadNames) names(packages) else rep("", length(packages))
+  parts <- Map(function(p, nm) {
+    if (!grepl("\n", p, fixed = TRUE)) {
+      out <- p
+      names(out) <- nm
+      return(out)
+    }
+    lines <- trimws(strsplit(p, "\n", fixed = TRUE)[[1]])
+    lines <- lines[nzchar(lines) & !grepl("^#", lines)]
+    if (!length(lines)) return(character(0))
+    names(lines) <- if (nzchar(nm) && length(lines) == 1L) nm else rep("", length(lines))
+    lines
+  }, packages, nms)
+  ## Strip Map's outer list names (which default to the input *values* when
+  ## the input vector had no names) so unlist doesn't prefix them onto the
+  ## inner names we set above.
+  names(parts) <- NULL
+  out <- unlist(parts, use.names = TRUE)
+  if (is.null(out)) return(character(0))
+  if (!hadNames || !any(nzchar(names(out)))) names(out) <- NULL
+  out
+}
+
 substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
+
+  ## `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`:
+  ## R's parser accepts a `{...}` block in place of a vector, so each line is
+  ## a standalone expression we can deparse back into a package spec. This
+  ## avoids the parse errors that would arise from passing bare unquoted
+  ## names as positional args. Comments (`# ...`) are stripped by the parser
+  ## before we ever see the tree, so they don't appear in the result.
+  ## Version constraints like `pkg (>= 1.0)` still don't parse inside `{...}`
+  ## and remain a parse error -- use the quoted/multi-line-string form for
+  ## those.
+  if (is.call(packagesSubstituted) &&
+      identical(packagesSubstituted[[1L]], as.name("{"))) {
+    exprs <- as.list(packagesSubstituted)[-1L]
+    return(vapply(exprs, function(e) paste(deparse(e), collapse = ""),
+                  character(1L)))
+  }
 
   # Deal with non character strings first
   packages2 <- if (isTRUE(all(is.character(packagesSubstituted)))) {
