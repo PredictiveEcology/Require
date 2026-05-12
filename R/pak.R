@@ -814,95 +814,65 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
-  ## Pak's `local::<file>` ref handling is SOURCE-ONLY: it rejects binary
-  ## tarballs (e.g. `.tgz` on macOS, `.zip` on Windows, or PPM-style
-  ## platform-suffixed `.tar.gz` binaries) with "Platform mismatch" even
-  ## when the binary matches the current R/arch. AND for source refs it
-  ## runs `R CMD build` first, which rebuilds vignettes -- so an offline
-  ## source-install of a CRAN package like dplyr fails because the
-  ## vignettes' setup code needs the network. Mirror the snapshot-install
-  ## hybrid pattern: install binaries via install.packages(repos = NULL,
-  ## type = "binary"), and only feed true source tarballs to pak. The
-  ## binary-vs-source decision now comes from
-  ## `pakCachedTarball()`'s `is_binary` field (authoritative, from
-  ## `pak::cache_list()`'s `platform` column) instead of a filename
-  ## heuristic -- on Linux PPM, binaries share the bare `pkg_ver.tar.gz`
-  ## filename with source tarballs and only the column distinguishes them.
+  ## Strategy: hand pak normal CRAN-style refs (or GitHub refs) and let it
+  ## install from its own cache. Earlier versions of this function passed
+  ## `local::<tarball>` refs, but that forces pak's source-install pipeline
+  ## (`R CMD build` rebuilds vignettes -- needs network -- and fails offline
+  ## with "Failed to build dplyr 1.2.1 (300ms)"). With normal refs and the
+  ## metadata cache marked fresh (`PKG_METADATA_UPDATE_AFTER`), pak sees the
+  ## cached binary (or source if that's all there is) and installs without
+  ## any rebuild.
+  ##
+  ## Three env vars + one option suppress pak's startup network probes:
+  ##   - `PKG_METADATA_UPDATE_AFTER=365d` -- treat cached metadata as fresh,
+  ##     so pak doesn't go to PPM/CRAN for repo refresh.
+  ##   - `R_BIOC_VERSION` -- short-circuits pkgcache's bioconductor version
+  ##     probe (default fetches `bioconductor.org/config.yaml`).
+  ##   - `R_BIOC_CONFIG_URL=file://...` -- redirects any residual yaml fetch
+  ##     to pkgcache's bundled fixture (located inside pak's private
+  ##     library on most installs).
+  ##   - `options(pak.no_extra_messages = TRUE)` -- suppresses the
+  ##     "Optional package `pillar` is not available" hint.
+  ## All four are saved + restored on exit so we don't leak overrides into
+  ## the user's session.
 
-  binaryPaths <- character(0)
-  binaryPkgs  <- character(0)
-  resolvedRefs <- character(0)
-  resolvedPkgs <- character(0)
-  notInCache  <- character(0)
-  for (pkg in toInstall$Package) {
+  ## Upfront cache probe: distinguish "not in cache" up front so the
+  ## user-facing warning names the actual cause. We don't pass cached
+  ## paths to pak -- pak already knows where its own cache is.
+  notInCache <- character(0)
+  refsToInstall <- character(0)
+  pkgsToInstall <- character(0)
+  for (i in seq_len(NROW(toInstall))) {
+    pkg <- toInstall$Package[i]
     cached <- pakCachedTarball(pkg)
     if (is.null(cached)) {
       notInCache <- c(notInCache, pkg)
-    } else if (isTRUE(cached$is_binary)) {
-      binaryPaths <- c(binaryPaths, cached$path)
-      binaryPkgs  <- c(binaryPkgs,  pkg)
     } else {
-      resolvedRefs <- c(resolvedRefs, paste0("local::", cached$path))
-      resolvedPkgs <- c(resolvedPkgs, pkg)
+      ## Prefer packageFullName when available -- it carries GitHub refs and
+      ## version pins. Fall back to the bare package name (CRAN-style).
+      ref <- if ("packageFullName" %in% names(toInstall) &&
+                 !is.na(toInstall$packageFullName[i]) &&
+                 nzchar(toInstall$packageFullName[i])) {
+        toInstall$packageFullName[i]
+      } else {
+        pkg
+      }
+      refsToInstall <- c(refsToInstall, ref)
+      pkgsToInstall <- c(pkgsToInstall, pkg)
     }
   }
-  ## Track "install reached pak but did not land on disk" separately from
-  ## "no tarball in cache" so the user-facing warning can name the right
-  ## cause.
+
   installFailedPkgs <- character(0)
 
-  if (length(binaryPaths)) {
-    messageVerbose("offline mode: installing ", length(binaryPaths),
-                   " binary package(s) from pak cache via install.packages: ",
-                   paste(binaryPkgs, collapse = ", "),
-                   verbose = verbose, verboseLevel = 1)
-    ## `type = "binary"` is only valid on Mac (.tgz) and Windows (.zip).
-    ## On Linux, PPM "binaries" are source-format `.tar.gz` files with
-    ## pre-compiled `.so` artifacts inside; R CMD INSTALL detects the
-    ## pre-built artifacts and installs without recompilation. Picking
-    ## type from .Platform$pkgType avoids the
-    ## "type 'binary' is not supported on this platform" error on Linux.
-    binaryType <- if (.Platform$pkgType == "source") "source" else "binary"
-    err <- try(suppressWarnings(
-      install.packages(binaryPaths, repos = NULL, type = binaryType,
-                       lib = libPaths[1], dependencies = FALSE,
-                       quiet = TRUE)
-    ), silent = TRUE)
-    if (is(err, "try-error")) {
-      messageVerbose("offline binary install via install.packages failed; ",
-                     "deferring to installed.packages() check: ",
-                     as.character(err),
-                     verbose = verbose, verboseLevel = 2)
-      ## Don't add to a missing list yet -- the ground-truth check below
-      ## decides. install.packages may have written some packages before
-      ## failing on another.
-    }
-  }
-
-  if (length(resolvedRefs)) {
-    messageVerbose("offline mode: installing ", length(resolvedRefs),
-                   " source package(s) from pak cache: ",
-                   paste(resolvedPkgs, collapse = ", "),
+  if (length(refsToInstall)) {
+    messageVerbose("offline mode: installing ", length(refsToInstall),
+                   " package(s) from pak cache: ",
+                   paste(pkgsToInstall, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
 
-    ## Issue: even with `local::` refs + `dependencies = FALSE`, pak's
-    ## subprocess hits the network at startup. pkgcache's bioconductor
-    ## helper calls `download.file("https://bioconductor.org/config.yaml",
-    ## ...)` via `read_url()` to learn the Bioc version, and newer pak
-    ## versions also probe `https://cdn.posit.co/posit-ai/manifest.json`.
-    ## Both fail under `Require.offlineMode = TRUE` and abort the install
-    ## even though we never need them for local source tarballs.
-    ##
-    ## Suppress the Bioc probe via the documented env-var hooks pkgcache
-    ## already respects: `R_BIOC_VERSION` short-circuits version detection,
-    ## and `R_BIOC_CONFIG_URL` redirects the yaml fetch to pkgcache's
-    ## bundled fixture (a real `file://` URL, so `download.file` succeeds
-    ## without network). pak subprocesses inherit env vars from this
-    ## process, so this propagates through callr. Restore on exit so we
-    ## don't leak the overrides into the user's session.
-    ## pkgcache is bundled inside pak's private library, not on the user's
-    ## `.libPaths()`, so `system.file(... package = "pkgcache")` will return ""
-    ## in the parent session. Fall back to pak's installed location.
+    ## Locate pkgcache's bioc-config.yaml fixture. pkgcache lives inside
+    ## pak's private library on most installs, so the top-level
+    ## system.file() lookup returns "" -- fall back to pak's library/.
     biocFixture <- tryCatch(
       system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
       error = function(e) "")
@@ -920,7 +890,8 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
       if (length(v) && nzchar(v) && !is.na(v)) v else "3.22"
     } else "3.22"
-    envNms <- c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL")
+    envNms <- c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
+                "PKG_METADATA_UPDATE_AFTER")
     oldEnv <- Sys.getenv(envNms, names = TRUE, unset = NA)
     if (is.na(oldEnv[["R_BIOC_VERSION"]]))
       Sys.setenv(R_BIOC_VERSION = biocVer)
@@ -928,23 +899,24 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       Sys.setenv(R_BIOC_CONFIG_URL =
                    paste0("file://", normalizePath(biocFixture, winslash = "/")))
     }
+    if (is.na(oldEnv[["PKG_METADATA_UPDATE_AFTER"]]))
+      Sys.setenv(PKG_METADATA_UPDATE_AFTER = "365d")
+    oldExtraOpt <- getOption("pak.no_extra_messages")
+    options(pak.no_extra_messages = TRUE)
     on.exit({
       for (nm in envNms) {
         v <- oldEnv[[nm]]
         if (is.na(v)) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(v), nm))
       }
+      options(pak.no_extra_messages = oldExtraOpt)
     }, add = TRUE)
 
     err <- try(pakCall(
-      pak::pak(resolvedRefs, lib = libPaths[1], ask = FALSE,
+      pak::pak(refsToInstall, lib = libPaths[1], ask = FALSE,
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
     if (is(err, "try-error")) {
-      ## Don't mark as missing yet -- pak may have died on a spurious
-      ## startup network probe (e.g. cdn.posit.co/posit-ai/manifest.json
-      ## in newer pak versions, for which there's no documented env-var
-      ## hook). The ground-truth `installed.packages()` check below will
-      ## detect whether the install actually landed before pak aborted.
+      ## Don't mark as missing yet -- the ground-truth check below decides.
       messageVerbose("pak install reported error; deferring to ",
                      "installed.packages() ground-truth check: ",
                      as.character(err),
@@ -952,10 +924,10 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
     }
   }
 
-  ## Verify final state on disk for everything we tried (binary + source) and
-  ## update pkgDT accordingly. This is the ground truth -- a successful pak
-  ## or install.packages call doesn't guarantee the package landed in libPaths.
-  triedPkgs <- c(binaryPkgs, resolvedPkgs)
+  ## Verify final state on disk and update pkgDT accordingly. This is the
+  ## ground truth -- a successful pak call doesn't guarantee the package
+  ## landed in libPaths.
+  triedPkgs <- pkgsToInstall
   if (length(triedPkgs)) {
     ipNow <- tryCatch(installed.packages(lib.loc = libPaths[1L], noCache = TRUE),
                       error = function(e) NULL)

@@ -1,4 +1,28 @@
-# Require 1.1.0.9039 (development version)
+# Require 1.1.0.9040 (development version)
+
+## bug fixes
+
+* Offline install under `Require.usePak = TRUE + Require.offlineMode = TRUE`
+  now uses pak's normal install flow against its existing cache instead
+  of forcing a `local::<tarball>` source install. The previous design
+  fed pak `local::` refs which forced its source-install pipeline
+  (`R CMD build` rebuilds vignettes -- needs network -- and failed offline
+  with "Failed to build dplyr 1.2.1 (300ms)"). The new flow passes
+  normal CRAN/GitHub refs to `pak::pak()` and uses three env-var hooks
+  to keep pak's subprocess fully offline:
+  - `PKG_METADATA_UPDATE_AFTER=365d` -- treat pak's cached metadata as
+    fresh so pak doesn't refresh from CRAN/PPM.
+  - `R_BIOC_VERSION` -- short-circuit pkgcache's Bioconductor version
+    probe.
+  - `R_BIOC_CONFIG_URL=file://...` -- redirect any residual yaml fetch
+    to pkgcache's bundled fixture.
+  Plus `options(pak.no_extra_messages = TRUE)` to silence the pillar
+  hint. All four are saved + restored on exit.
+
+  With the cached metadata and a cached binary (or source) for the
+  package, pak installs without recompilation -- e.g. dplyr in ~64ms
+  on a warm cache instead of failing.
+
 
 ## bug fixes
 

@@ -361,16 +361,14 @@ test_that("Require.downloadTimeout raises options(timeout) during GH download (i
                    info = "options(timeout) must be restored on exit")
 })
 
-test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe", {
-  # The user-reported failure mode: pak::pak() in offline mode still hits the
-  # network at startup (pkgcache fetches https://bioconductor.org/config.yaml
-  # via read_url -> download.file). We suppress this by setting
-  # R_BIOC_VERSION + R_BIOC_CONFIG_URL right before calling pak; pak's
-  # subprocess inherits env vars via callr. Verify the env vars are set
-  # during the call and restored afterwards.
+test_that("pakOfflineInstall sets metadata + bioc env vars to suppress pak probes", {
+  # The user-reported failure mode: pak's subprocess hits the network at
+  # startup (Bioc config probe, PPM metadata refresh). Suppress via env
+  # vars pak/pkgcache already respect: PKG_METADATA_UPDATE_AFTER tells
+  # pak the cached metadata is fresh enough to skip refresh; R_BIOC_*
+  # short-circuits the Bioc config fetch. Verify the env vars are set
+  # during the pak call and restored afterwards.
   skip_if_not_installed("pak")
-  # pkgcache is bundled inside pak's private library; the prod code falls
-  # back to that location if a top-level pkgcache isn't on .libPaths().
   pakDir <- tryCatch(find.package("pak"), error = function(e) "")
   biocFixture <- if (length(pakDir) && nzchar(pakDir)) {
     f <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
@@ -381,24 +379,27 @@ test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe
 
   observed_bioc_ver <- NULL
   observed_bioc_url <- NULL
-  pre_bioc_ver <- Sys.getenv("R_BIOC_VERSION", unset = NA)
-  pre_bioc_url <- Sys.getenv("R_BIOC_CONFIG_URL", unset = NA)
+  observed_meta_after <- NULL
+  observed_extra_opt <- NULL
+  pre_env <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
+                          "PKG_METADATA_UPDATE_AFTER"),
+                        names = TRUE, unset = NA)
   on.exit({
-    if (is.na(pre_bioc_ver)) Sys.unsetenv("R_BIOC_VERSION") else Sys.setenv(R_BIOC_VERSION = pre_bioc_ver)
-    if (is.na(pre_bioc_url)) Sys.unsetenv("R_BIOC_CONFIG_URL") else Sys.setenv(R_BIOC_CONFIG_URL = pre_bioc_url)
+    for (nm in names(pre_env)) {
+      v <- pre_env[[nm]]
+      if (is.na(v)) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(v), nm))
+    }
   }, add = TRUE)
-  Sys.unsetenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"))
+  Sys.unsetenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
+                 "PKG_METADATA_UPDATE_AFTER"))
 
-  # Build a minimal pkgDT with one ref pointing at a real (existing) file so
-  # pakCachedTarball() finds it and routes it to the source-install branch
-  # we instrumented. We don't care if pak actually installs -- we only care
-  # that R_BIOC_VERSION + R_BIOC_CONFIG_URL are visible to its subprocess.
   fakeTar <- tempfile(fileext = ".tar.gz")
   file.create(fakeTar)
   on.exit(unlink(fakeTar), add = TRUE)
 
   pkgDT <- data.table::data.table(
     Package = "zzzfakepkg",
+    packageFullName = "zzzfakepkg",
     needInstall = Require:::.txtInstall,
     installResult = NA_character_,
     installed = FALSE,
@@ -417,6 +418,8 @@ test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe
     pakCall          = function(expr, verbose) {
       observed_bioc_ver <<- Sys.getenv("R_BIOC_VERSION", unset = NA)
       observed_bioc_url <<- Sys.getenv("R_BIOC_CONFIG_URL", unset = NA)
+      observed_meta_after <<- Sys.getenv("PKG_METADATA_UPDATE_AFTER", unset = NA)
+      observed_extra_opt <<- getOption("pak.no_extra_messages", NA)
       invisible(NULL)
     },
     .package = "Require",
@@ -430,13 +433,17 @@ test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe
   expect_true(nzchar(observed_bioc_ver) && !is.na(observed_bioc_ver),
               info = "R_BIOC_VERSION must be set during pak::pak()")
   expect_true(grepl("^file://.+bioc-config\\.yaml$", observed_bioc_url %||% ""),
-              info = paste("R_BIOC_CONFIG_URL must point at pkgcache's bundled fixture; got:",
+              info = paste("R_BIOC_CONFIG_URL must point at the bundled fixture; got:",
                            observed_bioc_url))
+  expect_identical(observed_meta_after, "365d",
+                   info = "PKG_METADATA_UPDATE_AFTER must defer pak's metadata refresh")
+  expect_true(isTRUE(observed_extra_opt),
+              info = "pak.no_extra_messages must be set so pak skips the pillar hint")
 
-  # After the call returns, the env vars must be restored to their prior
-  # state (unset, in this test).
+  # All env vars restored to their prior (unset) state.
   expect_identical(Sys.getenv("R_BIOC_VERSION", unset = NA), NA_character_)
   expect_identical(Sys.getenv("R_BIOC_CONFIG_URL", unset = NA), NA_character_)
+  expect_identical(Sys.getenv("PKG_METADATA_UPDATE_AFTER", unset = NA), NA_character_)
 })
 
 test_that("setOfflineModeTRUE(force = TRUE) flips offlineMode when no internet", {
