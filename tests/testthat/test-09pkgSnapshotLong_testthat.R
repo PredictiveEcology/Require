@@ -271,7 +271,20 @@ test_that("test 09", {
                                   installedVersion = Version)])
         cat("=== /versionProblems ===\n\n")
       }
-      expect_true(NROW(versionProblems) == 0)
+      ## Surface the offending package list in the assertion message itself
+      ## so the testthat failure output is self-contained — the cat() block
+      ## above is easy to miss when scrolling test output, but `info` lands
+      ## right next to the failure.
+      versionProblemsInfo <- if (NROW(versionProblems)) {
+        paste0(
+          "\nsnapshot pin mismatches (after exclusions):\n",
+          paste0("  ", versionProblems$Package,
+                 ": snapshot=", versionProblems$i.Version,
+                 " installed=", versionProblems$Version,
+                 collapse = "\n")
+        )
+      } else NULL
+      expect_true(NROW(versionProblems) == 0, info = versionProblemsInfo)
 
       ## Note: the previous test version walked pkgDep recursively over
       ## every snapshot ref to verify the snapshot was a closed graph

@@ -7,9 +7,9 @@
 #
 # The full LandR-scale cascade-recovery interaction (~200 ref install,
 # parallel-cascade abort, identify-and-defer + serial fallback) is too
-# heavy for default CRAN runs. It is gated on an env var so a developer
-# can opt in (`R_REQUIRE_RUN_LARGE_INTEGRATION=true`); see the last
-# test_that block.
+# heavy for CRAN / CI. Outside those contexts (local dev runs) it is run
+# by default; set `R_REQUIRE_RUN_LARGE_INTEGRATION=false` to opt out
+# without leaving the lab. See the last test_that block.
 
 # ---------------------------------------------------------------------------
 # Unit: extractInstallFailures() parses pak's per-package failure lines.
@@ -629,16 +629,19 @@ test_that("pakEnv()$.lastInstallFailures is populated after a successful install
 # recover the install end-to-end and that the install summary correctly
 # attributes the surviving still-missing refs.
 #
-# Slow (3-15 min depending on package cache state) and network-heavy;
-# gated on R_REQUIRE_RUN_LARGE_INTEGRATION=true.
+# Slow (3-15 min depending on package cache state) and network-heavy.
+# CRAN and CI are already skipped above; on local interactive/dev runs
+# we run this by default. Set R_REQUIRE_RUN_LARGE_INTEGRATION=false to
+# opt out without changing the test.
 # ---------------------------------------------------------------------------
 test_that("identify-and-defer recovers from PSPclean-style cascade", {
   skip_on_cran()
   skip_on_ci()
   skip_if_offline2()
   skip_if_not_installed("pak")
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LARGE_INTEGRATION"))) {
-    skip("Set R_REQUIRE_RUN_LARGE_INTEGRATION=true to run; multi-minute install")
+  if (identical(tolower(Sys.getenv("R_REQUIRE_RUN_LARGE_INTEGRATION", "true")),
+                "false")) {
+    skip("R_REQUIRE_RUN_LARGE_INTEGRATION=false; skipping multi-minute install")
   }
   skip_if_not_installed("SpaDES.project")
 
