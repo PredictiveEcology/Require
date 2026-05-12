@@ -11,6 +11,9 @@
   runs, and version constraints like `pkg (>= 1.0)` don't parse in that
   form -- use the quoted/multi-line-string form for those.
 
+* `pkgDepTopoSort()` first argument renamed from `pkgs` to `packages` for
+  consistency with `Require()`, `Install()`, and `pkgDep()`.
+
 
 ## bug fixes
 

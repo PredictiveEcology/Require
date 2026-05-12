@@ -312,3 +312,13 @@ test_that("Require accepts an unquoted `{...}` block", {
   expect_length(res, 2L)
   expect_true(all(res))
 })
+
+test_that("pkgDepTopoSort's first arg is `packages` (consistent with Require)", {
+  # Renamed from `pkgs` so all entry points use the same arg name. Make sure
+  # both positional and named calls work.
+  skip_if_not_installed("Require")
+  out_named <- Require::pkgDepTopoSort(packages = "data.table")
+  out_pos   <- Require::pkgDepTopoSort("data.table")
+  expect_identical(out_named, out_pos)
+  expect_true("data.table" %in% names(out_named))
+})

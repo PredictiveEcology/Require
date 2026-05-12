@@ -10,30 +10,28 @@ utils::globalVariables(
 #' This is a wrapper around `tools::dependsOnPkgs`,
 #' but with the added option of `topoSort`, which
 #' will sort them such that the packages at the top will have
-#' the least number of dependencies that are in `pkgs`.
+#' the least number of dependencies that are in `packages`.
 #' This is essentially a topological sort, but it is done
 #' heuristically. This can be used to e.g., `detach` or
 #' `unloadNamespace` packages in order so that they each
 #' of their dependencies are detached or unloaded first.
-#' @param pkgs A vector of package names to evaluate their
-#'   reverse depends (i.e., the packages that *use* each
-#'   of these packages)
+#' @inheritParams Require
 #' @param deps An optional named list of (reverse) dependencies.
 #'   If not supplied, then `tools::dependsOnPkgs(..., recursive = TRUE)`
 #'   will be used
 #' @param topoSort Logical. If `TRUE`, the default, then
 #'   the returned list of packages will be in order with the
-#'   least number of dependencies listed in `pkgs` at
+#'   least number of dependencies listed in `packages` at
 #'   the top of the list.
 #' @param reverse Logical. If `TRUE`, then this will use `tools::pkgDependsOn`
-#'   to determine which packages depend on the `pkgs`
+#'   to determine which packages depend on the `packages`
 #' @param useAllInSearch Logical. If `TRUE`, then all non-core
-#' R packages in `search()` will be appended to `pkgs`
+#' R packages in `search()` will be appended to `packages`
 #' to allow those to also be identified
 #' @param returnFull Logical. Primarily useful when `reverse = TRUE`.
 #'   If `TRUE`, then then all installed packages will be searched.
 #'   If `FALSE`, the default, only packages that are currently in
-#'   the `search()` path and passed in `pkgs` will be included
+#'   the `search()` path and passed in `packages` will be included
 #'   in the possible reverse dependencies.
 #'
 #' @inheritParams Require
@@ -54,7 +52,7 @@ utils::globalVariables(
 #' }
 #' }
 #'
-pkgDepTopoSort <- function(pkgs,
+pkgDepTopoSort <- function(packages,
                            deps,
                            reverse = FALSE,
                            topoSort = TRUE,
@@ -68,14 +66,14 @@ pkgDepTopoSort <- function(pkgs,
                            verbose = getOption("Require.verbose"), ...) {
 
   libPaths <- dealWithMissingLibPaths(libPaths, ...)
-  pkgs <- parseMultiLinePackages(pkgs)
+  packages <- parseMultiLinePackages(packages)
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
       a <- search()
       a <- setdiff(a, .defaultPackages)
       a <- gsub("package:", "", a)
-      pkgs <- unique(c(pkgs, a))
+      packages <- unique(c(packages, a))
     } else {
       messageVerbose(
         "deps is provided; useAllInSearch will be set to FALSE",
@@ -85,7 +83,7 @@ pkgDepTopoSort <- function(pkgs,
     }
   }
 
-  names(pkgs) <- pkgs
+  names(packages) <- packages
   if (missing(deps)) {
     aa <- if (isTRUE(reverse)) {
       ip <- .installed.pkgs(lib.loc = libPaths, which = which, collapse = TRUE) # need all installed packages
@@ -93,10 +91,10 @@ pkgDepTopoSort <- function(pkgs,
       deps <- depsWithCommasToVector(ip$Package, ip$deps)
       deps <- lapply(deps, extractPkgName)
       # names(deps) <- ip[, "Package"]
-      # names(pkgs) <- pkgs
+      # names(packages) <- packages
       deps <- deps[order(names(deps))]
       revDeps <-
-        lapply(pkgs, function(p) {
+        lapply(packages, function(p) {
           names(unlist(
             lapply(deps, function(d) {
               if (isTRUE(any(p %in% d))) {
@@ -144,7 +142,7 @@ pkgDepTopoSort <- function(pkgs,
       }
     } else {
       pkgDep(
-        pkgs,
+        packages,
         recursive = TRUE,
         purge = purge,
         libPaths = libPaths,
