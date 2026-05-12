@@ -2,6 +2,18 @@
 
 ## enhancements
 
+* `Require.offlineMode = TRUE` no longer fails when pak's subprocess
+  probes the network at startup. pkgcache fetches
+  `https://bioconductor.org/config.yaml` via `download.file()` even when
+  installing `local::` source refs with `dependencies = FALSE`, which
+  aborts the install when offline. Suppressed by setting
+  `R_BIOC_VERSION` and `R_BIOC_CONFIG_URL` (pointing at pkgcache's
+  bundled `bioc-config.yaml` fixture, located inside pak's private
+  library on most systems) for the duration of the pak call, restored
+  on exit. pak's startup errors are now treated as advisory: the
+  ground-truth `installed.packages()` check decides whether the install
+  actually landed.
+
 * New `Require.downloadTimeout` option (default `300L` seconds). Raises
   `options("timeout")` for the duration of GitHub source-archive downloads
   in the legacy (non-pak) install path, where R's stock 60s default can

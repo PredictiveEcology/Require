@@ -360,3 +360,82 @@ test_that("Require.downloadTimeout raises options(timeout) during GH download (i
   expect_identical(getOption("timeout"), oldTimeout,
                    info = "options(timeout) must be restored on exit")
 })
+})
+
+test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe", {
+  # The user-reported failure mode: pak::pak() in offline mode still hits the
+  # network at startup (pkgcache fetches https://bioconductor.org/config.yaml
+  # via read_url -> download.file). We suppress this by setting
+  # R_BIOC_VERSION + R_BIOC_CONFIG_URL right before calling pak; pak's
+  # subprocess inherits env vars via callr. Verify the env vars are set
+  # during the call and restored afterwards.
+  skip_if_not_installed("pak")
+  # pkgcache is bundled inside pak's private library; the prod code falls
+  # back to that location if a top-level pkgcache isn't on .libPaths().
+  pakDir <- tryCatch(find.package("pak"), error = function(e) "")
+  biocFixture <- if (length(pakDir) && nzchar(pakDir)) {
+    f <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
+    if (file.exists(f)) f else ""
+  } else ""
+  if (!nzchar(biocFixture))
+    testthat::skip("pkgcache bioc-config.yaml fixture not found inside pak")
+
+  observed_bioc_ver <- NULL
+  observed_bioc_url <- NULL
+  pre_bioc_ver <- Sys.getenv("R_BIOC_VERSION", unset = NA)
+  pre_bioc_url <- Sys.getenv("R_BIOC_CONFIG_URL", unset = NA)
+  on.exit({
+    if (is.na(pre_bioc_ver)) Sys.unsetenv("R_BIOC_VERSION") else Sys.setenv(R_BIOC_VERSION = pre_bioc_ver)
+    if (is.na(pre_bioc_url)) Sys.unsetenv("R_BIOC_CONFIG_URL") else Sys.setenv(R_BIOC_CONFIG_URL = pre_bioc_url)
+  }, add = TRUE)
+  Sys.unsetenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"))
+
+  # Build a minimal pkgDT with one ref pointing at a real (existing) file so
+  # pakCachedTarball() finds it and routes it to the source-install branch
+  # we instrumented. We don't care if pak actually installs -- we only care
+  # that R_BIOC_VERSION + R_BIOC_CONFIG_URL are visible to its subprocess.
+  fakeTar <- tempfile(fileext = ".tar.gz")
+  file.create(fakeTar)
+  on.exit(unlink(fakeTar), add = TRUE)
+
+  pkgDT <- data.table::data.table(
+    Package = "zzzfakepkg",
+    needInstall = Require:::.txtInstall,
+    installResult = NA_character_,
+    installed = FALSE,
+    installedVersionOK = FALSE,
+    Version = NA_character_,
+    LibPath = NA_character_
+  )
+
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_envprobe_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  testthat::with_mocked_bindings(
+    pakCachedTarball = function(pkg) fakeTar,
+    pakCall          = function(expr, verbose) {
+      observed_bioc_ver <<- Sys.getenv("R_BIOC_VERSION", unset = NA)
+      observed_bioc_url <<- Sys.getenv("R_BIOC_CONFIG_URL", unset = NA)
+      invisible(NULL)
+    },
+    .package = "Require",
+    {
+      suppressWarnings(
+        Require:::pakOfflineInstall(pkgDT, libPaths = testlib, verbose = -1)
+      )
+    }
+  )
+
+  expect_true(nzchar(observed_bioc_ver) && !is.na(observed_bioc_ver),
+              info = "R_BIOC_VERSION must be set during pak::pak()")
+  expect_true(grepl("^file://.+bioc-config\\.yaml$", observed_bioc_url %||% ""),
+              info = paste("R_BIOC_CONFIG_URL must point at pkgcache's bundled fixture; got:",
+                           observed_bioc_url))
+
+  # After the call returns, the env vars must be restored to their prior
+  # state (unset, in this test).
+  expect_identical(Sys.getenv("R_BIOC_VERSION", unset = NA), NA_character_)
+  expect_identical(Sys.getenv("R_BIOC_CONFIG_URL", unset = NA), NA_character_)
+})

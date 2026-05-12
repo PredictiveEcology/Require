@@ -846,14 +846,71 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
                    " source package(s) from pak cache: ",
                    paste(resolvedPkgs, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
+
+    ## Issue: even with `local::` refs + `dependencies = FALSE`, pak's
+    ## subprocess hits the network at startup. pkgcache's bioconductor
+    ## helper calls `download.file("https://bioconductor.org/config.yaml",
+    ## ...)` via `read_url()` to learn the Bioc version, and newer pak
+    ## versions also probe `https://cdn.posit.co/posit-ai/manifest.json`.
+    ## Both fail under `Require.offlineMode = TRUE` and abort the install
+    ## even though we never need them for local source tarballs.
+    ##
+    ## Suppress the Bioc probe via the documented env-var hooks pkgcache
+    ## already respects: `R_BIOC_VERSION` short-circuits version detection,
+    ## and `R_BIOC_CONFIG_URL` redirects the yaml fetch to pkgcache's
+    ## bundled fixture (a real `file://` URL, so `download.file` succeeds
+    ## without network). pak subprocesses inherit env vars from this
+    ## process, so this propagates through callr. Restore on exit so we
+    ## don't leak the overrides into the user's session.
+    ## pkgcache is bundled inside pak's private library, not on the user's
+    ## `.libPaths()`, so `system.file(... package = "pkgcache")` will return ""
+    ## in the parent session. Fall back to pak's installed location.
+    biocFixture <- tryCatch(
+      system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
+      error = function(e) "")
+    if (!nzchar(biocFixture)) {
+      pakDir <- tryCatch(find.package("pak"), error = function(e) "")
+      if (length(pakDir) && nzchar(pakDir)) {
+        cand <- file.path(pakDir, "library", "pkgcache", "fixtures",
+                          "bioc-config.yaml")
+        if (file.exists(cand)) biocFixture <- cand
+      }
+    }
+    biocVer <- if (nzchar(biocFixture) && file.exists(biocFixture)) {
+      relLine <- grep("^release_version:", readLines(biocFixture, warn = FALSE),
+                      value = TRUE)[1L]
+      v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
+      if (length(v) && nzchar(v) && !is.na(v)) v else "3.22"
+    } else "3.22"
+    envNms <- c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL")
+    oldEnv <- Sys.getenv(envNms, names = TRUE, unset = NA)
+    if (is.na(oldEnv[["R_BIOC_VERSION"]]))
+      Sys.setenv(R_BIOC_VERSION = biocVer)
+    if (is.na(oldEnv[["R_BIOC_CONFIG_URL"]]) && nzchar(biocFixture)) {
+      Sys.setenv(R_BIOC_CONFIG_URL =
+                   paste0("file://", normalizePath(biocFixture, winslash = "/")))
+    }
+    on.exit({
+      for (nm in envNms) {
+        v <- oldEnv[[nm]]
+        if (is.na(v)) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(v), nm))
+      }
+    }, add = TRUE)
+
     err <- try(pakCall(
       pak::pak(resolvedRefs, lib = libPaths[1], ask = FALSE,
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
     if (is(err, "try-error")) {
-      warning(.txtCouldNotBeInstalled, ": offline install via pak failed: ",
-              as.character(err), call. = FALSE)
-      missingPkgs <- c(missingPkgs, resolvedPkgs)
+      ## Don't mark as missing yet -- pak may have died on a spurious
+      ## startup network probe (e.g. cdn.posit.co/posit-ai/manifest.json
+      ## in newer pak versions, for which there's no documented env-var
+      ## hook). The ground-truth `installed.packages()` check below will
+      ## detect whether the install actually landed before pak aborted.
+      messageVerbose("pak install reported error; deferring to ",
+                     "installed.packages() ground-truth check: ",
+                     as.character(err),
+                     verbose = verbose, verboseLevel = 2)
     }
   }
 
