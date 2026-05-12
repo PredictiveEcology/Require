@@ -79,23 +79,25 @@ Require::Install(
 ```
 will keep the project at the bleeding edge of the development branch of `reproducible`, but will only update if necessary (based on the version needed, expressed by the inequality) for the development branch of `SpaDES.core`. The user does not have to make decisions at run time as to whether an update should be made, and for which packages.
 
-# How `Require` differs from `pak` in philosophy
+
+# Differences between `pak` and `Require`
+
+## How `Require` differs from `pak` in philosophy
 
 By default, as of version 2.0.0, `Require` uses `pak` to do the majority of the work, but applies a different philosophy to package management. The two tools answer the same question — "what should be installed?" — in different ways.
 
-## Differences between `pak` and `Require`
-
 `Require` is therefore not an *alternative* to `pak`. It is a complementary *wrapper* that applies a different policy on top of `pak`. The differences described in this vignette are differences in **policy**, not in installation machinery. For example: when you call `pak::pkg_install("data.table")`, `pak` will offer to upgrade `data.table` if a newer version is on CRAN. When you call `Require::Install("data.table")`, `Require` first checks whether the installed version already satisfies your request; if it does, nothing happens at all. The actual install, when one is needed, is done by `pak` either way.
 
+Practically speaking, this means that a user can write their list of packages they need in their code, and leave it there, without concern that their packages may unexpectedly be updated -- using time and possibly changing functionality at an inopportune moment.
 
 ## Stability vs. Most-recent
 
 The biggest difference is what each tool does when a package is *already installed*.
 
 * **`pak` is current-first.** If you ask `pak` to install a package that is already there, it will check for a newer version and offer to upgrade.
-* **`Require` is stability-first.** If the installed version satisfies your request, `Require` does nothing. It will only install or upgrade when the version constraint you wrote actually requires it.
+* **`Require` is stability-first.** If the installed version satisfies your request, `Require` does not install. It will only install or upgrade when the version constraint you wrote actually requires it.
 
-This is what makes `Require` "set-and-forget". You can put a `Require::Install(...)` line near the top of a script, run that script every day for a year, and your packages will not silently change underneath you. They only change when you change the code.
+This is what makes `Require` "set-and-forget". You can put a `Require::Install(...)` line near the top of a script, run that script every day for a year, and your packages will not silently change underneath you. They only change when you change your version requirement.
 
 | The package state                | `pak::pkg_install("data.table")`            | `Require::Install("data.table")`            |
 | -------------------------------- | ------------------------------------------- | ------------------------------------------- |
@@ -128,7 +130,7 @@ try(pak::pak("data.table (>= 1.8.0)"))
 pak::pak("data.table@1.8.0")
 ```
 
-`Require` accepts the full set of R-style constraints right in the call, mixed freely:
+Consistent with the version requirements that can be specified in a package DESCRIPTION file, `Require` accepts the full set of R-style constraints right in the call, mixed freely:
 
 ```{r,eval=FALSE}
 Require::Install(c("data.table (>= 1.16)",
@@ -191,7 +193,7 @@ A snapshot is a flat list of exact pins (CRAN versions and GitHub SHAs). On pape
 
 ### Why snapshot install needs Require's plumbing on top of `pak`
 
-It is tempting to assume `pak`'s own cache would handle a snapshot install end-to-end — hand `pak` a list of `cran::pkg@version` refs and let `pkgcache` deduplicate. We measured this directly. Result, on a 379-package snapshot, cache-warm:
+It is tempting to assume `pak`'s own cache would handle a snapshot install end-to-end — hand `pak` a list of `cran::pkg@version` refs and let `pkgcache` deduplicate. We measured this directly. Result, on a 379-package snapshot:
 
 | Strategy                                                           | Cache-warm time | Outcome                                                         |
 | ------------------------------------------------------------------ | :-------------: | :-------------------------------------------------------------- |
