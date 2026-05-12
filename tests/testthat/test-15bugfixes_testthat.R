@@ -192,6 +192,69 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
+test_that("pakOfflineInstall routes .zip/.tgz binaries through local:: refs", {
+  # Regression on Windows: with PPM single-arch binaries cached
+  # (`x86_64-w64-mingw32`), pak's resolver picks the CRAN multi-arch URL
+  # (`i386+x86_64-w64-mingw32`) as canonical, misses the cache, and
+  # re-downloads. Routing `.zip` / `.tgz` files through `local::<file>`
+  # makes pak install the binary directly with no resolver involvement.
+  # The vignette-rebuild problem only applies to `.tar.gz`, so those keep
+  # the bare-ref pak path.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_local_zip_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  zipPath <- tempfile(fileext = ".zip")
+  tgzPath <- tempfile(fileext = ".tgz")
+  tarPath <- tempfile(fileext = ".tar.gz")
+  file.create(c(zipPath, tgzPath, tarPath))
+  on.exit(unlink(c(zipPath, tgzPath, tarPath)), add = TRUE)
+
+  pkgDT <- data.table::data.table(
+    Package         = c("pkgZip", "pkgTgz", "pkgTar"),
+    packageFullName = c("pkgZip", "pkgTgz", "pkgTar"),
+    needInstall     = Require:::.txtInstall,
+    installResult   = NA_character_,
+    installed       = FALSE,
+    installedVersionOK = FALSE,
+    Version         = NA_character_,
+    LibPath         = NA_character_
+  )
+
+  captured_refs <- NULL
+  testthat::with_mocked_bindings(
+    pakCachedTarball = function(pkg) {
+      switch(pkg,
+        pkgZip = list(path = zipPath, is_binary = TRUE),
+        pkgTgz = list(path = tgzPath, is_binary = TRUE),
+        pkgTar = list(path = tarPath, is_binary = FALSE),
+        NULL)
+    },
+    pakCall = function(expr, verbose) {
+      cl <- substitute(expr)
+      captured_refs <<- eval(cl[[2L]], envir = parent.frame())
+      invisible(NULL)
+    },
+    .package = "Require",
+    {
+      suppressWarnings(suppressMessages(
+        Require:::pakOfflineInstall(pkgDT, libPaths = testlib, verbose = -1)
+      ))
+    }
+  )
+
+  expect_identical(captured_refs[1], paste0("local::", zipPath),
+                   info = ".zip must be passed to pak as local::<file>")
+  expect_identical(captured_refs[2], paste0("local::", tgzPath),
+                   info = ".tgz must be passed to pak as local::<file>")
+  expect_identical(captured_refs[3], "pkgTar",
+                   info = ".tar.gz must be passed as a bare ref (no local::)")
+})
+
 test_that("pakOfflineInstall strips parenthetical version specs before pak", {
   # Regression: pak rejects Require-internal refs of the form
   # `pkg (>= 1.3.2)` with "Cannot parse package: glue (>= 1.3.2)". The

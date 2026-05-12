@@ -838,12 +838,30 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
     if (is.null(cached)) {
       notInCache <- c(notInCache, pkg)
     } else {
-      ## Prefer packageFullName when available -- it carries GitHub refs.
+      ## Choose the ref form per file extension so pak skips the network
+      ## without rebuilding anything:
+      ##
+      ##  - `.zip` (Windows binary) / `.tgz` (Mac binary):  use
+      ##    `local::<file>` -- pak installs the binary directly, no
+      ##    rebuild, no resolver, no CRAN-vs-PPM cache-key mismatch (the
+      ##    mismatch is what caused the Windows re-download with bare
+      ##    refs).
+      ##  - `.tar.gz`:  use a bare ref. `local::<tar.gz>` would trigger
+      ##    `R CMD build` (rebuilds vignettes, needs network, fails
+      ##    offline). With env vars below, pak's resolver instead hits
+      ##    its own cache (works on Linux including PPM source-format
+      ##    binaries with pre-built artifacts).
+      ##
       ## Strip the Require-internal `pkg (>= X.Y.Z)` parenthetical
-      ## constraint via `trimVersionNumber()`; pak rejects that form with
-      ## `Cannot parse package: glue (>= 1.3.2)`. GitHub `account/repo@ref`
-      ## forms are preserved.
-      ref <- if ("packageFullName" %in% names(toInstall) &&
+      ## constraint via `trimVersionNumber()` for the bare-ref path;
+      ## pak rejects parenthetical inequality forms with
+      ## `Cannot parse package: glue (>= 1.3.2)`. GitHub
+      ## `account/repo@ref` forms are preserved.
+      isBinaryArchive <- grepl("\\.(zip|tgz)$", cached$path,
+                               ignore.case = TRUE)
+      ref <- if (isBinaryArchive) {
+        paste0("local::", cached$path)
+      } else if ("packageFullName" %in% names(toInstall) &&
                  !is.na(toInstall$packageFullName[i]) &&
                  nzchar(toInstall$packageFullName[i])) {
         trimVersionNumber(toInstall$packageFullName[i])

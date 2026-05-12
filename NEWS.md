@@ -1,6 +1,28 @@
-# Require 1.1.0.9045 (development version)
+# Require 1.1.0.9046 (development version)
 
 ## bug fixes
+
+* Offline install on Windows no longer re-downloads cached binaries.
+  The earlier bare-ref pak path
+  (`pak::pak("dplyr", ...)` + `PKG_METADATA_UPDATE_AFTER`) worked on
+  Linux but on Windows pak's resolver picks CRAN's multi-arch URL
+  (`i386+x86_64-w64-mingw32`) as canonical, missed the PPM single-arch
+  cached binary (`x86_64-w64-mingw32`), and went online. The fix is
+  per-extension routing in `pakOfflineInstall()`:
+
+  - `.zip` (Windows binary) and `.tgz` (Mac binary) are passed to pak
+    as `local::<file>` refs. pak treats these as direct binary
+    installs -- no resolver, no cache-key matching, no download.
+  - `.tar.gz` keeps the bare-ref pak path (where `local::` would
+    trigger `R CMD build` and rebuild vignettes -- the original
+    reason `local::` couldn't be used for source-format files
+    offline). With the env-var hooks (`PKG_METADATA_UPDATE_AFTER`,
+    `R_BIOC_VERSION`, `R_BIOC_CONFIG_URL`), the bare-ref path uses
+    pak's own cache without going online on Linux.
+
+  pak stays in charge throughout -- its resolver, dep-ordering,
+  sysreqs, build, and progress UI all apply. Only the ref form
+  changes based on file extension.
 
 * Reverted to using `pak::pak()` for the offline install (vs. the
   `install.packages(<file>, repos = NULL)` approach in .9044). The
