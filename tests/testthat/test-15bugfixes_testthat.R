@@ -192,6 +192,64 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
+test_that("pakOfflineInstall strips parenthetical version specs before pak", {
+  # Regression: pak rejects Require-internal refs of the form
+  # `pkg (>= 1.3.2)` with "Cannot parse package: glue (>= 1.3.2)". The
+  # offline install path was passing packageFullName verbatim, so any
+  # dep that came back from pakDepsResolve with a parenthetical constraint
+  # killed the entire install silently (every package was reported as
+  # "tarball was in pak cache but offline install failed").
+  #
+  # Verify pakOfflineInstall now passes a bare/trimmed ref to pak by
+  # spying on the refs argument via a mocked pakCall.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_parsable_refs_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  fakeTar <- tempfile(fileext = ".tar.gz"); file.create(fakeTar)
+  on.exit(unlink(fakeTar), add = TRUE)
+
+  pkgDT <- data.table::data.table(
+    Package         = "glue",
+    packageFullName = "glue (>= 1.3.2)",  # the form that broke pak
+    needInstall     = Require:::.txtInstall,
+    installResult   = NA_character_,
+    installed       = FALSE,
+    installedVersionOK = FALSE,
+    Version         = NA_character_,
+    LibPath         = NA_character_
+  )
+
+  captured_refs <- NULL
+  testthat::with_mocked_bindings(
+    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = TRUE),
+    pakCall = function(expr, verbose) {
+      # Extract the refs argument from the unevaluated expression.
+      cl <- substitute(expr)
+      captured_refs <<- eval(cl[[2L]], envir = parent.frame())
+      invisible(NULL)
+    },
+    .package = "Require",
+    {
+      suppressWarnings(suppressMessages(
+        Require:::pakOfflineInstall(pkgDT, libPaths = testlib, verbose = -1)
+      ))
+    }
+  )
+
+  expect_false(any(grepl("\\(", captured_refs %||% "")),
+               info = paste("ref passed to pak::pak must not carry the",
+                            "parenthetical version constraint; got:",
+                            paste(captured_refs, collapse = ", ")))
+  expect_identical(captured_refs, "glue",
+                   info = paste("expected bare ref 'glue'; got:",
+                                paste(captured_refs, collapse = ", ")))
+})
+
 test_that("useLoadedIfSufficient refuses to short-circuit when files were removed", {
   # Regression on Windows: in the same R session, after `remove.packages()`
   # the namespace stays in `loadedNamespaces()` and `system.file(package=p)`

@@ -1,6 +1,18 @@
-# Require 1.1.0.9042 (development version)
+# Require 1.1.0.9043 (development version)
 
 ## bug fixes
+
+* Offline install no longer fails silently with "tarball was in pak
+  cache but offline install failed" for every package when the dep
+  tree contains version constraints. `pakOfflineInstall()` was passing
+  `packageFullName` (e.g. `glue (>= 1.3.2)`) verbatim to `pak::pak()`,
+  which rejects parenthetical inequality constraints with
+  `Cannot parse package: glue (>= 1.3.2)`. The error was buried at
+  `verboseLevel = 2`, so at default verbose the user only saw the
+  generic "offline install failed" warning with no diagnostic. Now
+  `trimVersionNumber()` strips the parenthetical before pak sees the
+  ref (preserving GitHub `account/repo@ref` forms), and any pak error
+  is surfaced at default verbose so failures are debuggable.
 
 * `useLoadedIfSufficient()` now verifies the package's `DESCRIPTION`
   exists on disk in an effective lib path before marking the row as

@@ -850,10 +850,16 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
     } else {
       ## Prefer packageFullName when available -- it carries GitHub refs and
       ## version pins. Fall back to the bare package name (CRAN-style).
+      ## IMPORTANT: strip the Require-internal `pkg (>= X.Y.Z)` parenthetical
+      ## constraint syntax via `trimVersionNumber()`. pak rejects refs of
+      ## that form with `Cannot parse package: glue (>= 1.3.2)` -- pak
+      ## understands `pkg@X` exact pins but not parenthetical inequality
+      ## constraints. `trimVersionNumber` preserves GitHub `account/repo@ref`
+      ## forms while stripping the parenthetical.
       ref <- if ("packageFullName" %in% names(toInstall) &&
                  !is.na(toInstall$packageFullName[i]) &&
                  nzchar(toInstall$packageFullName[i])) {
-        toInstall$packageFullName[i]
+        trimVersionNumber(toInstall$packageFullName[i])
       } else {
         pkg
       }
@@ -916,11 +922,16 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
     if (is(err, "try-error")) {
-      ## Don't mark as missing yet -- the ground-truth check below decides.
+      ## Surface the underlying pak error at default verbose -- if everything
+      ## still ended up on disk the ground-truth check below sets it right,
+      ## but when it doesn't, the user otherwise gets only the generic
+      ## "offline install failed" warning with no diagnostic. The actual pak
+      ## message ("Cannot parse package: glue (>= 1.3.2)" etc.) is what
+      ## reveals the bug.
       messageVerbose("pak install reported error; deferring to ",
                      "installed.packages() ground-truth check: ",
                      as.character(err),
-                     verbose = verbose, verboseLevel = 2)
+                     verbose = verbose, verboseLevel = 1)
     }
   }
 
