@@ -1,6 +1,22 @@
-# Require 1.1.0.9043 (development version)
+# Require 1.1.0.9044 (development version)
 
 ## bug fixes
+
+* Offline install on Windows no longer re-downloads packages that are
+  already in pak's cache. The previous design called `pak::pak("dplyr",
+  ...)` and relied on `PKG_METADATA_UPDATE_AFTER=365d` to keep pak from
+  going online. On Linux/Ubuntu that worked, but on Windows pak's cache
+  key match treats CRAN multi-arch builds
+  (`i386+x86_64-w64-mingw32`) as different from PPM single-arch builds
+  (`x86_64-w64-mingw32`); the resolver picks the "newer" CRAN URL and
+  goes to the network. `pakOfflineInstall()` now uses `pak::cache_list()`
+  to find each requested package's tarball and installs via
+  `install.packages(<file>, repos = NULL)` -- no resolution, no
+  metadata refresh, no platform-key matching, no network. pak is still
+  the cache provider; we just don't use its installer for local files
+  when offline. `R CMD INSTALL` honours pre-built artifacts inside
+  source-format PPM tarballs, so installs remain fast on every
+  platform.
 
 * Offline install no longer fails silently with "tarball was in pak
   cache but offline install failed" for every package when the dep
