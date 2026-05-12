@@ -156,7 +156,7 @@ ft2build.h, sodium.h, ...) and prints the corresponding
 change, and Rcpp's \verb{class_::constructor<>} template-arity limit are
 each pattern-matched and reported with a "bump \if{html}{\out{<pkg>}}" suggestion.
 }
-\item{Mac toolchain — \verb{~/.R/Makevars}}{
+\item{Mac toolchain -- \verb{~/.R/Makevars}}{
 R's default compile flags only search \verb{/opt/R/arm64/include}. To pick
 up Homebrew headers (libjpeg, glpk, freetype, etc.), add to
 \verb{~/.R/Makevars}:
@@ -176,7 +176,7 @@ also catches index rows whose file content disagrees with the index
 \item{Pak's \verb{local::} is source-only}{
 Confirmed empirically that pak's \code{pkg_install("local::<file>")}
 rejects binary tarballs (\code{.tgz} / \code{.zip} content) with
-"Platform mismatch" — even when the binary is for the current
+"Platform mismatch" -- even when the binary is for the current
 platform. The hybrid stage installs binaries via
 \code{install.packages(type = "binary")} BEFORE pak runs, so pak only
 sees source refs.
@@ -198,15 +198,15 @@ pipeline above; \code{"pak"} for the legacy direct-pak path.}
 \item{\code{Require.snapshotInstallerUsePPM}}{TRUE (default) to prepend a PPM
 binary repo. PPM serves Mac binaries by content-negotiating the
 \verb{R/<version>} User-Agent.}
-\item{\code{Require.snapshotInstallerHybrid}}{TRUE (default) — pre-install
+\item{\code{Require.snapshotInstallerHybrid}}{TRUE (default) -- pre-install
 cache binaries via \code{install.packages(type = "binary")} before pak.}
-\item{\code{Require.snapshotInstallerBumpOnFail}}{TRUE (default) — walk newer
+\item{\code{Require.snapshotInstallerBumpOnFail}}{TRUE (default) -- walk newer
 versions for refs that fail at the pin. FALSE for strict
 reproducibility.}
 \item{\code{Require.snapshotInstallerKnownFails}}{character vector of pkg
 names to skip in bump-retry (e.g. environment-dependent refs whose
 newer versions also won't help).}
-\item{\code{Require.snapshotInstallerPakSilent}}{FALSE (default) — pak's
+\item{\code{Require.snapshotInstallerPakSilent}}{FALSE (default) -- pak's
 resolver output reaches the user.}
 \item{\code{Require.snapshotDownloadAttempts}}{Retry count for libcurl-multi
 downloads. Default 4.}

@@ -19,7 +19,7 @@ availablePackagesOverride(
 \code{install.packages}, \code{install_github} or \code{installVersions}.
 \strong{When \code{options(Require.usePak = TRUE)}:} \code{repos} is added to pak's repository
 list via \code{options(repos)}. However, pak always includes CRAN and Bioconductor as
-built-in defaults regardless of this setting — \code{repos} can only \emph{add} sources,
+built-in defaults regardless of this setting -- \code{repos} can only \emph{add} sources,
 it cannot prevent pak from also searching CRAN. This differs from the default
 (\code{usePak = FALSE}) behaviour where \code{repos} strictly controls which repositories
 are used. Use \code{pak::cache_clean()} to clear pak's download cache if needed.}

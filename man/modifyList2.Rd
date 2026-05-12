@@ -18,7 +18,7 @@ modifyList3(..., keep.null = TRUE)
 }
 \description{
 This calls \code{\link[utils:modifyList]{utils::modifyList}} iteratively using
-\code{\link[base:funprog]{base::Reduce}}, so it can handle >2 lists.
+\code{\link[base:Reduce]{base::Reduce}}, so it can handle >2 lists.
 The subsequent list elements that share a name will override
 previous list elements with that same name.
 It also will handle the case where any list is a \code{NULL}. Note:
