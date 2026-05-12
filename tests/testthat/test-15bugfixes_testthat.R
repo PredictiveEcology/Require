@@ -192,6 +192,52 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
+test_that("allInPakCache refuses the shortcut when any row has a (HEAD) pin", {
+  # `(HEAD)` means "the current tip of the branch" -- which can only be
+  # resolved online. Even if a cached tarball for the package exists, we
+  # have no way of knowing it represents the *current* tip, so the
+  # shortcut must decline and let pak's resolver hit the network.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  fakeTar <- tempfile(fileext = ".tar.gz"); file.create(fakeTar)
+  on.exit(unlink(fakeTar), add = TRUE)
+
+  fakeCache <- data.frame(
+    package  = "fpCompare",
+    version  = "0.2.4",
+    platform = "source",
+    fullpath = fakeTar,
+    stringsAsFactors = FALSE
+  )
+
+  pkgDT_plain <- data.table::data.table(
+    Package         = "fpCompare",
+    packageFullName = "PredictiveEcology/fpCompare@development",
+    needInstall     = Require:::.txtInstall,
+    versionSpec     = NA_character_,
+    inequality      = NA_character_
+  )
+  pkgDT_head <- data.table::data.table(
+    Package         = "fpCompare",
+    packageFullName = "PredictiveEcology/fpCompare@development (HEAD)",
+    needInstall     = Require:::.txtInstall,
+    versionSpec     = NA_character_,
+    inequality      = NA_character_
+  )
+
+  testthat::with_mocked_bindings(
+    cache_list = function(...) fakeCache,
+    .package = "pak",
+    {
+      expect_true(Require:::allInPakCache(pkgDT_plain),
+                  info = "plain GitHub ref + cached tarball -> shortcut OK")
+      expect_false(Require:::allInPakCache(pkgDT_head),
+                   info = "(HEAD) pin -> must go online to resolve current tip")
+    }
+  )
+})
+
 test_that("allInPakCache honours version constraints", {
   # Cache-shortcut gate: a cached version that doesn't satisfy the user's
   # version constraint should NOT count as "in cache" -- we must go

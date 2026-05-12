@@ -763,6 +763,12 @@ allInPakCache <- function(pkgDT) {
   if (!"needInstall" %in% names(pkgDT)) return(FALSE)
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(TRUE)
+  ## (HEAD) pins -- `account/repo@branch (HEAD)` -- always require the
+  ## network: HEAD means "current tip of the branch", which we can't
+  ## determine from a local cache. If any row is HEAD-pinned, refuse the
+  ## shortcut so pak can resolve the tip online.
+  toInstall <- checkHEAD(toInstall)
+  if (any(toInstall[[hasHEADtxt]] %in% TRUE)) return(FALSE)
   hasVS <- "versionSpec" %in% names(toInstall)
   hasIN <- "inequality"  %in% names(toInstall)
   for (i in seq_len(NROW(toInstall))) {

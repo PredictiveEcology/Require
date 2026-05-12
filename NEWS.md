@@ -1,6 +1,14 @@
-# Require 1.1.0.9049 (development version)
+# Require 1.1.0.9050 (development version)
 
 ## bug fixes
+
+* `allInPakCache()` now refuses the cache shortcut when any requested
+  ref carries the `(HEAD)` pin (`account/repo@branch (HEAD)`). `(HEAD)`
+  means "the current tip of the branch", which can only be resolved
+  online -- a cached tarball provides no information about whether it
+  represents the current tip. With this guard, `Require()` correctly
+  forwards HEAD-pinned refs to pak's online resolver instead of
+  short-circuiting to a stale cached build.
 
 * Removed the `pakResetSubprocess()` call from the top of
   `pakOfflineInstall()`. On Windows the kill-and-wait race against
