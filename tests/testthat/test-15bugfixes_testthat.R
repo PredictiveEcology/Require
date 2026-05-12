@@ -192,6 +192,58 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
+test_that("allInPakCache honours version constraints", {
+  # Cache-shortcut gate: a cached version that doesn't satisfy the user's
+  # version constraint should NOT count as "in cache" -- we must go
+  # online to look for a satisfying build. Verify via mocked
+  # `pak::cache_list` returning a stale version.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  fakeTar <- tempfile(fileext = ".tar.gz"); file.create(fakeTar)
+  on.exit(unlink(fakeTar), add = TRUE)
+
+  fakeCache <- data.frame(
+    package  = "dplyr",
+    version  = "1.2.1",
+    platform = "source",
+    fullpath = fakeTar,
+    stringsAsFactors = FALSE
+  )
+
+  pkgDT_unconstrained <- data.table::data.table(
+    Package     = "dplyr",
+    needInstall = Require:::.txtInstall,
+    versionSpec = NA_character_,
+    inequality  = NA_character_
+  )
+  pkgDT_satisfied <- data.table::data.table(
+    Package     = "dplyr",
+    needInstall = Require:::.txtInstall,
+    versionSpec = "1.0.0",
+    inequality  = ">="
+  )
+  pkgDT_unsatisfied <- data.table::data.table(
+    Package     = "dplyr",
+    needInstall = Require:::.txtInstall,
+    versionSpec = "2.0.0",
+    inequality  = ">="
+  )
+
+  testthat::with_mocked_bindings(
+    cache_list = function(...) fakeCache,
+    .package = "pak",
+    {
+      expect_true(Require:::allInPakCache(pkgDT_unconstrained),
+                  info = "no constraint -> cached 1.2.1 is enough")
+      expect_true(Require:::allInPakCache(pkgDT_satisfied),
+                  info = "1.2.1 satisfies >= 1.0.0 -> cache is enough")
+      expect_false(Require:::allInPakCache(pkgDT_unsatisfied),
+                   info = "1.2.1 does NOT satisfy >= 2.0.0 -> must go online")
+    }
+  )
+})
+
 test_that("pakOfflineInstall routes .zip/.tgz binaries through local:: refs", {
   # Regression on Windows: with PPM single-arch binaries cached
   # (`x86_64-w64-mingw32`), pak's resolver picks the CRAN multi-arch URL
@@ -227,7 +279,7 @@ test_that("pakOfflineInstall routes .zip/.tgz binaries through local:: refs", {
 
   captured_refs <- NULL
   testthat::with_mocked_bindings(
-    pakCachedTarball = function(pkg) {
+    pakCachedTarball = function(pkg, ...) {
       switch(pkg,
         pkgZip = list(path = zipPath, is_binary = TRUE),
         pkgTgz = list(path = tgzPath, is_binary = TRUE),
@@ -285,7 +337,7 @@ test_that("pakOfflineInstall strips parenthetical version specs before pak", {
 
   captured_refs <- NULL
   testthat::with_mocked_bindings(
-    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = TRUE),
+    pakCachedTarball = function(pkg, ...) list(path = fakeTar, is_binary = TRUE),
     pakCall = function(expr, verbose) {
       # Capture the refs argument from pak::pak's unevaluated call.
       cl <- substitute(expr)
@@ -688,7 +740,7 @@ test_that("pakOfflineInstall distinguishes 'not in cache' from 'install failed'"
   # finds the supposedly-cached pkg still missing on disk -- the "install
   # failed" branch we want to exercise.
   testthat::with_mocked_bindings(
-    pakCachedTarball = function(pkg) {
+    pakCachedTarball = function(pkg, ...) {
       if (pkg == "inCache")    list(path = fakeTar, is_binary = FALSE)
       else                     NULL
     },

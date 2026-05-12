@@ -443,11 +443,25 @@ Require <- function(packages,
       needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
       if (needInstalls) {
         if (getOption("Require.usePak", FALSE)) {
-          if (isTRUE(getOption("Require.offlineMode"))) {
-            # Offline mode: pak's normal install path makes network calls
-            # (metadata refresh, conflict resolution, downloads). Bypass it by
-            # resolving each requested package to a `local::` ref into pak's
-            # download cache and installing those directly.
+          ## Cache shortcut: if every package we'd install is already in
+          ## pak's download cache, skip pak's online resolver and install
+          ## from the cache directly. Avoids pak's metadata refresh (which
+          ## can stall on TCP timeouts when the network is down) and is
+          ## consistent with Require's "don't unnecessarily check for
+          ## updates" philosophy -- the same rule already applied to
+          ## installed packages. Skip the shortcut when the user
+          ## explicitly asked for `install = "force"` or set
+          ## `purge = TRUE`; those signal "ignore the cache".
+          forceOnline <- identical(install, "force") || isTRUE(purge)
+          useCacheShortcut <- isTRUE(getOption("Require.offlineMode")) ||
+            (!forceOnline && allInPakCache(pkgDT))
+          if (useCacheShortcut) {
+            if (!isTRUE(getOption("Require.offlineMode"))) {
+              messageVerbose("All requested packages are in the pak ",
+                             "download cache; installing from cache ",
+                             "(no metadata refresh, no network)",
+                             verbose = verbose, verboseLevel = 1)
+            }
             pkgDT <- pakOfflineInstall(pkgDT, libPaths = libPaths, verbose = verbose)
           } else {
             pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,

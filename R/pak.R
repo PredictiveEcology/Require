@@ -752,6 +752,32 @@ pakRefToBareName <- function(refs) {
 # newest source tarball.  Used by the offline-mode install path so that
 # `Install("fpCompare")` can succeed without any network access as long as
 # pak previously downloaded the package.
+## Returns TRUE iff every package flagged `needInstall == .txtInstall` in
+## `pkgDT` has a usable tarball in pak's download cache (per
+## `pakCachedTarball()`). Used as the gate for the "skip pak's online
+## resolver entirely" shortcut in `Require()`: when every package we'd
+## install is already cached, we route through `pakOfflineInstall()` even
+## in non-offline mode, avoiding pak's metadata refresh (which can stall
+## on TCP timeouts when network is down).
+allInPakCache <- function(pkgDT) {
+  if (!"needInstall" %in% names(pkgDT)) return(FALSE)
+  toInstall <- pkgDT[needInstall == .txtInstall]
+  if (!NROW(toInstall)) return(TRUE)
+  hasVS <- "versionSpec" %in% names(toInstall)
+  hasIN <- "inequality"  %in% names(toInstall)
+  for (i in seq_len(NROW(toInstall))) {
+    pkg   <- toInstall$Package[i]
+    vSpec <- if (hasVS) toInstall$versionSpec[i] else NA_character_
+    ineq  <- if (hasIN) toInstall$inequality[i]  else NA_character_
+    # pakCachedTarball returns NULL if no cached row satisfies the
+    # version constraint (or if nothing is cached at all). Either way:
+    # we must go online to fetch a satisfying build.
+    if (is.null(pakCachedTarball(pkg, versionSpec = vSpec, inequality = ineq)))
+      return(FALSE)
+  }
+  TRUE
+}
+
 ## Returns `NULL` if no usable tarball is cached, or a list
 ##   list(path = <fullpath>, is_binary = <logical>)
 ## We need `is_binary` from `pak::cache_list()`'s `platform` column rather
@@ -761,7 +787,8 @@ pakRefToBareName <- function(refs) {
 ## distinguishes them. Filename-only classification routed PPM binaries to
 ## the source-install branch, which made pak try to R-CMD-BUILD them
 ## offline (and fail, since vignettes etc. need network).
-pakCachedTarball <- function(pkg) {
+pakCachedTarball <- function(pkg, versionSpec = NA_character_,
+                             inequality = NA_character_) {
   if (!requireNamespace("pak", quietly = TRUE)) return(NULL)
   cl <- tryCatch(pak::cache_list(), error = function(e) NULL)
   if (is.null(cl) || NROW(cl) == 0L || !"package" %in% names(cl))
@@ -775,6 +802,22 @@ pakCachedTarball <- function(pkg) {
   isInstallable <- grepl("\\.(tar\\.gz|tgz|zip)$", rows$fullpath)
   rows <- rows[isInstallable, , drop = FALSE]
   if (NROW(rows) == 0L) return(NULL)
+
+  ## Version-constraint filter: drop cached rows whose `version` does NOT
+  ## satisfy the user's inequality (e.g. `dplyr (>= 2.0.0)` rules out a
+  ## cached 1.2.1). Caller passes the constraint from pkgDT's
+  ## `versionSpec` / `inequality` columns; with neither supplied we keep
+  ## all rows (the original unconstrained behaviour).
+  hasConstraint <- !is.na(versionSpec) && nzchar(versionSpec) &&
+                   !is.na(inequality)  && nzchar(inequality)
+  if (hasConstraint && "version" %in% names(rows)) {
+    okVer <- vapply(rows$version, function(v) {
+      if (is.na(v) || !nzchar(v)) return(FALSE)
+      isTRUE(compareVersion2(v, versionSpec, inequality))
+    }, logical(1))
+    rows <- rows[okVer, , drop = FALSE]
+    if (NROW(rows) == 0L) return(NULL)
+  }
 
   # Authoritative binary vs source: pak::cache_list()'s `platform` column.
   # "source" or NA -> source; matching-arch string -> binary.
@@ -841,9 +884,13 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   notInCache <- character(0)
   refsToInstall <- character(0)
   pkgsToInstall <- character(0)
+  hasVS <- "versionSpec" %in% names(toInstall)
+  hasIN <- "inequality"  %in% names(toInstall)
   for (i in seq_len(NROW(toInstall))) {
-    pkg <- toInstall$Package[i]
-    cached <- pakCachedTarball(pkg)
+    pkg   <- toInstall$Package[i]
+    vSpec <- if (hasVS) toInstall$versionSpec[i] else NA_character_
+    ineq  <- if (hasIN) toInstall$inequality[i]  else NA_character_
+    cached <- pakCachedTarball(pkg, versionSpec = vSpec, inequality = ineq)
     if (is.null(cached)) {
       notInCache <- c(notInCache, pkg)
       ## Diagnostic: log raw cache rows for this pkg so users can see why

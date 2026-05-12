@@ -1,4 +1,27 @@
-# Require 1.1.0.9047 (development version)
+# Require 1.1.0.9048 (development version)
+
+## enhancements
+
+* `Require()` now skips pak's online resolver entirely when every
+  package it would install is already in pak's download cache at a
+  version that satisfies the user's constraint. Avoids pak's metadata
+  refresh (which can stall on TCP timeouts when network is slow or
+  unreachable -- previously 47 s or indefinite wait when an internet-
+  less Ubuntu had everything cached). Consistent with Require's
+  philosophy: don't reach out for updates we never asked for.
+
+  Implementation: a new `allInPakCache(pkgDT)` gate; when it returns
+  `TRUE`, dispatch goes to `pakOfflineInstall()` instead of
+  `pakInstallFiltered()` -- even when `Require.offlineMode = FALSE`.
+  The shortcut is skipped when the user signals "ignore the cache":
+  `install = "force"` or `purge = TRUE`.
+
+* `pakCachedTarball()` now respects version constraints. New optional
+  `versionSpec` / `inequality` arguments; cache rows whose `version`
+  doesn't satisfy the inequality are filtered out, so e.g.
+  `Require("dplyr (>= 2.0.0)")` no longer mistakenly uses a cached
+  `dplyr 1.2.1`. `allInPakCache()` and `pakOfflineInstall()` both
+  thread `pkgDT$versionSpec` / `inequality` into the lookup.
 
 ## bug fixes
 
