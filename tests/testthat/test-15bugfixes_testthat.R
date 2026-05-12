@@ -413,7 +413,7 @@ test_that("pakOfflineInstall sets R_BIOC_* env vars to suppress pak's bioc probe
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
 
   testthat::with_mocked_bindings(
-    pakCachedTarball = function(pkg) fakeTar,
+    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = FALSE),
     pakCall          = function(expr, verbose) {
       observed_bioc_ver <<- Sys.getenv("R_BIOC_VERSION", unset = NA)
       observed_bioc_url <<- Sys.getenv("R_BIOC_CONFIG_URL", unset = NA)
@@ -502,4 +502,122 @@ test_that("internetExists(force = TRUE) bypasses the Require.checkInternet gate"
   )
   expect_false(res_forced,
                info = "forced call should probe and return FALSE when offline")
+})
+
+test_that("pakCachedTarball routes Linux PPM binaries through binary install", {
+  # Regression for the user-reported Linux failure: PPM binary tarballs
+  # share the bare `pkg_ver.tar.gz` filename with their source counterparts.
+  # The old filename heuristic misclassified them as source, fed them to
+  # pak as `local::<file>` refs, and pak then tried to R-CMD-BUILD them
+  # offline (which rebuilds vignettes and fails). The fix uses
+  # pak::cache_list()'s `platform` column instead, which is authoritative.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  # Build a fake pak cache_list with both a source AND a Linux PPM binary
+  # for the same package + version. Use the running R's arch so the
+  # is_binary predicate matches.
+  arch <- R.version$arch
+  ppmPlatform <- paste0(arch, "-pc-linux-gnu-ubuntu-24.04")
+
+  srcPath <- tempfile(pattern = "src_", fileext = ".tar.gz")
+  binPath <- tempfile(pattern = "bin_", fileext = ".tar.gz")
+  file.create(srcPath); file.create(binPath)
+  on.exit(unlink(c(srcPath, binPath)), add = TRUE)
+  # Make the binary newer so it would win the mtime tiebreak; the platform
+  # filter should pick it regardless of mtime, but this also exercises the
+  # mtime path within the binary subset.
+  Sys.setFileTime(binPath, Sys.time())
+  Sys.setFileTime(srcPath, Sys.time() - 3600)
+
+  fakeCache <- data.frame(
+    package  = c("dplyr", "dplyr"),
+    version  = c("1.2.1", "1.2.1"),
+    platform = c("source", ppmPlatform),
+    fullpath = c(srcPath,  binPath),
+    stringsAsFactors = FALSE
+  )
+
+  testthat::with_mocked_bindings(
+    cache_list = function(...) fakeCache,
+    .package = "pak",
+    {
+      out <- Require:::pakCachedTarball("dplyr")
+    }
+  )
+
+  expect_type(out, "list")
+  expect_identical(out$path, binPath,
+                   info = "must prefer the platform-matching binary over source")
+  expect_true(out$is_binary,
+              info = "must report is_binary = TRUE for the PPM binary")
+
+  # Now drop the binary row and confirm source is correctly detected
+  testthat::with_mocked_bindings(
+    cache_list = function(...) fakeCache[1, , drop = FALSE],
+    .package = "pak",
+    {
+      out2 <- Require:::pakCachedTarball("dplyr")
+    }
+  )
+  expect_identical(out2$path, srcPath)
+  expect_false(out2$is_binary)
+})
+
+test_that("pakOfflineInstall distinguishes 'not in cache' from 'install failed'", {
+  # The old single-warning text ("offline mode and not in pak cache") was
+  # actively misleading when packages were in the cache but the install
+  # step failed. Split into two warnings so the user knows which case
+  # they're in.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_split_warn_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  fakeTar <- tempfile(fileext = ".tar.gz"); file.create(fakeTar)
+  on.exit(unlink(fakeTar), add = TRUE)
+
+  pkgDT <- data.table::data.table(
+    Package = c("inCache", "notInCache"),
+    needInstall = Require:::.txtInstall,
+    installResult = NA_character_,
+    installed = FALSE,
+    installedVersionOK = FALSE,
+    Version = NA_character_,
+    LibPath = NA_character_
+  )
+
+  warnings_seen <- character()
+  testthat::with_mocked_bindings(
+    pakCachedTarball = function(pkg) {
+      if (pkg == "inCache")    list(path = fakeTar, is_binary = FALSE)
+      else                     NULL
+    },
+    # Pretend pak ran but installed nothing -- so ground-truth check below
+    # finds the supposedly-cached pkg still missing on disk.
+    pakCall = function(expr, verbose) invisible(NULL),
+    .package = "Require",
+    {
+      withCallingHandlers(
+        suppressMessages(
+          Require:::pakOfflineInstall(pkgDT, libPaths = testlib, verbose = -1)
+        ),
+        warning = function(w) {
+          warnings_seen <<- c(warnings_seen, conditionMessage(w))
+          invokeRestart("muffleWarning")
+        }
+      )
+    }
+  )
+
+  expect_true(any(grepl("notInCache", warnings_seen) &
+                  grepl("not in pak cache", warnings_seen, fixed = TRUE)),
+              info = "expected a 'not in pak cache' warning naming notInCache")
+  expect_true(any(grepl("inCache", warnings_seen) &
+                  grepl("tarball was in pak cache but offline install failed",
+                        warnings_seen, fixed = TRUE)),
+              info = "expected a separate 'install failed' warning naming inCache")
 })

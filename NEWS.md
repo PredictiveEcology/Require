@@ -1,4 +1,29 @@
-# Require 1.1.0.9038 (development version)
+# Require 1.1.0.9039 (development version)
+
+## bug fixes
+
+* Offline install on Linux no longer fails to recognise PPM (binary)
+  tarballs in pak's cache. PPM binaries share the bare `pkg_ver.tar.gz`
+  filename with their source counterparts on Linux; only
+  `pak::cache_list()`'s `platform` column distinguishes them. The old
+  filename-only classification misrouted PPM binaries into pak's
+  source-install branch, which then tried to `R CMD build` them
+  (rebuilding vignettes that need network) and aborted with
+  "Failed to build dplyr 1.2.1 (300ms)" or similar. `pakCachedTarball()`
+  now returns an `is_binary` flag derived from the `platform` column,
+  and `pakOfflineInstall()` routes accordingly.
+
+* The Linux binary path now picks `type` from `.Platform$pkgType` so
+  `install.packages(..., type = "binary")` -- which errors on Linux --
+  is not used. Linux gets `type = "source"`; Mac/Windows still get
+  `type = "binary"`.
+
+* `pakOfflineInstall()` now emits two distinct warnings when something
+  is missing on disk after the install: "not in pak cache" for packages
+  whose tarball wasn't cached, and "tarball was in pak cache but
+  offline install failed" for packages that had a tarball but failed to
+  install. The old single hard-coded "not in pak cache" message was
+  actively misleading when the latter happened.
 
 ## enhancements
 

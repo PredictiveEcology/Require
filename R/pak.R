@@ -752,29 +752,55 @@ pakRefToBareName <- function(refs) {
 # newest source tarball.  Used by the offline-mode install path so that
 # `Install("fpCompare")` can succeed without any network access as long as
 # pak previously downloaded the package.
+## Returns `NULL` if no usable tarball is cached, or a list
+##   list(path = <fullpath>, is_binary = <logical>)
+## We need `is_binary` from `pak::cache_list()`'s `platform` column rather
+## than from filename heuristics because on Linux, PPM binaries share the
+## bare `pkg_ver.tar.gz` filename with their source counterparts -- only
+## the `platform` column ("source" vs e.g. "x86_64-pc-linux-gnu-ubuntu-24.04")
+## distinguishes them. Filename-only classification routed PPM binaries to
+## the source-install branch, which made pak try to R-CMD-BUILD them
+## offline (and fail, since vignettes etc. need network).
 pakCachedTarball <- function(pkg) {
-  if (!requireNamespace("pak", quietly = TRUE)) return(NA_character_)
+  if (!requireNamespace("pak", quietly = TRUE)) return(NULL)
   cl <- tryCatch(pak::cache_list(), error = function(e) NULL)
   if (is.null(cl) || NROW(cl) == 0L || !"package" %in% names(cl))
-    return(NA_character_)
+    return(NULL)
   rows <- cl[!is.na(cl$package) & cl$package == pkg, , drop = FALSE]
-  if (NROW(rows) == 0L) return(NA_character_)
+  if (NROW(rows) == 0L) return(NULL)
   # Reject pak intermediate files: extracted directories, platform-suffixed
   # build artifacts (e.g. `_X.tar.gz-aarch64-apple-darwin20-4.5.2`), and
   # `.tar.gz-t` partial-download stubs. Only accept paths ending in a real
-  # installable archive extension that pak::pak("local::path") can resolve.
+  # installable archive extension.
   isInstallable <- grepl("\\.(tar\\.gz|tgz|zip)$", rows$fullpath)
   rows <- rows[isInstallable, , drop = FALSE]
-  if (NROW(rows) == 0L) return(NA_character_)
-  # Prefer the platform-matching binary (has non-NA, arch-matching `platform`);
-  # fall back to source.
-  isPlat <- !is.na(rows$platform) & grepl(R.version$arch, rows$platform, fixed = TRUE)
-  if (any(isPlat)) rows <- rows[isPlat, , drop = FALSE]
-  # Newest by mtime
-  paths <- rows$fullpath
-  paths <- paths[file.exists(paths)]
-  if (!length(paths)) return(NA_character_)
-  paths[which.max(file.mtime(paths))]
+  if (NROW(rows) == 0L) return(NULL)
+
+  # Authoritative binary vs source: pak::cache_list()'s `platform` column.
+  # "source" or NA -> source; matching-arch string -> binary.
+  isBinary <- !is.na(rows$platform) & rows$platform != "source" &
+              grepl(R.version$arch, rows$platform, fixed = TRUE)
+
+  # Prefer platform-matching binary over source.
+  if (any(isBinary)) {
+    rows <- rows[isBinary, , drop = FALSE]
+    chosenBinary <- TRUE
+  } else {
+    isSrc <- is.na(rows$platform) | rows$platform == "source"
+    rowsSrc <- rows[isSrc, , drop = FALSE]
+    if (NROW(rowsSrc) > 0L) {
+      rows <- rowsSrc
+      chosenBinary <- FALSE
+    } else {
+      # Unrecognised platform value: treat as source-ish to be safe.
+      chosenBinary <- FALSE
+    }
+  }
+
+  rows <- rows[file.exists(rows$fullpath), , drop = FALSE]
+  if (NROW(rows) == 0L) return(NULL)
+  i <- which.max(file.mtime(rows$fullpath))
+  list(path = rows$fullpath[i], is_binary = chosenBinary)
 }
 
 # Offline install via pak: resolve each user package to a local tarball in
@@ -791,53 +817,65 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   ## Pak's `local::<file>` ref handling is SOURCE-ONLY: it rejects binary
   ## tarballs (e.g. `.tgz` on macOS, `.zip` on Windows, or PPM-style
   ## platform-suffixed `.tar.gz` binaries) with "Platform mismatch" even
-  ## when the binary matches the current R/arch. Mirror the snapshot-install
+  ## when the binary matches the current R/arch. AND for source refs it
+  ## runs `R CMD build` first, which rebuilds vignettes -- so an offline
+  ## source-install of a CRAN package like dplyr fails because the
+  ## vignettes' setup code needs the network. Mirror the snapshot-install
   ## hybrid pattern: install binaries via install.packages(repos = NULL,
-  ## type = "binary"), and only feed source tarballs to pak as `local::` refs.
-  isBinaryTarball <- function(p) {
-    if (is.na(p) || !nzchar(p)) return(FALSE)
-    bn <- basename(p)
-    if (grepl("\\.(tgz|zip)$", bn)) return(TRUE)              # mac / windows
-    ## linux PPM binary tarballs are `.tar.gz` BUT carry a platform suffix
-    ## in the filename or live under a `bin/linux/...` subpath in pak's
-    ## cache; the pak::cache_list `platform` column pins this down -- but
-    ## we only have the path here, so use the platform-suffix heuristic.
-    grepl("-(x86_64|aarch64|arm64)-(linux|apple|w64)", bn)
-  }
+  ## type = "binary"), and only feed true source tarballs to pak. The
+  ## binary-vs-source decision now comes from
+  ## `pakCachedTarball()`'s `is_binary` field (authoritative, from
+  ## `pak::cache_list()`'s `platform` column) instead of a filename
+  ## heuristic -- on Linux PPM, binaries share the bare `pkg_ver.tar.gz`
+  ## filename with source tarballs and only the column distinguishes them.
 
   binaryPaths <- character(0)
   binaryPkgs  <- character(0)
   resolvedRefs <- character(0)
   resolvedPkgs <- character(0)
-  missingPkgs  <- character(0)
+  notInCache  <- character(0)
   for (pkg in toInstall$Package) {
-    tarball <- pakCachedTarball(pkg)
-    if (is.na(tarball)) {
-      missingPkgs <- c(missingPkgs, pkg)
-    } else if (isBinaryTarball(tarball)) {
-      binaryPaths <- c(binaryPaths, tarball)
+    cached <- pakCachedTarball(pkg)
+    if (is.null(cached)) {
+      notInCache <- c(notInCache, pkg)
+    } else if (isTRUE(cached$is_binary)) {
+      binaryPaths <- c(binaryPaths, cached$path)
       binaryPkgs  <- c(binaryPkgs,  pkg)
     } else {
-      resolvedRefs <- c(resolvedRefs, paste0("local::", tarball))
+      resolvedRefs <- c(resolvedRefs, paste0("local::", cached$path))
       resolvedPkgs <- c(resolvedPkgs, pkg)
     }
   }
+  ## Track "install reached pak but did not land on disk" separately from
+  ## "no tarball in cache" so the user-facing warning can name the right
+  ## cause.
+  installFailedPkgs <- character(0)
 
   if (length(binaryPaths)) {
     messageVerbose("offline mode: installing ", length(binaryPaths),
                    " binary package(s) from pak cache via install.packages: ",
                    paste(binaryPkgs, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
+    ## `type = "binary"` is only valid on Mac (.tgz) and Windows (.zip).
+    ## On Linux, PPM "binaries" are source-format `.tar.gz` files with
+    ## pre-compiled `.so` artifacts inside; R CMD INSTALL detects the
+    ## pre-built artifacts and installs without recompilation. Picking
+    ## type from .Platform$pkgType avoids the
+    ## "type 'binary' is not supported on this platform" error on Linux.
+    binaryType <- if (.Platform$pkgType == "source") "source" else "binary"
     err <- try(suppressWarnings(
-      install.packages(binaryPaths, repos = NULL, type = "binary",
+      install.packages(binaryPaths, repos = NULL, type = binaryType,
                        lib = libPaths[1], dependencies = FALSE,
                        quiet = TRUE)
     ), silent = TRUE)
     if (is(err, "try-error")) {
-      warning(.txtCouldNotBeInstalled,
-              ": offline binary install via install.packages failed: ",
-              as.character(err), call. = FALSE)
-      missingPkgs <- c(missingPkgs, binaryPkgs)
+      messageVerbose("offline binary install via install.packages failed; ",
+                     "deferring to installed.packages() check: ",
+                     as.character(err),
+                     verbose = verbose, verboseLevel = 2)
+      ## Don't add to a missing list yet -- the ground-truth check below
+      ## decides. install.packages may have written some packages before
+      ## failing on another.
     }
   }
 
@@ -931,20 +969,35 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
         set(pkgDT, wh, "LibPath",            unname(ipNow[pkg, "LibPath"]))
         set(pkgDT, wh, "installResult",      "OK")
       } else {
-        missingPkgs <- c(missingPkgs, pkg)
+        installFailedPkgs <- c(installFailedPkgs, pkg)
       }
     }
   }
 
-  if (length(missingPkgs)) {
-    missingPkgs <- unique(missingPkgs)
-    for (pkg in missingPkgs) {
+  ## Distinct warnings: "tarball not in cache" vs "tarball was in cache but
+  ## install failed". The former is genuinely unrecoverable until the user
+  ## gets internet back; the latter usually points at a build-tool or
+  ## sysreq issue and is worth flagging separately for debugging.
+  if (length(notInCache)) {
+    for (pkg in notInCache) {
       wh <- which(pkgDT$Package == pkg)
       if (length(wh)) set(pkgDT, wh, "installResult", .txtCouldNotBeInstalled)
     }
     warning(.txtCouldNotBeInstalled, ": ",
-            paste(missingPkgs, collapse = ", "),
+            paste(notInCache, collapse = ", "),
             "; offline mode and not in pak cache",
+            call. = FALSE)
+  }
+  if (length(installFailedPkgs)) {
+    installFailedPkgs <- unique(installFailedPkgs)
+    for (pkg in installFailedPkgs) {
+      wh <- which(pkgDT$Package == pkg)
+      if (length(wh)) set(pkgDT, wh, "installResult", .txtCouldNotBeInstalled)
+    }
+    warning(.txtCouldNotBeInstalled, ": ",
+            paste(installFailedPkgs, collapse = ", "),
+            "; tarball was in pak cache but offline install failed ",
+            "(check build tools / sysreqs / R version compatibility)",
             call. = FALSE)
   }
   pkgDT
