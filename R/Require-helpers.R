@@ -477,6 +477,19 @@ useLoadedIfSufficient <- function(pkgDT,
                    error = function(e) NA_character_)
     if (!nzchar(lp)) lp <- NA_character_
     if (!is.na(lp) && !normPath(lp) %in% effectiveLibPaths) next
+    ## Disk-presence check: a namespace can stay loaded after its files are
+    ## removed (e.g. `remove.packages("dplyr")` in the same R session).
+    ## `system.file(package = pkg)` then returns the path that was recorded
+    ## when the namespace loaded -- pointing at a directory that no longer
+    ## exists. Without this check, useLoadedIfSufficient would skip reinstall,
+    ## leaving the on-disk libPath empty and triggering downstream
+    ## `read.dcf(... DESCRIPTION)` warnings the first time anything walks
+    ## installed.packages(). Require's contract here is "after this call, the
+    ## packages are on disk", so re-route to install when files are gone.
+    hasDescOnDisk <- any(vapply(effectiveLibPaths, function(L) {
+      file.exists(file.path(L, pkg, "DESCRIPTION"))
+    }, logical(1)))
+    if (!hasDescOnDisk) next
     set(pkgDT, i, "installed",          TRUE)
     set(pkgDT, i, "installedVersionOK", TRUE)
     set(pkgDT, i, "needInstall",        .txtDontInstall)

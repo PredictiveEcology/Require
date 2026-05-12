@@ -192,6 +192,60 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
+test_that("useLoadedIfSufficient refuses to short-circuit when files were removed", {
+  # Regression on Windows: in the same R session, after `remove.packages()`
+  # the namespace stays in `loadedNamespaces()` and `system.file(package=p)`
+  # still returns the path where the package WAS installed. The previous
+  # logic (loaded + libPath-in-effective) marked the row as
+  # `loadedSufficient = TRUE`, install was skipped, and downstream
+  # installed.packages() then warned about missing DESCRIPTIONs.
+  #
+  # The fix: also verify the DESCRIPTION actually exists on disk inside one
+  # of the effective lib paths. Here we point `libPaths` at a fresh tempdir
+  # and mock `system.file` so the libPath-membership check passes -- this
+  # exercises ONLY the new disk-presence check.
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_loaded_removed_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  pkgDT <- data.table::data.table(
+    Package          = "testthat",
+    packageFullName  = "testthat",
+    needInstall      = Require:::.txtInstall,
+    versionSpec      = NA_character_,
+    inequality       = NA_character_,
+    Version          = NA_character_,
+    LibPath          = NA_character_,
+    installed        = FALSE,
+    installedVersionOK = NA,
+    loadedSufficient = FALSE
+  )
+
+  # Make system.file(package = "testthat") report testlib so the libPath
+  # check inside useLoadedIfSufficient passes. The DESCRIPTION file at
+  # file.path(testlib, "testthat", "DESCRIPTION") deliberately does NOT
+  # exist -- that's the regression scenario.
+  testthat::local_mocked_bindings(
+    system.file = function(..., package = NULL) {
+      if (!is.null(package) && identical(package, "testthat")) {
+        return(file.path(testlib, "testthat"))
+      }
+      args <- list(..., package = package)
+      do.call(base::system.file, args[!vapply(args, is.null, logical(1))])
+    },
+    .package = "base"
+  )
+
+  out <- Require:::useLoadedIfSufficient(pkgDT, libPaths = testlib, verbose = -2)
+
+  expect_false(isTRUE(out$loadedSufficient[1]),
+               info = paste("Row whose namespace is loaded but DESCRIPTION",
+                            "is missing from disk must NOT be marked loadedSufficient"))
+  expect_identical(out$needInstall[1], Require:::.txtInstall,
+                   info = "Row must remain flagged for reinstall")
+})
+
 test_that("Require(install = FALSE) skips pak/CRAN dep resolution", {
   # Regression: with install = FALSE the user wants to load already-installed
   # packages, nothing more. Running pak::pkg_deps (usePak = TRUE) or pkgDep

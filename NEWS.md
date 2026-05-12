@@ -1,6 +1,20 @@
-# Require 1.1.0.9041 (development version)
+# Require 1.1.0.9042 (development version)
 
 ## bug fixes
+
+* `useLoadedIfSufficient()` now verifies the package's `DESCRIPTION`
+  exists on disk in an effective lib path before marking the row as
+  satisfied. In a single R session, `remove.packages()` deletes files
+  from disk but leaves the namespace in `loadedNamespaces()`, and
+  `system.file(package = ...)` continues to return the recorded
+  (now-nonexistent) path. The previous logic (loaded + libPath-in-
+  effective) treated such packages as already installed; offline
+  `Require(pkg)` then skipped reinstall and downstream
+  `installed.packages()` walks emitted `cannot open compressed file
+  '.../DESCRIPTION'` warnings. Adding the disk-presence check makes
+  Require correctly route those rows back through the install pipeline
+  so the package ends up on disk again, consistent with Require's
+  "after this call, the packages are installed" contract.
 
 * Online pak install no longer spins forever when a package fails to
   build because of missing system packages. The identify-and-defer
