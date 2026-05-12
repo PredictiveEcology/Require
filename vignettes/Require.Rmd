@@ -225,9 +225,12 @@ options(Require.offlineMode = TRUE)
 Require::Require("dplyr")
 ```
 
-`Require` looks for each package in the local `pak` cache and installs from there. Linux PPM binaries, macOS `.tgz`, Windows `.zip`, and source tarballs are all handled. With a warm cache, installs are near-instant — no rebuild, no download.
+`Require` looks for each package in the local `pak` cache and lets `pak` install from there. With a warm cache, installs are near-instant — no rebuild, no download.
 
-`pak` provides the cache (via `pak::cache_list()`); the install step uses `install.packages(<file>, repos = NULL)` directly. Calling `pak::pak()` for a local file rebuilds vignettes (which needs the network) and, on Windows, treats PPM binary builds as out of date and re-downloads — so its installer is unsuitable offline. `install.packages` simply runs `R CMD INSTALL` on the tarball: no resolution, no rebuild, no network.
+Two things make this work that calling `pak` directly does not:
+
+* **Network probes are suppressed.** `pak` normally fetches `bioconductor.org/config.yaml` and refreshes its repo metadata at startup, even when nothing remote is needed. `Require` sets the right environment variables so those calls are skipped for the duration of the install.
+* **Refs are translated.** `Require`'s internal `pkg (>= X.Y.Z)` constraint form is rewritten to the bare package name before `pak` sees it (`pak` rejects the parenthetical form).
 
 You don't have to set `Require.offlineMode` yourself. If `Require` tries an online install and any package fails because the network is unreachable, it probes for connectivity (~2 seconds) and, if there really is no internet, automatically retries from the cache. On the happy path you pay nothing extra; the probe only runs when an install fails.
 

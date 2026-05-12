@@ -192,18 +192,17 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
 })
 
 
-test_that("pakOfflineInstall calls install.packages on the cached tarball (no pak::pak)", {
-  # The offline path bypasses `pak::pak()` entirely: pak gives us the cache
-  # location, install.packages does the local install. This avoids both
-  # pak's R-CMD-build-rebuilds-vignettes failure mode AND pak's Windows
-  # cache-key-mismatch that triggered a re-download even with
-  # `PKG_METADATA_UPDATE_AFTER=365d`. Verify the file path and type by
-  # spying on install.packages.
+test_that("pakOfflineInstall strips parenthetical version specs before pak", {
+  # Regression: pak rejects Require-internal refs of the form
+  # `pkg (>= 1.3.2)` with "Cannot parse package: glue (>= 1.3.2)". The
+  # offline install path passes `packageFullName` to pak::pak() but must
+  # first strip the parenthetical constraint -- pak understands `pkg@ver`
+  # exact pins but not parenthetical inequalities.
   skip_if_not_installed("pak")
   skip_if_not_installed("data.table")
 
   testlib <- file.path(tempdir(),
-                       paste0("rqlib_offline_local_", as.integer(Sys.time())))
+                       paste0("rqlib_parsable_refs_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
 
@@ -212,7 +211,7 @@ test_that("pakOfflineInstall calls install.packages on the cached tarball (no pa
 
   pkgDT <- data.table::data.table(
     Package         = "glue",
-    packageFullName = "glue (>= 1.3.2)",  # the historical pak-incompatible form
+    packageFullName = "glue (>= 1.3.2)",  # the form that broke pak
     needInstall     = Require:::.txtInstall,
     installResult   = NA_character_,
     installed       = FALSE,
@@ -221,19 +220,15 @@ test_that("pakOfflineInstall calls install.packages on the cached tarball (no pa
     LibPath         = NA_character_
   )
 
-  captured_pkgs <- NULL
-  captured_repos <- NULL
-  captured_type  <- NULL
-  # `Require` imports `install.packages` from `utils` (NAMESPACE), so Require's
-  # namespace has its own binding. Mock that binding directly.
+  captured_refs <- NULL
   testthat::with_mocked_bindings(
-    install.packages = function(pkgs, repos = NULL, type = NULL, ...) {
-      captured_pkgs  <<- pkgs
-      captured_repos <<- repos
-      captured_type  <<- type
+    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = TRUE),
+    pakCall = function(expr, verbose) {
+      # Capture the refs argument from pak::pak's unevaluated call.
+      cl <- substitute(expr)
+      captured_refs <<- eval(cl[[2L]], envir = parent.frame())
       invisible(NULL)
     },
-    pakCachedTarball = function(pkg) list(path = fakeTar, is_binary = TRUE),
     .package = "Require",
     {
       suppressWarnings(suppressMessages(
@@ -242,12 +237,13 @@ test_that("pakOfflineInstall calls install.packages on the cached tarball (no pa
     }
   )
 
-  expect_identical(captured_pkgs, fakeTar,
-                   info = "install.packages must be called with the cached tarball path")
-  expect_null(captured_repos,
-              info = "repos must be NULL (no resolver, no network)")
-  expect_true(captured_type %in% c("binary", "source"),
-              info = paste("type must be platform-appropriate; got:", captured_type))
+  expect_false(any(grepl("\\(", captured_refs %||% "")),
+               info = paste("ref passed to pak::pak must not carry the",
+                            "parenthetical version constraint; got:",
+                            paste(captured_refs, collapse = ", ")))
+  expect_identical(captured_refs, "glue",
+                   info = paste("expected bare ref 'glue'; got:",
+                                paste(captured_refs, collapse = ", ")))
 })
 
 test_that("useLoadedIfSufficient refuses to short-circuit when files were removed", {
@@ -625,15 +621,15 @@ test_that("pakOfflineInstall distinguishes 'not in cache' from 'install failed'"
   )
 
   warnings_seen <- character()
-  # Make install.packages a no-op so the ground-truth check below finds the
-  # supposedly-cached pkg still missing on disk -- the "install failed"
-  # branch we want to exercise.
+  # Pretend pak ran but installed nothing -- so the ground-truth check
+  # finds the supposedly-cached pkg still missing on disk -- the "install
+  # failed" branch we want to exercise.
   testthat::with_mocked_bindings(
-    install.packages = function(...) invisible(NULL),
     pakCachedTarball = function(pkg) {
       if (pkg == "inCache")    list(path = fakeTar, is_binary = FALSE)
       else                     NULL
     },
+    pakCall = function(expr, verbose) invisible(NULL),
     .package = "Require",
     {
       withCallingHandlers(

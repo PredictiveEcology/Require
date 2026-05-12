@@ -814,83 +814,106 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
-  ## Design: use `pak::cache_list()` (via `pakCachedTarball()`) to FIND each
-  ## requested package's tarball, then install with `install.packages(repos
-  ## = NULL)`. Two earlier strategies broke for different reasons:
-  ##
-  ##  1. `pak::pak("local::<tarball>", ...)` runs `R CMD build` first, which
-  ##     rebuilds vignettes (needs network) and fails offline with
-  ##     "Failed to build dplyr 1.2.1 (300ms)".
-  ##  2. `pak::pak("dplyr", ...)` with `PKG_METADATA_UPDATE_AFTER=365d` and
-  ##     friends works on Linux (Ubuntu) but re-downloads on Windows --
-  ##     pak's cache match keys differ between PPM (`x86_64-w64-mingw32`)
-  ##     and CRAN's multi-arch builds (`i386+x86_64-w64-mingw32`), so the
-  ##     resolver picks the CRAN URL and goes to the network for the build
-  ##     it considers "current".
-  ##
-  ## `install.packages(repos = NULL, <tarball>)` calls R CMD INSTALL on the
-  ## file we hand it -- no resolution, no rebuild, no network, no platform-
-  ## key matching. pak is still the cache provider (we look up the tarball
-  ## via `pak::cache_list()`); we just don't use its installer for local
-  ## files when offline. Source-format tarballs that already contain
-  ## pre-built artifacts (Linux PPM "binaries") install via R CMD INSTALL
-  ## which detects and reuses the artifacts.
+  ## Strategy: keep pak as the installer (so its resolver, dep-ordering,
+  ## sysreqs, build, and progress UI all apply). Pass it bare/cleaned-up
+  ## refs and set env vars + an option so its startup network probes are
+  ## skipped:
+  ##   - `PKG_METADATA_UPDATE_AFTER=365d` -- treat cached repo metadata as
+  ##     fresh, so pak doesn't refresh from CRAN/PPM at startup.
+  ##   - `R_BIOC_VERSION` -- short-circuits pkgcache's Bioconductor
+  ##     version detection (it fetches `bioconductor.org/config.yaml`
+  ##     otherwise).
+  ##   - `R_BIOC_CONFIG_URL=file://...` -- redirects any residual yaml
+  ##     fetch to pkgcache's bundled fixture inside pak's private library.
+  ##   - `options(pak.no_extra_messages = TRUE)` -- suppresses the
+  ##     "Optional package `pillar` is not available" startup hint.
+  ## All four are saved + restored on exit.
 
   notInCache <- character(0)
-  binPaths   <- character(0); binPkgs <- character(0)
-  srcPaths   <- character(0); srcPkgs <- character(0)
-  for (pkg in toInstall$Package) {
+  refsToInstall <- character(0)
+  pkgsToInstall <- character(0)
+  for (i in seq_len(NROW(toInstall))) {
+    pkg <- toInstall$Package[i]
     cached <- pakCachedTarball(pkg)
     if (is.null(cached)) {
       notInCache <- c(notInCache, pkg)
-    } else if (isTRUE(cached$is_binary)) {
-      binPaths <- c(binPaths, cached$path)
-      binPkgs  <- c(binPkgs,  pkg)
     } else {
-      srcPaths <- c(srcPaths, cached$path)
-      srcPkgs  <- c(srcPkgs,  pkg)
+      ## Prefer packageFullName when available -- it carries GitHub refs.
+      ## Strip the Require-internal `pkg (>= X.Y.Z)` parenthetical
+      ## constraint via `trimVersionNumber()`; pak rejects that form with
+      ## `Cannot parse package: glue (>= 1.3.2)`. GitHub `account/repo@ref`
+      ## forms are preserved.
+      ref <- if ("packageFullName" %in% names(toInstall) &&
+                 !is.na(toInstall$packageFullName[i]) &&
+                 nzchar(toInstall$packageFullName[i])) {
+        trimVersionNumber(toInstall$packageFullName[i])
+      } else {
+        pkg
+      }
+      refsToInstall <- c(refsToInstall, ref)
+      pkgsToInstall <- c(pkgsToInstall, pkg)
     }
   }
 
   installFailedPkgs <- character(0)
-  triedPkgs <- c(binPkgs, srcPkgs)
+  triedPkgs <- pkgsToInstall
 
-  if (length(triedPkgs)) {
-    messageVerbose("offline mode: installing ", length(triedPkgs),
+  if (length(refsToInstall)) {
+    messageVerbose("offline mode: installing ", length(refsToInstall),
                    " package(s) from pak cache: ",
-                   paste(triedPkgs, collapse = ", "),
+                   paste(pkgsToInstall, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
-  }
 
-  ## `type = "binary"` is only valid on Mac (`.tgz`) and Windows (`.zip`).
-  ## On Linux, PPM "binaries" are `.tar.gz` files with pre-built `.so`
-  ## artifacts inside; R CMD INSTALL detects them and skips recompilation.
-  ## Picking the type from `.Platform$pkgType` avoids
-  ## "type 'binary' is not supported on this platform" on Linux.
-  binaryType <- if (.Platform$pkgType == "source") "source" else "binary"
-
-  if (length(binPaths)) {
-    err <- try(suppressWarnings(
-      install.packages(binPaths, repos = NULL, type = binaryType,
-                       lib = libPaths[1], dependencies = FALSE,
-                       quiet = !installPackageVerbose(verbose))
-    ), silent = TRUE)
-    if (is(err, "try-error")) {
-      messageVerbose("offline binary install failed; deferring to ",
-                     "installed.packages() ground-truth check: ",
-                     as.character(err),
-                     verbose = verbose, verboseLevel = 1)
+    ## Locate pkgcache's bioc-config.yaml fixture. pkgcache lives inside
+    ## pak's private library on most installs, so the top-level
+    ## system.file() lookup returns "" -- fall back to pak's library/.
+    biocFixture <- tryCatch(
+      system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
+      error = function(e) "")
+    if (!nzchar(biocFixture)) {
+      pakDir <- tryCatch(find.package("pak"), error = function(e) "")
+      if (length(pakDir) && nzchar(pakDir)) {
+        cand <- file.path(pakDir, "library", "pkgcache", "fixtures",
+                          "bioc-config.yaml")
+        if (file.exists(cand)) biocFixture <- cand
+      }
     }
-  }
+    biocVer <- if (nzchar(biocFixture) && file.exists(biocFixture)) {
+      relLine <- grep("^release_version:", readLines(biocFixture, warn = FALSE),
+                      value = TRUE)[1L]
+      v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
+      if (length(v) && nzchar(v) && !is.na(v)) v else "3.22"
+    } else "3.22"
+    envNms <- c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
+                "PKG_METADATA_UPDATE_AFTER")
+    oldEnv <- Sys.getenv(envNms, names = TRUE, unset = NA)
+    if (is.na(oldEnv[["R_BIOC_VERSION"]]))
+      Sys.setenv(R_BIOC_VERSION = biocVer)
+    if (is.na(oldEnv[["R_BIOC_CONFIG_URL"]]) && nzchar(biocFixture)) {
+      Sys.setenv(R_BIOC_CONFIG_URL =
+                   paste0("file://", normalizePath(biocFixture, winslash = "/")))
+    }
+    if (is.na(oldEnv[["PKG_METADATA_UPDATE_AFTER"]]))
+      Sys.setenv(PKG_METADATA_UPDATE_AFTER = "365d")
+    oldExtraOpt <- getOption("pak.no_extra_messages")
+    options(pak.no_extra_messages = TRUE)
+    on.exit({
+      for (nm in envNms) {
+        v <- oldEnv[[nm]]
+        if (is.na(v)) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(v), nm))
+      }
+      options(pak.no_extra_messages = oldExtraOpt)
+    }, add = TRUE)
 
-  if (length(srcPaths)) {
-    err <- try(suppressWarnings(
-      install.packages(srcPaths, repos = NULL, type = "source",
-                       lib = libPaths[1], dependencies = FALSE,
-                       quiet = !installPackageVerbose(verbose))
-    ), silent = TRUE)
+    err <- try(pakCall(
+      pak::pak(refsToInstall, lib = libPaths[1], ask = FALSE,
+               dependencies = FALSE, upgrade = FALSE),
+      verbose), silent = TRUE)
     if (is(err, "try-error")) {
-      messageVerbose("offline source install failed; deferring to ",
+      ## Surface the underlying pak error at default verbose so silent-pak
+      ## failures are debuggable. The generic "offline install failed"
+      ## warning below loses the diagnostic.
+      messageVerbose("pak install reported error; deferring to ",
                      "installed.packages() ground-truth check: ",
                      as.character(err),
                      verbose = verbose, verboseLevel = 1)
