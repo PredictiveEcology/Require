@@ -1,6 +1,23 @@
-# Require 1.1.0.9046 (development version)
+# Require 1.1.0.9047 (development version)
 
 ## bug fixes
+
+* Recovery from a failed online install (no internet) now works on
+  Windows. `Require::Install("dplyr", ...)` with `offlineMode = FALSE`
+  and no internet fails inside `pakInstallFiltered`, the recovery hook
+  flips `offlineMode = TRUE`, and `pakOfflineInstall` retries from the
+  pak cache. Previously the retry reported "not in pak cache" for
+  every package even though `pak::cache_list()` showed them present.
+  Root cause: `pak::cache_list()` is executed in pak's persistent
+  background subprocess, which can be in a wedged state from the
+  preceding failed install plan, returning stale or empty rows.
+  `pakOfflineInstall()` now calls `pakResetSubprocess()` at the top
+  so the cache lookup runs against a fresh subprocess.
+
+* `pakOfflineInstall()` now logs why a package is reported as "not in
+  pak cache" at default verbose: how many `cache_list()` rows it found
+  for that package and whether their on-disk files exist. Surfaces
+  the underlying state instead of just "not in cache".
 
 * Offline install on Windows no longer re-downloads cached binaries.
   The earlier bare-ref pak path

@@ -814,6 +814,15 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
+  ## When this runs as the recovery hook after a failed `pakInstallFiltered`
+  ## (no internet), pak's persistent subprocess can be in a wedged state
+  ## from the failed plan. `pak::cache_list()` is executed in that same
+  ## subprocess (see pak::cache_list source), so a wedged subprocess can
+  ## return stale or empty rows -- making us falsely conclude "not in pak
+  ## cache" for packages that are actually present on disk. Kill the
+  ## subprocess so pak spawns a fresh one for the cache lookup.
+  pakResetSubprocess()
+
   ## Strategy: keep pak as the installer (so its resolver, dep-ordering,
   ## sysreqs, build, and progress UI all apply). Pass it bare/cleaned-up
   ## refs and set env vars + an option so its startup network probes are
@@ -837,6 +846,26 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
     cached <- pakCachedTarball(pkg)
     if (is.null(cached)) {
       notInCache <- c(notInCache, pkg)
+      ## Diagnostic: log raw cache rows for this pkg so users can see why
+      ## the lookup missed (no rows / no matching binary / missing file
+      ## on disk). Verbose-gated to keep the happy path quiet.
+      if (verbose >= 1) {
+        raw <- tryCatch({
+          cl <- pak::cache_list()
+          cl[!is.na(cl$package) & cl$package == pkg,
+             c("package", "version", "platform", "fullpath"), drop = FALSE]
+        }, error = function(e) NULL)
+        if (!is.null(raw) && NROW(raw) > 0L) {
+          messageVerbose("pakCachedTarball(", pkg, ") returned NULL despite ",
+                         NROW(raw), " cache row(s); fullpath exists? ",
+                         paste(file.exists(raw$fullpath), collapse = ","),
+                         verbose = verbose, verboseLevel = 1)
+        } else {
+          messageVerbose("pakCachedTarball(", pkg,
+                         ") returned NULL; no rows in pak::cache_list()",
+                         verbose = verbose, verboseLevel = 1)
+        }
+      }
     } else {
       ## Choose the ref form per file extension so pak skips the network
       ## without rebuilding anything:
