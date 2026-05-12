@@ -314,7 +314,18 @@ Require <- function(packages,
 
     basePkgsToLoad <- packages[packages %in% .basePkgs]
 
-    if (getOption("Require.usePak", FALSE)) {
+    # `install = FALSE` means: don't reach CRAN/GitHub to install or update --
+    # just load whatever is already installed. Dependency resolution (via pak
+    # or pkgDep) hits CRAN, which on Windows + RStudio triggers an SSL warning
+    # via .rs.downloadFile(CRAN_mirrors.csv), and on a multi-package mix the
+    # pak path emits a noisy "switching to per-package resolution" Note even
+    # when there's nothing to do. Short-circuit to the no-deps pkgDT here so
+    # the downstream installed/require pipeline runs without any network call.
+    skipDepResolution <- isFALSE(install)
+
+    if (skipDepResolution) {
+      pkgDT <- toPkgDTFull(packages)
+    } else if (getOption("Require.usePak", FALSE)) {
       # Pass repos to pak via options(repos): pak's remote() subprocess copies
       # getOption("repos") into the subprocess environment. IMPORTANT LIMITATION:
       # pak::repo_get() always includes CRAN + Bioconductor as built-in defaults
@@ -345,7 +356,7 @@ Require <- function(packages,
                                   standAlone = standAlone, verbose = verbose,
                                   purge = purge)
        }
-    } else {
+    } else if (!skipDepResolution) {
       if (length(which)) {
         # "Rdpack"     "S7"         "rbibutils"  "reformulas"
         deps <- pkgDep(packages, simplify = FALSE,

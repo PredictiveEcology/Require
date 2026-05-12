@@ -190,3 +190,31 @@ test_that("useLoadedIfSufficient does not satisfy `(HEAD)` pins", {
   # interactive runs. The hasHEAD-skip behavior on row 1 is the actual
   # regression target, so we leave the row-2 sanity assertion off.
 })
+
+
+test_that("Require(install = FALSE) skips pak/CRAN dep resolution", {
+  # Regression: with install = FALSE the user wants to load already-installed
+  # packages, nothing more. Running pak::pkg_deps (usePak = TRUE) or pkgDep
+  # (usePak = FALSE) reaches CRAN, which on Windows + RStudio triggers
+  # .rs.downloadFile(CRAN_mirrors.csv) -> SSL warning; the pak path also
+  # emits a "switching to per-package resolution" Note even when there's
+  # nothing to do. The fix short-circuits to toPkgDTFull() before either
+  # network-touching path. Assert no chatty messages from a no-op call.
+  skip_if_not_installed("Require")
+
+  msgs_pak <- withr::with_options(
+    list(Require.usePak = TRUE, Require.verbose = 1),
+    capture.output(type = "message",
+                   res <- Require::Require("Require", install = FALSE))
+  )
+  expect_true(res)
+  expect_false(any(grepl("per-package resolution", msgs_pak)))
+  expect_false(any(grepl("CRAN_mirrors", msgs_pak)))
+
+  msgs_legacy <- withr::with_options(
+    list(Require.usePak = FALSE, Require.verbose = 1),
+    capture.output(type = "message",
+                   res2 <- Require::Require("Require", install = FALSE))
+  )
+  expect_true(res2)
+})
