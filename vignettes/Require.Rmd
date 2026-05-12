@@ -218,7 +218,7 @@ Snapshot installs are the default path of `Require::Install()` when an `inst/sna
 
 ## Working offline
 
-`Require` can install **and** load packages with no internet, as long as they (or compatible builds of them) were downloaded once before. Set:
+`Require` can install **and** load packages with no internet, as long as they (or compatible builds of them) were downloaded once before. This is useful in some settings, including e.g., a high performance computer cluster that has no internet access on the compute nodes. Set:
 
 ```r
 options(Require.offlineMode = TRUE)
