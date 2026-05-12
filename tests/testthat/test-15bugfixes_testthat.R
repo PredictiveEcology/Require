@@ -628,3 +628,34 @@ test_that("pakOfflineInstall distinguishes 'not in cache' from 'install failed'"
                         warnings_seen, fixed = TRUE)),
               info = "expected a separate 'install failed' warning naming inCache")
 })
+
+test_that("extractMissingSysreqs parses pak's 'Missing N system packages' block", {
+  # Regression for the infinite-retry symptom: when pak reports missing
+  # system packages, identify-and-defer's dep resolver re-includes the
+  # failing pkg in every retry plan (because dependents still reference
+  # it), so the loop ping-pongs forever. Detecting the block lets the
+  # loop terminate with an actionable error.
+  output <- c(
+    "  + fs          2.1.0  [bld][cmp] + ✖ cmake, ✔ make, ✖ libuv1-dev",
+    "✖ Missing 2 system packages. You'll probably need to install them manually:",
+    "+ cmake       - fs",
+    "+ libuv1-dev  - fs",
+    "i No downloads are needed, 80 pkgs (51.17 MB) are cached"
+  )
+  out <- Require:::extractMissingSysreqs(output)
+  expect_named(out, c("fs", "fs"))
+  expect_setequal(unname(out), c("cmake", "libuv1-dev"))
+
+  # Multi-pkg form: one sysreq needed by several packages
+  output2 <- c(
+    "✖ Missing 1 system packages. You'll probably need to install them manually:",
+    "+ libssl-dev  - curl, openssl"
+  )
+  out2 <- Require:::extractMissingSysreqs(output2)
+  expect_named(out2, c("curl", "openssl"))
+  expect_true(all(unname(out2) == "libssl-dev"))
+
+  # No block -> empty
+  expect_identical(Require:::extractMissingSysreqs("nothing relevant"), character(0))
+  expect_identical(Require:::extractMissingSysreqs(character(0)), character(0))
+})

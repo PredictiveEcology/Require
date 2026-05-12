@@ -1,6 +1,17 @@
-# Require 1.1.0.9040 (development version)
+# Require 1.1.0.9041 (development version)
 
 ## bug fixes
+
+* Online pak install no longer spins forever when a package fails to
+  build because of missing system packages. The identify-and-defer
+  loop's dep resolver re-includes the failing package in every retry
+  plan (since dependents still reference it), so the loop ping-pongs on
+  the same culprit indefinitely. New `extractMissingSysreqs()` parses
+  pak's "Missing N system packages" block and the `+ <sysreq> - <pkg>`
+  mapping. When detected, the loop bails out with an actionable warning
+  naming each affected package and its missing system dependencies
+  (e.g. "fs needs: cmake, libuv1-dev"). Packages that already installed
+  before the failure are preserved.
 
 * Offline install under `Require.usePak = TRUE + Require.offlineMode = TRUE`
   now uses pak's normal install flow against its existing cache instead

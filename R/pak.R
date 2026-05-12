@@ -2002,6 +2002,56 @@ extractBuildFailures <- function(output) {
 }
 
 # ---------------------------------------------------------------------------
+# Parse pak's "Missing N system packages" block. Returns a named character
+# vector: names = pkg the system dep is needed BY (e.g. "fs"), values = the
+# system package name (e.g. "cmake"). A single pkg with two missing sysreqs
+# produces two entries with the same name. Empty character() if no block.
+#
+# pak emits this block during the resolve phase, BEFORE attempting the
+# build, and it's a deterministic signal that the build will fail until the
+# user installs the system packages. Retrying without fixing the sysreqs is
+# pointless and produces the symptom in issue [INFINITE-RETRY]:
+#     identify-and-defer iter 1: 1 culprit(s) deferred (fs); 74 cascade
+#     casualties queued for next pass
+#   followed by infinite repeats of the same iter on the same passList,
+#   because pak's dep resolver re-includes fs in every plan that contains
+#   any of its 74 dependents.
+#
+# Format (color codes already stripped):
+#   X Missing 2 system packages. You'll probably need to install them manually:
+#   + cmake       - fs
+#   + libuv1-dev  - fs
+# Pkg lists can be comma-separated when a single sysreq is needed by many.
+# ---------------------------------------------------------------------------
+extractMissingSysreqs <- function(output) {
+  if (!length(output) || !any(nzchar(output))) return(character(0))
+  clean <- gsub("\033\\[[0-9;]*m", "", paste(output, collapse = "\n"))
+  lines <- strsplit(clean, "\n")[[1]]
+  hdrs  <- grep("Missing\\s+\\d+\\s+system packages?", lines, perl = TRUE)
+  if (!length(hdrs)) return(character(0))
+  out <- character(0)
+  for (h in hdrs) {
+    j <- h + 1L
+    while (j <= length(lines)) {
+      ln <- lines[j]
+      m  <- regmatches(ln, regexec(
+        "^\\s*[+]\\s+(\\S+)\\s+-\\s+(.+?)\\s*$", ln, perl = TRUE))[[1]]
+      if (length(m) < 3L) break
+      sysreq <- m[2]
+      pkgs   <- trimws(strsplit(m[3], "\\s*,\\s*")[[1]])
+      pkgs   <- pkgs[nzchar(pkgs)]
+      if (length(pkgs)) {
+        v <- rep(sysreq, length(pkgs))
+        names(v) <- pkgs
+        out <- c(out, v)
+      }
+      j <- j + 1L
+    }
+  }
+  out
+}
+
+# ---------------------------------------------------------------------------
 # Parse pak's captured stderr/messages for per-package install failure
 # diagnostics. Returns a data.table:
 #
@@ -2709,6 +2759,27 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       iterMsgsStart <- length(allCapturedMsgs) + 1L
       capturePak(pakRetryLoop(passList, repos, verbose))
       capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
+
+      ## Terminate early if pak reports missing system packages. Retrying
+      ## won't help: pak's dep resolver re-includes the failing pkg in
+      ## every plan that contains any of its dependents, so the loop just
+      ## ping-pongs on the same culprit. Emit a clear actionable error
+      ## (with sysreq -> pkg mapping) instead of spinning forever.
+      sysreqMissing <- extractMissingSysreqs(capturedMsgs)
+      if (length(sysreqMissing)) {
+        affectedPkgs <- unique(names(sysreqMissing))
+        # Group sysreqs by package for a readable summary
+        byPkg <- split(unname(sysreqMissing), names(sysreqMissing))
+        summary <- vapply(names(byPkg), function(p) {
+          paste0(p, " needs: ", paste(unique(byPkg[[p]]), collapse = ", "))
+        }, character(1))
+        warning(.txtCouldNotBeInstalled, ": ",
+                paste(affectedPkgs, collapse = ", "),
+                "; missing system packages -- install them and re-run.\n  ",
+                paste(summary, collapse = "\n  "),
+                call. = FALSE)
+        break
+      }
 
       # noCache = TRUE: pak just installed these packages in a subprocess; the
       # parent R session's installed.packages() cache is still pre-install.
