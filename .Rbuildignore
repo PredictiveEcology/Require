@@ -29,3 +29,5 @@ inst\timings.csv
 ^docs/RequireApproach.html$
 ^pkgdown$
 ^HANDOFF\.md$
+^\.vscode$
+^\.positai$
