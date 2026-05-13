@@ -805,9 +805,30 @@ warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
 }
 
 
-## rpackageFolder() was inlined into checkLibPaths() (its sole caller)
-## and removed during the cache-helper consolidation. Restore here if a
-## downstream package was depending on it via Require:::rpackageFolder.
+## Internal helper: given a path, append `versionMajorMinor()` so libraries
+## stay R-version-specific (unless `exact = TRUE`, or the path is in
+## `R_LIBS_SITE`, or we're in a non-interactive R CMD check tmp libpath).
+## Default path is `cachePkgDir()`; passing `NULL` or `FALSE` short-circuits
+## to `NULL`. Kept callable as `Require:::rpackageFolder` for the test
+## suite and any downstream package that reaches in via the unexported
+## name.
+rpackageFolder <- function(path = cachePkgDir(), exact = FALSE) {
+  if (is.null(path)) return(NULL)
+  if (isFALSE(path)) return(NULL)
+  if (isTRUE(exact)) return(path)
+
+  path <- path[1]
+  siteLibs <- normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])
+  if (normPathMemoise(path) %in% siteLibs) return(path)
+
+  if (interactive() && !endsWith(path, versionMajorMinor())) {
+    ## R CMD check on R >= 4.2 uses a random tmp libpath; skip the
+    ## R-version append there so the path the user-set libpath wins.
+    file.path(path, versionMajorMinor())
+  } else {
+    path
+  }
+}
 
 
 preparePkgNameToReport <- function(Package, packageFullName) {

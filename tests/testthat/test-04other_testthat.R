@@ -138,19 +138,24 @@ test_that("test 4", {
   # out2222 <- capture.output(setupOff())
   # testthat::expect_true(identical(Require:::cacheGetOptionCachePkgDir(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
 
+  ## cacheGetOptionCachePkgDir() is deprecated -- still functional but
+  ## emits a warning every call. Suppress so the legacy assertions pass
+  ## R-CMD-check's `error-on: warning` policy.
+  cGOCD <- function() suppressWarnings(cacheGetOptionCachePkgDir())
+
   ooo <- options(Require.cachePkgDir = TRUE)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), cachePkgDir()))
+  testthat::expect_true(identical(cGOCD(), cachePkgDir()))
   ooo <- options(Require.cachePkgDir = FALSE)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  testthat::expect_true(identical(cGOCD(), NULL))
   ooo <- options(Require.cachePkgDir = tempdir())
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), tempdir()))
+  testthat::expect_true(identical(cGOCD(), tempdir()))
   ooo <- options(Require.cachePkgDir = "default")
   RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
   if (identical(RPackageCacheSysEnv, "FALSE")) {
-    testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
+    testthat::expect_true(identical(NULL, cGOCD()))
   } else {
-    if (!(is.null(Require:::cacheGetOptionCachePkgDir()) || Require:::cacheGetOptionCachePkgDir() == "FALSE")) {
-      testthat::expect_true(identical(normPath(Require:::cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir())))
+    if (!(is.null(cGOCD()) || identical(cGOCD(), "FALSE"))) {
+      testthat::expect_true(identical(normPath(cGOCD()), normPath(Require::cachePkgDir())))
     }
   }
 
@@ -295,7 +300,7 @@ test_that("test 4", {
 
 
   ooo <- options(Require.cachePkgDir = NULL)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  testthat::expect_true(identical(suppressWarnings(cacheGetOptionCachePkgDir()), NULL))
   options(ooo)
 
 })

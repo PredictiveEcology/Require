@@ -1237,7 +1237,11 @@ test_that("cachePkgDir() follows R_USER_CACHE_DIR in pak mode (issue #91)", {
   newPath <- tryCatch(Require::cachePkgDir(), error = function(e) NULL)
   skip_if(is.null(newPath), "could not query pak cache path after respawn")
 
-  testthat::expect_true(startsWith(newPath, tmpRoot),
+  ## macOS resolves /var/folders/... to /private/var/folders/...; normalize
+  ## both sides so the prefix check survives the symlink expansion.
+  newPathNorm  <- normalizePath(newPath, mustWork = FALSE)
+  tmpRootNorm  <- normalizePath(tmpRoot,  mustWork = FALSE)
+  testthat::expect_true(startsWith(newPathNorm, tmpRootNorm),
     info = paste("setting R_USER_CACHE_DIR must redirect pak's cache;",
-                 "got:", newPath, "expected prefix:", tmpRoot))
+                 "got:", newPathNorm, "expected prefix:", tmpRootNorm))
 })
