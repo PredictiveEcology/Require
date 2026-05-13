@@ -1036,9 +1036,12 @@ pkgDepTopoSortMemoise <- function(...) {
 }
 
 pkgDepDBFilename <- function() {
-  if (!is.null(cacheGetOptionCachePkgDir())) {
-    file.path(cachePkgDir(), "pkgDepDB.rds")
-  } # returns NULL if no Cache used
+  ## Require's pkgDep cache file -- bookkeeping, kept next to the legacy
+  ## SHA DB so first-run-after-upgrade doesn't lose existing state.
+  d <- .requirePkgInfoDir()
+  if (!is.null(d) && nzchar(d))
+    file.path(d, "pkgDepDB.rds")
+  ## else NULL (matches the prior "no Cache used" branch)
 }
 
 isAre <- function(l, v) {
@@ -1119,7 +1122,10 @@ cacheClearPackages <- function(packages,
                                      Rversion = versionMajorMinor(),
                                      clearCranCache = FALSE,
                                      verbose = getOption("Require.verbose")) {
-  out <- cachePkgDir(create = FALSE)
+  ## NOTE: this is the legacy clearer over Require's own bookkeeping dir.
+  ## In pak mode the tarballs live in pak's cache; a follow-up commit
+  ## reroutes this function through `pak::cache_delete()` / `pak::cache_clean()`.
+  out <- .requirePkgInfoDir(create = FALSE)
   if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)
   }

@@ -1048,3 +1048,84 @@ test_that("pinInstalledForPak returns input unchanged when libPath is empty", {
   testthat::expect_identical(out, "data.table",
     info = "empty libPath has no installed packages -- ref must pass through unchanged")
 })
+
+# ---------------------------------------------------------------------------
+# cachePkgDir() consolidation
+#
+# `cachePkgDir()` is the single getter for the package-tarball cache:
+#   * usePak = TRUE  -> pak::cache_summary()$cachepath
+#   * usePak = FALSE -> legacy <cacheDir>/packages/<Rver>
+#
+# `.requirePkgInfoDir()` stays at the legacy path regardless of pak mode --
+# it holds Require's own bookkeeping (SHA DB, mirrors.csv, pkgDepDB, etc.)
+# which pak doesn't know about. Together these split a previously-overloaded
+# concept and let `R_USER_CACHE_DIR` be the single env-var knob for shared
+# caches (closes the spirit of #91 without needing R_REQUIRE_PKG_CACHE).
+# ---------------------------------------------------------------------------
+
+test_that("cachePkgDir() returns pak's cache path in pak mode", {
+  skip_if_not_installed("pak")
+  withr::with_options(list(Require.usePak = TRUE), {
+    pakPath <- tryCatch(pak::cache_summary()$cachepath, error = function(e) NULL)
+    skip_if(is.null(pakPath) || !nzchar(pakPath),
+            "pak::cache_summary() unavailable here -- nothing to compare against")
+    testthat::expect_identical(
+      normalizePath(Require::cachePkgDir(), mustWork = FALSE),
+      normalizePath(pakPath, mustWork = FALSE),
+      info = "cachePkgDir() must delegate to pak::cache_summary()$cachepath in pak mode"
+    )
+  })
+})
+
+test_that("cachePkgDir() returns legacy path when usePak = FALSE", {
+  withr::with_options(list(Require.usePak = FALSE), {
+    legacy <- Require::cachePkgDir()
+    testthat::expect_true(grepl(paste0("packages/", Require:::versionMajorMinor(), "$"),
+                                legacy),
+      info = "non-pak path must be <cacheDir>/packages/<Rver>")
+    testthat::expect_true(startsWith(legacy, Require:::cacheDir()),
+      info = "non-pak path must be a child of cacheDir()")
+  })
+})
+
+test_that(".requirePkgInfoDir() is stable across usePak setting", {
+  withr::with_options(list(Require.usePak = TRUE), {
+    inPak  <- Require:::.requirePkgInfoDir()
+  })
+  withr::with_options(list(Require.usePak = FALSE), {
+    noPak <- Require:::.requirePkgInfoDir()
+  })
+  testthat::expect_identical(inPak, noPak,
+    info = "Require's bookkeeping dir must not move when pak is toggled")
+  testthat::expect_true(grepl(paste0("packages/", Require:::versionMajorMinor(), "$"),
+                              inPak),
+    info = ".requirePkgInfoDir() must keep the legacy <cacheDir>/packages/<Rver> layout")
+})
+
+test_that("cachePkgDir() follows R_USER_CACHE_DIR in pak mode (issue #91)", {
+  skip_if_not_installed("pak")
+  ## The kill+respawn dance: tweak R_USER_CACHE_DIR, kill pak's subprocess,
+  ## the next pak call respawns and captures the new env. Restore at exit
+  ## so other tests aren't affected.
+  oldEnv <- Sys.getenv("R_USER_CACHE_DIR", unset = NA)
+  oldRemote <- pak:::pkg_data$remote
+  tmpRoot <- tempfile("rUserCache-")
+  on.exit({
+    ## restore env + subprocess for downstream tests
+    if (is.na(oldEnv)) Sys.unsetenv("R_USER_CACHE_DIR") else Sys.setenv(R_USER_CACHE_DIR = oldEnv)
+    rs <- pak:::pkg_data$remote
+    if (inherits(rs, "r_session") && rs$is_alive()) rs$kill()
+    unlink(tmpRoot, recursive = TRUE)
+  }, add = TRUE)
+
+  Sys.setenv(R_USER_CACHE_DIR = tmpRoot)
+  rs <- pak:::pkg_data$remote
+  if (inherits(rs, "r_session") && rs$is_alive()) rs$kill()
+  ## next pak call respawns with the new env
+  newPath <- tryCatch(Require::cachePkgDir(), error = function(e) NULL)
+  skip_if(is.null(newPath), "could not query pak cache path after respawn")
+
+  testthat::expect_true(startsWith(newPath, tmpRoot),
+    info = paste("setting R_USER_CACHE_DIR must redirect pak's cache;",
+                 "got:", newPath, "expected prefix:", tmpRoot))
+})

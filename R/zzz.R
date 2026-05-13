@@ -47,17 +47,17 @@ envPkgCreate()
   }
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
-  possCacheDir <- cacheGetOptionCachePkgDir() |> checkPath(create = TRUE)
-  # if (!is.null(possCacheDir)) {
-  #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
-  # }
+  ## Ensure Require's bookkeeping dir exists at load time. (Note: this is
+  ## Require's own SHA DB / mirrors / DESCRIPTION cache area, NOT pak's
+  ## package tarball cache. See [.requirePkgInfoDir].)
+  possCacheDir <- .requirePkgInfoDir(create = TRUE)
 
   invisible()
 }
 
 .onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
-    possCacheDir <- cacheGetOptionCachePkgDir()
+    possCacheDir <- cachePkgDir()
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
       if (!is.null(possCacheDir)) {

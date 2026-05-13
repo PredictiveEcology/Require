@@ -661,12 +661,15 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
         alreadyThere <- basename(ccFiles) %in% basename(localFiles)
         if (any(!alreadyThere)) {
           ccFiles <- ccFiles[!alreadyThere]
-          toFiles <- file.path(cacheGetOptionCachePkgDir(), basename(ccFiles))
+          ## crancache integration is a legacy non-pak workflow -- staging
+          ## directory lives next to Require's other bookkeeping rather
+          ## than in pak's cache (pak doesn't index files dropped here).
+          toFiles <- file.path(.requirePkgInfoDir(create = TRUE), basename(ccFiles))
           linked <- linkOrCopy(ccFiles, toFiles)
           messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
                          verbose = verbose, verboseLevel = 1
           )
-          localFiles <- dir(cacheGetOptionCachePkgDir(), full.names = TRUE)
+          localFiles <- dir(.requirePkgInfoDir(), full.names = TRUE)
         }
       }
     }

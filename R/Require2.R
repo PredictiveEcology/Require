@@ -2181,8 +2181,11 @@ keepOnlyBinary <- function(fn, keepSourceIfOnlyOne = TRUE) {
 }
 
 moveFileToCacheOrTmp <- function(pkgInstall) {
-  localFileDir <- if (!is.null(cacheGetOptionCachePkgDir())) {
-    cacheGetOptionCachePkgDir()
+  ## Legacy non-pak downloader: park downloaded tarballs alongside Require's
+  ## bookkeeping rather than in pak's tarball cache (pak doesn't index files
+  ## dropped here externally, so they'd be invisible anyway).
+  localFileDir <- if (nzchar(.requirePkgInfoDir())) {
+    .requirePkgInfoDir(create = TRUE)
   } else {
     tempdir3()
   }
@@ -2317,7 +2320,7 @@ localFileID <- function(Package, localFiles, repoLocation, SHAonGH, inequality,
 
 identifyLocalFiles <- function(pkgInstall, repos, purge, libPaths, verbose) {
   #### Uses pkgInstall #####
-  if (!is.null(cacheGetOptionCachePkgDir())) {
+  if (nzchar(.requirePkgInfoDir())) {
     removeOldFlatCachePkgs(verbose = verbose)
     # check for crancache copies -- only look in repos-specific subdirectories
     repoDirs <- cachePkgDirForRepo(repos)
@@ -2841,7 +2844,7 @@ renameLocalGitTarWSHA <- function(localFile, SHAonGH) {
 #' @importFrom stats na.omit
 copyBuiltToCache <- function(pkgInstall, tmpdirs, copyOnly = FALSE) {
   if (!is.null(pkgInstall)) {
-    if (!is.null(cacheGetOptionCachePkgDir())) {
+    if (nzchar(.requirePkgInfoDir())) {
       out <- try(Map(td = tmpdirs, function(td) {
         tdPkgs <- dir(td, full.names = TRUE,
                       pattern = paste0("\\.zip|\\.tar\\.gz|", macBinaryFileExtGrep))
@@ -2977,12 +2980,12 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
 }
 
 getVersionOnReposLocal <- function(pkgDT) {
-  if (!is.null(cacheGetOptionCachePkgDir())) {
+  if (nzchar(.requirePkgInfoDir())) {
     set(pkgDT, NULL, "tmpOrder", seq(NROW(pkgDT)))
     if (any(is.na(pkgDT[["VersionOnRepos"]]))) {
       pkgDTList <- split(pkgDT, !is.na(pkgDT[["VersionOnRepos"]]))
       if (!is.null(pkgDTList$`FALSE`)) {
-        localFilesOuter <- dir(cacheGetOptionCachePkgDir())
+        localFilesOuter <- dir(.requirePkgInfoDir())
         pkgNoVoR <- pkgDTList$`FALSE`
         wh <- pkgNoVoR[["repoLocation"]] %in% .txtGitHub
         if (any(wh)) {
@@ -3237,10 +3240,10 @@ messagesAboutWarnings <- function(w, toInstall, returnDetails, tmpdir, verbose =
     }
   }
 
-  if (!is.null(cacheGetOptionCachePkgDir())) {
-    if (isTRUE(unlist(grepV(pkgName, cacheGetOptionCachePkgDir()))) || needReInstall) {
+  if (nzchar(.requirePkgInfoDir())) {
+    if (isTRUE(unlist(grepV(pkgName, .requirePkgInfoDir()))) || needReInstall) {
       messageVerbose(verbose = verbose, verboseLevel = 1, "Cached copy of ", basename(pkgName), " was corrupt; deleting; retrying")
-      # unlink(dir(cacheGetOptionCachePkgDir(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
+      # unlink(dir(.requirePkgInfoDir(), pattern = basename(pkgName), full.names = TRUE)) # delete the erroneous Cache item
       retrying <- try(Require(toInstall[Package %in% basename(pkgName)][["packageFullName"]],
                               require = FALSE,
                               verbose = verbose, returnDetails = returnDetails,

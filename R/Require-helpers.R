@@ -600,7 +600,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         caps <- unique(rbindlist(caps, fill = TRUE, use.names = TRUE), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
-        if (!is.null(cacheGetOptionCachePkgDir()) && NROW(caps) > 0) {
+        if (nzchar(.requirePkgInfoDir()) && NROW(caps) > 0) {
           checkPath(dirname(fn), create = TRUE)
           saveRDS(cap[[type]], file = fn)
         }
@@ -1257,9 +1257,11 @@ getSHAFromPkgEnv <- function() {
 
 
 getSHAFromGitHubDBFilename <- function() {
-  go <- cacheGetOptionCachePkgDir()
-  if (!is.null(go))
-    out <- file.path(go, paste0(.txtGetSHAfromGitHub, ".rds")) # returns NULL if no Cache used
+  ## Require-private bookkeeping (not a package tarball) -- keep next to
+  ## the legacy bookkeeping path so existing on-disk state is preserved.
+  go <- .requirePkgInfoDir()
+  if (!is.null(go) && nzchar(go))
+    out <- file.path(go, paste0(.txtGetSHAfromGitHub, ".rds"))
   else
     out <- character()
   out
@@ -1664,7 +1666,9 @@ extractPkgNameFromWarning <- function(x) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(cachePkgDir(),
+  ## Require's own available.packages snapshot -- bookkeeping, not a
+  ## package tarball, so it lives in .requirePkgInfoDir() not pak's cache.
+  file.path(.requirePkgInfoDir(),
             paste0(gsub("https|[:/]", "", repos), collapse = "/"),
             type, "availablePackages.rds")
 }
