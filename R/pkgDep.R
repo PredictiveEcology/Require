@@ -825,6 +825,11 @@ defaultCacheAgeForPurge <- 3600
 #' local caches of GitHub (e.g., `"DESCRIPTION"`) files, and some function calls
 #' that are cached. This function clears all of them.
 #'
+#' With `packages = TRUE`, the package binary cache is also cleared --
+#' under `usePak = TRUE` (the default) this delegates to
+#' `pak::cache_clean()`; under the legacy path it walks Require's
+#' bookkeeping dir directly.
+#'
 #' @inheritParams Require
 #' @return Run for its side effect, namely, all cached objects are removed.
 #'
@@ -1122,9 +1127,62 @@ cacheClearPackages <- function(packages,
                                      Rversion = versionMajorMinor(),
                                      clearCranCache = FALSE,
                                      verbose = getOption("Require.verbose")) {
-  ## NOTE: this is the legacy clearer over Require's own bookkeeping dir.
-  ## In pak mode the tarballs live in pak's cache; a follow-up commit
-  ## reroutes this function through `pak::cache_delete()` / `pak::cache_clean()`.
+  ## In pak mode the package tarballs live in pak's cache, not in
+  ## Require's bookkeeping dir. Delegate to pak's native API so the
+  ## right files actually get removed.
+  if (isTRUE(getOption("Require.usePak", TRUE)) &&
+      requireNamespace("pak", quietly = TRUE)) {
+    if (!identical(Rversion, versionMajorMinor())) {
+      messageVerbose(
+        "cacheClearPackages: `Rversion` arg ignored under usePak = TRUE -- ",
+        "pak's cache is not partitioned by R version the way Require's ",
+        "legacy cache was; pak::cache_delete() / pak::cache_clean() ",
+        "operate on the full cache.",
+        verbose = verbose, verboseLevel = 1
+      )
+    }
+    proceed <- TRUE
+    if (isTRUE(ask)) {
+      message(if (missing(packages))
+                "Are you sure you would like to remove ALL packages from pak's cache?"
+              else
+                paste0("Are you sure you would like to remove\n",
+                       paste(packages, collapse = ", "),
+                       "\nfrom pak's cache?"))
+      askResult <- readline("(n or anything else for yes) ")
+      if (startsWith(tolower(askResult), "n")) proceed <- FALSE
+    }
+    if (isTRUE(proceed)) {
+      if (missing(packages)) {
+        messageVerbose("Clearing entire pak download cache via pak::cache_clean()",
+                       verbose = verbose, verboseLevel = 1)
+        tryCatch(pak::cache_clean(),
+                 error = function(e) {
+                   warning("pak::cache_clean() failed: ", conditionMessage(e),
+                           call. = FALSE)
+                 })
+      } else {
+        messageVerbose("Removing from pak download cache: ",
+                       paste(packages, collapse = ", "),
+                       verbose = verbose, verboseLevel = 1)
+        tryCatch(pak::cache_delete(package = packages),
+                 error = function(e) {
+                   warning("pak::cache_delete() failed: ", conditionMessage(e),
+                           call. = FALSE)
+                 })
+      }
+      ## Also drop Require's own SHA DB so HEAD-pin resolution
+      ## reflects the fresh state (mirrors the legacy branch's behavior).
+      SHAfile1 <- getSHAFromGitHubDBFilename()
+      if (length(SHAfile1) && nzchar(SHAfile1) && isTRUE(file.exists(SHAfile1)))
+        unlink(SHAfile1)
+    } else {
+      message("Aborting")
+    }
+    return(invisible(NULL))
+  }
+
+  ## Legacy non-pak path: walk Require's bookkeeping dir directly.
   out <- .requirePkgInfoDir(create = FALSE)
   if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)

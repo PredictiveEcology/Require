@@ -1102,6 +1102,75 @@ test_that(".requirePkgInfoDir() is stable across usePak setting", {
     info = ".requirePkgInfoDir() must keep the legacy <cacheDir>/packages/<Rver> layout")
 })
 
+# ---------------------------------------------------------------------------
+# cacheClearPackages() / cachePurge() reroute through pak in pak mode
+# ---------------------------------------------------------------------------
+
+test_that("cacheClearPackages() in pak mode delegates to pak::cache_clean()", {
+  skip_if_not_installed("pak")
+  ## Stub pak::cache_clean to a recorder; with no `packages` arg the function
+  ## must hit the clean path, not the delete path.
+  cleanCalled <- 0L
+  deleteCalled <- list()
+  testthat::local_mocked_bindings(
+    cache_clean = function() {
+      cleanCalled <<- cleanCalled + 1L
+      invisible(NULL)
+    },
+    cache_delete = function(...) {
+      deleteCalled[[length(deleteCalled) + 1L]] <<- list(...)
+      invisible(NULL)
+    },
+    .package = "pak"
+  )
+  withr::with_options(list(Require.usePak = TRUE),
+    Require::cacheClearPackages(ask = FALSE, verbose = -1))
+  testthat::expect_identical(cleanCalled, 1L,
+    info = "no `packages` arg must call pak::cache_clean() exactly once")
+  testthat::expect_length(deleteCalled, 0L)
+})
+
+test_that("cacheClearPackages(packages=...) delegates to pak::cache_delete()", {
+  skip_if_not_installed("pak")
+  cleanCalled <- 0L
+  deleteArgs  <- NULL
+  testthat::local_mocked_bindings(
+    cache_clean = function() { cleanCalled <<- cleanCalled + 1L; invisible(NULL) },
+    cache_delete = function(...) {
+      deleteArgs <<- list(...)
+      invisible(NULL)
+    },
+    .package = "pak"
+  )
+  withr::with_options(list(Require.usePak = TRUE),
+    Require::cacheClearPackages(packages = c("ps", "callr"),
+                                ask = FALSE, verbose = -1))
+  testthat::expect_identical(cleanCalled, 0L,
+    info = "with `packages` arg, full clean must NOT be called")
+  testthat::expect_identical(deleteArgs$package, c("ps", "callr"),
+    info = "package names must be forwarded as `package =` arg to pak::cache_delete()")
+})
+
+test_that("cacheClearPackages() under usePak=FALSE keeps walking the legacy bookkeeping dir", {
+  ## When usePak is off, the function must NOT invoke pak's API. We
+  ## verify by mocking pak's funcs to fail loudly and confirming neither
+  ## is invoked.
+  skip_if_not_installed("pak")
+  testthat::local_mocked_bindings(
+    cache_clean = function() stop("pak::cache_clean called under usePak=FALSE"),
+    cache_delete = function(...) stop("pak::cache_delete called under usePak=FALSE"),
+    .package = "pak"
+  )
+  withr::with_options(list(Require.usePak = FALSE), {
+    res <- tryCatch(
+      Require::cacheClearPackages(ask = FALSE, verbose = -1),
+      error = function(e) e
+    )
+    testthat::expect_false(inherits(res, "error"),
+      info = "legacy path must not call pak's API")
+  })
+})
+
 test_that("cachePkgDir() follows R_USER_CACHE_DIR in pak mode (issue #91)", {
   skip_if_not_installed("pak")
   ## The kill+respawn dance: tweak R_USER_CACHE_DIR, kill pak's subprocess,
