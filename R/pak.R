@@ -849,7 +849,15 @@ pakCachedTarball <- function(pkg, versionSpec = NA_character_,
   rows <- rows[file.exists(rows$fullpath), , drop = FALSE]
   if (NROW(rows) == 0L) return(NULL)
   i <- which.max(file.mtime(rows$fullpath))
-  list(path = rows$fullpath[i], is_binary = chosenBinary)
+  ## Return the cached row's `version` too. Callers need it to construct
+  ## an exact-pin pak ref (`pkg@version`) so pak installs the cached
+  ## version rather than the latest available on CRAN -- otherwise a
+  ## snapshot install of `fpCompare (==0.2.2)` was getting fpCompare
+  ## 0.2.4 because the parenthetical `(==X)` form gets stripped to a
+  ## bare `pkg` ref before pak ever sees the constraint.
+  cachedVer <- if ("version" %in% names(rows)) rows$version[i] else NA_character_
+  list(path = rows$fullpath[i], is_binary = chosenBinary,
+       version = cachedVer)
 }
 
 # Offline install via pak: resolve each user package to a local tarball in
@@ -928,28 +936,37 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       ##
       ##  - `.zip` (Windows binary) / `.tgz` (Mac binary):  use
       ##    `local::<file>` -- pak installs the binary directly, no
-      ##    rebuild, no resolver, no CRAN-vs-PPM cache-key mismatch (the
-      ##    mismatch is what caused the Windows re-download with bare
-      ##    refs).
-      ##  - `.tar.gz`:  use a bare ref. `local::<tar.gz>` would trigger
-      ##    `R CMD build` (rebuilds vignettes, needs network, fails
-      ##    offline). With env vars below, pak's resolver instead hits
-      ##    its own cache (works on Linux including PPM source-format
-      ##    binaries with pre-built artifacts).
+      ##    rebuild, no resolver, no CRAN-vs-PPM cache-key mismatch.
+      ##  - `.tar.gz`:  pin pak's resolver to the EXACT version we found
+      ##    in the cache. `local::<tar.gz>` would trigger `R CMD build`
+      ##    (rebuilds vignettes -- needs network). A bare `pkg` ref
+      ##    leaves pak free to pick the latest CRAN version instead of
+      ##    the cached one (the bug snapshot installs hit:
+      ##    `fpCompare (==0.2.2)` got stripped to `fpCompare` and pak
+      ##    installed 0.2.4). `pkg@<cachedVersion>` keeps pak in charge
+      ##    of dep ordering / sysreqs / build but tells it which version
+      ##    we want, and the cache filter has already verified that
+      ##    version satisfies the user's constraint.
       ##
-      ## Strip the Require-internal `pkg (>= X.Y.Z)` parenthetical
-      ## constraint via `trimVersionNumber()` for the bare-ref path;
-      ## pak rejects parenthetical inequality forms with
-      ## `Cannot parse package: glue (>= 1.3.2)`. GitHub
-      ## `account/repo@ref` forms are preserved.
+      ## GitHub refs (`account/repo@SHA`) are preserved via
+      ## `trimVersionNumber()`, which keeps the `@SHA` for
+      ## owner/repo-style refs while stripping parenthetical specs.
       isBinaryArchive <- grepl("\\.(zip|tgz)$", cached$path,
                                ignore.case = TRUE)
+      fullName <- if ("packageFullName" %in% names(toInstall))
+        toInstall$packageFullName[i] else NA_character_
+      isGitHubRef <- !is.na(fullName) && nzchar(fullName) &&
+        grepl("/", sub("@.*$", "", fullName), fixed = TRUE)
       ref <- if (isBinaryArchive) {
         paste0("local::", cached$path)
-      } else if ("packageFullName" %in% names(toInstall) &&
-                 !is.na(toInstall$packageFullName[i]) &&
-                 nzchar(toInstall$packageFullName[i])) {
-        trimVersionNumber(toInstall$packageFullName[i])
+      } else if (isGitHubRef) {
+        ## GitHub: preserve `account/repo@SHA` (trimVersionNumber's
+        ## `@version` strip is gated on no-slash-before-@, so this
+        ## is safe).
+        trimVersionNumber(fullName)
+      } else if (!is.null(cached$version) &&
+                 !is.na(cached$version) && nzchar(cached$version)) {
+        paste0(pkg, "@", cached$version)
       } else {
         pkg
       }

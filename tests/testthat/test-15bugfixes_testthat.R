@@ -353,6 +353,76 @@ test_that("pakOfflineInstall routes .zip/.tgz binaries through local:: refs", {
                    info = ".tar.gz must be passed as a bare ref (no local::)")
 })
 
+test_that("pakOfflineInstall pins source .tar.gz refs to the cached version", {
+  # Regression: snapshot install of `fpCompare (==0.2.2)` was getting
+  # fpCompare 0.2.4 because the parenthetical constraint was stripped
+  # to a bare `fpCompare` ref and pak then installed the latest CRAN
+  # version. Fix: when `pakCachedTarball()` returns a `version`, the
+  # source-tarball ref becomes `pkg@<version>` so pak resolves to
+  # exactly the cached version. GitHub `account/repo@SHA` refs are
+  # preserved separately.
+  skip_if_not_installed("pak")
+  skip_if_not_installed("data.table")
+
+  testlib <- file.path(tempdir(),
+                       paste0("rqlib_pin_version_", as.integer(Sys.time())))
+  dir.create(testlib, recursive = TRUE)
+  on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
+
+  tarPath <- tempfile(fileext = ".tar.gz"); file.create(tarPath)
+  on.exit(unlink(tarPath), add = TRUE)
+
+  pkgDT <- data.table::data.table(
+    Package         = c("fpCompare", "PredictiveEcology/fpCompare@SHA",
+                        "withVersion"),
+    packageFullName = c("fpCompare (==0.2.2)",
+                        "PredictiveEcology/fpCompare@abc123",
+                        "withVersion"),  # unconstrained, fallback path
+    needInstall     = Require:::.txtInstall,
+    installResult   = NA_character_,
+    installed       = FALSE,
+    installedVersionOK = FALSE,
+    Version         = NA_character_,
+    LibPath         = NA_character_
+  )
+
+  captured_refs <- NULL
+  testthat::with_mocked_bindings(
+    pakCachedTarball = function(pkg, ...) {
+      switch(pkg,
+        fpCompare = list(path = tarPath, is_binary = FALSE,
+                         version = "0.2.2"),
+        `PredictiveEcology/fpCompare@SHA` =
+          list(path = tarPath, is_binary = FALSE, version = "0.2.2"),
+        withVersion = list(path = tarPath, is_binary = FALSE,
+                           version = "1.2.3"),
+        NULL)
+    },
+    pakCall = function(expr, verbose) {
+      cl <- substitute(expr)
+      captured_refs <<- eval(cl[[2L]], envir = parent.frame())
+      invisible(NULL)
+    },
+    .package = "Require",
+    {
+      suppressWarnings(suppressMessages(
+        Require:::pakOfflineInstall(pkgDT, libPaths = testlib, verbose = -1)
+      ))
+    }
+  )
+
+  expect_identical(captured_refs[1], "fpCompare@0.2.2",
+                   info = paste("CRAN-style `pkg (==X)` must become",
+                                "`pkg@X` (preserves the pin); got:",
+                                captured_refs[1]))
+  expect_identical(captured_refs[2], "PredictiveEcology/fpCompare@abc123",
+                   info = paste("GitHub `account/repo@SHA` must be preserved;",
+                                "got:", captured_refs[2]))
+  expect_identical(captured_refs[3], "withVersion@1.2.3",
+                   info = paste("unconstrained CRAN ref must pin to the",
+                                "cached version; got:", captured_refs[3]))
+})
+
 test_that("pakOfflineInstall strips parenthetical version specs before pak", {
   # Regression: pak rejects Require-internal refs of the form
   # `pkg (>= 1.3.2)` with "Cannot parse package: glue (>= 1.3.2)". The
