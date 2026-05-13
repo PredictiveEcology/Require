@@ -20,26 +20,61 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \value{
-If \code{!is.null(cacheGetOptionCachePkgDir())}, i.e., a cache path exists,
-the cache directory will be created,
-with a README placed in the folder. Otherwise, this function will just
-return the path of what the cache directory would be.
+A path string. When \code{create = TRUE}, the directory is created (with
+a \code{README} placed in \code{cacheDir()}'s root if absent); otherwise the
+function just returns what the path would be.
 }
 \description{
-Sets (if \code{create = TRUE}) or gets the cache
-directory associated with the \code{Require} package.
+\code{cacheDir()} returns Require's own scratch directory (SHA database,
+available.packages snapshots, mirrors.csv, pkgDep cache); \code{cachePkgDir()}
+returns the package binary tarball cache.
 }
-\details{
-To set a different directory than the default, set the system variable:
-\code{R_REQUIRE_CACHE = "somePath"} and/or \code{R_REQUIRE_PKG_CACHE = "somePath"}
-e.g., in \code{.Renviron} file or \code{Sys.setenv()}. See Note below.
+\section{What goes where}{
+\tabular{llll}{
+   Function \tab What it holds \tab Default location \tab Knob \cr
+   \code{cacheDir()} \tab Require-internal bookkeeping (SHA DB, mirrors.csv, pkgDep cache) \tab \code{tools::R_user_dir("Require", "cache")} \tab \code{R_REQUIRE_CACHE} \cr
+   \code{cachePkgDir()} \tab Package binary tarballs \tab pak's \code{cache_summary()$cachepath} (pak mode) \tab \code{R_USER_CACHE_DIR} (via pak) \cr
+   \code{cachePkgDir()} \tab Package binary tarballs \tab \verb{<cacheDir>/packages/<Rver>} (legacy) \tab \code{R_REQUIRE_CACHE} \cr
 }
-\note{
-There are two different cache directories used by \code{Require}: \code{cacheDir} and \code{cachePkgDir}.
-The \code{cachePkgDir} is intended to be a sub-directory of the \code{cacheDir}.
-If you set \code{Sys.setenv("R_REQUIRE_CACHE" = "somedir")}, then both the package cache
-and cache dirs will be set, with the package cache a sub-directory.
-You can, however, set them independently, if you set \code{"R_REQUIRE_CACHE"} and
-\code{"R_REQUIRE_PKG_CACHE"} environment variables.
-The package cache can also be set with \code{options("Require.cachePkgDir" = "somedir")}.
+
+
+Both defaults flow from \code{tools::R_user_dir()}, so setting
+\verb{R_USER_CACHE_DIR=/some/path} in \code{.Renviron} redirects \strong{both} caches
+to sibling subdirectories of \verb{/some/path/R/} -- pak's cache lands in
+\verb{pkgcache/pkg/}, Require's in \verb{Require/}. That's the one-knob way to
+set up a shared cache across machines or R versions.
 }
+
+\section{How \code{cachePkgDir()} changes with \code{usePak}}{
+
+
+\describe{
+\item{\code{getOption("Require.usePak", TRUE)} (default)}{Thin wrapper over
+\code{pak::cache_summary()$cachepath}. The directory is owned by pak/pkgcache;
+location is controlled by \code{R_USER_CACHE_DIR} (read at pak's subprocess
+spawn time). Default: \code{tools::R_user_dir("pkgcache", "cache")/pkg}.}
+\item{\code{usePak = FALSE} (legacy)}{Returns \verb{<cacheDir>/packages/<Rver>},
+controlled by \code{R_REQUIRE_CACHE}.}
+}
+
+Require-internal bookkeeping files always live next to the legacy path
+(\verb{<cacheDir>/packages/<Rver>}) regardless of \code{usePak} -- pak doesn't know
+about them and would treat them as stray files.
+}
+
+\section{Deprecations}{
+
+
+The following Require-specific knobs and helpers were folded into the
+pair above. Each is still functional for one release cycle and emits a
+deprecation warning when used.\tabular{ll}{
+   Deprecated \tab Use instead \cr
+   \code{cacheGetOptionCachePkgDir()} \tab \code{cachePkgDir()} \cr
+   \code{rpackageFolder()} (internal) \tab (inlined into \code{checkLibPaths()}) \cr
+   \code{purgeCache()} \tab \code{cachePurge()} \cr
+   \code{clearRequirePackageCache()} \tab \code{cacheClearPackages()} \cr
+   \code{options("Require.cachePkgDir")} \tab \code{R_USER_CACHE_DIR} env var \cr
+   \code{Sys.getenv("R_REQUIRE_PKG_CACHE")} \tab \code{R_USER_CACHE_DIR} env var \cr
+}
+}
+

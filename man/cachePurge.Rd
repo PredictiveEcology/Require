@@ -48,7 +48,16 @@ are used. Use \code{pak::cache_clean()} to clear pak's download cache if needed.
 Run for its side effect, namely, all cached objects are removed.
 }
 \description{
-Require uses caches for local Package saving, local caches of \code{available.packages},
-local caches of GitHub (e.g., \code{"DESCRIPTION"}) files, and some function calls
-that are cached. This function clears all of them.
+Clears Require's own bookkeeping caches: the \code{available.packages()}
+snapshot, the GitHub SHA database, the \code{DESCRIPTION} cache, and the
+pkgDep memoisation database. These live under \code{\link[=cacheDir]{cacheDir()}} and are
+distinct from the package binary tarball cache.
+}
+\details{
+With \code{packages = TRUE}, the package binary cache is also cleared by
+calling \code{\link[=cacheClearPackages]{cacheClearPackages()}} -- which under \code{usePak = TRUE} (the
+default) delegates to \code{pak::cache_clean()}, and under the legacy path
+walks Require's bookkeeping dir directly.
+
+\code{purgeCache()} is a deprecated alias.
 }

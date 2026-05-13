@@ -1,17 +1,58 @@
 #' Path to (package) cache directory
 #'
-#' Sets (if `create = TRUE`) or gets the cache
-#' directory associated with the `Require` package.
-#' @return
-#' If `!is.null(cacheGetOptionCachePkgDir())`, i.e., a cache path exists,
-#' the cache directory will be created,
-#'   with a README placed in the folder. Otherwise, this function will just
-#'   return the path of what the cache directory would be.
+#' `cacheDir()` returns Require's own scratch directory (SHA database,
+#' available.packages snapshots, mirrors.csv, pkgDep cache); `cachePkgDir()`
+#' returns the package binary tarball cache.
 #'
-#' @details
-#' To set a different directory than the default, set the system variable:
-#' `R_REQUIRE_CACHE = "somePath"` and/or `R_REQUIRE_PKG_CACHE = "somePath"`
-#' e.g., in `.Renviron` file or `Sys.setenv()`. See Note below.
+#' @section What goes where:
+#'
+#' | Function          | What it holds                                                    | Default location                              | Knob                            |
+#' |-------------------|------------------------------------------------------------------|-----------------------------------------------|---------------------------------|
+#' | `cacheDir()`      | Require-internal bookkeeping (SHA DB, mirrors.csv, pkgDep cache) | `tools::R_user_dir("Require", "cache")`       | `R_REQUIRE_CACHE`               |
+#' | `cachePkgDir()`   | Package binary tarballs                                          | pak's `cache_summary()$cachepath` (pak mode)  | `R_USER_CACHE_DIR` (via pak)    |
+#' | `cachePkgDir()`   | Package binary tarballs                                          | `<cacheDir>/packages/<Rver>` (legacy)         | `R_REQUIRE_CACHE`               |
+#'
+#' Both defaults flow from `tools::R_user_dir()`, so setting
+#' `R_USER_CACHE_DIR=/some/path` in `.Renviron` redirects **both** caches
+#' to sibling subdirectories of `/some/path/R/` -- pak's cache lands in
+#' `pkgcache/pkg/`, Require's in `Require/`. That's the one-knob way to
+#' set up a shared cache across machines or R versions.
+#'
+#' @section How `cachePkgDir()` changes with `usePak`:
+#'
+#' \describe{
+#'   \item{`getOption("Require.usePak", TRUE)` (default)}{Thin wrapper over
+#'     `pak::cache_summary()$cachepath`. The directory is owned by pak/pkgcache;
+#'     location is controlled by `R_USER_CACHE_DIR` (read at pak's subprocess
+#'     spawn time). Default: `tools::R_user_dir("pkgcache", "cache")/pkg`.}
+#'   \item{`usePak = FALSE` (legacy)}{Returns `<cacheDir>/packages/<Rver>`,
+#'     controlled by `R_REQUIRE_CACHE`.}
+#' }
+#'
+#' Require-internal bookkeeping files always live next to the legacy path
+#' (`<cacheDir>/packages/<Rver>`) regardless of `usePak` -- pak doesn't know
+#' about them and would treat them as stray files.
+#'
+#' @section Deprecations:
+#'
+#' The following Require-specific knobs and helpers were folded into the
+#' pair above. Each is still functional for one release cycle and emits a
+#' deprecation warning when used.
+#'
+#' | Deprecated                          | Use instead                          |
+#' |-------------------------------------|--------------------------------------|
+#' | `cacheGetOptionCachePkgDir()`       | `cachePkgDir()`                      |
+#' | `rpackageFolder()` (internal)       | (inlined into `checkLibPaths()`)     |
+#' | `purgeCache()`                      | `cachePurge()`                       |
+#' | `clearRequirePackageCache()`        | `cacheClearPackages()`               |
+#' | `options("Require.cachePkgDir")`    | `R_USER_CACHE_DIR` env var           |
+#' | `Sys.getenv("R_REQUIRE_PKG_CACHE")` | `R_USER_CACHE_DIR` env var           |
+#'
+#' @return
+#'   A path string. When `create = TRUE`, the directory is created (with
+#'   a `README` placed in `cacheDir()`'s root if absent); otherwise the
+#'   function just returns what the path would be.
+#'
 #' @inheritParams checkPath
 #' @inheritParams Require
 #' @export
@@ -90,25 +131,6 @@ normPathMemoise <- function(d) {
 
 #' @export
 #' @rdname cacheDir
-#'
-#' @note
-#' `cachePkgDir()` is the single source of truth for "where Require/pak puts
-#' downloaded package tarballs".
-#'
-#' * With `getOption("Require.usePak", TRUE)` (the default): a thin wrapper
-#'   over `pak::cache_summary()$cachepath`. The directory is owned and managed
-#'   by pak/pkgcache; the location is controlled by the `R_USER_CACHE_DIR`
-#'   environment variable (pak's standard knob -- read at pak's subprocess
-#'   spawn time). When `R_USER_CACHE_DIR` is unset, pak resolves it via
-#'   `tools::R_user_dir("pkgcache", "cache")`, so by default the path lives
-#'   as a sibling of Require's own scratch dir (`R_REQUIRE_CACHE`).
-#'
-#' * With `usePak = FALSE` (legacy non-pak path): `<cacheDir>/packages/<Rver>`,
-#'   driven by `R_REQUIRE_CACHE`.
-#'
-#' To share a cache across machines or R versions, set `R_USER_CACHE_DIR` in
-#' `.Renviron`. The previously-supported `R_REQUIRE_PKG_CACHE` env var and
-#' `Require.cachePkgDir` option are deprecated -- use `R_USER_CACHE_DIR`.
 cachePkgDir <- function(create) {
   if (missing(create)) {
     create <- FALSE
@@ -208,18 +230,24 @@ RequireGitHubCacheDir <- function(create) {
 #' Get the option for `Require.cachePkgDir` (deprecated)
 #'
 #' @description
-#' Deprecated in favour of [cachePkgDir()], which is now the single getter
-#' for the package-tarball cache (wraps `pak::cache_summary()$cachepath`
-#' under `usePak = TRUE`). Honoured for one release cycle to preserve
-#' behaviour when `options("Require.cachePkgDir")` or `R_REQUIRE_PKG_CACHE`
-#' are user-set; otherwise just delegates to `cachePkgDir(FALSE)`.
+#' **Deprecated.** Use [cachePkgDir()] instead -- it is now the single
+#' getter for the package-tarball cache and wraps
+#' `pak::cache_summary()$cachepath` under `usePak = TRUE` (the default).
 #'
-#' First checks if an environment variable `R_REQUIRE_PKG_CACHE` is
-#' set and defines a path.
-#' If not set, checks whether the `options("Require.cachePkgDir")` is set.
-#' If a character string, then it returns that.
-#' If `TRUE`, then use `cachePkgDir()`. If `FALSE`
-#' then returns `NULL`.
+#' This function is kept for one release cycle as a functional shim. It
+#' still resolves a user-supplied path from `options("Require.cachePkgDir")`
+#' or the `R_REQUIRE_PKG_CACHE` environment variable when set, but those
+#' two knobs are themselves deprecated and ignored under `usePak = TRUE`.
+#' To redirect pak's package cache to a shared location, set
+#' `R_USER_CACHE_DIR` in `.Renviron` (pak's standard env var). See
+#' [cacheDir()] for the full migration table.
+#'
+#' Resolution order (legacy path):
+#' 1. If `R_REQUIRE_PKG_CACHE` is set, return it.
+#' 2. Else if `options("Require.cachePkgDir")` is character, return it.
+#' 3. Else if the option is `TRUE`, return `cachePkgDir(FALSE)`.
+#' 4. Else if the option is `FALSE`, return `NULL`.
+#' 5. Otherwise, return `cachePkgDir(FALSE)`.
 #'
 #' @export
 cacheGetOptionCachePkgDir <- function() {
