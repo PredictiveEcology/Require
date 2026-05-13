@@ -468,7 +468,10 @@ test_that("pakOfflineInstall strips parenthetical version specs before pak", {
     }
   )
 
-  expect_false(any(grepl("\\(", captured_refs %||% "")),
+  # `%||%` only became base in R 4.4 -- inline the fallback so this test
+  # runs on oldrel-3 (R 4.3.x).
+  refsForCheck <- if (is.null(captured_refs)) "" else captured_refs
+  expect_false(any(grepl("\\(", refsForCheck)),
                info = paste("ref passed to pak::pak must not carry the",
                             "parenthetical version constraint; got:",
                             paste(captured_refs, collapse = ", ")))
@@ -602,6 +605,16 @@ test_that("Require accepts a multi-line string of packages (issue #147)", {
   # `install = FALSE` keeps this offline -- we only need to confirm the parse
   # path reaches the installed/load pipeline as if the user had typed
   # c("Require", "data.table").
+  #
+  # `standAlone = FALSE` is needed when this test runs under covr (or any
+  # fresh-install scenario, e.g. CI test-coverage on macOS): covr installs
+  # Require into a private tempdir, but Require's deps (data.table) sit in
+  # the runner's site-library. The default `Require.standAlone = TRUE`
+  # would constrain `libPaths` to that tempdir, hide data.table, mark it for
+  # reinstall, hit the "Can't install Require dependency" guard, and finally
+  # make `require()` return FALSE -- failing `all(res)` despite the parser
+  # working correctly. Forcing the shared-libs mode keeps the test focused
+  # on the parser, which is what issue #147 was about.
   block <- "
     # core
     Require
@@ -609,7 +622,7 @@ test_that("Require accepts a multi-line string of packages (issue #147)", {
     # ggplot2 (intentionally commented out)
   "
   res <- withr::with_options(
-    list(Require.usePak = FALSE),
+    list(Require.usePak = FALSE, Require.standAlone = FALSE),
     Require::Require(block, install = FALSE)
   )
   # Both packages reach the load step (`install = FALSE`, both already installed)
@@ -641,8 +654,10 @@ test_that("substitutePackages turns a `{...}` block into a character vector", {
 
 test_that("Require accepts an unquoted `{...}` block", {
   skip_if_not_installed("Require")
+  # See multi-line-string test above for why `Require.standAlone = FALSE` is
+  # set: same fresh-install-libPath interaction.
   res <- withr::with_options(
-    list(Require.usePak = FALSE),
+    list(Require.usePak = FALSE, Require.standAlone = FALSE),
     Require::Require({
       Require
       data.table
