@@ -1,6 +1,20 @@
-# Require 1.1.0.9050 (development version)
+# Require 1.1.0.9051 (development version)
 
 ## bug fixes
+
+* Snapshot installs no longer install the wrong (latest-CRAN) version of
+  a pinned package. With `Require::Require(packageVersionFile = ...)`
+  the snapshot rows carry `(==X)` exact pins, but the cache-shortcut
+  path (.9048) was constructing the pak ref via
+  `trimVersionNumber()`, which strips both parenthetical specs AND
+  pak's `pkg@ver` form when `Require.usePak = TRUE`. So
+  `fpCompare (==0.2.2)` became a bare `fpCompare` ref and pak
+  installed the latest CRAN version (0.2.4) instead of the snapshot
+  pin. `pakCachedTarball()` now returns the cached row's `version`,
+  and `pakOfflineInstall()` constructs `pkg@<cachedVersion>` for
+  source-tarball refs (`.tar.gz`) so pak resolves to exactly the
+  cached version. Binary `.zip` / `.tgz` refs unchanged (still
+  `local::<file>`), and GitHub `account/repo@SHA` refs unchanged.
 
 * `allInPakCache()` now refuses the cache shortcut when any requested
   ref carries the `(HEAD)` pin (`account/repo@branch (HEAD)`). `(HEAD)`
