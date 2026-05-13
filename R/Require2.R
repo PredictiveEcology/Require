@@ -362,13 +362,13 @@ Require <- function(packages,
          withCallingHandlers(
            pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                     standAlone = standAlone, verbose = verbose,
-                                    purge = purge),
+                                    purge = purge, install = install),
            message = function(m) invokeRestart("muffleMessage")
          )
        } else {
          pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                   standAlone = standAlone, verbose = verbose,
-                                  purge = purge)
+                                  purge = purge, install = install)
        }
     } else if (!skipDepResolution) {
       if (length(which)) {

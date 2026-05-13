@@ -409,6 +409,41 @@ isGH <- function(pkgs) {
   grepl("^[[:alpha:]]+/.+", pkgs)
 }
 
+# For each plain CRAN ref in `pkgsForPak` that names a package currently
+# installed in `libPaths`, rewrite it to `pkg@<installedVersion>`. Leaves
+# GitHub refs, pre-pinned `pkg@X` refs, packages with an explicit user
+# version constraint (carried in `resolvedPkgs`), and uninstalled
+# packages alone. Returns the rewritten character vector.
+pinInstalledForPak <- function(pkgsForPak, libPaths, resolvedPkgs = NULL) {
+  if (!length(pkgsForPak)) return(pkgsForPak)
+  ip <- tryCatch(installed.packages(lib.loc = libPaths),
+                 error = function(e) NULL)
+  if (is.null(ip) || !NROW(ip)) return(pkgsForPak)
+  installedVer <- setNames(unname(ip[, "Version"]), unname(ip[, "Package"]))
+  # Names of packages the user version-pinned (parenthetical specs in the
+  # original refs). pinning these would force pak to install the installed
+  # version, masking the user's upgrade/downgrade request.
+  userPinned <- character(0)
+  if (length(resolvedPkgs)) {
+    hasUserSpec <- grepl("\\([^)]+\\)", resolvedPkgs)
+    if (any(hasUserSpec))
+      userPinned <- extractPkgName(resolvedPkgs[hasUserSpec])
+  }
+  out <- pkgsForPak
+  for (i in seq_along(pkgsForPak)) {
+    p <- pkgsForPak[i]
+    if (isGH(p)) next                # GitHub refs: leave as-is
+    if (grepl("@", p, fixed = TRUE)) next  # already pinned
+    nm <- extractPkgName(p)
+    if (!nzchar(nm)) next
+    if (nm %in% userPinned) next      # user gave an explicit constraint
+    v <- installedVer[nm]
+    if (is.na(v) || !nzchar(v)) next
+    out[i] <- paste0(nm, "@", unname(v))
+  }
+  out
+}
+
 pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
                       keepVersionNumber, verbose = getOption("Require.verbose")) {
   if (!requireNamespace("pak")) stop("Please install pak")
@@ -1806,7 +1841,8 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
 # Resolve package dependencies using pak, returning a Require-format pkgDT.
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
 pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
-                          purge = getOption("Require.purge", FALSE)) {
+                          purge = getOption("Require.purge", FALSE),
+                          install = TRUE) {
   pakLoad <- tryCatch(loadNamespace("pak"),
                       error = function(e) e)
   if (inherits(pakLoad, "error")) {
@@ -1876,6 +1912,19 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   pkgsForPak <- unique(pkgsForPak)
   # Convert == version specs to pak @version format for the dep query
   pkgsForPak <- equalsToAt(pkgsForPak)
+
+  # Pin already-installed user packages to their installed version before
+  # pak resolves transitive deps. Without this, pak picks the LATEST CRAN
+  # release of each parent (e.g. processx 3.9.0) and returns its Imports
+  # constraints -- forcing transitive deps to upgrade even when the
+  # parent itself stays installed at an older version (e.g. processx
+  # 3.8.6 Imports `ps (>= 1.2.0)`, but 3.9.0 Imports `ps (>= 1.9.3)`,
+  # so an unpinned query made `Require("processx")` spuriously upgrade
+  # ps from 1.9.2 to 1.9.3). Skip when `install == "force"`: the user
+  # explicitly asked to upgrade, so pak should resolve to latest.
+  if (!identical(install, "force"))
+    pkgsForPak <- pinInstalledForPak(pkgsForPak, libPaths = libPaths,
+                                     resolvedPkgs = resolvedPkgs)
 
   if (!length(pkgsForPak)) return(toPkgDTFull(character()))
 

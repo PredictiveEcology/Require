@@ -989,3 +989,62 @@ test_that("pakDepsCacheKey omits userPkgs when not supplied (back-compat)", {
   testthat::expect_false(identical(k_old, k_new_same),
     info = "key with userPkgs supplied must differ from key with userPkgs omitted")
 })
+
+# ---------------------------------------------------------------------------
+# pinInstalledForPak: rewrites plain CRAN refs to `pkg@<installedVersion>`
+# so pak resolves transitive deps from the installed version's DESCRIPTION
+# rather than the latest CRAN release. Regression guard for the bug where
+# `Require("processx")` (with processx 3.8.6 + ps 1.9.2 installed) spuriously
+# upgraded ps to 1.9.3 because pak read the constraint `ps (>= 1.9.3)` from
+# processx 3.9.0's (latest CRAN) Imports rather than from the installed
+# 3.8.6's `ps (>= 1.2.0)`.
+# ---------------------------------------------------------------------------
+
+# Use a package that's always installed when these tests run (data.table is
+# a hard dep of Require). Bare DESCRIPTION stubs in a tempdir don't trigger
+# installed.packages() — it requires a properly-built package layout — so
+# we test against the real package metadata instead.
+test_that("pinInstalledForPak rewrites installed plain refs to pkg@version", {
+  dtVer <- as.character(utils::packageVersion("data.table"))
+  out <- Require:::pinInstalledForPak(
+    pkgsForPak = c("data.table", "definitelynotapackage12345"),
+    libPaths   = .libPaths()
+  )
+  testthat::expect_identical(out[1L], paste0("data.table@", dtVer),
+    info = "installed data.table must be pinned to its installed version")
+  testthat::expect_identical(out[2L], "definitelynotapackage12345",
+    info = "uninstalled package must be left as-is (no @version)")
+})
+
+test_that("pinInstalledForPak skips refs the user version-pinned", {
+  # `pkgsForPak` is the version-stripped form pak gets; `resolvedPkgs`
+  # carries the user's original parenthetical constraint, e.g.
+  # `data.table (>= 9.9.9)`. Pinning would mask the user's upgrade request.
+  out <- Require:::pinInstalledForPak(
+    pkgsForPak   = "data.table",
+    libPaths     = .libPaths(),
+    resolvedPkgs = "data.table (>= 9.9.9)"
+  )
+  testthat::expect_identical(out, "data.table",
+    info = "must not pin when user provided an explicit version constraint")
+})
+
+test_that("pinInstalledForPak leaves GitHub refs and pre-pinned refs alone", {
+  out <- Require:::pinInstalledForPak(
+    pkgsForPak = c("Rdatatable/data.table", "data.table@1.0.0"),
+    libPaths   = .libPaths()
+  )
+  testthat::expect_identical(out[1L], "Rdatatable/data.table",
+    info = "GitHub ref must be left as-is")
+  testthat::expect_identical(out[2L], "data.table@1.0.0",
+    info = "ref with an existing @version pin must be left as-is")
+})
+
+test_that("pinInstalledForPak returns input unchanged when libPath is empty", {
+  tmpLib <- tempfile("pinTest-")
+  dir.create(tmpLib, recursive = TRUE)
+  on.exit(unlink(tmpLib, recursive = TRUE), add = TRUE)
+  out <- Require:::pinInstalledForPak("data.table", libPaths = tmpLib)
+  testthat::expect_identical(out, "data.table",
+    info = "empty libPath has no installed packages -- ref must pass through unchanged")
+})
