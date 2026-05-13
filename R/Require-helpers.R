@@ -805,31 +805,9 @@ warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
 }
 
 
-rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
-  if (!is.null(path)) {
-    if (isTRUE(exact)) {
-      return(path)
-    }
-    if (isFALSE(path)) {
-      return(NULL)
-    }
-
-    path <- path[1]
-    if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
-      path
-    } else {
-      if (interactive() && !endsWith(path, versionMajorMinor())) {
-        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
-        ## need to know if it's a user, who *should* keep R-version-specific dirs
-        file.path(path, versionMajorMinor())
-      } else {
-        path
-      }
-    }
-  } else {
-    NULL
-  }
-}
+## rpackageFolder() was inlined into checkLibPaths() (its sole caller)
+## and removed during the cache-helper consolidation. Restore here if a
+## downstream package was depending on it via Require:::rpackageFolder.
 
 
 preparePkgNameToReport <- function(Package, packageFullName) {

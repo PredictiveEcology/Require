@@ -205,10 +205,17 @@ RequireGitHubCacheDir <- function(create) {
 
   return(pkgCacheDir)
 }
-#' Get the option for `Require.cachePkgDir`
+#' Get the option for `Require.cachePkgDir` (deprecated)
 #'
-#' First checks if an environment variable `Require.cachePkgDir`
-#' is set and defines a path.
+#' @description
+#' Deprecated in favour of [cachePkgDir()], which is now the single getter
+#' for the package-tarball cache (wraps `pak::cache_summary()$cachepath`
+#' under `usePak = TRUE`). Honoured for one release cycle to preserve
+#' behaviour when `options("Require.cachePkgDir")` or `R_REQUIRE_PKG_CACHE`
+#' are user-set; otherwise just delegates to `cachePkgDir(FALSE)`.
+#'
+#' First checks if an environment variable `R_REQUIRE_PKG_CACHE` is
+#' set and defines a path.
 #' If not set, checks whether the `options("Require.cachePkgDir")` is set.
 #' If a character string, then it returns that.
 #' If `TRUE`, then use `cachePkgDir()`. If `FALSE`
@@ -216,6 +223,12 @@ RequireGitHubCacheDir <- function(create) {
 #'
 #' @export
 cacheGetOptionCachePkgDir <- function() {
+  .Deprecated("cachePkgDir", package = "Require",
+              msg = paste0(
+                "cacheGetOptionCachePkgDir() is deprecated; use cachePkgDir() ",
+                "instead. To redirect pak's package cache, set R_USER_CACHE_DIR ",
+                "in your .Renviron (not R_REQUIRE_PKG_CACHE)."
+              ))
   curVal <- getOption("Require.cachePkgDir")
   try <- 1
   while (try < 3) {

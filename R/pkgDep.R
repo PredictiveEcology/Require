@@ -843,7 +843,11 @@ cachePurge <- function(packages = FALSE,
 
 #' @rdname cachePurge
 #' @export
-purgeCache <- cachePurge
+purgeCache <- function(packages = FALSE, repos = getOption("repos")) {
+  .Deprecated("cachePurge", package = "Require",
+              msg = "purgeCache() is deprecated; use cachePurge() instead.")
+  cachePurge(packages = packages, repos = repos)
+}
 
 dealWithCache <- function(purge = TRUE,
                           checkAge = TRUE,
@@ -1262,7 +1266,24 @@ cacheClearPackages <- function(packages,
 
 #' @export
 #' @rdname clearRequire
-clearRequirePackageCache <- cacheClearPackages
+clearRequirePackageCache <- function(packages,
+                                     ask = interactive(),
+                                     Rversion = versionMajorMinor(),
+                                     clearCranCache = FALSE,
+                                     verbose = getOption("Require.verbose")) {
+  .Deprecated("cacheClearPackages", package = "Require",
+              msg = paste0(
+                "clearRequirePackageCache() is deprecated; ",
+                "use cacheClearPackages() instead."
+              ))
+  if (missing(packages)) {
+    cacheClearPackages(ask = ask, Rversion = Rversion,
+                       clearCranCache = clearCranCache, verbose = verbose)
+  } else {
+    cacheClearPackages(packages = packages, ask = ask, Rversion = Rversion,
+                       clearCranCache = clearCranCache, verbose = verbose)
+  }
+}
 
 depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, which) {
   if (!missing(depends)) {

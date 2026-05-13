@@ -289,7 +289,25 @@ checkLibPaths <- function(libPaths, ifMissing, exact = FALSE, ...) {
     pathsToCheck <- libPaths
   }
   unlist(lapply(pathsToCheck, function(lp) {
-    checkPath(rpackageFolder(lp, exact = exact), create = TRUE)
+    ## Inlined former rpackageFolder(): if `exact = FALSE` and we're in an
+    ## interactive session, ensure the libPath ends with the R version
+    ## (so projects keep R-version-specific libraries separated).
+    ## R CMD check on R >= 4.2 uses a random tmp libPath; we don't append
+    ## there.
+    path <- if (isTRUE(exact) || is.null(lp) || isFALSE(lp)) {
+      lp
+    } else {
+      lp <- lp[1]
+      siteLibs <- normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])
+      if (normPathMemoise(lp) %in% siteLibs) {
+        lp
+      } else if (interactive() && !endsWith(lp, versionMajorMinor())) {
+        file.path(lp, versionMajorMinor())
+      } else {
+        lp
+      }
+    }
+    checkPath(path, create = TRUE)
   }))
 }
 

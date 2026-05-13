@@ -52,6 +52,31 @@ envPkgCreate()
   ## package tarball cache. See [.requirePkgInfoDir].)
   possCacheDir <- .requirePkgInfoDir(create = TRUE)
 
+  ## Deprecation: the package-tarball cache location is now controlled by
+  ## pak's standard env var R_USER_CACHE_DIR (consistent with the rest of
+  ## the R ecosystem). The Require-specific knobs below remain functional
+  ## for one release cycle but emit a one-time warning so users can
+  ## migrate.
+  if (isTRUE(getOption("Require.usePak", TRUE))) {
+    optVal <- getOption("Require.cachePkgDir", "default")
+    if (!identical(optVal, "default") && !identical(optVal, NULL)) {
+      packageStartupMessage(
+        "Require: options('Require.cachePkgDir') is deprecated and is ",
+        "ignored under usePak = TRUE. To redirect pak's package cache, ",
+        "set R_USER_CACHE_DIR in .Renviron instead."
+      )
+    }
+    envVal <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+    if (nzchar(envVal)) {
+      packageStartupMessage(
+        "Require: R_REQUIRE_PKG_CACHE is deprecated and is ignored under ",
+        "usePak = TRUE. To redirect pak's package cache, set ",
+        "R_USER_CACHE_DIR in .Renviron instead (currently: '",
+        envVal, "')."
+      )
+    }
+  }
+
   invisible()
 }
 

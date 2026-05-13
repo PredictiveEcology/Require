@@ -1171,6 +1171,49 @@ test_that("cacheClearPackages() under usePak=FALSE keeps walking the legacy book
   })
 })
 
+# ---------------------------------------------------------------------------
+# Deprecation: cacheGetOptionCachePkgDir, purgeCache, clearRequirePackageCache
+#
+# These are kept as functional shims for one release cycle so existing user
+# code doesn't break, but emit a `.Deprecated()` warning steering callers
+# to the canonical names.
+# ---------------------------------------------------------------------------
+
+test_that("cacheGetOptionCachePkgDir() emits a deprecation warning", {
+  testthat::expect_warning(
+    Require::cacheGetOptionCachePkgDir(),
+    regexp = "deprecated.*cachePkgDir",
+    info = "cacheGetOptionCachePkgDir must emit a .Deprecated() warning"
+  )
+})
+
+test_that("purgeCache() emits a deprecation warning", {
+  ## Stub dealWithCache (the only side-effect) so this test doesn't actually
+  ## clear caches in the developer's environment.
+  testthat::local_mocked_bindings(
+    dealWithCache = function(...) invisible(NULL),
+    .package = "Require"
+  )
+  testthat::expect_warning(
+    Require::purgeCache(),
+    regexp = "deprecated.*cachePurge",
+    info = "purgeCache must emit a .Deprecated() warning"
+  )
+})
+
+test_that("clearRequirePackageCache() emits a deprecation warning", {
+  ## Stub the canonical worker to a no-op for this isolation test.
+  testthat::local_mocked_bindings(
+    cacheClearPackages = function(...) invisible(NULL),
+    .package = "Require"
+  )
+  testthat::expect_warning(
+    Require::clearRequirePackageCache(ask = FALSE),
+    regexp = "deprecated.*cacheClearPackages",
+    info = "clearRequirePackageCache must emit a .Deprecated() warning"
+  )
+})
+
 test_that("cachePkgDir() follows R_USER_CACHE_DIR in pak mode (issue #91)", {
   skip_if_not_installed("pak")
   ## The kill+respawn dance: tweak R_USER_CACHE_DIR, kill pak's subprocess,
