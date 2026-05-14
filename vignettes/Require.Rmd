@@ -108,6 +108,44 @@ This is what makes `Require` "set-and-forget". You can put a `Require::Install(.
 
 `Require` exposes the upgrade policy through the version constraints in your code. If you want the latest, ask for it (e.g. `data.table (>= 1.16)` or `data.table (HEAD)`); if you want stability, leave the constraint off.
 
+## GitHub branches: exact pin vs. version minimum
+
+The same stability-first policy shows up clearly when you install from a GitHub branch. `pak` reads the `DESCRIPTION` on that branch and enforces every dependency *exactly* as written — even with `upgrade = FALSE`, it will downgrade (or upgrade) installed dependencies to match the pin. `Require` reads the same `DESCRIPTION` but treats each line as a *minimum*: if an installed dependency already satisfies the constraint, it is left alone.
+
+Here `LandR@development` lists `reproducible (>= 3.0.0.9001)` in its `DESCRIPTION`, while the user already has `reproducible 3.0.0.9083` installed:
+
+```
+> pak::pak("PredictiveEcology/LandR@development", upgrade = FALSE)
+
+→ Will install 1 package.
+→ Will update 1 package.
+→ All 2 packages (0 B) are cached.
++ LandR                     1.1.5.9101 [bld][cmp] (GitHub: c5e771d)
++ reproducible 3.0.0.9083 → 3.0.0.9001 [bld][cmp] (GitHub: ffffec4)
+✔ All system requirements are already installed.
+
+? Do you want to continue (Y/n) n
+Error: Aborted.
+
+> Require::Install("PredictiveEcology/LandR@development", upgrade = FALSE)
+Require/pak skipping new package dependency identification: using cache (103 packages, 0.6h old)
+All requested packages are in the pak download cache; installing from cache (no metadata refresh, no network)
+offline mode: installing 1 package(s) from pak cache: LandR
+
+→ Will install 1 package.
+→ The package (0 B) is cached.
++ LandR   1.1.5.9101 [bld][cmp] (GitHub: c5e771d)
+
+ℹ No downloads are needed, 1 pkg is cached
+ℹ Building LandR 1.1.5.9101
+✔ Built LandR 1.1.5.9101 (24.8s)
+✔ Installed LandR 1.1.5.9101 (github::PredictiveEcology/LandR@c5e771d) (37ms)
+✔ 1 pkg: added 1 [25.9s]
+Installed 1 packages in 26.3 secs
+```
+
+`pak` insists on replacing `reproducible 3.0.0.9083` with the exact pin from the branch (3.0.0.9001), even though the installed version is newer. `Require` keeps the newer copy because it still satisfies LandR's constraint. The two behaviours have different use cases: `pak`'s exact-pin enforcement is what you want when you need to reproduce the dependency graph the branch author committed to; `Require`'s version-minimum policy is what you want for "set-and-forget" scripts where any version meeting the minimum is acceptable.
+
 ## Installs *and loads* in one line
 
 `pak` installs packages. To use them, you still need a separate `library()` call.
