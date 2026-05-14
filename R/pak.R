@@ -3290,7 +3290,18 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # rather than updating the local `nowInstalledAll` declared above --
         # leaving the local NULL and producing "object 'Package' not found"
         # when the next line indexes it.
-        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths(), noCache = TRUE),
+        #
+        # Use `origPaths` (the .libPaths() snapshot taken at the top of
+        # pakInstallFiltered), not `.libPaths()` -- the latter has been
+        # narrowed to c(libPaths[1], basePkgLib) for standAlone semantics,
+        # which hides packages installed in the user's personal library.
+        # For a GitHub-only package like `PredictiveEcology/clusters` that
+        # the user has installed in their default user library but not in
+        # the project libPaths[1], pak's install subprocess correctly
+        # "keeps" it (it's findable via pak's own cache/lookup), but
+        # Require's post-install check on the narrowed .libPaths() can't
+        # see it and erroneously emits "could not be installed: clusters".
+        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = origPaths, noCache = TRUE),
                                                        stringsAsFactors = FALSE))
         # Same guard as nowInstalled above: when installed.packages() returns
         # an empty matrix the data.table[Package == pkg] expression errors with
