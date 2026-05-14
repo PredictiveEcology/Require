@@ -414,101 +414,6 @@ isGH <- function(pkgs) {
 # GitHub refs, pre-pinned `pkg@X` refs, packages with an explicit user
 # version constraint (carried in `resolvedPkgs`), and uninstalled
 # packages alone. Returns the rewritten character vector.
-# Look up missing packages (cantPkgs) in the `Remotes:` field of locally-
-# installed candidate packages, returning the matching `owner/pkg[@branch]`
-# refs. pak's CRAN-style resolver does not follow Remotes (unlike
-# devtools/remotes), so when a user package's DESCRIPTION lists
-# `Remotes: owner/pkg` and pak fails with "Can't find package called pkg",
-# this helper recovers the ref so we can inject it into pak's input.
-#
-# Arguments:
-#   missingPkgs   bare names pak reported as missing (e.g. "clusters").
-#   candidatePkgs current pkgsForPak entries; only their installed package
-#                 names (after stripping owner/, @version, version-spec) are
-#                 used to locate DESCRIPTIONs to scan.
-#   libPaths      where to look for installed candidate DESCRIPTIONs.
-#
-# Returns: named character vector keyed by missingPkg name with value
-# `owner/pkg[@branch]` for each match. Missing packages not found anywhere
-# are omitted; the caller falls back to other strategies (CRAN archive).
-findRemoteRefsForMissing <- function(missingPkgs, candidatePkgs, libPaths) {
-  if (!length(missingPkgs) || !length(candidatePkgs)) return(character(0))
-  candidateNames <- unique(extractPkgName(candidatePkgs))
-  candidateNames <- candidateNames[nzchar(candidateNames)]
-  out <- character(0)
-  remaining <- missingPkgs
-  for (cand in candidateNames) {
-    if (!length(remaining)) break
-    descPath <- tryCatch(
-      system.file("DESCRIPTION", package = cand, lib.loc = libPaths),
-      error = function(e) "")
-    if (!nzchar(descPath)) next
-    remotes <- tryCatch(
-      DESCRIPTIONFileDeps(descPath, which = "Remotes"),
-      error = function(e) character(0))
-    if (!length(remotes)) next
-    for (rem in remotes) {
-      ref <- trimws(rem)
-      if (!nzchar(ref)) next
-      # Only follow GitHub-style refs ("owner/pkg" or "owner/pkg@branch");
-      # skip other Remote prefixes (bitbucket::, gitlab::, local::, etc.)
-      # since they have different semantics and pak's handling varies.
-      if (!grepl("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(@.+)?$", ref)) next
-      refName <- extractPkgName(ref)
-      if (refName %in% remaining) {
-        out[refName] <- ref
-        remaining <- setdiff(remaining, refName)
-      }
-    }
-  }
-  out
-}
-
-# Classify why pak's batch dep resolution failed. Returns a short
-# human-readable phrase to splice into the "switching to per-package
-# resolution" message so the user gets an accurate diagnosis instead
-# of the previous always-says-"CRAN/GitHub conflict" boilerplate.
-#
-# Heuristics applied in order:
-#   - "Can't find package called X" lines -> if any X is in a candidate's
-#       installed Remotes:, surface the Remote-only failure mode by name.
-#   - "Can't find package called X" lines without a Remote match ->
-#       generic "missing package(s): X".
-#   - "Conflicts with" / "dependency conflict" lines -> CRAN/GitHub
-#       conflict (the original message's premise).
-#   - otherwise: "unknown pak error; see verboseLevel = 3 for detail".
-pakDepsBatchFailureReason <- function(errLines, pkgsForPak, libPaths = NULL) {
-  if (!length(errLines)) errLines <- character(0)
-  cantLines <- grep(.txtCantFindPackage, errLines, value = TRUE)
-  cantPkgs  <- trimws(sub(paste0(".*", .txtCantFindPackage), "", cantLines))
-  cantPkgs  <- sub("\\.$", "", cantPkgs)
-  cantPkgs  <- cantPkgs[nzchar(cantPkgs) & !grepl("::", cantPkgs)]
-  if (length(cantPkgs)) {
-    remoteMatches <- character(0)
-    if (length(libPaths)) {
-      remoteMatches <- tryCatch(
-        findRemoteRefsForMissing(cantPkgs,
-                                  candidatePkgs = pkgsForPak,
-                                  libPaths       = libPaths),
-        error = function(e) character(0))
-    }
-    if (length(remoteMatches)) {
-      pairs <- paste0("`", names(remoteMatches), "` -> `",
-                      unname(remoteMatches), "` (in Remotes:)")
-      return(paste0(
-        "missing Remote-only package(s) that pak's CRAN-style resolver ",
-        "does not follow: ", paste(pairs, collapse = "; ")))
-    }
-    return(paste0("missing package(s): ", paste(cantPkgs, collapse = ", ")))
-  }
-  conflictLines <- grep("(?i)(conflicts with|dependency conflict)",
-                        errLines, value = TRUE, perl = TRUE)
-  if (length(conflictLines)) {
-    return("CRAN/GitHub ref conflict in the dep tree")
-  }
-  "unknown pak error; rerun with options(Require.verbose = 3) for detail"
-}
-
 pinInstalledForPak <- function(pkgsForPak, libPaths, resolvedPkgs = NULL) {
   if (!length(pkgsForPak)) return(pkgsForPak)
   ip <- tryCatch(installed.packages(lib.loc = libPaths),
@@ -1679,8 +1584,7 @@ pakDepsCacheDir <- function() {
   file.path(cacheDir(), "pak", "pkg_deps")
 }
 
-pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
-                            libPaths = NULL) {
+pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL) {
 
   # --- 1. Compute cache key ---
   key      <- pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs)
@@ -1880,16 +1784,8 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
     # Also pass any accumulated url:: archive refs to each call, so packages with
     # archived transitive deps (e.g. pryr) can still be resolved.
     #
-    # Classify the batch failure from the LAST attempt's errLines so the user
-    # gets an accurate diagnosis instead of a generic "CRAN/GitHub conflict"
-    # message (which was misleading when the real failure was e.g. a
-    # Remote-only package that pak's CRAN-style resolver couldn't follow).
-    classifiedReason <- pakDepsBatchFailureReason(
-      errLines       = if (exists("errLines", inherits = FALSE)) errLines else character(0),
-      pkgsForPak     = pkgsForPak,
-      libPaths       = libPaths)
-    messageVerbose("Require Note: pak's batch dependency resolution failed (",
-                   classifiedReason, "); switching to per-package resolution.",
+    messageVerbose("Require Note: pak's batch dependency resolution failed; ",
+                   "switching to per-package resolution.",
                    verbose = verbose, verboseLevel = 1)
     archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
     nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
@@ -2052,8 +1948,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                                repos    = getOption("repos"),
                                verbose  = verbose,
                                purge    = purge,
-                               userPkgs = resolvedPkgs,
-                               libPaths = libPaths)
+                               userPkgs = resolvedPkgs)
 
   if (is.null(pak_result)) {
     messageVerbose("pak::pkg_deps: all strategies failed; using direct package list only.",
@@ -2709,18 +2604,11 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     toInstall[, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio") := NULL]
   }
 
-  # Pre-install integrity check. Abort the install for any toInstall package
-  # whose installed DESCRIPTION names a hard dependency that is neither
-  # currently installed nor planned in pkgDT. This catches the
-  # pak-doesn't-follow-Remotes-from-CRAN-style-parents failure mode at the
-  # earliest correct point: BEFORE we ask pak to install, so we don't end up
-  # with a "successfully installed" cached binary whose Imports are
-  # unsatisfied on disk (which would later fail at library() with a
-  # confusing "there is no package called X" error).
-  #
-  # Rationale (user's design call): if a hard dep can't be resolved, the
-  # install plan is broken; don't proceed and pretend success. Surface the
-  # actionable Remotes-following hint so the user knows how to fix it.
+  # Pre-install integrity check: abort the install for any toInstall package
+  # whose installed DESCRIPTION names a hard dep that is neither currently
+  # installed nor planned in pkgDT. Letting pak proceed in that state can
+  # succeed from a cached binary and leave the user with a broken install
+  # whose library() call later fails -- worse than a clean abort.
   unresolvedDeps <- list()
   if (NROW(toInstall)) {
     installedNamesPre <- tryCatch(
@@ -2746,41 +2634,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   }
   if (length(unresolvedDeps)) {
     affected <- names(unresolvedDeps)
-    allMissing <- unique(unlist(unresolvedDeps))
-    remoteRefs <- tryCatch(
-      findRemoteRefsForMissing(allMissing,
-                                candidatePkgs = affected,
-                                libPaths      = origPaths),
-      error = function(e) character(0))
     perPkgLines <- vapply(affected, function(p) {
       paste0("  - ", p, " depends on (not installed, not in plan): ",
              paste(unresolvedDeps[[p]], collapse = ", "))
     }, character(1))
-    remotesLines <- if (length(remoteRefs))
-      paste0(
-        "\nRemote-only refs detected:\n",
-        paste(vapply(names(remoteRefs), function(mp) {
-          paste0("  - `", mp, "` is declared as `",
-                 remoteRefs[[mp]], "` in a candidate's Remotes:")
-        }, character(1)), collapse = "\n"))
-    else ""
-    workaround <- if (length(remoteRefs))
-      paste0(
-        "\nWorkaround: include the GitHub ref explicitly, e.g.\n  ",
-        "Require::Install(c(",
-        paste0("\"", c(unname(remoteRefs), affected),
-               "\"", collapse = ", "),
-        "), install = \"force\")")
-    else ""
     warning(
-      "skipping install: hard dependencies are unresolved (would produce a ",
-      "broken install whose load fails). Affected:\n",
+      "skipping install: hard dependencies are unresolved:\n",
       paste(perPkgLines, collapse = "\n"),
-      remotesLines,
-      workaround,
       call. = FALSE, immediate. = TRUE)
-    # Mark the affected rows as not-installed in pkgDT so downstream
-    # accounting/load steps see them as failed rather than succeeded.
     for (p in affected) {
       wh <- which(pkgDT$Package == p)
       if (length(wh)) {
@@ -2789,7 +2650,6 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         set(pkgDT, wh, "installResult",     .txtCouldNotBeInstalled)
       }
     }
-    # Remove affected rows from toInstall so pak isn't even invoked for them.
     toInstall <- toInstall[!Package %in% affected]
     if (!NROW(toInstall)) return(pkgDT)
   }
@@ -3528,87 +3388,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   ]
   if (length(silentlyFailed)) {
     reason <- pakBuildFailReason(lastPakErr)
-    # If any failed ref is owner/repo-style, the most likely cause is a typo in
-    # the GitHub user/repo (pak surfaces a 404 as a generic "Could not solve").
-    # Append the same spelling-hint that the non-pak path emits so the user
-    # gets actionable guidance without having to dig through pak's wrapper.
     failedFullPaths <- toInstall$packageFullName[toInstall$Package %in% silentlyFailed]
     ghHint <- if (any(grepl("/", failedFullPaths, fixed = TRUE)))
       paste0("\n", .txtDidYouSpell) else ""
-    # pak's CRAN-style resolver does NOT follow Remotes: from CRAN/r-universe
-    # parents (only from GitHub-style parents). If any silentlyFailed package
-    # appears in the Remotes: of an installed candidate package, that's almost
-    # certainly the failure mode -- emit a clear, actionable hint pointing at
-    # the workaround (explicitly include the Remote's owner/pkg ref in the
-    # Install() call). This is diagnostic only; we do NOT auto-inject the ref,
-    # because the user may legitimately want to control which source provides
-    # the package, and pak's choice to ignore Remotes from CRAN-style parents
-    # is itself an intentional design choice we shouldn't paper over silently.
-    #
-    # Two cases harvested into `missingForRemotesLookup`:
-    #   (a) the silentlyFailed package itself is in a candidate's Remotes
-    #       (e.g. user requested "fireSenseUtils" which is Remote-only).
-    #   (b) the silentlyFailed package failed because a transitive Remote
-    #       dep couldn't be found (e.g. fireSenseUtils failed because pak
-    #       reported "Can't find package called clusters" and clusters is
-    #       in fireSenseUtils' Remotes). The cascaded package name is
-    #       parsed from `lastPakErr`.
-    cascadedMissing <- character(0)
-    if (nzchar(lastPakErr)) {
-      m <- regmatches(lastPakErr,
-                       gregexpr(paste0(.txtCantFindPackage, "[A-Za-z0-9._-]+"),
-                                lastPakErr))[[1]]
-      if (length(m)) {
-        cascadedMissing <- trimws(sub(paste0("^.*", .txtCantFindPackage), "", m))
-        cascadedMissing <- cascadedMissing[nzchar(cascadedMissing) &
-                                            !grepl("::", cascadedMissing)]
-      }
-    }
-    missingForRemotesLookup <- unique(c(silentlyFailed, cascadedMissing))
-    remoteRefs <- tryCatch(
-      findRemoteRefsForMissing(missingForRemotesLookup,
-                                candidatePkgs = toInstall$Package,
-                                libPaths      = libPaths),
-      error = function(e) character(0))
-    remotesHint <- ""
-    if (length(remoteRefs)) {
-      lines <- vapply(names(remoteRefs), function(mp) {
-        paste0("  - `", mp, "` is declared in a candidate's Remotes: as `",
-               remoteRefs[[mp]], "`")
-      }, character(1))
-      example <- paste0(
-        "Require::Install(c(",
-        paste0("\"", c(unname(remoteRefs), failedFullPaths[!failedFullPaths %in% names(remoteRefs)]),
-               "\"", collapse = ", "),
-        "), install = \"force\")")
-      remotesHint <- paste0(
-        "\nNote: pak does not follow `Remotes:` when resolving packages from ",
-        "CRAN-like sources (CRAN, r-universe). The following candidate-only-",
-        "in-Remotes refs were found:\n",
-        paste(lines, collapse = "\n"),
-        "\nWorkaround: include the GitHub ref explicitly, e.g.\n  ", example)
-    } else if (length(cascadedMissing)) {
-      # Generic hint: pak reported "Can't find package called X" but we
-      # could not pin a specific owner/repo (e.g. the parent package isn't
-      # installed locally, so its DESCRIPTION Remotes: is not readable).
-      # Still useful to point at the likely cause + workaround shape so the
-      # user knows what to look for.
-      remotesHint <- paste0(
-        "\nNote: pak reported `Can't find package called ",
-        paste(cascadedMissing, collapse = ", "),
-        "` -- this is the typical signature of a Remote-only package ",
-        "(e.g. on GitHub) that pak's CRAN-style resolver doesn't follow ",
-        "from a parent's `Remotes:` field. If the package is on GitHub, ",
-        "include the explicit `owner/repo` ref, e.g.:\n  ",
-        "Require::Install(c(\"OWNER/", cascadedMissing[1L], "\", \"",
-        paste(silentlyFailed, collapse = "\", \""),
-        "\"), install = \"force\")")
-    }
     warning(.txtCouldNotBeInstalled, ": ",
             paste(silentlyFailed, collapse = ", "),
             if (nzchar(reason)) paste0("; ", reason) else "",
             ghHint,
-            remotesHint,
             call. = FALSE, immediate. = TRUE)
   }
 
