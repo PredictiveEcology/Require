@@ -25,7 +25,60 @@
   
 ## Function consolidation for cached packages
 
+* `cachePkgDir()` now points at the cache that actually holds package
+  tarballs. Under `Require.usePak = TRUE` it returns
+  `pak::cache_summary()$cachepath` (pak owns the binary/source cache
+  via pkgcache, redirectable through the standard `R_USER_CACHE_DIR`
+  env var); under `usePak = FALSE` it returns the legacy
+  `<cacheDir>/packages/<Rver>`. Previously it always returned the
+  legacy path regardless of installer, so users (and Require itself)
+  were inspecting the wrong directory in pak mode. Closes the spirit
+  of issue #91 -- env-var-driven shared cache works, and the R-version
+  subdirectory is appended automatically by pak / `tools::R_user_dir()`.
 
+* `cacheClearPackages()` and `cachePurge(packages = TRUE)` now route
+  through pak's cache management in pak mode --
+  `pak::cache_clean()` when no `packages` argument is given,
+  `pak::cache_delete(package = <names>)` when it is. Under
+  `usePak = FALSE` the legacy walk-and-unlink behaviour is unchanged.
+  Previously these helpers only cleared Require's bookkeeping
+  directory while pak's tarball cache silently kept growing. Note:
+  the `Rversion` argument is a no-op under pak (pak's cache isn't
+  partitioned by R version the way Require's was).
+
+* New internal `.requirePkgInfoDir()` for Require's own bookkeeping
+  (SHA DB, mirrors, `pkgDepDB`, `available.packages` cache,
+  `DESCRIPTION` snapshots). Stays at the legacy
+  `<cacheDir>/packages/<Rver>` path regardless of pak mode -- those
+  files belong to Require and pak doesn't index them, so keeping
+  them out of pak's tarball cache prevents accidental deletion by
+  `pak::cache_clean()` and silent file invisibility. All internal
+  callers that previously used `cachePkgDir()` for bookkeeping were
+  migrated.
+
+## deprecations
+
+* The following names emit a `.Deprecated()` warning and forward to
+  their canonical replacement for one release cycle:
+  - `cacheGetOptionCachePkgDir()` -> `cachePkgDir()`
+  - `purgeCache()`                -> `cachePurge()`
+  - `clearRequirePackageCache()`  -> `cacheClearPackages()`
+
+* `options("Require.cachePkgDir")` and the `R_REQUIRE_PKG_CACHE`
+  environment variable are deprecated. Under `usePak = TRUE` they no
+  longer influence the cache location (pak owns it). At package load
+  a one-time `packageStartupMessage()` points users at the standard
+  replacement: set `R_USER_CACHE_DIR` in `.Renviron` to share or
+  relocate the cache. `tools::R_user_dir()` automatically routes both
+  pak's cache (`~/.cache/R/pkgcache/pkg`) and Require's scratch dir
+  (`~/.cache/R/Require`) through that single env var, so a shared-
+  cache setup needs just one line.
+
+* `?cachePkgDir` (and the related `?cachePurge`, `?cacheClearPackages`,
+  `?cacheGetOptionCachePkgDir` topics) was rewritten to lead with a
+  "What goes where" table covering both `usePak` modes, an explicit
+  deprecation/migration table for every name above, and a description
+  of how `cachePkgDir()`'s return value changes with `usePak`.
 
 ## bug fixes
 
