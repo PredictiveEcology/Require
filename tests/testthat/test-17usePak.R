@@ -1546,6 +1546,35 @@ test_that("pakInstallFiltered aborts install when a hard dep is unresolved (pre-
   )
 })
 
+test_that("silentlyFailed warning emits a generic Remote-only hint when the parent is not locally installed", {
+  ## When the parent package (e.g. fireSenseUtils) isn't locally installed,
+  ## we can't read its DESCRIPTION Remotes: -- so findRemoteRefsForMissing
+  ## returns empty. But pak's "Can't find package called X" error still
+  ## tells us X is missing. In that case the warning must emit a GENERIC
+  ## Remote-only hint pointing at the likely cause + workaround shape,
+  ## rather than just the bare "could not be installed" with no guidance.
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  testthat::expect_true(
+    grepl("cascadedMissing", oneLine),
+    info = "warning logic must parse cascadedMissing from lastPakErr"
+  )
+  testthat::expect_true(
+    grepl("else if \\(length\\(cascadedMissing\\)\\)", oneLine),
+    info = "warning must have a generic-hint branch when no candidate Remote was found"
+  )
+  testthat::expect_true(
+    grepl("CRAN-style resolver doesn't follow", oneLine, fixed = TRUE) ||
+    grepl("CRAN-style resolver does not follow", oneLine, fixed = TRUE),
+    info = "generic hint must mention pak's CRAN-style resolver limitation"
+  )
+  testthat::expect_true(
+    grepl('OWNER/', oneLine, fixed = TRUE),
+    info = "generic hint must include a copy-pasteable OWNER/repo workaround shape"
+  )
+})
+
 test_that("silentlyFailed warning surfaces a Remotes hint when applicable (source check)", {
   ## End-to-end behavioural test is hard (it needs pak to fail on a real
   ## Remotes-only package), so assert at the source level that the warning

@@ -3587,6 +3587,22 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         "in-Remotes refs were found:\n",
         paste(lines, collapse = "\n"),
         "\nWorkaround: include the GitHub ref explicitly, e.g.\n  ", example)
+    } else if (length(cascadedMissing)) {
+      # Generic hint: pak reported "Can't find package called X" but we
+      # could not pin a specific owner/repo (e.g. the parent package isn't
+      # installed locally, so its DESCRIPTION Remotes: is not readable).
+      # Still useful to point at the likely cause + workaround shape so the
+      # user knows what to look for.
+      remotesHint <- paste0(
+        "\nNote: pak reported `Can't find package called ",
+        paste(cascadedMissing, collapse = ", "),
+        "` -- this is the typical signature of a Remote-only package ",
+        "(e.g. on GitHub) that pak's CRAN-style resolver doesn't follow ",
+        "from a parent's `Remotes:` field. If the package is on GitHub, ",
+        "include the explicit `owner/repo` ref, e.g.:\n  ",
+        "Require::Install(c(\"OWNER/", cascadedMissing[1L], "\", \"",
+        paste(silentlyFailed, collapse = "\", \""),
+        "\"), install = \"force\")")
     }
     warning(.txtCouldNotBeInstalled, ": ",
             paste(silentlyFailed, collapse = ", "),
