@@ -1426,6 +1426,43 @@ test_that("pakDepsToPkgDT pins installed user packages even under install='force
     info = "pakDepsToPkgDT must still call pinInstalledForPak to keep deps stable")
 })
 
+# (d) -- post-install check must look at the user's ORIGINAL libpaths,
+#        not pakInstallFiltered's narrowed .libPaths(), or packages
+#        installed in the user's personal library (and only there) are
+#        misclassified as "could not be installed".
+#        Concrete trigger: a GitHub-only package like
+#        `PredictiveEcology/clusters` listed in fireSenseUtils' Remotes,
+#        already installed in the user's default library but not in the
+#        project libPaths[1].  pak's install subprocess correctly "keeps"
+#        it, but Require's post-install check (which narrows .libPaths()
+#        for standAlone) doesn't see it -> spurious warning.
+test_that("pakInstallFiltered post-install fallback queries origPaths, not the narrowed .libPaths()", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## Find the post-install "look in all lib paths" installed.packages() call.
+  ## After the fix it must use `lib.loc = origPaths`, not `lib.loc = .libPaths()`.
+  ## (origPaths is the snapshot taken at the top of pakInstallFiltered before
+  ## the standAlone narrowing.)
+  ##
+  ## Use a focused regex matching the assignment site: only the
+  ## `nowInstalledAll <- ... installed.packages(lib.loc = ..., ...)` line.
+  m <- regmatches(oneLine,
+    regexpr("nowInstalledAll\\s*<-\\s*[^\n]*installed\\.packages\\([^)]+\\)", oneLine))
+  testthat::expect_true(length(m) > 0L,
+    info = "must find the post-install nowInstalledAll <- installed.packages(...) site")
+  testthat::expect_true(
+    grepl("lib\\.loc\\s*=\\s*origPaths", m),
+    info = paste0("post-install fallback must use origPaths (the unnarrowed snapshot) ",
+                  "so packages installed in the user's personal library are visible. ",
+                  "Using .libPaths() here hides them under standAlone = TRUE."))
+  testthat::expect_false(
+    grepl("lib\\.loc\\s*=\\s*\\.libPaths\\(\\)", m),
+    info = paste0("post-install fallback must NOT use .libPaths() -- it has been ",
+                  "narrowed to c(libPaths[1], basePkgLib) for standAlone semantics, ",
+                  "which hides user-library installs."))
+})
+
 # (c) -- pinInstalledForPak's own semantics are unchanged: it respects
 #        user-supplied version specs and GitHub/url::/@-pinned refs.
 #        This is what lets the new always-pin behaviour stay safe: if a

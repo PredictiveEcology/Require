@@ -154,7 +154,7 @@ ft2build.h, sodium.h, ...) and prints the corresponding
 \verb{brew install ...} (or apt) suggestion. R 4.5's removal of
 \code{Calloc/Free}, GDAL >= 3.10's \verb{const OGRSpatialReference*} ABI
 change, and Rcpp's \verb{class_::constructor<>} template-arity limit are
-each pattern-matched and reported with a "bump \if{html}{\out{<pkg>}}" suggestion.
+each pattern-matched and reported with a "bump \verb{<pkg>}" suggestion.
 }
 \item{Mac toolchain -- \verb{~/.R/Makevars}}{
 R's default compile flags only search \verb{/opt/R/arm64/include}. To pick
