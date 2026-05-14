@@ -1506,6 +1506,46 @@ test_that("findRemoteRefsForMissing returns empty when no candidate has matching
   testthat::expect_length(out, 0)
 })
 
+test_that("pakInstallFiltered aborts install when a hard dep is unresolved (pre-install check)", {
+  ## Design call: if a user-requested package's installed DESCRIPTION names
+  ## a hard dep that is neither already installed nor planned for install
+  ## in pkgDT, the install must be SKIPPED, not allowed to proceed. The
+  ## typical trigger is the pak-doesn't-follow-Remotes-from-CRAN-style-
+  ## parents failure mode: pak resolves nothing, pakDepsToPkgDT falls back
+  ## to toPkgDTFull(packages), and the user package's Remote-only dep is
+  ## in neither libPath nor plan. Letting pak install in this state can
+  ## succeed from cache and produce a broken install whose load fails.
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  testthat::expect_true(
+    grepl("unresolvedDeps", oneLine),
+    info = "pre-install integrity check must build an unresolvedDeps list"
+  )
+  testthat::expect_true(
+    grepl("skipping install: hard dependencies are unresolved", oneLine, fixed = TRUE),
+    info = "skip warning must use a clear leading phrase that explains the abort"
+  )
+  testthat::expect_true(
+    grepl('which = c\\("Depends", "Imports", "LinkingTo"\\)', oneLine),
+    info = "pre-install check must parse Imports/Depends/LinkingTo from each installed package's DESCRIPTION"
+  )
+  testthat::expect_true(
+    grepl("findRemoteRefsForMissing\\([^)]*allMissing", oneLine),
+    info = "skip warning must consult findRemoteRefsForMissing so the Remote-only failure mode is surfaced"
+  )
+  ## Affected rows must be marked .txtCouldNotBeInstalled in pkgDT and
+  ## removed from toInstall, so pak isn't invoked for them.
+  testthat::expect_true(
+    grepl('"installResult"\\s*,\\s*\\.txtCouldNotBeInstalled', oneLine),
+    info = "affected rows must be marked .txtCouldNotBeInstalled in pkgDT"
+  )
+  testthat::expect_true(
+    grepl("toInstall\\s*<-\\s*toInstall\\[!Package %in% affected\\]", oneLine),
+    info = "affected rows must be removed from toInstall so pak::pak() is not called for them"
+  )
+})
+
 test_that("silentlyFailed warning surfaces a Remotes hint when applicable (source check)", {
   ## End-to-end behavioural test is hard (it needs pak to fail on a real
   ## Remotes-only package), so assert at the source level that the warning

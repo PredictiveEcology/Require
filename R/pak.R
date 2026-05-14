@@ -2709,6 +2709,91 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     toInstall[, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio") := NULL]
   }
 
+  # Pre-install integrity check. Abort the install for any toInstall package
+  # whose installed DESCRIPTION names a hard dependency that is neither
+  # currently installed nor planned in pkgDT. This catches the
+  # pak-doesn't-follow-Remotes-from-CRAN-style-parents failure mode at the
+  # earliest correct point: BEFORE we ask pak to install, so we don't end up
+  # with a "successfully installed" cached binary whose Imports are
+  # unsatisfied on disk (which would later fail at library() with a
+  # confusing "there is no package called X" error).
+  #
+  # Rationale (user's design call): if a hard dep can't be resolved, the
+  # install plan is broken; don't proceed and pretend success. Surface the
+  # actionable Remotes-following hint so the user knows how to fix it.
+  unresolvedDeps <- list()
+  if (NROW(toInstall)) {
+    installedNamesPre <- tryCatch(
+      rownames(installed.packages(lib.loc = origPaths, noCache = TRUE)),
+      error = function(e) character(0))
+    plannedNames <- unique(pkgDT$Package)
+    for (pkg in toInstall$Package) {
+      descPath <- tryCatch(
+        system.file("DESCRIPTION", package = pkg, lib.loc = origPaths),
+        error = function(e) "")
+      if (!nzchar(descPath)) next  # not installed locally; can't pre-check
+      hardDeps <- tryCatch(
+        unique(extractPkgName(DESCRIPTIONFileDeps(
+          descPath, which = c("Depends", "Imports", "LinkingTo")))),
+        error = function(e) character(0))
+      hardDeps <- setdiff(hardDeps, c(.basePkgs, "R", ""))
+      missingDeps <- hardDeps[!(hardDeps %in% installedNamesPre |
+                                 hardDeps %in% plannedNames)]
+      if (length(missingDeps)) {
+        unresolvedDeps[[pkg]] <- missingDeps
+      }
+    }
+  }
+  if (length(unresolvedDeps)) {
+    affected <- names(unresolvedDeps)
+    allMissing <- unique(unlist(unresolvedDeps))
+    remoteRefs <- tryCatch(
+      findRemoteRefsForMissing(allMissing,
+                                candidatePkgs = affected,
+                                libPaths      = origPaths),
+      error = function(e) character(0))
+    perPkgLines <- vapply(affected, function(p) {
+      paste0("  - ", p, " depends on (not installed, not in plan): ",
+             paste(unresolvedDeps[[p]], collapse = ", "))
+    }, character(1))
+    remotesLines <- if (length(remoteRefs))
+      paste0(
+        "\nRemote-only refs detected:\n",
+        paste(vapply(names(remoteRefs), function(mp) {
+          paste0("  - `", mp, "` is declared as `",
+                 remoteRefs[[mp]], "` in a candidate's Remotes:")
+        }, character(1)), collapse = "\n"))
+    else ""
+    workaround <- if (length(remoteRefs))
+      paste0(
+        "\nWorkaround: include the GitHub ref explicitly, e.g.\n  ",
+        "Require::Install(c(",
+        paste0("\"", c(unname(remoteRefs), affected),
+               "\"", collapse = ", "),
+        "), install = \"force\")")
+    else ""
+    warning(
+      "skipping install: hard dependencies are unresolved (would produce a ",
+      "broken install whose load fails). Affected:\n",
+      paste(perPkgLines, collapse = "\n"),
+      remotesLines,
+      workaround,
+      call. = FALSE, immediate. = TRUE)
+    # Mark the affected rows as not-installed in pkgDT so downstream
+    # accounting/load steps see them as failed rather than succeeded.
+    for (p in affected) {
+      wh <- which(pkgDT$Package == p)
+      if (length(wh)) {
+        set(pkgDT, wh, "installed",         FALSE)
+        set(pkgDT, wh, "installedVersionOK", FALSE)
+        set(pkgDT, wh, "installResult",     .txtCouldNotBeInstalled)
+      }
+    }
+    # Remove affected rows from toInstall so pak isn't even invoked for them.
+    toInstall <- toInstall[!Package %in% affected]
+    if (!NROW(toInstall)) return(pkgDT)
+  }
+
   # Convert Require's package specs to pak format
   pkgs <- toInstall$packageFullName
 
