@@ -438,6 +438,14 @@ Require <- function(packages,
         wh <- which(pkgDT$Package %in% extractPkgName(packages))
         set(pkgDT, wh, "installedVersionOK", FALSE)
         set(pkgDT, wh, "forceInstall", TRUE)
+        ## whichToInstall's force-branch identifies user-requested packages
+        ## via loadOrder, but recordLoadOrder is gated on `require != FALSE`,
+        ## so Install(pkg, install = "force") (which calls Require with
+        ## require = FALSE) left needInstall = .txtDontInstall and
+        ## pakInstallFiltered returned silently without calling pak::pak().
+        ## Set needInstall directly here, where `packages` is in scope, so
+        ## the install fires regardless of the require/loadOrder state.
+        set(pkgDT, wh, "needInstall", .txtInstall)
       }
 
       needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
