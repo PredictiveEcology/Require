@@ -414,6 +414,56 @@ isGH <- function(pkgs) {
 # GitHub refs, pre-pinned `pkg@X` refs, packages with an explicit user
 # version constraint (carried in `resolvedPkgs`), and uninstalled
 # packages alone. Returns the rewritten character vector.
+# Look up missing packages (cantPkgs) in the `Remotes:` field of locally-
+# installed candidate packages, returning the matching `owner/pkg[@branch]`
+# refs. pak's CRAN-style resolver does not follow Remotes (unlike
+# devtools/remotes), so when a user package's DESCRIPTION lists
+# `Remotes: owner/pkg` and pak fails with "Can't find package called pkg",
+# this helper recovers the ref so we can inject it into pak's input.
+#
+# Arguments:
+#   missingPkgs   bare names pak reported as missing (e.g. "clusters").
+#   candidatePkgs current pkgsForPak entries; only their installed package
+#                 names (after stripping owner/, @version, version-spec) are
+#                 used to locate DESCRIPTIONs to scan.
+#   libPaths      where to look for installed candidate DESCRIPTIONs.
+#
+# Returns: named character vector keyed by missingPkg name with value
+# `owner/pkg[@branch]` for each match. Missing packages not found anywhere
+# are omitted; the caller falls back to other strategies (CRAN archive).
+findRemoteRefsForMissing <- function(missingPkgs, candidatePkgs, libPaths) {
+  if (!length(missingPkgs) || !length(candidatePkgs)) return(character(0))
+  candidateNames <- unique(extractPkgName(candidatePkgs))
+  candidateNames <- candidateNames[nzchar(candidateNames)]
+  out <- character(0)
+  remaining <- missingPkgs
+  for (cand in candidateNames) {
+    if (!length(remaining)) break
+    descPath <- tryCatch(
+      system.file("DESCRIPTION", package = cand, lib.loc = libPaths),
+      error = function(e) "")
+    if (!nzchar(descPath)) next
+    remotes <- tryCatch(
+      DESCRIPTIONFileDeps(descPath, which = "Remotes"),
+      error = function(e) character(0))
+    if (!length(remotes)) next
+    for (rem in remotes) {
+      ref <- trimws(rem)
+      if (!nzchar(ref)) next
+      # Only follow GitHub-style refs ("owner/pkg" or "owner/pkg@branch");
+      # skip other Remote prefixes (bitbucket::, gitlab::, local::, etc.)
+      # since they have different semantics and pak's handling varies.
+      if (!grepl("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(@.+)?$", ref)) next
+      refName <- extractPkgName(ref)
+      if (refName %in% remaining) {
+        out[refName] <- ref
+        remaining <- setdiff(remaining, refName)
+      }
+    }
+  }
+  out
+}
+
 pinInstalledForPak <- function(pkgsForPak, libPaths, resolvedPkgs = NULL) {
   if (!length(pkgsForPak)) return(pkgsForPak)
   ip <- tryCatch(installed.packages(lib.loc = libPaths),
@@ -1681,14 +1731,44 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
       }
     }
 
-    # --- Handle "Can't find package called X" (archived packages) ---
+    # --- Handle "Can't find package called X" ---
+    # Two cases handled in order:
+    #   (a) X is listed in the `Remotes:` field of a locally-installed user
+    #       package (e.g. fireSenseUtils' DESCRIPTION has
+    #       `Remotes: PredictiveEcology/clusters`). pak's CRAN-style resolver
+    #       does NOT follow Remotes when the parent ref came from a CRAN/
+    #       r-universe-style source (only when the parent is itself a GitHub
+    #       ref), so the user gets "Can't find package called clusters" even
+    #       though the Remote says exactly where to find it. Inject the
+    #       Remote's `owner/X` ref into pkgsForPak so pak can resolve it.
+    #   (b) X is an archived CRAN package -- find the archive URL via
+    #       pakGetArchive() and inject a `url::` ref.
     cantLines <- grep(.txtCantFindPackage, errLines, value = TRUE)
     cantPkgs  <- trimws(sub(paste0(".*", .txtCantFindPackage), "", cantLines))
     cantPkgs  <- sub("\\.$", "", cantPkgs)
     cantPkgs  <- cantPkgs[nzchar(cantPkgs) & !grepl("::", cantPkgs)]
     if (length(cantPkgs)) {
       newRefs <- character(0)
-      for (cp in cantPkgs) {
+      resolvedViaRemotes <- character(0)
+      # Case (a): try to satisfy each cantPkg via Remotes of locally-installed
+      # user-requested packages. pkgsForPak's package names give us the
+      # candidate parents to check.
+      remoteRefs <- findRemoteRefsForMissing(cantPkgs,
+                                              candidatePkgs = pkgsForPak,
+                                              libPaths = libPaths)
+      if (length(remoteRefs)) {
+        for (cp in names(remoteRefs)) {
+          newRefs <- c(newRefs, remoteRefs[[cp]])
+          conflictRows[[length(conflictRows) + 1L]] <-
+            list(Package = cp,
+                 Conflict   = paste0(cp, " (not on CRAN; in Remotes)"),
+                 Resolution = paste0("use ", remoteRefs[[cp]]))
+        }
+        resolvedViaRemotes <- names(remoteRefs)
+      }
+      # Case (b): for any cantPkg not satisfied via Remotes, try CRAN archives.
+      remainingCant <- setdiff(cantPkgs, resolvedViaRemotes)
+      for (cp in remainingCant) {
         urlRef <- tryCatch(
           pakGetArchive(cp, packages = cp, whRm = 1L),
           error = function(e) cp
@@ -3290,18 +3370,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # rather than updating the local `nowInstalledAll` declared above --
         # leaving the local NULL and producing "object 'Package' not found"
         # when the next line indexes it.
-        #
-        # Use `origPaths` (the .libPaths() snapshot taken at the top of
-        # pakInstallFiltered), not `.libPaths()` -- the latter has been
-        # narrowed to c(libPaths[1], basePkgLib) for standAlone semantics,
-        # which hides packages installed in the user's personal library.
-        # For a GitHub-only package like `PredictiveEcology/clusters` that
-        # the user has installed in their default user library but not in
-        # the project libPaths[1], pak's install subprocess correctly
-        # "keeps" it (it's findable via pak's own cache/lookup), but
-        # Require's post-install check on the narrowed .libPaths() can't
-        # see it and erroneously emits "could not be installed: clusters".
-        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = origPaths, noCache = TRUE),
+        nowInstalledAll <- as.data.table(as.data.frame(installed.packages(lib.loc = .libPaths(), noCache = TRUE),
                                                        stringsAsFactors = FALSE))
         # Same guard as nowInstalled above: when installed.packages() returns
         # an empty matrix the data.table[Package == pkg] expression errors with
