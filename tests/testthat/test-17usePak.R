@@ -1395,3 +1395,61 @@ test_that("pakRetryLoop single-call CRAN-only path does not depend on forceUpgra
     grepl("up\\s*<-\\s*any\\(ghOrUrl\\)\\s*\\|\\|\\s*cranUp", oneLine),
     info = "single-call branch must combine ghOrUrl with cranUp, not with forceUpgrade")
 })
+
+# (c) -- pakDepsToPkgDT must pin installed user packages even under
+#        install = "force".  Without pinning, pak's dep tree resolution
+#        uses the LATEST user-package version's Imports, which transitively
+#        forces upgrades of CRAN deps that are still satisfied by the
+#        installed user package's Imports.  E.g. installed reproducible
+#        Imports `broom (>= 1.0.10)` (satisfied by installed broom 1.0.12),
+#        but latest reproducible Imports `broom (>= 1.0.13)` -- pak then
+#        upgrades broom to 1.0.13 even with upgrade=FALSE, because the
+#        constraint is hard.
+test_that("pakDepsToPkgDT pins installed user packages even under install='force'", {
+  src <- deparse(body(Require:::pakDepsToPkgDT))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## The fix: pinInstalledForPak must NOT be gated on install != "force".
+  ## Specifically, there must be no `if (!identical(install, "force"))`
+  ## guard wrapping the pinInstalledForPak() call.
+  ## Use a tolerant regex that catches the guarded form across any whitespace.
+  guardedForm <- "if\\s*\\(\\s*!\\s*identical\\(\\s*install\\s*,\\s*[\"']force[\"']\\s*\\)\\s*\\)\\s*pkgsForPak\\s*<-\\s*pinInstalledForPak"
+  testthat::expect_false(
+    grepl(guardedForm, oneLine),
+    info = paste0("pakDepsToPkgDT must NOT skip pinning under install='force' -- ",
+                  "doing so makes pak resolve dep tree against the latest user-package ",
+                  "Imports, which transitively forces upgrades of installed CRAN deps."))
+
+  ## And pinInstalledForPak must still be called (unconditionally now).
+  testthat::expect_true(
+    grepl("pkgsForPak\\s*<-\\s*pinInstalledForPak\\(", oneLine),
+    info = "pakDepsToPkgDT must still call pinInstalledForPak to keep deps stable")
+})
+
+# (c) -- pinInstalledForPak's own semantics are unchanged: it respects
+#        user-supplied version specs and GitHub/url::/@-pinned refs.
+#        This is what lets the new always-pin behaviour stay safe: if a
+#        user passes `Install("reproducible (>= 1.5)", install = "force")`,
+#        the parenthetical spec marks the package as `userPinned` and pin
+#        is skipped, so pak resolves against that constraint (not installed).
+test_that("pinInstalledForPak skips user-version-constrained packages", {
+  skip_if_not_installed("digest")
+
+  ## Two packages: one with a parenthetical user-version constraint,
+  ## one bare (the everyday case the always-pin fix is meant to handle).
+  pkgsForPak  <- c("digest", "data.table")
+  resolvedPkgs <- c("digest (>= 0.0.1)", "data.table")  # only digest user-pinned
+
+  out <- Require:::pinInstalledForPak(
+    pkgsForPak,
+    libPaths     = .libPaths(),
+    resolvedPkgs = resolvedPkgs
+  )
+
+  ## digest had a user spec -> not pinned to installed version.
+  testthat::expect_false(grepl("^digest@", out[1]),
+    info = "user-version-constrained packages must NOT be pinned (the constraint must drive resolution)")
+  ## data.table had no user spec and is installed -> pinned to installed version.
+  testthat::expect_true(grepl("^data.table@", out[2]),
+    info = "bare user packages with no constraint must be pinned to installed version to keep deps stable")
+})
