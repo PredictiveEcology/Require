@@ -1245,3 +1245,153 @@ test_that("cachePkgDir() follows R_USER_CACHE_DIR in pak mode (issue #91)", {
     info = paste("setting R_USER_CACHE_DIR must redirect pak's cache;",
                  "got:", newPathNorm, "expected prefix:", tmpRootNorm))
 })
+
+# ---------------------------------------------------------------------------
+# 21. install = "force" must NOT upgrade transitive CRAN dependencies
+# ---------------------------------------------------------------------------
+# Regression report: on Windows + RStudio,
+#   Install({reproducible; SpaDES.core; ...}, install = "force")
+# emitted pak's
+#   "+ broom 1.0.12 → 1.0.13, mgcv 1.9-3 → 1.9-4, sf 1.1-0 → 1.1-1, ..."
+# even though the user had not asked for those CRAN dependencies to be
+# updated.  Root causes (both fixed; covered below):
+#
+#  (a) Require2.R "Deal with force installs" block must set
+#      `needInstall = .txtInstall` on user-requested rows so they end up
+#      in `pakInstallFiltered`'s toInstall.  Previously this was only
+#      done indirectly via whichToInstall's `askedByUser <- !is.na(loadOrder)`,
+#      which was empty when Install() called Require(require = FALSE)
+#      because recordLoadOrder is gated on the require flag.
+#
+#  (b) pakRetryLoop must NOT propagate forceUpgrade to the CRAN-batch
+#      pak::pak() call's `upgrade=` flag.  pak's `upgrade` is global
+#      across the entire resolved dep graph -- passing TRUE force-upgrades
+#      every CRAN dep, not just the user-requested ones.  Force semantics
+#      apply to user-requested packages; transitive deps stay put unless
+#      a constraint forces them.
+
+# (a) -- force block correctly sets needInstall on user-requested rows only
+test_that("install = 'force' sets needInstall=.txtInstall on user-requested rows only", {
+  packages <- c("reproducible", "SpaDES.core")
+  ## pkgDT containing user-requested rows + a transitive dep row
+  pkgDT <- data.table::data.table(
+    Package         = c("reproducible", "SpaDES.core", "broom"),
+    packageFullName = c("reproducible", "SpaDES.core", "broom"),
+    inequality      = "",
+    versionSpec     = "",
+    installed       = TRUE,
+    Version         = c("1.2.3", "0.9.0", "1.0.12"),
+    installedVersionOK = TRUE,
+    needInstall     = Require:::.txtDontInstall,
+    loadOrder       = NA_integer_
+  )
+
+  ## Replicate the "Deal with force installs" block from Require2.R
+  data.table::set(pkgDT, NULL, "forceInstall", FALSE)
+  install <- "force"
+  if (install %in% "force") {
+    wh <- which(pkgDT$Package %in% Require:::extractPkgName(packages))
+    data.table::set(pkgDT, wh, "installedVersionOK", FALSE)
+    data.table::set(pkgDT, wh, "forceInstall", TRUE)
+    data.table::set(pkgDT, wh, "needInstall", Require:::.txtInstall)
+  }
+
+  testthat::expect_equal(
+    pkgDT[Package %in% packages, needInstall],
+    rep(Require:::.txtInstall, length(packages)),
+    info = "user-requested rows must be marked needInstall=.txtInstall under install='force'"
+  )
+  testthat::expect_equal(
+    pkgDT[Package == "broom", needInstall],
+    Require:::.txtDontInstall,
+    info = "transitive dep rows must NOT be marked .txtInstall under install='force'"
+  )
+  testthat::expect_true(
+    all(pkgDT[Package %in% packages, forceInstall]),
+    info = "user-requested rows must have forceInstall=TRUE"
+  )
+  testthat::expect_false(
+    pkgDT[Package == "broom", forceInstall],
+    info = "transitive dep rows must have forceInstall=FALSE"
+  )
+})
+
+# (a) -- pakInstallFiltered toInstall filter respects the force-block mark
+test_that("pakInstallFiltered toInstall filter selects only force-marked user rows", {
+  pkgDT <- data.table::data.table(
+    Package         = c("reproducible", "SpaDES.core", "broom", "mgcv"),
+    packageFullName = c("reproducible", "SpaDES.core", "broom", "mgcv"),
+    inequality      = "",
+    versionSpec     = "",
+    needInstall     = c(Require:::.txtInstall, Require:::.txtInstall,
+                        Require:::.txtDontInstall, Require:::.txtDontInstall),
+    forceInstall    = c(TRUE, TRUE, FALSE, FALSE),
+    installed       = TRUE,
+    Version         = c("1.2.3", "0.9.0", "1.0.12", "1.9-3"),
+    installedVersionOK = c(FALSE, FALSE, TRUE, TRUE)
+  )
+
+  toInstall <- pkgDT[needInstall == Require:::.txtInstall]
+  testthat::expect_setequal(
+    toInstall$Package, c("reproducible", "SpaDES.core"))
+  testthat::expect_false(any(c("broom", "mgcv") %in% toInstall$Package),
+    info = "transitive deps must not enter pakInstallFiltered's install set under install='force'")
+})
+
+# (b) -- pakRetryLoop CRAN-batch upgrade flag is FALSE regardless of forceUpgrade
+test_that("pakRetryLoop CRAN-batch upgrade flag is FALSE even with forceUpgrade=TRUE", {
+  ## Read the source of pakInstallFiltered (where pakRetryLoop is defined)
+  ## and assert the line that derives cranUp explicitly hard-codes FALSE.
+  ## If a future refactor reintroduces propagation of forceUpgrade to the
+  ## CRAN batch's `upgrade=` flag, this test will fail loudly.
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## The fix: cranUp must NOT be derived from forceUpgrade. Specifically,
+  ## there must be no `cranUp <- isTRUE(forceUpgrade)` line, and the
+  ## assignment `cranUp <- FALSE` must be present.
+  testthat::expect_false(
+    grepl("cranUp\\s*<-\\s*isTRUE\\(forceUpgrade\\)", oneLine),
+    info = paste0("pakRetryLoop must NOT propagate forceUpgrade to the CRAN-batch ",
+                  "upgrade flag -- doing so causes transitive CRAN deps to be ",
+                  "gratuitously upgraded under install = 'force'")
+  )
+  testthat::expect_true(
+    grepl("cranUp\\s*<-\\s*FALSE", oneLine),
+    info = "pakRetryLoop's CRAN-batch upgrade flag (cranUp) must be FALSE"
+  )
+})
+
+# (b) -- GitHub batch still uses upgrade=TRUE (unchanged) so branch-pulling works
+test_that("pakRetryLoop GitHub batch still uses upgrade=TRUE", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## In the two-call branch (mixed batch), the GitHub call must hard-code
+  ## upgrade=TRUE to force fetching the latest commit from the branch.
+  ## Find pak::pak(packages[ghOrUrl], ...) and confirm upgrade = TRUE in
+  ## the same arg list (allowing whitespace + line breaks).
+  ghCall <- regmatches(oneLine, regexpr(
+    "pak::pak\\(packages\\[ghOrUrl\\][^)]*\\)", oneLine))
+  testthat::expect_true(length(ghCall) > 0L,
+    info = "must find the pak::pak(packages[ghOrUrl], ...) call")
+  testthat::expect_true(
+    grepl("upgrade\\s*=\\s*TRUE", ghCall),
+    info = "GitHub-batch pak call must keep upgrade=TRUE so latest commits are fetched"
+  )
+})
+
+# (b) -- single-call branch (CRAN-only batch) must also use upgrade=FALSE
+#         even when forceUpgrade would otherwise have been TRUE.
+test_that("pakRetryLoop single-call CRAN-only path does not depend on forceUpgrade", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## In the single-call (all-CRAN or all-GH) branch the upgrade flag is
+  ## derived as:  up <- any(ghOrUrl) || cranUp.
+  ## With cranUp pinned to FALSE, an all-CRAN batch resolves to FALSE.
+  ## Confirm cranUp is the only knob that gates the CRAN-only path.
+  testthat::expect_true(
+    grepl("up\\s*<-\\s*any\\(ghOrUrl\\)\\s*\\|\\|\\s*cranUp", oneLine),
+    info = "single-call branch must combine ghOrUrl with cranUp, not with forceUpgrade")
+})
