@@ -2514,7 +2514,7 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
     failures <- rbind(failures, data.table(
       package      = unexplained,
       reason_type  = "still-missing",
-      reason_brief = "absent from project lib; pak did not emit a per-package error (likely cascade casualty of a wedged subprocess)",
+      reason_brief = "absent from project lib; pak did not emit a per-package error",
       reason_detail = ""), fill = TRUE)
   }
   if (NROW(failures) == 0L) return(invisible(failures))
