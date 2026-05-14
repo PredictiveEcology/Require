@@ -70,7 +70,7 @@
 #'     `brew install ...` (or apt) suggestion. R 4.5's removal of
 #'     `Calloc/Free`, GDAL >= 3.10's `const OGRSpatialReference*` ABI
 #'     change, and Rcpp's `class_::constructor<>` template-arity limit are
-#'     each pattern-matched and reported with a "bump <pkg>" suggestion.
+#'     each pattern-matched and reported with a "bump `<pkg>`" suggestion.
 #'   }
 #'   \item{Mac toolchain -- `~/.R/Makevars`}{
 #'     R's default compile flags only search `/opt/R/arm64/include`. To pick
