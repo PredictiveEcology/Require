@@ -4,11 +4,7 @@
 \alias{internetExists}
 \title{Internet Exists query}
 \usage{
-internetExists(
-  mess = "",
-  verbose = getOption("Require.verbose"),
-  force = FALSE
-)
+internetExists(verbose = getOption("Require.verbose"), force = FALSE)
 }
 \arguments{
 \item{verbose}{Numeric or logical indicating how verbose should the function

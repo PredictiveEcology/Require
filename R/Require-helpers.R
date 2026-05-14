@@ -1343,7 +1343,7 @@ urlExists <- function(url) {
 #'   install dispatch) and a 2-second probe is cheap relative to the cost
 #'   of failing late. Defaults to `FALSE` to preserve the no-probe default
 #'   behaviour for all other call sites.
-internetExists <- function(mess = "", verbose = getOption("Require.verbose"),
+internetExists <- function(verbose = getOption("Require.verbose"),
                            force = FALSE) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
     if (force || getOption("Require.checkInternet", FALSE)) {
