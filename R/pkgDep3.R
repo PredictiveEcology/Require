@@ -110,6 +110,7 @@ pkgDep <- function(packages,
 
   stPkgDep <- Sys.time()
   libPaths <- dealWithMissingLibPaths(libPaths, ...)
+  packages <- parseMultiLinePackages(packages)
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NULL
   if (!is.null(doDeps))
@@ -1622,7 +1623,9 @@ RequireDependencies <- function(libPaths = .libPaths()) {
   } else if (!is.null(Repository) && !is.na(Repository) && nzchar(Repository)) {
     file.path(cachePkgDirForRepo(Repository, create = TRUE), basename(PackageUrl))
   } else {
-    file.path(cachePkgDir(create = TRUE), basename(PackageUrl))
+    ## Legacy non-pak DESCRIPTION downloader: keep tarballs alongside
+    ## Require's other bookkeeping (pak's cache is opaque to us here).
+    file.path(.requirePkgInfoDir(create = TRUE), basename(PackageUrl))
   }
   rmEmptyFiles(tf)
   for (attempt in 1:2) {

@@ -10,30 +10,28 @@ utils::globalVariables(
 #' This is a wrapper around `tools::dependsOnPkgs`,
 #' but with the added option of `topoSort`, which
 #' will sort them such that the packages at the top will have
-#' the least number of dependencies that are in `pkgs`.
+#' the least number of dependencies that are in `packages`.
 #' This is essentially a topological sort, but it is done
 #' heuristically. This can be used to e.g., `detach` or
 #' `unloadNamespace` packages in order so that they each
 #' of their dependencies are detached or unloaded first.
-#' @param pkgs A vector of package names to evaluate their
-#'   reverse depends (i.e., the packages that *use* each
-#'   of these packages)
+#' @inheritParams Require
 #' @param deps An optional named list of (reverse) dependencies.
 #'   If not supplied, then `tools::dependsOnPkgs(..., recursive = TRUE)`
 #'   will be used
 #' @param topoSort Logical. If `TRUE`, the default, then
 #'   the returned list of packages will be in order with the
-#'   least number of dependencies listed in `pkgs` at
+#'   least number of dependencies listed in `packages` at
 #'   the top of the list.
 #' @param reverse Logical. If `TRUE`, then this will use `tools::pkgDependsOn`
-#'   to determine which packages depend on the `pkgs`
+#'   to determine which packages depend on the `packages`
 #' @param useAllInSearch Logical. If `TRUE`, then all non-core
-#' R packages in `search()` will be appended to `pkgs`
+#' R packages in `search()` will be appended to `packages`
 #' to allow those to also be identified
 #' @param returnFull Logical. Primarily useful when `reverse = TRUE`.
 #'   If `TRUE`, then then all installed packages will be searched.
 #'   If `FALSE`, the default, only packages that are currently in
-#'   the `search()` path and passed in `pkgs` will be included
+#'   the `search()` path and passed in `packages` will be included
 #'   in the possible reverse dependencies.
 #'
 #' @inheritParams Require
@@ -54,7 +52,7 @@ utils::globalVariables(
 #' }
 #' }
 #'
-pkgDepTopoSort <- function(pkgs,
+pkgDepTopoSort <- function(packages,
                            deps,
                            reverse = FALSE,
                            topoSort = TRUE,
@@ -68,13 +66,14 @@ pkgDepTopoSort <- function(pkgs,
                            verbose = getOption("Require.verbose"), ...) {
 
   libPaths <- dealWithMissingLibPaths(libPaths, ...)
+  packages <- parseMultiLinePackages(packages)
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
       a <- search()
       a <- setdiff(a, .defaultPackages)
       a <- gsub("package:", "", a)
-      pkgs <- unique(c(pkgs, a))
+      packages <- unique(c(packages, a))
     } else {
       messageVerbose(
         "deps is provided; useAllInSearch will be set to FALSE",
@@ -84,7 +83,7 @@ pkgDepTopoSort <- function(pkgs,
     }
   }
 
-  names(pkgs) <- pkgs
+  names(packages) <- packages
   if (missing(deps)) {
     aa <- if (isTRUE(reverse)) {
       ip <- .installed.pkgs(lib.loc = libPaths, which = which, collapse = TRUE) # need all installed packages
@@ -92,10 +91,10 @@ pkgDepTopoSort <- function(pkgs,
       deps <- depsWithCommasToVector(ip$Package, ip$deps)
       deps <- lapply(deps, extractPkgName)
       # names(deps) <- ip[, "Package"]
-      # names(pkgs) <- pkgs
+      # names(packages) <- packages
       deps <- deps[order(names(deps))]
       revDeps <-
-        lapply(pkgs, function(p) {
+        lapply(packages, function(p) {
           names(unlist(
             lapply(deps, function(d) {
               if (isTRUE(any(p %in% d))) {
@@ -143,7 +142,7 @@ pkgDepTopoSort <- function(pkgs,
       }
     } else {
       pkgDep(
-        pkgs,
+        packages,
         recursive = TRUE,
         purge = purge,
         libPaths = libPaths,
@@ -822,9 +821,17 @@ defaultCacheAgeForPurge <- 3600
 
 #' Purge everything in the Require cache
 #'
-#' Require uses caches for local Package saving, local caches of `available.packages`,
-#' local caches of GitHub (e.g., `"DESCRIPTION"`) files, and some function calls
-#' that are cached. This function clears all of them.
+#' Clears Require's own bookkeeping caches: the `available.packages()`
+#' snapshot, the GitHub SHA database, the `DESCRIPTION` cache, and the
+#' pkgDep memoisation database. These live under [cacheDir()] and are
+#' distinct from the package binary tarball cache.
+#'
+#' With `packages = TRUE`, the package binary cache is also cleared by
+#' calling [cacheClearPackages()] -- which under `usePak = TRUE` (the
+#' default) delegates to `pak::cache_clean()`, and under the legacy path
+#' walks Require's bookkeeping dir directly.
+#'
+#' `purgeCache()` is a deprecated alias.
 #'
 #' @inheritParams Require
 #' @return Run for its side effect, namely, all cached objects are removed.
@@ -839,7 +846,11 @@ cachePurge <- function(packages = FALSE,
 
 #' @rdname cachePurge
 #' @export
-purgeCache <- cachePurge
+purgeCache <- function(packages = FALSE, repos = getOption("repos")) {
+  .Deprecated("cachePurge", package = "Require",
+              msg = "purgeCache() is deprecated; use cachePurge() instead.")
+  cachePurge(packages = packages, repos = repos)
+}
 
 dealWithCache <- function(purge = TRUE,
                           checkAge = TRUE,
@@ -1037,9 +1048,12 @@ pkgDepTopoSortMemoise <- function(...) {
 }
 
 pkgDepDBFilename <- function() {
-  if (!is.null(cacheGetOptionCachePkgDir())) {
-    file.path(cachePkgDir(), "pkgDepDB.rds")
-  } # returns NULL if no Cache used
+  ## Require's pkgDep cache file -- bookkeeping, kept next to the legacy
+  ## SHA DB so first-run-after-upgrade doesn't lose existing state.
+  d <- .requirePkgInfoDir()
+  if (!is.null(d) && nzchar(d))
+    file.path(d, "pkgDepDB.rds")
+  ## else NULL (matches the prior "no Cache used" branch)
 }
 
 isAre <- function(l, v) {
@@ -1100,18 +1114,37 @@ getAvailablePackagesIfNeeded <-
     ap
   }
 
-#' Clear Require Cache elements
+#' Clear cached package tarballs
+#'
+#' Removes downloaded package archives from the cache that [cachePkgDir()]
+#' returns. With `usePak = TRUE` (the default) this delegates to
+#' `pak::cache_clean()` (no `packages` arg) or
+#' `pak::cache_delete(package = ...)` (selective). With `usePak = FALSE`
+#' it walks Require's legacy bookkeeping dir and unlinks tarballs there.
+#'
+#' Require's own bookkeeping (SHA DB, mirrors.csv, available.packages
+#' snapshots) is preserved by this function; use [cachePurge()] to clear
+#' those as well.
+#'
+#' `clearRequirePackageCache()` is a deprecated alias.
+#'
+#' @section Migration note:
+#'
+#' The `Rversion` parameter is honoured only on the legacy path -- pak's
+#' cache is not partitioned by R version the way Require's cache was, so
+#' `pak::cache_clean()`/`pak::cache_delete()` operate on the whole cache
+#' regardless of `Rversion`. The function emits a verbose note when
+#' `Rversion != versionMajorMinor()` under `usePak = TRUE`.
 #'
 #' @param packages Either missing or a character vector of package names
-#'   (currently cannot specify version number) to remove from the local Require
-#'   Cache.
-#' @param ask Logical. If `TRUE`, then it will ask user to confirm
-#' @param Rversion An R version (major dot minor, e.g., "4.2"). Defaults to
-#'   current R version.
-#' @param clearCranCache Logical. If `TRUE`, then this will also clear the
-#'   local `crancache` cache, which is only relevant if
-#'   `options(Require.useCranCache = TRUE)`, i.e., if `Require` is using the
-#'   `crancache` cache also
+#'   (currently cannot specify version number) to remove from the cache.
+#' @param ask Logical. If `TRUE`, asks the user to confirm before deleting.
+#' @param Rversion An R version (major.minor, e.g., `"4.2"`). Defaults to
+#'   the current R version. **Ignored under `usePak = TRUE`** -- see
+#'   "Migration note".
+#' @param clearCranCache Logical. If `TRUE`, also clears the local
+#'   `crancache` cache, which is only relevant if
+#'   `options(Require.useCranCache = TRUE)`.
 #' @export
 #' @inheritParams Require
 #' @rdname clearRequire
@@ -1120,7 +1153,63 @@ cacheClearPackages <- function(packages,
                                      Rversion = versionMajorMinor(),
                                      clearCranCache = FALSE,
                                      verbose = getOption("Require.verbose")) {
-  out <- cachePkgDir(create = FALSE)
+  ## In pak mode the package tarballs live in pak's cache, not in
+  ## Require's bookkeeping dir. Delegate to pak's native API so the
+  ## right files actually get removed.
+  if (isTRUE(getOption("Require.usePak", TRUE)) &&
+      requireNamespace("pak", quietly = TRUE)) {
+    if (!identical(Rversion, versionMajorMinor())) {
+      messageVerbose(
+        "cacheClearPackages: `Rversion` arg ignored under usePak = TRUE -- ",
+        "pak's cache is not partitioned by R version the way Require's ",
+        "legacy cache was; pak::cache_delete() / pak::cache_clean() ",
+        "operate on the full cache.",
+        verbose = verbose, verboseLevel = 1
+      )
+    }
+    proceed <- TRUE
+    if (isTRUE(ask)) {
+      message(if (missing(packages))
+                "Are you sure you would like to remove ALL packages from pak's cache?"
+              else
+                paste0("Are you sure you would like to remove\n",
+                       paste(packages, collapse = ", "),
+                       "\nfrom pak's cache?"))
+      askResult <- readline("(n or anything else for yes) ")
+      if (startsWith(tolower(askResult), "n")) proceed <- FALSE
+    }
+    if (isTRUE(proceed)) {
+      if (missing(packages)) {
+        messageVerbose("Clearing entire pak download cache via pak::cache_clean()",
+                       verbose = verbose, verboseLevel = 1)
+        tryCatch(pak::cache_clean(),
+                 error = function(e) {
+                   warning("pak::cache_clean() failed: ", conditionMessage(e),
+                           call. = FALSE)
+                 })
+      } else {
+        messageVerbose("Removing from pak download cache: ",
+                       paste(packages, collapse = ", "),
+                       verbose = verbose, verboseLevel = 1)
+        tryCatch(pak::cache_delete(package = packages),
+                 error = function(e) {
+                   warning("pak::cache_delete() failed: ", conditionMessage(e),
+                           call. = FALSE)
+                 })
+      }
+      ## Also drop Require's own SHA DB so HEAD-pin resolution
+      ## reflects the fresh state (mirrors the legacy branch's behavior).
+      SHAfile1 <- getSHAFromGitHubDBFilename()
+      if (length(SHAfile1) && nzchar(SHAfile1) && isTRUE(file.exists(SHAfile1)))
+        unlink(SHAfile1)
+    } else {
+      message("Aborting")
+    }
+    return(invisible(NULL))
+  }
+
+  ## Legacy non-pak path: walk Require's bookkeeping dir directly.
+  out <- .requirePkgInfoDir(create = FALSE)
   if (!identical(Rversion, versionMajorMinor())) {
     out <- file.path(dirname(out), Rversion)
   }
@@ -1199,7 +1288,24 @@ cacheClearPackages <- function(packages,
 
 #' @export
 #' @rdname clearRequire
-clearRequirePackageCache <- cacheClearPackages
+clearRequirePackageCache <- function(packages,
+                                     ask = interactive(),
+                                     Rversion = versionMajorMinor(),
+                                     clearCranCache = FALSE,
+                                     verbose = getOption("Require.verbose")) {
+  .Deprecated("cacheClearPackages", package = "Require",
+              msg = paste0(
+                "clearRequirePackageCache() is deprecated; ",
+                "use cacheClearPackages() instead."
+              ))
+  if (missing(packages)) {
+    cacheClearPackages(ask = ask, Rversion = Rversion,
+                       clearCranCache = clearCranCache, verbose = verbose)
+  } else {
+    cacheClearPackages(packages = packages, ask = ask, Rversion = Rversion,
+                       clearCranCache = clearCranCache, verbose = verbose)
+  }
+}
 
 depsImpsSugsLinksToWhich <- function(depends, imports, suggests, linkingTo, which) {
   if (!missing(depends)) {

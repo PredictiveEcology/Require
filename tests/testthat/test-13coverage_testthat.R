@@ -5,7 +5,7 @@ test_that("RequireOptions functions", {
   testthat::expect_true("Require.verbose" %in% names(ro))
   testthat::expect_true("Require.usePak" %in% names(ro))
   testthat::expect_true("Require.cachePkgDir" %in% names(ro))
-  testthat::expect_identical(ro[["Require.usePak"]], FALSE)
+  testthat::expect_identical(ro[["Require.usePak"]], TRUE)
   testthat::expect_identical(ro[["Require.offlineMode"]], FALSE)
 
   gro <- getRequireOptions()
@@ -111,10 +111,13 @@ test_that("setup.R cache functions", {
   testthat::expect_true(is.character(cd))
   testthat::expect_true(nchar(cd) > 0)
 
-  # cachePkgDir returns a path under cacheDir
+  # cachePkgDir returns a path. In pak mode it's pak's cache
+  # (~/.cache/R/pkgcache/pkg); legacy mode is <cacheDir>/packages/<Rver>.
   pkgDir <- cachePkgDir()
   testthat::expect_true(is.character(pkgDir))
-  testthat::expect_true(grepl("packages", pkgDir))
+  testthat::expect_true(nzchar(pkgDir))
+  testthat::expect_true(grepl("(packages|pkgcache)", pkgDir),
+    info = "expected pak's `pkgcache/pkg` or Require's legacy `.../packages/<Rver>`")
 
   # cachePkgDirForRepo sanitizes URL -- check the subdir name only (not full path,
   # which on Windows contains ":" from the drive letter e.g. "C:\...")
@@ -139,13 +142,14 @@ test_that("setup.R cache functions", {
     }
   )
 
-  # cacheGetOptionCachePkgDir with TRUE option
+  # cacheGetOptionCachePkgDir with TRUE option (deprecated wrapper that
+  # delegates to cachePkgDir() -- matches its current path semantics).
   withr::with_options(
     list(Require.cachePkgDir = TRUE),
     {
-      val <- cacheGetOptionCachePkgDir()
+      val <- suppressWarnings(cacheGetOptionCachePkgDir())
       testthat::expect_true(is.character(val))
-      testthat::expect_true(grepl("packages", val))
+      testthat::expect_true(grepl("(packages|pkgcache)", val))
     }
   )
 
@@ -153,7 +157,7 @@ test_that("setup.R cache functions", {
   withr::with_options(
     list(Require.cachePkgDir = FALSE),
     {
-      val <- cacheGetOptionCachePkgDir()
+      val <- suppressWarnings(cacheGetOptionCachePkgDir())
       testthat::expect_null(val)
     }
   )
@@ -163,7 +167,7 @@ test_that("setup.R cache functions", {
   withr::with_options(
     list(Require.cachePkgDir = td),
     {
-      val <- cacheGetOptionCachePkgDir()
+      val <- suppressWarnings(cacheGetOptionCachePkgDir())
       testthat::expect_identical(val, td)
     }
   )
@@ -174,7 +178,7 @@ test_that("setup.R cache functions", {
     withr::with_envvar(
       c("R_REQUIRE_PKG_CACHE" = "FALSE"),
       {
-        val <- cacheGetOptionCachePkgDir()
+        val <- suppressWarnings(cacheGetOptionCachePkgDir())
         testthat::expect_null(val)
       }
     )
@@ -186,7 +190,7 @@ test_that("setup.R cache functions", {
     withr::with_envvar(
       c("R_REQUIRE_PKG_CACHE" = "TRUE"),
       {
-        val <- cacheGetOptionCachePkgDir()
+        val <- suppressWarnings(cacheGetOptionCachePkgDir())
         testthat::expect_true(is.character(val))
       }
     )
@@ -199,7 +203,7 @@ test_that("setup.R cache functions", {
     withr::with_envvar(
       c("R_REQUIRE_PKG_CACHE" = tdPkgCache),
       {
-        val <- cacheGetOptionCachePkgDir()
+        val <- suppressWarnings(cacheGetOptionCachePkgDir())
         testthat::expect_identical(val, tdPkgCache)
       }
     )

@@ -19,6 +19,14 @@ comma <- ", "
 
 .txtMissingValueWhereTFNeeded <- "missing value where TRUE/FALSE needed"
 .txtUnableToAccessIndex <- "unable to access index"
+# Benign side effects of base R's available.packages() trying PACKAGES.rds first
+# and falling through to PACKAGES.gz. r-universe never serves PACKAGES.rds, so
+# these warnings fire on every successful r-universe fetch.
+.txtBenignAvailPkgsWarns <- paste(
+  "cannot open URL .*PACKAGES\\.rds.*404",
+  "downloaded length 0 != reported length [0-9]+",
+  sep = "|"
+)
 .txtGitHub <- "GitHub"
 .txtArchive <- "Archive"
 .txtCouldNotBeInstalled <- "could not be installed"

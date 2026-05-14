@@ -640,8 +640,13 @@ SysInfo <-
 }
 
 .runLongExamples <- function() {
-  .isDevelVersion() ||
-    Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
+  # Auto-enable based on .isDevelVersion() is unsafe: with
+  # `--run-dontrun --run-donttest` (default in r-lib/actions/check-r-package),
+  # every dev-version R CMD check runs the full Require::Install() cascade
+  # for every example in Require.Rd — hours on a cold CI runner.
+  # Require explicit opt-in (R_REQUIRE_RUN_ALL_EXAMPLES=true) regardless of
+  # version. Devs can set it in .Renviron locally.
+  Sys.getenv("R_REQUIRE_RUN_ALL_EXAMPLES") == "true"
 }
 
 doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose")) {
@@ -656,12 +661,15 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
         alreadyThere <- basename(ccFiles) %in% basename(localFiles)
         if (any(!alreadyThere)) {
           ccFiles <- ccFiles[!alreadyThere]
-          toFiles <- file.path(cacheGetOptionCachePkgDir(), basename(ccFiles))
+          ## crancache integration is a legacy non-pak workflow -- staging
+          ## directory lives next to Require's other bookkeeping rather
+          ## than in pak's cache (pak doesn't index files dropped here).
+          toFiles <- file.path(.requirePkgInfoDir(create = TRUE), basename(ccFiles))
           linked <- linkOrCopy(ccFiles, toFiles)
           messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
                          verbose = verbose, verboseLevel = 1
           )
-          localFiles <- dir(cacheGetOptionCachePkgDir(), full.names = TRUE)
+          localFiles <- dir(.requirePkgInfoDir(), full.names = TRUE)
         }
       }
     }

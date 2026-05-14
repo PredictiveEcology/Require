@@ -19,7 +19,14 @@ test_that("test 1", {
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
   if (isDev) {
-    warns <- capture_warnings(Require(c("rlang", "covr (==3.6.3)"),
+    ## Bumped from covr (==3.6.3) to covr (==3.6.5):
+    ## covr 3.6.3 used the SET_BODY symbol from R-internals which was
+    ## removed in R 4.5+. R CMD INSTALL of covr 3.6.3 builds fine but
+    ## fails the test-load step with "undefined symbol: SET_BODY" /
+    ## "loading failed". covr 3.6.5+ uses the public R API instead.
+    ## The version-pin-warning behavior under test is unaffected by
+    ## the version choice.
+    warns <- capture_warnings(Require(c("rlang", "covr (==3.6.5)"),
                                       require = FALSE, quiet = quiet))
     test <- testWarnsInUsePleaseChange(warns)
     if (!isMacOS())
@@ -135,11 +142,6 @@ test_that("test 1", {
     warns <- capture_warnings(
       out <- Require(packageVersionFile = fileNames[["fn0"]][["txt"]], standAlone = TRUE)
     )
-    if (isTRUE(getOption("Require.usePak"))) {
-      okWarn <- grepl(.txtPakCurrentlyPakNoSnapshots, warns)
-      expect_true(okWarn)
-    }
-
     # Test
     there <- data.table::fread(fileNames[["fn0"]][["txt"]])
     unique(there, by = "Package")

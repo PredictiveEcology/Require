@@ -1,6 +1,748 @@
-# Require 1.1.0.9000 (development version)
+# Require 1.1.0.9051 (development version)
+
+## bug fixes
+
+* Snapshot installs no longer install the wrong (latest-CRAN) version of
+  a pinned package. With `Require::Require(packageVersionFile = ...)`
+  the snapshot rows carry `(==X)` exact pins, but the cache-shortcut
+  path (.9048) was constructing the pak ref via
+  `trimVersionNumber()`, which strips both parenthetical specs AND
+  pak's `pkg@ver` form when `Require.usePak = TRUE`. So
+  `fpCompare (==0.2.2)` became a bare `fpCompare` ref and pak
+  installed the latest CRAN version (0.2.4) instead of the snapshot
+  pin. `pakCachedTarball()` now returns the cached row's `version`,
+  and `pakOfflineInstall()` constructs `pkg@<cachedVersion>` for
+  source-tarball refs (`.tar.gz`) so pak resolves to exactly the
+  cached version. Binary `.zip` / `.tgz` refs unchanged (still
+  `local::<file>`), and GitHub `account/repo@SHA` refs unchanged.
+
+* `allInPakCache()` now refuses the cache shortcut when any requested
+  ref carries the `(HEAD)` pin (`account/repo@branch (HEAD)`). `(HEAD)`
+  means "the current tip of the branch", which can only be resolved
+  online -- a cached tarball provides no information about whether it
+  represents the current tip. With this guard, `Require()` correctly
+  forwards HEAD-pinned refs to pak's online resolver instead of
+  short-circuiting to a stale cached build.
+
+* Removed the `pakResetSubprocess()` call from the top of
+  `pakOfflineInstall()`. On Windows the kill-and-wait race against
+  pak's auto-respawn broke the very next `pak::cache_list()` call, so
+  immediately after the cache shortcut reported "all requested packages
+  are in the pak download cache", `pakCachedTarball()` returned NULL
+  for every package with "no rows in pak::cache_list()". Visible thanks
+  to the diagnostic logging added in .9047. The reset was intended for
+  the recovery-after-failure path but is unnecessary on the cache-
+  shortcut path (no wedged subprocess to recover from), and on Windows
+  it was actively destructive. Leaving the subprocess alone in both
+  cases.
+
+## enhancements
+
+* `Require()` now skips pak's online resolver entirely when every
+  package it would install is already in pak's download cache at a
+  version that satisfies the user's constraint. Avoids pak's metadata
+  refresh (which can stall on TCP timeouts when network is slow or
+  unreachable -- previously 47 s or indefinite wait when an internet-
+  less Ubuntu had everything cached). Consistent with Require's
+  philosophy: don't reach out for updates we never asked for.
+
+  Implementation: a new `allInPakCache(pkgDT)` gate; when it returns
+  `TRUE`, dispatch goes to `pakOfflineInstall()` instead of
+  `pakInstallFiltered()` -- even when `Require.offlineMode = FALSE`.
+  The shortcut is skipped when the user signals "ignore the cache":
+  `install = "force"` or `purge = TRUE`.
+
+* `pakCachedTarball()` now respects version constraints. New optional
+  `versionSpec` / `inequality` arguments; cache rows whose `version`
+  doesn't satisfy the inequality are filtered out, so e.g.
+  `Require("dplyr (>= 2.0.0)")` no longer mistakenly uses a cached
+  `dplyr 1.2.1`. `allInPakCache()` and `pakOfflineInstall()` both
+  thread `pkgDT$versionSpec` / `inequality` into the lookup.
+
+## bug fixes
+
+* Recovery from a failed online install (no internet) now works on
+  Windows. `Require::Install("dplyr", ...)` with `offlineMode = FALSE`
+  and no internet fails inside `pakInstallFiltered`, the recovery hook
+  flips `offlineMode = TRUE`, and `pakOfflineInstall` retries from the
+  pak cache. Previously the retry reported "not in pak cache" for
+  every package even though `pak::cache_list()` showed them present.
+  Root cause: `pak::cache_list()` is executed in pak's persistent
+  background subprocess, which can be in a wedged state from the
+  preceding failed install plan, returning stale or empty rows.
+  `pakOfflineInstall()` now calls `pakResetSubprocess()` at the top
+  so the cache lookup runs against a fresh subprocess.
+
+* `pakOfflineInstall()` now logs why a package is reported as "not in
+  pak cache" at default verbose: how many `cache_list()` rows it found
+  for that package and whether their on-disk files exist. Surfaces
+  the underlying state instead of just "not in cache".
+
+* Offline install on Windows no longer re-downloads cached binaries.
+  The earlier bare-ref pak path
+  (`pak::pak("dplyr", ...)` + `PKG_METADATA_UPDATE_AFTER`) worked on
+  Linux but on Windows pak's resolver picks CRAN's multi-arch URL
+  (`i386+x86_64-w64-mingw32`) as canonical, missed the PPM single-arch
+  cached binary (`x86_64-w64-mingw32`), and went online. The fix is
+  per-extension routing in `pakOfflineInstall()`:
+
+  - `.zip` (Windows binary) and `.tgz` (Mac binary) are passed to pak
+    as `local::<file>` refs. pak treats these as direct binary
+    installs -- no resolver, no cache-key matching, no download.
+  - `.tar.gz` keeps the bare-ref pak path (where `local::` would
+    trigger `R CMD build` and rebuild vignettes -- the original
+    reason `local::` couldn't be used for source-format files
+    offline). With the env-var hooks (`PKG_METADATA_UPDATE_AFTER`,
+    `R_BIOC_VERSION`, `R_BIOC_CONFIG_URL`), the bare-ref path uses
+    pak's own cache without going online on Linux.
+
+  pak stays in charge throughout -- its resolver, dep-ordering,
+  sysreqs, build, and progress UI all apply. Only the ref form
+  changes based on file extension.
+
+* Reverted to using `pak::pak()` for the offline install (vs. the
+  `install.packages(<file>, repos = NULL)` approach in .9044). The
+  install.packages route installed each tarball standalone with no dep
+  ordering, so a multi-package install where A depends on B in the
+  same batch failed with "dependency 'B' is not available for package
+  'A'". Trying to topologically sort and install one-at-a-time
+  reproduces logic that pak already does; per user direction, keep pak
+  in charge. The env-var hooks
+  (`PKG_METADATA_UPDATE_AFTER`, `R_BIOC_VERSION`, `R_BIOC_CONFIG_URL`)
+  and `pak.no_extra_messages` are back. The `trimVersionNumber()`
+  fix that strips Require-internal `pkg (>= X)` constraints before
+  pak sees them is preserved.
+
+* Offline install no longer fails silently with "tarball was in pak
+  cache but offline install failed" for every package when the dep
+  tree contains version constraints. `pakOfflineInstall()` was passing
+  `packageFullName` (e.g. `glue (>= 1.3.2)`) verbatim to `pak::pak()`,
+  which rejects parenthetical inequality constraints with
+  `Cannot parse package: glue (>= 1.3.2)`. The error was buried at
+  `verboseLevel = 2`, so at default verbose the user only saw the
+  generic "offline install failed" warning with no diagnostic. Now
+  `trimVersionNumber()` strips the parenthetical before pak sees the
+  ref (preserving GitHub `account/repo@ref` forms), and any pak error
+  is surfaced at default verbose so failures are debuggable.
+
+* `useLoadedIfSufficient()` now verifies the package's `DESCRIPTION`
+  exists on disk in an effective lib path before marking the row as
+  satisfied. In a single R session, `remove.packages()` deletes files
+  from disk but leaves the namespace in `loadedNamespaces()`, and
+  `system.file(package = ...)` continues to return the recorded
+  (now-nonexistent) path. The previous logic (loaded + libPath-in-
+  effective) treated such packages as already installed; offline
+  `Require(pkg)` then skipped reinstall and downstream
+  `installed.packages()` walks emitted `cannot open compressed file
+  '.../DESCRIPTION'` warnings. Adding the disk-presence check makes
+  Require correctly route those rows back through the install pipeline
+  so the package ends up on disk again, consistent with Require's
+  "after this call, the packages are installed" contract.
+
+* Online pak install no longer spins forever when a package fails to
+  build because of missing system packages. The identify-and-defer
+  loop's dep resolver re-includes the failing package in every retry
+  plan (since dependents still reference it), so the loop ping-pongs on
+  the same culprit indefinitely. New `extractMissingSysreqs()` parses
+  pak's "Missing N system packages" block and the `+ <sysreq> - <pkg>`
+  mapping. When detected, the loop bails out with an actionable warning
+  naming each affected package and its missing system dependencies
+  (e.g. "fs needs: cmake, libuv1-dev"). Packages that already installed
+  before the failure are preserved.
+
+* Offline install under `Require.usePak = TRUE + Require.offlineMode = TRUE`
+  now uses pak's normal install flow against its existing cache instead
+  of forcing a `local::<tarball>` source install. The previous design
+  fed pak `local::` refs which forced its source-install pipeline
+  (`R CMD build` rebuilds vignettes -- needs network -- and failed offline
+  with "Failed to build dplyr 1.2.1 (300ms)"). The new flow passes
+  normal CRAN/GitHub refs to `pak::pak()` and uses three env-var hooks
+  to keep pak's subprocess fully offline:
+  - `PKG_METADATA_UPDATE_AFTER=365d` -- treat pak's cached metadata as
+    fresh so pak doesn't refresh from CRAN/PPM.
+  - `R_BIOC_VERSION` -- short-circuit pkgcache's Bioconductor version
+    probe.
+  - `R_BIOC_CONFIG_URL=file://...` -- redirect any residual yaml fetch
+    to pkgcache's bundled fixture.
+  Plus `options(pak.no_extra_messages = TRUE)` to silence the pillar
+  hint. All four are saved + restored on exit.
+
+  With the cached metadata and a cached binary (or source) for the
+  package, pak installs without recompilation -- e.g. dplyr in ~64ms
+  on a warm cache instead of failing.
+
+
+## bug fixes
+
+* Offline install on Linux no longer fails to recognise PPM (binary)
+  tarballs in pak's cache. PPM binaries share the bare `pkg_ver.tar.gz`
+  filename with their source counterparts on Linux; only
+  `pak::cache_list()`'s `platform` column distinguishes them. The old
+  filename-only classification misrouted PPM binaries into pak's
+  source-install branch, which then tried to `R CMD build` them
+  (rebuilding vignettes that need network) and aborted with
+  "Failed to build dplyr 1.2.1 (300ms)" or similar. `pakCachedTarball()`
+  now returns an `is_binary` flag derived from the `platform` column,
+  and `pakOfflineInstall()` routes accordingly.
+
+* The Linux binary path now picks `type` from `.Platform$pkgType` so
+  `install.packages(..., type = "binary")` -- which errors on Linux --
+  is not used. Linux gets `type = "source"`; Mac/Windows still get
+  `type = "binary"`.
+
+* `pakOfflineInstall()` now emits two distinct warnings when something
+  is missing on disk after the install: "not in pak cache" for packages
+  whose tarball wasn't cached, and "tarball was in pak cache but
+  offline install failed" for packages that had a tarball but failed to
+  install. The old single hard-coded "not in pak cache" message was
+  actively misleading when the latter happened.
+
+## enhancements
+
+* `Require.offlineMode = TRUE` no longer fails when pak's subprocess
+  probes the network at startup. pkgcache fetches
+  `https://bioconductor.org/config.yaml` via `download.file()` even when
+  installing `local::` source refs with `dependencies = FALSE`, which
+  aborts the install when offline. Suppressed by setting
+  `R_BIOC_VERSION` and `R_BIOC_CONFIG_URL` (pointing at pkgcache's
+  bundled `bioc-config.yaml` fixture, located inside pak's private
+  library on most systems) for the duration of the pak call, restored
+  on exit. pak's startup errors are now treated as advisory: the
+  ground-truth `installed.packages()` check decides whether the install
+  actually landed.
+
+* New auto-recovery when an online pak install fails because the network
+  is unreachable. If `pakInstallFiltered()` leaves any row flagged
+  "could not be installed", `Require()` now probes the network once (2
+  seconds) and, if missing, flips `Require.offlineMode = TRUE` and
+  retries the still-missing packages via `pakOfflineInstall()` against
+  the local pak download cache. The happy path is unchanged -- the
+  probe is paid only on the sad path. The auto-set state is cleared on
+  `Require()`'s on.exit so the user's explicit setting is preserved.
+
+* `internetExists()` and `setOfflineModeTRUE()` gained a `force` parameter
+  that probes regardless of `options("Require.checkInternet")`. Default
+  remains `FALSE`, so non-install code paths still respect the user's
+  opt-in.
+
+* New `Require.downloadTimeout` option (default `300L` seconds). Raises
+  `options("timeout")` for the duration of GitHub source-archive downloads
+  in the legacy (non-pak) install path, where R's stock 60s default can
+  abort multi-MB fetches on slow connections (issue #140). Has no effect
+  under `Require.usePak = TRUE`, which uses pak's own libcurl downloader
+  with its own retry/timeout.
+
+* `Require()` now accepts a multi-line string of packages -- newlines split
+  into one package per line, whitespace is trimmed, and blank or
+  `#`-prefixed lines are dropped (issue #147). An unquoted `{...}` block
+  form is also accepted, e.g.
+  `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`;
+  comments inside `{...}` are stripped by R's parser before this function
+  runs, and version constraints like `pkg (>= 1.0)` don't parse in that
+  form -- use the quoted/multi-line-string form for those.
+
+* `pkgDepTopoSort()` first argument renamed from `pkgs` to `packages` for
+  consistency with `Require()`, `Install()`, and `pkgDep()`.
+
+## bug fixes
+
+* `Require::Install()` with `==` / `<=` version pins now actually installs
+  the requested version. Five interacting bugs in the pak install path
+  caused `Install(c("stringfish (<= 0.15.8)", "qs (== 0.27.3)"))` to
+  silently install stringfish 0.19.0 (ignoring the upper bound) and
+  report qs as `[still-missing]` in the install summary even after the
+  archive-fallback pass had successfully installed it. Fixes:
+
+  * **@-version ref normalization.** New `pakRefToBareName()` helper
+    (`R/pak.R`) reduces any pak ref to the bare package name that
+    `installed.packages()` returns. `extractPkgName()` only strips
+    parenthetical `(>=X)` version specs — it does NOT strip pak's
+    `pkg@X` exact-pin form that `equalsToAt()` / `lessThanToAt()`
+    introduce. Consequence pre-fix: `qs@0.27.3` survived through
+    `pkgNamesAll` and `passNames`, never matched
+    `installed.packages()`'s bare `"qs"`, and every version-pinned
+    install looked "still missing" to the iter-loop / archive-fallback /
+    install-summary checks — even right after a successful install.
+
+  * **Cache key now respects user-supplied version constraints.**
+    `pakDepsCacheKey()` previously hashed only the version-stripped
+    `pkgsForPak`, so two calls differing only in constraints shared a
+    cache entry. The cached `pak_result` was reused by downstream
+    `pakDepsToPkgDT` processing whose behavior DOES branch on the
+    user-supplied constraints (`trimRedundancies` + `lessThanToAt`
+    rely on constraint rows actually being present in `pkgDT`); a stale
+    entry from a different constraint set silently corrupted the next
+    install plan. Fix: thread a `userPkgs` parameter through
+    `pakDepsCacheKey` / `pakDepsResolve` / `pakDepsCacheInvalidate`,
+    pass `resolvedPkgs` (constraint-bearing form) at the call site.
+
+  * **`pakInstallFiltered` dedup keeps the strictest constraint row.**
+    When pkgDT had two rows for the same Package (e.g. user's
+    `(<= 0.15.8)` upper bound and a transitive dep's `(>= 0.15.1)`
+    lower bound, both correctly kept by `trimRedundancies` because
+    they're complementary, not redundant), `unique(by = "Package")`
+    arbitrarily kept whichever sorted first — typically the `>=` row
+    from the dep tree. The user's `<=` pin was then dropped, the
+    downstream `gsub("\\(>=...\\)")` stripped to bare name, the `any::`
+    prefix made it `any::stringfish`, and pak silently installed the
+    latest. Fix: sort by inequality priority
+    (`==` > `<=` > `<` > `>=` > `>` > none) before unique-by-Package
+    so the strictest row wins. `equalsToAt()` / `lessThanToAt()` then
+    translate the surviving `==` / `<=` / `<` row into pak's exact
+    `@version` pin form.
+
+  * **No more empty `Warning message: could not be installed:`.**
+    `pakGetArchive()` was being called by `pakErrorHandling` with an
+    empty `pkgNoVersion` when pak emitted an internal error that
+    didn't match any known parse pattern (e.g.
+    `if (!version_satisfies(...))`). The downstream warning then fired
+    with no package name and no reason. Fix: early-return at
+    `pakGetArchive` entry when `pkg2` is empty; `nzchar()` guard at
+    the warn site as belt-and-braces.
+
+  * **Mid-pipeline retry warnings demoted to debug messages.**
+    `pakRetryLoop` and `pakSerialInstall` were emitting
+    `warning(... immediate. = TRUE)` for every transient install
+    failure — but those layers are early stages of a multi-layer retry
+    pipeline (parallel batch → identify-and-defer → serial →
+    CRAN-archive fallback) and the failure is routinely repaired by a
+    downstream layer. Users were told inline
+    `Warning: could not be installed: qs@0.27.3` then watched qs
+    install successfully via the archive pass two seconds later.
+    Those emissions are now `messageVerbose(... verboseLevel = 2)`
+    prefixed with the source layer (`pakRetryLoop:` /
+    `pakSerialInstall:`) for diagnostics. The post-install
+    `silentlyFailed` warning remains the authoritative end-state
+    report — it inspects the actual lib state and only fires for
+    packages that did NOT make it in by the end.
+
+* Install summary's canonical `installFailures` parse now runs AFTER
+  the archive-fallback pass so per-package `Failed to build X` lines
+  emitted during the archive pass are picked up rather than falling
+  through to the catch-all `still-missing` branch. Rows are also
+  filtered by `finalMissing`, so packages that failed in iter 1 but
+  succeeded in a deferred-culprit serial pass don't leak into the
+  summary as build-errors when in fact they ended up installed.
+
+# Require 1.1.0.9029 (development version)
+
+## bug fixes
+
+* identify-and-defer iter check now strips pak's `any::` CRAN prefix
+  (and `owner/` GitHub prefix) from `passNames` before comparing with
+  `installed.packages()`. Without this, `extractPkgName("any::cli")`
+  returns `"any::cli"` while `installed.packages()` returns `"cli"`, so
+  every successfully-installed CRAN ref in the iter pass-list looked
+  "still missing" — sending the loop into the no-parseable-culprits
+  serial-install fallback every single time, even on a clean
+  `Require::Install(devtools)` with all CRAN deps. Symptom: a 3-minute
+  parallel install followed by another 3 minutes of pointless serial
+  pak calls that all report "kept N". Same transformation as the
+  `pkgNamesAll` computation in the final-missing check above; the iter
+  check just forgot to apply it. The 1.1.0.9027 `noCache = TRUE` fix
+  was real but secondary — the cache wasn't the problem; the prefix
+  mismatch was.
+
+# Require 1.1.0.9028 (development version)
+
+## bug fixes
+
+* `pakBuildFailReason()` now actually surfaces pak's real failure cause.
+  Two issues in 1.1.0.9025: (a) the filter did not strip pak's own
+  wrapper line `Error : ! error in pak subprocess` or the `Caused by
+  error:` chain delimiter, so when pak's `try()`-string already chained
+  to the real reason, the fallback returned the wrapper line and the
+  cause was never seen; (b) the diagnostic regex did not include
+  `Could not solve package dependencies` or `Can't find package
+  called`, two of pak's most common cause-line patterns. Both fixed.
+  The bullet `! ` prefix that pak adds is now stripped from the
+  fallback line so the warning reads cleanly.
+
+* `pakRetryLoop()` no longer fires the duplicate "could not be installed:"
+  warning. The `alreadyWarned <<- TRUE` super-assignment in
+  `pakRetryLoop`'s own body walked past the local declaration to
+  `pakInstallFiltered`'s enclosing scope (where no such variable
+  exists), leaving the local `FALSE` and triggering the post-loop
+  fallback warning every time. Changed to `alreadyWarned <-` so the
+  local actually gets set. (`warnedDropped` legitimately uses `<<-`
+  because it really is in the enclosing scope — only `alreadyWarned`
+  was wrong.) This was a pre-existing bug that 1.1.0.9025 reproduced
+  in the new `identical(packages, pkgsIn)` branch.
+
+# Require 1.1.0.9027 (development version)
+
+## bug fixes
+
+* Post-install `installed.packages()` checks now pass `noCache = TRUE`.
+  pak runs each install in a subprocess; the parent R session's
+  `installed.packages()` cache is not invalidated when the subprocess
+  writes to the lib. Without this, freshly-installed packages looked
+  "still missing" to the strategy loop in `pakInstallFiltered`, falling
+  into the "no parseable culprits; falling back to serial install"
+  branch and re-running pak unnecessarily — visible as e.g. a simple
+  `Require::Install(pkgload)` taking ~12s instead of ~3s, with bogus
+  "still missing after iter 1" messages.
+
+# Require 1.1.0.9026 (development version)
+
+## new features
+
+* `Require()` now skips reinstall when a package is already loaded in the
+  current R session with a version that satisfies the requested
+  constraint. Previously, even when the loaded version was sufficient,
+  Require would still ask pak (or `install.packages()`) to install/upgrade
+  the package — which fails when the loaded namespace is imported by
+  another loaded package (e.g. `reproducible` <- `climateData`),
+  surfacing as the generic "Error : ! error in pak subprocess".  The new
+  `useLoadedIfSufficient()` helper runs after `whichToInstall()` and, for
+  any candidate flagged for install, checks `getNamespaceVersion()` and
+  `compareVersion2()` against the row's `versionSpec`/`inequality`. When
+  the loaded version satisfies, the row is marked `installed = TRUE`,
+  `installedVersionOK = TRUE`, `needInstall = .txtDontInstall`, plus a
+  new `loadedSufficient = TRUE` flag. `doLoads()` consults the flag and
+  attaches via `require(x, character.only = TRUE)` (no `lib.loc`) to
+  avoid R's "cannot be unloaded because <X> is imported by <Y>" error
+  path. Honoured for HEAD-checked GitHub refs too — version pin trumps
+  HEAD when the user's spec is a `(>= ...)` constraint. Skipped when
+  `install = "force"`, since that explicitly asks for reinstall.
+
+# Require 1.1.0.9025 (development version)
+
+## bug fixes
+
+* pak install warnings now surface the actual subprocess failure reason
+  instead of the generic "Error : ! error in pak subprocess" wrapper.
+  `pakBuildFailReason()` now also accepts the captured pak-subprocess
+  message stream and `pakRetryLoop()` / `pakSerialInstall()` slice and
+  pass it through, so warnings include the real cause — e.g. "namespace
+  'reproducible' is imported by 'climateData' so cannot be unloaded".
+  The reason-extractor's diagnostic regex was extended to recognise
+  unload-blocked-by-import and locked-package patterns. Also fixed a
+  duplicate-warning bug: the `identical(packages, pkgsIn)` branch in
+  `pakRetryLoop` warned without setting `alreadyWarned`, so the
+  post-loop `!alreadyWarned` block fired a second, less-informative
+  warning with no package names.
+
+# Require 1.1.0.9024 (development version)
+
+## bug fixes
+
+* `Require()` now recovers from R's "cannot be unloaded because <pkg> is
+  imported by <others>" failure. Previously, when `require(x, lib.loc =
+  libPaths)` failed for this reason — typical when a package (e.g.
+  `reproducible`, `Rcpp`, `dplyr`) is already loaded from a different lib
+  and its dependents (`SpaDES.core`, `LandR`, `terra`, ...) have imported
+  it — Require warned "package will not be attached" and left `x` off the
+  search path. Modules calling unqualified functions from `x` (e.g.
+  `prepInputs(...)` inside a SpaDES `init` event) then failed with
+  "object 'prepInputs' not found". The recovery detects the situation via
+  `loadedNamespaces()` (the failed-unload kept the namespace loaded) and
+  retries `require(x, character.only = TRUE)` *without* `lib.loc`, which
+  attaches the already-loaded namespace to `search()`. R prints the
+  "Failed with error: ... cannot be unloaded" text directly to stderr
+  rather than as a condition, so a `withCallingHandlers(warning=...)`
+  capture would not have seen it.
+
+# Require 1.1.0.9023 (development version)
+
+## bug fixes
+
+* `pakGetArchive()` now returns the input `packages` unchanged when
+  `options(repos)` has no concrete CRAN URL (e.g. only an r-universe is
+  configured, or only `@CRAN@` placeholder). Previously,
+  `paste0("url::", character(0))` collapsed to a length-1 `"url::"`
+  string; downstream `pak::pak("url::")` then aborted the whole archive
+  batch with an opaque "All URLs failed". The archive-fallback call
+  site additionally rejects any ref that is not a fully-formed
+  `url::https?://...` URL.
+
+# Require 1.1.0.9022 (development version)
+
+## bug fixes
+
+* Archive fallback now passes all archive URLs to pak in a single batch
+  call so cross-archive dependencies resolve correctly. Previously, the
+  fallback installed each archive ref serially: this worked for
+  archived packages whose deps were on current CRAN, but failed for
+  cross-archive cases like `disk.frame` (which depends on `pryr`,
+  itself archived) — pak would emit "Can't find package called pryr"
+  because the pryr archive URL wasn't in the same install plan.
+  Verified end-to-end on the (disk.frame, pryr) pair: 2 pkgs + 54
+  transitive deps install in a single ~30s pak call. If the batch call
+  fails for any reason, falls back to per-ref serial install (which
+  recovers archives without cross-archive deps).
+
+# Require 1.1.0.9021 (development version)
+
+## new features
+
+* `pakInstallFiltered()` now runs an *archive fallback* pass at the end of
+  install. For any still-missing packages whose failure pak did not
+  attribute (i.e. no per-package `Failed to build` line — typical of
+  archived-from-CRAN refs that the current CRAN mirror can't resolve),
+  Require constructs a `url::https://.../Archive/<pkg>/<pkg>_<ver>.tar.gz`
+  ref via the existing `pakGetArchive()` helper and attempts a serial
+  install of each. Confirmed working for archived CRAN packages such as
+  `pryr` that pak wouldn't resolve via `any::pryr`. Packages that still
+  fail (e.g. genuine source-build issues, transitive deps no longer
+  available) remain in the install-failure summary.
+
+# Require 1.1.0.9020 (development version)
+
+## new features
+
+* `pakInstallFiltered()` now emits an end-of-install summary listing each
+  package that did not end up in the project library, with a parsed
+  reason where pak's output was specific enough to attribute one. The
+  reason is one of:
+    - `missing-build-deps` — R CMD INSTALL pre-flight check refused to
+      build the package because some `Imports` were not yet in the
+      library at build time (typical cascade culprit). Brief includes
+      the dep names parsed from pak's `ERROR: dependencies '...' are
+      not available for package '...'` line.
+    - `compile-error` — gcc/Fortran error during source build.
+    - `version-conflict` — pak refused with an unsatisfiable
+      version pin in the dep tree.
+    - `build-error` — generic "Failed to build" with no parseable
+      ERROR: line.
+    - `still-missing` — package wasn't in `.libPaths()` at the end of
+      all install passes, but pak emitted no specific failure for it
+      (typical cascade casualty when pak's subprocess crashed during
+      dep resolution).
+  The full structured table is also stored in
+  `pakEnv()$.lastInstallFailures` for programmatic access.
+* New helpers `extractInstallFailures()` and `reportInstallFailures()`
+  expose the parser and reporter independently of the install loop.
+
+## bug fixes
+
+* `pakInstallFiltered()` post-install loop: the lazy initialisation of
+  `nowInstalledAll` used `<<-` rather than `<-`, so the assignment leaked
+  into the global environment instead of updating the local variable
+  declared earlier in the function. Subsequent `nowInstalledAll[Package
+  == pkg]` then errored with "object 'Package' not found" when the
+  package wasn't in `libPaths[1]` (the common case after a partial
+  install with cascade casualties). Fixed by switching to `<-`.
+
+## new features
+
+* `pakInstallFiltered()` gains a fallback **serial install** path: when
+  the iterative identify-and-defer loop has packages still missing but
+  no further build-failure culprits are parseable from pak's output —
+  typically because pak's subprocess crashed during dep resolution on a
+  large casualty batch — Require now invokes `pakSerialInstall()` on the
+  remaining missing refs. Each per-ref pak call has a tiny dep graph
+  pak resolves cleanly, and a single ref's failure no longer aborts the
+  rest. Slow but reliable; usually the only step that gets full LandR-
+  scale workflows installable end-to-end.
+* New helper `pakResetSubprocess()` force-restarts pak's persistent
+  callr `r_session` (the one held in `pak:::pkg_data$remote`). Called
+  between identify-and-defer iterations and before the deferred-culprit
+  serial install, so each phase starts with a clean pak subprocess.
+  Necessary because pak can wedge after a large failed install plan in
+  a way that makes every subsequent call emit "Error : ! error in pak
+  subprocess" without naming a build culprit.
+
+# Require 1.1.0.9018 (development version)
+
+## new features
+
+* `pakInstallFiltered()` gains an iterative *identify-and-defer* install
+  strategy (now the default) that handles pak's cascade-abort behaviour on
+  large transitive dep graphs. When pak emits per-package `Failed to build
+  <pkg>` lines, those packages are treated as the authoritative culprits;
+  the rest of the unbuilt packages — cascade casualties from pak aborting
+  the install plan — get a clean parallel retry without the culprits in
+  the batch. Culprits are then installed one-by-one at the end via the
+  new `pakSerialInstall()`, when their build-time deps are present in the
+  project lib so R CMD INSTALL's pre-flight check passes.
+* New helper `extractBuildFailures(output)` parses pak's stderr/messages
+  for `Failed to build <pkg>` lines.
+* New helper `pakSerialInstall(pkgs, lib, repos, verbose)` installs refs
+  one at a time; used by the deferred phase of identify-and-defer.
+* Strategy is selectable via `options(Require.pakInstallStrategy = ...)`:
+  - `"identify-and-defer"` (default)
+  - `"original"` (legacy single-pass behaviour)
+* Per-call install timing is recorded in `pakEnv()$.lastPakInstallTimings`.
+
+## bug fixes
+
+* `pakInstallFiltered()` post-install loop: `nowInstalledAll` now gets the
+  same empty-matrix guard as `nowInstalled` (it could previously error
+  "object 'Package' not found" when `installed.packages(.libPaths())`
+  returned a matrix without expected columns, masking the upstream
+  install failure).
+
+# Require 1.1.0.9017 (development version)
+
+## bug fixes
+
+* `pakErrorHandling()` no longer crashes when `pak`'s error output contains
+  characters that, when spliced into a regex, form an invalid pattern (e.g.
+  TRE "Unknown collating element" from stray brackets, or dots in package
+  names like `paws.application.integration`). Symptoms were a misleading
+  warning `could not be installed: invalid regular expression '...'`,
+  followed by `Error: object 'Package' not found` from
+  `pakInstallFiltered()`, with the real `pak` build-failure reason
+  silently swallowed. Three fixes:
+  * New `regexEscape()` helper escapes regex metacharacters in
+    `pkgNoVersion` / `vers` before splicing them into a `paste0()` pattern;
+    the surrounding `grep` is also wrapped in `tryCatch` so a still-malformed
+    pattern returns `integer(0)` rather than aborting.
+  * When `pakErrorHandling()` itself errors, the surrounding `tryCatch` in
+    `pakRetryLoop()` now also reports `pakBuildFailReason()` of the original
+    `pak` error and `message()`s the full raw `pak` error (truncated at
+    8 kB) so the underlying build-failure cause is no longer hidden.
+  * `pakInstallFiltered()`'s post-install loop guards against
+    `installed.packages()` returning an empty matrix without the expected
+    columns, which previously surfaced as `object 'Package' not found` and
+    masked the real build failure.
+
+  These fixes were already merged in the `dependencies=NA` commit
+  (1.1.0.9016) but were not separately documented; this entry records
+  them retroactively.
+
+# Require 1.1.0.9016 (development version)
+
+## bug fixes
+
+* CRAN-like packages installed via `pakInstall()` now use
+  `dependencies = NA` (was `FALSE`). With `dependencies = FALSE`, pak
+  parallelises source builds without waiting for build-time hard deps
+  to finish — e.g. `htmlwidgets` would start building while `htmltools`
+  was still mid-install and fail with "dependencies are not available".
+  `dependencies = NA` lets pak topologically order builds by the
+  hard-dep graph. Combined with `upgrade = FALSE`, this still avoids
+  upgrading already-installed packages beyond what Require requested.
+
+# Require 1.1.0.9015 (development version)
+
+## dependencies
+
+* `pak` is now an `Imports` (was `Suggests`). The `usePak` branch requires `pak`
+  for all GitHub/url-style installs, and isolated project libraries (e.g., those
+  created by `SpaDES.project::setupProject()`) do not always inherit the user's
+  default library where `pak` might be installed. Declaring `pak` as a hard
+  dependency ensures it is present wherever Require is.
+
+# Require 1.1.0.9013 (development version)
+
+## bug fixes
+
+* GitHub and `url::` packages are now installed with `upgrade = TRUE`,
+  `dependencies = FALSE` so pak always fetches the latest commit from the
+  requested branch without upgrading transitive CRAN dependencies. Previously,
+  `upgrade = FALSE` caused pak to "keep" any already-installed version of a
+  GitHub package even when a newer version was required, because pak treats a
+  bare `owner/repo@branch` ref as satisfied by whatever version is already in
+  the library. CRAN-like packages are still installed with `upgrade = FALSE`,
+  `dependencies = FALSE` to avoid unnecessary upgrades of already-satisfied
+  dependencies.
+
+# Require 1.1.0.9011 (development version)
+
+## bug fixes
+
+* `pak::pak()` is now called with `dependencies = NA` (pak's default) instead of
+  `dependencies = FALSE`. Previously, `dependencies = FALSE` caused installation
+  failures for GitHub dev packages whose latest DESCRIPTION had new or updated dep
+  requirements that were not captured in Require's earlier dep-tree snapshot. Using
+  `dependencies = NA` lets pak satisfy any such requirements automatically, matching
+  the behaviour of a direct `pak::pak()` call.
+* "Please change required version" is no longer emitted spuriously when pak fails to
+  install a package that was not previously present in the library (first-time install
+  failure). Previously, a `NA` pre-install version was compared with the post-attempt
+  installed version, incorrectly signalling that pak had installed a different version.
+
+# Require 1.1.0.9010 (development version)
+
+## bug fixes
+
+* When pak fails to install a package with an error that Require does not
+  recognise as retryable (e.g. a subprocess crash, network timeout, or GitHub
+  API error), the install attempt now stops immediately and the actual pak error
+  reason is included in the `"could not be installed"` warning.  Previously the
+  retry loop would silently repeat the same failed call 15 times and then emit
+  a bare `"could not be installed: <pkg>"` with no explanation.
+
+# Require 1.1.0.9009 (development version)
+
+## bug fixes
+
+* When pak fails to install a newer version of a package but an older version is already
+  installed, Require now loads the installed version as a fallback (with a warning) instead
+  of refusing to load at all. Previously this produced confusing downstream errors (e.g.
+  "object 'sppEquivalencies_CA' not found") because the package was silently not attached,
+  even though a usable version was present in the library.
+
+# Require 1.1.0.9008 (development version)
+
+## bug fixes
+
+* `require()` failures are now always visible regardless of `Require.verbose` setting.
+  Previously, when `Require.verbose <= 0`, a package that failed to attach (e.g. a
+  missing dependency, wrong library path) was silently ignored, producing confusing
+  downstream errors like "object 'sppEquivalencies_CA' not found". Now a `warning()`
+  with `immediate. = TRUE` is always emitted when `require()` returns FALSE, including
+  the underlying R message and the library paths that were searched.
+
+# Require 1.1.0.9007 (development version)
+
+## Enhancements
+* `pak` is now the default dependency-resolver and install backend
+  (`options(Require.usePak = TRUE)` is set by default). `pak::pkg_deps()` replaces
+  Require's internal `pkgDep()` pipeline for full transitive dependency resolution,
+  while Require's version-priority logic (`whichToInstall`, `trimRedundancies`,
+  `confirmEqualsDontViolateInequalitiesThenTrim`) still governs which packages
+  actually get installed. Archived CRAN packages, GitHub references, and
+  CRAN/GitHub conflicts are all handled via retry loops in `pakDepsToPkgDT()` and
+  `pakInstallFiltered()`.
+* When pak fails to build or install a package, the warning now includes the
+  actual reason (e.g., namespace version mismatch, file locked on Windows,
+  compilation failure) rather than a bare "could not be installed" message.
+* Misleading "Please change required version" warnings are now suppressed when a
+  package build fails and the installed version is unchanged; the warning is only
+  shown when pak successfully installed a different (but still insufficient) version.
+* When pak detects a CRAN/GitHub conflict caused by a `Remotes:` entry in another
+  package's `DESCRIPTION` (e.g., `sp` vs `sp` via `SpaDES.core` Remotes), the
+  conflict table now clearly shows both sides:
+  `sp (CRAN)  vs  sp (via PredictiveEcology/SpaDES.core@development Remotes)`.
+  Previously this displayed the misleading `sp  vs  PredictiveEcology/SpaDES.core@development`.
+* The pak dependency-tree cache (in-memory and disk) now reports cache hits at the
+  default `verbose = 1` level, making it visible that subsequent `Require()` calls
+  are served from cache rather than querying pak/CRAN again.
+* When a non-pak install log contains a namespace version error
+  (`namespace 'X' Y is being loaded, but >= Z is required`), Require now
+  automatically installs the required version of `X` and retries, rather than
+  failing silently.
 
 ## Bugfixes
+* When a GitHub package fails to build (e.g. `map` compilation error) and is
+  permanently removed from the pak retry list, Require now emits a warning
+  naming the package and, where extractable, the reason (namespace mismatch,
+  compilation failure, etc.). Previously the failure was silent when other
+  packages succeeded. Cascade failures — packages that depend on the failed
+  package and therefore also fail to install — are similarly reported after
+  the update loop.
+* Fixed `require()` not being called for packages (e.g. `LandR`) when using
+  `Require.usePak = TRUE`. The root cause: `pakDepsToPkgDT()` step-3b compared
+  pak's CRAN-resolved version against the user's version constraint. When the
+  user had a dev version installed (satisfying the constraint) but pak's CRAN
+  resolution returned an older version, the package was incorrectly removed from
+  `pkgDT`. Because `recordLoadOrder()` could not find the package in `pkgDT`,
+  `base::require()` was never called. The fix checks the actually-installed version
+  before classifying a package as unsatisfiable.
+* Fixed a second `require()` failure mode: a user-requested package (e.g.
+  `LandR`) could end up completely absent from `pkgDT` if step-3b removed it
+  from the local package list AND it was not a transitive dependency of any
+  other requested package. In this case `recordLoadOrder()` had no row to
+  match, so `loadOrder` was never set and `base::require()` was never called.
+  The fix adds a recovery pass after the main pipeline: any user-requested
+  package that is absent from `pkgDT` but installed at a satisfying version
+  is rbind-ed back with `loadOrder` set and `installedVersionOK = TRUE`.
+  Also adds verbose ≥ 1 diagnostics in `doLoads()` to report when packages
+  with `loadOrder` set are skipped (and why) or when `base::require()` itself
+  returns `FALSE`.
 * Fixed `file:////` URL error when downloading archived packages that were
   previously cached locally; `basename()` is now used for `file://` repository
   URLs to match the flat cache layout.

@@ -1,17 +1,46 @@
 if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
   withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
 }
+
+## pak's pkgcache refuses to use the system cache during R CMD check (CRAN
+## policy: pkgcache aborts with "R_USER_CACHE_DIR env var not set during
+## package check"). Without this, every pak::pak() call inside the test suite
+## errors out with `get_user_cache_dir()`, the install fails, identify-and-defer
+## retries, and the suite stalls under R CMD check on CI for hours.
+## Point pak at a per-session temp dir so it can write its cache. The dir
+## must exist before pak::cache_summary() / loadNamespace("pak") runs, so
+## create it eagerly here rather than relying on pak to mkdir.
+##
+## Gate this override on `!interactive()` so dev runs of
+## testthat::test_local() use the user's real pkgcache rather than a
+## throwaway tempdir per session. Require's snapshot installer
+## populates pkgcache after each download (pkg_cache_add_file), so a
+## persistent cache means a second test_local() invocation hits all
+## 378 tarballs and skips the libcurl-multi download phase entirely.
+## Under R CMD check / CI / batch usage, interactive() is FALSE and the
+## tempdir override still applies.
+if (!nzchar(Sys.getenv("R_USER_CACHE_DIR")) && !interactive()) {
+  .userCacheDir <- tempfile("RequireUserCache_")
+  dir.create(.userCacheDir, recursive = TRUE, showWarnings = FALSE)
+  withr::local_envvar(
+    R_USER_CACHE_DIR = .userCacheDir,
+    .local_envir = teardown_env()
+  )
+  rm(.userCacheDir)
+}
 verboseForDev <- 2
-Require.usePak <- FALSE
+Require.usePak <- TRUE#Sys.getenv("R_REQUIRE_USE_PAK", "false") == "true"
 Require.installPackageSys <- 2L#2 * (isMacOS() %in% FALSE)
 Require.offlineMode <- FALSE
 usePkgCache <- tempdir2("RequireCacheForTests") # or NULL for using default
 
-if (isTRUE(Require.usePak)) {
-  if (requireNamespace("pak")) {
-    existingCacheDir <- pak::cache_summary()$cachepath
-  }
-}
+## pak namespace is loaded lazily by code paths that need it. Eagerly loading
+## here had two issues:
+## 1. pak::cache_summary() errored under R CMD check (pkgcache "R_USER_CACHE_DIR
+##    env var not set during package check" policy).
+## 2. requireNamespace("pak") in a fresh `R --vanilla` test subprocess
+##    occasionally hung indefinitely on cold pak/pkgcache state — the same
+##    hang we observed in the 6-hour CI matrix timeouts.
 
 isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
   Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
@@ -69,7 +98,23 @@ withr::local_options(
     install.packages.compile.from.source = "never",
     Require.unloadNamespaces = TRUE,
     Require.offlineMode = Require.offlineMode,
-    Require.Home = "~/GitHub/Require"
+    Require.Home = "~/GitHub/Require",
+    ## Force cli's dynamic redraw during interactive dev test runs.
+    ## testthat's evaluate::evaluate sink makes cli's auto-detection
+    ## (isatty(stderr()) || ...) return FALSE inside tests and fall
+    ## back to one-line-per-tick "static" output. Override here for
+    ## any *direct* cli use in Require / our test code; the
+    ## R_CLI_DYNAMIC env var (in local_envvar below) carries this
+    ## into subprocesses.
+    cli.dynamic = if (isDevAndInteractive) TRUE else NULL,
+    ## pak vendors its own progress renderer that ignores cli.dynamic.
+    ## Even with the option set, pak's pkgdepends progress bar emits
+    ## its spinner ticks as separate lines under testthat's sink.
+    ## Disable pak's progress entirely during tests — user still sees
+    ## informational headers ("Will install N packages", "✔ Installed
+    ## X") and the per-package install confirmations, just no spinner
+    ## storm. Same logic as cli.dynamic: only during interactive dev.
+    pkg.show_progress = if (isDevAndInteractive) FALSE else NULL
   ),
   .local_envir = teardown_env()
 )
@@ -78,7 +123,16 @@ withr::local_envvar(
   .new = list(
     "R_TESTS" = "",
     "R_REMOTES_UPGRADE" = "never",
-    "CRANCACHE_DISABLE" = TRUE
+    "CRANCACHE_DISABLE" = TRUE,
+    ## Companion to options(cli.dynamic) above. Options live only in
+    ## the parent R session; pak runs in an r_session callr subprocess
+    ## that doesn't inherit them, so cli's auto-detection there still
+    ## falls back to static and we get the same one-line-per-tick spew.
+    ## Env vars DO propagate to the subprocess, and cli's
+    ## is_dynamic_tty() reads R_CLI_DYNAMIC after getOption("cli.dynamic")
+    ## but before isatty(). Empty string (NA via setting NA) leaves it
+    ## untouched in CI / R CMD check.
+    "R_CLI_DYNAMIC" = if (isDevAndInteractive) "true" else NA
   ),
   .local_envir = teardown_env()
 )

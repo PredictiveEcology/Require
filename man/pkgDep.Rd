@@ -7,7 +7,7 @@
 \title{Reverse package depends}
 \usage{
 pkgDepTopoSort(
-  pkgs,
+  packages,
   deps,
   reverse = FALSE,
   topoSort = TRUE,
@@ -47,33 +47,54 @@ pkgDep(
 )
 }
 \arguments{
-\item{pkgs}{A vector of package names to evaluate their
-reverse depends (i.e., the packages that \emph{use} each
-of these packages)}
+\item{packages}{Either a character vector of packages to install via
+\code{install.packages}, then load (i.e., with \code{library}), or, for convenience,
+a vector or list (using \code{c} or \code{list}) of unquoted package names to install
+and/or load (as in \code{require}, but vectorized). Passing vectors of names may
+not work in all cases, so user should confirm before relying on this behaviour
+in operational code.
+In the case of a GitHub package, it
+will be assumed that the name of the repository is the name of the package.
+If this is not the case, then pass a \emph{named} character vector here, where the
+names are the package names that could be different than the GitHub
+repository name.
+As a convenience for copy-pasting long lists, any character element that
+contains newlines is split into one package per line, with whitespace
+trimmed and blank or \verb{#}-prefixed lines dropped. For example,
+\code{Require("\\n  dplyr\\n  # ggplot2\\n  PredictiveEcology/LandR@development\\n")}
+is equivalent to
+\code{Require(c("dplyr", "PredictiveEcology/LandR@development"))}.
+Alternatively, an unquoted \code{{...}} block is accepted, with each line
+treated as one package spec, e.g.
+\code{Require({ dplyr; lme4; PredictiveEcology/LandR@development })}.
+Note that R's parser strips comments inside \code{{...}} before this function
+runs, so to omit a package delete the line (or comment it out -- both
+have the same effect). Version constraints such as \verb{pkg (>= 1.0)} do
+not parse inside \code{{...}} and must use the quoted string form.}
 
 \item{deps}{An optional named list of (reverse) dependencies.
 If not supplied, then \code{tools::dependsOnPkgs(..., recursive = TRUE)}
 will be used}
 
 \item{reverse}{Logical. If \code{TRUE}, then this will use \code{tools::pkgDependsOn}
-to determine which packages depend on the \code{pkgs}}
+to determine which packages depend on the \code{packages}}
 
 \item{topoSort}{Logical. If \code{TRUE}, the default, then
 the returned list of packages will be in order with the
-least number of dependencies listed in \code{pkgs} at
+least number of dependencies listed in \code{packages} at
 the top of the list.}
 
 \item{libPaths}{A path to search for installed packages. Defaults to
 \code{.libPaths()}}
 
 \item{useAllInSearch}{Logical. If \code{TRUE}, then all non-core
-R packages in \code{search()} will be appended to \code{pkgs}
+R packages in \code{search()} will be appended to \code{packages}
 to allow those to also be identified}
 
 \item{returnFull}{Logical. Primarily useful when \code{reverse = TRUE}.
 If \code{TRUE}, then then all installed packages will be searched.
 If \code{FALSE}, the default, only packages that are currently in
-the \code{search()} path and passed in \code{pkgs} will be included
+the \code{search()} path and passed in \code{packages} will be included
 in the possible reverse dependencies.}
 
 \item{recursive}{Logical. Should dependencies of dependencies be searched,
@@ -107,18 +128,6 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \item{...}{Currently only \code{dependencies} as an alternative to \code{which}. If specified,
 then \code{which} will be ignored.}
 
-\item{packages}{Either a character vector of packages to install via
-\code{install.packages}, then load (i.e., with \code{library}), or, for convenience,
-a vector or list (using \code{c} or \code{list}) of unquoted package names to install
-and/or load (as in \code{require}, but vectorized). Passing vectors of names may
-not work in all cases, so user should confirm before relying on this behaviour
-in operational code.
-In the case of a GitHub package, it
-will be assumed that the name of the repository is the name of the package.
-If this is not the case, then pass a \emph{named} character vector here, where the
-names are the package names that could be different than the GitHub
-repository name.}
-
 \item{depends}{Logical. Include packages listed in "Depends". Default \code{TRUE}.}
 
 \item{imports}{Logical. Include packages listed in "Imports". Default \code{TRUE}.}
@@ -130,7 +139,13 @@ repository name.}
 \code{TRUE}.}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
-\code{install.packages}, \code{install_github} or \code{installVersions}.}
+\code{install.packages}, \code{install_github} or \code{installVersions}.
+\strong{When \code{options(Require.usePak = TRUE)}:} \code{repos} is added to pak's repository
+list via \code{options(repos)}. However, pak always includes CRAN and Bioconductor as
+built-in defaults regardless of this setting -- \code{repos} can only \emph{add} sources,
+it cannot prevent pak from also searching CRAN. This differs from the default
+(\code{usePak = FALSE}) behaviour where \code{repos} strictly controls which repositories
+are used. Use \code{pak::cache_clean()} to clear pak's download cache if needed.}
 
 \item{keepVersionNumber}{Logical. If \code{TRUE}, then the package dependencies
 returned will include version number. Default is \code{FALSE}}
@@ -172,7 +187,7 @@ are either full reverse depends.
 This is a wrapper around \code{tools::dependsOnPkgs},
 but with the added option of \code{topoSort}, which
 will sort them such that the packages at the top will have
-the least number of dependencies that are in \code{pkgs}.
+the least number of dependencies that are in \code{packages}.
 This is essentially a topological sort, but it is done
 heuristically. This can be used to e.g., \code{detach} or
 \code{unloadNamespace} packages in order so that they each

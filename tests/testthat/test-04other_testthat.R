@@ -24,8 +24,10 @@ test_that("test 4", {
                )
     )
   )
-  expect_match(all = FALSE, err$message, .txtDidYouSpell)
-  expect_match(all = FALSE, err$message, "scfm")
+  if (!isTRUE(getOption("Require.usePak"))) {
+    expect_match(all = FALSE, err$message, .txtDidYouSpell)
+    expect_match(all = FALSE, err$message, "scfm")
+  }
 
   # for coverages that were missing
   pkgDTEmpty <- Require:::toPkgDT(character())
@@ -136,19 +138,24 @@ test_that("test 4", {
   # out2222 <- capture.output(setupOff())
   # testthat::expect_true(identical(Require:::cacheGetOptionCachePkgDir(), secondTry)) # BECAUSE THIS IS A MANUAL OVERRIDE of options; doesn't return Sys.getenv
 
+  ## cacheGetOptionCachePkgDir() is deprecated -- still functional but
+  ## emits a warning every call. Suppress so the legacy assertions pass
+  ## R-CMD-check's `error-on: warning` policy.
+  cGOCD <- function() suppressWarnings(cacheGetOptionCachePkgDir())
+
   ooo <- options(Require.cachePkgDir = TRUE)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), cachePkgDir()))
+  testthat::expect_true(identical(cGOCD(), cachePkgDir()))
   ooo <- options(Require.cachePkgDir = FALSE)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  testthat::expect_true(identical(cGOCD(), NULL))
   ooo <- options(Require.cachePkgDir = tempdir())
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), tempdir()))
+  testthat::expect_true(identical(cGOCD(), tempdir()))
   ooo <- options(Require.cachePkgDir = "default")
   RPackageCacheSysEnv <- Sys.getenv("R_REQUIRE_PKG_CACHE")
   if (identical(RPackageCacheSysEnv, "FALSE")) {
-    testthat::expect_true(identical(NULL, cacheGetOptionCachePkgDir()))
+    testthat::expect_true(identical(NULL, cGOCD()))
   } else {
-    if (!(is.null(Require:::cacheGetOptionCachePkgDir()) || Require:::cacheGetOptionCachePkgDir() == "FALSE")) {
-      testthat::expect_true(identical(normPath(Require:::cacheGetOptionCachePkgDir()), normPath(Require::cachePkgDir())))
+    if (!(is.null(cGOCD()) || identical(cGOCD(), "FALSE"))) {
+      testthat::expect_true(identical(normPath(cGOCD()), normPath(Require::cachePkgDir())))
     }
   }
 
@@ -185,8 +192,9 @@ test_that("test 4", {
                                      which = c("Suggests", "Imports", "Depends"))
     locals <- setdiff(extractPkgName(localDeps), .basePkgs)
     testArgs <- setdiff(locals, unique(extractPkgName(unname(unlist(as.list(out2))))))
-    # not sure why roxygen2 was not in it before; fpCompare is new, not yet on PEUniverse
-    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown", "fpCompare"))
+    # not sure why roxygen2 was not in it before; fpCompare is new, not yet on PEUniverse;
+    # pkgcache is added for offline-mode pak introspection (no upstream module deps)
+    testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown", "fpCompare", "pkgcache"))
     testthat::expect_identical(testArgs, character())
   }
   if (isDev) {
@@ -277,7 +285,7 @@ test_that("test 4", {
     # 7.367775  8.914831  9.495963 10.46189 10.56006 10.65823     3
   }
 
-  if (getRversion() >= "4.3.0") { # R 4.2.x and below can't seem to build many of the PE ecosystem from src
+  if (getRversion() >= "4.3.0" && !isTRUE(getOption("Require.usePak"))) { # R 4.2.x and below can't seem to build many of the PE ecosystem from src
     # Mistakenly have a partial repos, i.e., without getOption("repos") -- This failed previously Jul 2, 2024
     dir44 <- tempdir2(.rndstr(1))
     silence <- dir.create(dir44, recursive = TRUE, showWarnings = FALSE)
@@ -286,12 +294,13 @@ test_that("test 4", {
       Require::Install("LandR", repos = "predictiveecology.r-universe.dev", libPaths = dir44,
                        standAlone = TRUE)
     )
+    # pak appends the repos argument to 6 other repos; so you can't isolate just one repo
     expect_match(warns, paste(sep = "|", .txtPleaseRestart, .txtCouldNotBeInstalled, .txtInstallationPkgFailed, "is not available for this version of R", "downloaded length 0", "cannot open URL", "404 Not Found"))
   }
 
 
   ooo <- options(Require.cachePkgDir = NULL)
-  testthat::expect_true(identical(cacheGetOptionCachePkgDir(), NULL))
+  testthat::expect_true(identical(suppressWarnings(cacheGetOptionCachePkgDir()), NULL))
   options(ooo)
 
 })

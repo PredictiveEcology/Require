@@ -1,0 +1,6 @@
+Package,Version,GithubRepo,GithubUsername,GithubRef,GithubSHA1
+"crayon","1.4.0",NA,NA,NA,NA
+"lifecycle","1.0.0",NA,NA,NA,NA
+"assertthat","0.2.0",NA,NA,NA,NA
+"withr","2.5.0",NA,NA,NA,NA
+"R6",NA,"R6","r-lib","main","507867875fdeaffbe7f7038291256b798f6bb042"
