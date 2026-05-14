@@ -1920,11 +1920,20 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # parent itself stays installed at an older version (e.g. processx
   # 3.8.6 Imports `ps (>= 1.2.0)`, but 3.9.0 Imports `ps (>= 1.9.3)`,
   # so an unpinned query made `Require("processx")` spuriously upgrade
-  # ps from 1.9.2 to 1.9.3). Skip when `install == "force"`: the user
-  # explicitly asked to upgrade, so pak should resolve to latest.
-  if (!identical(install, "force"))
-    pkgsForPak <- pinInstalledForPak(pkgsForPak, libPaths = libPaths,
-                                     resolvedPkgs = resolvedPkgs)
+  # ps from 1.9.2 to 1.9.3).
+  #
+  # Pin even when install = "force". `install = "force"` is documented to
+  # force the user-requested packages, not their deps. Resolving the dep
+  # tree against the LATEST user-package versions sweeps any transitive
+  # constraint upgrades (e.g. "latest reproducible Imports broom >=
+  # 1.0.13") into the plan, gratuitously bumping broom even though the
+  # installed user package version is still satisfied by the installed
+  # dep. Pinning to installed versions resolves the dep tree from the
+  # constraints the user is already running against, so deps stay where
+  # they are. Users wanting deps refreshed should use update.packages()
+  # or the pak equivalent.
+  pkgsForPak <- pinInstalledForPak(pkgsForPak, libPaths = libPaths,
+                                   resolvedPkgs = resolvedPkgs)
 
   if (!length(pkgsForPak)) return(toPkgDTFull(character()))
 
