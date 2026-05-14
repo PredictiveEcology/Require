@@ -2,6 +2,10 @@
 
 ## enhancements
 
+* Major change. The package dependency and package installation engine now
+  uses `pak` by default. Going forward, this will be the only maintained code.
+  Require handles many cases that `pak` does not handle. See vignette.
+  
 * `Require()` now skips pak's online resolver entirely when every
   package it would install is already in pak's download cache at a
   version that satisfies the user's constraint. Avoids pak's metadata
@@ -22,6 +26,51 @@
   `Require("dplyr (>= 2.0.0)")` no longer mistakenly uses a cached
   `dplyr 1.2.1`. `allInPakCache()` and `pakOfflineInstall()` both
   thread `pkgDT$versionSpec` / `inequality` into the lookup.
+
+* `Require.offlineMode = TRUE` no longer fails when pak's subprocess
+  probes the network at startup. pkgcache fetches
+  `https://bioconductor.org/config.yaml` via `download.file()` even when
+  installing `local::` source refs with `dependencies = FALSE`, which
+  aborts the install when offline. Suppressed by setting
+  `R_BIOC_VERSION` and `R_BIOC_CONFIG_URL` (pointing at pkgcache's
+  bundled `bioc-config.yaml` fixture, located inside pak's private
+  library on most systems) for the duration of the pak call, restored
+  on exit. pak's startup errors are now treated as advisory: the
+  ground-truth `installed.packages()` check decides whether the install
+  actually landed.
+
+* New auto-recovery when an online pak install fails because the network
+  is unreachable. If `pakInstallFiltered()` leaves any row flagged
+  "could not be installed", `Require()` now probes the network once (2
+  seconds) and, if missing, flips `Require.offlineMode = TRUE` and
+  retries the still-missing packages via `pakOfflineInstall()` against
+  the local pak download cache. The happy path is unchanged -- the
+  probe is paid only on the sad path. The auto-set state is cleared on
+  `Require()`'s on.exit so the user's explicit setting is preserved.
+
+* `internetExists()` and `setOfflineModeTRUE()` gained a `force` parameter
+  that probes regardless of `options("Require.checkInternet")`. Default
+  remains `FALSE`, so non-install code paths still respect the user's
+  opt-in.
+
+* New `Require.downloadTimeout` option (default `300L` seconds). Raises
+  `options("timeout")` for the duration of GitHub source-archive downloads
+  in the legacy (non-pak) install path, where R's stock 60s default can
+  abort multi-MB fetches on slow connections (issue #140). Has no effect
+  under `Require.usePak = TRUE`, which uses pak's own libcurl downloader
+  with its own retry/timeout.
+
+* `Require()` now accepts a multi-line string of packages -- newlines split
+  into one package per line, whitespace is trimmed, and blank or
+  `#`-prefixed lines are dropped (issue #147). An unquoted `{...}` block
+  form is also accepted, e.g.
+  `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`;
+  comments inside `{...}` are stripped by R's parser before this function
+  runs, and version constraints like `pkg (>= 1.0)` don't parse in that
+  form -- use the quoted/multi-line-string form for those.
+
+* `pkgDepTopoSort()` first argument renamed from `pkgs` to `packages` for
+  consistency with `Require()`, `Install()`, and `pkgDep()`.
   
 ## Function consolidation for cached packages
 
@@ -226,9 +275,6 @@
   package, pak installs without recompilation -- e.g. dplyr in ~64ms
   on a warm cache instead of failing.
 
-
-## bug fixes
-
 * Offline install on Linux no longer fails to recognise PPM (binary)
   tarballs in pak's cache. PPM binaries share the bare `pkg_ver.tar.gz`
   filename with their source counterparts on Linux; only
@@ -251,55 +297,6 @@
   offline install failed" for packages that had a tarball but failed to
   install. The old single hard-coded "not in pak cache" message was
   actively misleading when the latter happened.
-
-## enhancements
-
-* `Require.offlineMode = TRUE` no longer fails when pak's subprocess
-  probes the network at startup. pkgcache fetches
-  `https://bioconductor.org/config.yaml` via `download.file()` even when
-  installing `local::` source refs with `dependencies = FALSE`, which
-  aborts the install when offline. Suppressed by setting
-  `R_BIOC_VERSION` and `R_BIOC_CONFIG_URL` (pointing at pkgcache's
-  bundled `bioc-config.yaml` fixture, located inside pak's private
-  library on most systems) for the duration of the pak call, restored
-  on exit. pak's startup errors are now treated as advisory: the
-  ground-truth `installed.packages()` check decides whether the install
-  actually landed.
-
-* New auto-recovery when an online pak install fails because the network
-  is unreachable. If `pakInstallFiltered()` leaves any row flagged
-  "could not be installed", `Require()` now probes the network once (2
-  seconds) and, if missing, flips `Require.offlineMode = TRUE` and
-  retries the still-missing packages via `pakOfflineInstall()` against
-  the local pak download cache. The happy path is unchanged -- the
-  probe is paid only on the sad path. The auto-set state is cleared on
-  `Require()`'s on.exit so the user's explicit setting is preserved.
-
-* `internetExists()` and `setOfflineModeTRUE()` gained a `force` parameter
-  that probes regardless of `options("Require.checkInternet")`. Default
-  remains `FALSE`, so non-install code paths still respect the user's
-  opt-in.
-
-* New `Require.downloadTimeout` option (default `300L` seconds). Raises
-  `options("timeout")` for the duration of GitHub source-archive downloads
-  in the legacy (non-pak) install path, where R's stock 60s default can
-  abort multi-MB fetches on slow connections (issue #140). Has no effect
-  under `Require.usePak = TRUE`, which uses pak's own libcurl downloader
-  with its own retry/timeout.
-
-* `Require()` now accepts a multi-line string of packages -- newlines split
-  into one package per line, whitespace is trimmed, and blank or
-  `#`-prefixed lines are dropped (issue #147). An unquoted `{...}` block
-  form is also accepted, e.g.
-  `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`;
-  comments inside `{...}` are stripped by R's parser before this function
-  runs, and version constraints like `pkg (>= 1.0)` don't parse in that
-  form -- use the quoted/multi-line-string form for those.
-
-* `pkgDepTopoSort()` first argument renamed from `pkgs` to `packages` for
-  consistency with `Require()`, `Install()`, and `pkgDep()`.
-
-## bug fixes
 
 * `Require::Install()` with `==` / `<=` version pins now actually installs
   the requested version. Five interacting bugs in the pak install path

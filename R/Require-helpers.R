@@ -1331,6 +1331,12 @@ urlExists <- function(url) {
   ret
 }
 
+#' Internet Exists query
+#'
+#' Simple test for internet availability.
+#'
+#' @returns Logical. `TRUE` if internet is available, `FALSE` if not.
+#'
 #' @inheritParams Require
 #' @param force If `TRUE`, probe even when `options("Require.checkInternet")`
 #'   is `FALSE`. Used at points where we're about to do real work (e.g.,

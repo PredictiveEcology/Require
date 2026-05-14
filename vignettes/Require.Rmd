@@ -16,7 +16,60 @@ editor_options:
 
 `Require` is designed with features that facilitate running R code that is part of a continuous reproducible workflow, from data-to-decisions. For this to work, all functions called by a user should have a property whereby the initial time they are called does the heavy work, and the subsequent times are sufficiently fast that the user is not forced to skip over lines of code when re-running code. This is called "rerun-tolerance" or "idempotency", i.e., the line can be rerun under identical conditions and very quickly return the original result. The package, `reproducible`, has a function `Cache` which can convert many function calls to have this property. It does not work well for functions whose objectives are side-effects, like installing and loading packages. `Require` fills this gap.
 
-## New default as of version 2.0.0
+# How it works -- **Version priority**
+
+Three rules describe `Require`'s behaviour completely:
+
+1. **Version-number requirements drive updates.** If the installed version already satisfies the constraint, no update happens.
+2. **No version requirement, package present → no install.**
+3. **Multiple, apparently incompatible requests for the same package don't error.** 
+
+Therefore, `Require` uses statement about *version* as the top level priority. Any request to install a package without a version statement will only install a package if it is not installed. Otherwise, it will install nothing. Examples:
+
+```
+Require::Require("data.table") # installs if missing, otherwise calls require
+```
+
+The next line installs `data.table` if missing, otherwise checks the locally installed version, installs update if 
+needed to satisfy version statement, then calls require:
+```
+Require::Require("data.table (>=1.18.0)") 
+```
+
+This **version priority** behaviour matches the default `install.packages` behaviour in base R, when a package declares a version dependency. `Require` extends this to a user-specified statement.
+
+See below for more detailed examples.
+
+## Apparent package conflicts
+
+When there are apparent package conflicts, `Require` uses, in this order: 
+
+- version requirement;
+- CRAN priority;
+- order requested
+
+See these examples:
+
+```{r,eval=FALSE}
+# No version specifications — CRAN version installed, or nothing if already installed
+Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
+
+# `HEAD` after the GitHub ref forces the tip of the development branch
+Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
+
+# Same: `HEAD` after the package name (of either form) forces the tip
+Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
+
+# No conflict: version requirement is satisfiable by the named branch
+Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
+                   "PredictiveEcology/reproducible (>= 2.0.10)"))
+
+# Even if a branch doesn't exist, no error if a later requirement names a different branch
+Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
+                   "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
+```
+
+# New default as of version 2.0.0
 
 The internal package dependency algorithm and package installation mechanism now uses `pak` for both instead of a custom package dependency function plus `install.packages`. This allows a user to mix and match `pak` based manual installs with `Require`-based code. I highlight below the differences between using `pak` and `Require`, with these new default internals. The old, native `Require` approach still works, if the user desires to use it: `options(Require.usePak = FALSE)`.
 
@@ -32,24 +85,6 @@ Features include:
 6. Local package **caching** (see below) for fast (re-)installs.
 7. Manages (several types of) conflicting package requests, i.e., different GitHub branches.
 8. Finds specific versions of packages from an incomplete CRAN-like repository (such as r-universe.dev), even when the *version* is not available, but it *is* available on the main CRAN mirrors.
-
-## How it works -- **Version priority**
-
-`Require` uses statement about *version* as the top level priority. Any request to install a package without a version statement will only install a package if it is not installed. Otherwise, it will install nothing. Examples:
-
-```
-Require::Require("data.table") # installs if missing, otherwise calls require
-```
-
-The next line installs `data.table` if missing, otherwise checks the locally installed version, installs update if 
-needed to satisfy version statement, then calls require:
-```
-Require::Require("data.table (>=1.18.0)") 
-```
-
-This **version priority** behaviour matches the default `install.packages` behaviour in base R, when a package declares a version dependency. `Require` extends this to a user-specified statement.
-
-See below for more detailed examples.
 
 ## Rerun-tolerance
 
@@ -84,7 +119,7 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 
 ## How `Require` differs from `pak` in philosophy
 
-By default, as of version 2.0.0, `Require` uses `pak` to do the majority of the work, but applies a different philosophy to package management. The two tools answer the same question — "what should be installed?" — in different ways.
+By default, as of version 2.0.0, `Require` uses `pak` to do calculate package dependency trees and installations. However, `Require` applies a different philosophy to package management. The two tools answer the same question — "what should be installed?" — in different ways.
 
 `Require` is therefore not an *alternative* to `pak`. It is a complementary *wrapper* that applies a different policy on top of `pak`. The differences described in this vignette are differences in **policy**, not in installation machinery. For example: when you call `pak::pkg_install("data.table")`, `pak` will offer to upgrade `data.table` if a newer version is on CRAN. When you call `Require::Install("data.table")`, `Require` first checks whether the installed version already satisfies your request; if it does, nothing happens at all. The actual install, when one is needed, is done by `pak` either way.
 
@@ -182,7 +217,7 @@ This matters because the constraint is what tells `Require` "stop, don't install
 
 When two of your dependencies (or sub-dependencies) point to different sources or different branches of the same package, `pak` reports a conflict and stops. The user is expected to fix it — usually by adding `any::` prefixes or removing one of the requests.
 
-`Require` resolves the conflict for you, using a documented priority:
+`Require` resolves the conflict for you, using the above documented priority:
 
 1. Honour any version constraint that's been written down,
 2. Prefer the CRAN-like version if it satisfies the version constraint,
@@ -295,44 +330,29 @@ When a package isn't in the cache at all, `Require` warns "not in pak cache" —
 
 The "installation engine" rows that used to appear here (parallel downloads, parallel installs, local cache) are no longer differences: `Require` uses `pak` for those.
 
-# Version requirements determine package installation
+## Set it and forget it speed
 
-Three rules describe `Require`'s behaviour completely:
+Because a major objective for `Require` is to be set it and forget it, it cannot use meaningful human time. Thus, when all packages are installed, rerunning `Require` lines is 2x-10x faster than the equivalent `pak::pak` line:
 
-1. **Version-number requirements drive updates.** If the installed version already satisfies the constraint, no update happens.
-2. **No version requirement, package present → no install.**
-3. **Multiple, apparently incompatible requests for the same package don't error.** If a version requirement decides it, that wins. Otherwise CRAN wins. Otherwise the first listed wins.
-
-```{r,eval=FALSE}
-# No version specifications — CRAN version installed, or nothing if already installed
-Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
-
-# `HEAD` after the GitHub ref forces the tip of the development branch
-Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
-
-# Same: `HEAD` after the package name (of either form) forces the tip
-Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
-
-# No conflict: version requirement is satisfiable by the named branch
-Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
-                   "PredictiveEcology/reproducible (>= 2.0.10)"))
-
-# Even if a branch doesn't exist, no error if a later requirement names a different branch
-Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
-                   "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
 ```
+> system.time(pak::pak(c("devtools", "testthat", "roxygen2")))
+                                                                             
+ℹ No downloads are needed
+✔ 3 pkgs + 90 deps: kept 92 [1.4s]
+   user  system elapsed 
+   0.00    0.00    1.47 
+   
+> system.time(Require::Install(c("devtools", "testthat", "roxygen2")))
+Require/pak skipping new package dependency identification: using memory cache (93 packages)
+No packages to install/update
+   user  system elapsed 
+   0.04    0.00    0.20 
+```
+
 
 # Why is it fast?
 
-Some of the features make it fast the first time being used on a system, some make it fast the second & subsequent time on a system (which can be first time in a new project). These features are caching and parallel downloads (the latter via `pak`).
-
-## Caching
-
-`Require` inherits `pak` caching, if `Require.usePak = TRUE)`, and adds a few others. 
-
-### Inherited from `pak`
-
-`Require` (via `pak` if `Require.usePak = TRUE)`) keeps a local cache of: package files (source or binary, including binaries it has built locally from source); the package dependency tree (per session). Together, these speed up installation on a computer that can access the local cache, e.g., for each new project. 
+`pak` is already fast due to parallel downloads and package caching. `Require` adds a few other features for speed.
 
 ### Extra from `Require`
 
