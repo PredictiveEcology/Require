@@ -404,8 +404,14 @@ Require <- function(packages,
       pkgDT <- trimRedundancies(pkgDT)
 
       pkgDT <- updatePackagesWithNames(pkgDT, packages)
-      if (!isFALSE(require))
-        pkgDT <- recordLoadOrder(packages, pkgDT)
+      ## Always record loadOrder, even when require = FALSE. loadOrder is the
+      ## marker for "user explicitly asked for this package" -- whichToInstall
+      ## relies on it (R/Require2.R: askedByUser logic) to mark force-install
+      ## rows as needInstall = .txtInstall. Gating this on `require` meant
+      ## Install(pkg, install = "force") -- which calls Require(require=FALSE)
+      ## -- silently skipped pak install entirely. doLoads at L1093 already
+      ## handles both "loadOrder set" and "loadOrder NULL" cases.
+      pkgDT <- recordLoadOrder(packages, pkgDT)
       if (!is.null(pkgDT[["Version"]]))
         setnames(pkgDT, old = "Version", new = "VersionOnRepos")
       pkgDT <- installedVers(pkgDT, libPaths = libPaths, standAlone = standAlone)
