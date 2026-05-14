@@ -437,7 +437,7 @@ Require <- function(packages,
       if (install %in% "force") {
         wh <- which(pkgDT$Package %in% extractPkgName(packages))
         set(pkgDT, wh, "installedVersionOK", FALSE)
-        set(pkgDT, wh, "forceInstall", FALSE)
+        set(pkgDT, wh, "forceInstall", TRUE)
       }
 
       needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
