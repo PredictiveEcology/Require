@@ -2683,10 +2683,20 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       # CRAN-like refs: dependencies=NA so pak orders parallel source builds by
       # the build-time hard-dep graph (see comment block above).
       ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
-      # CRAN-batch upgrade: TRUE when caller passed install = "force" (else
-      # pak keeps the cached version even if it doesn't satisfy a `(>=X)` pin
-      # the user explicitly asked Require to force-reinstall).
-      cranUp <- isTRUE(forceUpgrade)
+      # CRAN-batch upgrade: always FALSE. pak's `upgrade` is a global flag
+      # applied to every package in the resolved dep graph -- so passing
+      # `upgrade=TRUE` for `install = "force"` would gratuitously upgrade
+      # every transitive CRAN dep (e.g. broom, mgcv, sf, survival) even
+      # when the installed version still satisfies the user package's
+      # Imports. `install = "force"` is documented to force the
+      # user-requested packages, not their deps; users wanting deps
+      # upgraded should use update.packages() or the pak equivalent.
+      # Note: with upgrade=FALSE, pak skips already-installed user
+      # packages that satisfy "any::pkg" (i.e. any installed version),
+      # so already-current packages are not literally re-downloaded.
+      # True force-reinstall of an already-current package would need
+      # remove.packages() first; left as future work.
+      cranUp <- FALSE
       err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
         # Two separate calls when both types are present
         e1 <- try(pakCall(
