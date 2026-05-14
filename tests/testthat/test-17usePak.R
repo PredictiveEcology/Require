@@ -1516,9 +1516,13 @@ test_that("silentlyFailed warning surfaces a Remotes hint when applicable (sourc
   oneLine <- paste(src, collapse = "\n")
 
   ## Hint construction must call findRemoteRefsForMissing in the
-  ## silentlyFailed branch.
+  ## silentlyFailed branch. The "missing" arg may be either the bare
+  ## silentlyFailed list or an expanded one that includes packages
+  ## parsed from lastPakErr's "Can't find package called X" lines
+  ## (so cascade failures surface the right Remote-only hint).
   testthat::expect_true(
-    grepl("findRemoteRefsForMissing\\(silentlyFailed", oneLine),
+    grepl("findRemoteRefsForMissing\\((silentlyFailed|missingForRemotesLookup)",
+          oneLine),
     info = "silentlyFailed warning must consult findRemoteRefsForMissing for Remote-only packages"
   )
 
