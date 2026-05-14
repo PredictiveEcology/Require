@@ -1784,9 +1784,9 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
     # (confirmEqualsDontViolateInequalitiesThenTrim + trimRedundancies) pick the winner.
     # Also pass any accumulated url:: archive refs to each call, so packages with
     # archived transitive deps (e.g. pryr) can still be resolved.
-    messageVerbose("Note: batch dependency resolution found unresolvable conflicts; ",
+    messageVerbose("Require Note: pak's batch dependency resolution found unresolvable conflicts; ",
                    "switching to per-package resolution. ",
-                   "This is normal when mixing CRAN and GitHub packages -- Require will handle it.",
+                   "This is normal when mixing CRAN and GitHub packages.",
                    verbose = verbose, verboseLevel = 1)
     archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
     nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
