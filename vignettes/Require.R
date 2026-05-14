@@ -1,4 +1,23 @@
 ## ----eval=FALSE---------------------------------------------------------------
+# # No version specifications — CRAN version installed, or nothing if already installed
+# Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
+# 
+# # `HEAD` after the GitHub ref forces the tip of the development branch
+# Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
+# 
+# # Same: `HEAD` after the package name (of either form) forces the tip
+# Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
+# 
+# # No conflict: version requirement is satisfiable by the named branch
+# Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
+#                    "PredictiveEcology/reproducible (>= 2.0.10)"))
+# 
+# # Even if a branch doesn't exist, no error if a later requirement names a different branch
+# Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
+#                    "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
+
+
+## ----eval=FALSE---------------------------------------------------------------
 # Require::Install(
 #   c("PredictiveEcology/reproducible@development (HEAD)",
 #     "PredictiveEcology/SpaDES.core@development (>=2.0.5.9004)"))
@@ -42,23 +61,4 @@
 # 
 # # Require: succeeds — fetches the most recent archived copy
 # Require::Install("knn")
-
-
-## ----eval=FALSE---------------------------------------------------------------
-# # No version specifications — CRAN version installed, or nothing if already installed
-# Require::Install(c("PredictiveEcology/reproducible@development", "reproducible"))
-# 
-# # `HEAD` after the GitHub ref forces the tip of the development branch
-# Require::Install(c("PredictiveEcology/reproducible@development (HEAD)", "reproducible"))
-# 
-# # Same: `HEAD` after the package name (of either form) forces the tip
-# Require::Install(c("PredictiveEcology/reproducible@development", "reproducible (HEAD)"))
-# 
-# # No conflict: version requirement is satisfiable by the named branch
-# Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
-#                    "PredictiveEcology/reproducible (>= 2.0.10)"))
-# 
-# # Even if a branch doesn't exist, no error if a later requirement names a different branch
-# Require::Install(c("PredictiveEcology/reproducible@modsForLargeArchives (>= 2.0.10.9010)",
-#                    "PredictiveEcology/reproducible@validityTest (>= 2.0.9)"))
 

@@ -119,7 +119,7 @@ will keep the project at the bleeding edge of the development branch of `reprodu
 
 ## How `Require` differs from `pak` in philosophy
 
-By default, as of version 2.0.0, `Require` uses `pak` to do calculate package dependency trees and installations. However, `Require` applies a different philosophy to package management. The two tools answer the same question — "what should be installed?" — in different ways.
+By default, as of version 2.0.0, `Require` uses `pak` to calculate package dependency trees and installations. However, `Require` applies a different philosophy to package management. The two tools answer the same question — "what should be installed?" — in different ways.
 
 `Require` is therefore not an *alternative* to `pak`. It is a complementary *wrapper* that applies a different policy on top of `pak`. The differences described in this vignette are differences in **policy**, not in installation machinery. For example: when you call `pak::pkg_install("data.table")`, `pak` will offer to upgrade `data.table` if a newer version is on CRAN. When you call `Require::Install("data.table")`, `Require` first checks whether the installed version already satisfies your request; if it does, nothing happens at all. The actual install, when one is needed, is done by `pak` either way.
 
@@ -217,11 +217,7 @@ This matters because the constraint is what tells `Require` "stop, don't install
 
 When two of your dependencies (or sub-dependencies) point to different sources or different branches of the same package, `pak` reports a conflict and stops. The user is expected to fix it — usually by adding `any::` prefixes or removing one of the requests.
 
-`Require` resolves the conflict for you, using the above documented priority:
-
-1. Honour any version constraint that's been written down,
-2. Prefer the CRAN-like version if it satisfies the version constraint,
-3. Use the order in which packages were listed.
+`Require` resolves the conflict for you, using the priority documented above (version requirement, then CRAN, then order requested).
 
 ```{r, eval=FALSE,message=TRUE}
 # pak: errors out — both branches of LandR are requested

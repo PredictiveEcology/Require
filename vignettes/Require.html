@@ -372,8 +372,63 @@ The package, <code>reproducible</code>, has a function
 property. It does not work well for functions whose objectives are
 side-effects, like installing and loading packages. <code>Require</code>
 fills this gap.</p>
-<div id="new-default-as-of-version-2.0.0" class="section level2">
-<h2>New default as of version 2.0.0</h2>
+</div>
+<div id="how-it-works-version-priority" class="section level1">
+<h1>How it works – <strong>Version priority</strong></h1>
+<p>Three rules describe <code>Require</code>’s behaviour completely:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Version-number requirements drive updates.</strong> If the
+installed version already satisfies the constraint, no update
+happens.</li>
+<li><strong>No version requirement, package present → no
+install.</strong></li>
+<li><strong>Multiple, apparently incompatible requests for the same
+package don’t error.</strong></li>
+</ol>
+<p>Therefore, <code>Require</code> uses statement about <em>version</em>
+as the top level priority. Any request to install a package without a
+version statement will only install a package if it is not installed.
+Otherwise, it will install nothing. Examples:</p>
+<pre><code>Require::Require(&quot;data.table&quot;) # installs if missing, otherwise calls require</code></pre>
+<p>The next line installs <code>data.table</code> if missing, otherwise
+checks the locally installed version, installs update if needed to
+satisfy version statement, then calls require:</p>
+<pre><code>Require::Require(&quot;data.table (&gt;=1.18.0)&quot;) </code></pre>
+<p>This <strong>version priority</strong> behaviour matches the default
+<code>install.packages</code> behaviour in base R, when a package
+declares a version dependency. <code>Require</code> extends this to a
+user-specified statement.</p>
+<p>See below for more detailed examples.</p>
+<div id="apparent-package-conflicts" class="section level2">
+<h2>Apparent package conflicts</h2>
+<p>When there are apparent package conflicts, <code>Require</code> uses,
+in this order:</p>
+<ul>
+<li>version requirement;</li>
+<li>CRAN priority;</li>
+<li>order requested</li>
+</ul>
+<p>See these examples:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># No version specifications — CRAN version installed, or nothing if already installed</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># `HEAD` after the GitHub ref forces the tip of the development branch</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># Same: `HEAD` after the package name (of either form) forces the tip</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible (HEAD)&quot;</span>))</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># No conflict: version requirement is satisfiable by the named branch</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;= 2.0.10.9010)&quot;</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>))</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co"># Even if a branch doesn&#39;t exist, no error if a later requirement names a different branch</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;= 2.0.10.9010)&quot;</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible@validityTest (&gt;= 2.0.9)&quot;</span>))</span></code></pre></div>
+</div>
+</div>
+<div id="new-default-as-of-version-2.0.0" class="section level1">
+<h1>New default as of version 2.0.0</h1>
 <p>The internal package dependency algorithm and package installation
 mechanism now uses <code>pak</code> for both instead of a custom package
 dependency function plus <code>install.packages</code>. This allows a
@@ -383,7 +438,6 @@ between using <code>pak</code> and <code>Require</code>, with these new
 default internals. The old, native <code>Require</code> approach still
 works, if the user desires to use it:
 <code>options(Require.usePak = FALSE)</code>.</p>
-</div>
 <div id="key-features-when-usepak-true" class="section level2">
 <h2>Key features (when <code>usePak = TRUE</code>)</h2>
 <p>Features include:</p>
@@ -407,23 +461,6 @@ repository (such as r-universe.dev), even when the <em>version</em> is
 not available, but it <em>is</em> available on the main CRAN
 mirrors.</li>
 </ol>
-</div>
-<div id="how-it-works-version-priority" class="section level2">
-<h2>How it works – <strong>Version priority</strong></h2>
-<p><code>Require</code> uses statement about <em>version</em> as the top
-level priority. Any request to install a package without a version
-statement will only install a package if it is not installed. Otherwise,
-it will install nothing. Examples:</p>
-<pre><code>Require::Require(&quot;data.table&quot;) # installs if missing, otherwise calls require</code></pre>
-<p>The next line installs <code>data.table</code> if missing, otherwise
-checks the locally installed version, installs update if needed to
-satisfy version statement, then calls require:</p>
-<pre><code>Require::Require(&quot;data.table (&gt;=1.18.0)&quot;) </code></pre>
-<p>This <strong>version priority</strong> behaviour matches the default
-<code>install.packages</code> behaviour in base R, when a package
-declares a version dependency. <code>Require</code> extends this to a
-user-specified statement.</p>
-<p>See below for more detailed examples.</p>
 </div>
 <div id="rerun-tolerance" class="section level2">
 <h2>Rerun-tolerance</h2>
@@ -471,9 +508,9 @@ necessary for dependencies. More likely, they will want to have a
 mixture of these strategies, i.e., bleeding edge with some code, but
 only if necessary with others. Thus, <code>Require</code> offers
 programmatic control for this. For example</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>,</span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>    <span class="st">&quot;PredictiveEcology/SpaDES.core@development (&gt;=2.0.5.9004)&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>    <span class="st">&quot;PredictiveEcology/SpaDES.core@development (&gt;=2.0.5.9004)&quot;</span>))</span></code></pre></div>
 <p>will keep the project at the bleeding edge of the development branch
 of <code>reproducible</code>, but will only update if necessary (based
 on the version needed, expressed by the inequality) for the development
@@ -489,7 +526,8 @@ which packages.</p>
 <h2>How <code>Require</code> differs from <code>pak</code> in
 philosophy</h2>
 <p>By default, as of version 2.0.0, <code>Require</code> uses
-<code>pak</code> to do the majority of the work, but applies a different
+<code>pak</code> to calculate package dependency trees and
+installations. However, <code>Require</code> applies a different
 philosophy to package management. The two tools answer the same question
 — “what should be installed?” — in different ways.</p>
 <p><code>Require</code> is therefore not an <em>alternative</em> to
@@ -627,7 +665,7 @@ separate <code>library()</code> call.</p>
 <p><code>Require::Require()</code> does both: it installs (if needed)
 and then loads. The whole package-management story for a script can fit
 on one line:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">&quot;data.table (&gt;= 1.16)&quot;</span>, <span class="st">&quot;lme4&quot;</span>, <span class="st">&quot;PredictiveEcology/SpaDES.core@development&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">Require</span>(<span class="fu">c</span>(<span class="st">&quot;data.table (&gt;= 1.16)&quot;</span>, <span class="st">&quot;lme4&quot;</span>, <span class="st">&quot;PredictiveEcology/SpaDES.core@development&quot;</span>))</span></code></pre></div>
 </div>
 <div id="version-constraints-in-the-package-name" class="section level2">
 <h2>Version constraints in the package name</h2>
@@ -636,17 +674,17 @@ on one line:</p>
 <code>&gt;=</code> or <code>&lt;=</code> directly — you would have to
 either pin a specific version yourself or put the constraint in a
 <code>DESCRIPTION</code> file:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># Won&#39;t work — pak does not parse this</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;data.table (&gt;= 1.8.0)&quot;</span>))</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co"># What you have to write instead — pick an exact version yourself</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;data.table@1.8.0&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Won&#39;t work — pak does not parse this</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;data.table (&gt;= 1.8.0)&quot;</span>))</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co"># What you have to write instead — pick an exact version yourself</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;data.table@1.8.0&quot;</span>)</span></code></pre></div>
 <p>Consistent with the version requirements that can be specified in a
 package DESCRIPTION file, <code>Require</code> accepts the full set of
 R-style constraints right in the call, mixed freely:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;data.table (&gt;= 1.16)&quot;</span>,</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                   <span class="st">&quot;stringfish (&lt;= 0.15.8)&quot;</span>,</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                   <span class="st">&quot;qs (== 0.27.3)&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;data.table (&gt;= 1.16)&quot;</span>,</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>                   <span class="st">&quot;stringfish (&lt;= 0.15.8)&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                   <span class="st">&quot;qs (== 0.27.3)&quot;</span>))</span></code></pre></div>
 <p>This matters because the constraint is what tells
 <code>Require</code> “stop, don’t install” or “yes, please upgrade”. The
 constraint is the policy.</p>
@@ -658,25 +696,20 @@ different sources or different branches of the same package,
 <code>pak</code> reports a conflict and stops. The user is expected to
 fix it — usually by adding <code>any::</code> prefixes or removing one
 of the requests.</p>
-<p><code>Require</code> resolves the conflict for you, using a
-documented priority:</p>
-<ol style="list-style-type: decimal">
-<li>Honour any version constraint that’s been written down,</li>
-<li>Prefer the CRAN-like version if it satisfies the version
-constraint,</li>
-<li>Use the order in which packages were listed.</li>
-</ol>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co"># pak: errors out — both branches of LandR are requested</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pak</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>,</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>               <span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>)))</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co"># Require: takes them in order — main wins</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>,</span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>))</span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co"># Require: takes by version requirement — development wins because it satisfies the constraint</span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>,</span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/LandR@development (&gt;= 1.1.5)&quot;</span>))</span></code></pre></div>
+<p><code>Require</code> resolves the conflict for you, using the
+priority documented above (version requirement, then CRAN, then order
+requested).</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># pak: errors out — both branches of LandR are requested</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pak</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>               <span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>)))</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co"># Require: takes them in order — main wins</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/LandR@development&quot;</span>))</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co"># Require: takes by version requirement — development wins because it satisfies the constraint</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/LandR@main&quot;</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/LandR@development (&gt;= 1.1.5)&quot;</span>))</span></code></pre></div>
 <p>The same conflict-resolution applies to mismatches between a CRAN
 package and a GitHub <code>Remotes</code> field deep inside someone
 else’s package: <code>Require</code> picks something and explains why,
@@ -693,11 +726,11 @@ that workaround doesn’t always help.</p>
 automatically and continues. This means a workflow that worked yesterday
 continues to work today, even if a CRAN package has been archived
 overnight.</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co"># pak: fails — `knn` is archived</span></span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="st">&quot;knn&quot;</span>))</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="co"># Require: succeeds — fetches the most recent archived copy</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="st">&quot;knn&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co"># pak: fails — `knn` is archived</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="fu">try</span>(pak<span class="sc">::</span><span class="fu">pkg_install</span>(<span class="st">&quot;knn&quot;</span>))</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co"># Require: succeeds — fetches the most recent archived copy</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="st">&quot;knn&quot;</span>)</span></code></pre></div>
 </div>
 <div id="installing-from-a-snapshot" class="section level2">
 <h2>Installing from a snapshot</h2>
@@ -869,8 +902,8 @@ with no internet, as long as they (or compatible builds of them) were
 downloaded once before. This is useful in some settings, including e.g.,
 a high performance computer cluster that has no internet access on the
 compute nodes. Set:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">options</span>(<span class="at">Require.offlineMode =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Require</span>(<span class="st">&quot;dplyr&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">options</span>(<span class="at">Require.offlineMode =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Require</span>(<span class="st">&quot;dplyr&quot;</span>)</span></code></pre></div>
 <p><code>Require</code> looks for each package in the local
 <code>pak</code> cache and lets <code>pak</code> install from there.
 With a warm cache, installs are near-instant — no rebuild, no
@@ -993,56 +1026,31 @@ install failed”, so the cause is unambiguous.</p>
 downloads, parallel installs, local cache) are no longer differences:
 <code>Require</code> uses <code>pak</code> for those.</p>
 </div>
+<div id="set-it-and-forget-it-speed" class="section level2">
+<h2>Set it and forget it speed</h2>
+<p>Because a major objective for <code>Require</code> is to be set it
+and forget it, it cannot use meaningful human time. Thus, when all
+packages are installed, rerunning <code>Require</code> lines is 2x-10x
+faster than the equivalent <code>pak::pak</code> line:</p>
+<pre><code>&gt; system.time(pak::pak(c(&quot;devtools&quot;, &quot;testthat&quot;, &quot;roxygen2&quot;)))
+                                                                             
+ℹ No downloads are needed
+✔ 3 pkgs + 90 deps: kept 92 [1.4s]
+   user  system elapsed 
+   0.00    0.00    1.47 
+   
+&gt; system.time(Require::Install(c(&quot;devtools&quot;, &quot;testthat&quot;, &quot;roxygen2&quot;)))
+Require/pak skipping new package dependency identification: using memory cache (93 packages)
+No packages to install/update
+   user  system elapsed 
+   0.04    0.00    0.20 </code></pre>
 </div>
-<div id="version-requirements-determine-package-installation" class="section level1">
-<h1>Version requirements determine package installation</h1>
-<p>Three rules describe <code>Require</code>’s behaviour completely:</p>
-<ol style="list-style-type: decimal">
-<li><strong>Version-number requirements drive updates.</strong> If the
-installed version already satisfies the constraint, no update
-happens.</li>
-<li><strong>No version requirement, package present → no
-install.</strong></li>
-<li><strong>Multiple, apparently incompatible requests for the same
-package don’t error.</strong> If a version requirement decides it, that
-wins. Otherwise CRAN wins. Otherwise the first listed wins.</li>
-</ol>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># No version specifications — CRAN version installed, or nothing if already installed</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a><span class="co"># `HEAD` after the GitHub ref forces the tip of the development branch</span></span>
-<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development (HEAD)&quot;</span>, <span class="st">&quot;reproducible&quot;</span>))</span>
-<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a></span>
-<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co"># Same: `HEAD` after the package name (of either form) forces the tip</span></span>
-<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@development&quot;</span>, <span class="st">&quot;reproducible (HEAD)&quot;</span>))</span>
-<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a></span>
-<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co"># No conflict: version requirement is satisfiable by the named branch</span></span>
-<span id="cb11-11"><a href="#cb11-11" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;= 2.0.10.9010)&quot;</span>,</span>
-<span id="cb11-12"><a href="#cb11-12" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible (&gt;= 2.0.10)&quot;</span>))</span>
-<span id="cb11-13"><a href="#cb11-13" tabindex="-1"></a></span>
-<span id="cb11-14"><a href="#cb11-14" tabindex="-1"></a><span class="co"># Even if a branch doesn&#39;t exist, no error if a later requirement names a different branch</span></span>
-<span id="cb11-15"><a href="#cb11-15" tabindex="-1"></a>Require<span class="sc">::</span><span class="fu">Install</span>(<span class="fu">c</span>(<span class="st">&quot;PredictiveEcology/reproducible@modsForLargeArchives (&gt;= 2.0.10.9010)&quot;</span>,</span>
-<span id="cb11-16"><a href="#cb11-16" tabindex="-1"></a>                   <span class="st">&quot;PredictiveEcology/reproducible@validityTest (&gt;= 2.0.9)&quot;</span>))</span></code></pre></div>
 </div>
 <div id="why-is-it-fast" class="section level1">
 <h1>Why is it fast?</h1>
-<p>Some of the features make it fast the first time being used on a
-system, some make it fast the second &amp; subsequent time on a system
-(which can be first time in a new project). These features are caching
-and parallel downloads (the latter via <code>pak</code>).</p>
-<div id="caching" class="section level2">
-<h2>Caching</h2>
-<p><code>Require</code> inherits <code>pak</code> caching, if
-<code>Require.usePak = TRUE)</code>, and adds a few others.</p>
-<div id="inherited-from-pak" class="section level3">
-<h3>Inherited from <code>pak</code></h3>
-<p><code>Require</code> (via <code>pak</code> if
-<code>Require.usePak = TRUE)</code>) keeps a local cache of: package
-files (source or binary, including binaries it has built locally from
-source); the package dependency tree (per session). Together, these
-speed up installation on a computer that can access the local cache,
-e.g., for each new project.</p>
-</div>
+<p><code>pak</code> is already fast due to parallel downloads and
+package caching. <code>Require</code> adds a few other features for
+speed.</p>
 <div id="extra-from-require" class="section level3">
 <h3>Extra from <code>Require</code></h3>
 <p>If the packages supplied to a <code>Require/Install</code> call are
@@ -1051,7 +1059,6 @@ the package dependency tree is not re-calculated as it is stored on disk
 and in memory (so in-session re-runs are very fast). Since this is a
 slow process for &gt;200 packages, users will see near instant package
 assessments.</p>
-</div>
 </div>
 </div>
 <div id="renv-and-require" class="section level1">
