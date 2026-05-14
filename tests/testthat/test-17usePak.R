@@ -1338,27 +1338,25 @@ test_that("pakInstallFiltered toInstall filter selects only force-marked user ro
     info = "transitive deps must not enter pakInstallFiltered's install set under install='force'")
 })
 
-# (b) -- pakRetryLoop CRAN-batch upgrade flag is FALSE regardless of forceUpgrade
-test_that("pakRetryLoop CRAN-batch upgrade flag is FALSE even with forceUpgrade=TRUE", {
-  ## Read the source of pakInstallFiltered (where pakRetryLoop is defined)
-  ## and assert the line that derives cranUp explicitly hard-codes FALSE.
-  ## If a future refactor reintroduces propagation of forceUpgrade to the
-  ## CRAN batch's `upgrade=` flag, this test will fail loudly.
+# (b) -- pakRetryLoop CRAN-batch upgrade flag tracks forceUpgrade.
+#         The "don't gratuitously upgrade deps" property is achieved at the
+#         dep-tree level by pinInstalledForPak()'s `pkg@<installedVersion>`
+#         pins (always-on as of fix(install-force): pin installed user
+#         packages); pak treats those exact pins as already-satisfied and
+#         doesn't upgrade them. cranUp=TRUE on force is still needed so
+#         that user packages at versions failing their `>=` constraint
+#         do get installed -- with cranUp=FALSE pak skipped them since
+#         the bare "any::pkg" form considers any installed version OK
+#         (regression caught by test-04other on Windows).
+test_that("pakRetryLoop CRAN-batch upgrade flag is derived from forceUpgrade", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
 
-  ## The fix: cranUp must NOT be derived from forceUpgrade. Specifically,
-  ## there must be no `cranUp <- isTRUE(forceUpgrade)` line, and the
-  ## assignment `cranUp <- FALSE` must be present.
-  testthat::expect_false(
-    grepl("cranUp\\s*<-\\s*isTRUE\\(forceUpgrade\\)", oneLine),
-    info = paste0("pakRetryLoop must NOT propagate forceUpgrade to the CRAN-batch ",
-                  "upgrade flag -- doing so causes transitive CRAN deps to be ",
-                  "gratuitously upgraded under install = 'force'")
-  )
   testthat::expect_true(
-    grepl("cranUp\\s*<-\\s*FALSE", oneLine),
-    info = "pakRetryLoop's CRAN-batch upgrade flag (cranUp) must be FALSE"
+    grepl("cranUp\\s*<-\\s*isTRUE\\(forceUpgrade\\)", oneLine),
+    info = paste0("cranUp must track forceUpgrade -- hard-coding FALSE breaks ",
+                  "the force-install path for user pkgs that fail their >= ",
+                  "constraint, since pak skips when installed satisfies 'any::'")
   )
 })
 
@@ -1381,19 +1379,16 @@ test_that("pakRetryLoop GitHub batch still uses upgrade=TRUE", {
   )
 })
 
-# (b) -- single-call branch (CRAN-only batch) must also use upgrade=FALSE
-#         even when forceUpgrade would otherwise have been TRUE.
-test_that("pakRetryLoop single-call CRAN-only path does not depend on forceUpgrade", {
+# (b) -- single-call branch upgrade flag is `any(ghOrUrl) || cranUp`,
+#         so a CRAN-only batch tracks cranUp (=forceUpgrade) and a GH-only
+#         batch always upgrades. No leaking of forceUpgrade through any
+#         other path.
+test_that("pakRetryLoop single-call branch combines ghOrUrl with cranUp (not forceUpgrade directly)", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
-
-  ## In the single-call (all-CRAN or all-GH) branch the upgrade flag is
-  ## derived as:  up <- any(ghOrUrl) || cranUp.
-  ## With cranUp pinned to FALSE, an all-CRAN batch resolves to FALSE.
-  ## Confirm cranUp is the only knob that gates the CRAN-only path.
   testthat::expect_true(
     grepl("up\\s*<-\\s*any\\(ghOrUrl\\)\\s*\\|\\|\\s*cranUp", oneLine),
-    info = "single-call branch must combine ghOrUrl with cranUp, not with forceUpgrade")
+    info = "single-call branch must combine ghOrUrl with cranUp")
 })
 
 # (c) -- pakDepsToPkgDT must pin installed user packages even under
