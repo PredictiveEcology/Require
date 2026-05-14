@@ -1731,44 +1731,14 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
       }
     }
 
-    # --- Handle "Can't find package called X" ---
-    # Two cases handled in order:
-    #   (a) X is listed in the `Remotes:` field of a locally-installed user
-    #       package (e.g. fireSenseUtils' DESCRIPTION has
-    #       `Remotes: PredictiveEcology/clusters`). pak's CRAN-style resolver
-    #       does NOT follow Remotes when the parent ref came from a CRAN/
-    #       r-universe-style source (only when the parent is itself a GitHub
-    #       ref), so the user gets "Can't find package called clusters" even
-    #       though the Remote says exactly where to find it. Inject the
-    #       Remote's `owner/X` ref into pkgsForPak so pak can resolve it.
-    #   (b) X is an archived CRAN package -- find the archive URL via
-    #       pakGetArchive() and inject a `url::` ref.
+    # --- Handle "Can't find package called X" (archived packages) ---
     cantLines <- grep(.txtCantFindPackage, errLines, value = TRUE)
     cantPkgs  <- trimws(sub(paste0(".*", .txtCantFindPackage), "", cantLines))
     cantPkgs  <- sub("\\.$", "", cantPkgs)
     cantPkgs  <- cantPkgs[nzchar(cantPkgs) & !grepl("::", cantPkgs)]
     if (length(cantPkgs)) {
       newRefs <- character(0)
-      resolvedViaRemotes <- character(0)
-      # Case (a): try to satisfy each cantPkg via Remotes of locally-installed
-      # user-requested packages. pkgsForPak's package names give us the
-      # candidate parents to check.
-      remoteRefs <- findRemoteRefsForMissing(cantPkgs,
-                                              candidatePkgs = pkgsForPak,
-                                              libPaths = libPaths)
-      if (length(remoteRefs)) {
-        for (cp in names(remoteRefs)) {
-          newRefs <- c(newRefs, remoteRefs[[cp]])
-          conflictRows[[length(conflictRows) + 1L]] <-
-            list(Package = cp,
-                 Conflict   = paste0(cp, " (not on CRAN; in Remotes)"),
-                 Resolution = paste0("use ", remoteRefs[[cp]]))
-        }
-        resolvedViaRemotes <- names(remoteRefs)
-      }
-      # Case (b): for any cantPkg not satisfied via Remotes, try CRAN archives.
-      remainingCant <- setdiff(cantPkgs, resolvedViaRemotes)
-      for (cp in remainingCant) {
+      for (cp in cantPkgs) {
         urlRef <- tryCatch(
           pakGetArchive(cp, packages = cp, whRm = 1L),
           error = function(e) cp
@@ -3426,10 +3396,43 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     failedFullPaths <- toInstall$packageFullName[toInstall$Package %in% silentlyFailed]
     ghHint <- if (any(grepl("/", failedFullPaths, fixed = TRUE)))
       paste0("\n", .txtDidYouSpell) else ""
+    # pak's CRAN-style resolver does NOT follow Remotes: from CRAN/r-universe
+    # parents (only from GitHub-style parents). If any silentlyFailed package
+    # appears in the Remotes: of an installed candidate package, that's almost
+    # certainly the failure mode -- emit a clear, actionable hint pointing at
+    # the workaround (explicitly include the Remote's owner/pkg ref in the
+    # Install() call). This is diagnostic only; we do NOT auto-inject the ref,
+    # because the user may legitimately want to control which source provides
+    # the package, and pak's choice to ignore Remotes from CRAN-style parents
+    # is itself an intentional design choice we shouldn't paper over silently.
+    remoteRefs <- tryCatch(
+      findRemoteRefsForMissing(silentlyFailed,
+                                candidatePkgs = toInstall$Package,
+                                libPaths      = libPaths),
+      error = function(e) character(0))
+    remotesHint <- ""
+    if (length(remoteRefs)) {
+      lines <- vapply(names(remoteRefs), function(mp) {
+        paste0("  - `", mp, "` is declared in a candidate's Remotes: as `",
+               remoteRefs[[mp]], "`")
+      }, character(1))
+      example <- paste0(
+        "Require::Install(c(",
+        paste0("\"", c(unname(remoteRefs), failedFullPaths[!failedFullPaths %in% names(remoteRefs)]),
+               "\"", collapse = ", "),
+        "), install = \"force\")")
+      remotesHint <- paste0(
+        "\nNote: pak does not follow `Remotes:` when resolving packages from ",
+        "CRAN-like sources (CRAN, r-universe). The following candidate-only-",
+        "in-Remotes refs were found:\n",
+        paste(lines, collapse = "\n"),
+        "\nWorkaround: include the GitHub ref explicitly, e.g.\n  ", example)
+    }
     warning(.txtCouldNotBeInstalled, ": ",
             paste(silentlyFailed, collapse = ", "),
             if (nzchar(reason)) paste0("; ", reason) else "",
             ghHint,
+            remotesHint,
             call. = FALSE, immediate. = TRUE)
   }
 

@@ -1426,14 +1426,19 @@ test_that("pakDepsToPkgDT pins installed user packages even under install='force
     info = "pakDepsToPkgDT must still call pinInstalledForPak to keep deps stable")
 })
 
-# (d) -- "Can't find package called X" must consult Remotes: of locally-
-#        installed candidate packages before falling through to CRAN archive
-#        lookup. pak's CRAN-style resolver doesn't follow Remotes (unlike
-#        devtools/remotes), so a Remote-only package like
-#        `PredictiveEcology/clusters` (listed in fireSenseUtils' Remotes)
-#        produces "Can't find package called clusters" with no further
-#        explanation. Require should harvest the Remote ref from the
-#        installed parent's DESCRIPTION and feed it to pak.
+# (d) -- "could not be installed: X" diagnostic: when pak's CRAN-style
+#        resolver fails to find a Remote-only package (e.g.
+#        `PredictiveEcology/clusters` listed in fireSenseUtils' Remotes:
+#        but ignored by pak when fireSenseUtils is resolved from r-universe),
+#        the existing silentlyFailed warning was a bare "could not be
+#        installed: clusters" with no actionable info. After the fix,
+#        pakInstallFiltered's warning appends a hint pointing at the
+#        Remote ref and a copy-pasteable workaround Install() call.
+#        The helper `findRemoteRefsForMissing()` does the lookup; it is
+#        diagnostic-only -- we do NOT auto-inject the ref, because pak's
+#        choice to ignore Remotes from CRAN-style parents is itself a
+#        design choice (CRAN won't run arbitrary GitHub Remotes) that
+#        Require shouldn't paper over silently.
 
 test_that("findRemoteRefsForMissing harvests owner/pkg refs from a candidate's installed Remotes:", {
   ## Build a fake installed package with a Remotes field, then point
@@ -1499,6 +1504,42 @@ test_that("findRemoteRefsForMissing returns empty when no candidate has matching
     libPaths      = .libPaths()
   )
   testthat::expect_length(out, 0)
+})
+
+test_that("silentlyFailed warning surfaces a Remotes hint when applicable (source check)", {
+  ## End-to-end behavioural test is hard (it needs pak to fail on a real
+  ## Remotes-only package), so assert at the source level that the warning
+  ## builder constructs the remotesHint via findRemoteRefsForMissing and
+  ## splices it into the warning() call. If a future refactor drops the
+  ## hint logic, this test fails loudly.
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## Hint construction must call findRemoteRefsForMissing in the
+  ## silentlyFailed branch.
+  testthat::expect_true(
+    grepl("findRemoteRefsForMissing\\(silentlyFailed", oneLine),
+    info = "silentlyFailed warning must consult findRemoteRefsForMissing for Remote-only packages"
+  )
+
+  ## The hint string ("Remotes:" / "Workaround:") must be reachable from
+  ## the warning() at the silentlyFailed site.
+  testthat::expect_true(
+    grepl("Remotes:", oneLine, fixed = TRUE),
+    info = "warning text must reference Remotes: so the user understands the failure mode"
+  )
+  testthat::expect_true(
+    grepl("Workaround", oneLine, fixed = TRUE),
+    info = "warning text must include a Workaround: pointer so the user knows what to do"
+  )
+
+  ## remotesHint must be assigned and then referenced in the warning() call.
+  ## (Regex-only check; the .libPaths()-based end-to-end is in `findRemoteRefsForMissing`
+  ## tests above.)
+  testthat::expect_true(
+    grepl("remotesHint\\s*<-", oneLine) && grepl(",[[:space:]]*remotesHint[[:space:]]*,", oneLine),
+    info = "remotesHint must be assigned then passed to warning() at the silentlyFailed site"
+  )
 })
 
 # (c) -- pinInstalledForPak's own semantics are unchanged: it respects
