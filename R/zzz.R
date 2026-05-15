@@ -52,6 +52,10 @@ envPkgCreate()
   ## package tarball cache. See [.requirePkgInfoDir].)
   possCacheDir <- .requirePkgInfoDir(create = TRUE)
 
+  invisible()
+}
+
+.onAttach <- function(libname, pkgname) {
   ## Deprecation: the package-tarball cache location is now controlled by
   ## pak's standard env var R_USER_CACHE_DIR (consistent with the rest of
   ## the R ecosystem). The Require-specific knobs below remain functional
@@ -77,10 +81,6 @@ envPkgCreate()
     }
   }
 
-  invisible()
-}
-
-.onAttach <- function(libname, pkgname) {
   if (isInteractive()) {
     possCacheDir <- cachePkgDir()
     mess <- c(

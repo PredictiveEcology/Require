@@ -1236,24 +1236,23 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   }
   if (!is(his, "try-error") || length(isCRAN) > 0) {
     if (is(his, "try-error")) {
-      # Package not found in archive either -- remove it and warn.
-      # Belt-and-braces: even if an upstream parse handed us an empty
-      # `pkgNoVer`, the early-return at the top of pakGetArchive should
-      # have caught it; guard the warning anyway so we never emit an
-      # empty `could not be installed:` message.
+      # Package not found in archive either -- remove it from `packages`
+      # and let pakInstallFiltered's downstream silentlyFailed warning be
+      # the canonical user-facing failure surface. Demoting the warning
+      # here (previously a top-level warning()) avoids two separate
+      # numbered warnings for the same root cause -- e.g. one for clusters
+      # (not on CRAN, not in a Remote pak knows about) and one for its
+      # parent fireSenseUtils -- when the user really just needs one
+      # coherent diagnostic at the end of the call.
       packages <- packages[-whRm]
       if (any(nzchar(pkgNoVer))) {
         nz <- pkgNoVer[nzchar(pkgNoVer)]
-        # If a failed ref looks like an owner/repo GitHub form, the most likely
-        # cause is a typo in the owner or repo name (pak silently treats a 404
-        # GitHub URL as "not on CRAN, no archive either"). Surface the same
-        # spelling-hint that the non-pak path emits so users get an actionable
-        # message instead of opaque "could not be installed".
         ghFailed <- grepl("/", nz, fixed = TRUE)
         suffix <- if (any(ghFailed)) paste0("\n", .txtDidYouSpell) else ""
-        warning(.txtCouldNotBeInstalled, ": ",
-                paste(nz, collapse = ", "), suffix,
-                call. = FALSE)
+        messageVerbose("pakGetArchive: ", .txtCouldNotBeInstalled, ": ",
+                       paste(nz, collapse = ", "), suffix,
+                       verbose = getOption("Require.verbose"),
+                       verboseLevel = 2)
       }
       return(packages)
     }
@@ -1784,9 +1783,9 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
     # (confirmEqualsDontViolateInequalitiesThenTrim + trimRedundancies) pick the winner.
     # Also pass any accumulated url:: archive refs to each call, so packages with
     # archived transitive deps (e.g. pryr) can still be resolved.
-    messageVerbose("Require Note: pak's batch dependency resolution found unresolvable conflicts; ",
-                   "switching to per-package resolution. ",
-                   "This is normal when mixing CRAN and GitHub packages.",
+    #
+    messageVerbose("Require Note: pak's batch dependency resolution failed; ",
+                   "switching to per-package resolution.",
                    verbose = verbose, verboseLevel = 1)
     archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
     nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
@@ -1920,11 +1919,20 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # parent itself stays installed at an older version (e.g. processx
   # 3.8.6 Imports `ps (>= 1.2.0)`, but 3.9.0 Imports `ps (>= 1.9.3)`,
   # so an unpinned query made `Require("processx")` spuriously upgrade
-  # ps from 1.9.2 to 1.9.3). Skip when `install == "force"`: the user
-  # explicitly asked to upgrade, so pak should resolve to latest.
-  if (!identical(install, "force"))
-    pkgsForPak <- pinInstalledForPak(pkgsForPak, libPaths = libPaths,
-                                     resolvedPkgs = resolvedPkgs)
+  # ps from 1.9.2 to 1.9.3).
+  #
+  # Pin even when install = "force". `install = "force"` is documented to
+  # force the user-requested packages, not their deps. Resolving the dep
+  # tree against the LATEST user-package versions sweeps any transitive
+  # constraint upgrades (e.g. "latest reproducible Imports broom >=
+  # 1.0.13") into the plan, gratuitously bumping broom even though the
+  # installed user package version is still satisfied by the installed
+  # dep. Pinning to installed versions resolves the dep tree from the
+  # constraints the user is already running against, so deps stay where
+  # they are. Users wanting deps refreshed should use update.packages()
+  # or the pak equivalent.
+  pkgsForPak <- pinInstalledForPak(pkgsForPak, libPaths = libPaths,
+                                   resolvedPkgs = resolvedPkgs)
 
   if (!length(pkgsForPak)) return(toPkgDTFull(character()))
 
@@ -2401,7 +2409,7 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
     failures <- rbind(failures, data.table(
       package      = unexplained,
       reason_type  = "still-missing",
-      reason_brief = "absent from project lib; pak did not emit a per-package error (likely cascade casualty of a wedged subprocess)",
+      reason_brief = "absent from project lib; pak did not emit a per-package error",
       reason_detail = ""), fill = TRUE)
   }
   if (NROW(failures) == 0L) return(invisible(failures))
@@ -2596,6 +2604,56 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     toInstall[, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio") := NULL]
   }
 
+  # Pre-install integrity check: abort the install for any toInstall package
+  # whose installed DESCRIPTION names a hard dep that is neither currently
+  # installed nor planned in pkgDT. Letting pak proceed in that state can
+  # succeed from a cached binary and leave the user with a broken install
+  # whose library() call later fails -- worse than a clean abort.
+  unresolvedDeps <- list()
+  if (NROW(toInstall)) {
+    installedNamesPre <- tryCatch(
+      rownames(installed.packages(lib.loc = origPaths, noCache = TRUE)),
+      error = function(e) character(0))
+    plannedNames <- unique(pkgDT$Package)
+    for (pkg in toInstall$Package) {
+      descPath <- tryCatch(
+        system.file("DESCRIPTION", package = pkg, lib.loc = origPaths),
+        error = function(e) "")
+      if (!nzchar(descPath)) next  # not installed locally; can't pre-check
+      hardDeps <- tryCatch(
+        unique(extractPkgName(DESCRIPTIONFileDeps(
+          descPath, which = c("Depends", "Imports", "LinkingTo")))),
+        error = function(e) character(0))
+      hardDeps <- setdiff(hardDeps, c(.basePkgs, "R", ""))
+      missingDeps <- hardDeps[!(hardDeps %in% installedNamesPre |
+                                 hardDeps %in% plannedNames)]
+      if (length(missingDeps)) {
+        unresolvedDeps[[pkg]] <- missingDeps
+      }
+    }
+  }
+  if (length(unresolvedDeps)) {
+    affected <- names(unresolvedDeps)
+    perPkgLines <- vapply(affected, function(p) {
+      paste0("  - ", p, " depends on (not installed, not in plan): ",
+             paste(unresolvedDeps[[p]], collapse = ", "))
+    }, character(1))
+    warning(
+      "skipping install: hard dependencies are unresolved:\n",
+      paste(perPkgLines, collapse = "\n"),
+      call. = FALSE, immediate. = TRUE)
+    for (p in affected) {
+      wh <- which(pkgDT$Package == p)
+      if (length(wh)) {
+        set(pkgDT, wh, "installed",         FALSE)
+        set(pkgDT, wh, "installedVersionOK", FALSE)
+        set(pkgDT, wh, "installResult",     .txtCouldNotBeInstalled)
+      }
+    }
+    toInstall <- toInstall[!Package %in% affected]
+    if (!NROW(toInstall)) return(pkgDT)
+  }
+
   # Convert Require's package specs to pak format
   pkgs <- toInstall$packageFullName
 
@@ -2683,9 +2741,23 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       # CRAN-like refs: dependencies=NA so pak orders parallel source builds by
       # the build-time hard-dep graph (see comment block above).
       ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
-      # CRAN-batch upgrade: TRUE when caller passed install = "force" (else
-      # pak keeps the cached version even if it doesn't satisfy a `(>=X)` pin
-      # the user explicitly asked Require to force-reinstall).
+      # CRAN-batch upgrade: TRUE when caller passed install = "force".
+      #
+      # Earlier we hard-coded FALSE here to avoid pak's global `upgrade`
+      # flag sweeping transitive CRAN deps into the upgrade plan, but
+      # that broke a legitimate force scenario: with `pak::pak("any::pkg",
+      # upgrade=FALSE)` pak treats an installed older version as
+      # satisfying "any::" and skips, so e.g.
+      #   Install("fpCompare (>= 0.2.4)", install = "force")
+      # against installed fpCompare 0.2.3 became a no-op (caught by
+      # test-04other on Windows). Restored to upgrade=TRUE for force.
+      # Safe now because pakDepsToPkgDT unconditionally calls
+      # pinInstalledForPak() (even under force), so installed transitive
+      # deps enter pak's dep tree as exact `pkg@<installedVersion>` pins.
+      # pak treats an exact `pkg@X` ref as already-satisfied when X is
+      # what's installed -- `upgrade=TRUE` therefore upgrades only the
+      # unpinned user packages (those with explicit constraints or no
+      # spec); pinned deps stay put.
       cranUp <- isTRUE(forceUpgrade)
       err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
         # Two separate calls when both types are present
@@ -3320,10 +3392,6 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   ]
   if (length(silentlyFailed)) {
     reason <- pakBuildFailReason(lastPakErr)
-    # If any failed ref is owner/repo-style, the most likely cause is a typo in
-    # the GitHub user/repo (pak surfaces a 404 as a generic "Could not solve").
-    # Append the same spelling-hint that the non-pak path emits so the user
-    # gets actionable guidance without having to dig through pak's wrapper.
     failedFullPaths <- toInstall$packageFullName[toInstall$Package %in% silentlyFailed]
     ghHint <- if (any(grepl("/", failedFullPaths, fixed = TRUE)))
       paste0("\n", .txtDidYouSpell) else ""

@@ -443,8 +443,15 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
 
   for (attempt in 1:3) {
     if (!file.exists(mirrorsLocalFile))
-      download.file("https://cran.r-project.org/CRAN_mirrors.csv",
-                    destfile = mirrorsLocalFile, quiet = TRUE)
+      ## Suppress download.file warnings: on Windows + RStudio,
+      ## download.file is intercepted by .rs.downloadFile which emits a
+      ## warning() on SSL failure even with quiet = TRUE. The retry loop
+      ## (SSL workaround on attempt 2, curl method on attempt 3) already
+      ## handles failure gracefully, so the warning is pure noise.
+      suppressWarnings(try(
+        download.file("https://cran.r-project.org/CRAN_mirrors.csv",
+                      destfile = mirrorsLocalFile, quiet = TRUE),
+        silent = TRUE))
     a <- try(read.csv(mirrorsLocalFile), silent = TRUE)
     if (!is(a, "try-error"))
       break

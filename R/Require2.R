@@ -404,8 +404,14 @@ Require <- function(packages,
       pkgDT <- trimRedundancies(pkgDT)
 
       pkgDT <- updatePackagesWithNames(pkgDT, packages)
-      if (!isFALSE(require))
-        pkgDT <- recordLoadOrder(packages, pkgDT)
+      ## Always record loadOrder, even when require = FALSE. loadOrder is the
+      ## marker for "user explicitly asked for this package" -- whichToInstall
+      ## relies on it (R/Require2.R: askedByUser logic) to mark force-install
+      ## rows as needInstall = .txtInstall. Gating this on `require` meant
+      ## Install(pkg, install = "force") -- which calls Require(require=FALSE)
+      ## -- silently skipped pak install entirely. doLoads at L1093 already
+      ## handles both "loadOrder set" and "loadOrder NULL" cases.
+      pkgDT <- recordLoadOrder(packages, pkgDT)
       if (!is.null(pkgDT[["Version"]]))
         setnames(pkgDT, old = "Version", new = "VersionOnRepos")
       pkgDT <- installedVers(pkgDT, libPaths = libPaths, standAlone = standAlone)
@@ -437,7 +443,15 @@ Require <- function(packages,
       if (install %in% "force") {
         wh <- which(pkgDT$Package %in% extractPkgName(packages))
         set(pkgDT, wh, "installedVersionOK", FALSE)
-        set(pkgDT, wh, "forceInstall", FALSE)
+        set(pkgDT, wh, "forceInstall", TRUE)
+        ## whichToInstall's force-branch identifies user-requested packages
+        ## via loadOrder, but recordLoadOrder is gated on `require != FALSE`,
+        ## so Install(pkg, install = "force") (which calls Require with
+        ## require = FALSE) left needInstall = .txtDontInstall and
+        ## pakInstallFiltered returned silently without calling pak::pak().
+        ## Set needInstall directly here, where `packages` is in scope, so
+        ## the install fires regardless of the require/loadOrder state.
+        set(pkgDT, wh, "needInstall", .txtInstall)
       }
 
       needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"

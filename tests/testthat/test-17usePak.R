@@ -1245,3 +1245,243 @@ test_that("cachePkgDir() follows R_USER_CACHE_DIR in pak mode (issue #91)", {
     info = paste("setting R_USER_CACHE_DIR must redirect pak's cache;",
                  "got:", newPathNorm, "expected prefix:", tmpRootNorm))
 })
+
+# ---------------------------------------------------------------------------
+# 21. install = "force" must NOT upgrade transitive CRAN dependencies
+# ---------------------------------------------------------------------------
+# Regression report: on Windows + RStudio,
+#   Install({reproducible; SpaDES.core; ...}, install = "force")
+# emitted pak's
+#   "+ broom 1.0.12 → 1.0.13, mgcv 1.9-3 → 1.9-4, sf 1.1-0 → 1.1-1, ..."
+# even though the user had not asked for those CRAN dependencies to be
+# updated.  Root causes (both fixed; covered below):
+#
+#  (a) Require2.R "Deal with force installs" block must set
+#      `needInstall = .txtInstall` on user-requested rows so they end up
+#      in `pakInstallFiltered`'s toInstall.  Previously this was only
+#      done indirectly via whichToInstall's `askedByUser <- !is.na(loadOrder)`,
+#      which was empty when Install() called Require(require = FALSE)
+#      because recordLoadOrder is gated on the require flag.
+#
+#  (b) pakRetryLoop must NOT propagate forceUpgrade to the CRAN-batch
+#      pak::pak() call's `upgrade=` flag.  pak's `upgrade` is global
+#      across the entire resolved dep graph -- passing TRUE force-upgrades
+#      every CRAN dep, not just the user-requested ones.  Force semantics
+#      apply to user-requested packages; transitive deps stay put unless
+#      a constraint forces them.
+
+# (a) -- force block correctly sets needInstall on user-requested rows only
+test_that("install = 'force' sets needInstall=.txtInstall on user-requested rows only", {
+  packages <- c("reproducible", "SpaDES.core")
+  ## pkgDT containing user-requested rows + a transitive dep row
+  pkgDT <- data.table::data.table(
+    Package         = c("reproducible", "SpaDES.core", "broom"),
+    packageFullName = c("reproducible", "SpaDES.core", "broom"),
+    inequality      = "",
+    versionSpec     = "",
+    installed       = TRUE,
+    Version         = c("1.2.3", "0.9.0", "1.0.12"),
+    installedVersionOK = TRUE,
+    needInstall     = Require:::.txtDontInstall,
+    loadOrder       = NA_integer_
+  )
+
+  ## Replicate the "Deal with force installs" block from Require2.R
+  data.table::set(pkgDT, NULL, "forceInstall", FALSE)
+  install <- "force"
+  if (install %in% "force") {
+    wh <- which(pkgDT$Package %in% Require:::extractPkgName(packages))
+    data.table::set(pkgDT, wh, "installedVersionOK", FALSE)
+    data.table::set(pkgDT, wh, "forceInstall", TRUE)
+    data.table::set(pkgDT, wh, "needInstall", Require:::.txtInstall)
+  }
+
+  testthat::expect_equal(
+    pkgDT[Package %in% packages, needInstall],
+    rep(Require:::.txtInstall, length(packages)),
+    info = "user-requested rows must be marked needInstall=.txtInstall under install='force'"
+  )
+  testthat::expect_equal(
+    pkgDT[Package == "broom", needInstall],
+    Require:::.txtDontInstall,
+    info = "transitive dep rows must NOT be marked .txtInstall under install='force'"
+  )
+  testthat::expect_true(
+    all(pkgDT[Package %in% packages, forceInstall]),
+    info = "user-requested rows must have forceInstall=TRUE"
+  )
+  testthat::expect_false(
+    pkgDT[Package == "broom", forceInstall],
+    info = "transitive dep rows must have forceInstall=FALSE"
+  )
+})
+
+# (a) -- pakInstallFiltered toInstall filter respects the force-block mark
+test_that("pakInstallFiltered toInstall filter selects only force-marked user rows", {
+  pkgDT <- data.table::data.table(
+    Package         = c("reproducible", "SpaDES.core", "broom", "mgcv"),
+    packageFullName = c("reproducible", "SpaDES.core", "broom", "mgcv"),
+    inequality      = "",
+    versionSpec     = "",
+    needInstall     = c(Require:::.txtInstall, Require:::.txtInstall,
+                        Require:::.txtDontInstall, Require:::.txtDontInstall),
+    forceInstall    = c(TRUE, TRUE, FALSE, FALSE),
+    installed       = TRUE,
+    Version         = c("1.2.3", "0.9.0", "1.0.12", "1.9-3"),
+    installedVersionOK = c(FALSE, FALSE, TRUE, TRUE)
+  )
+
+  toInstall <- pkgDT[needInstall == Require:::.txtInstall]
+  testthat::expect_setequal(
+    toInstall$Package, c("reproducible", "SpaDES.core"))
+  testthat::expect_false(any(c("broom", "mgcv") %in% toInstall$Package),
+    info = "transitive deps must not enter pakInstallFiltered's install set under install='force'")
+})
+
+# (b) -- pakRetryLoop CRAN-batch upgrade flag tracks forceUpgrade.
+#         The "don't gratuitously upgrade deps" property is achieved at the
+#         dep-tree level by pinInstalledForPak()'s `pkg@<installedVersion>`
+#         pins (always-on as of fix(install-force): pin installed user
+#         packages); pak treats those exact pins as already-satisfied and
+#         doesn't upgrade them. cranUp=TRUE on force is still needed so
+#         that user packages at versions failing their `>=` constraint
+#         do get installed -- with cranUp=FALSE pak skipped them since
+#         the bare "any::pkg" form considers any installed version OK
+#         (regression caught by test-04other on Windows).
+test_that("pakRetryLoop CRAN-batch upgrade flag is derived from forceUpgrade", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  testthat::expect_true(
+    grepl("cranUp\\s*<-\\s*isTRUE\\(forceUpgrade\\)", oneLine),
+    info = paste0("cranUp must track forceUpgrade -- hard-coding FALSE breaks ",
+                  "the force-install path for user pkgs that fail their >= ",
+                  "constraint, since pak skips when installed satisfies 'any::'")
+  )
+})
+
+# (b) -- GitHub batch still uses upgrade=TRUE (unchanged) so branch-pulling works
+test_that("pakRetryLoop GitHub batch still uses upgrade=TRUE", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## In the two-call branch (mixed batch), the GitHub call must hard-code
+  ## upgrade=TRUE to force fetching the latest commit from the branch.
+  ## Find pak::pak(packages[ghOrUrl], ...) and confirm upgrade = TRUE in
+  ## the same arg list (allowing whitespace + line breaks).
+  ghCall <- regmatches(oneLine, regexpr(
+    "pak::pak\\(packages\\[ghOrUrl\\][^)]*\\)", oneLine))
+  testthat::expect_true(length(ghCall) > 0L,
+    info = "must find the pak::pak(packages[ghOrUrl], ...) call")
+  testthat::expect_true(
+    grepl("upgrade\\s*=\\s*TRUE", ghCall),
+    info = "GitHub-batch pak call must keep upgrade=TRUE so latest commits are fetched"
+  )
+})
+
+# (b) -- single-call branch upgrade flag is `any(ghOrUrl) || cranUp`,
+#         so a CRAN-only batch tracks cranUp (=forceUpgrade) and a GH-only
+#         batch always upgrades. No leaking of forceUpgrade through any
+#         other path.
+test_that("pakRetryLoop single-call branch combines ghOrUrl with cranUp (not forceUpgrade directly)", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+  testthat::expect_true(
+    grepl("up\\s*<-\\s*any\\(ghOrUrl\\)\\s*\\|\\|\\s*cranUp", oneLine),
+    info = "single-call branch must combine ghOrUrl with cranUp")
+})
+
+# (c) -- pakDepsToPkgDT must pin installed user packages even under
+#        install = "force".  Without pinning, pak's dep tree resolution
+#        uses the LATEST user-package version's Imports, which transitively
+#        forces upgrades of CRAN deps that are still satisfied by the
+#        installed user package's Imports.  E.g. installed reproducible
+#        Imports `broom (>= 1.0.10)` (satisfied by installed broom 1.0.12),
+#        but latest reproducible Imports `broom (>= 1.0.13)` -- pak then
+#        upgrades broom to 1.0.13 even with upgrade=FALSE, because the
+#        constraint is hard.
+test_that("pakDepsToPkgDT pins installed user packages even under install='force'", {
+  src <- deparse(body(Require:::pakDepsToPkgDT))
+  oneLine <- paste(src, collapse = "\n")
+
+  ## The fix: pinInstalledForPak must NOT be gated on install != "force".
+  ## Specifically, there must be no `if (!identical(install, "force"))`
+  ## guard wrapping the pinInstalledForPak() call.
+  ## Use a tolerant regex that catches the guarded form across any whitespace.
+  guardedForm <- "if\\s*\\(\\s*!\\s*identical\\(\\s*install\\s*,\\s*[\"']force[\"']\\s*\\)\\s*\\)\\s*pkgsForPak\\s*<-\\s*pinInstalledForPak"
+  testthat::expect_false(
+    grepl(guardedForm, oneLine),
+    info = paste0("pakDepsToPkgDT must NOT skip pinning under install='force' -- ",
+                  "doing so makes pak resolve dep tree against the latest user-package ",
+                  "Imports, which transitively forces upgrades of installed CRAN deps."))
+
+  ## And pinInstalledForPak must still be called (unconditionally now).
+  testthat::expect_true(
+    grepl("pkgsForPak\\s*<-\\s*pinInstalledForPak\\(", oneLine),
+    info = "pakDepsToPkgDT must still call pinInstalledForPak to keep deps stable")
+})
+
+# (d) -- pre-install integrity check: when a user-requested package's
+#        installed DESCRIPTION names a hard dep that is neither already
+#        installed nor planned for install in pkgDT, pakInstallFiltered
+#        must SKIP the install (not proceed) and emit a clear warning.
+#        The typical trigger is the pak-doesn't-follow-Remotes-from-CRAN-
+#        style-parents limitation: pak's dep resolution fails, pakDepsToPkgDT
+#        falls back to toPkgDTFull(packages), and the user package's
+#        Remote-only dep ends up neither in libPath nor in plan. Letting
+#        pak install in that state can succeed from a cached binary and
+#        produce a broken install whose load fails later.
+
+test_that("pakInstallFiltered aborts install when a hard dep is unresolved (pre-install check)", {
+  src <- deparse(body(Require:::pakInstallFiltered))
+  oneLine <- paste(src, collapse = "\n")
+
+  testthat::expect_true(
+    grepl("unresolvedDeps", oneLine),
+    info = "pre-install integrity check must build an unresolvedDeps list"
+  )
+  testthat::expect_true(
+    grepl("skipping install: hard dependencies are unresolved", oneLine, fixed = TRUE),
+    info = "skip warning must use a clear leading phrase that explains the abort"
+  )
+  testthat::expect_true(
+    grepl('which = c\\("Depends", "Imports", "LinkingTo"\\)', oneLine),
+    info = "pre-install check must parse Imports/Depends/LinkingTo from each installed package's DESCRIPTION"
+  )
+  testthat::expect_true(
+    grepl('"installResult"\\s*,\\s*\\.txtCouldNotBeInstalled', oneLine),
+    info = "affected rows must be marked .txtCouldNotBeInstalled in pkgDT"
+  )
+  testthat::expect_true(
+    grepl("toInstall\\s*<-\\s*toInstall\\[!Package %in% affected\\]", oneLine),
+    info = "affected rows must be removed from toInstall so pak::pak() is not called for them"
+  )
+})
+
+# (c) -- pinInstalledForPak's own semantics are unchanged: it respects
+#        user-supplied version specs and GitHub/url::/@-pinned refs.
+#        This is what lets the new always-pin behaviour stay safe: if a
+#        user passes `Install("reproducible (>= 1.5)", install = "force")`,
+#        the parenthetical spec marks the package as `userPinned` and pin
+#        is skipped, so pak resolves against that constraint (not installed).
+test_that("pinInstalledForPak skips user-version-constrained packages", {
+  skip_if_not_installed("digest")
+
+  ## Two packages: one with a parenthetical user-version constraint,
+  ## one bare (the everyday case the always-pin fix is meant to handle).
+  pkgsForPak  <- c("digest", "data.table")
+  resolvedPkgs <- c("digest (>= 0.0.1)", "data.table")  # only digest user-pinned
+
+  out <- Require:::pinInstalledForPak(
+    pkgsForPak,
+    libPaths     = .libPaths(),
+    resolvedPkgs = resolvedPkgs
+  )
+
+  ## digest had a user spec -> not pinned to installed version.
+  testthat::expect_false(grepl("^digest@", out[1]),
+    info = "user-version-constrained packages must NOT be pinned (the constraint must drive resolution)")
+  ## data.table had no user spec and is installed -> pinned to installed version.
+  testthat::expect_true(grepl("^data.table@", out[2]),
+    info = "bare user packages with no constraint must be pinned to installed version to keep deps stable")
+})

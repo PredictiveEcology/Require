@@ -1,47 +1,44 @@
 ## Release information
 
-This is minor update to address CRAN failures on Fedora and Mac, as requested by Prof. Brian Ripley. 
+This is a feature update. The major change is that the package dependency
+and installation engine now defaults to `pak`. The legacy non-pak code
+path is retained for users who set `options(Require.usePak = FALSE)`, but
+going forward `pak` is the only actively maintained installer. See
+`NEWS.md` for the full list of changes.
 
-See `NEWS.md` for a full list of changes.
+A handful of cache-management helpers were also consolidated and the
+legacy names deprecated (functional shims warn for one release cycle);
+see the `## deprecations` section in `NEWS.md` and the rewritten
+`?cachePkgDir` topic for the migration map.
 
 ## Test environments
 
-### Rhub
+Require is a pure-R package (no compiled code), so the GitHub Actions +
+win-builder matrix covers the OS / R-version surface; rhub flavours
+that target compiled-code or numeric-precision issues (ASAN/UBSAN,
+valgrind, ATLAS, noLD) were skipped as they add no value here.
 
-Tested with `rhub::rhub_check(branch = "master", platforms = rhub::rhub_platforms()$name[c(1:18, 20)])`,
-which includes the same systems as were failing on CRAN machines.
-  
-### Previous R versions
-* Ubuntu 20.04                 (GitHub), 4.2.3, 4.3.3
-* Windows                      (GitHub), 4.2.3, 4.3.3
-* Windows                 (win-builder), R 4.3.3
+### GitHub Actions
+* Ubuntu 24.04, R-devel, R-release (4.5.3), R-oldrel-1 (4.4.x), R-oldrel-2 (4.3.x), R-oldrel-3 (4.2.x)
+* Windows,     R-devel, R-release (4.5.3), R-oldrel-1, R-oldrel-2, R-oldrel-3
+* macOS,       R-release (4.5.3)
 
-### Current R versions
-* macOS 14.5                    (local), R 4.4.1
-* Ubuntu 20.04                 (GitHub), R 4.4.1
-* Ubuntu 20.04                  (local), R 4.4.1
-* Windows                      (GitHub), R 4.4.1
-* Windows                       (local), R 4.4.1
-* Windows                 (win-builder), R 4.4.1
+### Local
+* Ubuntu 24.04, R 4.5.3 (`devtools::check(args = "--as-cran")`, 0E/0W/0N)
 
-### Development R version
-* Ubuntu 20.04                 (GitHub), R-devel  (2024-08-05 r86925)
-* Ubuntu 20.04                  (local), R-devel  (2024-08-05 r86925)
-* Windows                      (GitHub), R-devel  (2024-08-05 r86925 ucrt)
-* Windows                 (win-builder), R-devel  (2024-08-05 r86925 ucrt)
+### win-builder
+* Windows, R-oldrelease (4.4.x)
+* Windows, R-release    (4.5.3)
+* Windows, R-devel
 
 ## R CMD check results
 
-There are no errors, or warnings in any of the above.
+0 errors | 0 warnings | 0 notes
 
 ## Downstream dependencies
 
-We checked all reverse dependency from CRAN and found none.
-
-> revdepcheck::revdep_report_cran() ## update cran-comments with this output
-## revdepcheck results
-
-We checked 1 reverse dependencies, comparing R CMD check results across CRAN and dev versions of this package.
+We checked the 1 reverse dependency (`SpaDES.core`) from CRAN, comparing
+R CMD check results across CRAN and dev versions of this package.
 
  * We saw 0 new problems
  * We failed to check 0 packages
