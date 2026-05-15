@@ -1,6 +1,51 @@
-# Require 1.1.1
+# Require 2.0.0
 
-## enhancements
+## breaking changes
+
+* The package dependency and package installation engine now defaults to
+  `pak`. `options(Require.usePak = FALSE)` still falls back to the legacy
+  non-pak code path, but `pak` is the only actively maintained installer
+  going forward. This is the headline change motivating the major version
+  bump. See vignette for the migration map and behavioural differences
+  Require still papers over relative to a raw `pak::pak()` call.
+
+## bug fixes
+
+* Windows + RStudio: the SSL warning emitted by `.rs.downloadFile`
+  intercepting `download.file("https://cran.r-project.org/CRAN_mirrors.csv")`
+  no longer surfaces. The retry loop in `whIsOfficialCRANrepo()` already
+  handled the failure gracefully; the warning was pure noise. The call
+  is now wrapped in `suppressWarnings(try(..., silent = TRUE))`.
+
+* `install = "force"` no longer (1) gratuitously upgrades transitive CRAN
+  deps (e.g. broom, mgcv, sf, survival) when only top-level packages were
+  requested, and (2) silently no-ops when called via `Install()` (which
+  passes `require = FALSE`). Three coordinated fixes:
+    - `pakDepsToPkgDT()` now pins installed user packages to their installed
+      version under `install = "force"` (previously skipped). Pak resolves
+      the dep tree against the constraints the user is already running
+      against, so installed deps that satisfy stay put.
+    - The "Deal with force installs" block in `Require()` now sets
+      `needInstall = .txtInstall` directly on user-requested rows, so
+      `pakInstallFiltered`'s `toInstall` filter no longer comes up empty
+      when `recordLoadOrder` was skipped (the previous indirection went
+      through `loadOrder`, which `Install()` doesn't populate).
+    - `forceInstall = TRUE` is restored for user-requested rows under
+      `install = "force"` (regressed to `FALSE` in the pak-integration
+      commit `c2830a6b`). Only the non-pak `doInstalls` HEAD-ref handling
+      reads this flag; the pak path is unaffected.
+
+* `pakInstallFiltered()` now runs a pre-install integrity check: if any
+  user-requested package's installed `DESCRIPTION` names a hard dep
+  (Depends/Imports/LinkingTo) that is neither already installed nor in
+  pak's plan, the install is skipped entirely and a warning is emitted.
+  This catches the common failure mode where pak's CRAN-style resolver
+  ignores `Remotes:` from a non-CRAN parent (e.g. r-universe), the
+  Remote-only dep is missing, and pak would otherwise succeed from a
+  cached binary -- producing a broken install whose `library()` call
+  later fails with "there is no package called X".
+
+## enhancements (originally drafted for 1.1.1)
 
 * Major change. The package dependency and package installation engine now
   uses `pak` by default. Going forward, this will be the only maintained code.

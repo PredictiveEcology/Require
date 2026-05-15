@@ -127,6 +127,7 @@ test_that("test 6", {
   ### pkgDepTopoSort
 
   # MUST HAVE the "knownRevDeps" installed first
+  skip_on_cran()
   skip_on_ci()
   knownRevDeps <- list(
     Require = c(

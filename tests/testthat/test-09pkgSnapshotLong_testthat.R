@@ -4,6 +4,13 @@ test_that("test 09", {
   # a 30-pkg slice profile -- way past CI budget. Run locally only via
   # R_REQUIRE_RUN_ALL_TESTS=true.
   skip_on_ci()
+  # The snapshot-vs-installed-version assertion compares the pinned versions
+  # in inst/snapshot.txt against installed.packages() in the system library.
+  # On CRAN's check farm the installed versions move continuously while
+  # snapshot.txt is frozen, so the assertion would routinely fail with no
+  # bug to fix on Require's side. Skip on CRAN -- this test is a developer
+  # aid for keeping the snapshot file in sync, not a Require behaviour test.
+  skip_on_cran()
   # skip_if(getOption("Require.usePak"), message = "Takes too long on pak")
   ## blocking removed: was `skip_if(getRversion() > "4.4.3")`
   setupInitial <- setupTest(needRequireInNewLib = FALSE)

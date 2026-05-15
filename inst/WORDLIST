@@ -33,6 +33,7 @@ LinkingTo
 MRAN
 NeedsCompilation
 ORCID
+Pak
 PredictiveEcology
 README
 RSPM
@@ -41,6 +42,7 @@ Rcpp's
 Readme
 Require's
 SHAs
+SSL
 SaveNames
 SpaDES
 TRE
@@ -98,6 +100,7 @@ libuv1
 lockfile
 macOS's
 memoisation
+mgcv
 misrouted
 packagemanager
 pak

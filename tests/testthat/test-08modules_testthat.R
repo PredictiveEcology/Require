@@ -10,6 +10,12 @@ test_that("test 8", {
   # transitive dep tree) which routinely takes >2h on GH-hosted runners and
   # times out. Runs locally for devs via R_REQUIRE_RUN_ALL_TESTS=true.
   skip_on_ci()
+  # Same rationale applies to CRAN's check farm: 100+ source compiles leave
+  # gcc `.s` intermediates in /tmp which trip the "detritus in the temp
+  # directory" NOTE, and the install volume is well beyond CRAN's per-package
+  # check budget. This is a developer-only end-to-end test, not a Require
+  # behaviour test that CRAN needs to run.
+  skip_on_cran()
   if (isDev) {
     projectDir <- Require:::tempdir2(Require:::.rndstr(1))
     # setLinuxBinaryRepo()

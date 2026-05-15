@@ -1,10 +1,18 @@
 ## Release information
 
-This is a feature update. The major change is that the package dependency
-and installation engine now defaults to `pak`. The legacy non-pak code
-path is retained for users who set `options(Require.usePak = FALSE)`, but
-going forward `pak` is the only actively maintained installer. See
-`NEWS.md` for the full list of changes.
+This is a major release (2.0.0). The headline change is that the package
+dependency and installation engine now defaults to `pak`. The legacy
+non-pak code path is retained for users who set
+`options(Require.usePak = FALSE)`, but `pak` is the only actively
+maintained installer going forward -- the version bump signals the
+backbone switch. See `NEWS.md` for the full list of changes.
+
+Bundled in this release are several `install = "force"` fixes (don't
+gratuitously upgrade transitive CRAN deps; correctly mark user-requested
+rows for install; restore `forceInstall = TRUE`), a pre-install
+integrity check that aborts when a hard dep is unresolved rather than
+producing a broken install, and Windows + RStudio SSL-warning
+suppression in the `whIsOfficialCRANrepo()` retry loop.
 
 A handful of cache-management helpers were also consolidated and the
 legacy names deprecated (functional shims warn for one release cycle);
