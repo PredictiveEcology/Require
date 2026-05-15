@@ -1,57 +1,57 @@
 ## Release information
 
-This is a minor feature release (1.1.0) with new functions, bugfixes, and housekeeping improvements.
+This is a major release (2.0.0). The headline change is that the package
+dependency and installation engine now defaults to `pak`. The legacy
+non-pak code path is retained for users who set
+`options(Require.usePak = FALSE)`, but `pak` is the only actively
+maintained installer going forward -- the version bump signals the
+backbone switch. See `NEWS.md` for the full list of changes.
 
-Key changes:
-* Package cache now uses per-repository subdirectories to prevent cross-repo cache contamination (#143).
-* New helper `removeOldFlatCachePkgs()` to migrate users from the old flat cache layout.
-* Default for `getOption("Require.usePak")` corrected from TRUE to FALSE.
-* Several bugfixes (see `NEWS.md` for full list).
-* All `\dontrun{}` examples converted to `\donttest{}`.
+Bundled in this release are several `install = "force"` fixes (don't
+gratuitously upgrade transitive CRAN deps; correctly mark user-requested
+rows for install; restore `forceInstall = TRUE`), a pre-install
+integrity check that aborts when a hard dep is unresolved rather than
+producing a broken install, and Windows + RStudio SSL-warning
+suppression in the `whIsOfficialCRANrepo()` retry loop.
 
-See `NEWS.md` for a full list of changes.
+A handful of cache-management helpers were also consolidated and the
+legacy names deprecated (functional shims warn for one release cycle);
+see the `## deprecations` section in `NEWS.md` and the rewritten
+`?cachePkgDir` topic for the migration map.
 
 ## Test environments
 
-### Rhub / win-builder
+Require is a pure-R package (no compiled code), so the GitHub Actions +
+win-builder matrix covers the OS / R-version surface; rhub flavours
+that target compiled-code or numeric-precision issues (ASAN/UBSAN,
+valgrind, ATLAS, noLD) were skipped as they add no value here.
 
-Tested with `rhub::rhub_check()` and `devtools::check_win_devel()`.
+### GitHub Actions
+* Ubuntu 24.04, R-devel, R-release (4.5.3), R-oldrel-1 (4.4.x), R-oldrel-2 (4.3.x), R-oldrel-3 (4.2.x)
+* Windows,     R-devel, R-release (4.5.3), R-oldrel-1, R-oldrel-2, R-oldrel-3
+* macOS,       R-release (4.5.3)
 
-### Previous R versions
-* Ubuntu 24.04                 (GitHub), 4.3.3, 4.4.3
-* Windows                      (GitHub), 4.3.3, 4.4.3
+### Local
+* Ubuntu 24.04, R 4.5.3 (`devtools::check(args = "--as-cran")`, 0E/0W/0N)
 
-### Current R versions
-* Ubuntu 24.04                  (local), R 4.5.2
-* Ubuntu 24.04                 (GitHub), R 4.5.2
-* Windows                      (GitHub), R 4.5.2
-* Windows                 (win-builder), R 4.5.2
-
-### Development R version
-* Ubuntu 24.04                 (GitHub), R-devel
-* Windows                      (GitHub), R-devel
-* Windows                 (win-builder), R-devel
+### win-builder
+* Windows, R-oldrelease (4.4.x)
+* Windows, R-release    (4.5.3)
+* Windows, R-devel
 
 ## R CMD check results
 
-There are no errors or warnings in any of the above.
-
-There is one NOTE on win-builder:
-
-    Author field differs from that derived from Authors@R
-
-This is a known cosmetic difference in how R renders ORCID identifiers from
-`Authors@R`: the auto-derived `Author:` field includes `ORCID: ` as a label
-before the URL, while the `Authors@R` field shows the bare URL. No action is
-needed.
+0 errors | 0 warnings | 0 notes
 
 ## Downstream dependencies
 
-We checked 1 reverse dependency (SpaDES.core 3.0.4).
+We checked the 1 reverse dependency (`SpaDES.core`) from CRAN, comparing
+R CMD check results across CRAN and dev versions of this package.
 
  * We saw 0 new problems
  * We failed to check 0 packages
 
-SpaDES.core has 1 pre-existing error (vignette requires package `NLMR` from a
-non-CRAN repository) that occurs identically on both the CRAN and dev versions
-of Require. It is unrelated to this package.
+SpaDES.core has 1 pre-existing vignette error (an `ii-modules.Rmd`
+sentinel about an interrupted `spades()` call) that occurs identically
+on both the CRAN and dev versions of Require. It is unrelated to this
+package and was present before the 2.0.0 changes.

@@ -2,15 +2,29 @@
 % Please edit documentation in R/setup.R
 \name{cacheGetOptionCachePkgDir}
 \alias{cacheGetOptionCachePkgDir}
-\title{Get the option for \code{Require.cachePkgDir}}
+\title{Get the option for \code{Require.cachePkgDir} (deprecated)}
 \usage{
 cacheGetOptionCachePkgDir()
 }
 \description{
-First checks if an environment variable \code{Require.cachePkgDir}
-is set and defines a path.
-If not set, checks whether the \code{options("Require.cachePkgDir")} is set.
-If a character string, then it returns that.
-If \code{TRUE}, then use \code{cachePkgDir()}. If \code{FALSE}
-then returns \code{NULL}.
+\strong{Deprecated.} Use \code{\link[=cachePkgDir]{cachePkgDir()}} instead -- it is now the single
+getter for the package-tarball cache and wraps
+\code{pak::cache_summary()$cachepath} under \code{usePak = TRUE} (the default).
+
+This function is kept for one release cycle as a functional shim. It
+still resolves a user-supplied path from \code{options("Require.cachePkgDir")}
+or the \code{R_REQUIRE_PKG_CACHE} environment variable when set, but those
+two knobs are themselves deprecated and ignored under \code{usePak = TRUE}.
+To redirect pak's package cache to a shared location, set
+\code{R_USER_CACHE_DIR} in \code{.Renviron} (pak's standard env var). See
+\code{\link[=cacheDir]{cacheDir()}} for the full migration table.
+
+Resolution order (legacy path):
+\enumerate{
+\item If \code{R_REQUIRE_PKG_CACHE} is set, return it.
+\item Else if \code{options("Require.cachePkgDir")} is character, return it.
+\item Else if the option is \code{TRUE}, return \code{cachePkgDir(FALSE)}.
+\item Else if the option is \code{FALSE}, return \code{NULL}.
+\item Otherwise, return \code{cachePkgDir(FALSE)}.
+}
 }

@@ -5,8 +5,8 @@ utils::globalVariables(c(
   "fullGit", "github", "groupCRANtogether", "groupCRANtogetherChange",
   "groupCRANtogetherDif", "hasVersionSpec", "i.neededFiles",
   "inequality", "installFrom", "installFromFac", "installOrder",
-  "installResult", "isGitPkg", "keep", "keep2", "lastRow", "localFileName",
-  "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
+  "installResult", "isGitPkg", "keep", "keep2", "lastRow", "loadedSufficient",
+  "localFileName", "localType", "maxVers", "mtime", "N", "Names", "neededFiles",
   "needLaterDate", "nextRow", "Package", "packageFullName", "repoLocation",
   "RepoWBranch", "tmpOrder", "type", "version", "VersionFromPV", "violations"
 ))
@@ -411,8 +411,103 @@ installedVers <- function(pkgDT, libPaths, standAlone = FALSE) {
   }
 
   installed <- !is.na(pkgDT$Version)
-  if (any(installed)) {
-    set(pkgDT, NULL, "installed", installed)
+  set(pkgDT, NULL, "installed", installed)
+  pkgDT
+}
+
+# When a package is already loaded in the current R session with a version
+# that satisfies the user's version constraint, mark it as installed so the
+# downstream gate skips reinstall. Trying to upgrade a loaded package whose
+# namespace is imported by another loaded package (e.g. `reproducible` ->
+# `climateData`) is the most common cause of pak's
+# "Error : ! error in pak subprocess" — pak can't unload the live namespace
+# to swap in the new version, the subprocess aborts, and the user is left
+# with a useless generic error. If the loaded version already meets the
+# requested constraint, there is no reason to reinstall in the first place.
+#
+# Side-effect: also flags `loadedSufficient = TRUE` so doLoads() can attach
+# via `require(x, character.only = TRUE)` without `lib.loc`, avoiding R's
+# "cannot be unloaded because <X> is imported by <Y>" error path.
+useLoadedIfSufficient <- function(pkgDT,
+                                  libPaths = .libPaths(),
+                                  standAlone = FALSE,
+                                  verbose = getOption("Require.verbose")) {
+  if (!NROW(pkgDT)) return(pkgDT)
+  if (!"needInstall" %in% names(pkgDT)) return(pkgDT)
+  candidates <- which(pkgDT[["needInstall"]] %in% .txtInstall)
+  if (!length(candidates)) return(pkgDT)
+  loaded <- loadedNamespaces()
+  loaded <- setdiff(loaded, .basePkgs)
+  if (!length(loaded)) return(pkgDT)
+  if (!"loadedSufficient" %in% names(pkgDT))
+    set(pkgDT, NULL, "loadedSufficient", FALSE)
+  # `(HEAD)` is a Require-specific pin that means "the latest commit of the
+  # branch in the ref" (e.g. `account/repo@somebranch (HEAD)` -> always fetch
+  # the tip of `somebranch`). It is not encoded in versionSpec/inequality, so
+  # the constraint check below would treat it as unconstrained and skip
+  # reinstall on whatever stale version happens to be loaded. Populate the
+  # `hasHEAD` column up front so we can keep those refs out of the
+  # already-loaded fast path.
+  pkgDT <- checkHEAD(pkgDT)
+  # standAlone = TRUE means the user wants the package physically present in
+  # libPaths[1]; a namespace loaded from another library does NOT satisfy that.
+  effectiveLibPaths <- if (isTRUE(standAlone))
+    normPath(libPaths[1L]) else normPath(libPaths)
+  intercepted <- character(0)
+  reasons <- character(0)
+  for (i in candidates) {
+    pkg <- pkgDT[["Package"]][i]
+    if (!pkg %in% loaded) next
+    # Skip refs pinned to HEAD: a loaded namespace can never satisfy "must be
+    # the current tip of branch X" because we have no commit hash to compare.
+    # Forward to the normal install path, which lets pak fetch the tip.
+    if (isTRUE(pkgDT[[hasHEADtxt]][i])) next
+    loadedVer <- tryCatch(as.character(getNamespaceVersion(pkg)),
+                          error = function(e) NA_character_)
+    if (is.na(loadedVer) || !nzchar(loadedVer)) next
+    vSpec <- pkgDT[["versionSpec"]][i]
+    ineq  <- pkgDT[["inequality"]][i]
+    hasConstraint <- !is.na(vSpec) && nzchar(vSpec) &&
+                     !is.na(ineq) && nzchar(ineq)
+    if (hasConstraint) {
+      ok <- isTRUE(compareVersion2(loadedVer, vSpec, ineq))
+      if (!ok) next
+    }
+    lp <- tryCatch(dirname(system.file(package = pkg)),
+                   error = function(e) NA_character_)
+    if (!nzchar(lp)) lp <- NA_character_
+    if (!is.na(lp) && !normPath(lp) %in% effectiveLibPaths) next
+    ## Disk-presence check: a namespace can stay loaded after its files are
+    ## removed (e.g. `remove.packages("dplyr")` in the same R session).
+    ## `system.file(package = pkg)` then returns the path that was recorded
+    ## when the namespace loaded -- pointing at a directory that no longer
+    ## exists. Without this check, useLoadedIfSufficient would skip reinstall,
+    ## leaving the on-disk libPath empty and triggering downstream
+    ## `read.dcf(... DESCRIPTION)` warnings the first time anything walks
+    ## installed.packages(). Require's contract here is "after this call, the
+    ## packages are on disk", so re-route to install when files are gone.
+    hasDescOnDisk <- any(vapply(effectiveLibPaths, function(L) {
+      file.exists(file.path(L, pkg, "DESCRIPTION"))
+    }, logical(1)))
+    if (!hasDescOnDisk) next
+    set(pkgDT, i, "installed",          TRUE)
+    set(pkgDT, i, "installedVersionOK", TRUE)
+    set(pkgDT, i, "needInstall",        .txtDontInstall)
+    set(pkgDT, i, "Version",            loadedVer)
+    if (!is.na(lp)) set(pkgDT, i, "LibPath", lp)
+    set(pkgDT, i, "loadedSufficient",   TRUE)
+    intercepted <- c(intercepted, pkg)
+    reasons <- c(reasons,
+                 if (hasConstraint)
+                   paste0(pkg, " ", loadedVer, " satisfies ", ineq, " ", vSpec)
+                 else
+                   paste0(pkg, " ", loadedVer, " (no version constraint)"))
+  }
+  if (length(intercepted)) {
+    messageVerbose(
+      "Already loaded with sufficient version, skipping reinstall: ",
+      paste(unique(reasons), collapse = "; "),
+      verbose = verbose, verboseLevel = 1)
   }
   pkgDT
 }
@@ -505,7 +600,7 @@ available.packagesCached <- function(repos, purge, verbose = getOption("Require.
         caps <- unique(rbindlist(caps, fill = TRUE, use.names = TRUE), by = c("Package", "Version", "Repository"))
         cap[[type]] <- caps
 
-        if (!is.null(cacheGetOptionCachePkgDir()) && NROW(caps) > 0) {
+        if (nzchar(.requirePkgInfoDir()) && NROW(caps) > 0) {
           checkPath(dirname(fn), create = TRUE)
           saveRDS(cap[[type]], file = fn)
         }
@@ -710,29 +805,28 @@ warningCantInstall <- function(pkgs, libPaths = .libPaths()) {
 }
 
 
-rpackageFolder <- function(path = cacheGetOptionCachePkgDir(), exact = FALSE) {
-  if (!is.null(path)) {
-    if (isTRUE(exact)) {
-      return(path)
-    }
-    if (isFALSE(path)) {
-      return(NULL)
-    }
+## Internal helper: given a path, append `versionMajorMinor()` so libraries
+## stay R-version-specific (unless `exact = TRUE`, or the path is in
+## `R_LIBS_SITE`, or we're in a non-interactive R CMD check tmp libpath).
+## Default path is `cachePkgDir()`; passing `NULL` or `FALSE` short-circuits
+## to `NULL`. Kept callable as `Require:::rpackageFolder` for the test
+## suite and any downstream package that reaches in via the unexported
+## name.
+rpackageFolder <- function(path = cachePkgDir(), exact = FALSE) {
+  if (is.null(path)) return(NULL)
+  if (isFALSE(path)) return(NULL)
+  if (isTRUE(exact)) return(path)
 
-    path <- path[1]
-    if (normPathMemoise(path) %in% normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])) {
-      path
-    } else {
-      if (interactive() && !endsWith(path, versionMajorMinor())) {
-        ## R CMD check on R >= 4.2 sets libpaths to use a random tmp dir
-        ## need to know if it's a user, who *should* keep R-version-specific dirs
-        file.path(path, versionMajorMinor())
-      } else {
-        path
-      }
-    }
+  path <- path[1]
+  siteLibs <- normPathMemoise(strsplit(Sys.getenv("R_LIBS_SITE"), split = ":")[[1]])
+  if (normPathMemoise(path) %in% siteLibs) return(path)
+
+  if (interactive() && !endsWith(path, versionMajorMinor())) {
+    ## R CMD check on R >= 4.2 uses a random tmp libpath; skip the
+    ## R-version append there so the path the user-set libpath wins.
+    file.path(path, versionMajorMinor())
   } else {
-    NULL
+    path
   }
 }
 
@@ -1162,9 +1256,11 @@ getSHAFromPkgEnv <- function() {
 
 
 getSHAFromGitHubDBFilename <- function() {
-  go <- cacheGetOptionCachePkgDir()
-  if (!is.null(go))
-    out <- file.path(go, paste0(.txtGetSHAfromGitHub, ".rds")) # returns NULL if no Cache used
+  ## Require-private bookkeeping (not a package tarball) -- keep next to
+  ## the legacy bookkeeping path so existing on-disk state is preserved.
+  go <- .requirePkgInfoDir()
+  if (!is.null(go) && nzchar(go))
+    out <- file.path(go, paste0(.txtGetSHAfromGitHub, ".rds"))
   else
     out <- character()
   out
@@ -1235,10 +1331,22 @@ urlExists <- function(url) {
   ret
 }
 
+#' Internet Exists query
+#'
+#' Simple test for internet availability.
+#'
+#' @returns Logical. `TRUE` if internet is available, `FALSE` if not.
+#'
 #' @inheritParams Require
-internetExists <- function(mess = "", verbose = getOption("Require.verbose")) {
+#' @param force If `TRUE`, probe even when `options("Require.checkInternet")`
+#'   is `FALSE`. Used at points where we're about to do real work (e.g.,
+#'   install dispatch) and a 2-second probe is cheap relative to the cost
+#'   of failing late. Defaults to `FALSE` to preserve the no-probe default
+#'   behaviour for all other call sites.
+internetExists <- function(verbose = getOption("Require.verbose"),
+                           force = FALSE) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
-    if (getOption("Require.checkInternet", FALSE)) {
+    if (force || getOption("Require.checkInternet", FALSE)) {
       internetMightExist <- TRUE
       iet <- get0(.txtInternetExistsTime, envir = pkgEnv())
       checkNow <- TRUE
@@ -1360,6 +1468,16 @@ masterMainHEAD <- function(url, need) {
 #' @export
 .downloadFileMasterMainAuth <- function(url, destfile, need = "HEAD",
                                         verbose = getOption("Require.verbose"), verboseLevel = 2) {
+  ## Issue #140: R's default `options("timeout")` is 60s, which is too short
+  ## for slow connections fetching a multi-MB GitHub source zip (the bare
+  ## `download.file` calls below inherit it). Raise it for the duration of
+  ## this call, with `Require.downloadTimeout` (seconds) as the user-facing
+  ## knob. The legacy non-pak path is the only one that reaches here; under
+  ## `Require.usePak = TRUE` pak's own libcurl downloader is used instead.
+  oldTimeout <- getOption("timeout")
+  options(timeout = max(oldTimeout, getOption("Require.downloadTimeout", 300L)))
+  on.exit(options(timeout = oldTimeout), add = TRUE)
+
   if (!dir.exists(dirname(destfile)))
     silent <- checkPath(dirname(destfile), create = TRUE)
   hasMasterMain <- grepl(masterMainGrep, url)
@@ -1553,7 +1671,9 @@ extractPkgNameFromWarning <- function(x) {
 }
 
 availablePackagesCachedPath <- function(repos, type) {
-  file.path(cachePkgDir(),
+  ## Require's own available.packages snapshot -- bookkeeping, not a
+  ## package tarball, so it lives in .requirePkgInfoDir() not pak's cache.
+  file.path(.requirePkgInfoDir(),
             paste0(gsub("https|[:/]", "", repos), collapse = "/"),
             type, "availablePackages.rds")
 }
@@ -1648,9 +1768,10 @@ gitHubFileUrl <- function(hasSubFolder, Branch, GitSubFolder, Account, Repo, fil
 }
 
 
-setOfflineModeTRUE <- function(verbose = getOption("Require.verbose")) {
+setOfflineModeTRUE <- function(verbose = getOption("Require.verbose"),
+                               force = FALSE) {
   if (!isTRUE(getOption("Require.offlineMode"))) {
-    if (!internetExists()) {
+    if (!internetExists(force = force)) {
       options(
         "Require.offlineMode" = TRUE,
         "Require.offlineModeSetAutomatically" = TRUE
@@ -1742,39 +1863,27 @@ available.packagesWithCallingHandlers <- function(repo, type, verbose = getOptio
       out <- try(available.packages(repos = repo, type = type,
                                     ignore_repo_cache = ignore_repo_cache)),
       warning = function(w) {
-        warns <<- w$message
+        if (!grepl(.txtBenignAvailPkgsWarns, w$message)) {
+          warns <<- c(warns, w$message)
+        }
         invokeRestart("muffleWarning")
       })
-    SSLwarns <- grepl(.txtUnableToAccessIndex, warns)
-    otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
-    SSLout <- SSLmodsWithFails(out, SSLwarns, warns, attmpt, verbose, otherwarns)
-    if (!is.null(SSLout))
-      eval(parse(text = SSLout)) # will be next or break
-    # if (is(out, "try-error") || any(SSLwarns)) {
-    #   # https://stackoverflow.com/a/76684292/3890027
-    #   prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-    #   Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
-    #   ignore_repo_cache <- TRUE
-    #   on.exit({
-    #     if (nzchar(prevCurlVal))
-    #       Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
-    #     else
-    #       Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-    #   }, add = TRUE)
-    # } else {
-    #   if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
-    #    next
-    #   }
-    #   if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
-    #     break
-    #   setOfflineModeTRUE(verbose = verbose)
-    #   if (length(otherwarns)) {
-    #     warning(warns)
-    #   }
-    #   break
-    # }
 
+    accessFail <- is(out, "try-error") || any(grepl(.txtUnableToAccessIndex, warns))
+    if (accessFail && attmpt == 1L) {
+      # https://stackoverflow.com/a/76684292/3890027
+      enableSSLWorkaround()
+      ignore_repo_cache <- TRUE
+      next
+    }
+    break
   }
+
+  stillFailing <- is(out, "try-error") || any(grepl(.txtUnableToAccessIndex, warns))
+  if (stillFailing) setOfflineModeTRUE(verbose = verbose)
+
+  otherwarns <- grep(.txtUnableToAccessIndex, warns, invert = TRUE, value = TRUE)
+  for (w in otherwarns) warning(w, call. = FALSE)
 
   out
 }
@@ -1975,30 +2084,14 @@ isGitCommitHash <- function(Branch) {
 }
 
 
-SSLmodsWithFails <- function(out, SSLwarns, warns, attmpt, verbose, otherwarns) {
-  SSLout <- NULL
-  if (is(out, "try-error") || any(SSLwarns)) {
-    # https://stackoverflow.com/a/76684292/3890027
-    prevCurlVal <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-    Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT=TRUE)
-    ignore_repo_cache <- TRUE
-    on.exit2({
-      if (nzchar(prevCurlVal))
-        Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prevCurlVal)
-      else
-        Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
-    }, add = TRUE)
-  } else {
-    if (any(grepl("cannot open URL", warns)) && attmpt == 1) { # seems to be transient esp with predictiveecology.r-universe.dev
-      SSLout <- "next"
-    }
-    if (urlExists("https://www.google.com"))  # this means that the repository does not have the packages.RDS file, meaning it doesn't have e.g., binary packages for R 4.2
-      SSLout <- "break"
-    setOfflineModeTRUE(verbose = verbose)
-    if (length(otherwarns)) {
-      warning(warns)
-    }
-    SSLout <- "break"
-  }
-  SSLout
+enableSSLWorkaround <- function() {
+  prev <- Sys.getenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+  Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = TRUE)
+  on.exit2({
+    if (nzchar(prev))
+      Sys.setenv(R_LIBCURL_SSL_REVOKE_BEST_EFFORT = prev)
+    else
+      Sys.unsetenv("R_LIBCURL_SSL_REVOKE_BEST_EFFORT")
+  }, add = TRUE)
+  invisible()
 }

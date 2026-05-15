@@ -52,6 +52,12 @@ default to a standard CRAN repository, forcing a source install. See also
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set
 via \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds).}
+\item{\code{downloadTimeout}}{Default: \code{300L} (seconds). Used as the floor for
+\code{options("timeout")} during GitHub source-archive downloads in the legacy
+(non-pak) install path. R's stock 60-second timeout is too short for
+slow connections fetching multi-MB zips. Has no effect under
+\code{Require.usePak = TRUE}, which delegates downloads to pak's own libcurl
+client.}
 \item{\code{spatialPkgs}}{ Default: A character vector of packages that are
 generally more successful if installed from Source on Unix-alikes. Since
 there are repositories that offer binary packages builds for Linux (e.g.,

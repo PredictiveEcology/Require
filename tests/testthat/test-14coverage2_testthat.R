@@ -388,8 +388,11 @@ test_that("removeOldFlatCachePkgs removes flat .tar.gz files", {
     pe <- Require:::pkgEnv()
     pe[["oldFlatCacheChecked"]] <- NULL
 
-    # Create the flat cache dir and put a fake .tar.gz directly in it
-    flatDir <- cachePkgDir(create = TRUE)
+    ## removeOldFlatCachePkgs is a migration helper for the pre-#143 flat
+    ## layout inside Require's bookkeeping dir -- which after the
+    ## cache-helper consolidation is .requirePkgInfoDir(), not the new
+    ## cachePkgDir() (which under usePak = TRUE points at pak's cache).
+    flatDir <- Require:::.requirePkgInfoDir(create = TRUE)
     fakeFile <- file.path(flatDir, "fakepkg_1.0.0.tar.gz")
     file.create(fakeFile)
     testthat::expect_true(file.exists(fakeFile))

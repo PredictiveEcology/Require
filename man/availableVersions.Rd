@@ -23,7 +23,13 @@ available.packagesCached(
 \item{package}{A single package name (without version or github specifications)}
 
 \item{repos}{The remote repository (e.g., a CRAN mirror), passed to either
-\code{install.packages}, \code{install_github} or \code{installVersions}.}
+\code{install.packages}, \code{install_github} or \code{installVersions}.
+\strong{When \code{options(Require.usePak = TRUE)}:} \code{repos} is added to pak's repository
+list via \code{options(repos)}. However, pak always includes CRAN and Bioconductor as
+built-in defaults regardless of this setting -- \code{repos} can only \emph{add} sources,
+it cannot prevent pak from also searching CRAN. This differs from the default
+(\code{usePak = FALSE}) behaviour where \code{repos} strictly controls which repositories
+are used. Use \code{pak::cache_clean()} to clear pak's download cache if needed.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,

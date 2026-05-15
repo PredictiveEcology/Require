@@ -22,12 +22,13 @@ envPkgCreate()
 
   # if (FALSE) {
   if (isTRUE(getOption("Require.usePak"))) {
-    if (requireNamespace("pak")) {
-      existingCacheDir <- pak::cache_summary()$cachepath
+    if (requireNamespace("pak", quietly = TRUE)) {
+      # tryCatch: under R CMD check, pak::cache_summary() errors with
+      # "R_USER_CACHE_DIR env var not set during package check" (pkgcache
+      # CRAN policy). The probed value isn't used downstream — the call is
+      # only here to warm pak — so swallow the error.
+      tryCatch(pak::cache_summary(), error = function(e) NULL)
     }
-    # if (!is.character(existingCacheDir) && nzchar(existingCacheDir))
-    #   Sys.setenv("R_REQUIRE_CACHE" = tempdir3())
-    # }
   }
 
   opts.Require <- RequireOptions()
@@ -46,17 +47,42 @@ envPkgCreate()
   }
   .RequireDependenciesNoBase <<- extractPkgName(setdiff(.RequireDependencies, .basePkgs))
 
-  possCacheDir <- cacheGetOptionCachePkgDir() |> checkPath(create = TRUE)
-  # if (!is.null(possCacheDir)) {
-  #   dir.create(possCacheDir, showWarnings = FALSE, recursive = TRUE)
-  # }
+  ## Ensure Require's bookkeeping dir exists at load time. (Note: this is
+  ## Require's own SHA DB / mirrors / DESCRIPTION cache area, NOT pak's
+  ## package tarball cache. See [.requirePkgInfoDir].)
+  possCacheDir <- .requirePkgInfoDir(create = TRUE)
 
   invisible()
 }
 
 .onAttach <- function(libname, pkgname) {
+  ## Deprecation: the package-tarball cache location is now controlled by
+  ## pak's standard env var R_USER_CACHE_DIR (consistent with the rest of
+  ## the R ecosystem). The Require-specific knobs below remain functional
+  ## for one release cycle but emit a one-time warning so users can
+  ## migrate.
+  if (isTRUE(getOption("Require.usePak", TRUE))) {
+    optVal <- getOption("Require.cachePkgDir", "default")
+    if (!identical(optVal, "default") && !identical(optVal, NULL)) {
+      packageStartupMessage(
+        "Require: options('Require.cachePkgDir') is deprecated and is ",
+        "ignored under usePak = TRUE. To redirect pak's package cache, ",
+        "set R_USER_CACHE_DIR in .Renviron instead."
+      )
+    }
+    envVal <- Sys.getenv("R_REQUIRE_PKG_CACHE")
+    if (nzchar(envVal)) {
+      packageStartupMessage(
+        "Require: R_REQUIRE_PKG_CACHE is deprecated and is ignored under ",
+        "usePak = TRUE. To redirect pak's package cache, set ",
+        "R_USER_CACHE_DIR in .Renviron instead (currently: '",
+        envVal, "')."
+      )
+    }
+  }
+
   if (isInteractive()) {
-    possCacheDir <- cacheGetOptionCachePkgDir()
+    possCacheDir <- cachePkgDir()
     mess <- c(
       "Require version: ", as.character(utils::packageVersion("Require")), "\n",
       if (!is.null(possCacheDir)) {

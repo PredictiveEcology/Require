@@ -3,7 +3,7 @@
 \name{cacheClearPackages}
 \alias{cacheClearPackages}
 \alias{clearRequirePackageCache}
-\title{Clear Require Cache elements}
+\title{Clear cached package tarballs}
 \usage{
 cacheClearPackages(
   packages,
@@ -23,18 +23,17 @@ clearRequirePackageCache(
 }
 \arguments{
 \item{packages}{Either missing or a character vector of package names
-(currently cannot specify version number) to remove from the local Require
-Cache.}
+(currently cannot specify version number) to remove from the cache.}
 
-\item{ask}{Logical. If \code{TRUE}, then it will ask user to confirm}
+\item{ask}{Logical. If \code{TRUE}, asks the user to confirm before deleting.}
 
-\item{Rversion}{An R version (major dot minor, e.g., "4.2"). Defaults to
-current R version.}
+\item{Rversion}{An R version (major.minor, e.g., \code{"4.2"}). Defaults to
+the current R version. \strong{Ignored under \code{usePak = TRUE}} -- see
+"Migration note".}
 
-\item{clearCranCache}{Logical. If \code{TRUE}, then this will also clear the
-local \code{crancache} cache, which is only relevant if
-\code{options(Require.useCranCache = TRUE)}, i.e., if \code{Require} is using the
-\code{crancache} cache also}
+\item{clearCranCache}{Logical. If \code{TRUE}, also clears the local
+\code{crancache} cache, which is only relevant if
+\code{options(Require.useCranCache = TRUE)}.}
 
 \item{verbose}{Numeric or logical indicating how verbose should the function
 be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
@@ -43,5 +42,26 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \description{
-Clear Require Cache elements
+Removes downloaded package archives from the cache that \code{\link[=cachePkgDir]{cachePkgDir()}}
+returns. With \code{usePak = TRUE} (the default) this delegates to
+\code{pak::cache_clean()} (no \code{packages} arg) or
+\code{pak::cache_delete(package = ...)} (selective). With \code{usePak = FALSE}
+it walks Require's legacy bookkeeping dir and unlinks tarballs there.
 }
+\details{
+Require's own bookkeeping (SHA DB, mirrors.csv, available.packages
+snapshots) is preserved by this function; use \code{\link[=cachePurge]{cachePurge()}} to clear
+those as well.
+
+\code{clearRequirePackageCache()} is a deprecated alias.
+}
+\section{Migration note}{
+
+
+The \code{Rversion} parameter is honoured only on the legacy path -- pak's
+cache is not partitioned by R version the way Require's cache was, so
+\code{pak::cache_clean()}/\code{pak::cache_delete()} operate on the whole cache
+regardless of \code{Rversion}. The function emits a verbose note when
+\code{Rversion != versionMajorMinor()} under \code{usePak = TRUE}.
+}
+

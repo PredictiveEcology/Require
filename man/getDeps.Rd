@@ -7,7 +7,16 @@ packages: name, repository, branch, version. For CRAN-alikes, it will only
 be 2 pieces: name, version. There can also be an inequality or equality, if
 there is a version.}
 \usage{
-getDeps(pkgDT, which, recursive, type = type, repos, libPaths, verbose)
+getDeps(
+  pkgDT,
+  which,
+  recursive,
+  type = type,
+  repos,
+  libPaths,
+  verbose,
+  parentChain = ""
+)
 }
 \arguments{
 \item{pkgDT}{A \code{pkgDT} object e.g., from \code{toPkgDT}}
@@ -33,6 +42,10 @@ be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
 \code{Require} function, when \code{verbose >= 2}, also returns details as if
 \code{returnDetails = TRUE} (for backwards compatibility).}
+
+\item{parentChain}{A character string representing the chain of parent
+packages that required this package, e.g., \code{"digest -> reproducible"}.
+Used to provide context in "not on CRAN" messages. Default \code{""}.}
 }
 \value{
 A (named) vector of SaveNames, which is a concatenation of the 2 or 4 elements

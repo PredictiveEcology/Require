@@ -10,6 +10,9 @@ on:
 
 name: R-CMD-check
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   R-CMD-check:
     if: "!contains(github.event.commits[0].message, '[skip-ci]')"
@@ -28,7 +31,13 @@ jobs:
           - {os: windows-latest,  r: 'oldrel-2'} ## currently 4.3
           - {os: windows-latest,  r: 'oldrel-3'} ## currently 4.2
           - {os: ubuntu-latest,   r: 'devel'}
-          - {os: ubuntu-latest,   r: 'release'}  ## currently 4.5
+          # Single matrix entry that opts in to the slow integration tests
+          # (5 archived-CRAN install round-trips in test-16 — measured at
+          # 340s vs ~50s for the rest of the test suite). Other matrix
+          # entries skip those via R_REQUIRE_RUN_LONG_CI gate so the 11-job
+          # matrix doesn't camp on GHA's 20-job concurrency cap. Coverage
+          # of the slow path is preserved on this one entry.
+          - {os: ubuntu-latest,   r: 'release', runLong: true}  ## currently 4.5
           - {os: ubuntu-latest,   r: 'oldrel-1'} ## currently 4.4
           - {os: ubuntu-latest,   r: 'oldrel-2'} ## currently 4.3
           - {os: ubuntu-latest,   r: 'oldrel-3'} ## currently 4.2
@@ -36,11 +45,28 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+      # Set to "true" only on the matrix entry tagged `runLong: true`.
+      # Tests that read this env (currently the 5 archived-CRAN install
+      # round-trips in test-16installFailureMetadata) bypass skip_on_ci()
+      # only when this is non-empty.
+      R_REQUIRE_RUN_LONG_CI: ${{ matrix.config.runLong && 'true' || '' }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: r-lib/actions/setup-pandoc@v2
+      # setup-pandoc occasionally fails with HTTP 5xx when its CDN blips
+      # (hit SpaDES.tools today). Three attempts with continue-on-error
+      # ride out those transient failures; transient pandoc-CDN errors
+      # almost always clear on the immediate next call.
+      - id: pandoc1
+        continue-on-error: true
+        uses: r-lib/actions/setup-pandoc@v2
+      - if: steps.pandoc1.outcome == 'failure'
+        id: pandoc2
+        continue-on-error: true
+        uses: r-lib/actions/setup-pandoc@v2
+      - if: steps.pandoc1.outcome == 'failure' && steps.pandoc2.outcome == 'failure'
+        uses: r-lib/actions/setup-pandoc@v2
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -53,12 +79,45 @@ jobs:
         run: |
           echo "_R_CHECK_THINGS_IN_OTHER_DIRS_=true" >> $GITHUB_ENV
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - id: deps
+        continue-on-error: true
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          # Pin pak to its stable channel; devel-pak occasionally regresses
+          # on dep resolution.
+          pak-version: stable
           extra-packages: |
             any::rcmdcheck
 
+      # Fallback: when setup-r-dependencies fails (typically a transient
+      # `Cannot query GitHub` / `pkgdepends resolution error` on
+      # rate-limited or blip'd GitHub API calls), retry with a fresh
+      # pak-stable install + pkg_install loop. Up to 3 attempts × 30 min ×
+      # 60 s backoff. Same pattern used in reproducible / SpaDES.core /
+      # SpaDES.project.
+      - name: Install R deps (retry fallback)
+        if: steps.deps.outcome == 'failure'
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          retry_wait_seconds: 60
+          retry_on: error
+          shell: 'Rscript {0}'
+          command: |
+            install.packages("pak", repos = "https://r-lib.github.io/p/pak/stable/")
+            pak::local_install_dev_deps(ask = FALSE, dependencies = TRUE)
+            pak::pkg_install("any::rcmdcheck", ask = FALSE)
+
       - uses: r-lib/actions/check-r-package@v2
         with:
-          args: 'c("--no-manual", "--as-cran", "--run-dontrun", "--run-donttest")'
+          # Dropped --run-dontrun --run-donttest: man/Require.Rd has a
+          # \dontrun{} block that does ~11 real CRAN/GitHub installs
+          # (crayon, cli, R6, rlang, ellipsis, fpCompare, plus a
+          # multi-package Require() loop). With those flags every matrix
+          # entry on a cold pak cache spent multi-hour wall time on
+          # dep-install storm and routinely wedged through GHA's 6h cap.
+          # Examples are still syntax-checked. Use the runLong flag +
+          # tests for live exercise of those code paths.
+          args: 'c("--no-manual", "--as-cran")'
           upload-snapshots: true

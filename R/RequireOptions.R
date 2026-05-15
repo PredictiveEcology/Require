@@ -44,6 +44,12 @@
 #'   by `Require` will be deleted and rebuilt. This should not generally be
 #'   necessary as it will automatically be deleted after (by default) 1 hour (set
 #'   via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in seconds).}
+#' \item{`downloadTimeout`}{Default: `300L` (seconds). Used as the floor for
+#'   `options("timeout")` during GitHub source-archive downloads in the legacy
+#'   (non-pak) install path. R's stock 60-second timeout is too short for
+#'   slow connections fetching multi-MB zips. Has no effect under
+#'   `Require.usePak = TRUE`, which delegates downloads to pak's own libcurl
+#'   client.}
 #' \item{`spatialPkgs`}{ Default: A character vector of packages that are
 #'   generally more successful if installed from Source on Unix-alikes. Since
 #'   there are repositories that offer binary packages builds for Linux (e.g.,
@@ -62,6 +68,7 @@ RequireOptions <- function() {
     Require.cachePkgDir = "default",
     Require.checkInternet = TRUE,
     Require.cloneFrom = NULL,
+    Require.downloadTimeout = 300L,
     Require.install = TRUE,
     Require.installPackagesSys = 2L, # if (isMacOS()) 2L else 2L,
     Require.otherPkgs = c(
@@ -84,9 +91,11 @@ RequireOptions <- function() {
       "terra",
       "units"
     ), # c("raster", "s2", "sf", "sp", "units")
+    Require.snapshotInstaller = "pak",
+    Require.snapshotInstallerUsePPM = TRUE,
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,
-    Require.usePak = FALSE,
+    Require.usePak = TRUE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
   )
