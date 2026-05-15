@@ -9,6 +9,16 @@
   bump. See vignette for the migration map and behavioural differences
   Require still papers over relative to a raw `pak::pak()` call.
 
+* `pak`'s automatic system-requirements installation is now disabled by
+  default. `pak` can otherwise probe for `sudo` and `apt-get install`
+  missing system libraries; installing OS libraries is the user's or
+  administrator's responsibility, not Require's, and the silent
+  privilege escalation is unwanted in containers, CI, shared/HPC nodes
+  and on CRAN. Set `PKG_SYSREQS=true` (env var) or
+  `options(pkg.sysreqs = TRUE)` *before* loading Require to opt back in;
+  an explicit opt-in is honoured everywhere. A regression test guards
+  this behaviour.
+
 ## bug fixes
 
 * Windows + RStudio: the SSL warning emitted by `.rs.downloadFile`
@@ -864,8 +874,9 @@
 * Expanded test suite with targeted unit tests for many previously uncovered internal functions, including message helpers, cache helpers, environment accessors, and `pkgDepTopoSort`.
 
 ## Bugfixes
-* several minor
-* better fails when status is 403 for package dependency checking
+* fixes on MacOS that were preventing many types of packages from installing.
+* several minor.
+* better fails when status is 403 for package dependency checking.
 * `updatePackages` had 2 minor bugs that prevented some mixtures of necessary updates from being correctly identified.
 * resolved failure to install when using `(HEAD)` in some cases for packages in custom repositories
 * use `R_REQUIRE_CACHE` environment variable for setting the cache directory instead of modifying `R_USER_CACHE_DIR` (#124).
