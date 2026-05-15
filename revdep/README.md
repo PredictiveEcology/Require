@@ -18,10 +18,16 @@
 
 |package    |old    |new    |Δ  |
 |:----------|:------|:------|:--|
-|Require    |1.0.1  |1.1.1  |*  |
+|Require    |1.0.1  |2.0.0  |*  |
 |data.table |1.18.4 |1.18.4 |   |
 |pak        |NA     |0.9.5  |*  |
 |sys        |3.4.3  |3.4.3  |   |
 
 # Revdeps
+
+## All (1)
+
+|package     |version |error |warning |note |
+|:-----------|:-------|:-----|:-------|:----|
+|[SpaDES.core](problems.md#spadescore)|3.0.4   |1     |        |     |
 
