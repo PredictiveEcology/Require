@@ -73,6 +73,14 @@ The following options are likely of interest to most users:
   hour (set via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment
   variable in seconds).
 
+- `downloadTimeout`:
+
+  Default: `300L` (seconds). Used as the floor for `options("timeout")`
+  during GitHub source-archive downloads in the legacy (non-pak) install
+  path. R's stock 60-second timeout is too short for slow connections
+  fetching multi-MB zips. Has no effect under `Require.usePak = TRUE`,
+  which delegates downloads to pak's own libcurl client.
+
 - `spatialPkgs`:
 
   Default: A character vector of packages that are generally more

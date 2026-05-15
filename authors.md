@@ -17,13 +17,13 @@ Source:
 [`DESCRIPTION`](https://github.com/PredictiveEcology/Require/blob/main/DESCRIPTION)
 
 McIntire E (2026). *Require: Installing and Loading R Packages for
-Reproducible Workflows*. R package version 1.1.0,
+Reproducible Workflows*. R package version 2.0.0,
 <https://Require.predictiveecology.org>.
 
     @Manual{,
       title = {Require: Installing and Loading R Packages for Reproducible Workflows},
       author = {Eliot J B McIntire},
       year = {2026},
-      note = {R package version 1.1.0},
+      note = {R package version 2.0.0},
       url = {https://Require.predictiveecology.org},
     }

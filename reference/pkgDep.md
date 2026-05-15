@@ -4,10 +4,10 @@ This is a wrapper around
 [`tools::dependsOnPkgs`](https://rdrr.io/r/tools/dependsOnPkgs.html),
 but with the added option of `topoSort`, which will sort them such that
 the packages at the top will have the least number of dependencies that
-are in `pkgs`. This is essentially a topological sort, but it is done
-heuristically. This can be used to e.g., `detach` or `unloadNamespace`
-packages in order so that they each of their dependencies are detached
-or unloaded first.
+are in `packages`. This is essentially a topological sort, but it is
+done heuristically. This can be used to e.g., `detach` or
+`unloadNamespace` packages in order so that they each of their
+dependencies are detached or unloaded first.
 
 `pkgDep2` is a convenience wrapper of `pkgDep` that "goes one level in",
 i.e., the first order dependencies, and runs the `pkgDep` on those.
@@ -30,7 +30,7 @@ multiple sources to be searched in the same function call.
 
 ``` r
 pkgDepTopoSort(
-  pkgs,
+  packages,
   deps,
   reverse = FALSE,
   topoSort = TRUE,
@@ -72,10 +72,32 @@ pkgDep(
 
 ## Arguments
 
-- pkgs:
+- packages:
 
-  A vector of package names to evaluate their reverse depends (i.e., the
-  packages that *use* each of these packages)
+  Either a character vector of packages to install via
+  `install.packages`, then load (i.e., with `library`), or, for
+  convenience, a vector or list (using `c` or `list`) of unquoted
+  package names to install and/or load (as in `require`, but
+  vectorized). Passing vectors of names may not work in all cases, so
+  user should confirm before relying on this behaviour in operational
+  code. In the case of a GitHub package, it will be assumed that the
+  name of the repository is the name of the package. If this is not the
+  case, then pass a *named* character vector here, where the names are
+  the package names that could be different than the GitHub repository
+  name. As a convenience for copy-pasting long lists, any character
+  element that contains newlines is split into one package per line,
+  with whitespace trimmed and blank or `#`-prefixed lines dropped. For
+  example,
+  `Require("\n dplyr\n # ggplot2\n PredictiveEcology/LandR@development\n")`
+  is equivalent to
+  `Require(c("dplyr", "PredictiveEcology/LandR@development"))`.
+  Alternatively, an unquoted `{...}` block is accepted, with each line
+  treated as one package spec, e.g.
+  `Require({ dplyr; lme4; PredictiveEcology/LandR@development })`. Note
+  that R's parser strips comments inside `{...}` before this function
+  runs, so to omit a package delete the line (or comment it out – both
+  have the same effect). Version constraints such as `pkg (>= 1.0)` do
+  not parse inside `{...}` and must use the quoted string form.
 
 - deps:
 
@@ -85,13 +107,13 @@ pkgDep(
 - reverse:
 
   Logical. If `TRUE`, then this will use `tools::pkgDependsOn` to
-  determine which packages depend on the `pkgs`
+  determine which packages depend on the `packages`
 
 - topoSort:
 
   Logical. If `TRUE`, the default, then the returned list of packages
   will be in order with the least number of dependencies listed in
-  `pkgs` at the top of the list.
+  `packages` at the top of the list.
 
 - libPaths:
 
@@ -102,7 +124,7 @@ pkgDep(
 
   Logical. If `TRUE`, then all non-core R packages in
   [`search()`](https://rdrr.io/r/base/search.html) will be appended to
-  `pkgs` to allow those to also be identified
+  `packages` to allow those to also be identified
 
 - returnFull:
 
@@ -110,7 +132,7 @@ pkgDep(
   all installed packages will be searched. If `FALSE`, the default, only
   packages that are currently in the
   [`search()`](https://rdrr.io/r/base/search.html) path and passed in
-  `pkgs` will be included in the possible reverse dependencies.
+  `packages` will be included in the possible reverse dependencies.
 
 - recursive:
 
@@ -157,20 +179,6 @@ pkgDep(
   Currently only `dependencies` as an alternative to `which`. If
   specified, then `which` will be ignored.
 
-- packages:
-
-  Either a character vector of packages to install via
-  `install.packages`, then load (i.e., with `library`), or, for
-  convenience, a vector or list (using `c` or `list`) of unquoted
-  package names to install and/or load (as in `require`, but
-  vectorized). Passing vectors of names may not work in all cases, so
-  user should confirm before relying on this behaviour in operational
-  code. In the case of a GitHub package, it will be assumed that the
-  name of the repository is the name of the package. If this is not the
-  case, then pass a *named* character vector here, where the names are
-  the package names that could be different than the GitHub repository
-  name.
-
 - depends:
 
   Logical. Include packages listed in "Depends". Default `TRUE`.
@@ -190,7 +198,15 @@ pkgDep(
 - repos:
 
   The remote repository (e.g., a CRAN mirror), passed to either
-  `install.packages`, `install_github` or `installVersions`.
+  `install.packages`, `install_github` or `installVersions`. **When
+  `options(Require.usePak = TRUE)`:** `repos` is added to pak's
+  repository list via `options(repos)`. However, pak always includes
+  CRAN and Bioconductor as built-in defaults regardless of this setting
+  – `repos` can only *add* sources, it cannot prevent pak from also
+  searching CRAN. This differs from the default (`usePak = FALSE`)
+  behaviour where `repos` strictly controls which repositories are used.
+  Use [`pak::cache_clean()`](https://pak.r-lib.org/reference/cache.html)
+  to clear pak's download cache if needed.
 
 - keepVersionNumber:
 

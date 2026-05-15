@@ -8,7 +8,16 @@ equality, if there is a version.
 ## Usage
 
 ``` r
-getDeps(pkgDT, which, recursive, type = type, repos, libPaths, verbose)
+getDeps(
+  pkgDT,
+  which,
+  recursive,
+  type = type,
+  repos,
+  libPaths,
+  verbose,
+  parentChain = ""
+)
 ```
 
 ## Arguments
@@ -50,6 +59,12 @@ getDeps(pkgDT, which, recursive, type = type, repos, libPaths, verbose)
   minimal outputs; if `1` or TRUE, more outputs; `2` even more. NOTE: in
   `Require` function, when `verbose >= 2`, also returns details as if
   `returnDetails = TRUE` (for backwards compatibility).
+
+- parentChain:
+
+  A character string representing the chain of parent packages that
+  required this package, e.g., `"digest -> reproducible"`. Used to
+  provide context in "not on CRAN" messages. Default `""`.
 
 ## Value
 

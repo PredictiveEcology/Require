@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -140,6 +140,144 @@ This can later be passed to <code>Require</code>.</p>
 <p><code>pkgSnapshot2</code> returns a vector of package names and versions, with no file output. See
 examples.</p>
     </div>
+    <div class="section level2">
+    <h2 id="installing-from-a-snapshot-file">Installing from a snapshot file<a class="anchor" aria-label="anchor" href="#installing-from-a-snapshot-file"></a></h2>
+
+
+<p>Pass the snapshot file to <code><a href="Require.html">Require()</a></code> via <code>packageVersionFile = "snapshot.txt"</code>.
+By default this routes through a multi-stage installer (gated by
+<code>options(Require.snapshotInstaller = "install.packages")</code>) that:</p><ol><li><p><strong>Skips already-installed-at-target-version refs.</strong></p></li>
+<li><p><strong>Cache pre-filter</strong> via <code><a href="https://r-lib.github.io/pkgcache/reference/pkg_cache_api.html" class="external-link">pkgcache::pkg_cache_list()</a></code>. Source tarballs feed
+<code>pak::pkg_install(local::...)</code>; binaries are reserved for step (4). Rotten
+cache rows (missing fullpath, gzip-corrupt, DESCRIPTION mismatch) are
+auto-evicted via <code><a href="https://r-lib.github.io/pkgcache/reference/pkg_cache_api.html" class="external-link">pkgcache::pkg_cache_delete_files()</a></code> so future runs
+don't keep tripping on them.</p></li>
+<li><p><strong>Parallel libcurl-multi download</strong> for refs not in cache, chunked at 50
+URLs per call (macOS file-descriptor limit). Walks priority URLs: row's
+<code>Repository</code> -&gt; PPM -&gt; CRAN -&gt; CRAN/Archive. Up to 4 retries with
+exponential backoff (<code>Require.snapshotDownloadAttempts</code>).</p></li>
+<li><p><strong>Hybrid binary-first install</strong> via <code>install.packages(type = "binary")</code>
+for any ref that has a cache binary matching this R session
+(<code>R.version$platform</code>, <code>&lt;major&gt;.&lt;minor&gt;</code>). Skips compilation, reduces
+pak's parallel-build workload. Disable via
+<code>options(Require.snapshotInstallerHybrid = FALSE)</code>.</p></li>
+<li><p><strong><code>pak::pkg_install(local::...)</code> for the rest</strong> with <code>dependencies = NA</code>,
+<code>upgrade = FALSE</code>. Refs already-installed-at-target-version are excluded
+upfront so pak doesn't reinstall-to-self.</p></li>
+<li><p><strong><code>install.packages(repos = file://...)</code> fallback</strong> if pak refuses (its
+solver is strict; <code>install.packages</code> is best-effort and tolerates
+per-package compile failures).</p></li>
+<li><p><strong>Bump-and-retry</strong>: for any ref still missing, walks newer-than-pin
+versions from CRAN/PPM/Archive ascending and tries each until one
+installs (capped at 20 candidates). Disable via
+<code>options(Require.snapshotInstallerBumpOnFail = FALSE)</code> for strict
+reproducibility (no drift, fail loudly).</p></li>
+<li><p><strong>Diagnostic report</strong> classifying each gap with a concrete <code>fix:</code> line.</p></li>
+</ol><p>Built binaries from this run are added back to <code>pkgcache</code> via
+<code>cacheBuiltBinaries()</code> (registered on <code>on.exit</code>), so a subsequent run hits
+step (4) instead of recompiling.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="common-snapshot-pitfalls">Common snapshot pitfalls<a class="anchor" aria-label="anchor" href="#common-snapshot-pitfalls"></a></h2>
+
+
+
+<dl><dt>Version-coherence (the snapshot's own pins disagree)</dt>
+<dd><p>A ref's <code>DESCRIPTION</code> declares <code>Imports: X (&gt;= V)</code> but the snapshot
+pins <code>X</code> at a version that doesn't satisfy it. <code>pak</code>'s strict solver
+refuses to install. The installer runs a coherence pre-check before
+handing off to pak and prints any unsatisfied constraint with a fix
+suggestion (e.g., <code>servr 0.30 requires xfun (&gt;= 0.42); snapshot pins xfun = 0.40 -&gt; bump xfun</code>).</p></dd>
+
+<dt><code>R</code> pseudo-package</dt>
+<dd><p><code>pkgSnapshot()</code> writes a row recording the running R version
+(e.g., <code>R,4.4,...</code>). The installer skips this row alongside base
+packages.</p></dd>
+
+<dt>System library mismatches (compile failures)</dt>
+<dd><p>Source builds need the host's system libs to match what the package
+expects. The installer's <code>classifyCompileFailure()</code> recognises
+missing-header errors (jpeglib.h, gdal.h, geos_c.h, glpk.h,
+ft2build.h, sodium.h, ...) and prints the corresponding
+<code>brew install ...</code> (or apt) suggestion. R 4.5's removal of
+<code>Calloc/Free</code>, GDAL &gt;= 3.10's <code>const OGRSpatialReference*</code> ABI
+change, and Rcpp's <code>class_::constructor&lt;&gt;</code> template-arity limit are
+each pattern-matched and reported with a "bump <code>&lt;pkg&gt;</code>" suggestion.</p></dd>
+
+<dt>Mac toolchain – <code>~/.R/Makevars</code></dt>
+<dd><p>R's default compile flags only search <code>/opt/R/arm64/include</code>. To pick
+up Homebrew headers (libjpeg, glpk, freetype, etc.), add to
+<code>~/.R/Makevars</code>:</p><div class="sourceCode"><pre><code>
+      CPPFLAGS += -I/opt/homebrew/include
+      LDFLAGS  += -L/opt/homebrew/lib
+    </code></pre></div>
+</dd>
+
+<dt>Stale <code>pkgcache</code> index</dt>
+<dd><p><code>pkgcache</code> shares state across R versions and architectures. Cache
+rows tagged with platform/rversion that don't match this session
+are filtered out (e.g., R-4.5 binaries when running R-4.4); validation
+also catches index rows whose file content disagrees with the index
+(a known historical bug-class). Both kinds get auto-evicted, so
+<code><a href="https://pak.r-lib.org/reference/cache.html" class="external-link">pak::cache_clean()</a></code> is rarely needed.</p></dd>
+
+<dt>Pak's <code>local::</code> is source-only</dt>
+<dd><p>Confirmed empirically that pak's <code>pkg_install("local::&lt;file&gt;")</code>
+rejects binary tarballs (<code>.tgz</code> / <code>.zip</code> content) with
+"Platform mismatch" – even when the binary is for the current
+platform. The hybrid stage installs binaries via
+<code>install.packages(type = "binary")</code> BEFORE pak runs, so pak only
+sees source refs.</p></dd>
+
+<dt>Pak strict-aborts on first build failure</dt>
+<dd><p><code>install.packages</code> continues past per-package compile failures;
+<code><a href="https://pak.r-lib.org/reference/pkg_install.html" class="external-link">pak::pkg_install</a></code> does not. The fallback to <code>install.packages</code> and
+the bump-and-retry stage together provide a best-effort completion
+guarantee even when individual refs are environment-fragile.</p></dd>
+
+
+</dl></div>
+    <div class="section level2">
+    <h2 id="snapshot-installer-options">Snapshot-installer options<a class="anchor" aria-label="anchor" href="#snapshot-installer-options"></a></h2>
+
+
+<dl><dt><code>Require.snapshotInstaller</code></dt>
+<dd><p><code>"install.packages"</code> to use the
+pipeline above; <code>"pak"</code> for the legacy direct-pak path.</p></dd>
+
+<dt><code>Require.snapshotInstallerUsePPM</code></dt>
+<dd><p>TRUE (default) to prepend a PPM
+binary repo. PPM serves Mac binaries by content-negotiating the
+<code>R/&lt;version&gt;</code> User-Agent.</p></dd>
+
+<dt><code>Require.snapshotInstallerHybrid</code></dt>
+<dd><p>TRUE (default) – pre-install
+cache binaries via <code>install.packages(type = "binary")</code> before pak.</p></dd>
+
+<dt><code>Require.snapshotInstallerBumpOnFail</code></dt>
+<dd><p>TRUE (default) – walk newer
+versions for refs that fail at the pin. FALSE for strict
+reproducibility.</p></dd>
+
+<dt><code>Require.snapshotInstallerKnownFails</code></dt>
+<dd><p>character vector of pkg
+names to skip in bump-retry (e.g. environment-dependent refs whose
+newer versions also won't help).</p></dd>
+
+<dt><code>Require.snapshotInstallerPakSilent</code></dt>
+<dd><p>FALSE (default) – pak's
+resolver output reaches the user.</p></dd>
+
+<dt><code>Require.snapshotDownloadAttempts</code></dt>
+<dd><p>Retry count for libcurl-multi
+downloads. Default 4.</p></dd>
+
+<dt><code>Require.snapshotDownloadChunk</code></dt>
+<dd><p>URLs per <code><a href="https://rdrr.io/r/utils/download.file.html" class="external-link">download.file()</a></code> call.
+Default 50 (stays under macOS's ~256 file-descriptor ulimit).</p></dd>
+
+
+</dl></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

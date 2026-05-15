@@ -8,10 +8,6 @@ Reference table of R versions and their release dates (2018 and later).
 rversions
 ```
 
-## Format
-
-An object of class `data.frame` with 21 rows and 2 columns.
-
 ## Details
 
 Update this as needed using `rversions::r_versions()`:

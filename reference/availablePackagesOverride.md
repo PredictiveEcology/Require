@@ -26,7 +26,15 @@ availablePackagesOverride(
 - repos:
 
   The remote repository (e.g., a CRAN mirror), passed to either
-  `install.packages`, `install_github` or `installVersions`.
+  `install.packages`, `install_github` or `installVersions`. **When
+  `options(Require.usePak = TRUE)`:** `repos` is added to pak's
+  repository list via `options(repos)`. However, pak always includes
+  CRAN and Bioconductor as built-in defaults regardless of this setting
+  – `repos` can only *add* sources, it cannot prevent pak from also
+  searching CRAN. This differs from the default (`usePak = FALSE`)
+  behaviour where `repos` strictly controls which repositories are used.
+  Use [`pak::cache_clean()`](https://pak.r-lib.org/reference/cache.html)
+  to clear pak's download cache if needed.
 
 - purge:
 

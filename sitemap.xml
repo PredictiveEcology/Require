@@ -1,6 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://Require.predictiveecology.org/404.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/CONTRIBUTING.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/HANDOFF.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/articles/Require.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/articles/index.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/authors.html</loc></url>
@@ -35,6 +36,7 @@
 <url><loc>https://Require.predictiveecology.org/reference/getCRANrepos.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/getDeps.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/index.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/reference/internetExists.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/invertList.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/joinToAvailablePackages.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/linkOrCopy.html</loc></url>

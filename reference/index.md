@@ -43,7 +43,7 @@
 - [`cacheGetOptionCachePkgDir()`](https://Require.predictiveecology.org/reference/cacheGetOptionCachePkgDir.md)
   :
 
-  Get the option for `Require.cachePkgDir`
+  Get the option for `Require.cachePkgDir` (deprecated)
 
 - [`cachePurge()`](https://Require.predictiveecology.org/reference/cachePurge.md)
   [`purgeCache()`](https://Require.predictiveecology.org/reference/cachePurge.md)
@@ -57,7 +57,7 @@
 
 - [`cacheClearPackages()`](https://Require.predictiveecology.org/reference/clearRequire.md)
   [`clearRequirePackageCache()`](https://Require.predictiveecology.org/reference/clearRequire.md)
-  : Clear Require Cache elements
+  : Clear cached package tarballs
 
 - [`compareVersion2()`](https://Require.predictiveecology.org/reference/compareVersion2.md)
   : Compare package versions
@@ -103,6 +103,9 @@
   GitHub packages: name, repository, branch, version. For CRAN-alikes,
   it will only be 2 pieces: name, version. There can also be an
   inequality or equality, if there is a version.
+
+- [`internetExists()`](https://Require.predictiveecology.org/reference/internetExists.md)
+  : Internet Exists query
 
 - [`invertList()`](https://Require.predictiveecology.org/reference/invertList.md)
   : Invert a 2-level list

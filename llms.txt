@@ -16,6 +16,7 @@ snapshotting capabilities of `renv`. It takes its name from the idea
 that a user could simply have one line like this:
 
 ``` r
+
 Require(c("dplyr", "lme4", "PredictiveEcology/LandR@development"))
 ```
 
@@ -73,6 +74,7 @@ default setting of `require = TRUE`.
 These lines:
 
 ``` r
+
 if (!require("dplyr")) {install.packages("dplyr"); require("dplyr")}
 if (!require("lme4")) {install.packages("lme4"); require("lme4")}
 if (!require("tidyverse")) {install.packages("tidyverse"); require("tidyverse")}
@@ -81,6 +83,7 @@ if (!require("tidyverse")) {install.packages("tidyverse"); require("tidyverse")}
 become:
 
 ``` r
+
 if (!require("Require")) {install.packages("Require"); require("Require")}
 Require(c("dplyr", "lme4", "tidyverse"))
 ```
@@ -104,6 +107,7 @@ CRAN-like packages and GitHub.com and other similar code-sharing pages.
 This works well if the objective is to keep current. It is fast.
 
 ``` r
+
 # These lines
 pak::pkg_install(c("dplyr", "lme4"))
 
@@ -192,12 +196,14 @@ status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge
 **Install from CRAN:**
 
 ``` r
+
 install.packages("Require")
 ```
 
 **Install development version:**
 
 ``` r
+
 # Installing the development binary (Windows/MacOS)
 install.packages("Require", repos = "https://predictiveecology.r-universe.dev")
 
@@ -217,6 +223,7 @@ status](https://github.com/PredictiveEcology/Require/workflows/R-CMD-check/badge
 This is a development version of the package:
 
 ``` r
+
 install.packages("Require", repose = "https://predictiveecology.r-universe.dev") 
 ```
 
@@ -228,6 +235,7 @@ one of the main function to load packages,
 `install.packages`, it is vectorized on package names.
 
 ``` r
+
 if (!require("Require")) {install.packages("Require")} # sadly, Require can't install itself
 Require::Require("data.table")
 
@@ -286,6 +294,7 @@ project can be fully isolated (unlike
 see packages in the R_HOME directory)
 
 ``` r
+
 library(Require)
 projectPackages = "projectPackages"
 dir.create(projectPackages)
@@ -300,6 +309,7 @@ version on MRAN and CRAN Archives. In the same way as above, we can
 specify maximum or exact package versions.
 
 ``` r
+
 Require("fpCompare (<=0.1.0)") # we don't have to know where to get this
 ```
 
@@ -309,6 +319,7 @@ Because it is vectorized, there can be a long list of packages at the
 top of a project file, with various sources and version specifications.
 
 ``` r
+
 Install(c("dplyr (==1.1.4)", "reproducible", 
           "PredictiveEcology/SpaDES@development", "raster (>=3.1.5)"))
 ```
@@ -319,6 +330,7 @@ When a system is set up with the correct packages and versions, we can
 take a snapshot and give that file to another person or machine:
 
 ``` r
+
 library(Require)
 pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project specific ones
 
@@ -413,7 +425,7 @@ this project.
 - [`cacheGetOptionCachePkgDir()`](https://Require.predictiveecology.org/reference/cacheGetOptionCachePkgDir.md)
   :
 
-  Get the option for `Require.cachePkgDir`
+  Get the option for `Require.cachePkgDir` (deprecated)
 
 - [`cachePurge()`](https://Require.predictiveecology.org/reference/cachePurge.md)
   [`purgeCache()`](https://Require.predictiveecology.org/reference/cachePurge.md)
@@ -427,7 +439,7 @@ this project.
 
 - [`cacheClearPackages()`](https://Require.predictiveecology.org/reference/clearRequire.md)
   [`clearRequirePackageCache()`](https://Require.predictiveecology.org/reference/clearRequire.md)
-  : Clear Require Cache elements
+  : Clear cached package tarballs
 
 - [`compareVersion2()`](https://Require.predictiveecology.org/reference/compareVersion2.md)
   : Compare package versions
@@ -473,6 +485,9 @@ this project.
   GitHub packages: name, repository, branch, version. For CRAN-alikes,
   it will only be 2 pieces: name, version. There can also be an
   inequality or equality, if there is a version.
+
+- [`internetExists()`](https://Require.predictiveecology.org/reference/internetExists.md)
+  : Internet Exists query
 
 - [`invertList()`](https://Require.predictiveecology.org/reference/invertList.md)
   : Invert a 2-level list
