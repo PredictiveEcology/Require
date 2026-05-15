@@ -40,6 +40,27 @@ regexEscape <- function(x) {
 #   (3) capture.output(type = "output") -- catches anything written directly to
 #       stdout via cat()/writeLines() by pak's cli_server_default renderer, such
 #       as "i No downloads are needed, 1 pkg is cached".
+# TRUE iff the user has explicitly opted IN to pak's automatic
+# system-requirements installation, via either the `PKG_SYSREQS` env var
+# set to a truthy value or `options(pkg.sysreqs = TRUE)`. Used by
+# .onLoad (to decide whether to force the subsystem off) and pakCall (to
+# decide whether to re-assert off per call). Default is opt-OUT: if the
+# user has said nothing, Require keeps pak's sudo-capable sysreqs path
+# disabled. An explicit opt-in is honoured everywhere -- the user's
+# machine, the user's sudo, the user's choice.
+.sysreqsTruthy <- function(x) {
+  isTRUE(x) ||
+    (is.character(x) && length(x) == 1L &&
+       tolower(trimws(x)) %in% c("true", "yes", "on", "1"))
+}
+.sysreqsUserOptedIn <- function() {
+  envv <- Sys.getenv("PKG_SYSREQS", unset = "")
+  if (nzchar(envv) && .sysreqsTruthy(envv)) return(TRUE)
+  opt <- getOption("pkg.sysreqs", default = NULL)
+  if (!is.null(opt) && .sysreqsTruthy(opt)) return(TRUE)
+  FALSE
+}
+
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
   ## Inline null-coalesce: `%||%` is base in R 4.4+ but not 4.3, and Require
   ## doesn't import it from rlang. Without this, pakCall errors on R 4.3
@@ -49,11 +70,16 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
   ## Defense-in-depth for the CRAN sudo-probe issue (see zzz.R .onLoad):
   ## re-assert that pak's sysreqs subsystem is OFF on every pak call, so
   ## nothing that toggles env/options mid-session can let pak run
-  ## `sudo sh -c id` / apt-get. Cheap, idempotent; not restored on exit
-  ## because "Require never sudo-installs system libs" is a permanent
-  ## policy, not a temporary toggle.
-  Sys.setenv(PKG_SYSREQS = "false", PKG_SYSREQS_SUDO = "false")
-  options(pkg.sysreqs = FALSE, pkg.sysreqs_sudo = FALSE)
+  ## `sudo sh -c id` / apt-get. NOT applied when the user explicitly
+  ## opted in at load time (.sysreqsUserOptIn captured in zzz.R) -- an
+  ## informed user who wants pak to auto-install system libraries keeps
+  ## that choice; it is their machine and their sudo. CRAN-safe because
+  ## CRAN's check env never sets the opt-in, so the force-off path
+  ## always applies there. Default (flag absent) = force off (safe).
+  if (!isTRUE(get0(".sysreqsUserOptIn", envir = pkgEnv(), inherits = FALSE))) {
+    Sys.setenv(PKG_SYSREQS = "false", PKG_SYSREQS_SUDO = "false")
+    options(pkg.sysreqs = FALSE, pkg.sysreqs_sudo = FALSE)
+  }
   if (verbose <= -1L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)

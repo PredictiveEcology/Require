@@ -38,14 +38,25 @@ envPkgCreate()
   ## in-process pkgdepends use. Only set when the user has not made an
   ## explicit choice, so a user who deliberately opts in keeps ownership
   ## of that decision (and its consequences).
-  if (!nzchar(Sys.getenv("PKG_SYSREQS")))
-    Sys.setenv(PKG_SYSREQS = "false")
-  if (!nzchar(Sys.getenv("PKG_SYSREQS_SUDO")))
-    Sys.setenv(PKG_SYSREQS_SUDO = "false")
-  if (is.null(getOption("pkg.sysreqs")))
-    options(pkg.sysreqs = FALSE)
-  if (is.null(getOption("pkg.sysreqs_sudo")))
-    options(pkg.sysreqs_sudo = FALSE)
+  ## Capture the user's explicit opt-in ONCE, before we touch anything,
+  ## and stash it so pakCall() can consult it too. Opt-in = the env var
+  ## set to a truthy value OR the option explicitly TRUE, at load time.
+  ## A user who deliberately enables pak's automatic system-library
+  ## installation keeps that choice everywhere in Require, not just at
+  ## load (the previous pakCall() override silently defeated it). This
+  ## stays CRAN-safe: CRAN's check machines never set PKG_SYSREQS=true,
+  ## so the default path always applies there.
+  assign(".sysreqsUserOptIn", .sysreqsUserOptedIn(), envir = pkgEnv())
+  if (!isTRUE(get0(".sysreqsUserOptIn", envir = pkgEnv(), inherits = FALSE))) {
+    if (!nzchar(Sys.getenv("PKG_SYSREQS")))
+      Sys.setenv(PKG_SYSREQS = "false")
+    if (!nzchar(Sys.getenv("PKG_SYSREQS_SUDO")))
+      Sys.setenv(PKG_SYSREQS_SUDO = "false")
+    if (is.null(getOption("pkg.sysreqs")))
+      options(pkg.sysreqs = FALSE)
+    if (is.null(getOption("pkg.sysreqs_sudo")))
+      options(pkg.sysreqs_sudo = FALSE)
+  }
 
   # if (FALSE) {
   if (isTRUE(getOption("Require.usePak"))) {
