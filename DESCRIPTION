@@ -42,6 +42,7 @@ Imports:
     tools,
     utils
 Suggests:
+    callr,
     cli,
     covr,
     curl,
@@ -51,6 +52,7 @@ Suggests:
     httr,
     parallel,
     pkgcache,
+    pkgload,
     rematch2,
     rmarkdown,
     knitr,
