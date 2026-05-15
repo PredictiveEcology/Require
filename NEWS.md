@@ -9,6 +9,16 @@
   bump. See vignette for the migration map and behavioural differences
   Require still papers over relative to a raw `pak::pak()` call.
 
+* `pak`'s automatic system-requirements installation is now disabled by
+  default. `pak` can otherwise probe for `sudo` and `apt-get install`
+  missing system libraries; installing OS libraries is the user's or
+  administrator's responsibility, not Require's, and the silent
+  privilege escalation is unwanted in containers, CI, shared/HPC nodes
+  and on CRAN. Set `PKG_SYSREQS=true` (env var) or
+  `options(pkg.sysreqs = TRUE)` *before* loading Require to opt back in;
+  an explicit opt-in is honoured everywhere. A regression test guards
+  this behaviour.
+
 ## bug fixes
 
 * Windows + RStudio: the SSL warning emitted by `.rs.downloadFile`
