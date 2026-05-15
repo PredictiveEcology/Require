@@ -1,4 +1,15 @@
 test_that("test 1", {
+  # CRAN POLICY: this is an integration test that installs real packages
+  # over the network via Require()/pak (first install is at the
+  # `Require("fpCompare (<= 1.2.3)")` call below). CRAN must not run it:
+  # (a) tests must not require internet, (b) the previous `skip_on_cran()`
+  # was buried ~220 lines in, AFTER several real installs had already run
+  # -- which is how pak's sysreqs sudo-probe reached CRAN's machine and
+  # got the 2026-05-15 submission cancelled. The pak sysreqs subsystem is
+  # now also globally disabled in .onLoad (belt and braces), but this
+  # test still has no business doing network installs on CRAN. GHA runs
+  # the full suite. Skip at the very top, before any pak/network call.
+  skip_on_cran()
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 

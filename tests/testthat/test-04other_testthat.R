@@ -1,4 +1,11 @@
 test_that("test 4", {
+  # CRAN POLICY: integration test -- exercises Require()/Install() against
+  # real (and deliberately-misspelled) network/GitHub refs, which spins up
+  # pak. Tests must not require internet on CRAN, and pak must not be
+  # driven on CRAN's machines. Skip at the top, before any pak/network
+  # call. (The pak sysreqs sudo-probe is also globally disabled in
+  # .onLoad; this is the correct CRAN-hygiene fix on top of that.)
+  skip_on_cran()
 
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
