@@ -46,6 +46,14 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
   ## (silently, since try() in callers swallows it), turning every pak
   ## install attempt into a "could not be installed" no-op.
   if (is.null(verbose)) verbose <- 0L
+  ## Defense-in-depth for the CRAN sudo-probe issue (see zzz.R .onLoad):
+  ## re-assert that pak's sysreqs subsystem is OFF on every pak call, so
+  ## nothing that toggles env/options mid-session can let pak run
+  ## `sudo sh -c id` / apt-get. Cheap, idempotent; not restored on exit
+  ## because "Require never sudo-installs system libs" is a permanent
+  ## policy, not a temporary toggle.
+  Sys.setenv(PKG_SYSREQS = "false", PKG_SYSREQS_SUDO = "false")
+  options(pkg.sysreqs = FALSE, pkg.sysreqs_sudo = FALSE)
   if (verbose <= -1L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)

@@ -20,6 +20,33 @@ envPkgCreate()
     Sys.setenv("R_REQUIRE_CACHE" = defCacheDir)
   }
 
+  ## CRAN POLICY / SECURITY: pak's pkgdepends has an automatic
+  ## system-requirements ("sysreqs") subsystem. On Linux it probes for
+  ## passwordless sudo (it runs `sudo sh -c id`) and, if available, will
+  ## `apt-get install` missing system libraries. CRAN treats any sudo
+  ## attempt from package code as an attempt to hijack the machine and
+  ## will cancel the submission (reported by Uwe Ligges, 2026-05-15:
+  ## "anduin3.wu.ac.at ... user NOT in sudoers ... COMMAND=/bin/sh -c id").
+  ##
+  ## Require must NEVER let pak escalate privileges or install system
+  ## packages: installing OS libraries is the user's/admin's
+  ## responsibility, well outside Require's remit. Force the entire
+  ## sysreqs subsystem off the moment Require loads, BEFORE the first
+  ## pak call below. The env vars are the load-bearing part: pak runs in
+  ## a callr subprocess that always inherits the environment but does not
+  ## reliably copy every `pkg.*` option. We set the options too for any
+  ## in-process pkgdepends use. Only set when the user has not made an
+  ## explicit choice, so a user who deliberately opts in keeps ownership
+  ## of that decision (and its consequences).
+  if (!nzchar(Sys.getenv("PKG_SYSREQS")))
+    Sys.setenv(PKG_SYSREQS = "false")
+  if (!nzchar(Sys.getenv("PKG_SYSREQS_SUDO")))
+    Sys.setenv(PKG_SYSREQS_SUDO = "false")
+  if (is.null(getOption("pkg.sysreqs")))
+    options(pkg.sysreqs = FALSE)
+  if (is.null(getOption("pkg.sysreqs_sudo")))
+    options(pkg.sysreqs_sudo = FALSE)
+
   # if (FALSE) {
   if (isTRUE(getOption("Require.usePak"))) {
     if (requireNamespace("pak", quietly = TRUE)) {

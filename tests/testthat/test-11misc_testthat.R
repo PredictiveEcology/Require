@@ -1,4 +1,10 @@
 test_that("test 11", {
+  # CRAN POLICY: integration test -- drives Require()/Install() against
+  # real/misspelled GitHub refs via pak. Must not run on CRAN (no
+  # internet-dependent tests; pak not to be driven on CRAN). Skip at the
+  # top, before the first Install() call. (pak sysreqs sudo-probe is also
+  # globally disabled in .onLoad.)
+  skip_on_cran()
 
   # skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
   setupInitial <- setupTest()
