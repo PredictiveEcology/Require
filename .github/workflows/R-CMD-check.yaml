@@ -103,11 +103,20 @@ jobs:
           max_attempts: 3
           retry_wait_seconds: 60
           retry_on: error
-          shell: 'Rscript {0}'
+          # nick-fields/retry only supports a fixed shell set (bash, sh,
+          # pwsh, cmd, python) -- NOT the `Rscript {0}` custom shell that
+          # works in plain `run:` steps. Using `shell: Rscript {0}` here
+          # fails immediately with "Shell Rscript not supported" (seen on
+          # windows-devel). Wrap the R code in `Rscript -e` under bash
+          # (available on all r-lib GHA runners incl. Windows Git Bash);
+          # multiple -e args run sequentially in one R process, so the
+          # behaviour is identical to the previous three-line script.
+          shell: bash
           command: |
-            install.packages("pak", repos = "https://r-lib.github.io/p/pak/stable/")
-            pak::local_install_dev_deps(ask = FALSE, dependencies = TRUE)
-            pak::pkg_install("any::rcmdcheck", ask = FALSE)
+            Rscript \
+              -e 'install.packages("pak", repos = "https://r-lib.github.io/p/pak/stable/")' \
+              -e 'pak::local_install_dev_deps(ask = FALSE, dependencies = TRUE)' \
+              -e 'pak::pkg_install("any::rcmdcheck", ask = FALSE)'
 
       - uses: r-lib/actions/check-r-package@v2
         with:

@@ -11,6 +11,8 @@ Note on the previous (cancelled) submission:
   system libraries, and to do so it checks for and uses sudo. This `Require` package did not disable that feature before relying on pak, and
   one of the integration tests caused pak to run during the check, which triggered the sudo attempt on the check machine.
 
+- Once aware of the issue, we were able to reproduce it, and now we test for it.
+
 - This has been corrected in two parallel ways:
 
   1. The package now disables pak's automatic system-library installation when it loads, before any call to pak is made. It will
@@ -45,14 +47,18 @@ this package plays a different role than `pak`, `renv` and `base` functions like
   valgrind, ATLAS, noLD) were skipped as they add no value here.
 
   ### GitHub Actions (run on the submitted commit)
-  * Ubuntu 24.04: R-devel, R 4.6.0 (release), R 4.5.3, R 4.4.3, R 4.3.3
-  * Windows:      R-devel, R 4.6.0 (release), R 4.5.3, R 4.4.3, R 4.3.3
-  * macOS:        R 4.6.0 (release)
+  The current R release is 4.6.0; the older versions below are
+  R CMD check's oldrel-1/2/3, not the release.
+  * Ubuntu 24.04 - R-devel, R 4.6.0 (release), R 4.5.3 (oldrel-1),
+    R 4.4.3 (oldrel-2), R 4.3.3 (oldrel-3)
+  * Windows Server - R-devel, R 4.6.0 (release), R 4.5.3 (oldrel-1),
+    R 4.4.3 (oldrel-2), R 4.3.3 (oldrel-3)
+  * macOS - R 4.6.0 (release)
 
   ### win-builder
-  * Windows, R-devel
-  * Windows, R 4.6.x (release)
-  * Windows, R 4.5.x (oldrelease)
+  * Windows - R-devel
+  * Windows - R 4.6.0 (current release)
+  * Windows - R 4.5.3 (oldrelease)
 
 ## R CMD check results
 
