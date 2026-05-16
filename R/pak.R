@@ -443,6 +443,32 @@ isGH <- function(pkgs) {
   grepl("^[[:alpha:]]+/.+", pkgs)
 }
 
+# Returns TRUE iff the constraint (`versionSpec` / `inequality`) is satisfied,
+# either by what's on disk (`installedVer`) or by pak's globally-resolved
+# version (`pakResolvedVer`) -- and in the latter case only when pak's
+# resolution matches what's actually on disk.
+#
+# The disk-match guard is the regression fix for the binary-lag scenario:
+# pak's `pkg_deps` resolver may pick the source version (e.g. reproducible
+# 3.1.0) while `pak::pak()` chooses to "keep" the older binary (3.0.0) on
+# platforms whose CRAN binary hasn't caught up. Treating `pakResolvedVer` as
+# authoritative without checking disk reality marks the unsatisfied install
+# as "OK" and the user gets `Installed 1 packages` followed by a still-old
+# `packageVersion(pkg)`.
+pakConstraintSatisfied <- function(installedVer, versionSpec, inequality,
+                                   pakResolvedVer = NA_character_) {
+  satisfies <- isTRUE(compareVersion2(installedVer,
+                                      versionSpec = versionSpec,
+                                      inequality  = inequality))
+  if (!satisfies && !is.na(pakResolvedVer) && nzchar(pakResolvedVer) &&
+      identical(pakResolvedVer, installedVer)) {
+    satisfies <- isTRUE(compareVersion2(pakResolvedVer,
+                                        versionSpec = versionSpec,
+                                        inequality  = inequality))
+  }
+  satisfies
+}
+
 # For each plain CRAN ref in `pkgsForPak` that names a package currently
 # installed in `libPaths`, rewrite it to `pkg@<installedVersion>`. Leaves
 # GitHub refs, pre-pinned `pkg@X` refs, packages with an explicit user
@@ -3327,11 +3353,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           pakVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
           if (!is.null(pakVerMap)) {
             cand <- pakVerMap[pkg]
-            if (!is.na(cand) && nzchar(cand)) {
-              pakRes <- unname(cand)
-              satisfies <- isTRUE(compareVersion2(pakRes, versionSpec = vSpec, inequality = ineq))
-            }
+            if (!is.na(cand) && nzchar(cand)) pakRes <- unname(cand)
           }
+          satisfies <- pakConstraintSatisfied(installedVer, vSpec, ineq, pakRes)
         }
         if (!isTRUE(satisfies)) {
           # We are inside `if (NROW(nowRow))`, i.e. pak HAS something installed
@@ -3350,7 +3374,18 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           # on disk) and warrants the "please change required version" guidance
           # even when preVer == installedVer (e.g. on a re-Require() call).
           pakChoseInstalled <- !is.na(pakRes) && identical(pakRes, installedVer)
-          if (versionChanged || firstTimeInsufficient || pakChoseInstalled)
+          # pak resolved to a newer version than what's actually on disk
+          # (typical Mac/Win case: source > binary). Warn the user that the
+          # install was effectively a no-op even though pak reported success.
+          pakResolvedNewer <- !is.na(pakRes) && !identical(pakRes, installedVer) &&
+                              isTRUE(compareVersion2(pakRes, versionSpec = vSpec, inequality = ineq))
+          if (pakResolvedNewer) {
+            warning(.txtCouldNotBeInstalled, ": ", pkg, " ", ineq, " ", vSpec,
+                    "; pak resolved ", pakRes, " but only ", installedVer,
+                    " is available as a binary on this platform -- ",
+                    "install from source or wait for the binary to be built.",
+                    call. = FALSE)
+          } else if (versionChanged || firstTimeInsufficient || pakChoseInstalled)
             warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
           # Always add to warnedDropped: either we already warned above (versionChanged),
           # or pak ran and chose not to update this package, meaning Require's over-strict
