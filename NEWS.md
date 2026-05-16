@@ -1,3 +1,8 @@
+# Require 2.0.0.9000 (development version)
+
+* Development version opened after the CRAN release of 2.0.0. No
+  user-facing changes yet.
+
 # Require 2.0.0
 
 ## breaking changes
