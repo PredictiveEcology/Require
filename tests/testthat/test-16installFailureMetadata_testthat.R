@@ -694,3 +694,71 @@ test_that("identify-and-defer recovers from PSPclean-style cascade", {
     expect_true(all(nzchar(failures$reason_brief)))
   }
 })
+
+# ---------------------------------------------------------------------------
+# Regression: binary-lag silent "OK"
+#
+# Field case (Mac, Require 2.0.0):
+#   > Require::Install("reproducible (>= 3.1.0)")
+#   Installed 1 packages in 6.4 secs
+#   > packageVersion("reproducible")
+#   [1] '3.0.0'
+#
+# CRAN had reproducible 3.1.0 in source but only 3.0.0 as a Mac binary, so
+# pak's `pkg_deps` resolver pinned 3.1.0 in `pakResolvedVersionMap` while
+# `pak::pak()` chose to "keep" the 3.0.0 binary. The post-install
+# reconciliation in pakInstallFiltered fell back to `pakResolvedVer` without
+# checking that it matched what was actually on disk, so the install was
+# reported as successful. The fix: only trust pak's resolved version when
+# it matches the version actually present.
+# ---------------------------------------------------------------------------
+test_that("pakConstraintSatisfied is FALSE when pak resolved newer than installed", {
+  # Binary-lag scenario: disk has 3.0.0, pak resolved to 3.1.0.
+  # Must be FALSE -- the install did not satisfy >= 3.1.0.
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer   = "3.0.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = "3.1.0"
+  ))
+})
+
+test_that("pakConstraintSatisfied is TRUE when installed version meets constraint", {
+  expect_true(Require:::pakConstraintSatisfied(
+    installedVer   = "3.1.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = "3.1.0"
+  ))
+  expect_true(Require:::pakConstraintSatisfied(
+    installedVer   = "3.2.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = NA_character_
+  ))
+})
+
+test_that("pakConstraintSatisfied is FALSE when neither installed nor pakRes meets constraint", {
+  # pak chose to install installedVer (matches what's on disk) but neither
+  # satisfies the user constraint -- the install is a real failure.
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer   = "3.0.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = "3.0.0"
+  ))
+})
+
+test_that("pakConstraintSatisfied tolerates missing / blank pakResolvedVer", {
+  # When pakResolvedVer is unavailable, fall back solely to installedVer.
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer = "3.0.0", versionSpec = "3.1.0", inequality = ">="))
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer = "3.0.0", versionSpec = "3.1.0", inequality = ">=",
+    pakResolvedVer = NA_character_))
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer = "3.0.0", versionSpec = "3.1.0", inequality = ">=",
+    pakResolvedVer = ""))
+  expect_true(Require:::pakConstraintSatisfied(
+    installedVer = "3.1.0", versionSpec = "3.1.0", inequality = ">="))
+})
