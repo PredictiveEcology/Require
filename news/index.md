@@ -2,6 +2,8 @@
 
 ## Require 2.0.0
 
+CRAN release: 2026-05-15
+
 ### breaking changes
 
 - The package dependency and package installation engine now defaults to

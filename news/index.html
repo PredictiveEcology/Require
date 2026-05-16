@@ -34,7 +34,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.0.0" id="require-200">Require 2.0.0<a class="anchor" aria-label="anchor" href="#require-200"></a></h2>
+<h2 class="pkg-version" data-toc-text="2.0.0" id="require-200">Require 2.0.0<a class="anchor" aria-label="anchor" href="#require-200"></a></h2><p class="text-muted">CRAN release: 2026-05-15</p>
 <div class="section level3">
 <h3 id="breaking-changes-2-0-0">breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-2-0-0"></a></h3>
 <ul><li><p>The package dependency and package installation engine now defaults to <code>pak</code>. <code>options(Require.usePak = FALSE)</code> still falls back to the legacy non-pak code path, but <code>pak</code> is the only actively maintained installer going forward. This is the headline change motivating the major version bump. See vignette for the migration map and behavioural differences Require still papers over relative to a raw <code><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak::pak()</a></code> call.</p></li>
