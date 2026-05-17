@@ -95,6 +95,22 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
   }
 }
 
+# When the caller explicitly requested type = "source", force pak to resolve
+# AND install from source only. pak ignores base R's getOption("pkgType"); its
+# source-vs-binary selection is driven by pkgdepends' `platforms` config, which
+# is settable from the main process via options(pkg.platforms=) (read when pak
+# builds the proposal, before the subprocess is spawned). The default is
+# c(<this platform>, "source"); pinning it to "source" stops pak from "keeping"
+# or installing a stale CRAN binary when the source tree is newer -- the
+# binary-lag downgrade where pak resolves reproducible 3.1.0 (source) but only
+# the 3.0.0 binary exists on Windows/Mac, leaving the user silently downgraded.
+# Returns the previous options() list for on.exit(options(old)) restoration, or
+# NULL when no override was applied (caller skips the on.exit in that case).
+forcePakSourceIfRequested <- function(type) {
+  if (!identical(type, "source")) return(NULL)
+  options(pkg.platforms = "source")
+}
+
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
   grp <- c(
     .txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith,
@@ -1901,13 +1917,18 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
 pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                           purge = getOption("Require.purge", FALSE),
-                          install = TRUE) {
+                          install = TRUE, type = getOption("pkgType")) {
   pakLoad <- tryCatch(loadNamespace("pak"),
                       error = function(e) e)
   if (inherits(pakLoad, "error")) {
     stop("Please install pak (loadNamespace('pak') failed: ",
          conditionMessage(pakLoad), ")", call. = FALSE)
   }
+
+  # Honour an explicit type = "source": pin pak to source-only resolution for
+  # the duration of this call (covers the nested pakDepsResolve/pak::pkg_deps).
+  oldPlatforms <- forcePakSourceIfRequested(type)
+  if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # pak spawns a subprocess that inherits .libPaths(). Set .libPaths() to match
   # Require's standAlone semantics before calling pak, then restore on exit.
@@ -2609,8 +2630,14 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
-                                forceUpgrade = FALSE) {
+                                forceUpgrade = FALSE, type = getOption("pkgType")) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+
+  # Honour an explicit type = "source": without this, pak's install step can
+  # "keep" or fetch the older platform binary even after the resolve picked the
+  # newer source version, producing the silent binary-lag downgrade.
+  oldPlatforms <- forcePakSourceIfRequested(type)
+  if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
   # sees the same library set that was used for dependency resolution.
