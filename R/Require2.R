@@ -486,7 +486,8 @@ Require <- function(packages,
             # call should re-resolve rather than use a stale cached result.
             pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
                                    wh   = whichToDILES(doDeps),
-                                   repos = repos)
+                                   repos = repos,
+                                   type = type)
             ## Recovery: if pakInstallFiltered left any rows flagged
             ## .txtCouldNotBeInstalled, probe internet once. If missing,
             ## switch to offlineMode and retry those rows via the pak
