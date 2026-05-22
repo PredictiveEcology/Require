@@ -95,6 +95,22 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
   }
 }
 
+# When the caller explicitly requested type = "source", force pak to resolve
+# AND install from source only. pak ignores base R's getOption("pkgType"); its
+# source-vs-binary selection is driven by pkgdepends' `platforms` config, which
+# is settable from the main process via options(pkg.platforms=) (read when pak
+# builds the proposal, before the subprocess is spawned). The default is
+# c(<this platform>, "source"); pinning it to "source" stops pak from "keeping"
+# or installing a stale CRAN binary when the source tree is newer -- the
+# binary-lag downgrade where pak resolves reproducible 3.1.0 (source) but only
+# the 3.0.0 binary exists on Windows/Mac, leaving the user silently downgraded.
+# Returns the previous options() list for on.exit(options(old)) restoration, or
+# NULL when no override was applied (caller skips the on.exit in that case).
+forcePakSourceIfRequested <- function(type) {
+  if (!identical(type, "source")) return(NULL)
+  options(pkg.platforms = "source")
+}
+
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
   grp <- c(
     .txtCntInstllDep, .txtFailedToBuildSrcPkg, .txtConflictsWith,
@@ -1613,14 +1629,22 @@ pakWhoNeeds <- function(pkg, pak_result = NULL) {
 # ---------------------------------------------------------------------------
 .pakDepsCacheTTL <- 24 * 3600   # 24 hours default
 
-pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
+pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL,
+                            type = getOption("pkgType")) {
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   # coerce to character vectors: options(repos = list(...)) is a supported
   # pattern, and sort() errors on list input with 'x must be atomic'
   payload <- list(pkgs  = sort(as.character(unlist(pkgsForPak, use.names = FALSE))),
                   wh    = sort(as.character(unlist(wh))),
-                  repos = sort(as.character(unlist(repos, use.names = FALSE))))
+                  repos = sort(as.character(unlist(repos, use.names = FALSE))),
+                  # Source-only resolution is a different dep-tree problem than
+                  # binary/both: pak picks the source version (e.g. reproducible
+                  # 3.1.0) where the binary path would "keep" the older binary
+                  # (3.0.0). Without this, a type="source" call reuses a
+                  # binary-era cached pak_result and the source intent is
+                  # silently lost -- the exact binary-lag downgrade symptom.
+                  srcOnly = isTRUE(identical(type, "source")))
   # `userPkgs` (when supplied) carries the user's original version-bearing
   # refs, e.g. c("stringfish (<= 0.15.8)", "qs (== 0.27.3)"). pak::pkg_deps()
   # only sees `pkgsForPak` -- the version-stripped form -- so without folding
@@ -1644,10 +1668,12 @@ pakDepsCacheDir <- function() {
   file.path(cacheDir(), "pak", "pkg_deps")
 }
 
-pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL) {
+pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
 
   # --- 1. Compute cache key ---
-  key      <- pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs)
+  key      <- pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs,
+                              type = type)
   envKey   <- paste0("pakDeps_", key)
   cacheDir <- pakDepsCacheDir()
   cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
@@ -1886,8 +1912,10 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
 # (installed state changed; cache key stays the same but should be revalidated
 # sooner than the normal TTL would allow).
 # ---------------------------------------------------------------------------
-pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
-  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs),
+pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL,
+                                   type = getOption("pkgType")) {
+  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs,
+                                       type = type),
                        error = function(e) NULL)
   if (is.null(key)) return(invisible(NULL))
   envKey   <- paste0("pakDeps_", key)
@@ -1901,13 +1929,18 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
 pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                           purge = getOption("Require.purge", FALSE),
-                          install = TRUE) {
+                          install = TRUE, type = getOption("pkgType")) {
   pakLoad <- tryCatch(loadNamespace("pak"),
                       error = function(e) e)
   if (inherits(pakLoad, "error")) {
     stop("Please install pak (loadNamespace('pak') failed: ",
          conditionMessage(pakLoad), ")", call. = FALSE)
   }
+
+  # Honour an explicit type = "source": pin pak to source-only resolution for
+  # the duration of this call (covers the nested pakDepsResolve/pak::pkg_deps).
+  oldPlatforms <- forcePakSourceIfRequested(type)
+  if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # pak spawns a subprocess that inherits .libPaths(). Set .libPaths() to match
   # Require's standAlone semantics before calling pak, then restore on exit.
@@ -2008,7 +2041,8 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                                repos    = getOption("repos"),
                                verbose  = verbose,
                                purge    = purge,
-                               userPkgs = resolvedPkgs)
+                               userPkgs = resolvedPkgs,
+                               type     = type)
 
   if (is.null(pak_result)) {
     messageVerbose("pak::pkg_deps: all strategies failed; using direct package list only.",
@@ -2609,8 +2643,14 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
-                                forceUpgrade = FALSE) {
+                                forceUpgrade = FALSE, type = getOption("pkgType")) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+
+  # Honour an explicit type = "source": without this, pak's install step can
+  # "keep" or fetch the older platform binary even after the resolve picked the
+  # newer source version, producing the silent binary-lag downgrade.
+  oldPlatforms <- forcePakSourceIfRequested(type)
+  if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
   # sees the same library set that was used for dependency resolution.

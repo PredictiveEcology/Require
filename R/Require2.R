@@ -362,13 +362,13 @@ Require <- function(packages,
          withCallingHandlers(
            pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                     standAlone = standAlone, verbose = verbose,
-                                    purge = purge, install = install),
+                                    purge = purge, install = install, type = type),
            message = function(m) invokeRestart("muffleMessage")
          )
        } else {
          pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                   standAlone = standAlone, verbose = verbose,
-                                  purge = purge, install = install)
+                                  purge = purge, install = install, type = type)
        }
     } else if (!skipDepResolution) {
       if (length(which)) {
@@ -480,12 +480,14 @@ Require <- function(packages,
           } else {
             pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
                                         standAlone = standAlone, verbose = verbose,
-                                        forceUpgrade = identical(install, "force"))
+                                        forceUpgrade = identical(install, "force"),
+                                        type = type)
             # Invalidate the dep-tree cache: installed state changed, so the next
             # call should re-resolve rather than use a stale cached result.
             pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
                                    wh   = whichToDILES(doDeps),
-                                   repos = repos)
+                                   repos = repos,
+                                   type = type)
             ## Recovery: if pakInstallFiltered left any rows flagged
             ## .txtCouldNotBeInstalled, probe internet once. If missing,
             ## switch to offlineMode and retry those rows via the pak
