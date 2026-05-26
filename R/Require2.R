@@ -1174,13 +1174,15 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
       # by <other-pkgs>" failure: R prints that text directly (not as a
       # condition), then require() returns FALSE -- but the namespace IS still
       # loaded (unload failed, so it stayed). Detect via loadedNamespaces()
-      # and force-attach via require() without lib.loc, so unqualified calls
-      # to functions from this package (e.g., `prepInputs()` from
-      # reproducible inside a SpaDES module's `init` event) succeed.
+      # and attach the live namespace directly via attachNamespace(); using
+      # require() again re-triggers R's version check + unload attempt, which
+      # fails the same way. attachNamespace() bypasses that and just puts the
+      # in-memory namespace on the search path.
       if (!isTRUE(res) && x %in% loadedNamespaces()) {
-        res <- suppressWarnings(suppressMessages(
-          base::require(x, character.only = TRUE, quietly = TRUE)
-        ))
+        if (!paste0("package:", x) %in% search()) {
+          tryCatch(attachNamespace(x), error = function(e) {})
+        }
+        res <- paste0("package:", x) %in% search()
         if (isTRUE(res)) warn_msgs <- character(0L)
       }
       if (!isTRUE(res)) {

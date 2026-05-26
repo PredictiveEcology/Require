@@ -1,3 +1,18 @@
+# Require 2.0.0.9001 (development version)
+
+* Recover from `cannot be unloaded ... imported by` failure via
+  `attachNamespace()`: when `require(pkg, lib.loc = ...)` fails because
+  `pkg` is already loaded from a different lib and its dependents (e.g.
+  `SpaDES.core`) have imported it, the previous recovery code called
+  `require(pkg)` without `lib.loc` -- but that still re-triggers R's
+  version check and the same unload-and-fail path, so the package was
+  left detached. Replace that fallback with a direct `attachNamespace(pkg)`
+  call, which puts the already-loaded namespace on the search path
+  without re-resolving against `.libPaths()`. Fixes the "object
+  'prepInputs' not found" cascade when running a SpaDES workflow
+  against a project lib whose `reproducible`/`SpaDES.core` versions
+  differ from those already loaded in the user lib.
+
 # Require 2.0.0.9000 (development version)
 
 * Development version opened after the CRAN release of 2.0.0. No
