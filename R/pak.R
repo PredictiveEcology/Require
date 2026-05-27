@@ -1087,6 +1087,8 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   }
 
   installFailedPkgs <- character(0)
+
+
   triedPkgs <- pkgsToInstall
 
   if (length(refsToInstall)) {
@@ -1140,6 +1142,42 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       pak::pak(refsToInstall, lib = libPaths[1], ask = FALSE,
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
+
+    ## "Conflicts with" recovery: pak's batch resolver sometimes reports
+    ## a ref as conflicting with itself (e.g. when the same package's
+    ## exact-pin appears both as a top-level request and as a transitive
+    ## resolution -- happens for GitHub@SHA + version-pin combinations
+    ## even after dedup). The conflict poisons the entire batch -- ALL
+    ## refs are refused even though only one is "guilty". Recovery:
+    ## reset pak's subprocess (the batch failure often wedges it) and
+    ## install each ref one-at-a-time. Per-ref resolution can't trigger
+    ## this kind of self-conflict.
+    if (is(err, "try-error") &&
+        grepl("Conflicts with", as.character(err), fixed = TRUE)) {
+      messageVerbose(
+        "pakOfflineInstall: batch resolver reported 'Conflicts with' (",
+        "likely a pak self-conflict on an exact-pin ref); ",
+        "retrying each ref one-at-a-time so the other refs aren't blocked.",
+        verbose = verbose, verboseLevel = 1)
+      pakResetSubprocess()
+      for (i in seq_along(refsToInstall)) {
+        perRefErr <- try(pakCall(
+          pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
+                   dependencies = FALSE, upgrade = FALSE),
+          verbose), silent = TRUE)
+        if (is(perRefErr, "try-error")) {
+          messageVerbose(
+            "pakOfflineInstall: per-ref retry failed for ",
+            refsToInstall[i], ": ", as.character(perRefErr),
+            verbose = verbose, verboseLevel = 2)
+          pakResetSubprocess()
+        }
+      }
+      ## Don't propagate the original batch error to the warning path
+      ## below -- ground-truth installed.packages() check decides
+      ## whether each ref actually landed.
+      err <- NULL
+    }
     if (is(err, "try-error")) {
       ## Surface the underlying pak error at default verbose so silent-pak
       ## failures are debuggable. The generic "offline install failed"
@@ -1988,19 +2026,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   pkgsForPak <- HEADtoNone(pkgsForPak)
   pkgsForPak <- trimVersionNumber(pkgsForPak)
   pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
-  # For any remaining duplicated package names (both have no version spec), prefer GH ref
-  pkgNms <- extractPkgName(pkgsForPak)
-  dupNms <- unique(pkgNms[duplicated(pkgNms)])
-  if (length(dupNms)) {
-    toRemove <- integer(0)
-    for (pn in dupNms) {
-      idx <- which(pkgNms == pn)
-      ghIdx <- idx[isGH(pkgsForPak[idx])]
-      if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
-      else                    toRemove <- c(toRemove, idx[-1L])
-    }
-    if (length(toRemove)) pkgsForPak <- pkgsForPak[-toRemove]
-  }
+  pkgsForPak <- .preferGHrefDedup(pkgsForPak)
   pkgsForPak <- unique(pkgsForPak)
   # Convert == version specs to pak @version format for the dep query
   pkgsForPak <- equalsToAt(pkgsForPak)
@@ -2173,6 +2199,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # 4. Include the user's originally stated packages (with their version specs).
   # These may have stricter requirements than what DESCRIPTION files state.
   user_pkgFN <- packages[!extractPkgName(packages) %in% .basePkgs]
+  # Apply the same GH-vs-CRAN dedup we apply to pkgsForPak above. Without
+  # this, a user list with multiple ref forms for the same package
+  # (e.g. c("PredictiveEcology/reproducible@development",
+  #         "PredictiveEcology/reproducible",
+  #         "reproducible")) leaves all three in user_pkgFN -- and they
+  # then flow through toPkgDTFull() + trimRedundancies() (which can't
+  # dedup them because none has a versionSpec) into pakOfflineInstall,
+  # whose batch pak::pak() call then dies with
+  #   reproducible@<v>: Conflicts with reproducible@<v>.
+  user_pkgFN <- .preferGHrefDedup(user_pkgFN)
 
   # 4a. Sync url:: archive refs from pkgsForPak back into user_pkgFN.
   # The retry loop may have replaced plain package names (e.g. "fastdigest") with
@@ -2561,6 +2597,43 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
   if (!length(pakPath) || !nzchar(pakPath[1]))
     return("pak not present in project lib")
   ""
+}
+
+# ---------------------------------------------------------------------------
+# .preferGHrefDedup: for a character vector of refs, when the same package
+# appears multiple times keep ONE -- preferring a GitHub-style ref
+# (`account/repo[@branch_or_sha]`) over a CRAN-form ref (`pkg` or
+# `pkg@version`). If multiple GitHub refs exist for the same package,
+# keep the first one (user-input order; the @specific form is typically
+# listed before the @HEAD/bare form). If no GitHub ref exists for a
+# duplicate, keep the first occurrence.
+#
+# Why this exists: trimRedundancies()'s logic for collapsing duplicate
+# package rows relies on `versionSpec` (e.g. `(>= 1.0)`) being set on at
+# least one row. The user-input case
+#   c("PredictiveEcology/reproducible@development",
+#     "PredictiveEcology/reproducible",
+#     "reproducible")
+# has no versionSpec on any of the three forms, so trimRedundancies()
+# leaves all three -- which then survives into pakOfflineInstall and
+# poisons pak's batch with
+#   reproducible@<v>: Conflicts with reproducible@<v>
+# This helper applies the "prefer GH ref" tiebreaker that trimRedundancies
+# can't.
+# ---------------------------------------------------------------------------
+.preferGHrefDedup <- function(refs) {
+  if (length(refs) <= 1) return(refs)
+  pkgNms <- extractPkgName(refs)
+  dupNms <- unique(pkgNms[duplicated(pkgNms)])
+  if (!length(dupNms)) return(refs)
+  toRemove <- integer(0)
+  for (pn in dupNms) {
+    idx <- which(pkgNms == pn)
+    ghIdx <- idx[isGH(refs[idx])]
+    if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
+    else                    toRemove <- c(toRemove, idx[-1L])
+  }
+  if (length(toRemove)) refs[-toRemove] else refs
 }
 
 # ---------------------------------------------------------------------------

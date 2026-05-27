@@ -1008,6 +1008,42 @@ test_that(".pakNoCopyPkgs() includes pak, callr, processx, cli", {
               info = paste("got:", paste(out, collapse = ", ")))
 })
 
+test_that(".preferGHrefDedup() collapses multi-form refs preferring GH > CRAN", {
+  # Regression: user lists of the form
+  #   c("PredictiveEcology/reproducible@development",
+  #     "PredictiveEcology/reproducible",
+  #     "reproducible")
+  # have no versionSpec on any row, so trimRedundancies() can't dedup them.
+  # All three survived into pakOfflineInstall and poisoned the pak batch
+  # with `reproducible@<v>: Conflicts with reproducible@<v>`.
+  refs <- c("PredictiveEcology/reproducible@development",
+            "PredictiveEcology/reproducible",
+            "reproducible",
+            "data.table")
+  expect_identical(
+    Require:::.preferGHrefDedup(refs),
+    c("PredictiveEcology/reproducible@development", "data.table"))
+
+  # No GH ref present: keep first occurrence per package.
+  expect_identical(
+    Require:::.preferGHrefDedup(c("reproducible", "reproducible@1.2.3", "data.table")),
+    c("reproducible", "data.table"))
+
+  # Multiple GH refs for same package: keep the first (typically the most
+  # specific @branch/@SHA form -- user-input order wins).
+  expect_identical(
+    Require:::.preferGHrefDedup(c("acct/pkg@dev", "acct/pkg", "pkg")),
+    "acct/pkg@dev")
+
+  # No-op when there are no duplicates.
+  refs2 <- c("data.table", "fpCompare", "digest")
+  expect_identical(Require:::.preferGHrefDedup(refs2), refs2)
+
+  # Empty / single inputs return unchanged.
+  expect_identical(Require:::.preferGHrefDedup(character(0)), character(0))
+  expect_identical(Require:::.preferGHrefDedup("data.table"), "data.table")
+})
+
 test_that(".isSessionLibPath() distinguishes real project libs from ephemeral tempdirs", {
   # A path that IS in .libPaths() must be recognised as a session lib path.
   expect_true(Require:::.isSessionLibPath(.libPaths()[1]))

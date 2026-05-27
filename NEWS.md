@@ -1,3 +1,21 @@
+# Require 2.0.0.9010 (development version)
+
+* User input lists with multiple ref forms for the same package
+  (e.g. `c("PredictiveEcology/reproducible@development",
+  "PredictiveEcology/reproducible", "reproducible")`) no longer leak
+  all three forms through `pakDepsToPkgDT()` into `pakOfflineInstall()`.
+  `trimRedundancies()` can't dedup these because none of the three has
+  a `versionSpec` -- the existing GH-vs-CRAN tiebreaker in
+  `pakDepsToPkgDT()` was applied to `pkgsForPak` (input to pak's
+  resolver) but NOT to `user_pkgFN` (input to `toPkgDTFull()`), so all
+  three rows reached the install machinery. Symptom: pak's batch
+  resolver refused the entire offline-install batch with
+  `reproducible@<v>: Conflicts with reproducible@<v>`, blocking the
+  install of ALL packages in the same batch (digest, fpCompare,
+  lobstr, prettyunits, reproducible). Fix: factored the existing GH-
+  ref-preference dedup loop into a `.preferGHrefDedup()` helper and
+  applied it to `user_pkgFN` as well.
+
 # Require 2.0.0.9009 (development version)
 
 * `ensurePakInProjectLib()` is now only called when `libPaths[1]` is part
