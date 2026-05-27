@@ -641,8 +641,16 @@ isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest
 }
 
-isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
+isBinaryCRANRepo <- function(curCRANRepo = NULL,
                              repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
+  if (is.null(curCRANRepo)) {
+    r <- getOption("repos")
+    # `r[["CRAN"]]` throws "subscript out of bounds" on a named character
+    # vector when no element is named "CRAN" -- can happen if a caller has
+    # rebuilt `options("repos")` in a way that drops names (e.g. via
+    # `unique(c(extraRepo, getOption("repos")))`).
+    curCRANRepo <- if ("CRAN" %in% names(r)) r[["CRAN"]] else NA_character_
+  }
   if (isWindows() || isMacOS()) {
     isBin <- grepl("[\\|/])|/bin[\\|/]", curCRANRepo)
   } else {
