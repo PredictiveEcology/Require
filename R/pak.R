@@ -2525,6 +2525,95 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 }
 
 # ---------------------------------------------------------------------------
+# Packages that must NEVER be installed by file-level copy/symlink across
+# libs (i.e. excluded from clonePackages / linkOrCopyPackageFiles).
+#
+# pak ships native binaries + an embedded library of helper packages
+# (callr, processx, cli, ...) with platform-specific executables that do
+# NOT survive a file-by-file copy on Windows. The symptom is pak's
+# subprocess dying with
+#   `Native call to processx_exec failed: Command '' not found`
+# the next time anything tries to spawn a nested subprocess (i.e. every
+# real install attempt). Same risk for standalone callr / processx / cli
+# if they're ever cloned across libs -- their compiled bits are tied to
+# the install location at link time.
+# ---------------------------------------------------------------------------
+.pakNoCopyPkgs <- function() c("pak", "callr", "processx", "cli")
+
+# ---------------------------------------------------------------------------
+# .pakNeedsReinstall: pure decision function for ensurePakInProjectLib().
+#
+# Given the result of find.package("pak", lib.loc = projLib) and (optionally)
+# the captured text of pak::pak_sitrep(), return:
+#   - ""              if pak is healthy in projLib (no reinstall needed)
+#   - <reason string> if pak should be reinstalled fresh into projLib
+#
+# Separated from the IO wrapper so the decision rules are unit-testable
+# without mocking the filesystem or pak itself.
+# ---------------------------------------------------------------------------
+.pakNeedsReinstall <- function(pakPath, sitrepLines = NULL) {
+  if (!length(pakPath) || !nzchar(pakPath[1]))
+    return("pak not present in project lib")
+  if (length(sitrepLines) && any(grepl("local install\\?", sitrepLines)))
+    return("pak_sitrep() reports '(local install?)' -- not from a standard repo")
+  ""
+}
+
+# ---------------------------------------------------------------------------
+# ensurePakInProjectLib: make sure pak is installed in libPaths[1] (the
+# project lib), reinstalling fresh via base install.packages() if it's
+# absent OR if pak_sitrep() reports the "(local install?)" tag that
+# indicates a non-standard install (e.g. file-copied across libs).
+#
+# Why this exists: SpaDES.project::setupPackages (and other
+# project-bootstrap workflows) historically populated the project lib by
+# file-copying packages from the system lib. That works for pure-R
+# packages, but pak's embedded native helpers do NOT survive the copy on
+# Windows -- the next pak call dies inside processx with
+#   `Native call to processx_exec failed: Command '' not found`.
+# The robust fix is to install pak fresh into the project lib using base
+# install.packages() (NOT pak::pak -- chicken-and-egg if pak is broken).
+# ---------------------------------------------------------------------------
+ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
+                                  verbose = getOption("Require.verbose")) {
+  if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
+  if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
+    return(invisible(FALSE))
+
+  pakPath <- suppressWarnings(tryCatch(
+    find.package("pak", lib.loc = projLib, quiet = TRUE),
+    error = function(e) character(0)))
+
+  sitLines <- character(0)
+  if (length(pakPath) && nzchar(pakPath[1])) {
+    sitLines <- tryCatch(
+      utils::capture.output(suppressMessages(pak::pak_sitrep())),
+      error = function(e) paste0("sitrep error: ", conditionMessage(e)))
+  }
+
+  reason <- .pakNeedsReinstall(pakPath, sitLines)
+  if (!nzchar(reason)) return(invisible(TRUE))
+
+  messageVerbose(
+    "Require: ", reason, ".\n",
+    "  Installing pak fresh into project lib (NOT copying): ", projLib, "\n",
+    "  Copying pak from another lib does not work on Windows -- pak's\n",
+    "  embedded callr/processx helper executables do not survive a copy.\n",
+    "  (Symptom otherwise: 'Native call to processx_exec failed: Command' '' 'not found'.)",
+    verbose = verbose, verboseLevel = 1)
+
+  ok <- tryCatch({
+    utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE)
+    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  }, error = function(e) {
+    messageVerbose("ensurePakInProjectLib: install.packages('pak') failed: ",
+                   conditionMessage(e), verbose = verbose, verboseLevel = 1)
+    FALSE
+  })
+  invisible(ok)
+}
+
+# ---------------------------------------------------------------------------
 # pakResetSubprocess: force pak to spawn a fresh background R session on the
 # next pak::pak() call. pak holds a persistent callr r_session in
 # pak:::pkg_data$remote and reuses it across calls; if the previous call

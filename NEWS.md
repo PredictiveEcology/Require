@@ -1,3 +1,21 @@
+# Require 2.0.0.9006 (development version)
+
+* pak (and its native-helper siblings `callr`, `processx`, `cli`) are
+  no longer file-copied across libs by `clonePackages()` /
+  `linkOrCopyPackageFiles()`. Their embedded platform-specific
+  executables don't survive a copy on Windows, producing
+  `Native call to processx_exec failed: Command '' not found` on the
+  next subprocess spawn. Those packages now stay in the install plan so
+  the install machinery installs them fresh.
+* New `ensurePakInProjectLib()` called early in `Require()`: when
+  `Require.usePak = TRUE`, verifies pak is installed in `libPaths[1]`
+  (the project lib) and reinstalls it fresh via `utils::install.packages()`
+  if missing -- or if `pak::pak_sitrep()` reports `(local install?)`,
+  the canonical sign of a non-standard / damaged pak install (typically
+  the result of an old file-copy bootstrap). Uses base
+  `install.packages()`, not pak itself, to avoid the chicken-and-egg
+  problem when pak is broken.
+
 # Require 2.0.0.9002 (development version)
 
 * `whIsOfficialCRANrepo()` no longer leaks a "cannot open file"

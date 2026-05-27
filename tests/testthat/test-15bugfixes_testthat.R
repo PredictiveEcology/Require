@@ -1001,3 +1001,99 @@ test_that("isBinaryCRANRepo() default arg is resilient when 'CRAN' is not a name
     }
   )
 })
+
+test_that(".pakNoCopyPkgs() includes pak, callr, processx, cli", {
+  out <- Require:::.pakNoCopyPkgs()
+  expect_true(all(c("pak", "callr", "processx", "cli") %in% out),
+              info = paste("got:", paste(out, collapse = ", ")))
+})
+
+test_that(".pakNeedsReinstall() flags missing, healthy, and (local install?)", {
+  # Missing from project lib
+  expect_match(Require:::.pakNeedsReinstall(character(0)),                "not present")
+  expect_match(Require:::.pakNeedsReinstall(""),                          "not present")
+  expect_match(Require:::.pakNeedsReinstall(NULL),                        "not present")
+
+  # Healthy install: pak present and sitrep has no "(local install?)" line
+  expect_identical(
+    Require:::.pakNeedsReinstall(
+      "/some/path/pak",
+      sitrepLines = c("* pak version:", "- 0.9.2",
+                      "* pak repository: CRAN",
+                      "* Dependencies can be loaded")),
+    "")
+
+  # Corruption sentinel: sitrep mentions "(local install?)"
+  expect_match(
+    Require:::.pakNeedsReinstall(
+      "/some/path/pak",
+      sitrepLines = c("* pak repository: - (local install?)")),
+    "local install")
+})
+
+test_that("linkOrCopyPackageFiles() excludes pak/callr/processx/cli even when asked", {
+  # Regression: SpaDES.project::setupPackages (pre-pak) used to file-copy
+  # the system lib into the project lib; pak's embedded callr/processx
+  # native helpers don't survive that on Windows and the resulting pak
+  # install dies inside processx with `Command '' not found` on the next
+  # subprocess spawn. linkOrCopyPackageFiles() must therefore drop those
+  # packages from the copy list so the install machinery installs them
+  # fresh instead.
+
+  # Build a synthetic installed.packages() matrix with Built that satisfies
+  # Require:::correctBuilt() for the current R version (so cantClone()
+  # treats every row as clone-eligible by default).
+  rvDot <- Require:::RversionDot()  # e.g. "4.5."
+  built <- paste0(rvDot, "0; ; ;")
+  pkgs  <- c("data.table", "pak", "callr", "processx", "cli", "rlang")
+  ip <- cbind(
+    Package          = pkgs,
+    Version          = rep("1.0.0", length(pkgs)),
+    NeedsCompilation = rep("no", length(pkgs)),  # all clone-eligible by NeedsCompilation
+    Built            = rep(built, length(pkgs))
+  )
+  rownames(ip) <- pkgs
+
+  passedThrough <- NULL
+  testthat::with_mocked_bindings(
+    linkOrCopyPackageFilesInner = function(Packages, fromLib, toLib) {
+      passedThrough <<- Packages
+      invisible()
+    },
+    .package = "Require",
+    {
+      Require:::linkOrCopyPackageFiles(
+        Packages = pkgs,
+        fromLib  = tempdir(),
+        toLib    = tempdir(),
+        ip       = ip
+      )
+    }
+  )
+
+  expect_false(is.null(passedThrough),
+               info = "linkOrCopyPackageFilesInner mock was never invoked")
+  # pak / callr / processx / cli must NOT be cloned
+  expect_false(any(c("pak", "callr", "processx", "cli") %in% passedThrough),
+               info = paste("got passed through:", paste(passedThrough, collapse = ", ")))
+  # The non-pak rows still go through normally
+  expect_true(all(c("data.table", "rlang") %in% passedThrough))
+})
+
+test_that("ensurePakInProjectLib() is a no-op when Require.usePak is FALSE", {
+  installCalled <- FALSE
+  withr::with_options(
+    list(Require.usePak = FALSE),
+    {
+      testthat::with_mocked_bindings(
+        install.packages = function(...) { installCalled <<- TRUE; invisible() },
+        .package = "utils",
+        {
+          Require:::ensurePakInProjectLib(tempfile("noPak"))
+        }
+      )
+    }
+  )
+  expect_false(installCalled,
+               info = "install.packages should never be called when usePak = FALSE")
+})
