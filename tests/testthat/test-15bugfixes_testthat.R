@@ -970,3 +970,34 @@ test_that("whIsOfficialCRANrepo does not leak 'cannot open file' warning when .m
     info = paste("Leaked warnings:", paste(caught, collapse = "; "))
   )
 })
+
+test_that("isBinaryCRANRepo() default arg is resilient when 'CRAN' is not a name in options(repos)", {
+  # Regression: the default arg `curCRANRepo = getOption("repos")[["CRAN"]]`
+  # threw "subscript out of bounds" on a named character vector when no
+  # element was named "CRAN" -- triggered when caller code rebuilt
+  # options("repos") in a way that dropped names, e.g.
+  #   unique(c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  # which on a fresh session yields an unnamed character vector.
+
+  withr::with_options(
+    list(repos = c(
+      "https://predictiveecology.r-universe.dev",
+      "https://cloud.r-project.org"
+    )),  # deliberately unnamed -- no "CRAN" name present
+    {
+      # Pre-fix: this errored with "subscript out of bounds".
+      # Post-fix: returns without erroring; value is FALSE/NA depending on platform.
+      expect_no_error(out <- Require:::isBinaryCRANRepo())
+      # The result must not be TRUE -- there is no recognised CRAN entry to classify.
+      expect_false(isTRUE(any(out)))
+    }
+  )
+
+  # Sanity: when CRAN *is* named, the function still works (no regression).
+  withr::with_options(
+    list(repos = c(CRAN = "https://cloud.r-project.org")),
+    {
+      expect_no_error(Require:::isBinaryCRANRepo())
+    }
+  )
+})
