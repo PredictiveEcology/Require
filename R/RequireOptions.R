@@ -96,6 +96,7 @@ RequireOptions <- function() {
     Require.standAlone = TRUE,
     Require.useCranCache = FALSE,
     Require.usePak = TRUE,
+    Require.forcePakReinstall = FALSE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
   )

@@ -1,4 +1,4 @@
-# Require 2.0.0.9007 (development version)
+# Require 2.0.0.9008 (development version)
 
 * pak (and its native-helper siblings `callr`, `processx`, `cli`) are
   no longer file-copied across libs by `clonePackages()` /
@@ -10,20 +10,30 @@
 * New `ensurePakInProjectLib()` called early in `Require()`: when
   `Require.usePak = TRUE`, verifies pak is installed in `libPaths[1]`
   (the project lib) and reinstalls it fresh via `utils::install.packages()`
-  if missing -- or if `pak::pak_sitrep()` reports `(local install?)`,
-  the canonical sign of a non-standard / damaged pak install (typically
-  the result of an old file-copy bootstrap). Uses base
-  `install.packages()`, not pak itself, to avoid the chicken-and-egg
-  problem when pak is broken.
-* `ensurePakInProjectLib()` now copes with Windows DLL locks: when
-  `install.packages('pak')` no-ops with
-  `Warning: package 'pak' is in use and will not be installed`,
-  the fix retries the install from a fresh `Rscript --vanilla -e ...`
-  subprocess (no pak loaded, no DLL lock) so the on-disk files actually
-  get replaced. If pak was already loaded in this session and the
-  in-memory namespace can't be unloaded after the install (locked DLL),
-  Require now stops with a clear "please restart R" message rather than
-  silently continuing with the broken loaded copy.
+  if absent. Uses base `install.packages()`, not pak itself, to avoid
+  the chicken-and-egg problem when pak is broken.
+* `ensurePakInProjectLib()` correctly handles the case where pak is
+  already loaded in this R session (e.g. user ran `pak::pak()` before
+  `Require::Install`). On Windows the loaded DLL holds a filesystem
+  lock that blocks `install.packages` from writing. Two-step release
+  before installing: `pakResetSubprocess()` (kill the persistent
+  r_session that holds an indirect DLL reference) followed by
+  `unloadNamespace("pak")`. Only if pak is *still* loaded after both
+  does Require `stop()` with a clear "please RESTART R" message.
+* `R/zzz.R` no longer eagerly loads pak in `.onLoad()`. Eager loading
+  grabbed the Windows DLL lock before `ensurePakInProjectLib()` could
+  run, leaving us unable to reinstall pak when needed. Pak is now
+  loaded on first actual use by the existing `requireNamespace("pak")`
+  checks in `R/pak.R`.
+* New `Require.forcePakReinstall` option (default `FALSE`). The
+  "pak files present in projLib but secretly broken from a file-copy
+  bootstrap" case can't be detected reliably from disk -- the
+  `(local install?)` tag in `pak::pak_sitrep()` is **not** a reliable
+  signal (it also fires on healthy CRAN binaries, which would put
+  CRAN-pak users in an infinite reinstall loop). The new option is
+  the explicit escape hatch: set `options(Require.forcePakReinstall = TRUE)`
+  before `Require::Install(...)` to force a fresh pak install once,
+  then unset it.
 
 # Require 2.0.0.9002 (development version)
 
