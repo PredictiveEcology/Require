@@ -1097,3 +1097,61 @@ test_that("ensurePakInProjectLib() is a no-op when Require.usePak is FALSE", {
   expect_false(installCalled,
                info = "install.packages should never be called when usePak = FALSE")
 })
+
+test_that(".pakInstallToProjLib() falls back to Rscript subprocess on 'is in use' warning (Windows DLL lock)", {
+  # Regression: install.packages() on Windows emits
+  #   `Warning: package 'pak' is in use and will not be installed`
+  # and silently no-ops when pak's DLL is held by the running R process.
+  # Without the Rscript-subprocess fallback, ensurePakInProjectLib leaves
+  # pak still broken on disk and the user is stuck.
+
+  # Track whether the Rscript subprocess was invoked.
+  subprocessCalled <- list(rscript = NULL, args = NULL)
+
+  testthat::with_mocked_bindings(
+    install.packages = function(...) {
+      warning("package 'pak' is in use and will not be installed")
+      invisible()
+    },
+    .package = "utils",
+    {
+      testthat::with_mocked_bindings(
+        system2 = function(command, args = character(), ...) {
+          subprocessCalled$rscript <<- command
+          subprocessCalled$args <<- args
+          0L
+        },
+        .package = "base",
+        {
+          # find.package() also needs to be mocked to simulate "pak still
+          # not in projLib after install.packages" so the fallback fires,
+          # then "pak in projLib after subprocess" so we report success.
+          findPackageCallCount <- 0L
+          testthat::with_mocked_bindings(
+            find.package = function(...) {
+              findPackageCallCount <<- findPackageCallCount + 1L
+              if (findPackageCallCount <= 1L) character(0) else "/fake/projLib/pak"
+            },
+            .package = "base",
+            {
+              ok <- Require:::.pakInstallToProjLib(
+                projLib = "/fake/projLib",
+                repos   = c(CRAN = "https://cloud.r-project.org"),
+                verbose = -1)
+            }
+          )
+        }
+      )
+    }
+  )
+
+  expect_true(isTRUE(ok),
+              info = "pakInstallToProjLib should report success after the subprocess fallback")
+  expect_match(basename(subprocessCalled$rscript), "^Rscript")
+  expect_true(any(grepl("^--vanilla", subprocessCalled$args)),
+              info = "Rscript should be invoked with --vanilla to skip user profile")
+  expect_true(any(grepl("install\\.packages\\(\"pak\"", subprocessCalled$args)),
+              info = "Rscript -e expr should call install.packages('pak', ...)")
+  expect_true(any(grepl("\"/fake/projLib\"", subprocessCalled$args, fixed = TRUE)),
+              info = "Rscript expr should install to projLib via lib = arg")
+})

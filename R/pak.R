@@ -2602,15 +2602,103 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
     "  (Symptom otherwise: 'Native call to processx_exec failed: Command' '' 'not found'.)",
     verbose = verbose, verboseLevel = 1)
 
-  ok <- tryCatch({
-    utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE)
-    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
-  }, error = function(e) {
-    messageVerbose("ensurePakInProjectLib: install.packages('pak') failed: ",
-                   conditionMessage(e), verbose = verbose, verboseLevel = 1)
-    FALSE
-  })
+  ## Was pak loaded in this session before we started? If so, we'll need to
+  ## (try to) replace the loaded copy after install -- otherwise downstream
+  ## code keeps using the broken in-memory pak even though disk is fresh.
+  pakWasLoaded <- "pak" %in% loadedNamespaces()
+
+  ok <- .pakInstallToProjLib(projLib = projLib, repos = repos, verbose = verbose)
+
+  if (isTRUE(ok) && pakWasLoaded) {
+    ## Disk is fresh, but the current R session still has the old pak in
+    ## memory (and may hold its DLL on Windows). Try to unload+reload from
+    ## projLib; if that fails (locked DLL is the usual reason on Windows),
+    ## stop() with a clear restart instruction. Continuing with the old
+    ## in-memory pak just hits the same processx_exec failure the user is
+    ## here to fix.
+    reloaded <- .pakReloadFromProjLib(projLib)
+    if (!isTRUE(reloaded)) {
+      stop(
+        "Require: pak has been (re)installed into\n  ", projLib,
+        "\nbut the previously-loaded pak namespace could not be replaced ",
+        "in this R session (Windows DLL lock).\n",
+        "Please RESTART R and rerun your Require::Install(...) call.",
+        call. = FALSE)
+    }
+  }
   invisible(ok)
+}
+
+# ---------------------------------------------------------------------------
+# .pakInstallToProjLib: install pak into projLib via base install.packages.
+# On Windows the parent R process may hold a lock on pak's DLL, in which
+# case install.packages quietly no-ops with the warning
+#   "package 'pak' is in use and will not be installed"
+# Detect that case and retry from a FRESH Rscript subprocess (no pak
+# loaded, no DLL lock) so disk gets the new bits regardless.
+# ---------------------------------------------------------------------------
+.pakInstallToProjLib <- function(projLib, repos, verbose) {
+  ## Best-effort unload first -- often enough on its own.
+  if ("pak" %in% loadedNamespaces())
+    try(suppressWarnings(unloadNamespace("pak")), silent = TRUE)
+
+  warnings <- character()
+  tryCatch(
+    withCallingHandlers(
+      utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE),
+      warning = function(w) {
+        warnings <<- c(warnings, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    ),
+    error = function(e) warnings <<- c(warnings, paste0("error: ", conditionMessage(e)))
+  )
+  ok <- length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+
+  ## If we got the "in use" / "cannot be installed" warning AND pak still
+  ## isn't in projLib, retry via Rscript subprocess.
+  if (!ok && any(grepl("is in use|cannot be installed|cannot remove", warnings))) {
+    messageVerbose(
+      "ensurePakInProjectLib: in-process install blocked (pak's DLL is locked); ",
+      "retrying via Rscript subprocess so the on-disk files can be replaced.",
+      verbose = verbose, verboseLevel = 1)
+    rscript <- file.path(R.home("bin"),
+                         if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
+    expr <- sprintf(
+      'install.packages("pak", lib = %s, repos = %s, quiet = TRUE)',
+      deparse(projLib), deparse(repos))
+    suppressWarnings(try(system2(
+      rscript, args = c("--vanilla", "-e", expr),
+      stdout = if (verbose >= 2) "" else FALSE,
+      stderr = if (verbose >= 2) "" else FALSE
+    ), silent = TRUE))
+    ok <- length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  }
+
+  if (!ok && length(warnings))
+    messageVerbose("ensurePakInProjectLib: install.packages('pak') warnings:\n  ",
+                   paste(warnings, collapse = "\n  "),
+                   verbose = verbose, verboseLevel = 1)
+  ok
+}
+
+# ---------------------------------------------------------------------------
+# .pakReloadFromProjLib: unload pak (if loaded), then re-require it from
+# projLib. Returns TRUE iff the loaded copy now resolves to projLib.
+# Returns FALSE if unload couldn't free the DLL (Windows) -- the caller
+# uses this signal to ask the user to restart R.
+# ---------------------------------------------------------------------------
+.pakReloadFromProjLib <- function(projLib) {
+  if ("pak" %in% loadedNamespaces())
+    try(suppressWarnings(unloadNamespace("pak")), silent = TRUE)
+  if ("pak" %in% loadedNamespaces()) return(FALSE)
+  ok <- suppressWarnings(requireNamespace(
+    "pak", lib.loc = c(projLib, .libPaths()), quietly = TRUE))
+  if (!isTRUE(ok)) return(FALSE)
+  ## Confirm the loaded copy resolves to projLib (not some other lib)
+  isTRUE(length(suppressWarnings(tryCatch(
+    find.package("pak", lib.loc = projLib, quiet = TRUE),
+    error = function(e) character(0)))) > 0)
 }
 
 # ---------------------------------------------------------------------------

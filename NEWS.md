@@ -1,4 +1,4 @@
-# Require 2.0.0.9006 (development version)
+# Require 2.0.0.9007 (development version)
 
 * pak (and its native-helper siblings `callr`, `processx`, `cli`) are
   no longer file-copied across libs by `clonePackages()` /
@@ -15,6 +15,15 @@
   the result of an old file-copy bootstrap). Uses base
   `install.packages()`, not pak itself, to avoid the chicken-and-egg
   problem when pak is broken.
+* `ensurePakInProjectLib()` now copes with Windows DLL locks: when
+  `install.packages('pak')` no-ops with
+  `Warning: package 'pak' is in use and will not be installed`,
+  the fix retries the install from a fresh `Rscript --vanilla -e ...`
+  subprocess (no pak loaded, no DLL lock) so the on-disk files actually
+  get replaced. If pak was already loaded in this session and the
+  in-memory namespace can't be unloaded after the install (locked DLL),
+  Require now stops with a clear "please restart R" message rather than
+  silently continuing with the broken loaded copy.
 
 # Require 2.0.0.9002 (development version)
 
