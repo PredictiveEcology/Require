@@ -1,3 +1,17 @@
+# Require 2.0.0.9002 (development version)
+
+* `whIsOfficialCRANrepo()` no longer leaks a "cannot open file"
+  warning when the cached `.mirrors.csv` is absent and the download
+  fallback also fails (offline / fresh cache).
+  `try(read.csv(...), silent = TRUE)` swallows the *error* but
+  `file()` signals the warning first, so it escaped to callers'
+  `withCallingHandlers` (e.g. `SpaDES.project::setupProject`),
+  whose handlers probed the call stack for variables that do not
+  exist on the pak code path -- crashing with
+  `Error in get(obj, envir = env, inherits = FALSE) : object 'pkgDT' not found`.
+  The read is now skipped when the file is absent, and wrapped in
+  `suppressWarnings()` otherwise.
+
 # Require 2.0.0.9001 (development version)
 
 * Recover from `cannot be unloaded ... imported by` failure via

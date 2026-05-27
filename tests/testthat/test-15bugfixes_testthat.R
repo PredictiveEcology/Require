@@ -929,3 +929,44 @@ test_that("extractMissingSysreqs parses pak's 'Missing N system packages' block"
   expect_identical(Require:::extractMissingSysreqs("nothing relevant"), character(0))
   expect_identical(Require:::extractMissingSysreqs(character(0)), character(0))
 })
+
+test_that("whIsOfficialCRANrepo does not leak 'cannot open file' warning when .mirrors.csv is absent", {
+  # Regression: when the cached .mirrors.csv is absent AND download.file fails
+  # (offline / fresh cache), `try(read.csv(...), silent = TRUE)` swallowed the
+  # error but `file()` signals a "cannot open file" warning before erroring,
+  # which escaped try(). That warning was caught by callers' withCallingHandlers
+  # (e.g. SpaDES.project::setupProject) whose handlers probed the call stack
+  # for `pkgDT` -- a variable that doesn't exist on the pak code path --
+  # crashing with: Error in get(obj, envir = env, inherits = FALSE).
+
+  tmpCache <- tempfile("requireMirrorsTest")
+  dir.create(tmpCache)
+  on.exit(unlink(tmpCache, recursive = TRUE), add = TRUE)
+
+  caught <- character()
+  withr::with_envvar(
+    c(R_REQUIRE_CACHE = tmpCache),
+    {
+      with_mocked_bindings(
+        download.file = function(...) stop("simulated offline"),
+        .package = "Require",
+        {
+          withCallingHandlers(
+            try(Require:::whIsOfficialCRANrepo(
+              currentRepos = c(CRAN = "https://cloud.r-project.org")
+            ), silent = TRUE),
+            warning = function(w) {
+              caught <<- c(caught, conditionMessage(w))
+              invokeRestart("muffleWarning")
+            }
+          )
+        }
+      )
+    }
+  )
+
+  expect_false(
+    any(grepl("cannot open", caught)),
+    info = paste("Leaked warnings:", paste(caught, collapse = "; "))
+  )
+})
