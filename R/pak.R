@@ -2564,6 +2564,23 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 }
 
 # ---------------------------------------------------------------------------
+# .isSessionLibPath: is `path` part of the session-wide .libPaths()?
+# Used to distinguish a real project lib (where ensurePakInProjectLib is
+# appropriate) from an ephemeral install-target tempdir passed only as
+# `Require::Install(pkg, libPaths = ..., standAlone = TRUE)` (where it
+# isn't). normalizePath the comparison so trailing-slash / 8.3-shortname
+# differences on Windows don't cause false negatives.
+# ---------------------------------------------------------------------------
+.isSessionLibPath <- function(path) {
+  if (!length(path) || !nzchar(path[1])) return(FALSE)
+  np <- tryCatch(normalizePath(path[1], winslash = "/", mustWork = FALSE),
+                 error = function(e) path[1])
+  nl <- tryCatch(normalizePath(.libPaths(), winslash = "/", mustWork = FALSE),
+                 error = function(e) .libPaths())
+  np %in% nl
+}
+
+# ---------------------------------------------------------------------------
 # ensurePakInProjectLib: make sure pak is installed in libPaths[1] (the
 # project lib), reinstalling fresh via base install.packages() if it's
 # absent OR if pak_sitrep() reports the "(local install?)" tag that

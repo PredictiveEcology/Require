@@ -1,3 +1,16 @@
+# Require 2.0.0.9009 (development version)
+
+* `ensurePakInProjectLib()` is now only called when `libPaths[1]` is part
+  of the session-wide `.libPaths()` -- i.e. a real project lib, not an
+  ephemeral install-target tempdir passed via
+  `Require::Install(pkg, libPaths = some_tempdir, standAlone = TRUE)`.
+  Previously every such call (common in tests and one-off installs)
+  tried to install pak into the ephemeral lib and ran
+  `unloadNamespace("pak")`, whose cascade left other packages in a
+  partial-load state. Symptom in CI: `test-12offlineMode_testthat.R`
+  failing in `unloadNamespace("fpCompare")` with
+  `cannot open file '.../fpCompare/R/fpCompare.rdb'`.
+
 # Require 2.0.0.9008 (development version)
 
 * pak (and its native-helper siblings `callr`, `processx`, `cli`) are

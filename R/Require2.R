@@ -296,14 +296,21 @@ Require <- function(packages,
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
 
   # Make sure pak is installed in the project lib (libPaths[1]) BEFORE any
-  # downstream code path calls pak. If pak is missing from the project lib
-  # (or is present but flagged "(local install?)" by pak_sitrep, indicating a
-  # non-standard install -- e.g. file-copied across libs by a pre-pak
-  # SpaDES.project::setupPackages run), reinstall it fresh. Copying pak from
-  # another lib does NOT work on Windows: pak's embedded callr/processx
-  # helper executables don't survive a file-by-file copy and the next pak
-  # call dies with `Native call to processx_exec failed: Command '' not found`.
-  ensurePakInProjectLib(libPaths[1], repos = repos, verbose = verbose)
+  # downstream code path calls pak. If pak is missing from the project lib,
+  # reinstall it fresh -- copying pak from another lib does NOT work on
+  # Windows: pak's embedded callr/processx helper executables don't survive
+  # a file-by-file copy and the next pak call dies with
+  #   `Native call to processx_exec failed: Command '' not found`.
+  #
+  # Gate on libPaths[1] being part of the session-wide .libPaths() so this
+  # only fires for *real* project libs. Ephemeral install-target tempdirs
+  # passed via Require::Install(pkg, libPaths = some_tempdir, standAlone =
+  # TRUE) -- common in tests and one-off installs -- are NOT project libs;
+  # treating them as such (a) wastes install time per call and (b) triggers
+  # an unloadNamespace("pak") cascade that interacts badly with packages
+  # the caller is in the middle of installing/unloading.
+  if (.isSessionLibPath(libPaths[1]))
+    ensurePakInProjectLib(libPaths[1], repos = repos, verbose = verbose)
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)

@@ -1008,6 +1008,20 @@ test_that(".pakNoCopyPkgs() includes pak, callr, processx, cli", {
               info = paste("got:", paste(out, collapse = ", ")))
 })
 
+test_that(".isSessionLibPath() distinguishes real project libs from ephemeral tempdirs", {
+  # A path that IS in .libPaths() must be recognised as a session lib path.
+  expect_true(Require:::.isSessionLibPath(.libPaths()[1]))
+  # A fresh tempdir is NOT in .libPaths() and must be rejected.
+  td <- tempfile("notASessionLib")
+  dir.create(td)
+  on.exit(unlink(td, recursive = TRUE), add = TRUE)
+  expect_false(Require:::.isSessionLibPath(td))
+  # Empty / NULL inputs are FALSE.
+  expect_false(Require:::.isSessionLibPath(""))
+  expect_false(Require:::.isSessionLibPath(character(0)))
+  expect_false(Require:::.isSessionLibPath(NULL))
+})
+
 test_that(".pakNeedsReinstall() flags missing-from-projLib and forceReinstall opt-in", {
   # Missing from project lib
   expect_match(Require:::.pakNeedsReinstall(character(0)), "not present")
