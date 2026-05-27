@@ -1,3 +1,12 @@
+# Require 2.0.0.9002 (development version)
+
+* `isBinaryCRANRepo()` no longer errors with "subscript out of bounds"
+  when `getOption("repos")` has no element named "CRAN". This can
+  happen when calling code rebuilds the repos option in a way that
+  drops names, e.g. `unique(c(extraRepo, getOption("repos")))`.
+  The default now resolves CRAN lazily and falls back to `NA` when
+  absent.
+
 # Require 2.0.0.9001 (development version)
 
 * Recover from `cannot be unloaded ... imported by` failure via
