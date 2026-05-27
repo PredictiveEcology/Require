@@ -452,10 +452,19 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
         download.file("https://cran.r-project.org/CRAN_mirrors.csv",
                       destfile = mirrorsLocalFile, quiet = TRUE),
         silent = TRUE))
-    a <- try(read.csv(mirrorsLocalFile), silent = TRUE)
+    ## Even with `try(silent = TRUE)`, `read.csv` on a missing file signals a
+    ## "cannot open file" warning before erroring (via file()). That warning
+    ## escapes `try()` and can be caught by callers' withCallingHandlers (e.g.
+    ## SpaDES.project) that then probe the stack for vars not in our code path.
+    ## Skip the read when the file is absent, and suppress the warning otherwise.
+    a <- if (file.exists(mirrorsLocalFile)) {
+      try(suppressWarnings(read.csv(mirrorsLocalFile)), silent = TRUE)
+    } else {
+      structure("download failed", class = "try-error")
+    }
     if (!is(a, "try-error"))
       break
-    unlink(mirrorsLocalFile)
+    if (file.exists(mirrorsLocalFile)) unlink(mirrorsLocalFile)
     if (attempt == 2) {
       # https://stackoverflow.com/a/76684292/3890027
       enableSSLWorkaround()
