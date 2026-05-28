@@ -1,4 +1,47 @@
-# Require 2.0.0.9012 (development version)
+# Require 2.0.0.9015 (development version)
+
+* `pakOfflineInstall()`: when a per-ref retry after a batch "Conflicts
+  with" failure ALSO hits "Conflicts with" (typical when the ref is a
+  `pkg@version` exact-pin and pak's resolver creates two solver entries
+  for the same package -- one from the input ref and one from an
+  installed/loaded copy), now falls back to a bare `pkg` ref. The
+  pak download cache was already filtered to the right version, so
+  dropping the explicit pin is safe.
+* `test-18nosudo_testthat.R`: the `callr::r()` subprocess now gets an
+  explicit `libpath` that includes `pkgload`'s and `pak`'s install
+  locations. `tests/testthat/setup.R` narrows the parent's
+  `.libPaths()` to `head + tail`, dropping middle entries where
+  Suggests like `pkgload` typically live under `devtools::test()`.
+  Without the override the subprocess could not load pkgload and the
+  sudo-trap test errored before reaching the protective assertion.
+* `test-05packagesLong_testthat.R:39`: replace the brittle
+  `length(pkgDepTest2[[1]]) == 2` assertion (which broke every time
+  Require's Imports list grew) with a robust "core deps are present"
+  check. The 2nd `Require()` call in the loop now applies the same
+  warning-pre-filter (drop `Please change required version` /
+  `could not be installed`) as the first call before testing against
+  `testWarnsInUsePleaseChange`.
+* `test-05`, `test-08`, `test-10`: the `testWarnsInUsePleaseChange`
+  assertions now attach the captured `warns` vector via `info=` so
+  future failures self-document the offending warning instead of just
+  reporting `TRUE != FALSE`.
+
+# Require 2.0.0.9014 (development version)
+
+* Auto-invalidate the pak dep-resolution cache when an install attempt
+  fails with `missing-build-deps`. The cached plan is provably stale in
+  that case (a build-time package wasn't in the resolved graph) --
+  most commonly because the user just upgraded Require to a release
+  that added an `Imports` package and the cache from before the
+  upgrade still represents the old graph. Without this, every
+  subsequent Require call would serve the same stale plan and hit the
+  same failure ad infinitum. The fix wipes only the specific cache
+  entry that was just used (both the in-memory and on-disk copy) so
+  the next call re-resolves. `pakDepsResolve()` now stashes its
+  cache key in `pakEnv()` so the invalidator doesn't need to recompute
+  it from the resolution args.
+
+
 
 * `processx` and `callr` are now declared `Imports` (callr moved from
   Suggests). pak ships its own embedded copies in `pak/library/` and

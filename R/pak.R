@@ -1165,6 +1165,31 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
           pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
                    dependencies = FALSE, upgrade = FALSE),
           verbose), silent = TRUE)
+        ## Second fallback: if the per-ref retry ALSO emitted "Conflicts with"
+        ## (typical when the ref is a `pkg@version` exact-pin and pak's
+        ## resolver creates two solver entries for the same package -- one
+        ## from the input ref and one from an installed/loaded copy), try
+        ## the same install with a bare `pkg` ref. The pak download cache
+        ## was already filtered to the right version, so dropping the
+        ## explicit pin is safe; we lose pak's version-pinning protection
+        ## but gain the ability to install at all. Same fallback for
+        ## `pkg` refs with an explicit `(>= X)` style spec.
+        if (is(perRefErr, "try-error") &&
+            grepl("Conflicts with", as.character(perRefErr), fixed = TRUE)) {
+          barePkg <- pkgsToInstall[i]
+          if (length(barePkg) && nzchar(barePkg) && barePkg != refsToInstall[i]) {
+            messageVerbose(
+              "pakOfflineInstall: per-ref retry for ", refsToInstall[i],
+              " also hit 'Conflicts with'; falling back to bare `",
+              barePkg, "` ref (cache already pinned to the right version).",
+              verbose = verbose, verboseLevel = 1)
+            pakResetSubprocess()
+            perRefErr <- try(pakCall(
+              pak::pak(barePkg, lib = libPaths[1], ask = FALSE,
+                       dependencies = FALSE, upgrade = FALSE),
+              verbose), silent = TRUE)
+          }
+        }
         if (is(perRefErr, "try-error")) {
           messageVerbose(
             "pakOfflineInstall: per-ref retry failed for ",
@@ -1718,6 +1743,12 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
   ttl      <- getOption("Require.pak.depCacheTTL", .pakDepsCacheTTL)
   offline  <- isTRUE(getOption("Require.offlineMode"))
 
+  ## Stash the cache key so the install machinery can invalidate the
+  ## specific entry it just consumed -- without needing to recompute the
+  ## key from the original `pkgsForPak` / `wh` / `repos` / `userPkgs` /
+  ## `type` arguments downstream. See `.pakDepsInvalidateLast()`.
+  assign(".lastPakDepsKey", key, envir = pakEnv())
+
   # --- 2. In-memory cache hit ---
   if (!isTRUE(purge)) {
     cached <- get0(envKey, envir = pakEnv(), inherits = FALSE)
@@ -1961,6 +1992,35 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL,
   rm(list = intersect(envKey, ls(envir = pakEnv())), envir = pakEnv())
   if (file.exists(cacheFile)) unlink(cacheFile)
   invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
+# .pakDepsInvalidateLast: invalidate the cache entry most recently returned
+# (or just written) by `pakDepsResolve()`. Uses the key that
+# `pakDepsResolve` stashed in `pakEnv()` so callers don't need to
+# recompute it from the original resolution args.
+#
+# Primary use: install-time recovery when pak reports
+# "missing-build-deps" -- the cached plan is provably incomplete for
+# this Require version (e.g. user upgraded Require to a release that
+# imports `processx` after the cache was built without processx in the
+# graph). Wiping that one entry forces a fresh resolution on the next
+# call, which picks up Require's current Imports.
+#
+# Returns TRUE if a key was found and invalidated, FALSE otherwise.
+# ---------------------------------------------------------------------------
+.pakDepsInvalidateLast <- function() {
+  key <- get0(".lastPakDepsKey", envir = pakEnv(), inherits = FALSE)
+  if (is.null(key) || !nzchar(key)) return(invisible(FALSE))
+  envKey   <- paste0("pakDeps_", key)
+  cacheFile <- file.path(pakDepsCacheDir(), paste0(key, ".rds"))
+  rm(list = intersect(envKey, ls(envir = pakEnv())), envir = pakEnv())
+  if (file.exists(cacheFile)) try(unlink(cacheFile), silent = TRUE)
+  ## Also drop the .lastPakDepsKey stash so we don't try to invalidate the
+  ## same already-gone entry twice.
+  if (exists(".lastPakDepsKey", envir = pakEnv(), inherits = FALSE))
+    try(rm(".lastPakDepsKey", envir = pakEnv()), silent = TRUE)
+  invisible(TRUE)
 }
 
 # Resolve package dependencies using pak, returning a Require-format pkgDT.
@@ -3577,6 +3637,27 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   installFailures <- reportInstallFailures(installFailures, finalMissing,
                                            verbose = verbose)
   assign(".lastInstallFailures", installFailures, envir = pakEnv())
+
+  ## Auto-invalidate the dep-resolution cache when pak reports
+  ## "missing-build-deps". The cached plan was built without that build
+  ## dep in the graph (most commonly: user just upgraded Require to a
+  ## release that added an `Imports` package -- e.g. processx in
+  ## 2.0.0.9013 -- but the per-call dep cache still represents the old
+  ## graph). Serving the stale plan on the next call would hit the same
+  ## missing-build-deps failure ad infinitum. Wiping the entry forces a
+  ## fresh resolution on retry. Cheap no-op when no key was stashed.
+  if (NROW(installFailures) &&
+      "reason_type" %in% names(installFailures) &&
+      any(installFailures$reason_type == "missing-build-deps")) {
+    invalidated <- .pakDepsInvalidateLast()
+    if (isTRUE(invalidated))
+      messageVerbose(
+        "pak install failed with missing-build-deps; invalidated the ",
+        "dep-resolution cache for this plan so the next Require call ",
+        "will re-resolve (typical cause: a Require version bump added ",
+        "an Imports package that wasn't in the cached graph).",
+        verbose = verbose, verboseLevel = 1)
+  }
 
   # Update pkgDT with installation results.
   # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector

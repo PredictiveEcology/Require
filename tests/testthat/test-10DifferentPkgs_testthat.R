@@ -37,7 +37,9 @@ test_that("test 10", {
     if (getOption("Require.installPackagesSys") < 2)
       warns <- grep("installation of package.+cissr.+had non-zero exit status", invert = TRUE, warns)
     test <- testWarnsInUsePleaseChange(warns)
-    expect_true(test)
+    expect_true(test,
+                info = paste("unexpected warns:",
+                             paste(warns, collapse = " | ")))
     skip_if_offline2()
 
     ins <- installed.packages(noCache = TRUE) |> as.data.table()

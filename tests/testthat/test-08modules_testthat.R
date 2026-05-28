@@ -100,7 +100,9 @@ test_that("test 8", {
     ) |>
       capture_warnings() -> warns
     test <- testWarnsInUsePleaseChange(warns)
-    expect_true(test)# "Require" is in use
+    expect_true(test,
+                info = paste("unexpected warns:",
+                             paste(warns, collapse = " | "))) # "Require" is in use
 
     # THE POST INSTALL COMPARISON
     ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
