@@ -1,3 +1,17 @@
+# Require 2.0.0.9017 (development version)
+
+* `pakOfflineInstall()` tier-C `local::<cached_path>` fallback now
+  passes `dependencies = NA` (pak's default: Depends + Imports +
+  LinkingTo for build) instead of `FALSE`. The other tiers stay at
+  `FALSE` because they're explicitly isolating a ref from pak's
+  solver, but tier C is doing a source build whose R CMD INSTALL
+  needs the build-time deps actually present in the lib. Without
+  this, `local::.../qs_0.27.3.tar.gz` failed to build because qs's
+  `LinkingTo: stringfish` wasn't in lib at build time, even though
+  both tarballs were in pak's cache. With `NA`, pak reads the
+  tarball's DESCRIPTION, resolves stringfish, finds it in the cache,
+  installs it first, then builds qs. Still all-cache; no network.
+
 # Require 2.0.0.9016 (development version)
 
 * `pakOfflineInstall()`: per-ref retry now fires on ANY pak batch

@@ -1190,16 +1190,23 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
           }
         }
         ## Tier C: on ANY remaining error, try `local::<cached_path>`.
-        ## This bypasses pak's resolver almost entirely (pak just runs
-        ## R CMD INSTALL on the cached tarball). Triggers pak's vignette
-        ## rebuild on source tarballs but that's worth it as a last
-        ## resort -- and it's the recovery path for resolver bugs like
-        ## the `version_satisfies(..., atleast = NA)` error pak emits
-        ## on archived-CRAN packages whose metadata has nullable fields
-        ## (observed end-to-end on user trying to install qs@0.27.3 from
-        ## the cache: pak's batch and per-ref both errored with
-        ## `! missing value where TRUE/FALSE needed`, but
-        ## `local::/.../qs_0.27.3.tar.gz` succeeded).
+        ## This bypasses pak's resolver almost entirely (pak reads the
+        ## tarball's DESCRIPTION directly) -- it's the recovery path for
+        ## resolver bugs like the `version_satisfies(..., atleast = NA)`
+        ## error pak emits on archived-CRAN packages whose metadata has
+        ## nullable fields (observed end-to-end on user trying to
+        ## install qs@0.27.3 from the cache).
+        ##
+        ## `dependencies = NA` (pak's default: Depends + Imports +
+        ## LinkingTo for build) -- NOT `FALSE`. The other-tier per-ref
+        ## calls use FALSE because they're explicitly isolating a ref
+        ## from pak's solver; tier C is doing a source build whose
+        ## R CMD INSTALL needs the build-time deps actually installed
+        ## (e.g. qs@0.27.3 LinkingTo stringfish: without stringfish in
+        ## lib at build time, the qs build fails even though both
+        ## tarballs are in pak's cache). With NA, pak reads qs's
+        ## DESCRIPTION, resolves stringfish, finds it in the cache,
+        ## installs it first, then builds qs. All-cache, no network.
         if (is(perRefErr, "try-error") &&
             length(cachedPathsToInstall) >= i &&
             !is.na(cachedPathsToInstall[i]) &&
@@ -1215,7 +1222,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
             pakResetSubprocess()
             perRefErr <- try(pakCall(
               pak::pak(localRef, lib = libPaths[1], ask = FALSE,
-                       dependencies = FALSE, upgrade = FALSE),
+                       dependencies = NA, upgrade = FALSE),
               verbose), silent = TRUE)
           }
         }
