@@ -1189,24 +1189,29 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
               verbose), silent = TRUE)
           }
         }
-        ## Tier C: on ANY remaining error, try `local::<cached_path>`.
-        ## This bypasses pak's resolver almost entirely (pak reads the
-        ## tarball's DESCRIPTION directly) -- it's the recovery path for
-        ## resolver bugs like the `version_satisfies(..., atleast = NA)`
-        ## error pak emits on archived-CRAN packages whose metadata has
-        ## nullable fields (observed end-to-end on user trying to
-        ## install qs@0.27.3 from the cache).
+        ## Tier C: on ANY remaining error, swap THIS ref to
+        ## `local::<cached_path>` and retry the WHOLE BATCH (with
+        ## `dependencies = FALSE` so every other ref's user-supplied
+        ## pin stays visible to pak).
         ##
-        ## `dependencies = NA` (pak's default: Depends + Imports +
-        ## LinkingTo for build) -- NOT `FALSE`. The other-tier per-ref
-        ## calls use FALSE because they're explicitly isolating a ref
-        ## from pak's solver; tier C is doing a source build whose
-        ## R CMD INSTALL needs the build-time deps actually installed
-        ## (e.g. qs@0.27.3 LinkingTo stringfish: without stringfish in
-        ## lib at build time, the qs build fails even though both
-        ## tarballs are in pak's cache). With NA, pak reads qs's
-        ## DESCRIPTION, resolves stringfish, finds it in the cache,
-        ## installs it first, then builds qs. All-cache, no network.
+        ## Why local::: bypasses pak's resolver for the failing ref
+        ## (pak reads the tarball's DESCRIPTION directly) -- the
+        ## recovery path for resolver bugs like the
+        ## `version_satisfies(... atleast = NA)` error pak emits on
+        ## archived-CRAN packages whose metadata has nullable fields
+        ## (observed end-to-end on user trying to install qs@0.27.3).
+        ##
+        ## Why pass the WHOLE batch: a previous version of tier C
+        ## called `pak::pak(localRef)` standalone. pak then resolved
+        ## qs's `LinkingTo: stringfish` against CRAN's LATEST
+        ## stringfish (0.19.0) instead of the user's pinned 0.17.0 --
+        ## installed 0.19.0, qs build then failed because qs 0.27.3
+        ## is binary-incompatible with stringfish 0.19.0. Solution:
+        ## pass the entire batch with this ref swapped, with
+        ## `dependencies = FALSE` so pak honours every pin and won't
+        ## reach for network upgrades. Pak orders the builds: each
+        ## `pkg@version` installs from cache first, then the local::
+        ## source build runs against the correctly-pinned deps.
         if (is(perRefErr, "try-error") &&
             length(cachedPathsToInstall) >= i &&
             !is.na(cachedPathsToInstall[i]) &&
@@ -1214,16 +1219,29 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
             file.exists(cachedPathsToInstall[i])) {
           localRef <- paste0("local::", cachedPathsToInstall[i])
           if (localRef != refsToInstall[i]) {
+            batchWithLocalSwap <- refsToInstall
+            batchWithLocalSwap[i] <- localRef
             messageVerbose(
               "pakOfflineInstall: per-ref retry for ", refsToInstall[i],
-              " still failing; falling back to `", localRef, "` to ",
-              "bypass pak's resolver.",
+              " still failing; swapping that ref to `", localRef, "` and ",
+              "retrying the WHOLE batch (so the other refs' pins stay ",
+              "visible to pak).",
               verbose = verbose, verboseLevel = 1)
             pakResetSubprocess()
             perRefErr <- try(pakCall(
-              pak::pak(localRef, lib = libPaths[1], ask = FALSE,
-                       dependencies = NA, upgrade = FALSE),
+              pak::pak(batchWithLocalSwap, lib = libPaths[1], ask = FALSE,
+                       dependencies = FALSE, upgrade = FALSE),
               verbose), silent = TRUE)
+            ## If the whole-batch retry succeeded, every ref in the
+            ## batch is now installed -- break out of the per-ref loop
+            ## so we don't redo work pak just completed.
+            if (!is(perRefErr, "try-error")) {
+              messageVerbose(
+                "pakOfflineInstall: whole-batch retry with `", localRef,
+                "` succeeded; skipping remaining per-ref retries.",
+                verbose = verbose, verboseLevel = 1)
+              break
+            }
           }
         }
         if (is(perRefErr, "try-error")) {

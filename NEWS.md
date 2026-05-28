@@ -1,3 +1,17 @@
+# Require 2.0.0.9018 (development version)
+
+* `pakOfflineInstall()` tier-C fallback now retries the WHOLE batch
+  with just the failing ref swapped to `local::<cached_path>`,
+  instead of calling pak on the single `local::` ref standalone.
+  With `dependencies = FALSE` (the batch-wide policy), every other
+  ref's user-supplied pin stays visible to pak -- so a
+  `Require::Install(c("stringfish (==0.17.0)", "qs (==0.27.3)"))`
+  call gets stringfish installed at 0.17.0 (the user's pin) instead
+  of pak resolving CRAN's latest 0.19.0 for qs's LinkingTo. Pak
+  orders the cached deps before the local::-driven source build.
+  If the whole-batch retry succeeds, the per-ref loop exits early
+  (every ref is now installed, no point continuing).
+
 # Require 2.0.0.9017 (development version)
 
 * `pakOfflineInstall()` tier-C `local::<cached_path>` fallback now
