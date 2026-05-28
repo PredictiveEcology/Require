@@ -1165,6 +1165,31 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
           pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
                    dependencies = FALSE, upgrade = FALSE),
           verbose), silent = TRUE)
+        ## Second fallback: if the per-ref retry ALSO emitted "Conflicts with"
+        ## (typical when the ref is a `pkg@version` exact-pin and pak's
+        ## resolver creates two solver entries for the same package -- one
+        ## from the input ref and one from an installed/loaded copy), try
+        ## the same install with a bare `pkg` ref. The pak download cache
+        ## was already filtered to the right version, so dropping the
+        ## explicit pin is safe; we lose pak's version-pinning protection
+        ## but gain the ability to install at all. Same fallback for
+        ## `pkg` refs with an explicit `(>= X)` style spec.
+        if (is(perRefErr, "try-error") &&
+            grepl("Conflicts with", as.character(perRefErr), fixed = TRUE)) {
+          barePkg <- pkgsToInstall[i]
+          if (length(barePkg) && nzchar(barePkg) && barePkg != refsToInstall[i]) {
+            messageVerbose(
+              "pakOfflineInstall: per-ref retry for ", refsToInstall[i],
+              " also hit 'Conflicts with'; falling back to bare `",
+              barePkg, "` ref (cache already pinned to the right version).",
+              verbose = verbose, verboseLevel = 1)
+            pakResetSubprocess()
+            perRefErr <- try(pakCall(
+              pak::pak(barePkg, lib = libPaths[1], ask = FALSE,
+                       dependencies = FALSE, upgrade = FALSE),
+              verbose), silent = TRUE)
+          }
+        }
         if (is(perRefErr, "try-error")) {
           messageVerbose(
             "pakOfflineInstall: per-ref retry failed for ",
