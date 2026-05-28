@@ -29,7 +29,13 @@ jobs:
           - {os: windows-latest,  r: 'release'}  ## currently 4.5
           - {os: windows-latest,  r: 'oldrel-1'} ## currently 4.4
           - {os: windows-latest,  r: 'oldrel-2'} ## currently 4.3
-          - {os: windows-latest,  r: 'oldrel-3'} ## currently 4.2
+          # windows-latest oldrel-3 (R 4.2) intentionally dropped: pak's
+          # stable channel and CRAN's binary index for R 4.2 on Windows
+          # are now thin enough that dep-install storms routinely hang
+          # past GHA's 6h max-runtime (observed during PR #155). R 4.2
+          # is still covered on Linux by ubuntu-latest oldrel-3 below.
+          # Re-add when there's a Windows R 4.2 setup that resolves
+          # deps in well under an hour.
           - {os: ubuntu-latest,   r: 'devel'}
           # Single matrix entry that opts in to the slow integration tests
           # (5 archived-CRAN install round-trips in test-16 — measured at
