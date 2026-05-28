@@ -2725,6 +2725,69 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
 }
 
 # ---------------------------------------------------------------------------
+# ensurePakHelpersInProjectLib: install pak's runtime helpers (processx +
+# callr, transitively ps) into projLib if absent.
+#
+# Why this exists: pak ships its own EMBEDDED copies of these helpers in
+# `pak/library/`, so a CRAN binary install of pak alone is normally "self-
+# contained" and these dependencies are NOT declared as standalone
+# packages. But on real-world Windows installs the embedded subprocess
+# machinery can wedge in a way that's only resolved when standalone
+# `processx` / `callr` are *also* visible in `.libPaths()` -- when they
+# are, pak's subprocess can fall back to them and per-ref `pak::pak()`
+# calls succeed instead of failing with no progress output and no
+# parseable error.
+#
+# This was observed end-to-end on a Windows project lib that had pak
+# installed but no standalone processx/callr: every per-ref install in
+# `pakSerialInstall` failed with empty reason strings, and the entire
+# install plan reported `Could not solve package dependencies`. Manually
+# `install.packages("processx")` fixed the cascade outright.
+#
+# Cheap to call on every Require(): the find.package() check is fast and
+# only triggers install.packages when something's actually missing.
+# ---------------------------------------------------------------------------
+.pakHelperPkgs <- function() c("processx", "callr")
+
+ensurePakHelpersInProjectLib <- function(projLib, repos = getOption("repos"),
+                                         verbose = getOption("Require.verbose")) {
+  if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
+  if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
+    return(invisible(FALSE))
+
+  helpers <- .pakHelperPkgs()
+  missing  <- helpers[vapply(helpers, function(p)
+    !length(suppressWarnings(tryCatch(
+      find.package(p, lib.loc = projLib, quiet = TRUE),
+      error = function(e) character(0)))),
+    logical(1))]
+  if (!length(missing)) return(invisible(TRUE))
+
+  messageVerbose(
+    "Require: pak helper package(s) missing from project lib (",
+    paste(missing, collapse = ", "), "); installing into ", projLib, ".\n",
+    "  pak ships embedded copies of these but its subprocess can wedge on\n",
+    "  Windows when standalone versions aren't visible in .libPaths()\n",
+    "  (symptom: pakSerialInstall reports `could not be installed` for\n",
+    "  every per-ref call with no reason and no pak progress output).",
+    verbose = verbose, verboseLevel = 1)
+
+  tryCatch({
+    utils::install.packages(missing, lib = projLib, repos = repos, quiet = TRUE)
+    invisible(all(vapply(helpers, function(p)
+      length(suppressWarnings(tryCatch(
+        find.package(p, lib.loc = projLib, quiet = TRUE),
+        error = function(e) character(0)))) > 0,
+      logical(1))))
+  }, error = function(e) {
+    messageVerbose("ensurePakHelpersInProjectLib: install.packages(",
+                   paste(missing, collapse = ", "), ") failed: ",
+                   conditionMessage(e), verbose = verbose, verboseLevel = 1)
+    invisible(FALSE)
+  })
+}
+
+# ---------------------------------------------------------------------------
 # pakResetSubprocess: force pak to spawn a fresh background R session on the
 # next pak::pak() call. pak holds a persistent callr r_session in
 # pak:::pkg_data$remote and reuses it across calls; if the previous call
@@ -2737,14 +2800,26 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
 # ---------------------------------------------------------------------------
 pakResetSubprocess <- function() {
   if (!requireNamespace("pak", quietly = TRUE)) return(invisible())
-  rs <- tryCatch(
-    get("pkg_data", envir = asNamespace("pak"))$remote,
-    error = function(e) NULL)
+  pkgData <- tryCatch(get("pkg_data", envir = asNamespace("pak")),
+                      error = function(e) NULL)
+  if (is.null(pkgData)) return(invisible())
+  rs <- tryCatch(pkgData$remote, error = function(e) NULL)
   if (inherits(rs, "r_session")) {
     try(rs$interrupt(), silent = TRUE)
     try(rs$wait(100), silent = TRUE)
     try(rs$kill(), silent = TRUE)
   }
+  ## Remove the slot entirely. Leaving a dead r_session in
+  ## `pak:::pkg_data$remote` was not enough on Windows -- pak's
+  ## restart_remote_if_needed() checks whether the slot exists, not
+  ## whether the process is alive, so per-ref `pak::pak()` calls after a
+  ## batch failure short-circuited with a generic error before any
+  ## install work happened (symptom: a wall of
+  ## `pakSerialInstall: could not be installed: any::X` lines with NO
+  ## reason and NO pak progress output). Removing the slot forces pak
+  ## to allocate a fresh r_session on the next call.
+  if (is.environment(pkgData) && exists("remote", envir = pkgData, inherits = FALSE))
+    try(rm("remote", envir = pkgData), silent = TRUE)
   invisible()
 }
 
@@ -2828,6 +2903,19 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
       messageVerbose("pakSerialInstall: ", .txtCouldNotBeInstalled, ": ", pkg,
                      if (nzchar(reason)) paste0("; ", reason) else "",
                      verbose = verbose, verboseLevel = 2)
+      ## At verboseLevel >= 3, also dump the raw pak error text. When
+      ## reason is empty (pakBuildFailReason couldn't extract anything),
+      ## this is often the only way to tell why pak failed -- e.g.
+      ## "Error : ! error in pak subprocess" with no further context
+      ## indicates a wedged r_session that didn't even start the install.
+      if (verbose >= 3) {
+        rawErr <- as.character(err)
+        if (length(pkgMsgs)) rawErr <- paste(c(rawErr, "--- pkgMsgs ---", pkgMsgs),
+                                             collapse = "\n")
+        if (nchar(rawErr) > 4000L) rawErr <- paste0(substr(rawErr, 1L, 4000L), "\n...[truncated]")
+        messageVerbose("pakSerialInstall raw error for ", pkg, ":\n", rawErr,
+                       verbose = verbose, verboseLevel = 3)
+      }
       ## A failed pak::pak() can leave pak's persistent r_session in a
       ## wedged state where every subsequent call returns instantly with
       ## an error -- without this reset, a single early failure cascades

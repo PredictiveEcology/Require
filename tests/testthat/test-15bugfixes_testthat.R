@@ -1124,6 +1124,80 @@ test_that("linkOrCopyPackageFiles() excludes pak/callr/processx/cli even when as
   expect_true(all(c("data.table", "rlang") %in% passedThrough))
 })
 
+test_that(".pakHelperPkgs() includes processx and callr", {
+  expect_true(all(c("processx", "callr") %in% Require:::.pakHelperPkgs()))
+})
+
+test_that("ensurePakHelpersInProjectLib() installs missing helpers (processx, callr) into projLib", {
+  # Regression: on Windows, pak's subprocess can wedge when standalone
+  # processx / callr are absent from the project lib, even though pak
+  # ships embedded copies. Each per-ref pak::pak() in pakSerialInstall
+  # then fails with empty reason and zero progress output. Installing
+  # standalone processx (+ callr) into the project lib resolves it.
+  installCalls <- list()
+  withr::with_options(
+    list(Require.usePak = TRUE),
+    {
+      testthat::with_mocked_bindings(
+        find.package = function(package, lib.loc = NULL, quiet = FALSE) {
+          # Simulate: processx + callr are NOT in projLib
+          if (package %in% c("processx", "callr")) character(0)
+          else "/fake/projLib/other"
+        },
+        .package = "base",
+        {
+          testthat::with_mocked_bindings(
+            install.packages = function(pkgs, lib, ...) {
+              installCalls[[length(installCalls) + 1L]] <<-
+                list(pkgs = pkgs, lib = lib)
+              invisible()
+            },
+            .package = "utils",
+            {
+              suppressMessages(Require:::ensurePakHelpersInProjectLib(
+                projLib = "/fake/projLib",
+                repos   = c(CRAN = "https://cloud.r-project.org"),
+                verbose = -1))
+            }
+          )
+        }
+      )
+    }
+  )
+  expect_true(length(installCalls) >= 1L,
+              info = "install.packages must be called when helpers are missing")
+  expect_true(all(c("processx", "callr") %in% installCalls[[1L]]$pkgs),
+              info = "the missing helpers must be the ones installed")
+  expect_identical(installCalls[[1L]]$lib, "/fake/projLib")
+})
+
+test_that("ensurePakHelpersInProjectLib() is a no-op when helpers already present", {
+  installCalled <- FALSE
+  withr::with_options(
+    list(Require.usePak = TRUE),
+    {
+      testthat::with_mocked_bindings(
+        find.package = function(...) "/fake/projLib/already-installed",
+        .package = "base",
+        {
+          testthat::with_mocked_bindings(
+            install.packages = function(...) { installCalled <<- TRUE; invisible() },
+            .package = "utils",
+            {
+              Require:::ensurePakHelpersInProjectLib(
+                projLib = "/fake/projLib",
+                repos   = c(CRAN = "https://cloud.r-project.org"),
+                verbose = -1)
+            }
+          )
+        }
+      )
+    }
+  )
+  expect_false(installCalled,
+               info = "install.packages must NOT be called when helpers are all present")
+})
+
 test_that("ensurePakInProjectLib() is a no-op when Require.usePak is FALSE", {
   installCalled <- FALSE
   withr::with_options(

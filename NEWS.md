@@ -1,3 +1,34 @@
+# Require 2.0.0.9011 (development version)
+
+* New `ensurePakHelpersInProjectLib()` called early in `Require()`
+  alongside `ensurePakInProjectLib()` (gated the same way: only when
+  `libPaths[1]` is in `.libPaths()`). When `Require.usePak = TRUE` and
+  pak's runtime helpers (`processx`, `callr`, transitively `ps`) are
+  absent from the project lib, installs them via base
+  `utils::install.packages()`.
+
+  pak ships its OWN embedded copies of these helpers in `pak/library/`,
+  so they're not declared as standalone Imports. But on real-world
+  Windows installs the embedded subprocess machinery can wedge in a
+  way that's only resolved when standalone `processx` / `callr` are
+  also visible in `.libPaths()`. Symptom: every per-ref `pak::pak()`
+  call in `pakSerialInstall` fails with an empty reason string and
+  zero pak progress output, blocking the entire install plan.
+  Manually `install.packages("processx")` was confirmed to fix this
+  end-to-end on a user's Windows machine.
+* `pakResetSubprocess()` now also REMOVES the `remote` slot from
+  `pak:::pkg_data` (in addition to `interrupt + wait + kill` on the
+  `r_session`). pak's `restart_remote_if_needed()` checks for slot
+  existence, not whether the process is alive -- leaving a dead
+  r_session in place was insufficient to make per-ref retries spawn
+  fresh subprocesses on Windows.
+* `pakSerialInstall()` now dumps the raw pak error text at
+  `Require.verbose >= 3` when `pakBuildFailReason()` extracts no
+  reason. Previously a wedged-subprocess failure showed only
+  `could not be installed: any::X` with no suffix, leaving users (and
+  maintainers) blind to whether the failure was a genuine build error
+  or a generic post-wedge "error in pak subprocess".
+
 # Require 2.0.0.9010 (development version)
 
 * User input lists with multiple ref forms for the same package
