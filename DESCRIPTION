@@ -16,7 +16,7 @@ URL:
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2026-05-27
-Version: 2.0.0.9011
+Version: 2.0.0.9012
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -35,14 +35,15 @@ Authors@R: c(
 Depends:
     R (>= 4.1)
 Imports:
+    callr,
     data.table (>= 1.10.4),
     methods,
     pak,
+    processx,
     sys,
     tools,
     utils
 Suggests:
-    callr,
     cli,
     covr,
     curl,

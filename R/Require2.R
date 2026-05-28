@@ -309,15 +309,8 @@ Require <- function(packages,
   # treating them as such (a) wastes install time per call and (b) triggers
   # an unloadNamespace("pak") cascade that interacts badly with packages
   # the caller is in the middle of installing/unloading.
-  if (.isSessionLibPath(libPaths[1])) {
+  if (.isSessionLibPath(libPaths[1]))
     ensurePakInProjectLib(libPaths[1], repos = repos, verbose = verbose)
-    ## Also ensure pak's runtime helpers (processx, callr) are present in
-    ## projLib. pak ships embedded copies but its subprocess can wedge on
-    ## Windows when standalone versions aren't in .libPaths() -- per-ref
-    ## pak::pak() calls then fail with empty reason strings and zero
-    ## progress output, blocking the entire install plan.
-    ensurePakHelpersInProjectLib(libPaths[1], repos = repos, verbose = verbose)
-  }
 
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)

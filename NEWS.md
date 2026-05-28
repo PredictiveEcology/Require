@@ -1,21 +1,17 @@
-# Require 2.0.0.9011 (development version)
+# Require 2.0.0.9012 (development version)
 
-* New `ensurePakHelpersInProjectLib()` called early in `Require()`
-  alongside `ensurePakInProjectLib()` (gated the same way: only when
-  `libPaths[1]` is in `.libPaths()`). When `Require.usePak = TRUE` and
-  pak's runtime helpers (`processx`, `callr`, transitively `ps`) are
-  absent from the project lib, installs them via base
-  `utils::install.packages()`.
-
-  pak ships its OWN embedded copies of these helpers in `pak/library/`,
-  so they're not declared as standalone Imports. But on real-world
-  Windows installs the embedded subprocess machinery can wedge in a
-  way that's only resolved when standalone `processx` / `callr` are
-  also visible in `.libPaths()`. Symptom: every per-ref `pak::pak()`
-  call in `pakSerialInstall` fails with an empty reason string and
-  zero pak progress output, blocking the entire install plan.
-  Manually `install.packages("processx")` was confirmed to fix this
-  end-to-end on a user's Windows machine.
+* `processx` and `callr` are now declared `Imports` (callr moved from
+  Suggests). pak ships its own embedded copies in `pak/library/` and
+  does not declare them as standalone Imports, but on some Windows
+  configurations pak's subprocess wedges unless standalone versions
+  are also visible in `.libPaths()` (symptom: every per-ref
+  `pak::pak()` call in `pakSerialInstall` fails with an empty reason
+  string and no pak progress output, blocking the entire install
+  plan; manually `install.packages("processx")` was confirmed to fix
+  this end-to-end on a user's Windows machine). Declaring them as
+  Require Imports guarantees they're installed alongside Require by R's
+  standard dep resolution, without any runtime install of third-party
+  packages from Require's code (the CRAN-friendly approach).
 * `pakResetSubprocess()` now also REMOVES the `remote` slot from
   `pak:::pkg_data` (in addition to `interrupt + wait + kill` on the
   `r_session`). pak's `restart_remote_if_needed()` checks for slot

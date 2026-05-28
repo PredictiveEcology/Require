@@ -2725,69 +2725,6 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
 }
 
 # ---------------------------------------------------------------------------
-# ensurePakHelpersInProjectLib: install pak's runtime helpers (processx +
-# callr, transitively ps) into projLib if absent.
-#
-# Why this exists: pak ships its own EMBEDDED copies of these helpers in
-# `pak/library/`, so a CRAN binary install of pak alone is normally "self-
-# contained" and these dependencies are NOT declared as standalone
-# packages. But on real-world Windows installs the embedded subprocess
-# machinery can wedge in a way that's only resolved when standalone
-# `processx` / `callr` are *also* visible in `.libPaths()` -- when they
-# are, pak's subprocess can fall back to them and per-ref `pak::pak()`
-# calls succeed instead of failing with no progress output and no
-# parseable error.
-#
-# This was observed end-to-end on a Windows project lib that had pak
-# installed but no standalone processx/callr: every per-ref install in
-# `pakSerialInstall` failed with empty reason strings, and the entire
-# install plan reported `Could not solve package dependencies`. Manually
-# `install.packages("processx")` fixed the cascade outright.
-#
-# Cheap to call on every Require(): the find.package() check is fast and
-# only triggers install.packages when something's actually missing.
-# ---------------------------------------------------------------------------
-.pakHelperPkgs <- function() c("processx", "callr")
-
-ensurePakHelpersInProjectLib <- function(projLib, repos = getOption("repos"),
-                                         verbose = getOption("Require.verbose")) {
-  if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
-  if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
-    return(invisible(FALSE))
-
-  helpers <- .pakHelperPkgs()
-  missing  <- helpers[vapply(helpers, function(p)
-    !length(suppressWarnings(tryCatch(
-      find.package(p, lib.loc = projLib, quiet = TRUE),
-      error = function(e) character(0)))),
-    logical(1))]
-  if (!length(missing)) return(invisible(TRUE))
-
-  messageVerbose(
-    "Require: pak helper package(s) missing from project lib (",
-    paste(missing, collapse = ", "), "); installing into ", projLib, ".\n",
-    "  pak ships embedded copies of these but its subprocess can wedge on\n",
-    "  Windows when standalone versions aren't visible in .libPaths()\n",
-    "  (symptom: pakSerialInstall reports `could not be installed` for\n",
-    "  every per-ref call with no reason and no pak progress output).",
-    verbose = verbose, verboseLevel = 1)
-
-  tryCatch({
-    utils::install.packages(missing, lib = projLib, repos = repos, quiet = TRUE)
-    invisible(all(vapply(helpers, function(p)
-      length(suppressWarnings(tryCatch(
-        find.package(p, lib.loc = projLib, quiet = TRUE),
-        error = function(e) character(0)))) > 0,
-      logical(1))))
-  }, error = function(e) {
-    messageVerbose("ensurePakHelpersInProjectLib: install.packages(",
-                   paste(missing, collapse = ", "), ") failed: ",
-                   conditionMessage(e), verbose = verbose, verboseLevel = 1)
-    invisible(FALSE)
-  })
-}
-
-# ---------------------------------------------------------------------------
 # pakResetSubprocess: force pak to spawn a fresh background R session on the
 # next pak::pak() call. pak holds a persistent callr r_session in
 # pak:::pkg_data$remote and reuses it across calls; if the previous call
