@@ -1274,3 +1274,53 @@ test_that("ensurePakInProjectLib() stops with restart message if pak can't be un
     }
   )
 })
+
+test_that(".pakDepsInvalidateLast() removes the stashed key + on-disk cache file", {
+  # Regression: a user upgraded Require to a version that added an
+  # Imports package (e.g. processx) but the pak dep-resolution cache
+  # from before the upgrade still represented the old dep graph. Pak
+  # tried to build a package that needed the new dep, failed with
+  # `missing-build-deps`, and the next Require call served the same
+  # stale plan -- same failure, ad infinitum. .pakDepsInvalidateLast()
+  # wipes the entry pakDepsResolve() most recently used so the next
+  # call re-resolves.
+
+  pe <- Require:::pakEnv()
+  fakeKey <- "pakDepsTest_abc123"
+  fakeEnvKey <- paste0("pakDeps_", fakeKey)
+
+  # Seed the stash + in-memory cache + a real on-disk cache file
+  assign(".lastPakDepsKey", fakeKey, envir = pe)
+  assign(fakeEnvKey, list(package = "fake"), envir = pe)
+  cacheDir  <- Require:::pakDepsCacheDir()
+  dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+  cacheFile <- file.path(cacheDir, paste0(fakeKey, ".rds"))
+  saveRDS(list(package = "fake"), cacheFile)
+  on.exit({
+    rm(list = intersect(c(".lastPakDepsKey", fakeEnvKey), ls(envir = pe)),
+       envir = pe)
+    if (file.exists(cacheFile)) unlink(cacheFile)
+  }, add = TRUE)
+
+  expect_true(exists(fakeEnvKey, envir = pe, inherits = FALSE))
+  expect_true(file.exists(cacheFile))
+
+  invalidated <- Require:::.pakDepsInvalidateLast()
+  expect_true(isTRUE(invalidated),
+              info = "invalidator must report it found and cleared a key")
+  expect_false(exists(fakeEnvKey, envir = pe, inherits = FALSE),
+               info = "in-memory cache entry must be gone after invalidate")
+  expect_false(file.exists(cacheFile),
+               info = "on-disk cache file must be gone after invalidate")
+  expect_false(exists(".lastPakDepsKey", envir = pe, inherits = FALSE),
+               info = ".lastPakDepsKey stash must be cleared to prevent double-invalidation")
+})
+
+test_that(".pakDepsInvalidateLast() is a no-op when no key was stashed", {
+  pe <- Require:::pakEnv()
+  ## Defensive: ensure no stash exists
+  if (exists(".lastPakDepsKey", envir = pe, inherits = FALSE))
+    rm(".lastPakDepsKey", envir = pe)
+  expect_false(Require:::.pakDepsInvalidateLast(),
+               info = "must return FALSE when nothing to invalidate")
+})

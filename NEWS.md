@@ -1,4 +1,19 @@
-# Require 2.0.0.9012 (development version)
+# Require 2.0.0.9014 (development version)
+
+* Auto-invalidate the pak dep-resolution cache when an install attempt
+  fails with `missing-build-deps`. The cached plan is provably stale in
+  that case (a build-time package wasn't in the resolved graph) --
+  most commonly because the user just upgraded Require to a release
+  that added an `Imports` package and the cache from before the
+  upgrade still represents the old graph. Without this, every
+  subsequent Require call would serve the same stale plan and hit the
+  same failure ad infinitum. The fix wipes only the specific cache
+  entry that was just used (both the in-memory and on-disk copy) so
+  the next call re-resolves. `pakDepsResolve()` now stashes its
+  cache key in `pakEnv()` so the invalidator doesn't need to recompute
+  it from the resolution args.
+
+
 
 * `processx` and `callr` are now declared `Imports` (callr moved from
   Suggests). pak ships its own embedded copies in `pak/library/` and
