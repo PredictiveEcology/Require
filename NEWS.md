@@ -1,4 +1,19 @@
-# Require 2.0.0.9018 (development version)
+# Require 2.0.0.9019 (development version)
+
+* When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
+  `==X` row in favour of an irreconcilable `>=Y` / `>Y` row (e.g. user
+  listed `c("stringfish (==0.17.0)", ...)` while another package
+  required `stringfish (>= 0.18.0)`), the surviving floor row is now
+  rewritten to `==Y` instead of left as `>=Y`. This honours the user
+  intent that motivated the original `==X` pin -- "as old as
+  possible" -- by installing the **minimum** version that satisfies
+  the surviving constraint instead of CRAN's latest. Previously, pak
+  was free to install e.g. stringfish 0.19.0 when only 0.18.0 was
+  needed, which then broke any package whose source build was
+  binary-pinned against 0.18.0. No behaviour change when a `>=`
+  conflict has no `==` opponent.
+
+
 
 * `pakOfflineInstall()` tier-C fallback now retries the WHOLE batch
   with just the failing ref swapped to `local::<cached_path>`,
