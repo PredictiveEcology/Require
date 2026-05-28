@@ -1001,3 +1001,276 @@ test_that("isBinaryCRANRepo() default arg is resilient when 'CRAN' is not a name
     }
   )
 })
+
+test_that(".pakNoCopyPkgs() includes pak, callr, processx, cli", {
+  out <- Require:::.pakNoCopyPkgs()
+  expect_true(all(c("pak", "callr", "processx", "cli") %in% out),
+              info = paste("got:", paste(out, collapse = ", ")))
+})
+
+test_that(".preferGHrefDedup() collapses multi-form refs preferring GH > CRAN", {
+  # Regression: user lists of the form
+  #   c("PredictiveEcology/reproducible@development",
+  #     "PredictiveEcology/reproducible",
+  #     "reproducible")
+  # have no versionSpec on any row, so trimRedundancies() can't dedup them.
+  # All three survived into pakOfflineInstall and poisoned the pak batch
+  # with `reproducible@<v>: Conflicts with reproducible@<v>`.
+  refs <- c("PredictiveEcology/reproducible@development",
+            "PredictiveEcology/reproducible",
+            "reproducible",
+            "data.table")
+  expect_identical(
+    Require:::.preferGHrefDedup(refs),
+    c("PredictiveEcology/reproducible@development", "data.table"))
+
+  # No GH ref present: keep first occurrence per package.
+  expect_identical(
+    Require:::.preferGHrefDedup(c("reproducible", "reproducible@1.2.3", "data.table")),
+    c("reproducible", "data.table"))
+
+  # Multiple GH refs for same package: keep the first (typically the most
+  # specific @branch/@SHA form -- user-input order wins).
+  expect_identical(
+    Require:::.preferGHrefDedup(c("acct/pkg@dev", "acct/pkg", "pkg")),
+    "acct/pkg@dev")
+
+  # No-op when there are no duplicates.
+  refs2 <- c("data.table", "fpCompare", "digest")
+  expect_identical(Require:::.preferGHrefDedup(refs2), refs2)
+
+  # Empty / single inputs return unchanged.
+  expect_identical(Require:::.preferGHrefDedup(character(0)), character(0))
+  expect_identical(Require:::.preferGHrefDedup("data.table"), "data.table")
+})
+
+test_that(".isSessionLibPath() distinguishes real project libs from ephemeral tempdirs", {
+  # A path that IS in .libPaths() must be recognised as a session lib path.
+  expect_true(Require:::.isSessionLibPath(.libPaths()[1]))
+  # A fresh tempdir is NOT in .libPaths() and must be rejected.
+  td <- tempfile("notASessionLib")
+  dir.create(td)
+  on.exit(unlink(td, recursive = TRUE), add = TRUE)
+  expect_false(Require:::.isSessionLibPath(td))
+  # Empty / NULL inputs are FALSE.
+  expect_false(Require:::.isSessionLibPath(""))
+  expect_false(Require:::.isSessionLibPath(character(0)))
+  expect_false(Require:::.isSessionLibPath(NULL))
+})
+
+test_that(".pakNeedsReinstall() flags missing-from-projLib and forceReinstall opt-in", {
+  # Missing from project lib
+  expect_match(Require:::.pakNeedsReinstall(character(0)), "not present")
+  expect_match(Require:::.pakNeedsReinstall(""),           "not present")
+  expect_match(Require:::.pakNeedsReinstall(NULL),         "not present")
+
+  # Present in projLib + no force => no reinstall
+  expect_identical(Require:::.pakNeedsReinstall("/some/path/pak"), "")
+  expect_identical(Require:::.pakNeedsReinstall("/some/path/pak",
+                                                 forceReinstall = FALSE), "")
+
+  # forceReinstall opt-in (Require.forcePakReinstall) => reinstall
+  expect_match(
+    Require:::.pakNeedsReinstall("/some/path/pak", forceReinstall = TRUE),
+    "forcePakReinstall = TRUE")
+})
+
+test_that("linkOrCopyPackageFiles() excludes pak/callr/processx/cli even when asked", {
+  # Regression: SpaDES.project::setupPackages (pre-pak) used to file-copy
+  # the system lib into the project lib; pak's embedded callr/processx
+  # native helpers don't survive that on Windows and the resulting pak
+  # install dies inside processx with `Command '' not found` on the next
+  # subprocess spawn. linkOrCopyPackageFiles() must therefore drop those
+  # packages from the copy list so the install machinery installs them
+  # fresh instead.
+
+  # Build a synthetic installed.packages() matrix with Built that satisfies
+  # Require:::correctBuilt() for the current R version (so cantClone()
+  # treats every row as clone-eligible by default).
+  rvDot <- Require:::RversionDot()  # e.g. "4.5."
+  built <- paste0(rvDot, "0; ; ;")
+  pkgs  <- c("data.table", "pak", "callr", "processx", "cli", "rlang")
+  ip <- cbind(
+    Package          = pkgs,
+    Version          = rep("1.0.0", length(pkgs)),
+    NeedsCompilation = rep("no", length(pkgs)),  # all clone-eligible by NeedsCompilation
+    Built            = rep(built, length(pkgs))
+  )
+  rownames(ip) <- pkgs
+
+  passedThrough <- NULL
+  testthat::with_mocked_bindings(
+    linkOrCopyPackageFilesInner = function(Packages, fromLib, toLib) {
+      passedThrough <<- Packages
+      invisible()
+    },
+    .package = "Require",
+    {
+      Require:::linkOrCopyPackageFiles(
+        Packages = pkgs,
+        fromLib  = tempdir(),
+        toLib    = tempdir(),
+        ip       = ip
+      )
+    }
+  )
+
+  expect_false(is.null(passedThrough),
+               info = "linkOrCopyPackageFilesInner mock was never invoked")
+  # pak / callr / processx / cli must NOT be cloned
+  expect_false(any(c("pak", "callr", "processx", "cli") %in% passedThrough),
+               info = paste("got passed through:", paste(passedThrough, collapse = ", ")))
+  # The non-pak rows still go through normally
+  expect_true(all(c("data.table", "rlang") %in% passedThrough))
+})
+
+test_that("ensurePakInProjectLib() is a no-op when Require.usePak is FALSE", {
+  installCalled <- FALSE
+  withr::with_options(
+    list(Require.usePak = FALSE),
+    {
+      testthat::with_mocked_bindings(
+        install.packages = function(...) { installCalled <<- TRUE; invisible() },
+        .package = "utils",
+        {
+          Require:::ensurePakInProjectLib(tempfile("noPak"))
+        }
+      )
+    }
+  )
+  expect_false(installCalled,
+               info = "install.packages should never be called when usePak = FALSE")
+})
+
+test_that("Require.forcePakReinstall = TRUE forces reinstall even when pak is in projLib", {
+  # When the user explicitly opts in via Require.forcePakReinstall (escape
+  # hatch for "pak files in projLib but secretly broken from a file-copy
+  # bootstrap"), ensurePakInProjectLib must call install.packages even if
+  # find.package() reports pak is already there.
+  installCalled <- FALSE
+  installLib    <- NULL
+  withr::with_options(
+    list(Require.usePak = TRUE, Require.forcePakReinstall = TRUE),
+    {
+      testthat::with_mocked_bindings(
+        install.packages = function(pkgs, lib, ...) {
+          installCalled <<- TRUE
+          installLib    <<- lib
+          invisible()
+        },
+        .package = "utils",
+        {
+          testthat::with_mocked_bindings(
+            find.package = function(...) "/fake/projLib/pak",  # pak IS in projLib
+            .package = "base",
+            {
+              suppressMessages(Require:::ensurePakInProjectLib(
+                projLib = "/fake/projLib",
+                repos   = c(CRAN = "https://cloud.r-project.org"),
+                verbose = -1))
+            }
+          )
+        }
+      )
+    }
+  )
+  expect_true(installCalled,
+              info = "forcePakReinstall = TRUE should trigger install.packages even if pak is in projLib")
+  expect_identical(installLib, "/fake/projLib")
+})
+
+test_that("ensurePakInProjectLib() releases pak before install: unload + pakResetSubprocess", {
+  # Case 4: pak is already loaded in the parent session (user ran pak::pak()
+  # directly before Require::Install was called, or some other path triggered
+  # pak loading). On Windows the loaded DLL blocks install.packages from
+  # writing -- so ensurePakInProjectLib must first kill pak's r_session
+  # (pakResetSubprocess) and unloadNamespace("pak") to release the lock.
+
+  resetCalled  <- FALSE
+  unloadCalled <- FALSE
+  installCalled <- FALSE
+
+  testthat::with_mocked_bindings(
+    # Simulate "pak is loaded" -> "pak is unloaded after unloadNamespace"
+    loadedNamespaces = local({
+      seenUnload <- FALSE
+      function() {
+        if (seenUnload) character(0) else "pak"
+      }
+    }),
+    unloadNamespace = function(...) { unloadCalled <<- TRUE; invisible() },
+    .package = "base",
+    {
+      # Replace these *after* the outer mocks so we can capture them
+      testthat::with_mocked_bindings(
+        pakResetSubprocess = function() { resetCalled <<- TRUE },
+        .package = "Require",
+        {
+          testthat::with_mocked_bindings(
+            install.packages = function(...) { installCalled <<- TRUE; invisible() },
+            .package = "utils",
+            {
+              testthat::with_mocked_bindings(
+                find.package = function(...) character(0),  # pak NOT in projLib -> needs install
+                .package = "base",
+                {
+                  # Flip the loadedNamespaces() return to "" after unloadNamespace runs.
+                  # We do this by augmenting the unloadNamespace mock to flip a flag
+                  # the loadedNamespaces() mock reads. Simpler: just call ensurePakInProjectLib
+                  # and assert pakResetSubprocess + unloadNamespace + install.packages all fired.
+                  ok <- tryCatch(
+                    suppressMessages(Require:::ensurePakInProjectLib(
+                      projLib = "/fake/projLib",
+                      repos   = c(CRAN = "https://cloud.r-project.org"),
+                      verbose = -1)),
+                    error = function(e) e
+                  )
+                }
+              )
+            }
+          )
+        }
+      )
+    }
+  )
+
+  expect_true(resetCalled,
+              info = "pakResetSubprocess() must be called when pak is loaded, to kill the r_session that holds the DLL")
+  expect_true(unloadCalled,
+              info = "unloadNamespace('pak') must be called to release the namespace + DLL")
+})
+
+test_that("ensurePakInProjectLib() stops with restart message if pak can't be unloaded", {
+  # If pak is loaded and our two-step release (pakResetSubprocess +
+  # unloadNamespace) fails to actually unload pak, ensurePakInProjectLib
+  # must stop() with an actionable "please RESTART R" message rather than
+  # silently no-op'ing and letting the user hit the same processx_exec
+  # failure mid-install.
+
+  testthat::with_mocked_bindings(
+    loadedNamespaces = function() "pak",      # always reports pak is loaded
+    unloadNamespace  = function(...) invisible(),  # pretends to unload but doesn't
+    .package = "base",
+    {
+      testthat::with_mocked_bindings(
+        pakResetSubprocess = function() invisible(),
+        .package = "Require",
+        {
+          testthat::with_mocked_bindings(
+            find.package = function(...) character(0),  # needs reinstall
+            .package = "base",
+            {
+              expect_error(
+                suppressMessages(Require:::ensurePakInProjectLib(
+                  projLib = "/fake/projLib",
+                  repos   = c(CRAN = "https://cloud.r-project.org"),
+                  verbose = -1)),
+                regexp = "RESTART R"
+              )
+            }
+          )
+        }
+      )
+    }
+  )
+})

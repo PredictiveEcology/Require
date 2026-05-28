@@ -94,7 +94,15 @@ test_that("Require.offlineMode installs AND loads from pak cache via Require()",
                               character.only = TRUE))
     }
     if (pkg %in% loadedNamespaces()) {
-      suppressWarnings(unloadNamespace(pkg))
+      ## tryCatch: if the test has already remove.packages()-ed pkg from
+      ## testlib, R's runHook(".onUnload") tries to lazy-load from the
+      ## now-missing .rdb and errors. Whether this fires depends on the
+      ## namespace's eager-vs-lazy load state at unload time, which
+      ## shifts with R version and which other namespaces are loaded in
+      ## the parent session.  This helper is best-effort cleanup, not an
+      ## assertion -- swallow the error.
+      tryCatch(suppressWarnings(unloadNamespace(pkg)),
+               error = function(e) NULL)
     }
   }
   on.exit(unloadIfLoaded(), add = TRUE)

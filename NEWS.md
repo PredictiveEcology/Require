@@ -1,3 +1,98 @@
+# Require 2.0.0.9012 (development version)
+
+* `processx` and `callr` are now declared `Imports` (callr moved from
+  Suggests). pak ships its own embedded copies in `pak/library/` and
+  does not declare them as standalone Imports, but on some Windows
+  configurations pak's subprocess wedges unless standalone versions
+  are also visible in `.libPaths()` (symptom: every per-ref
+  `pak::pak()` call in `pakSerialInstall` fails with an empty reason
+  string and no pak progress output, blocking the entire install
+  plan; manually `install.packages("processx")` was confirmed to fix
+  this end-to-end on a user's Windows machine). Declaring them as
+  Require Imports guarantees they're installed alongside Require by R's
+  standard dep resolution, without any runtime install of third-party
+  packages from Require's code (the CRAN-friendly approach).
+* `pakResetSubprocess()` now also REMOVES the `remote` slot from
+  `pak:::pkg_data` (in addition to `interrupt + wait + kill` on the
+  `r_session`). pak's `restart_remote_if_needed()` checks for slot
+  existence, not whether the process is alive -- leaving a dead
+  r_session in place was insufficient to make per-ref retries spawn
+  fresh subprocesses on Windows.
+* `pakSerialInstall()` now dumps the raw pak error text at
+  `Require.verbose >= 3` when `pakBuildFailReason()` extracts no
+  reason. Previously a wedged-subprocess failure showed only
+  `could not be installed: any::X` with no suffix, leaving users (and
+  maintainers) blind to whether the failure was a genuine build error
+  or a generic post-wedge "error in pak subprocess".
+
+# Require 2.0.0.9010 (development version)
+
+* User input lists with multiple ref forms for the same package
+  (e.g. `c("PredictiveEcology/reproducible@development",
+  "PredictiveEcology/reproducible", "reproducible")`) no longer leak
+  all three forms through `pakDepsToPkgDT()` into `pakOfflineInstall()`.
+  `trimRedundancies()` can't dedup these because none of the three has
+  a `versionSpec` -- the existing GH-vs-CRAN tiebreaker in
+  `pakDepsToPkgDT()` was applied to `pkgsForPak` (input to pak's
+  resolver) but NOT to `user_pkgFN` (input to `toPkgDTFull()`), so all
+  three rows reached the install machinery. Symptom: pak's batch
+  resolver refused the entire offline-install batch with
+  `reproducible@<v>: Conflicts with reproducible@<v>`, blocking the
+  install of ALL packages in the same batch (digest, fpCompare,
+  lobstr, prettyunits, reproducible). Fix: factored the existing GH-
+  ref-preference dedup loop into a `.preferGHrefDedup()` helper and
+  applied it to `user_pkgFN` as well.
+
+# Require 2.0.0.9009 (development version)
+
+* `ensurePakInProjectLib()` is now only called when `libPaths[1]` is part
+  of the session-wide `.libPaths()` -- i.e. a real project lib, not an
+  ephemeral install-target tempdir passed via
+  `Require::Install(pkg, libPaths = some_tempdir, standAlone = TRUE)`.
+  Previously every such call (common in tests and one-off installs)
+  tried to install pak into the ephemeral lib and ran
+  `unloadNamespace("pak")`, whose cascade left other packages in a
+  partial-load state. Symptom in CI: `test-12offlineMode_testthat.R`
+  failing in `unloadNamespace("fpCompare")` with
+  `cannot open file '.../fpCompare/R/fpCompare.rdb'`.
+
+# Require 2.0.0.9008 (development version)
+
+* pak (and its native-helper siblings `callr`, `processx`, `cli`) are
+  no longer file-copied across libs by `clonePackages()` /
+  `linkOrCopyPackageFiles()`. Their embedded platform-specific
+  executables don't survive a copy on Windows, producing
+  `Native call to processx_exec failed: Command '' not found` on the
+  next subprocess spawn. Those packages now stay in the install plan so
+  the install machinery installs them fresh.
+* New `ensurePakInProjectLib()` called early in `Require()`: when
+  `Require.usePak = TRUE`, verifies pak is installed in `libPaths[1]`
+  (the project lib) and reinstalls it fresh via `utils::install.packages()`
+  if absent. Uses base `install.packages()`, not pak itself, to avoid
+  the chicken-and-egg problem when pak is broken.
+* `ensurePakInProjectLib()` correctly handles the case where pak is
+  already loaded in this R session (e.g. user ran `pak::pak()` before
+  `Require::Install`). On Windows the loaded DLL holds a filesystem
+  lock that blocks `install.packages` from writing. Two-step release
+  before installing: `pakResetSubprocess()` (kill the persistent
+  r_session that holds an indirect DLL reference) followed by
+  `unloadNamespace("pak")`. Only if pak is *still* loaded after both
+  does Require `stop()` with a clear "please RESTART R" message.
+* `R/zzz.R` no longer eagerly loads pak in `.onLoad()`. Eager loading
+  grabbed the Windows DLL lock before `ensurePakInProjectLib()` could
+  run, leaving us unable to reinstall pak when needed. Pak is now
+  loaded on first actual use by the existing `requireNamespace("pak")`
+  checks in `R/pak.R`.
+* New `Require.forcePakReinstall` option (default `FALSE`). The
+  "pak files present in projLib but secretly broken from a file-copy
+  bootstrap" case can't be detected reliably from disk -- the
+  `(local install?)` tag in `pak::pak_sitrep()` is **not** a reliable
+  signal (it also fires on healthy CRAN binaries, which would put
+  CRAN-pak users in an infinite reinstall loop). The new option is
+  the explicit escape hatch: set `options(Require.forcePakReinstall = TRUE)`
+  before `Require::Install(...)` to force a fresh pak install once,
+  then unset it.
+
 # Require 2.0.0.9002 (development version)
 
 * `whIsOfficialCRANrepo()` no longer leaks a "cannot open file"

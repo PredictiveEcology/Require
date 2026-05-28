@@ -295,6 +295,23 @@ Require <- function(packages,
   libPaths <- doLibPaths(libPaths, standAlone = standAlone)
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
 
+  # Make sure pak is installed in the project lib (libPaths[1]) BEFORE any
+  # downstream code path calls pak. If pak is missing from the project lib,
+  # reinstall it fresh -- copying pak from another lib does NOT work on
+  # Windows: pak's embedded callr/processx helper executables don't survive
+  # a file-by-file copy and the next pak call dies with
+  #   `Native call to processx_exec failed: Command '' not found`.
+  #
+  # Gate on libPaths[1] being part of the session-wide .libPaths() so this
+  # only fires for *real* project libs. Ephemeral install-target tempdirs
+  # passed via Require::Install(pkg, libPaths = some_tempdir, standAlone =
+  # TRUE) -- common in tests and one-off installs -- are NOT project libs;
+  # treating them as such (a) wastes install time per call and (b) triggers
+  # an unloadNamespace("pak") cascade that interacts badly with packages
+  # the caller is in the middle of installing/unloading.
+  if (.isSessionLibPath(libPaths[1]))
+    ensurePakInProjectLib(libPaths[1], repos = repos, verbose = verbose)
+
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
@@ -3525,6 +3542,11 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
   alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][alreadyInstalledCanClone]
   alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% sourcePkgs()]
+  # Never clone pak / callr / processx / cli -- they bundle native binaries
+  # and helper executables that don't survive a file-by-file copy on Windows
+  # (see .pakNoCopyPkgs() in R/pak.R for why). Keeping them in the install
+  # plan (cantClone) forces a fresh install via the normal install machinery.
+  alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% .pakNoCopyPkgs()]
 
   if (length(grep("Error in readRDS", mess))) {
     # This means that the packages in rcf are broken
@@ -3564,7 +3586,10 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
     clearErrorReadRDSFile(mess, fromLib)
   }
   cant <- cantClone(ip)
-  cant <- unique(c(sourcePkgs(), cant[, "Package"]))
+  # Defense-in-depth: even if a caller bypasses clonePackages() and reaches
+  # this helper directly, pak/callr/processx/cli must never be file-copied
+  # across libs (their embedded native binaries don't survive on Windows).
+  cant <- unique(c(sourcePkgs(), cant[, "Package"], .pakNoCopyPkgs()))
   Packages <- setdiff(Packages, cant)
   linkOrCopyPackageFilesInner(Packages, fromLib, toLib)
   return(invisible())

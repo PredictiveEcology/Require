@@ -1087,6 +1087,8 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   }
 
   installFailedPkgs <- character(0)
+
+
   triedPkgs <- pkgsToInstall
 
   if (length(refsToInstall)) {
@@ -1140,6 +1142,42 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       pak::pak(refsToInstall, lib = libPaths[1], ask = FALSE,
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
+
+    ## "Conflicts with" recovery: pak's batch resolver sometimes reports
+    ## a ref as conflicting with itself (e.g. when the same package's
+    ## exact-pin appears both as a top-level request and as a transitive
+    ## resolution -- happens for GitHub@SHA + version-pin combinations
+    ## even after dedup). The conflict poisons the entire batch -- ALL
+    ## refs are refused even though only one is "guilty". Recovery:
+    ## reset pak's subprocess (the batch failure often wedges it) and
+    ## install each ref one-at-a-time. Per-ref resolution can't trigger
+    ## this kind of self-conflict.
+    if (is(err, "try-error") &&
+        grepl("Conflicts with", as.character(err), fixed = TRUE)) {
+      messageVerbose(
+        "pakOfflineInstall: batch resolver reported 'Conflicts with' (",
+        "likely a pak self-conflict on an exact-pin ref); ",
+        "retrying each ref one-at-a-time so the other refs aren't blocked.",
+        verbose = verbose, verboseLevel = 1)
+      pakResetSubprocess()
+      for (i in seq_along(refsToInstall)) {
+        perRefErr <- try(pakCall(
+          pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
+                   dependencies = FALSE, upgrade = FALSE),
+          verbose), silent = TRUE)
+        if (is(perRefErr, "try-error")) {
+          messageVerbose(
+            "pakOfflineInstall: per-ref retry failed for ",
+            refsToInstall[i], ": ", as.character(perRefErr),
+            verbose = verbose, verboseLevel = 2)
+          pakResetSubprocess()
+        }
+      }
+      ## Don't propagate the original batch error to the warning path
+      ## below -- ground-truth installed.packages() check decides
+      ## whether each ref actually landed.
+      err <- NULL
+    }
     if (is(err, "try-error")) {
       ## Surface the underlying pak error at default verbose so silent-pak
       ## failures are debuggable. The generic "offline install failed"
@@ -1988,19 +2026,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   pkgsForPak <- HEADtoNone(pkgsForPak)
   pkgsForPak <- trimVersionNumber(pkgsForPak)
   pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
-  # For any remaining duplicated package names (both have no version spec), prefer GH ref
-  pkgNms <- extractPkgName(pkgsForPak)
-  dupNms <- unique(pkgNms[duplicated(pkgNms)])
-  if (length(dupNms)) {
-    toRemove <- integer(0)
-    for (pn in dupNms) {
-      idx <- which(pkgNms == pn)
-      ghIdx <- idx[isGH(pkgsForPak[idx])]
-      if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
-      else                    toRemove <- c(toRemove, idx[-1L])
-    }
-    if (length(toRemove)) pkgsForPak <- pkgsForPak[-toRemove]
-  }
+  pkgsForPak <- .preferGHrefDedup(pkgsForPak)
   pkgsForPak <- unique(pkgsForPak)
   # Convert == version specs to pak @version format for the dep query
   pkgsForPak <- equalsToAt(pkgsForPak)
@@ -2173,6 +2199,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # 4. Include the user's originally stated packages (with their version specs).
   # These may have stricter requirements than what DESCRIPTION files state.
   user_pkgFN <- packages[!extractPkgName(packages) %in% .basePkgs]
+  # Apply the same GH-vs-CRAN dedup we apply to pkgsForPak above. Without
+  # this, a user list with multiple ref forms for the same package
+  # (e.g. c("PredictiveEcology/reproducible@development",
+  #         "PredictiveEcology/reproducible",
+  #         "reproducible")) leaves all three in user_pkgFN -- and they
+  # then flow through toPkgDTFull() + trimRedundancies() (which can't
+  # dedup them because none has a versionSpec) into pakOfflineInstall,
+  # whose batch pak::pak() call then dies with
+  #   reproducible@<v>: Conflicts with reproducible@<v>.
+  user_pkgFN <- .preferGHrefDedup(user_pkgFN)
 
   # 4a. Sync url:: archive refs from pkgsForPak back into user_pkgFN.
   # The retry loop may have replaced plain package names (e.g. "fastdigest") with
@@ -2525,6 +2561,170 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 }
 
 # ---------------------------------------------------------------------------
+# Packages that must NEVER be installed by file-level copy/symlink across
+# libs (i.e. excluded from clonePackages / linkOrCopyPackageFiles).
+#
+# pak ships native binaries + an embedded library of helper packages
+# (callr, processx, cli, ...) with platform-specific executables that do
+# NOT survive a file-by-file copy on Windows. The symptom is pak's
+# subprocess dying with
+#   `Native call to processx_exec failed: Command '' not found`
+# the next time anything tries to spawn a nested subprocess (i.e. every
+# real install attempt). Same risk for standalone callr / processx / cli
+# if they're ever cloned across libs -- their compiled bits are tied to
+# the install location at link time.
+# ---------------------------------------------------------------------------
+.pakNoCopyPkgs <- function() c("pak", "callr", "processx", "cli")
+
+# ---------------------------------------------------------------------------
+# .pakNeedsReinstall: pure decision function for ensurePakInProjectLib().
+#
+# Given the result of find.package("pak", lib.loc = projLib), return:
+#   - ""              if pak is present in projLib (no reinstall needed)
+#   - <reason string> if pak should be reinstalled fresh into projLib
+#
+# Note: we deliberately do NOT use pak_sitrep()'s "(local install?)" tag
+# as a corruption signal. That tag fires for every install where
+# `pak_sitrep_data$github-repository == "-"`, which includes CRAN
+# binaries -- so using it would put CRAN-pak users in an infinite
+# reinstall loop (each fresh install also tags as (local install?)).
+# The "pak in projLib but broken from a file-copy bootstrap" case is
+# handled via the `Require.forcePakReinstall = TRUE` opt-in.
+# ---------------------------------------------------------------------------
+.pakNeedsReinstall <- function(pakPath, forceReinstall = FALSE) {
+  if (isTRUE(forceReinstall))
+    return("Require.forcePakReinstall = TRUE (explicit opt-in)")
+  if (!length(pakPath) || !nzchar(pakPath[1]))
+    return("pak not present in project lib")
+  ""
+}
+
+# ---------------------------------------------------------------------------
+# .preferGHrefDedup: for a character vector of refs, when the same package
+# appears multiple times keep ONE -- preferring a GitHub-style ref
+# (`account/repo[@branch_or_sha]`) over a CRAN-form ref (`pkg` or
+# `pkg@version`). If multiple GitHub refs exist for the same package,
+# keep the first one (user-input order; the @specific form is typically
+# listed before the @HEAD/bare form). If no GitHub ref exists for a
+# duplicate, keep the first occurrence.
+#
+# Why this exists: trimRedundancies()'s logic for collapsing duplicate
+# package rows relies on `versionSpec` (e.g. `(>= 1.0)`) being set on at
+# least one row. The user-input case
+#   c("PredictiveEcology/reproducible@development",
+#     "PredictiveEcology/reproducible",
+#     "reproducible")
+# has no versionSpec on any of the three forms, so trimRedundancies()
+# leaves all three -- which then survives into pakOfflineInstall and
+# poisons pak's batch with
+#   reproducible@<v>: Conflicts with reproducible@<v>
+# This helper applies the "prefer GH ref" tiebreaker that trimRedundancies
+# can't.
+# ---------------------------------------------------------------------------
+.preferGHrefDedup <- function(refs) {
+  if (length(refs) <= 1) return(refs)
+  pkgNms <- extractPkgName(refs)
+  dupNms <- unique(pkgNms[duplicated(pkgNms)])
+  if (!length(dupNms)) return(refs)
+  toRemove <- integer(0)
+  for (pn in dupNms) {
+    idx <- which(pkgNms == pn)
+    ghIdx <- idx[isGH(refs[idx])]
+    if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
+    else                    toRemove <- c(toRemove, idx[-1L])
+  }
+  if (length(toRemove)) refs[-toRemove] else refs
+}
+
+# ---------------------------------------------------------------------------
+# .isSessionLibPath: is `path` part of the session-wide .libPaths()?
+# Used to distinguish a real project lib (where ensurePakInProjectLib is
+# appropriate) from an ephemeral install-target tempdir passed only as
+# `Require::Install(pkg, libPaths = ..., standAlone = TRUE)` (where it
+# isn't). normalizePath the comparison so trailing-slash / 8.3-shortname
+# differences on Windows don't cause false negatives.
+# ---------------------------------------------------------------------------
+.isSessionLibPath <- function(path) {
+  if (!length(path) || !nzchar(path[1])) return(FALSE)
+  np <- tryCatch(normalizePath(path[1], winslash = "/", mustWork = FALSE),
+                 error = function(e) path[1])
+  nl <- tryCatch(normalizePath(.libPaths(), winslash = "/", mustWork = FALSE),
+                 error = function(e) .libPaths())
+  np %in% nl
+}
+
+# ---------------------------------------------------------------------------
+# ensurePakInProjectLib: make sure pak is installed in libPaths[1] (the
+# project lib), reinstalling fresh via base install.packages() if it's
+# absent OR if pak_sitrep() reports the "(local install?)" tag that
+# indicates a non-standard install (e.g. file-copied across libs).
+#
+# Why this exists: SpaDES.project::setupPackages (and other
+# project-bootstrap workflows) historically populated the project lib by
+# file-copying packages from the system lib. That works for pure-R
+# packages, but pak's embedded native helpers do NOT survive the copy on
+# Windows -- the next pak call dies inside processx with
+#   `Native call to processx_exec failed: Command '' not found`.
+# The robust fix is to install pak fresh into the project lib using base
+# install.packages() (NOT pak::pak -- chicken-and-egg if pak is broken).
+# ---------------------------------------------------------------------------
+ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
+                                  verbose = getOption("Require.verbose")) {
+  if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
+  if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
+    return(invisible(FALSE))
+
+  pakPath <- suppressWarnings(tryCatch(
+    find.package("pak", lib.loc = projLib, quiet = TRUE),
+    error = function(e) character(0)))
+
+  forceReinstall <- isTRUE(getOption("Require.forcePakReinstall", FALSE))
+  reason <- .pakNeedsReinstall(pakPath, forceReinstall = forceReinstall)
+  if (!nzchar(reason)) return(invisible(TRUE))
+
+  messageVerbose(
+    "Require: ", reason, ".\n",
+    "  Installing pak fresh into project lib (NOT copying): ", projLib, "\n",
+    "  Copying pak from another lib does not work on Windows -- pak's\n",
+    "  embedded callr/processx helper executables do not survive a copy.\n",
+    "  (Symptom otherwise: 'Native call to processx_exec failed: Command' '' 'not found'.)",
+    verbose = verbose, verboseLevel = 1)
+
+  ## Case 4 -- pak loaded by the user (or by an earlier load) before we
+  ## got here. On Windows the loaded DLL holds a filesystem-level
+  ## sharing lock that blocks install.packages from writing.  Two-step
+  ## release: kill pak's background r_session (which holds an indirect
+  ## DLL reference via its embedded subprocess), then unload the
+  ## namespace.  Only after BOTH does install.packages stand a chance.
+  if ("pak" %in% loadedNamespaces()) {
+    pakResetSubprocess()
+    try(suppressWarnings(unloadNamespace("pak")), silent = TRUE)
+    if ("pak" %in% loadedNamespaces()) {
+      stop(
+        "Require: pak in this R session is loaded and its namespace ",
+        "could not be unloaded (the DLL is locked -- something is still ",
+        "holding a reference, e.g. another package, an R6 callback, or ",
+        "a stuck subprocess).\n",
+        "Please RESTART R and rerun your Require::Install(...) call.",
+        call. = FALSE)
+    }
+  }
+
+  ok <- tryCatch({
+    utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE)
+    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  }, error = function(e) {
+    messageVerbose("ensurePakInProjectLib: install.packages('pak') failed: ",
+                   conditionMessage(e), verbose = verbose, verboseLevel = 1)
+    FALSE
+  })
+  ## No reload step needed: pak is now unloaded, and the next requireNamespace("pak")
+  ## by downstream code will load the freshly-installed copy from projLib (or .libPaths
+  ## generally) -- not the previously-cached one (we already unloaded that).
+  invisible(ok)
+}
+
+# ---------------------------------------------------------------------------
 # pakResetSubprocess: force pak to spawn a fresh background R session on the
 # next pak::pak() call. pak holds a persistent callr r_session in
 # pak:::pkg_data$remote and reuses it across calls; if the previous call
@@ -2537,14 +2737,26 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # ---------------------------------------------------------------------------
 pakResetSubprocess <- function() {
   if (!requireNamespace("pak", quietly = TRUE)) return(invisible())
-  rs <- tryCatch(
-    get("pkg_data", envir = asNamespace("pak"))$remote,
-    error = function(e) NULL)
+  pkgData <- tryCatch(get("pkg_data", envir = asNamespace("pak")),
+                      error = function(e) NULL)
+  if (is.null(pkgData)) return(invisible())
+  rs <- tryCatch(pkgData$remote, error = function(e) NULL)
   if (inherits(rs, "r_session")) {
     try(rs$interrupt(), silent = TRUE)
     try(rs$wait(100), silent = TRUE)
     try(rs$kill(), silent = TRUE)
   }
+  ## Remove the slot entirely. Leaving a dead r_session in
+  ## `pak:::pkg_data$remote` was not enough on Windows -- pak's
+  ## restart_remote_if_needed() checks whether the slot exists, not
+  ## whether the process is alive, so per-ref `pak::pak()` calls after a
+  ## batch failure short-circuited with a generic error before any
+  ## install work happened (symptom: a wall of
+  ## `pakSerialInstall: could not be installed: any::X` lines with NO
+  ## reason and NO pak progress output). Removing the slot forces pak
+  ## to allocate a fresh r_session on the next call.
+  if (is.environment(pkgData) && exists("remote", envir = pkgData, inherits = FALSE))
+    try(rm("remote", envir = pkgData), silent = TRUE)
   invisible()
 }
 
@@ -2628,6 +2840,19 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
       messageVerbose("pakSerialInstall: ", .txtCouldNotBeInstalled, ": ", pkg,
                      if (nzchar(reason)) paste0("; ", reason) else "",
                      verbose = verbose, verboseLevel = 2)
+      ## At verboseLevel >= 3, also dump the raw pak error text. When
+      ## reason is empty (pakBuildFailReason couldn't extract anything),
+      ## this is often the only way to tell why pak failed -- e.g.
+      ## "Error : ! error in pak subprocess" with no further context
+      ## indicates a wedged r_session that didn't even start the install.
+      if (verbose >= 3) {
+        rawErr <- as.character(err)
+        if (length(pkgMsgs)) rawErr <- paste(c(rawErr, "--- pkgMsgs ---", pkgMsgs),
+                                             collapse = "\n")
+        if (nchar(rawErr) > 4000L) rawErr <- paste0(substr(rawErr, 1L, 4000L), "\n...[truncated]")
+        messageVerbose("pakSerialInstall raw error for ", pkg, ":\n", rawErr,
+                       verbose = verbose, verboseLevel = 3)
+      }
       ## A failed pak::pak() can leave pak's persistent r_session in a
       ## wedged state where every subsequent call returns instantly with
       ## an error -- without this reset, a single early failure cascades
