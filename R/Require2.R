@@ -2491,6 +2491,12 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
         rm <- pkgDT[which(!keepCols2)]
         pkgDT <- pkgDT[which(keepCols2)]
         pkgDT[Package %in% rm[["Package"]], installResult := msgPackageViolation]
+        ## When we rejected an exact `==X` pin in favour of a `>=Y` / `>Y`,
+        ## narrow the surviving constraint to `==Y` (the minimum that
+        ## satisfies the surviving inequality) instead of latest. Honours
+        ## the user intent that motivated the `==` pin: "as close to X as
+        ## we can get while still satisfying everyone else's lower bound."
+        .pinSurvivorToMinimumAfterExactReject(pkgDT, rm)
       }
     }
 
@@ -2515,7 +2521,12 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
       }, by = "Package"][, ..cols3]
       messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
       if (grepl("remove|rm", ifViolation[1])) {
+        ## Capture the rejected `==` rows BEFORE filtering so we can pin
+        ## survivors to the minimum that satisfies the surviving
+        ## inequality. Symmetric with the violation block above.
+        rm <- pkgDT[!(violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE)]
         pkgDT <- pkgDT[violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE]
+        .pinSurvivorToMinimumAfterExactReject(pkgDT, rm)
       }
     }
 
@@ -2554,6 +2565,40 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
 
   }
   pkgDT
+}
+
+# ---------------------------------------------------------------------------
+# .pinSurvivorToMinimumAfterExactReject: called from
+# confirmEqualsDontViolateInequalitiesThenTrim after we've dropped a
+# `==X` row because some other constraint (typically `>=Y` with Y > X)
+# can't be reconciled. For each Package whose `==X` got rejected this
+# way, rewrite the surviving `>=Y`/`>Y` row(s) as `==Y` (mutates
+# `pkgDT` in place, including `packageFullName` so downstream pak ref
+# construction picks up the pin).
+#
+# Why: the rejected `==X` represented user intent ("as old as
+# possible"). Latching the surviving floor to its minimum keeps as
+# close to that intent as the surviving constraint allows, instead
+# of letting pak fetch CRAN's latest. End-to-end driver: user listed
+# `c("stringfish (==0.17.0)", ...)` while another package required
+# `stringfish (>= 0.18.0)`; previous behaviour kept `>= 0.18.0` and
+# pak installed `0.19.0`. Now we pin to `== 0.18.0`.
+# ---------------------------------------------------------------------------
+.pinSurvivorToMinimumAfterExactReject <- function(pkgDT, rm) {
+  if (!is.data.table(rm) || !NROW(rm)) return(invisible(pkgDT))
+  if (!all(c("Package", "inequality") %in% names(rm))) return(invisible(pkgDT))
+  rejectedExactPkgs <- rm[inequality %in% "==", unique(Package)]
+  if (!length(rejectedExactPkgs)) return(invisible(pkgDT))
+  toPin <- pkgDT$Package %in% rejectedExactPkgs &
+           pkgDT$inequality %in% c(">=", ">") &
+           !is.na(pkgDT$versionSpec) &
+           nzchar(pkgDT$versionSpec)
+  if (!any(toPin)) return(invisible(pkgDT))
+  pkgDT[which(toPin), `:=`(
+    inequality = "==",
+    packageFullName = paste0(Package, " (== ", versionSpec, ")")
+  )]
+  invisible(pkgDT)
 }
 
 detectDoubleInequalsViolations <- function(inequality, versionSpec, N) {

@@ -1324,3 +1324,49 @@ test_that(".pakDepsInvalidateLast() is a no-op when no key was stashed", {
   expect_false(Require:::.pakDepsInvalidateLast(),
                info = "must return FALSE when nothing to invalidate")
 })
+
+test_that(".pinSurvivorToMinimumAfterExactReject() pins survivor when an == was rejected", {
+  # User listed `stringfish (==0.17.0)` AND another package required
+  # `stringfish (>= 0.18.0)`. Old behaviour: drop the ==, keep the >=
+  # as-is, pak fetches CRAN's LATEST (e.g. 0.19.0). New behaviour: when
+  # the rejected constraint was an exact `==X` pin, pin the surviving
+  # `>=Y`/`>Y` row to `==Y` so we install the minimum that satisfies
+  # the floor -- as close to the user's original `==X` as we can get.
+  pkgDT <- data.table::data.table(
+    Package         = "stringfish",
+    packageFullName = "stringfish (>= 0.18.0)",
+    versionSpec     = "0.18.0",
+    inequality      = ">="
+  )
+  rmRows <- data.table::data.table(Package = "stringfish", inequality = "==")
+  out <- Require:::.pinSurvivorToMinimumAfterExactReject(pkgDT, rmRows)
+  expect_identical(out$inequality, "==")
+  expect_identical(out$versionSpec, "0.18.0")
+  expect_identical(out$packageFullName, "stringfish (== 0.18.0)")
+})
+
+test_that(".pinSurvivorToMinimumAfterExactReject() is a no-op when no == was rejected", {
+  # Pure `>=Y` conflict (no exact pin involved) should NOT be pinned --
+  # absent a user-supplied `==` we have no reason to narrow.
+  pkgDT <- data.table::data.table(
+    Package         = "stringfish",
+    packageFullName = "stringfish (>= 0.18.0)",
+    versionSpec     = "0.18.0",
+    inequality      = ">="
+  )
+  rmRows <- data.table::data.table(
+    Package = "stringfish", inequality = ">=") # rejected was also a >=, not ==
+  before <- data.table::copy(pkgDT)
+  Require:::.pinSurvivorToMinimumAfterExactReject(pkgDT, rmRows)
+  expect_identical(pkgDT, before)
+})
+
+test_that(".pinSurvivorToMinimumAfterExactReject() handles empty/malformed inputs", {
+  pkgDT <- data.table::data.table(
+    Package = "stringfish", packageFullName = "stringfish",
+    versionSpec = NA_character_, inequality = NA_character_)
+  expect_silent(Require:::.pinSurvivorToMinimumAfterExactReject(
+    pkgDT, data.table::data.table()))
+  expect_silent(Require:::.pinSurvivorToMinimumAfterExactReject(
+    pkgDT, NULL))
+})

@@ -1012,6 +1012,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   notInCache <- character(0)
   refsToInstall <- character(0)
   pkgsToInstall <- character(0)
+  cachedPathsToInstall <- character(0)  # per ref: the cached tarball path, for local:: fallback
   hasVS <- "versionSpec" %in% names(toInstall)
   hasIN <- "inequality"  %in% names(toInstall)
   for (i in seq_len(NROW(toInstall))) {
@@ -1083,6 +1084,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       }
       refsToInstall <- c(refsToInstall, ref)
       pkgsToInstall <- c(pkgsToInstall, pkg)
+      cachedPathsToInstall <- c(cachedPathsToInstall, cached$path)
     }
   }
 
@@ -1143,37 +1145,34 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
 
-    ## "Conflicts with" recovery: pak's batch resolver sometimes reports
-    ## a ref as conflicting with itself (e.g. when the same package's
-    ## exact-pin appears both as a top-level request and as a transitive
-    ## resolution -- happens for GitHub@SHA + version-pin combinations
-    ## even after dedup). The conflict poisons the entire batch -- ALL
-    ## refs are refused even though only one is "guilty". Recovery:
-    ## reset pak's subprocess (the batch failure often wedges it) and
-    ## install each ref one-at-a-time. Per-ref resolution can't trigger
-    ## this kind of self-conflict.
-    if (is(err, "try-error") &&
-        grepl("Conflicts with", as.character(err), fixed = TRUE)) {
+    ## Batch-failure recovery: switch to per-ref install on ANY pak batch
+    ## error. Per-ref isolation lets us recover at least the refs pak can
+    ## install; it also bypasses several known pak resolver bugs that only
+    ## fire when multiple refs are in one solver context (e.g. self-
+    ## conflicts on exact-pins, `version_satisfies(... atleast = NA)`
+    ## errors on archived-CRAN deps). Each per-ref attempt has its own
+    ## fallback chain (tiers A -> B -> C below).
+    if (is(err, "try-error")) {
+      errStr <- as.character(err)
+      isConflict <- grepl("Conflicts with", errStr, fixed = TRUE)
       messageVerbose(
-        "pakOfflineInstall: batch resolver reported 'Conflicts with' (",
-        "likely a pak self-conflict on an exact-pin ref); ",
+        if (isConflict)
+          "pakOfflineInstall: batch resolver reported 'Conflicts with' (likely a pak self-conflict on an exact-pin ref); "
+        else
+          "pakOfflineInstall: batch install failed; ",
         "retrying each ref one-at-a-time so the other refs aren't blocked.",
         verbose = verbose, verboseLevel = 1)
       pakResetSubprocess()
       for (i in seq_along(refsToInstall)) {
+        ## Tier A: try the ref as it was originally constructed (typically
+        ## a `pkg@version` exact-pin against the cache).
         perRefErr <- try(pakCall(
           pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
                    dependencies = FALSE, upgrade = FALSE),
           verbose), silent = TRUE)
-        ## Second fallback: if the per-ref retry ALSO emitted "Conflicts with"
-        ## (typical when the ref is a `pkg@version` exact-pin and pak's
-        ## resolver creates two solver entries for the same package -- one
-        ## from the input ref and one from an installed/loaded copy), try
-        ## the same install with a bare `pkg` ref. The pak download cache
-        ## was already filtered to the right version, so dropping the
-        ## explicit pin is safe; we lose pak's version-pinning protection
-        ## but gain the ability to install at all. Same fallback for
-        ## `pkg` refs with an explicit `(>= X)` style spec.
+        ## Tier B: on "Conflicts with", try a bare `pkg` ref. Drops
+        ## pak's version-pinning protection but the pak download cache
+        ## was already filtered to the right version, so it's safe.
         if (is(perRefErr, "try-error") &&
             grepl("Conflicts with", as.character(perRefErr), fixed = TRUE)) {
           barePkg <- pkgsToInstall[i]
@@ -1190,6 +1189,61 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
               verbose), silent = TRUE)
           }
         }
+        ## Tier C: on ANY remaining error, swap THIS ref to
+        ## `local::<cached_path>` and retry the WHOLE BATCH (with
+        ## `dependencies = FALSE` so every other ref's user-supplied
+        ## pin stays visible to pak).
+        ##
+        ## Why local::: bypasses pak's resolver for the failing ref
+        ## (pak reads the tarball's DESCRIPTION directly) -- the
+        ## recovery path for resolver bugs like the
+        ## `version_satisfies(... atleast = NA)` error pak emits on
+        ## archived-CRAN packages whose metadata has nullable fields
+        ## (observed end-to-end on user trying to install qs@0.27.3).
+        ##
+        ## Why pass the WHOLE batch: a previous version of tier C
+        ## called `pak::pak(localRef)` standalone. pak then resolved
+        ## qs's `LinkingTo: stringfish` against CRAN's LATEST
+        ## stringfish (0.19.0) instead of the user's pinned 0.17.0 --
+        ## installed 0.19.0, qs build then failed because qs 0.27.3
+        ## is binary-incompatible with stringfish 0.19.0. Solution:
+        ## pass the entire batch with this ref swapped, with
+        ## `dependencies = FALSE` so pak honours every pin and won't
+        ## reach for network upgrades. Pak orders the builds: each
+        ## `pkg@version` installs from cache first, then the local::
+        ## source build runs against the correctly-pinned deps.
+        if (is(perRefErr, "try-error") &&
+            length(cachedPathsToInstall) >= i &&
+            !is.na(cachedPathsToInstall[i]) &&
+            nzchar(cachedPathsToInstall[i]) &&
+            file.exists(cachedPathsToInstall[i])) {
+          localRef <- paste0("local::", cachedPathsToInstall[i])
+          if (localRef != refsToInstall[i]) {
+            batchWithLocalSwap <- refsToInstall
+            batchWithLocalSwap[i] <- localRef
+            messageVerbose(
+              "pakOfflineInstall: per-ref retry for ", refsToInstall[i],
+              " still failing; swapping that ref to `", localRef, "` and ",
+              "retrying the WHOLE batch (so the other refs' pins stay ",
+              "visible to pak).",
+              verbose = verbose, verboseLevel = 1)
+            pakResetSubprocess()
+            perRefErr <- try(pakCall(
+              pak::pak(batchWithLocalSwap, lib = libPaths[1], ask = FALSE,
+                       dependencies = FALSE, upgrade = FALSE),
+              verbose), silent = TRUE)
+            ## If the whole-batch retry succeeded, every ref in the
+            ## batch is now installed -- break out of the per-ref loop
+            ## so we don't redo work pak just completed.
+            if (!is(perRefErr, "try-error")) {
+              messageVerbose(
+                "pakOfflineInstall: whole-batch retry with `", localRef,
+                "` succeeded; skipping remaining per-ref retries.",
+                verbose = verbose, verboseLevel = 1)
+              break
+            }
+          }
+        }
         if (is(perRefErr, "try-error")) {
           messageVerbose(
             "pakOfflineInstall: per-ref retry failed for ",
@@ -1202,15 +1256,6 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       ## below -- ground-truth installed.packages() check decides
       ## whether each ref actually landed.
       err <- NULL
-    }
-    if (is(err, "try-error")) {
-      ## Surface the underlying pak error at default verbose so silent-pak
-      ## failures are debuggable. The generic "offline install failed"
-      ## warning below loses the diagnostic.
-      messageVerbose("pak install reported error; deferring to ",
-                     "installed.packages() ground-truth check: ",
-                     as.character(err),
-                     verbose = verbose, verboseLevel = 1)
     }
   }
 

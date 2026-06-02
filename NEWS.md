@@ -1,4 +1,63 @@
-# Require 2.0.0.9015 (development version)
+# Require 2.0.0.9019 (development version)
+
+* When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
+  `==X` row in favour of an irreconcilable `>=Y` / `>Y` row (e.g. user
+  listed `c("stringfish (==0.17.0)", ...)` while another package
+  required `stringfish (>= 0.18.0)`), the surviving floor row is now
+  rewritten to `==Y` instead of left as `>=Y`. This honours the user
+  intent that motivated the original `==X` pin -- "as old as
+  possible" -- by installing the **minimum** version that satisfies
+  the surviving constraint instead of CRAN's latest. Previously, pak
+  was free to install e.g. stringfish 0.19.0 when only 0.18.0 was
+  needed, which then broke any package whose source build was
+  binary-pinned against 0.18.0. No behaviour change when a `>=`
+  conflict has no `==` opponent.
+
+
+
+* `pakOfflineInstall()` tier-C fallback now retries the WHOLE batch
+  with just the failing ref swapped to `local::<cached_path>`,
+  instead of calling pak on the single `local::` ref standalone.
+  With `dependencies = FALSE` (the batch-wide policy), every other
+  ref's user-supplied pin stays visible to pak -- so a
+  `Require::Install(c("stringfish (==0.17.0)", "qs (==0.27.3)"))`
+  call gets stringfish installed at 0.17.0 (the user's pin) instead
+  of pak resolving CRAN's latest 0.19.0 for qs's LinkingTo. Pak
+  orders the cached deps before the local::-driven source build.
+  If the whole-batch retry succeeds, the per-ref loop exits early
+  (every ref is now installed, no point continuing).
+
+# Require 2.0.0.9017 (development version)
+
+* `pakOfflineInstall()` tier-C `local::<cached_path>` fallback now
+  passes `dependencies = NA` (pak's default: Depends + Imports +
+  LinkingTo for build) instead of `FALSE`. The other tiers stay at
+  `FALSE` because they're explicitly isolating a ref from pak's
+  solver, but tier C is doing a source build whose R CMD INSTALL
+  needs the build-time deps actually present in the lib. Without
+  this, `local::.../qs_0.27.3.tar.gz` failed to build because qs's
+  `LinkingTo: stringfish` wasn't in lib at build time, even though
+  both tarballs were in pak's cache. With `NA`, pak reads the
+  tarball's DESCRIPTION, resolves stringfish, finds it in the cache,
+  installs it first, then builds qs. Still all-cache; no network.
+
+# Require 2.0.0.9016 (development version)
+
+* `pakOfflineInstall()`: per-ref retry now fires on ANY pak batch
+  failure (not only `Conflicts with`), and gains a third-tier
+  `local::<cached_path>` fallback. Bypasses pak's resolver almost
+  entirely on the cached source tarball -- recovery path for resolver
+  bugs that error before the install can start (e.g. the
+  `! missing value where TRUE/FALSE needed` from
+  `version_satisfies(... atleast = NA)` that pak emits on
+  archived-CRAN packages whose metadata has nullable fields, observed
+  end-to-end on `qs@0.27.3` install). Trade-off: triggers pak's
+  vignette rebuild on source tarballs, which can pull from the
+  network -- worth it as a last resort. Tier order per ref is:
+  (A) ref as-is, (B) bare `pkg` on `Conflicts with`, (C) `local::`
+  on any remaining error.
+
+
 
 * `pakOfflineInstall()`: when a per-ref retry after a batch "Conflicts
   with" failure ALSO hits "Conflicts with" (typical when the ref is a
