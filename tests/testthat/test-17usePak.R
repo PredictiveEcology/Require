@@ -219,6 +219,91 @@ test_that("pakDepsResolve disk cache hit emits message at verbose = 1", {
 })
 
 # ---------------------------------------------------------------------------
+# 5b. pakPkgDepsCached: per-package (single-ref) cache. The per-package fallback
+# loop caches each ref independently so a repeat call with only a few changed
+# refs re-resolves online just those. Both cache-hit tests short-circuit before
+# any pak::pkg_deps() call, so they need no network.
+# ---------------------------------------------------------------------------
+
+test_that("pakPkgDepsCached returns from in-memory cache without network", {
+  skip_if_not_installed("pak")
+
+  query <- "any::data.table"
+  wh    <- c("Imports", "Depends", "LinkingTo")
+  repos <- c(CRAN = "https://cloud.r-project.org")
+
+  key    <- Require:::pakDepsCacheKey(query, wh, repos)
+  envKey <- paste0("pakDeps1_", key)
+  fake   <- data.frame(package = "data.table", version = "1.15.0",
+                       ref = "data.table", direct = TRUE,
+                       stringsAsFactors = FALSE)
+  assign(envKey, fake, envir = Require:::pakEnv())
+  on.exit(rm(list = envKey, envir = Require:::pakEnv()), add = TRUE)
+
+  assign(".pakPkgDepsHits", 0L, envir = Require:::pakEnv())
+  res <- Require:::pakPkgDepsCached(query, wh, repos, verbose = 0, purge = FALSE)
+  testthat::expect_identical(res, fake)
+  testthat::expect_equal(
+    get0(".pakPkgDepsHits", envir = Require:::pakEnv(), ifnotfound = 0L), 1L)
+})
+
+test_that("pakPkgDepsCached returns from disk cache and promotes to memory", {
+  skip_if_not_installed("pak")
+
+  query     <- "any::digest"
+  wh        <- c("Imports", "Depends", "LinkingTo")
+  repos     <- c(CRAN = "https://cloud.r-project.org")
+  key       <- Require:::pakDepsCacheKey(query, wh, repos)
+  envKey    <- paste0("pakDeps1_", key)
+  cacheDir  <- Require:::pakDepsCacheDirOne()
+  cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
+  fake      <- data.frame(package = "digest", version = "0.6.35",
+                          ref = "digest", direct = TRUE,
+                          stringsAsFactors = FALSE)
+  dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+  saveRDS(fake, cacheFile)
+  on.exit(unlink(cacheFile), add = TRUE)
+
+  # No in-memory entry, so the disk path is exercised.
+  if (exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+    rm(list = envKey, envir = Require:::pakEnv())
+  on.exit(if (exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+            rm(list = envKey, envir = Require:::pakEnv()), add = TRUE)
+
+  res <- Require:::pakPkgDepsCached(query, wh, repos, verbose = 0, purge = FALSE)
+  testthat::expect_equal(res, fake)
+  # Promoted to the in-memory tier for subsequent same-session calls.
+  testthat::expect_true(exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+})
+
+test_that("pakPkgDepsCached bypasses cache when purge = TRUE", {
+  skip_if_not_installed("pak")
+
+  query  <- "any::data.table"
+  wh     <- c("Imports", "Depends", "LinkingTo")
+  repos  <- c(CRAN = "https://cloud.r-project.org")
+  key    <- Require:::pakDepsCacheKey(query, wh, repos)
+  envKey <- paste0("pakDeps1_", key)
+
+  # Inject a sentinel; with purge = TRUE it must NOT be returned (the helper
+  # would instead attempt a real resolution, which we don't run here).
+  sentinel <- data.frame(package = "SENTINEL", stringsAsFactors = FALSE)
+  assign(envKey, sentinel, envir = Require:::pakEnv())
+  on.exit(if (exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+            rm(list = envKey, envir = Require:::pakEnv()), add = TRUE)
+
+  assign(".pakPkgDepsHits", 0L, envir = Require:::pakEnv())
+  # We only assert the cache was NOT consulted (hit counter stays 0); the
+  # subsequent network resolution is allowed to fail/return anything.
+  suppressWarnings(suppressMessages(
+    try(Require:::pakPkgDepsCached(query, wh, repos, verbose = 0, purge = TRUE),
+        silent = TRUE)
+  ))
+  testthat::expect_equal(
+    get0(".pakPkgDepsHits", envir = Require:::pakEnv(), ifnotfound = 0L), 0L)
+})
+
+# ---------------------------------------------------------------------------
 # 6. recordLoadOrder: GitHub ref replaced by CRAN version-spec ref
 # ---------------------------------------------------------------------------
 

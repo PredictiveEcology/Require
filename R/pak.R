@@ -1770,6 +1770,70 @@ pakDepsCacheDir <- function() {
   file.path(cacheDir(), "pak", "pkg_deps")
 }
 
+## Per-package (single-ref) variant of the resolver disk cache. Kept in its own
+## subdir so single-ref entries don't intermingle with the whole-set entries.
+pakDepsCacheDirOne <- function() {
+  file.path(cacheDir(), "pak", "pkg_deps_one")
+}
+
+# ---------------------------------------------------------------------------
+# pakPkgDepsCached() -- per-package cached wrapper around pak::pkg_deps().
+#
+# The whole-set resolver cache in pakDepsResolve() is all-or-nothing: changing
+# ONE ref in the requested set changes the key and forces a full re-resolution.
+# The per-package fallback below resolves each ref independently, so cache each
+# ref's pak_result independently too. A repeat call where only a few refs
+# changed then re-resolves online only the changed refs; the unchanged refs are
+# served from memory (this session) or disk (across restarts) -- restoring the
+# pre-pak behaviour where pkgDep() was memoised per package.
+#
+# Key = md5(query, wh, repos, srcOnly) via pakDepsCacheKey(). The query already
+# carries the installed-version pin (pinInstalledForPak) and any == -> @version
+# conversion, so the key is self-invalidating when that ref's installed version
+# changes. TTL + offline semantics mirror pakDepsResolve().
+# ---------------------------------------------------------------------------
+pakPkgDepsCached <- function(query, wh, repos, verbose, purge,
+                             type = getOption("pkgType")) {
+  key       <- pakDepsCacheKey(query, wh, repos, type = type)
+  envKey    <- paste0("pakDeps1_", key)
+  cacheDir  <- pakDepsCacheDirOne()
+  cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
+  ttl       <- getOption("Require.pak.depCacheTTL", .pakDepsCacheTTL)
+  offline   <- isTRUE(getOption("Require.offlineMode"))
+
+  if (!isTRUE(purge)) {
+    cached <- get0(envKey, envir = pakEnv(), inherits = FALSE)
+    if (!is.null(cached)) {
+      assign(".pakPkgDepsHits", get0(".pakPkgDepsHits", envir = pakEnv(),
+             ifnotfound = 0L, inherits = FALSE) + 1L, envir = pakEnv())
+      return(cached)
+    }
+    if (file.exists(cacheFile)) {
+      age <- as.numeric(difftime(Sys.time(), file.mtime(cacheFile), units = "secs"))
+      if (offline || age < ttl) {
+        cached <- tryCatch(readRDS(cacheFile), error = function(e) NULL)
+        if (!is.null(cached)) {
+          assign(envKey, cached, envir = pakEnv())   # promote to memory tier
+          assign(".pakPkgDepsHits", get0(".pakPkgDepsHits", envir = pakEnv(),
+                 ifnotfound = 0L, inherits = FALSE) + 1L, envir = pakEnv())
+          return(cached)
+        }
+      }
+    }
+  }
+
+  result <- tryCatch(pakCall(pak::pkg_deps(query, dependencies = wh), verbose),
+                     error = function(e) NULL)
+  if (!is.null(result)) {
+    assign(envKey, result, envir = pakEnv())
+    tryCatch({
+      dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+      saveRDS(result, cacheFile)
+    }, error = function(e) NULL)   # non-fatal if disk write fails
+  }
+  result
+}
+
 pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
                            type = getOption("pkgType")) {
 
@@ -1983,16 +2047,25 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
                    verbose = verbose, verboseLevel = 1)
     archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
     nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
+    # Reset the per-package cache-hit counter so the summary below reports only
+    # this loop's hits. pakPkgDepsCached() caches each ref independently, so a
+    # repeat call with only a few changed refs re-resolves online just those.
+    assign(".pakPkgDepsHits", 0L, envir = pakEnv())
     per_pkg_results <- lapply(nonArchivePkgs, function(pkg) {
       # First try with archive refs (for packages with archived transitive deps).
       # If that fails (e.g., archive refs introduce new CRAN/GitHub conflicts), retry
       # without archive refs -- it's better to get a partial dep tree than nothing.
       query <- if (length(archiveRefs)) unique(c(pkg, archiveRefs)) else pkg
-      result <- tryCatch(pakCall(pak::pkg_deps(query, dependencies = wh), verbose), error = function(e) NULL)
+      result <- pakPkgDepsCached(query, wh, repos, verbose, purge, type = type)
       if (is.null(result) && length(archiveRefs))
-        result <- tryCatch(pakCall(pak::pkg_deps(pkg, dependencies = wh), verbose), error = function(e) NULL)
+        result <- pakPkgDepsCached(pkg, wh, repos, verbose, purge, type = type)
       result
     })
+    nHits <- get0(".pakPkgDepsHits", envir = pakEnv(), ifnotfound = 0L, inherits = FALSE)
+    if (nHits > 0L)
+      messageVerbose("Require/pak per-package resolution: ", nHits, " of ",
+                     length(nonArchivePkgs), " refs served from cache",
+                     verbose = verbose, verboseLevel = 1)
     per_pkg_results <- per_pkg_results[!sapply(per_pkg_results, is.null)]
     if (length(per_pkg_results)) {
       pak_result <- tryCatch(
