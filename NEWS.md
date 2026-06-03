@@ -1,3 +1,17 @@
+# Require 2.0.0.9020 (development version)
+
+* pak per-package dependency resolution is now cached per ref (two tiers:
+  in-memory for the session + disk across restarts), via the new
+  `pakPkgDepsCached()` helper. Previously only the *whole* requested package
+  set was cached (`pakDepsResolve()`), so changing a single ref in `reqdPkgs`
+  invalidated the key and forced every ref to be re-resolved online when pak's
+  batch resolution failed and the slow per-package fallback ran. Now a repeat
+  call with only a few changed refs re-resolves online just those; unchanged
+  refs come from cache. This restores the pre-pak behaviour where `pkgDep()`
+  was memoised per package. A `verbose >= 1` note reports how many refs were
+  served from cache. TTL/offline/`purge` semantics match `pakDepsResolve()`
+  (`options(Require.pak.depCacheTTL=)`, default 24 h).
+
 # Require 2.0.0.9019 (development version)
 
 * When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
