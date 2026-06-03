@@ -47,7 +47,10 @@ test_that("Require.offlineMode installs from pak cache, fails cleanly when cache
   expect_true(isInTestlib(),
               info = paste("offline install with cache must succeed; warns2 =",
                            paste(warns2, collapse = " | ")))
-  expect_length(warns2, 0L)
+  # expect_length() has no `info` arg; use expect_true() so the diagnostic
+  # warning dump survives (this offline path is otherwise hard to debug on CI).
+  expect_true(length(warns2) == 0L,
+              info = paste("warns2 =", paste(warns2, collapse = " | ")))
 
   # ---- 3. Wipe testlib AND pak cache + offline → install fails cleanly ----
   suppressMessages(remove.packages(pkg, lib = testlib))
