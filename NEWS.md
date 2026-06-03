@@ -1,3 +1,12 @@
+# Require 2.0.0.9021 (development version)
+
+* `test-12offlineMode_testthat.R:50`: fixed a test error that failed
+  R CMD check on all platforms. `expect_length()` has no `info`
+  argument, so the prior `expect_length(warns2, 0L, info = ...)` threw
+  `unused argument (info = ...)`. Replaced with
+  `expect_true(length(warns2) == 0L, info = ...)`, which keeps the
+  captured-`warns2` diagnostic the original change intended.
+
 # Require 2.0.0.9020 (development version)
 
 * `pakOfflineInstall()`: removed the tier-B fallback (bare `pkg` ref
@@ -14,9 +23,6 @@
   names(pkgDepTest2[[1]])` check is now applied to
   `extractPkgName(names(...))` since pkgDep2 returns names with
   version constraints attached (e.g. `"data.table (>= 1.10.4)"`).
-* `test-12offlineMode_testthat.R:50`: `expect_length(warns2, 0L)` now
-  attaches the captured `warns2` content via `info=` so any future
-  warning leak is self-diagnosing.
 
 # Require 2.0.0.9019 (development version)
 
