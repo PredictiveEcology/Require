@@ -1170,25 +1170,19 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
           pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
                    dependencies = FALSE, upgrade = FALSE),
           verbose), silent = TRUE)
-        ## Tier B: on "Conflicts with", try a bare `pkg` ref. Drops
-        ## pak's version-pinning protection but the pak download cache
-        ## was already filtered to the right version, so it's safe.
-        if (is(perRefErr, "try-error") &&
-            grepl("Conflicts with", as.character(perRefErr), fixed = TRUE)) {
-          barePkg <- pkgsToInstall[i]
-          if (length(barePkg) && nzchar(barePkg) && barePkg != refsToInstall[i]) {
-            messageVerbose(
-              "pakOfflineInstall: per-ref retry for ", refsToInstall[i],
-              " also hit 'Conflicts with'; falling back to bare `",
-              barePkg, "` ref (cache already pinned to the right version).",
-              verbose = verbose, verboseLevel = 1)
-            pakResetSubprocess()
-            perRefErr <- try(pakCall(
-              pak::pak(barePkg, lib = libPaths[1], ask = FALSE,
-                       dependencies = FALSE, upgrade = FALSE),
-              verbose), silent = TRUE)
-          }
-        }
+        ## Tier B used to drop the version pin and retry with a bare
+        ## `pkg` ref on "Conflicts with". That was wrong: when pak's
+        ## CRAN sees one version and pak's cache holds a different one
+        ## (e.g. a PE-fork like `fpCompare@0.2.6.9000` in cache vs CRAN
+        ## `0.2.6`), pak picks CRAN's mainline and silently installs the
+        ## wrong version. Caught end-to-end on test-12: tier-B installed
+        ## fpCompare 0.2.6 instead of the cached 0.2.6.9000 and pak
+        ## emitted a warning the test's expect_length(warns2, 0L) caught.
+        ## Tier C below (whole-batch retry with this ref swapped to
+        ## local::<cached_path>) is the correct recovery path -- it
+        ## guarantees the cached version is installed regardless of what
+        ## CRAN's mainline has. So tier B is now a no-op; tier C handles
+        ## both "Conflicts with" and any other batch failure.
         ## Tier C: on ANY remaining error, swap THIS ref to
         ## `local::<cached_path>` and retry the WHOLE BATCH (with
         ## `dependencies = FALSE` so every other ref's user-supplied
