@@ -40,10 +40,13 @@ test_that("test 5", {
   ## set evolves over time (data.table, pak, sys + new additions like
   ## callr/processx as Require grows). Don't pin to an exact count --
   ## just assert the core deps are present.
+  ## pkgDep2() returns names with version constraints attached
+  ## (e.g. "data.table (>= 1.10.4)"); strip to bare names before %in%.
+  pkgDep2Names <- Require:::extractPkgName(names(pkgDepTest2[[1]]))
   testthat::expect_true(
-    all(c("data.table", "pak") %in% names(pkgDepTest2[[1]])),
-    info = paste("pkgDepTest2[[1]] names:",
-                 paste(sort(names(pkgDepTest2[[1]])), collapse = ", ")))
+    all(c("data.table", "pak") %in% pkgDep2Names),
+    info = paste("pkgDepTest2[[1]] names (after extractPkgName):",
+                 paste(sort(pkgDep2Names), collapse = ", ")))
   testthat::expect_true({
     all(sort(names(pkgDepTest2$Require)) == sort(pkgDepTest1$Require))
   })

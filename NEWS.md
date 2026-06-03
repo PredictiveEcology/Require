@@ -1,3 +1,23 @@
+# Require 2.0.0.9020 (development version)
+
+* `pakOfflineInstall()`: removed the tier-B fallback (bare `pkg` ref
+  retry on pak's `Conflicts with`). It silently installed the wrong
+  version when pak's cache held a different version of the package
+  than CRAN's mainline (e.g. cache: `fpCompare@0.2.6.9000` PE-fork;
+  pak picks CRAN's mainline `0.2.6` on bare-ref retry). The tier-C
+  whole-batch retry with the failing ref swapped to
+  `local::<cached_path>` is the correct recovery -- it guarantees
+  the cached version is installed regardless of CRAN's mainline.
+  Tier C now handles both "Conflicts with" and any other batch
+  failure.
+* `test-05packagesLong_testthat.R:43`: the `c("data.table","pak") %in%
+  names(pkgDepTest2[[1]])` check is now applied to
+  `extractPkgName(names(...))` since pkgDep2 returns names with
+  version constraints attached (e.g. `"data.table (>= 1.10.4)"`).
+* `test-12offlineMode_testthat.R:50`: `expect_length(warns2, 0L)` now
+  attaches the captured `warns2` content via `info=` so any future
+  warning leak is self-diagnosing.
+
 # Require 2.0.0.9019 (development version)
 
 * When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
