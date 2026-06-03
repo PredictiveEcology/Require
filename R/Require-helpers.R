@@ -473,8 +473,16 @@ useLoadedIfSufficient <- function(pkgDT,
       ok <- isTRUE(compareVersion2(loadedVer, vSpec, ineq))
       if (!ok) next
     }
-    lp <- tryCatch(dirname(system.file(package = pkg)),
-                   error = function(e) NA_character_)
+    # suppressWarnings: this is a best-effort "where does pkg live" probe. When a
+    # namespace stays loaded after its files were removed (the very case the
+    # hasDescOnDisk check below handles), system.file()/find.package() walk the
+    # libPaths and read.dcf() the stale DESCRIPTION path, emitting "cannot open
+    # compressed file '<lib>/<pkg>/DESCRIPTION'". (Pronounced under devtools::test,
+    # where pkgload shims system.file().) tryCatch only traps errors, so that
+    # warning leaked out and tripped tests asserting a clean warning set. The
+    # missing-files case is already handled below; the warning is pure noise here.
+    lp <- suppressWarnings(tryCatch(dirname(system.file(package = pkg)),
+                                    error = function(e) NA_character_))
     if (!nzchar(lp)) lp <- NA_character_
     if (!is.na(lp) && !normPath(lp) %in% effectiveLibPaths) next
     ## Disk-presence check: a namespace can stay loaded after its files are
