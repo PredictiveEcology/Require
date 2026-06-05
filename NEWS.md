@@ -1,3 +1,16 @@
+# Require 2.0.0.9023 (development version)
+
+* A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
+  exact-version pin under pak: it installs that exact commit even when a
+  *different* version is already installed (previously a bare `@sha` was a no-op
+  whenever any version was installed, because the pak path is version-driven).
+  Implemented by attaching `(== <version pak resolves for that commit>)` to the
+  ref, so the commit's version drives the install decision; an equal installed
+  version is treated as satisfied (a same-version, different-commit case is not
+  distinguished -- dev versions bump per commit). Only explicit commit SHAs
+  qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
+  carrying a version spec are unaffected.
+
 # Require 2.0.0.9022 (development version)
 
 * Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
