@@ -1570,3 +1570,35 @@ test_that("pinInstalledForPak skips user-version-constrained packages", {
   testthat::expect_true(grepl("^data.table@", out[2]),
     info = "bare user packages with no constraint must be pinned to installed version to keep deps stable")
 })
+
+# ---------------------------------------------------------------------------
+# Regression: a GitHub ref pinned by BOTH @sha and (== version) must not be
+# turned into a malformed double-@ ref `owner/repo@sha@version` by the install
+# path. equalsToAt() used to run on the whole ref, appending @version to the
+# already-@sha-pinned ref; pak then could not install it and silently kept the
+# installed version, after which Require warned "pak resolved X but only Y is
+# available as a binary". The install path now skips equalsToAt()/lessThanToAt()
+# for refs that already carry an `@` pin. (R/pak.R, pakInstallFiltered ~L3160.)
+# ---------------------------------------------------------------------------
+test_that("GitHub @sha + (== version) ref is not double-@'d by the install path", {
+  ref <- "PredictiveEcology/reproducible@63cf18a80efa5dcf40957d6f207fce55fa0fdc19 (== 3.1.1.9036)"
+  # Reproduce the pakInstallFiltered transform sequence that builds the pak ref.
+  pkgs <- Require:::HEADtoNone(ref)
+  whUnpinned <- !grepl("@", pkgs)
+  pkgs[whUnpinned] <- Require:::equalsToAt(pkgs[whUnpinned])
+  whGH <- Require:::isGH(pkgs)
+  if (any(whGH)) pkgs[whGH] <- Require:::trimVersionNumber(pkgs[whGH])
+  testthat::expect_equal(
+    pkgs, "PredictiveEcology/reproducible@63cf18a80efa5dcf40957d6f207fce55fa0fdc19")
+  testthat::expect_equal(
+    lengths(regmatches(pkgs, gregexpr("@", pkgs, fixed = TRUE))), 1L,
+    info = "ref must carry exactly one @ (the sha), never @sha@version")
+
+  # Non-GitHub (== version) refs still get pak's @version exact pin.
+  testthat::expect_equal(Require:::equalsToAt("qs (== 0.27.3)"), "qs@0.27.3")
+  # A GitHub ref WITHOUT an @ still gets the @version form (unchanged behaviour).
+  gh <- "owner/repo (== 1.2.3)"
+  whU <- !grepl("@", gh)
+  gh[whU] <- Require:::equalsToAt(gh[whU])
+  testthat::expect_equal(gh, "owner/repo@1.2.3")
+})

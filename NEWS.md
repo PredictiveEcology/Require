@@ -1,3 +1,15 @@
+# Require 2.0.0.9022 (development version)
+
+* Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
+  *and* an exact version) silently no-op'ing when a different version was
+  already installed, then warning "pak resolved X but only Y is available as a
+  binary". The install path's `equalsToAt()` appended `@X` to the already-`@sha`
+  -pinned ref, producing a malformed `owner/repo@sha@X` ref pak could not
+  install. `equalsToAt()`/`lessThanToAt()` now skip refs that already carry an
+  `@` pin; the version parenthetical is stripped by `trimVersionNumber()` and
+  Require's post-install check verifies the version. The pinned commit now
+  installs (downgrading if needed) as expected.
+
 # Require 2.0.0.9020 (development version)
 
 * pak per-package dependency resolution is now cached per ref (two tiers:
