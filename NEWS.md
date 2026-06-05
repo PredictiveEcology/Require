@@ -1,3 +1,16 @@
+# Require 2.0.0.9022 (development version)
+
+* `test-01packages_testthat.R` (issue 87): the pinned-SHA downgrade test now
+  drops the loaded/installed newer `reproducible` before each
+  `Install(<owner>/reproducible@<sha> (HEAD))`, so pak does a clean install
+  rather than an in-place downgrade. pak's build worker crashes
+  (`unzip_class`/processx) when re-packaging during an in-place update over a
+  loaded newer version; the same SHA installs cleanly into a fresh state (and
+  Require's serial-install fallback then recovers). Issue 87's intent -- a SHA
+  ref resolving to the commit's version (`2.0.2.9001`) rather than CRAN's
+  (`2.0.2`) -- is still exercised. The underlying pak crash is tracked
+  separately.
+
 # Require 2.0.0.9020 (development version)
 
 * pak per-package dependency resolution is now cached per ref (two tiers:
