@@ -11,8 +11,6 @@
   qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
   carrying a version spec are unaffected.
 
-# Require 2.0.0.9022 (development version)
-
 * Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
   *and* an exact version) silently no-op'ing when a different version was
   already installed, then warning "pak resolved X but only Y is available as a
@@ -23,7 +21,16 @@
   Require's post-install check verifies the version. The pinned commit now
   installs (downgrading if needed) as expected.
 
-# Require 2.0.0.9020 (development version)
+* `test-01packages_testthat.R` (issue 87): the pinned-SHA downgrade test now
+  drops the loaded/installed newer `reproducible` before each
+  `Install(<owner>/reproducible@<sha> (HEAD))`, so pak does a clean install
+  rather than an in-place downgrade. pak's build worker crashes
+  (`unzip_class`/processx) when re-packaging during an in-place update over a
+  loaded newer version; the same SHA installs cleanly into a fresh state (and
+  Require's serial-install fallback then recovers). Issue 87's intent -- a SHA
+  ref resolving to the commit's version (`2.0.2.9001`) rather than CRAN's
+  (`2.0.2`) -- is still exercised. The underlying pak crash is tracked
+  separately.
 
 * pak per-package dependency resolution is now cached per ref (two tiers:
   in-memory for the session + disk across restarts), via the new
@@ -58,8 +65,6 @@
   names(pkgDepTest2[[1]])` check is now applied to
   `extractPkgName(names(...))` since pkgDep2 returns names with
   version constraints attached (e.g. `"data.table (>= 1.10.4)"`).
-
-# Require 2.0.0.9019 (development version)
 
 * When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
   `==X` row in favour of an irreconcilable `>=Y` / `>Y` row (e.g. user
