@@ -1,4 +1,4 @@
-# Require 2.0.0.9025 (development version)
+# Require 2.0.0.9027 (development version)
 
 * A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
   exact-version pin under pak: it installs that exact commit even when a
@@ -11,6 +11,20 @@
   qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
   carrying a version spec are unaffected.
 
+# Require 2.0.0.9026 (development version)
+
+* Performance: the offline (pak download-cache) install path no longer degrades
+  to slow one-at-a-time installs when the resolved set contains a package as
+  both a CRAN ref and a GitHub ref (e.g. `SpaDES.tools (>= 2.0.0)` plus
+  `PredictiveEcology/SpaDES.tools@development`). pak rejects such a batch with a
+  "Conflicts with" error even under `dependencies = FALSE`, which forced
+  `pakOfflineInstall()` into the per-ref fallback (and could cascade into build
+  failures, e.g. `LandR`, because deps were installed in isolation). The
+  CRAN-vs-GitHub/duplicate-CRAN dedup that the online path already applied is
+  now factored into a shared `dedupInstallRefs()` helper and run on the offline
+  path too, so the single parallel `pak::pak()` batch install proceeds. The
+  GitHub ref wins; among duplicate CRAN rows the strictest version pin is kept.
+
 * Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
   *and* an exact version) silently no-op'ing when a different version was
   already installed, then warning "pak resolved X but only Y is available as a
@@ -20,8 +34,6 @@
   `@` pin; the version parenthetical is stripped by `trimVersionNumber()` and
   Require's post-install check verifies the version. The pinned commit now
   installs (downgrading if needed) as expected.
-
-# Require 2.0.0.9023 (development version)
 
 * Fix: a user-requested CRAN package could be installed *without its
   dependencies* when pak's batch dependency solve was unsolvable. When a few
@@ -43,6 +55,7 @@
   Regression tests added in `test-17usePak.R` (network-free, via mocked
   `pak::pkg_deps()`).
 
+
 * `test-01packages_testthat.R` (issue 87): the pinned-SHA downgrade test now
   drops the loaded/installed newer `reproducible` before each
   `Install(<owner>/reproducible@<sha> (HEAD))`, so pak does a clean install
@@ -53,6 +66,8 @@
   ref resolving to the commit's version (`2.0.2.9001`) rather than CRAN's
   (`2.0.2`) -- is still exercised. The underlying pak crash is tracked
   separately.
+
+# Require 2.0.0.9020 (development version)
 
 * pak per-package dependency resolution is now cached per ref (two tiers:
   in-memory for the session + disk across restarts), via the new
@@ -87,6 +102,8 @@
   names(pkgDepTest2[[1]])` check is now applied to
   `extractPkgName(names(...))` since pkgDep2 returns names with
   version constraints attached (e.g. `"data.table (>= 1.10.4)"`).
+
+# Require 2.0.0.9019 (development version)
 
 * When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
   `==X` row in favour of an irreconcilable `>=Y` / `>Y` row (e.g. user
