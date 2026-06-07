@@ -1727,3 +1727,66 @@ test_that("pakDepsToPkgDT closure guard re-resolves a user CRAN pkg dropped from
   testthat::expect_true("gargle" %in% pkgDT$Package,
     info = "closure guard must pull a dropped user CRAN package's transitive deps into the plan")
 })
+
+# ---------------------------------------------------------------------------
+# 19. dedupInstallRefs: prevent the CRAN-vs-GitHub "Conflicts with" self-conflict
+#     that forces pak into the slow one-at-a-time install fallback.
+#
+# When a package appears in the install set as BOTH a plain-CRAN ref and a
+# GitHub ref (e.g. `SpaDES.tools (>= 2.0.0)` from a module's reqdPkgs AND
+# `PredictiveEcology/SpaDES.tools@development`), pak::pak() rejects the whole
+# batch with "Conflicts with" even under dependencies = FALSE -- so the offline
+# installer degrades to installing one ref at a time (very slow) instead of one
+# parallel batch. dedupInstallRefs() drops the redundant CRAN row, keeping the
+# GitHub ref, so the parallel batch install proceeds.
+# ---------------------------------------------------------------------------
+test_that("dedupInstallRefs keeps the GitHub ref and drops the same-package CRAN ref", {
+  dt <- data.table::data.table(
+    Package         = c("SpaDES.tools", "SpaDES.tools", "DBI"),
+    packageFullName = c("SpaDES.tools (>= 2.0.0)",
+                        "PredictiveEcology/SpaDES.tools@development", "DBI"),
+    inequality      = c(">=", NA, NA),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+
+  testthat::expect_false(anyDuplicated(out$Package) > 0)
+  testthat::expect_equal(
+    out[Package == "SpaDES.tools"]$packageFullName,
+    "PredictiveEcology/SpaDES.tools@development",
+    info = "the GitHub ref must win so pak does not see a CRAN-vs-GitHub conflict")
+  testthat::expect_true("DBI" %in% out$Package)   # untouched
+})
+
+test_that("dedupInstallRefs keeps the strictest constraint among duplicate CRAN rows", {
+  dt <- data.table::data.table(
+    Package         = c("stringfish", "stringfish"),
+    packageFullName = c("stringfish (<= 0.15.8)", "stringfish (>= 0.15.1)"),
+    inequality      = c("<=", ">="),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+  testthat::expect_equal(nrow(out), 1L)
+  testthat::expect_equal(out$packageFullName, "stringfish (<= 0.15.8)",
+    info = "the user's '<=' pin must survive (== > <= > < > >= > >), not the transitive '>='")
+})
+
+test_that("dedupInstallRefs is a no-op when there are no duplicate packages", {
+  dt <- data.table::data.table(
+    Package         = c("DBI", "terra"),
+    packageFullName = c("DBI", "terra (>= 1.7)"),
+    inequality      = c(NA, ">="),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+  testthat::expect_equal(nrow(out), 2L)
+  testthat::expect_setequal(out$Package, c("DBI", "terra"))
+})
+
+test_that("dedupInstallRefs handles a toInstall with no inequality column", {
+  dt <- data.table::data.table(
+    Package         = c("SpaDES.tools", "SpaDES.tools"),
+    packageFullName = c("SpaDES.tools", "PredictiveEcology/SpaDES.tools@development"),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+  testthat::expect_equal(nrow(out), 1L)
+  testthat::expect_equal(out$packageFullName,
+                         "PredictiveEcology/SpaDES.tools@development")
+})

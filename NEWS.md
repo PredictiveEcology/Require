@@ -1,4 +1,16 @@
-# Require 2.0.0.9024 (development version)
+# Require 2.0.0.9026 (development version)
+
+* Performance: the offline (pak download-cache) install path no longer degrades
+  to slow one-at-a-time installs when the resolved set contains a package as
+  both a CRAN ref and a GitHub ref (e.g. `SpaDES.tools (>= 2.0.0)` plus
+  `PredictiveEcology/SpaDES.tools@development`). pak rejects such a batch with a
+  "Conflicts with" error even under `dependencies = FALSE`, which forced
+  `pakOfflineInstall()` into the per-ref fallback (and could cascade into build
+  failures, e.g. `LandR`, because deps were installed in isolation). The
+  CRAN-vs-GitHub/duplicate-CRAN dedup that the online path already applied is
+  now factored into a shared `dedupInstallRefs()` helper and run on the offline
+  path too, so the single parallel `pak::pak()` batch install proceeds. The
+  GitHub ref wins; among duplicate CRAN rows the strictest version pin is kept.
 
 * Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
   *and* an exact version) silently no-op'ing when a different version was
@@ -9,8 +21,6 @@
   `@` pin; the version parenthetical is stripped by `trimVersionNumber()` and
   Require's post-install check verifies the version. The pinned commit now
   installs (downgrading if needed) as expected.
-
-# Require 2.0.0.9023 (development version)
 
 * Fix: a user-requested CRAN package could be installed *without its
   dependencies* when pak's batch dependency solve was unsolvable. When a few

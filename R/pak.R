@@ -971,6 +971,38 @@ pakCachedTarball <- function(pkg, versionSpec = NA_character_,
        version = cachedVer)
 }
 
+# Deduplicate an install set so a single package never appears as BOTH a plain
+# CRAN ref and a GitHub/url:: ref (and never as several plain-CRAN rows).
+# pak::pak() rejects such a list with a "Conflicts with" error EVEN under
+# `dependencies = FALSE` (it still does conflict detection), which forces the
+# slow per-ref ("one-at-a-time") install fallback and loses pak's parallel
+# batch build. Resolution rules (mirroring what the install paths need):
+#   * if any non-CRAN (GitHub/url::) ref exists for a Package, drop its plain
+#     CRAN rows -- the non-CRAN ref is authoritative;
+#   * among remaining same-Package rows, keep the one with the strictest version
+#     constraint (== > <= > < > >= > > > none) so a user pin isn't lost.
+# Operates on a copy; returns the deduplicated data.table. Used by both the
+# offline (cache) and online install paths so they behave identically.
+dedupInstallRefs <- function(toInstall) {
+  if (!NROW(toInstall) || !anyDuplicated(toInstall$Package)) return(toInstall)
+  toInstall <- data.table::copy(toInstall)
+  pfn <- if ("packageFullName" %in% names(toInstall))
+    toInstall$packageFullName else toInstall$Package
+  set(toInstall, NULL, "isNonCRAN", isGH(pfn) | startsWith(pfn, "url::"))
+  toInstall[, hasNonCRAN := any(isNonCRAN), by = Package]
+  # Remove plain CRAN rows when a non-CRAN ref exists for the same package
+  toInstall <- toInstall[!(hasNonCRAN == TRUE & isNonCRAN == FALSE)]
+  ineq <- if ("inequality" %in% names(toInstall))
+    toInstall$inequality else rep(NA_character_, NROW(toInstall))
+  set(toInstall, NULL, ".versionSpecPrio",
+      match(ineq, c("==", "<=", "<", ">=", ">"), nomatch = 6L))
+  setorderv(toInstall, c("Package", ".versionSpecPrio"))
+  # If duplicates still remain (e.g., two GitHub branches), keep the first
+  toInstall <- unique(toInstall, by = "Package")
+  set(toInstall, NULL, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio"), NULL)
+  toInstall[]
+}
+
 # Offline install via pak: resolve each user package to a local tarball in
 # pak's cache and install via `local::path` refs (which require no network).
 # Returns the (possibly-modified) pkgDT with `installed`, `Version`,
@@ -981,6 +1013,11 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
+  # Drop CRAN-vs-GitHub (and duplicate-CRAN) collisions BEFORE the batch
+  # pak::pak() so the single parallel install succeeds instead of degrading to
+  # the slow per-ref fallback. (The online path, pakInstallFiltered, does the
+  # same via dedupInstallRefs().)
+  toInstall <- dedupInstallRefs(toInstall)
 
   ## We used to call `pakResetSubprocess()` here, hoping that a wedged
   ## subprocess after a failed `pakInstallFiltered` plan would otherwise
@@ -3119,39 +3156,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
-  # Deduplicate: if the same Package appears as both a CRAN ref and a GitHub/url:: ref,
-  # keep only the non-CRAN ref. pak::pak() would reject the list with a "Conflicts with"
-  # error if both "any::SpaDES.tools" (CRAN) and "owner/SpaDES.tools@branch" (GitHub)
-  # appear together, because dependencies = FALSE still does conflict detection.
-  if (anyDuplicated(toInstall$Package)) {
-    toInstall[, isNonCRAN := isGH(packageFullName) | startsWith(packageFullName, "url::")]
-    toInstall[, hasNonCRAN := any(isNonCRAN), by = Package]
-    # Remove plain CRAN rows when a non-CRAN ref exists for the same package
-    toInstall <- toInstall[!(hasNonCRAN == TRUE & isNonCRAN == FALSE)]
-    # Among multiple plain-CRAN rows for the same Package (e.g. one row carries
-    # the user's "(<= 0.15.8)" upper-bound and a separate row carries a
-    # transitive dep's "(>= 0.15.1)" lower-bound -- trimRedundancies keeps both
-    # because they are complementary, not redundant), pick the row with the
-    # strictest constraint before unique(by = "Package") collapses them.
-    # Without this sort, unique() arbitrarily keeps whichever row sorted first
-    # in pkgDT -- typically the transitive ">=" row, since dep tree rows are
-    # appended after user rows. The user's "<=" pin is then dropped, the
-    # downstream gsub("\\(>=...\\)", "") strips the row to a bare name, the
-    # any:: prefix turns it into "any::stringfish", and pak silently installs
-    # the latest (constraint-violating) version -- symptom seen in the field
-    # as `Install("stringfish (<= 0.15.8)")` producing stringfish 0.19.0.
-    # Strictness order:  ==  >  <=  >  <  >  >=  >  >  >  none.
-    # equalsToAt() and lessThanToAt() (called below) translate ==/<=/< into
-    # exact "@version" pins; >= and > get stripped to bare names so any::pkg
-    # ends up resolving to latest.  Keeping the strictest row therefore
-    # ensures the install is correctly pinned where the user asked for one.
-    toInstall[, .versionSpecPrio := match(
-      inequality, c("==", "<=", "<", ">=", ">"), nomatch = 6L)]
-    setorderv(toInstall, c("Package", ".versionSpecPrio"))
-    # If duplicates still remain (e.g., two GitHub branches), keep first
-    toInstall <- unique(toInstall, by = "Package")
-    toInstall[, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio") := NULL]
-  }
+  # Deduplicate CRAN-vs-GitHub/url:: (and duplicate-CRAN) collisions for the same
+  # Package: pak::pak() rejects e.g. both "any::SpaDES.tools" (CRAN) and
+  # "owner/SpaDES.tools@branch" (GitHub) with a "Conflicts with" error even under
+  # dependencies = FALSE. The strictest version constraint is kept among plain-CRAN
+  # duplicates so a user pin (e.g. "stringfish (<= 0.15.8)") isn't dropped. See
+  # dedupInstallRefs() (shared with the offline path, pakOfflineInstall).
+  toInstall <- dedupInstallRefs(toInstall)
 
   # Pre-install integrity check: abort the install for any toInstall package
   # whose installed DESCRIPTION names a hard dep that is neither currently
