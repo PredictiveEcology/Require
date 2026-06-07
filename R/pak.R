@@ -3209,11 +3209,21 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # Strip HEAD flags (Require already decided to install HEAD packages)
   pkgs <- HEADtoNone(pkgs)
 
-  # == version -> @version (exact pin for pak)
-  pkgs <- equalsToAt(pkgs)
-
+  # Translate == / <= constraints to pak's @version exact-pin form -- but skip
+  # refs that ALREADY carry an `@` pin (i.e. a GitHub `owner/repo@sha`/`@branch`
+  # ref). For those, appending @<version> here produces a malformed
+  # `owner/repo@sha@version` ref that pak cannot install: it silently keeps the
+  # installed version (a no-op), and Require then warns "pak resolved X but only
+  # Y is available as a binary". The version parenthetical on an already-pinned
+  # GitHub ref is a package-version constraint (not a git ref); it is stripped by
+  # trimVersionNumber() below, and Require's post-install check verifies the
+  # installed version. (A GitHub ref WITHOUT an `@` still goes through
+  # equalsToAt, preserving the existing `owner/repo (== X)` -> `owner/repo@X`
+  # behaviour.)
+  whUnpinned <- !grepl("@", pkgs)
+  pkgs[whUnpinned] <- equalsToAt(pkgs[whUnpinned])    # == version -> @version (exact pin)
   # <= version -> find highest satisfying version via pak::pkg_history() -> @version
-  pkgs <- lessThanToAt(pkgs)
+  pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned])
 
   # >= version: strip the constraint. Since Require already checked that the installed
   # version does NOT satisfy >=, installing the latest will always satisfy it.
