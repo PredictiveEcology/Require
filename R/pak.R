@@ -841,6 +841,20 @@ equalsToAt <- function(pkgs) {
   gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs)
 }
 
+# TRUE for a GitHub ref pinned to an explicit commit SHA (`owner/repo@<sha>`)
+# that the user has NOT already version-constrained or HEAD-flagged. Such a ref
+# means "exactly this commit", so Require treats it as an exact-version pin (see
+# pakDepsToPkgDT step 4b). Branch refs (`owner/repo@development`) are excluded --
+# they track the branch via the HEAD machinery -- as are `(HEAD)`-flagged refs
+# and refs already carrying a `(==/>=/<= ...)` spec. SHA detection: the whole
+# post-`@` token (after stripping any version spec) is 7-40 hex chars.
+isExplicitShaPin <- function(refs) {
+  isGH(refs) &
+    grepl("@[0-9a-fA-F]{7,40}$", trimVersionNumber(refs)) &
+    !grepl("\\(HEAD\\)", refs) &
+    !grepl("\\([[:space:]]*[<>=]", refs)
+}
+
 # Reduce a vector of pak refs to the bare package names that line up with
 # rownames(installed.packages()). Three things to strip:
 #   * "any::"  prefix on plain CRAN refs   (any::cli           -> cli)
@@ -2485,6 +2499,28 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
       matchIdx <- which(extractPkgName(user_pkgFN) == archivePkgNamesFromPak[.i])
       if (length(matchIdx))
         user_pkgFN[matchIdx] <- archiveRefsInPkgsForPak[.i]
+    }
+  }
+
+  # 4b. Treat a pinned GitHub commit (@<sha>) as an exact-version pin.
+  # The pak path is version-driven: whichToInstall only forces an install when a
+  # version constraint is violated, so a *bare* `owner/repo@<sha>` ref is a no-op
+  # whenever any version is already installed -- even though the user asked for
+  # that exact commit. Attach `(== <version pak resolved for that commit>)` so the
+  # commit's version drives the decision: install when the installed version
+  # differs, treat an equal installed version as satisfied (a same-version,
+  # different-commit case is not distinguished -- dev versions bump per commit).
+  # Only explicit commit SHAs qualify; branch refs (which track the branch via
+  # HEAD), `(HEAD)`-flagged refs, and refs the user already version-constrained
+  # are left untouched. Combined with the @sha + (== X) install-path fix, the
+  # implicit `(== X)` resolves and installs cleanly (no malformed @sha@X ref).
+  if (NROW(pak_result) && !is.null(pak_result$version) && !is.null(pak_result$package)) {
+    verMapSha <- setNames(as.character(pak_result$version), pak_result$package)
+    isShaPinned <- isExplicitShaPin(user_pkgFN)
+    for (.j in which(isShaPinned)) {
+      v <- verMapSha[extractPkgName(user_pkgFN[.j])]
+      if (!is.na(v) && nzchar(v))
+        user_pkgFN[.j] <- paste0(user_pkgFN[.j], " (== ", v, ")")
     }
   }
 

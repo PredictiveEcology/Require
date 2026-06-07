@@ -1790,3 +1790,27 @@ test_that("dedupInstallRefs handles a toInstall with no inequality column", {
   testthat::expect_equal(out$packageFullName,
                          "PredictiveEcology/SpaDES.tools@development")
 })
+
+# ---------------------------------------------------------------------------
+# A pinned GitHub commit (`owner/repo@<sha>`) is treated as an exact-version pin
+# under pak: pakDepsToPkgDT (step 4b) attaches `(== <pak-resolved-version>)` so
+# the commit's version drives whichToInstall (install when the installed version
+# differs; equal version is satisfied). isExplicitShaPin() decides which refs
+# qualify. Branch refs, (HEAD) refs, already-constrained refs, and non-GitHub
+# refs must NOT qualify.
+# ---------------------------------------------------------------------------
+test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
+  sha <- "63cf18a80efa5dcf40957d6f207fce55fa0fdc19"
+  qualifies <- Require:::isExplicitShaPin(c(
+    paste0("PredictiveEcology/reproducible@", sha),                 # 1 bare sha   -> TRUE
+    paste0("PredictiveEcology/reproducible@", sha, " (== 3.1.1.9036)"), # 2 == set -> FALSE
+    paste0("PredictiveEcology/reproducible@", sha, " (HEAD)"),      # 3 HEAD       -> FALSE
+    "PredictiveEcology/reproducible@development",                   # 4 branch     -> FALSE
+    "PredictiveEcology/reproducible@63cf18a8",                      # 5 abbrev sha -> TRUE
+    "PredictiveEcology/reproducible",                              # 6 no @       -> FALSE
+    "reproducible (>= 2.0.0)",                                     # 7 CRAN spec  -> FALSE
+    "qs"                                                          # 8 plain      -> FALSE
+  ))
+  testthat::expect_equal(qualifies,
+                         c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
+})
