@@ -1,4 +1,4 @@
-# Require 2.0.0.9022 (development version)
+# Require 2.0.0.9024 (development version)
 
 * Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
   *and* an exact version) silently no-op'ing when a different version was
@@ -9,6 +9,40 @@
   `@` pin; the version parenthetical is stripped by `trimVersionNumber()` and
   Require's post-install check verifies the version. The pinned commit now
   installs (downgrading if needed) as expected.
+
+# Require 2.0.0.9023 (development version)
+
+* Fix: a user-requested CRAN package could be installed *without its
+  dependencies* when pak's batch dependency solve was unsolvable. When a few
+  GitHub `Remotes` refs genuinely conflict (e.g. `quickPlot@development` ->
+  `tidyverse/ggplot2` vs a pinned `ggplot2`), pak's error reports many innocent
+  CRAN packages as `"X: dependency conflict"`. `pakDepsResolve()` strips those
+  CRAN refs from `pkgsForPak` to coax the batch solver, but the per-package
+  fallback then resolved only the *stripped* set -- so a stripped top-level
+  package (e.g. `googledrive`) still installed via `user_pkgFN` while its
+  transitive deps (e.g. `gargle`) were never resolved, leaving a broken
+  namespace (`loadNamespace("googledrive")` -> "there is no package called
+  'gargle'"). Two complementary fixes:
+    - `pakDepsResolve()`'s per-package fallback now resolves the **original,
+      unstripped** ref set (in isolation there are no cross-package conflicts,
+      so cascade casualties keep their own dependency subtrees).
+    - `pakDepsToPkgDT()` adds a closure guard: any user-requested CRAN package
+      absent from the resolved tree is resolved individually and merged, so its
+      dependencies enter the install plan even if a future code path drops it.
+  Regression tests added in `test-17usePak.R` (network-free, via mocked
+  `pak::pkg_deps()`).
+
+
+* `test-01packages_testthat.R` (issue 87): the pinned-SHA downgrade test now
+  drops the loaded/installed newer `reproducible` before each
+  `Install(<owner>/reproducible@<sha> (HEAD))`, so pak does a clean install
+  rather than an in-place downgrade. pak's build worker crashes
+  (`unzip_class`/processx) when re-packaging during an in-place update over a
+  loaded newer version; the same SHA installs cleanly into a fresh state (and
+  Require's serial-install fallback then recovers). Issue 87's intent -- a SHA
+  ref resolving to the commit's version (`2.0.2.9001`) rather than CRAN's
+  (`2.0.2`) -- is still exercised. The underlying pak crash is tracked
+  separately.
 
 # Require 2.0.0.9020 (development version)
 

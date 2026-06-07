@@ -1882,6 +1882,18 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
   # --- 4. Cache miss: run the full retry + fallback resolution ---
   pak_result <- NULL
 
+  # The batch retry loop below MUTATES `pkgsForPak`, dropping refs that pak
+  # reports as conflicting so the *batch* solver can converge. Those drops are
+  # only valid for the batch: the per-package fallback resolves each ref in
+  # ISOLATION, where cross-package conflicts cannot occur, so it must see the
+  # complete original ref set. Keep an untouched copy for that fallback.
+  # Without this, a CRAN ref pak flagged only as a cascade casualty of an
+  # unrelated unsolvable conflict (e.g. `googledrive: dependency conflict`
+  # triggered by a `quickPlot@development` Remotes clash) is dropped here, then
+  # still installed via `user_pkgFN` in pakDepsToPkgDT() -- but WITHOUT its own
+  # transitive deps (e.g. `gargle`), giving a half-installed, broken namespace.
+  pkgsForPakOrig <- pkgsForPak
+
   for (.pakDepsAttempt in 1:5) {
     pak_result_or_err <- tryCatch(
       list(result = pakCall(pak::pkg_deps(pkgsForPak, dependencies = wh), verbose), err = NULL),
@@ -2045,8 +2057,15 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
     messageVerbose("Require Note: pak's batch dependency resolution failed; ",
                    "switching to per-package resolution.",
                    verbose = verbose, verboseLevel = 1)
-    archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
-    nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
+    # Resolve the ORIGINAL ref set (not the conflict-stripped `pkgsForPak`): in
+    # isolation there are no cross-package conflicts, so every ref the user
+    # asked for -- including cascade casualties stripped during the batch retry
+    # -- gets its own dependency subtree resolved. `url::` archive refs that the
+    # retry loop *discovered* (and added to `pkgsForPak`) are still useful as
+    # supplements for archived transitive deps, so carry those forward too.
+    archiveRefs <- unique(c(grep("^url::", pkgsForPak,     value = TRUE),
+                            grep("^url::", pkgsForPakOrig, value = TRUE)))
+    nonArchivePkgs <- pkgsForPakOrig[!grepl("^url::", pkgsForPakOrig)]
     # Reset the per-package cache-hit counter so the summary below reports only
     # this loop's hits. pakPkgDepsCached() caches each ref independently, so a
     # repeat call with only a few changed refs re-resolves online just those.
@@ -2246,6 +2265,39 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
     messageVerbose("pak::pkg_deps: all strategies failed; using direct package list only.",
                    verbose = verbose, verboseLevel = 2)
     return(toPkgDTFull(packages))
+  }
+
+  # 1b. Closure guard for user-requested CRAN packages.
+  # Every package the user asked for must appear in the resolved tree, otherwise
+  # its transitive deps never enter the install plan while the package itself is
+  # still installed via `user_pkgFN` (step 4) -- the "googledrive installed
+  # without gargle" failure mode. A user package can be absent from `pak_result`
+  # when batch resolution dropped it as a cascade casualty of an *unrelated*
+  # unsolvable conflict (pak marks many innocent CRAN packages "dependency
+  # conflict" when a few GitHub Remotes refs clash; pakDepsResolve strips them to
+  # coax the batch solver). Resolve any missing user CRAN package individually --
+  # in isolation there are no cross-package conflicts -- and merge its subtree so
+  # its dependencies (e.g. gargle) become part of the plan. Scoped to plain CRAN
+  # refs: GitHub/url:: refs are never stripped by that handler.
+  userCRANrefs <- packages[!isGH(packages) & !grepl("::", packages) &
+                           !extractPkgName(packages) %in% .basePkgs]
+  if (length(userCRANrefs)) {
+    missingUser <- setdiff(unique(extractPkgName(userCRANrefs)), pak_result$package)
+    if (length(missingUser)) {
+      messageVerbose("Require/pak: ", length(missingUser), " user-requested package(s) ",
+                     "absent from batch resolution (cascade casualties of an unrelated ",
+                     "conflict); resolving their dependency subtrees individually: ",
+                     paste(missingUser, collapse = ", "),
+                     verbose = verbose, verboseLevel = 1)
+      missingRefs <- trimVersionNumber(
+        userCRANrefs[match(missingUser, extractPkgName(userCRANrefs))])
+      extra <- lapply(missingRefs, function(q)
+        tryCatch(pakPkgDepsCached(q, wh, getOption("repos"), verbose, purge, type = type),
+                 error = function(e) NULL))
+      extra <- extra[!vapply(extra, is.null, logical(1))]
+      if (length(extra))
+        pak_result <- rbindlist(c(list(pak_result), extra), fill = TRUE, use.names = TRUE)
+    }
   }
 
   # 2. Flatten all deps sub-tables to get the raw version requirements.

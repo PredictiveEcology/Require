@@ -15,8 +15,8 @@ Description: A single key function, 'Require' that makes rerun-tolerant
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2026-06-02
-Version: 2.0.0.9022
+Date: 2026-06-06
+Version: 2.0.0.9024
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
