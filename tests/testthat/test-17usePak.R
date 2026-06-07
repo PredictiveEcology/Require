@@ -1626,3 +1626,128 @@ test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
   testthat::expect_equal(qualifies,
                          c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
 })
+
+# ---------------------------------------------------------------------------
+# 18. Cascade-casualty regression (issue: googledrive installed without gargle)
+#
+# When a few GitHub Remotes refs make the BATCH dependency solve unsolvable,
+# pak reports a cascade of innocent CRAN packages as "dependency conflict".
+# pakDepsResolve strips those CRAN refs from `pkgsForPak` to coax the batch
+# solver -- but the per-package fallback must still resolve the ORIGINAL ref
+# set (in isolation there are no cross-package conflicts), otherwise a stripped
+# top-level package (e.g. googledrive) is later installed via `user_pkgFN`
+# WITHOUT its transitive deps (e.g. gargle): a half-installed, broken namespace.
+#
+# These tests are network-free: the batch pak::pkg_deps() call is mocked to
+# throw the real conflict error, and each single-ref call returns a small fake
+# dep tree. Cache writes are redirected to a tempdir via R_REQUIRE_CACHE.
+# ---------------------------------------------------------------------------
+
+# A pak::pkg_deps()-shaped result for a single package. googledrive carries a
+# transitive `gargle` dep (both as a row and in its `deps` sub-table).
+.fakePakTreeForTest <- function(refOrName) {
+  nm <- Require:::extractPkgName(refOrName)
+  emptyDeps <- function()
+    data.frame(ref = character(), type = character(), package = character(),
+               op = character(), version = character(), stringsAsFactors = FALSE)
+  if (identical(nm, "googledrive")) {
+    pkgs <- c("googledrive", "gargle")
+    deps <- list(
+      data.frame(ref = "gargle", type = "imports", package = "gargle",
+                 op = "", version = "", stringsAsFactors = FALSE),
+      emptyDeps())
+  } else {
+    pkgs <- nm
+    deps <- list(emptyDeps())
+  }
+  data.frame(package = pkgs, version = NA_character_, ref = pkgs,
+             direct = pkgs == nm, lib_status = "new",
+             deps = I(deps), stringsAsFactors = FALSE)
+}
+
+# The real attempt-1 error shape: cascade casualties as "dependency conflict",
+# plus the genuine cross-package GitHub conflict that the batch can't solve.
+.fakeBatchConflictErr <- paste(
+  "! error in pak subprocess",
+  "Caused by error: ",
+  "! Could not solve package dependencies:",
+  "* googledrive: dependency conflict",
+  "* data.table: dependency conflict",
+  "* PredictiveEcology/quickPlot@development: Conflicts with quickPlot",
+  sep = "\n")
+
+test_that("pakDepsResolve per-package fallback keeps a cascade-casualty's transitive deps (gargle)", {
+  skip_if_not_installed("pak")
+
+  # 2 GitHub refs remain after the CRAN casualties are stripped, so the batch
+  # still has length > 1 and keeps failing -> the per-package fallback fires.
+  pkgsForPak <- c("googledrive", "data.table",
+                  "PredictiveEcology/quickPlot@development",
+                  "PredictiveEcology/SpaDES.tools@development")
+  wh    <- NA
+  repos <- c(CRAN = "https://cloud.r-project.org")
+
+  mock_pkg_deps <- function(pkg, dependencies = NA, ...) {
+    if (length(pkg) > 1L) stop(.fakeBatchConflictErr, call. = FALSE) # batch unsolvable
+    .fakePakTreeForTest(pkg)                                          # single ref: resolves
+  }
+
+  res <- withr::with_envvar(c(R_REQUIRE_CACHE = tempfile("reqcache")), {
+    withr::with_options(list(Require.purge = TRUE, Require.offlineMode = FALSE), {
+      testthat::with_mocked_bindings(
+        Require:::pakDepsResolve(pkgsForPak, wh, repos, verbose = 0, purge = TRUE),
+        pkg_deps = mock_pkg_deps, .package = "pak")
+    })
+  })
+
+  testthat::expect_false(is.null(res))
+  # The casualty (googledrive) and its transitive dep (gargle) both survive.
+  testthat::expect_true("googledrive" %in% res$package)
+  testthat::expect_true("gargle" %in% res$package,
+    info = "gargle must survive: per-package fallback resolves the ORIGINAL ref set, not the conflict-stripped one")
+})
+
+test_that("pakDepsToPkgDT closure guard re-resolves a user CRAN pkg dropped from the tree (gargle lands in pkgDT)", {
+  skip_if_not_installed("pak")
+
+  # Simulate the batch-success-with-stripped-casualty path: the resolver returns
+  # a tree that does NOT contain googledrive (it was stripped), but googledrive
+  # is a user-requested CRAN package, so the guard must resolve it individually
+  # and bring its dep (gargle) into the plan.
+  packages <- c("googledrive", "data.table")
+
+  # pakDepsResolve returns a tree WITHOUT googledrive/gargle.
+  fake_resolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
+    data.frame(package = "data.table", version = "1.15.0", ref = "data.table",
+               direct = TRUE, lib_status = "new",
+               deps = I(list(data.frame(ref = character(), type = character(),
+                                        package = character(), op = character(),
+                                        version = character(),
+                                        stringsAsFactors = FALSE))),
+               stringsAsFactors = FALSE)
+  }
+  # The guard resolves the missing googledrive individually.
+  fake_pkgdepscached <- function(query, wh, repos, verbose, purge,
+                                 type = getOption("pkgType")) {
+    if (identical(Require:::extractPkgName(query), "googledrive"))
+      .fakePakTreeForTest("googledrive")
+    else NULL
+  }
+
+  pkgDT <- withr::with_envvar(c(R_REQUIRE_CACHE = tempfile("reqcache")), {
+    withr::with_options(list(Require.purge = TRUE), {
+      testthat::with_mocked_bindings(
+        pakDepsResolve   = fake_resolve,
+        pakPkgDepsCached = fake_pkgdepscached,
+        Require:::pakDepsToPkgDT(packages,
+                                 which = c("Imports", "Depends", "LinkingTo"),
+                                 libPaths = .libPaths(), standAlone = FALSE,
+                                 verbose = 0, purge = TRUE)
+      )
+    })
+  })
+
+  testthat::expect_true("gargle" %in% pkgDT$Package,
+    info = "closure guard must pull a dropped user CRAN package's transitive deps into the plan")
+})
