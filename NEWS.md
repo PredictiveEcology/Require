@@ -12,7 +12,15 @@
   path too, so the single parallel `pak::pak()` batch install proceeds. The
   GitHub ref wins; among duplicate CRAN rows the strictest version pin is kept.
 
-# Require 2.0.0.9023 (development version)
+* Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
+  *and* an exact version) silently no-op'ing when a different version was
+  already installed, then warning "pak resolved X but only Y is available as a
+  binary". The install path's `equalsToAt()` appended `@X` to the already-`@sha`
+  -pinned ref, producing a malformed `owner/repo@sha@X` ref pak could not
+  install. `equalsToAt()`/`lessThanToAt()` now skip refs that already carry an
+  `@` pin; the version parenthetical is stripped by `trimVersionNumber()` and
+  Require's post-install check verifies the version. The pinned commit now
+  installs (downgrading if needed) as expected.
 
 * Fix: a user-requested CRAN package could be installed *without its
   dependencies* when pak's batch dependency solve was unsolvable. When a few
