@@ -1,3 +1,16 @@
+# Require 2.0.0.9028 (development version)
+
+* New option `Require.noRemotes` (default `FALSE`). When `TRUE`, GitHub-style
+  specs (`account/repo@branch`) passed to `Require()`/`Install()` are rewritten
+  to their bare package name (any version constraint is preserved) and resolved
+  from `repos` (e.g., prebuilt binaries on `predictiveecology.r-universe.dev`)
+  instead of being cloned and built from GitHub source. This removes the need
+  for git authentication and a source-build toolchain (e.g., Rtools on Windows)
+  -- useful for workshops and binary-only setups. Because version constraints
+  are kept, `repos` must carry a version that satisfies them. See
+  `?RequireOptions`. (Flows through `SpaDES.project::setupProject()` via
+  `options = list(Require.noRemotes = TRUE)`.)
+
 # Require 2.0.0.9027 (development version)
 
 * A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
