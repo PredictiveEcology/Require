@@ -1814,3 +1814,32 @@ test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
   testthat::expect_equal(qualifies,
                          c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
 })
+
+# ---------------------------------------------------------------------------
+# Require.noRemotes must be part of the resolver cache key. noRemotes rewrites
+# GitHub specs to bare names that resolve from `repos` (no Remotes-following),
+# producing a structurally different dep tree than a GitHub-ref resolution
+# (which DOES follow Remotes). Without folding the flag into the key, a noRemotes
+# run could reuse a stale pre-noRemotes (GitHub-ref) resolution -> the install
+# fell back to slow per-ref GitHub source builds with `Conflicts with` errors.
+# Added only when TRUE, so noRemotes = FALSE keys are unchanged (back-compat).
+# ---------------------------------------------------------------------------
+test_that("pakDepsCacheKey folds in Require.noRemotes (and is back-compatible)", {
+  pk    <- c("LandR", "pemisc", "SpaDES.tools")
+  wh    <- c("Imports", "Depends", "LinkingTo")
+  repos <- c(CRAN = "https://cloud.r-project.org")
+
+  kFalse <- Require:::pakDepsCacheKey(pk, wh, repos, noRemotes = FALSE)
+  kTrue  <- Require:::pakDepsCacheKey(pk, wh, repos, noRemotes = TRUE)
+  testthat::expect_false(identical(kFalse, kTrue))   # distinct entries
+
+  # Back-compat: with the option FALSE (the default), the key must be byte-for-
+  # byte the pre-fix key (the noRemotes field is only added when TRUE).
+  withr::with_options(list(Require.noRemotes = FALSE), {
+    testthat::expect_identical(Require:::pakDepsCacheKey(pk, wh, repos), kFalse)
+  })
+  # The default arg reads the option.
+  withr::with_options(list(Require.noRemotes = TRUE), {
+    testthat::expect_identical(Require:::pakDepsCacheKey(pk, wh, repos), kTrue)
+  })
+})

@@ -1,3 +1,15 @@
+# Require 2.0.0.9029 (development version)
+
+* `Require.noRemotes` is now part of the pak resolver-cache key. `noRemotes`
+  rewrites `owner/repo@branch` specs to bare names that resolve from `repos`
+  (r-universe) and, crucially, repo resolution does NOT follow `Remotes:` --
+  whereas a GitHub-ref resolution does. The two produce structurally different
+  dep trees, so a `noRemotes` run must not reuse a pre-`noRemotes` (GitHub-ref)
+  resolution cached on disk. Previously it could, and the install then fell back
+  to slow one-at-a-time GitHub source builds with `Conflicts with` errors (pak
+  following each cached package's `Remotes:`). The flag is folded into the key
+  only when `TRUE`, so existing `noRemotes = FALSE` cache entries are unchanged.
+
 # Require 2.0.0.9028 (development version)
 
 * New option `Require.noRemotes` (default `FALSE`). When `TRUE`, GitHub-style

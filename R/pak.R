@@ -1783,7 +1783,8 @@ pakWhoNeeds <- function(pkg, pak_result = NULL) {
 .pakDepsCacheTTL <- 24 * 3600   # 24 hours default
 
 pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL,
-                            type = getOption("pkgType")) {
+                            type = getOption("pkgType"),
+                            noRemotes = isTRUE(getOption("Require.noRemotes", FALSE))) {
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   # coerce to character vectors: options(repos = list(...)) is a supported
@@ -1813,6 +1814,19 @@ pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL,
   # quietly install the wrong (latest) version.
   if (!is.null(userPkgs))
     payload$userPkgs <- sort(as.character(unlist(userPkgs, use.names = FALSE)))
+  # `noRemotes` (Require.noRemotes = TRUE) rewrites `owner/repo@branch` specs to
+  # bare names that resolve from `repos` (r-universe) instead of being cloned and
+  # built from GitHub source -- and crucially, repo resolution does NOT follow the
+  # `Remotes:` field, whereas a GitHub-ref resolution does. The two therefore
+  # produce structurally different dep trees (bare/standard refs vs `owner/repo`
+  # refs that drag in Remotes). pkgsForPak usually already differs between the two
+  # (stripped vs not), but fold the flag in explicitly so a noRemotes run can NEVER
+  # reuse a pre-noRemotes (GitHub-ref) cache entry -- the exact stale-reuse that
+  # made a noRemotes install fall back to slow per-ref GitHub source builds with
+  # `Conflicts with` errors. Added only when TRUE so existing (noRemotes = FALSE)
+  # cache keys are unchanged (back-compat), mirroring the `userPkgs` handling.
+  if (isTRUE(noRemotes))
+    payload$noRemotes <- TRUE
   saveRDS(payload, tmp, compress = FALSE)
   unname(tools::md5sum(tmp))
 }
