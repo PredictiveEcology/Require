@@ -338,6 +338,14 @@ Require <- function(packages,
   if (any(hasInitSlash))
     packages[hasInitSlash] <- gsub("\\\"", "", packages[hasInitSlash])
 
+  # noRemotes: rewrite GitHub specs (account/repo@branch) to bare names so they
+  # resolve from `repos` (e.g., r-universe binaries) rather than being cloned
+  # and built from GitHub source. Avoids git auth + Rtools for end users (e.g.,
+  # workshops). Version constraints are preserved, so `repos` must carry a
+  # version satisfying them. See ?RequireOptions.
+  if (isTRUE(getOption("Require.noRemotes", FALSE)))
+    packages <- stripGitHubToRepos(packages, verbose = verbose)
+
   # Proceed to evaluate install and load need if there are any packages
   packagesOrig <- packages
   if (NROW(packages)) {

@@ -111,6 +111,50 @@ extractPkgGitHub <- function(pkgs) {
   # unlist(lapply(strsplit(trimVersionNumber(pkgs), split = "/|@"), function(x) x[2]))
 }
 
+#' Strip GitHub locators so packages resolve from `repos`
+#'
+#' Rewrites GitHub-style specs (`account/repo@branch`) to their bare package
+#' name, preserving any version constraint. This lets `Require`/`Install`
+#' satisfy them from `repos` (e.g., r-universe binaries) instead of cloning and
+#' building from GitHub source -- avoiding the need for git authentication and
+#' Rtools. Plain (non-GitHub) specs are returned unchanged. Used internally when
+#' `getOption("Require.noRemotes")` is `TRUE`.
+#'
+#' @inheritParams extractPkgName
+#' @param verbose Numeric. Controls reporting of which specs were rewritten.
+#' @return A character vector the same length as `pkgs`, with GitHub locators
+#'   removed.
+#' @keywords internal
+#' @examples
+#' Require:::stripGitHubToRepos("PredictiveEcology/SpaDES.core@development (>= 3.0.3.9003)")
+#' # -> "SpaDES.core (>= 3.0.3.9003)"
+stripGitHubToRepos <- function(pkgs, verbose = getOption("Require.verbose", 1)) {
+  if (!length(pkgs)) {
+    return(pkgs)
+  }
+  isGH <- !is.na(extractPkgGitHub(trimVersionNumber(pkgs)))
+  if (!any(isGH)) {
+    return(pkgs)
+  }
+  nm <- extractPkgName(pkgs[isGH])
+  ver <- extractVersionNumber(pkgs[isGH])
+  hasVer <- !is.na(ver) & nzchar(ver)
+  rebuilt <- nm
+  if (any(hasVer)) {
+    ineq <- extractInequality(pkgs[isGH][hasVer])
+    rebuilt[hasVer] <- paste0(nm[hasVer], " (", ineq, " ", ver[hasVer], ")")
+  }
+  if (verbose >= 1) {
+    messageVerbose(
+      "Require.noRemotes: resolving from repos instead of GitHub:\n",
+      paste0("  ", pkgs[isGH], " -> ", rebuilt, collapse = "\n"),
+      verbose = verbose, verboseLevel = 1
+    )
+  }
+  pkgs[isGH] <- rebuilt
+  pkgs
+}
+
 #' Trim version number off a compound package name
 #'
 #' The resulting string(s) will have only name (including github.com repository if it exists).
