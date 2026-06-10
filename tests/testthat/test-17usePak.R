@@ -1965,3 +1965,32 @@ test_that("pakCall is failure-triggered: no proactive pin on success; retries on
   testthat::expect_error(Require:::pakCall(g(), verbose = 0), "solve package")
   testthat::expect_identical(m, 1L)
 })
+
+# ---------------------------------------------------------------------------
+# getCRANrepos must resolve the "@CRAN@" placeholder IN PLACE, preserving other
+# repos (e.g. an r-universe). Regression: previously, when "@CRAN@" was present
+# AND CRAN_REPO was set (RStudio's default state), it replaced the entire repos
+# vector with CRAN-only, silently dropping r-universe and breaking
+# Require.noRemotes installs of PredictiveEcology packages.
+# ---------------------------------------------------------------------------
+test_that("getCRANrepos preserves non-CRAN repos when resolving @CRAN@", {
+  oldRepos <- getOption("repos"); oldEnv <- Sys.getenv("CRAN_REPO", unset = NA)
+  on.exit({
+    options(repos = oldRepos)
+    if (is.na(oldEnv)) Sys.unsetenv("CRAN_REPO") else Sys.setenv(CRAN_REPO = oldEnv)
+  }, add = TRUE)
+
+  peUniv <- "https://predictiveecology.r-universe.dev"
+
+  # GEDET5 case: r-universe + an unnamed "@CRAN@" + CRAN_REPO set
+  Sys.setenv(CRAN_REPO = "https://cran.rstudio.com/")
+  options(repos = c(CRAN = "https://cloud.r-project.org", peUniv, "@CRAN@"))
+  invisible(getCRANrepos(ind = 1))
+  testthat::expect_true(any(peUniv == unname(getOption("repos"))))   # r-universe kept
+  testthat::expect_false(any("@CRAN@" == unname(getOption("repos")))) # placeholder resolved
+
+  # no @CRAN@ -> untouched
+  options(repos = c(CRAN = "https://cloud.r-project.org", peUniv))
+  invisible(getCRANrepos(ind = 1))
+  testthat::expect_true(any(peUniv == unname(getOption("repos"))))
+})

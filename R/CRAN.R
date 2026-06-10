@@ -24,7 +24,18 @@ getCRANrepos <- function(repos = NULL, ind) {
   if (isTRUE("@CRAN@" %in% repos)) {
     cranRepo <- Sys.getenv("CRAN_REPO")
     repos <- if (nzchar(cranRepo)) {
-      options("repos" = c("CRAN" = cranRepo))
+      # Resolve the "@CRAN@" placeholder(s) to `cranRepo` IN PLACE, preserving
+      # every other configured repo. The previous
+      # `options("repos" = c("CRAN" = cranRepo))` REPLACED the whole repos vector
+      # with CRAN-only, silently dropping an r-universe (e.g. RStudio's default
+      # repos is `c(CRAN = "@CRAN@")` and RStudio sets `CRAN_REPO`, so an
+      # `options(repos = unique(c(<r-universe>, getOption("repos"))))` set by the
+      # user was wiped here). That broke `Require.noRemotes` installs, which
+      # resolve PredictiveEcology packages from that r-universe. Mirrors the
+      # `reposNow[!hasAts]` handling below (which already preserves other repos).
+      reposNow <- getOption("repos")
+      reposNow[reposNow %in% "@CRAN@"] <- cranRepo
+      options(repos = reposNow)
       cranRepo
     } else {
       if (isInteractive() && missing(ind)) {
