@@ -1,5 +1,16 @@
 # Require 2.0.0.9029 (development version)
 
+* The "all packages already in pak's download cache" shortcut no longer routes
+  an **online** install into the bespoke offline installer (`pakOfflineInstall`).
+  That installer hands pak every dependency-tree node as a `pkg@version`
+  exact-pin, which self-conflicts in pak's resolver
+  (`openssl@2.4.2: Conflicts with openssl@2.4.2`) and collapses to a slow
+  one-at-a-time per-ref fallback -- very visible on large `noRemotes` installs.
+  The shortcut now fires only in genuine `offlineMode`; otherwise the install
+  goes through pak's own resolve+install (`pakInstallFiltered`), which already
+  uses pak's download cache, orders builds natively, and carries the retry /
+  error-handling catches -- and still falls back to the offline cache installer
+  if the network turns out to be down.
 * Fixed a `>=` / `>` user constraint failing to upgrade an already-installed
   but insufficient package. e.g. `Install("reproducible (>= 3.1.1.9054)")` kept
   the installed `3.1.1` even though `3.1.1.9054` was available
