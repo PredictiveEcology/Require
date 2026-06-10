@@ -14,6 +14,13 @@
 
 # Require 2.0.0.9034 (development version)
 
+* `getCRANrepos()` now also de-duplicates `getOption("repos")` (dropping
+  duplicate repo URLs, keeping the first occurrence to preserve names) in
+  addition to stripping the resolved `@CRAN@` placeholder, updating the global
+  `repos` option in place so downstream resolvers don't query the same repo
+  twice. Centralizes repo cleanup that previously lived in
+  `SpaDES.project::setupProject()`.
+
 * Resilience to the transient
   `cannot open URL 'http://bioconductor.org/config.yaml'` failure. pak/pkgcache
   fetch the Bioconductor config at startup, and the entire pak call dies when
@@ -109,8 +116,6 @@
   `?RequireOptions`. (Flows through `SpaDES.project::setupProject()` via
   `options = list(Require.noRemotes = TRUE)`.)
 
-# Require 2.0.0.9027 (development version)
-
 * A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
   exact-version pin under pak: it installs that exact commit even when a
   *different* version is already installed (previously a bare `@sha` was a no-op
@@ -121,8 +126,6 @@
   distinguished -- dev versions bump per commit). Only explicit commit SHAs
   qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
   carrying a version spec are unaffected.
-
-# Require 2.0.0.9026 (development version)
 
 * Performance: the offline (pak download-cache) install path no longer degrades
   to slow one-at-a-time installs when the resolved set contains a package as

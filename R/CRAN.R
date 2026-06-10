@@ -52,12 +52,14 @@ getCRANrepos <- function(repos = NULL, ind) {
       repos <- getCRANrepos(repos, 1)
     }
   }
+  # Clean up the global repos option: drop the "@CRAN@" placeholder (now
+  # resolved above) and any duplicate repo URLs so downstream resolvers don't
+  # query the same repo twice. Keep the first occurrence to preserve names.
   reposNow <- getOption("repos")
-  hasAts <- reposNow %in% "@CRAN@"
-  if (isTRUE(any(hasAts))) {
-    options(repos = reposNow[!hasAts])
+  keep <- !(reposNow %in% "@CRAN@") & !duplicated(unname(reposNow))
+  if (!all(keep)) {
+    options(repos = reposNow[keep])
   }
-
 
   return(repos)
 }
