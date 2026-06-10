@@ -1,3 +1,14 @@
+# Require 2.0.0.9031 (development version)
+
+* `Require()`/`Install()` now warn to restart R when a package is installed at a
+  version that satisfies the request but an OLDER, insufficient version is still
+  loaded in the session. This happens when a dependency (e.g. `reproducible`) is
+  pulled in via another package's `Imports` from a different library before the
+  satisfying version is installed -- R can't hot-swap a loaded namespace, so the
+  session keeps using the stale version (and `find.package()` returns its path)
+  until restart. Previously this was silent. (`flagRestartForLoadedInsufficient()`,
+  surfaced through the existing "Please restart R" warning.)
+
 # Require 2.0.0.9030 (development version)
 
 * Version bump only (no functional change): several `noRemotes`-related fixes
