@@ -1,4 +1,4 @@
-# Require 2.0.0.9035 (development version)
+# Require 2.0.0.9037 (development version)
 
 * The `identify-and-defer` install strategy now installs deferred build-failure
   culprits in **dependency order** and **retries** them. Previously, when both a
@@ -11,6 +11,19 @@
   package 'Y'" lines so X installs before Y, and (2) a retry pass re-attempts any
   still-missing culprit while progress is being made (a newly-installed
   dependency can unblock another dependent). (`orderRefsByMissingDepEdges()`.)
+
+* `Require.noRemotes = TRUE` now reliably follows **no** `Remotes:`. pak follows a
+  package's `Remotes:` field whenever it resolves that package from a GitHub /
+  source ref (pkgdepends' `resolve_from_description` → `resolve_ref_deps`
+  rewrites a dependency's ref to the matching `Remotes` entry, e.g.
+  `LandR` → `PredictiveEcology/LandR`) — there is no pkgdepends switch to turn
+  this off. A package resolved from a repository is immune (r-universe's
+  `PACKAGES` has no `Remotes` column). So under noRemotes the guarantee is simply
+  that no `account/repo[@ref]` ref reaches pak's resolver. `pakDepsToPkgDT()` now
+  re-applies `stripGitHubToRepos()` at its entry (in addition to the top-level
+  strip in `Require()`), so a GitHub ref can't slip through any caller/path and
+  cause a transitive dependency (e.g. `LandR` pulled by `LandR.CS`'s `Remotes`)
+  to be built from GitHub source instead of resolved from the configured repos.
 
 # Require 2.0.0.9034 (development version)
 
