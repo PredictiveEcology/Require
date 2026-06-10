@@ -1,3 +1,12 @@
+# Require 2.0.0.9028 (development version)
+
+* `getCRANrepos()` now also de-duplicates `getOption("repos")` (dropping
+  duplicate repo URLs, keeping the first occurrence to preserve names) in
+  addition to stripping the resolved `@CRAN@` placeholder, updating the global
+  `repos` option in place so downstream resolvers don't query the same repo
+  twice. Centralizes repo cleanup that previously lived in
+  `SpaDES.project::setupProject()`.
+
 # Require 2.0.0.9027 (development version)
 
 * A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
