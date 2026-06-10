@@ -1,3 +1,16 @@
+# Require 2.0.0.9033 (development version)
+
+* `getCRANrepos()` no longer drops other repositories when resolving the
+  `"@CRAN@"` placeholder. Previously, when `repos` contained `"@CRAN@"` **and**
+  the `CRAN_REPO` env var was set (RStudio's default state: `repos` is
+  `c(CRAN = "@CRAN@")` and RStudio sets `CRAN_REPO`), it replaced the entire
+  `repos` vector with CRAN-only — silently wiping an r-universe a user had added
+  via `options(repos = unique(c(<r-universe>, getOption("repos"))))`. That broke
+  `Require.noRemotes` installs of PredictiveEcology packages (LandR, pemisc, ...)
+  for RStudio users: the packages "could not be found" because their hosting
+  r-universe had been removed from `repos` mid-run. Now the `"@CRAN@"`
+  placeholder is resolved in place and every other repo is preserved.
+
 # Require 2.0.0.9031 (development version)
 
 * `Require()`/`Install()` now warn to restart R when a package is installed at a
