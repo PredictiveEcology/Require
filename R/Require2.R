@@ -491,9 +491,20 @@ Require <- function(packages,
           ## installed packages. Skip the shortcut when the user
           ## explicitly asked for `install = "force"` or set
           ## `purge = TRUE`; those signal "ignore the cache".
-          forceOnline <- identical(install, "force") || isTRUE(purge)
-          useCacheShortcut <- isTRUE(getOption("Require.offlineMode")) ||
-            (!forceOnline && allInPakCache(pkgDT))
+          # Use the bespoke offline cache-install shortcut (pakOfflineInstall) ONLY
+          # in genuine offline mode. It used to ALSO fire whenever every package was
+          # already in pak's download cache (allInPakCache) -- a "skip the metadata
+          # refresh" optimization -- but that routes a perfectly ONLINE install into
+          # the bespoke exact-pin batch, which hands pak every dep-tree node as a
+          # `pkg@version` ref and self-conflicts in pak's resolver
+          # ("openssl@2.4.2: Conflicts with openssl@2.4.2"), collapsing to the slow
+          # per-ref one-at-a-time fallback. When online, prefer pak's own
+          # resolve+install (pakInstallFiltered): it uses pak's download cache
+          # anyway, orders builds natively, and carries the retry/error-handling
+          # catches (pakRetryLoop, pakErrorHandling). pakOfflineInstall remains for
+          # true offlineMode, and pakInstallFiltered's recovery block below still
+          # falls back to it if the network turns out to be down.
+          useCacheShortcut <- isTRUE(getOption("Require.offlineMode"))
           if (useCacheShortcut) {
             if (!isTRUE(getOption("Require.offlineMode"))) {
               messageVerbose("All requested packages are in the pak ",
