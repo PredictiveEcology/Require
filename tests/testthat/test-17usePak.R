@@ -1994,3 +1994,31 @@ test_that("getCRANrepos preserves non-CRAN repos when resolving @CRAN@", {
   invisible(getCRANrepos(ind = 1))
   testthat::expect_true(any(peUniv == unname(getOption("repos"))))
 })
+
+# ---------------------------------------------------------------------------
+# orderRefsByMissingDepEdges: deferred build-failure culprits must install in
+# dependency order. When both a dependency and its dependent are deferred (e.g.
+# LandR + LandR.CS), the serial pass must build the dependency first, inferred
+# from pak's "dependency 'X' is not available for package 'Y'" lines.
+# ---------------------------------------------------------------------------
+test_that("orderRefsByMissingDepEdges puts a deferred dependency before its dependent", {
+  ord <- Require:::orderRefsByMissingDepEdges
+  pn  <- Require:::extractPkgName
+  refs <- c("ianmseddy/LandR.CS@development", "PredictiveEcology/LandR@development", "data.table")
+
+  # dependent listed before its dependency; edge from pak's (curly-quote) message
+  out <- ord(refs, "ERROR: dependency ‘LandR’ is not available for package ‘LandR.CS’")
+  testthat::expect_lt(which(pn(out) == "LandR"), which(pn(out) == "LandR.CS"))
+  testthat::expect_setequal(pn(out), pn(refs))                 # no ref dropped/duplicated
+
+  # straight-quote variant parses the same
+  out2 <- ord(refs, "dependency 'LandR' is not available for package 'LandR.CS'")
+  testthat::expect_identical(pn(out2), pn(out))
+
+  # no parseable edge -> order unchanged
+  testthat::expect_identical(ord(refs, "an unrelated message"), refs)
+  # edge whose dependency is not in the ref set -> ignored, order unchanged
+  testthat::expect_identical(
+    ord(c("a", "b"), "dependency ‘zzz’ is not available for package ‘a’"),
+    c("a", "b"))
+})
