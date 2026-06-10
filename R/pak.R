@@ -108,10 +108,32 @@ setBiocConfigEnvForPak <- function() {
   invisible(TRUE)
 }
 
+# TRUE iff an error (walking its `parent` cause chain) is pak/pkgcache failing to
+# fetch bioconductor.org/config.yaml. pak fetches that at startup to detect the
+# Bioc version and hard-fails the WHOLE call when bioc.org is unreachable, even
+# when no Bioconductor package was requested. Used by pakCall() to trigger the
+# one-shot bundled-config fallback.
+isBiocConfigFetchError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  txt <- character(0)
+  cur <- e
+  depth <- 0L
+  while (!is.null(cur) && depth < 10L) {
+    txt <- c(txt, tryCatch(conditionMessage(cur), error = function(x) ""))
+    cur <- cur$parent
+    depth <- depth + 1L
+  }
+  txt <- paste(txt, collapse = "\n")
+  grepl("bioconductor\\.org/config\\.yaml", txt, ignore.case = TRUE) ||
+    (grepl("config\\.yaml", txt, ignore.case = TRUE) &&
+       grepl("bioconductor", txt, ignore.case = TRUE))
+}
+
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
-  ## Resilience: stop pak/pkgcache reaching bioconductor.org/config.yaml on every
-  ## call (it kills the whole call when bioc.org is unreachable). Idempotent.
-  setBiocConfigEnvForPak()
+  ## Capture the pak call UNEVALUATED so we can re-run it if the first attempt
+  ## dies on the bioconductor.org/config.yaml fetch (see runWithBiocFallback).
+  exprSub <- substitute(expr)
+  pf <- parent.frame()
   ## Inline null-coalesce: `%||%` is base in R 4.4+ but not 4.3, and Require
   ## doesn't import it from rlang. Without this, pakCall errors on R 4.3
   ## (silently, since try() in callers swallows it), turning every pak
@@ -130,18 +152,38 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
     Sys.setenv(PKG_SYSREQS = "false", PKG_SYSREQS_SUDO = "false")
     options(pkg.sysreqs = FALSE, pkg.sysreqs_sudo = FALSE)
   }
+  ## Failure-triggered bioc resilience: run the pak call normally (so when
+  ## bioc.org is reachable, pak uses the real, current Bioconductor config). ONLY
+  ## if it dies on the bioc config fetch, point pkgcache at its bundled config
+  ## (no network) and retry ONCE. We never pre-empt the fetch globally, so we
+  ## don't freeze the Bioc version for users who don't hit the failure.
+  runWithBiocFallback <- function() {
+    tryCatch(
+      eval(exprSub, envir = pf),
+      error = function(e) {
+        if (isBiocConfigFetchError(e) && setBiocConfigEnvForPak()) {
+          messageVerbose(
+            "pak could not reach bioconductor.org/config.yaml; retrying with ",
+            "pkgcache's bundled Bioconductor config (offline, no network).",
+            verbose = verbose, verboseLevel = 1)
+          eval(exprSub, envir = pf)
+        } else {
+          stop(e)
+        }
+      })
+  }
   if (verbose <= -1L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
     .res <- NULL
-    utils::capture.output(.res <- suppressMessages(force(expr)), type = "output")
+    utils::capture.output(.res <- suppressMessages(runWithBiocFallback()), type = "output")
     .res
   } else if (verbose == 0L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
-    force(expr)
+    runWithBiocFallback()
   } else {
-    force(expr)
+    runWithBiocFallback()
   }
 }
 

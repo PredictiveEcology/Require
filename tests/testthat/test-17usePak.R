@@ -1914,3 +1914,54 @@ test_that("setBiocConfigEnvForPak uses bundled bioc config, idempotent, respects
   Require:::setBiocConfigEnvForPak()
   testthat::expect_identical(Sys.getenv("R_BIOC_VERSION"), "9.9")
 })
+
+# ---------------------------------------------------------------------------
+# The bioc-config resilience is FAILURE-TRIGGERED: pakCall() runs the pak call
+# normally (so the real Bioc config is used when bioc.org is reachable) and only
+# falls back to the bundled config + retries once when the call dies on the bioc
+# fetch. It must NOT pin the Bioc config pre-emptively on success.
+# ---------------------------------------------------------------------------
+test_that("isBiocConfigFetchError detects the bioc fetch error via the cause chain", {
+  e <- simpleError("error in pak subprocess")
+  e$parent <- simpleError("cannot open URL 'http://bioconductor.org/config.yaml'")
+  testthat::expect_true(Require:::isBiocConfigFetchError(e))
+  testthat::expect_false(Require:::isBiocConfigFetchError(simpleError("Could not solve package dependencies")))
+  testthat::expect_false(Require:::isBiocConfigFetchError(NULL))
+})
+
+test_that("pakCall is failure-triggered: no proactive pin on success; retries once on bioc error", {
+  old <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"), names = TRUE, unset = NA)
+  on.exit({
+    for (nm in names(old))
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(old[[nm]]), nm))
+  }, add = TRUE)
+
+  # success path must not set the bioc env
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  testthat::expect_identical(Require:::pakCall("ok", verbose = 0), "ok")
+  testthat::expect_false(nzchar(Sys.getenv("R_BIOC_VERSION")))
+
+  # bioc fetch error -> fall back + retry once
+  bf <- Require:::pakBiocFixture()
+  testthat::skip_if(is.na(bf$version) || !nzchar(bf$path), "pkgcache bioc fixture not found")
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  n <- 0L
+  f <- function() {
+    n <<- n + 1L
+    if (n == 1L) {
+      e <- simpleError("error in pak subprocess")
+      e$parent <- simpleError("cannot open URL 'http://bioconductor.org/config.yaml'")
+      stop(e)
+    }
+    "retried"
+  }
+  testthat::expect_identical(Require:::pakCall(f(), verbose = 0), "retried")
+  testthat::expect_identical(n, 2L)                              # exactly one retry
+  testthat::expect_true(nzchar(Sys.getenv("R_BIOC_VERSION")))    # env set only on fallback
+
+  # a non-bioc error propagates without retry
+  m <- 0L
+  g <- function() { m <<- m + 1L; stop("Could not solve package dependencies") }
+  testthat::expect_error(Require:::pakCall(g(), verbose = 0), "solve package")
+  testthat::expect_identical(m, 1L)
+})
