@@ -1,3 +1,17 @@
+# Require 2.0.0.9032 (development version)
+
+* Resilience to the transient
+  `cannot open URL 'http://bioconductor.org/config.yaml'` failure. pak/pkgcache
+  fetch the Bioconductor config at startup, and the entire pak call dies when
+  bioc.org is unreachable (network blip, firewall, bioc downtime). Require now
+  points pak at pkgcache's own bundled bioc config (`R_BIOC_CONFIG_URL` file://)
+  and pins `R_BIOC_VERSION` so it never reaches the network -- set at load and
+  before every Require pak call, only when unset (respects a user's explicit
+  values) and only when the bundled fixture is found. Note: a *direct*
+  `pak::pak(...)` call made before Require is loaded (e.g. the first line of a
+  bootstrap script) is outside Require's reach -- set `R_BIOC_VERSION` yourself
+  there, or in `.Rprofile`.
+
 # Require 2.0.0.9031 (development version)
 
 * `Require()`/`Install()` now warn to restart R when a package is installed at a

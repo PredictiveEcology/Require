@@ -1886,3 +1886,31 @@ test_that("flagRestartForLoadedInsufficient flags loaded-but-insufficient, leave
   testthat::expect_identical(
     Require:::flagRestartForLoadedInsufficient(d4)$installResult, "OK")
 })
+
+# ---------------------------------------------------------------------------
+# Resilience to the transient `cannot open URL 'http://bioconductor.org/config.yaml'`
+# failure: setBiocConfigEnvForPak() points pak/pkgcache at its own bundled bioc
+# config (file://) and pins R_BIOC_VERSION, so pak never reaches bioc.org. Only
+# sets unset env vars (respects the user), only when the bundled fixture exists.
+# ---------------------------------------------------------------------------
+test_that("setBiocConfigEnvForPak uses bundled bioc config, idempotent, respects user", {
+  skip_if_not_installed("pak")
+  old <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"), names = TRUE, unset = NA)
+  on.exit({
+    for (nm in names(old))
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(old[[nm]]), nm))
+  }, add = TRUE)
+
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  bf <- Require:::pakBiocFixture()
+  testthat::skip_if(is.na(bf$version) || !nzchar(bf$path), "pkgcache bioc fixture not found")
+
+  testthat::expect_true(Require:::setBiocConfigEnvForPak())                 # sets
+  testthat::expect_true(nzchar(Sys.getenv("R_BIOC_VERSION")))
+  testthat::expect_match(Sys.getenv("R_BIOC_CONFIG_URL"), "^file://")
+  testthat::expect_false(Require:::setBiocConfigEnvForPak())                # idempotent
+
+  Sys.setenv(R_BIOC_VERSION = "9.9", R_BIOC_CONFIG_URL = "file:///x")       # explicit user values
+  Require:::setBiocConfigEnvForPak()
+  testthat::expect_identical(Sys.getenv("R_BIOC_VERSION"), "9.9")
+})
