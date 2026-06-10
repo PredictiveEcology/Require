@@ -2689,8 +2689,8 @@ extractBuildFailures <- function(output) {
 orderRefsByMissingDepEdges <- function(refs, msgs) {
   if (length(refs) < 2L || !length(msgs) || !any(nzchar(msgs))) return(refs)
   clean <- gsub("\033\\[[0-9;]*m", "", paste(msgs, collapse = "\n"))
-  pat <- paste0("dependency [‘'\"]?([A-Za-z0-9._]+)[’'\"]? is not available ",
-                "for package [‘'\"]?([A-Za-z0-9._]+)")
+  pat <- paste0("dependency [\u2018'\"]?([A-Za-z0-9._]+)[\u2019'\"]? is not available ",
+                "for package [\u2018'\"]?([A-Za-z0-9._]+)")
   m <- regmatches(clean, gregexpr(pat, clean, perl = TRUE))[[1]]
   if (!length(m)) return(refs)
   dep <- sub(paste0(".*", pat, ".*"), "\\1", m, perl = TRUE)   # X (dependency)
