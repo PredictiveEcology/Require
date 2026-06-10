@@ -3272,8 +3272,31 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # <= version -> find highest satisfying version via pak::pkg_history() -> @version
   pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned])
 
-  # >= version: strip the constraint. Since Require already checked that the installed
-  # version does NOT satisfy >=, installing the latest will always satisfy it.
+  # >= / > version: pak has no native lower-bound ref form. The old approach
+  # stripped the constraint to a bare name and let `any::` + the install run
+  # below pick "the latest". But pak treats a directly-requested `any::pkg` ref
+  # with upgrade = FALSE as ALREADY SATISFIED by whatever version is installed
+  # -- so an installed-but-insufficient version is KEPT, not upgraded (e.g.
+  # `Install("reproducible (>= 3.1.1.9054)")` kept the installed 3.1.1 even
+  # though 3.1.1.9054 was available). Pin instead to the version pak resolved
+  # for this package (pakResolvedVersionMap, set by pakDepsToPkgDT): an exact
+  # `pkg@<version>` ref forces pak to install that version regardless of the
+  # upgrade flag, which is what `pak::pak("pkg")` does. The `@` also keeps the
+  # `any::` prefix off below (isCRANlike excludes `@`). Falls through to the
+  # plain strip when no resolved version is known (e.g. per-package fallback).
+  pakResolvedVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
+  if (!is.null(pakResolvedVerMap)) {
+    whGE <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) &
+            !grepl("@", pkgs) & !isGH(pkgs)
+    for (.k in which(whGE)) {
+      .nm <- extractPkgName(pkgs[.k])
+      .v  <- unname(pakResolvedVerMap[.nm])
+      if (!is.na(.v) && nzchar(.v)) pkgs[.k] <- paste0(.nm, "@", .v)
+    }
+  }
+
+  # >= version: strip any remaining (unresolved) constraint. Since Require already
+  # checked the installed version does NOT satisfy >=, installing the latest satisfies it.
   pkgs <- gsub("[[:space:]]*\\(>=[[:space:]]*[^)]+\\)", "", pkgs)
 
   # > version: same logic as >=

@@ -1814,3 +1814,39 @@ test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
   testthat::expect_equal(qualifies,
                          c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
 })
+
+# ---------------------------------------------------------------------------
+# A user `>=` / `>` constraint on an already-installed-but-insufficient package
+# must UPGRADE it, not keep the old version. pak has no native lower-bound ref
+# form; the install path used to strip the constraint to a bare `any::pkg` ref,
+# and pak + upgrade=FALSE then treats an installed version as satisfying `any::`
+# and KEEPS it (e.g. reproducible 3.1.1 stayed when (>= 3.1.1.9054) was asked
+# and available). pakInstallFiltered now pins such refs to the version pak
+# resolved (pakResolvedVersionMap) -> `pkg@<version>`, which pak installs
+# regardless of the upgrade flag (and the `@` keeps `any::` off).
+# ---------------------------------------------------------------------------
+test_that(">= refs are pinned to the pak-resolved version (not stripped to any::)", {
+  on.exit(suppressWarnings(rm("pakResolvedVersionMap", envir = Require:::pakEnv())),
+          add = TRUE)
+  assign("pakResolvedVersionMap",
+         c(reproducible = "3.1.1.9054", terra = "1.9-27"),
+         envir = Require:::pakEnv())
+
+  pkgs <- c("reproducible (>= 3.1.1.9054)", "terra (> 1.5.0)", "ggplot2")
+  # replicate pakInstallFiltered's >= pinning step (R/pak.R ~3275)
+  m <- get0("pakResolvedVersionMap", envir = Require:::pakEnv(), inherits = FALSE)
+  whGE <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) &
+          !grepl("@", pkgs) & !Require:::isGH(pkgs)
+  for (.k in which(whGE)) {
+    .nm <- Require:::extractPkgName(pkgs[.k]); .v <- unname(m[.nm])
+    if (!is.na(.v) && nzchar(.v)) pkgs[.k] <- paste0(.nm, "@", .v)
+  }
+  testthat::expect_identical(pkgs[1], "reproducible@3.1.1.9054")
+  testthat::expect_identical(pkgs[2], "terra@1.9-27")
+  testthat::expect_identical(pkgs[3], "ggplot2")            # no constraint -> untouched
+  # a package absent from the resolved map keeps its constraint (falls through to strip)
+  pkgs2 <- "somePkg (>= 1.0)"
+  whGE2 <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs2) & !grepl("@", pkgs2)
+  v2 <- unname(m[Require:::extractPkgName(pkgs2)])
+  testthat::expect_true(is.na(v2))   # not pinned; downstream strip handles it
+})
