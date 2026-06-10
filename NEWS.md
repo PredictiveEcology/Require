@@ -1,3 +1,22 @@
+# Require 2.0.0.9034 (development version)
+
+* Resilience to the transient
+  `cannot open URL 'http://bioconductor.org/config.yaml'` failure. pak/pkgcache
+  fetch the Bioconductor config at startup, and the entire pak call dies when
+  bioc.org is unreachable (network blip, firewall, bioc downtime) -- even when no
+  Bioconductor package was requested. This is **failure-triggered**: pak calls
+  run normally (so the real, current Bioc config is used whenever bioc.org is
+  reachable), and *only* when a call dies on that specific fetch does `pakCall()`
+  point pkgcache at its own bundled bioc config (`R_BIOC_CONFIG_URL` file:// +
+  `R_BIOC_VERSION`, set only when unset) and retry once. We deliberately do **not**
+  pin the Bioc config pre-emptively -- doing so would freeze the Bioc version
+  (to pkgcache's snapshot) for every user, including those who never hit the
+  failure and who actually use Bioconductor. The underlying hard-fail is a pak
+  bug (an optional config fetch should not abort the whole operation); this is a
+  local fallback until that is fixed upstream. Note: a *direct* `pak::pak(...)`
+  call made before Require is loaded (e.g. a bootstrap script's first line) is
+  outside Require's reach -- set `R_BIOC_VERSION` yourself there or in `.Rprofile`.
+
 # Require 2.0.0.9033 (development version)
 
 * `getCRANrepos()` no longer drops other repositories when resolving the

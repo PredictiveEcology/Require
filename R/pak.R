@@ -61,7 +61,79 @@ regexEscape <- function(x) {
   FALSE
 }
 
+# Locate pkgcache's bundled `bioc-config.yaml` fixture and its release_version.
+# pak/pkgcache fetch http://bioconductor.org/config.yaml at startup to detect the
+# Bioconductor version; when bioc.org is unreachable (network blip, firewall, bioc
+# downtime) the ENTIRE pak call dies with
+#   `cannot open URL 'http://bioconductor.org/config.yaml'`.
+# Returns list(version=<chr or NA>, path=<chr or "">). pkgcache usually lives inside
+# pak's private library, so the top-level system.file() returns "" -- fall back to
+# pak's library/.
+pakBiocFixture <- function() {
+  fixture <- tryCatch(system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
+                      error = function(e) "")
+  if (!nzchar(fixture)) {
+    pakDir <- tryCatch(find.package("pak"), error = function(e) "")
+    if (length(pakDir) && nzchar(pakDir)) {
+      cand <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
+      if (file.exists(cand)) fixture <- cand
+    }
+  }
+  version <- NA_character_
+  if (nzchar(fixture) && file.exists(fixture)) {
+    relLine <- grep("^release_version:", readLines(fixture, warn = FALSE), value = TRUE)[1L]
+    v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
+    if (length(v) && nzchar(v) && !is.na(v)) version <- v
+  }
+  list(version = version, path = fixture)
+}
+
+# Point pak/pkgcache at the bundled bioc config so it NEVER reaches
+# bioconductor.org. Sets R_BIOC_VERSION + R_BIOC_CONFIG_URL, but ONLY when they
+# are unset (respecting a user's explicit choice) AND only when the bundled
+# fixture is actually found (so we set the correct version + a working file://
+# URL rather than guessing). Idempotent and cheap -- safe to call on every pak
+# call. Persistent (no on.exit restore): the goal is session-wide resilience to
+# the transient bioc fetch failure.
+setBiocConfigEnvForPak <- function() {
+  haveVer <- nzchar(Sys.getenv("R_BIOC_VERSION"))
+  haveUrl <- nzchar(Sys.getenv("R_BIOC_CONFIG_URL"))
+  if (haveVer && haveUrl) return(invisible(FALSE))
+  bf <- pakBiocFixture()
+  if (is.na(bf$version) || !nzchar(bf$path) || !file.exists(bf$path))
+    return(invisible(FALSE))   # no fixture -> don't guess a (possibly wrong) version
+  if (!haveVer) Sys.setenv(R_BIOC_VERSION = bf$version)
+  if (!haveUrl)
+    Sys.setenv(R_BIOC_CONFIG_URL = paste0("file://", normalizePath(bf$path, winslash = "/")))
+  invisible(TRUE)
+}
+
+# TRUE iff an error (walking its `parent` cause chain) is pak/pkgcache failing to
+# fetch bioconductor.org/config.yaml. pak fetches that at startup to detect the
+# Bioc version and hard-fails the WHOLE call when bioc.org is unreachable, even
+# when no Bioconductor package was requested. Used by pakCall() to trigger the
+# one-shot bundled-config fallback.
+isBiocConfigFetchError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  txt <- character(0)
+  cur <- e
+  depth <- 0L
+  while (!is.null(cur) && depth < 10L) {
+    txt <- c(txt, tryCatch(conditionMessage(cur), error = function(x) ""))
+    cur <- cur$parent
+    depth <- depth + 1L
+  }
+  txt <- paste(txt, collapse = "\n")
+  grepl("bioconductor\\.org/config\\.yaml", txt, ignore.case = TRUE) ||
+    (grepl("config\\.yaml", txt, ignore.case = TRUE) &&
+       grepl("bioconductor", txt, ignore.case = TRUE))
+}
+
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
+  ## Capture the pak call UNEVALUATED so we can re-run it if the first attempt
+  ## dies on the bioconductor.org/config.yaml fetch (see runWithBiocFallback).
+  exprSub <- substitute(expr)
+  pf <- parent.frame()
   ## Inline null-coalesce: `%||%` is base in R 4.4+ but not 4.3, and Require
   ## doesn't import it from rlang. Without this, pakCall errors on R 4.3
   ## (silently, since try() in callers swallows it), turning every pak
@@ -80,18 +152,38 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
     Sys.setenv(PKG_SYSREQS = "false", PKG_SYSREQS_SUDO = "false")
     options(pkg.sysreqs = FALSE, pkg.sysreqs_sudo = FALSE)
   }
+  ## Failure-triggered bioc resilience: run the pak call normally (so when
+  ## bioc.org is reachable, pak uses the real, current Bioconductor config). ONLY
+  ## if it dies on the bioc config fetch, point pkgcache at its bundled config
+  ## (no network) and retry ONCE. We never pre-empt the fetch globally, so we
+  ## don't freeze the Bioc version for users who don't hit the failure.
+  runWithBiocFallback <- function() {
+    tryCatch(
+      eval(exprSub, envir = pf),
+      error = function(e) {
+        if (isBiocConfigFetchError(e) && setBiocConfigEnvForPak()) {
+          messageVerbose(
+            "pak could not reach bioconductor.org/config.yaml; retrying with ",
+            "pkgcache's bundled Bioconductor config (offline, no network).",
+            verbose = verbose, verboseLevel = 1)
+          eval(exprSub, envir = pf)
+        } else {
+          stop(e)
+        }
+      })
+  }
   if (verbose <= -1L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
     .res <- NULL
-    utils::capture.output(.res <- suppressMessages(force(expr)), type = "output")
+    utils::capture.output(.res <- suppressMessages(runWithBiocFallback()), type = "output")
     .res
   } else if (verbose == 0L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
-    force(expr)
+    runWithBiocFallback()
   } else {
-    force(expr)
+    runWithBiocFallback()
   }
 }
 
@@ -1150,26 +1242,12 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
                    paste(pkgsToInstall, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
 
-    ## Locate pkgcache's bioc-config.yaml fixture. pkgcache lives inside
-    ## pak's private library on most installs, so the top-level
-    ## system.file() lookup returns "" -- fall back to pak's library/.
-    biocFixture <- tryCatch(
-      system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
-      error = function(e) "")
-    if (!nzchar(biocFixture)) {
-      pakDir <- tryCatch(find.package("pak"), error = function(e) "")
-      if (length(pakDir) && nzchar(pakDir)) {
-        cand <- file.path(pakDir, "library", "pkgcache", "fixtures",
-                          "bioc-config.yaml")
-        if (file.exists(cand)) biocFixture <- cand
-      }
-    }
-    biocVer <- if (nzchar(biocFixture) && file.exists(biocFixture)) {
-      relLine <- grep("^release_version:", readLines(biocFixture, warn = FALSE),
-                      value = TRUE)[1L]
-      v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
-      if (length(v) && nzchar(v) && !is.na(v)) v else "3.22"
-    } else "3.22"
+    ## Locate pkgcache's bioc-config.yaml fixture (shared helper). Fall back to
+    ## "3.22" only here (the offline path needs *some* version even if pak's
+    ## fixture can't be found, since it must avoid the network entirely).
+    .bf <- pakBiocFixture()
+    biocFixture <- .bf$path
+    biocVer <- if (!is.na(.bf$version)) .bf$version else "3.22"
     envNms <- c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
                 "PKG_METADATA_UPDATE_AFTER")
     oldEnv <- Sys.getenv(envNms, names = TRUE, unset = NA)
