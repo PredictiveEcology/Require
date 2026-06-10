@@ -1,3 +1,15 @@
+# Require 2.0.0.9029 (development version)
+
+* Fixed a `>=` / `>` user constraint failing to upgrade an already-installed
+  but insufficient package. e.g. `Install("reproducible (>= 3.1.1.9054)")` kept
+  the installed `3.1.1` even though `3.1.1.9054` was available
+  (`pak::pak("reproducible")` upgraded it correctly). The install path stripped
+  the lower-bound constraint to a bare `any::pkg` ref, and pak + `upgrade = FALSE`
+  treats an installed version as already satisfying `any::pkg`, so it was kept.
+  Such refs are now pinned to the version pak resolved (`pkg@<version>`), which
+  pak installs regardless of the upgrade flag. Refs with no resolved version
+  known fall through to the previous strip behaviour.
+
 # Require 2.0.0.9028 (development version)
 
 * New option `Require.noRemotes` (default `FALSE`). When `TRUE`, GitHub-style
