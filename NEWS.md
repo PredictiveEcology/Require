@@ -13,7 +13,26 @@
   cause a transitive dependency (e.g. `LandR` pulled by `LandR.CS`'s `Remotes`)
   to be built from GitHub source instead of resolved from the configured repos.
 
+* The `identify-and-defer` install strategy now installs deferred build-failure
+  culprits in **dependency order** and **retries** them. Previously, when both a
+  dependency and its dependent were deferred (e.g. `LandR` and `LandR.CS`, where
+  `LandR.CS` Imports `LandR`), the final serial pass installed them in deferral
+  order, so the dependent could be built before its dependency and fail with
+  `dependency 'LandR' is not available for package 'LandR.CS'` — and was never
+  re-attempted once the dependency landed. Now: (1) deferred culprits are
+  topologically ordered using pak's own "dependency 'X' is not available for
+  package 'Y'" lines so X installs before Y, and (2) a retry pass re-attempts any
+  still-missing culprit while progress is being made (a newly-installed
+  dependency can unblock another dependent). (`orderRefsByMissingDepEdges()`.)
+
 # Require 2.0.0.9034 (development version)
+
+* `getCRANrepos()` now also de-duplicates `getOption("repos")` (dropping
+  duplicate repo URLs, keeping the first occurrence to preserve names) in
+  addition to stripping the resolved `@CRAN@` placeholder, updating the global
+  `repos` option in place so downstream resolvers don't query the same repo
+  twice. Centralizes repo cleanup that previously lived in
+  `SpaDES.project::setupProject()`.
 
 * Resilience to the transient
   `cannot open URL 'http://bioconductor.org/config.yaml'` failure. pak/pkgcache
@@ -110,8 +129,6 @@
   `?RequireOptions`. (Flows through `SpaDES.project::setupProject()` via
   `options = list(Require.noRemotes = TRUE)`.)
 
-# Require 2.0.0.9027 (development version)
-
 * A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
   exact-version pin under pak: it installs that exact commit even when a
   *different* version is already installed (previously a bare `@sha` was a no-op
@@ -122,8 +139,6 @@
   distinguished -- dev versions bump per commit). Only explicit commit SHAs
   qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
   carrying a version spec are unaffected.
-
-# Require 2.0.0.9026 (development version)
 
 * Performance: the offline (pak download-cache) install path no longer degrades
   to slow one-at-a-time installs when the resolved set contains a package as

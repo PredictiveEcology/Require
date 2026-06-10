@@ -2694,6 +2694,43 @@ extractBuildFailures <- function(output) {
   unique(sub("Failed to build\\s+", "", m, perl = TRUE))
 }
 
+# Reorder `refs` so that, for every "dependency 'X' is not available for package
+# 'Y'" build-error parseable from `msgs` whose BOTH ends are in `refs`, the
+# dependency X installs before the dependent Y. Used to order the deferred-culprit
+# serial install: when both a dependency (e.g. LandR) and its dependent (LandR.CS)
+# get deferred, the serial pass must not build LandR.CS first. Best-effort and
+# stable -- refs with no parseable edge keep their position; an unresolvable
+# cycle bails out keeping the remaining order (never drops a ref). Index-based so
+# duplicate bare names can't drop/duplicate a ref.
+orderRefsByMissingDepEdges <- function(refs, msgs) {
+  if (length(refs) < 2L || !length(msgs) || !any(nzchar(msgs))) return(refs)
+  clean <- gsub("\033\\[[0-9;]*m", "", paste(msgs, collapse = "\n"))
+  pat <- paste0("dependency [\u2018'\"]?([A-Za-z0-9._]+)[\u2019'\"]? is not available ",
+                "for package [\u2018'\"]?([A-Za-z0-9._]+)")
+  m <- regmatches(clean, gregexpr(pat, clean, perl = TRUE))[[1]]
+  if (!length(m)) return(refs)
+  dep <- sub(paste0(".*", pat, ".*"), "\\1", m, perl = TRUE)   # X (dependency)
+  pkg <- sub(paste0(".*", pat, ".*"), "\\2", m, perl = TRUE)   # Y (dependent)
+  nms <- extractPkgName(refs)
+  edges <- unique(data.frame(dep = dep, pkg = pkg, stringsAsFactors = FALSE))
+  edges <- edges[edges$dep %in% nms & edges$pkg %in% nms & edges$dep != edges$pkg, ,
+                 drop = FALSE]
+  if (!nrow(edges)) return(refs)
+  idx <- seq_along(refs)
+  ordered <- integer(0)
+  guard <- 0L
+  while (length(idx) && guard <= length(refs)) {
+    guard <- guard + 1L
+    remNms <- nms[idx]
+    ready <- !vapply(remNms, function(n) any(edges$dep[edges$pkg == n] %in% remNms),
+                     logical(1))
+    if (!any(ready)) { ordered <- c(ordered, idx); break }   # cycle -> keep rest as-is
+    ordered <- c(ordered, idx[ready])
+    idx <- idx[!ready]
+  }
+  refs[ordered]
+}
+
 # ---------------------------------------------------------------------------
 # Parse pak's "Missing N system packages" block. Returns a named character
 # vector: names = pkg the system dep is needed BY (e.g. "fs"), values = the
@@ -3819,12 +3856,43 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     # state from the failed plan(s), and each serial install benefits from
     # a clean subprocess (see pakResetSubprocess() comment).
     if (length(deferred)) {
+      # Order so a deferred dependency installs before a deferred dependent
+      # (e.g. LandR before LandR.CS). Without this, the serial pass could build a
+      # dependent before its dependency and hit a spurious
+      # "dependency 'X' is not available for package 'Y'" build-error.
+      deferred <- orderRefsByMissingDepEdges(deferred, allCapturedMsgs)
       messageVerbose(
         "identify-and-defer: installing ", length(deferred),
         " deferred culprit(s) one at a time",
         verbose = verbose, verboseLevel = 1)
       pakResetSubprocess()
       capturePak(pakSerialInstall(deferred, libPaths[1], repos, verbose))
+
+      # Retry pass: a culprit can still fail only because a dependency that is
+      # ALSO a deferred culprit had not yet been installed when it was attempted
+      # (an ordering we couldn't infer, or a dependency installed later in the
+      # same pass). Re-attempt the ones still missing while progress is being
+      # made -- each newly-installed dependency can unblock another dependent.
+      for (retry in seq_len(3L)) {
+        instNow <- tryCatch(
+          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+          error = function(e) character(0))
+        stillMissing <- deferred[!extractPkgName(deferred) %in% instNow]
+        if (!length(stillMissing)) break
+        messageVerbose(
+          "identify-and-defer: retry ", retry, " -- re-attempting ",
+          length(stillMissing), " still-missing culprit(s) now that their ",
+          "dependencies may be installed",
+          verbose = verbose, verboseLevel = 1)
+        pakResetSubprocess()
+        capturePak(pakSerialInstall(stillMissing, libPaths[1], repos, verbose))
+        instAfter <- tryCatch(
+          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+          error = function(e) character(0))
+        # No progress this pass (none of the still-missing got installed) -> stop.
+        if (sum(!extractPkgName(stillMissing) %in% instAfter) >= length(stillMissing))
+          break
+      }
     }
   }
 
