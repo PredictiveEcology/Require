@@ -1850,3 +1850,39 @@ test_that(">= refs are pinned to the pak-resolved version (not stripped to any::
   v2 <- unname(m[Require:::extractPkgName(pkgs2)])
   testthat::expect_true(is.na(v2))   # not pinned; downstream strip handles it
 })
+
+# ---------------------------------------------------------------------------
+# flagRestartForLoadedInsufficient: a package can be installed at a satisfying
+# version while an OLDER, insufficient version is still LOADED (e.g. a dep pulled
+# in via another package's Imports from a different library before the new
+# version was installed). R can't hot-swap a loaded namespace, so Require now
+# flags these so the "Please restart R" warning fires.
+# ---------------------------------------------------------------------------
+test_that("flagRestartForLoadedInsufficient flags loaded-but-insufficient, leaves others", {
+  loadedVer <- as.character(getNamespaceVersion("data.table"))  # data.table is loaded in tests
+  hi <- "9999.0.0"
+
+  # loaded data.table fails (>= 9999.0.0) but the on-disk Version meets it -> restart
+  d1 <- data.table::data.table(Package = "data.table", versionSpec = hi,
+                               inequality = ">=", Version = hi, installResult = "OK")
+  o1 <- Require:::flagRestartForLoadedInsufficient(d1)
+  testthat::expect_match(o1$installResult, "restart", fixed = TRUE)
+
+  # loaded version already satisfies -> untouched
+  d2 <- data.table::data.table(Package = "data.table", versionSpec = "0.0.1",
+                               inequality = ">=", Version = loadedVer, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d2)$installResult, "OK")
+
+  # package not loaded -> untouched
+  d3 <- data.table::data.table(Package = "notLoadedPkgXYZ", versionSpec = hi,
+                               inequality = ">=", Version = hi, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d3)$installResult, "OK")
+
+  # no constraint -> untouched (a bare loaded package is never "insufficient")
+  d4 <- data.table::data.table(Package = "data.table", versionSpec = NA_character_,
+                               inequality = NA_character_, Version = loadedVer, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d4)$installResult, "OK")
+})

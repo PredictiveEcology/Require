@@ -568,6 +568,7 @@ Require <- function(packages,
     }
 
     pkgDT <- needToRestartR(pkgDT)
+    pkgDT <- flagRestartForLoadedInsufficient(pkgDT)
     whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
     if  (length(whRestartNeeded)) {
       warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
@@ -4516,6 +4517,44 @@ clearErrorReadRDSFile <- function(mess, libPath = .libPaths()[1]) {
   }
 }
 
+
+# A package can end up installed at a version that satisfies the request while an
+# OLDER, insufficient version is still LOADED in the session -- e.g. a dependency
+# (reproducible) pulled in via another package's `Imports` from a different
+# library before the satisfying version was installed. R cannot hot-swap a loaded
+# namespace, so the session keeps using the stale version (and `find.package()`
+# returns its path) until R is restarted. Flag those rows with an installResult
+# containing "restart" so the existing "Please restart R" warning fires -- without
+# this, Require silently installs the new version and the user keeps running the
+# old one. Fires whenever the LOADED version fails the constraint but the on-disk
+# (installed) version meets it, regardless of whether the install happened this
+# call (covers a satisfying version already on disk from a prior run too).
+flagRestartForLoadedInsufficient <- function(pkgDT) {
+  if (!NROW(pkgDT) ||
+      !all(c("Package", "versionSpec", "inequality", "Version") %in% names(pkgDT)))
+    return(pkgDT)
+  loaded <- setdiff(loadedNamespaces(), .basePkgs)
+  if (!length(loaded)) return(pkgDT)
+  for (i in seq_len(NROW(pkgDT))) {
+    pkg <- pkgDT[["Package"]][i]
+    if (!pkg %in% loaded) next
+    vSpec <- pkgDT[["versionSpec"]][i]
+    ineq  <- pkgDT[["inequality"]][i]
+    if (is.na(vSpec) || !nzchar(vSpec) || is.na(ineq) || !nzchar(ineq)) next
+    loadedVer <- tryCatch(as.character(getNamespaceVersion(pkg)),
+                          error = function(e) NA_character_)
+    if (is.na(loadedVer) || !nzchar(loadedVer)) next
+    if (isTRUE(compareVersion2(loadedVer, vSpec, ineq))) next     # loaded already OK
+    instVer <- pkgDT[["Version"]][i]
+    if (!is.na(instVer) && nzchar(instVer) && !identical(loadedVer, instVer) &&
+        isTRUE(compareVersion2(instVer, vSpec, ineq))) {
+      set(pkgDT, i, "installResult",
+          paste0("Need to restart R (loaded ", loadedVer, " < required ",
+                 ineq, " ", vSpec, "; ", instVer, " installed)"))
+    }
+  }
+  pkgDT
+}
 
 needToRestartR <- function(pkgDT) {
   whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall
