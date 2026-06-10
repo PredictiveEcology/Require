@@ -1,3 +1,10 @@
+# Require 2.0.0.9030 (development version)
+
+* Version bump only (no functional change): several `noRemotes`-related fixes
+  (offline-shortcut gating, `>=` upgrade pinning) all landed at `2.0.0.9029`, so
+  installs already holding a `9029` would not pick up the merged build. Bumping
+  to `9030` forces r-universe to rebuild and lets `pak`/`Require` upgrade cleanly.
+
 # Require 2.0.0.9029 (development version)
 
 * The "all packages already in pak's download cache" shortcut no longer routes
