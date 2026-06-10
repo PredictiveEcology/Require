@@ -338,6 +338,14 @@ Require <- function(packages,
   if (any(hasInitSlash))
     packages[hasInitSlash] <- gsub("\\\"", "", packages[hasInitSlash])
 
+  # noRemotes: rewrite GitHub specs (account/repo@branch) to bare names so they
+  # resolve from `repos` (e.g., r-universe binaries) rather than being cloned
+  # and built from GitHub source. Avoids git auth + Rtools for end users (e.g.,
+  # workshops). Version constraints are preserved, so `repos` must carry a
+  # version satisfying them. See ?RequireOptions.
+  if (isTRUE(getOption("Require.noRemotes", FALSE)))
+    packages <- stripGitHubToRepos(packages, verbose = verbose)
+
   # Proceed to evaluate install and load need if there are any packages
   packagesOrig <- packages
   if (NROW(packages)) {
@@ -483,9 +491,20 @@ Require <- function(packages,
           ## installed packages. Skip the shortcut when the user
           ## explicitly asked for `install = "force"` or set
           ## `purge = TRUE`; those signal "ignore the cache".
-          forceOnline <- identical(install, "force") || isTRUE(purge)
-          useCacheShortcut <- isTRUE(getOption("Require.offlineMode")) ||
-            (!forceOnline && allInPakCache(pkgDT))
+          # Use the bespoke offline cache-install shortcut (pakOfflineInstall) ONLY
+          # in genuine offline mode. It used to ALSO fire whenever every package was
+          # already in pak's download cache (allInPakCache) -- a "skip the metadata
+          # refresh" optimization -- but that routes a perfectly ONLINE install into
+          # the bespoke exact-pin batch, which hands pak every dep-tree node as a
+          # `pkg@version` ref and self-conflicts in pak's resolver
+          # ("openssl@2.4.2: Conflicts with openssl@2.4.2"), collapsing to the slow
+          # per-ref one-at-a-time fallback. When online, prefer pak's own
+          # resolve+install (pakInstallFiltered): it uses pak's download cache
+          # anyway, orders builds natively, and carries the retry/error-handling
+          # catches (pakRetryLoop, pakErrorHandling). pakOfflineInstall remains for
+          # true offlineMode, and pakInstallFiltered's recovery block below still
+          # falls back to it if the network turns out to be down.
+          useCacheShortcut <- isTRUE(getOption("Require.offlineMode"))
           if (useCacheShortcut) {
             if (!isTRUE(getOption("Require.offlineMode"))) {
               messageVerbose("All requested packages are in the pak ",
@@ -549,6 +568,7 @@ Require <- function(packages,
     }
 
     pkgDT <- needToRestartR(pkgDT)
+    pkgDT <- flagRestartForLoadedInsufficient(pkgDT)
     whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
     if  (length(whRestartNeeded)) {
       warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
@@ -4497,6 +4517,44 @@ clearErrorReadRDSFile <- function(mess, libPath = .libPaths()[1]) {
   }
 }
 
+
+# A package can end up installed at a version that satisfies the request while an
+# OLDER, insufficient version is still LOADED in the session -- e.g. a dependency
+# (reproducible) pulled in via another package's `Imports` from a different
+# library before the satisfying version was installed. R cannot hot-swap a loaded
+# namespace, so the session keeps using the stale version (and `find.package()`
+# returns its path) until R is restarted. Flag those rows with an installResult
+# containing "restart" so the existing "Please restart R" warning fires -- without
+# this, Require silently installs the new version and the user keeps running the
+# old one. Fires whenever the LOADED version fails the constraint but the on-disk
+# (installed) version meets it, regardless of whether the install happened this
+# call (covers a satisfying version already on disk from a prior run too).
+flagRestartForLoadedInsufficient <- function(pkgDT) {
+  if (!NROW(pkgDT) ||
+      !all(c("Package", "versionSpec", "inequality", "Version") %in% names(pkgDT)))
+    return(pkgDT)
+  loaded <- setdiff(loadedNamespaces(), .basePkgs)
+  if (!length(loaded)) return(pkgDT)
+  for (i in seq_len(NROW(pkgDT))) {
+    pkg <- pkgDT[["Package"]][i]
+    if (!pkg %in% loaded) next
+    vSpec <- pkgDT[["versionSpec"]][i]
+    ineq  <- pkgDT[["inequality"]][i]
+    if (is.na(vSpec) || !nzchar(vSpec) || is.na(ineq) || !nzchar(ineq)) next
+    loadedVer <- tryCatch(as.character(getNamespaceVersion(pkg)),
+                          error = function(e) NA_character_)
+    if (is.na(loadedVer) || !nzchar(loadedVer)) next
+    if (isTRUE(compareVersion2(loadedVer, vSpec, ineq))) next     # loaded already OK
+    instVer <- pkgDT[["Version"]][i]
+    if (!is.na(instVer) && nzchar(instVer) && !identical(loadedVer, instVer) &&
+        isTRUE(compareVersion2(instVer, vSpec, ineq))) {
+      set(pkgDT, i, "installResult",
+          paste0("Need to restart R (loaded ", loadedVer, " < required ",
+                 ineq, " ", vSpec, "; ", instVer, " installed)"))
+    }
+  }
+  pkgDT
+}
 
 needToRestartR <- function(pkgDT) {
   whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall

@@ -48,6 +48,18 @@ there are repositories that offer binary packages builds for Linux (e.g.,
 RStudio Package Manager), the vector of package names indicated here will
 default to a standard CRAN repository, forcing a source install. See also
 \code{spatialPkgs} option, which does the same for spatial packages.}
+\item{\code{noRemotes}}{ Default: \code{FALSE}. If \code{TRUE}, GitHub-style specs
+(\code{account/repo@branch}) passed to \code{Require}/\code{Install} are rewritten to their
+bare package name (the version constraint, if any, is preserved). The
+packages are then resolved from \code{repos} (e.g., a CRAN-like or r-universe
+repository serving prebuilt binaries) instead of being cloned and built
+from GitHub source. This avoids the need for git authentication and a
+source-build toolchain (e.g., Rtools on Windows), which is useful for
+workshops and other binary-only setups. Because version constraints are
+kept, \code{repos} must provide a version that satisfies them, otherwise
+resolution will fail (rather than silently falling back to GitHub). Ensure
+the relevant repository (e.g., \code{predictiveecology.r-universe.dev}) is in
+\code{getOption("repos")}.}
 \item{\code{purge}}{Default: \code{FALSE}. If set to (almost) all internal caches used
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set

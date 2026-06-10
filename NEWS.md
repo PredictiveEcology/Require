@@ -1,4 +1,5 @@
-# Require 2.0.0.9028 (development version)
+
+# Require 2.0.0.9034 (development version)
 
 * `getCRANrepos()` now also de-duplicates `getOption("repos")` (dropping
   duplicate repo URLs, keeping the first occurrence to preserve names) in
@@ -7,7 +8,100 @@
   twice. Centralizes repo cleanup that previously lived in
   `SpaDES.project::setupProject()`.
 
-# Require 2.0.0.9027 (development version)
+* Resilience to the transient
+  `cannot open URL 'http://bioconductor.org/config.yaml'` failure. pak/pkgcache
+  fetch the Bioconductor config at startup, and the entire pak call dies when
+  bioc.org is unreachable (network blip, firewall, bioc downtime) -- even when no
+  Bioconductor package was requested. This is **failure-triggered**: pak calls
+  run normally (so the real, current Bioc config is used whenever bioc.org is
+  reachable), and *only* when a call dies on that specific fetch does `pakCall()`
+  point pkgcache at its own bundled bioc config (`R_BIOC_CONFIG_URL` file:// +
+  `R_BIOC_VERSION`, set only when unset) and retry once. We deliberately do **not**
+  pin the Bioc config pre-emptively -- doing so would freeze the Bioc version
+  (to pkgcache's snapshot) for every user, including those who never hit the
+  failure and who actually use Bioconductor. The underlying hard-fail is a pak
+  bug (an optional config fetch should not abort the whole operation); this is a
+  local fallback until that is fixed upstream. Note: a *direct* `pak::pak(...)`
+  call made before Require is loaded (e.g. a bootstrap script's first line) is
+  outside Require's reach -- set `R_BIOC_VERSION` yourself there or in `.Rprofile`.
+
+# Require 2.0.0.9033 (development version)
+
+* `getCRANrepos()` no longer drops other repositories when resolving the
+  `"@CRAN@"` placeholder. Previously, when `repos` contained `"@CRAN@"` **and**
+  the `CRAN_REPO` env var was set (RStudio's default state: `repos` is
+  `c(CRAN = "@CRAN@")` and RStudio sets `CRAN_REPO`), it replaced the entire
+  `repos` vector with CRAN-only — silently wiping an r-universe a user had added
+  via `options(repos = unique(c(<r-universe>, getOption("repos"))))`. That broke
+  `Require.noRemotes` installs of PredictiveEcology packages (LandR, pemisc, ...)
+  for RStudio users: the packages "could not be found" because their hosting
+  r-universe had been removed from `repos` mid-run. Now the `"@CRAN@"`
+  placeholder is resolved in place and every other repo is preserved.
+
+# Require 2.0.0.9031 (development version)
+
+* `Require()`/`Install()` now warn to restart R when a package is installed at a
+  version that satisfies the request but an OLDER, insufficient version is still
+  loaded in the session. This happens when a dependency (e.g. `reproducible`) is
+  pulled in via another package's `Imports` from a different library before the
+  satisfying version is installed -- R can't hot-swap a loaded namespace, so the
+  session keeps using the stale version (and `find.package()` returns its path)
+  until restart. Previously this was silent. (`flagRestartForLoadedInsufficient()`,
+  surfaced through the existing "Please restart R" warning.)
+
+# Require 2.0.0.9030 (development version)
+
+* Version bump only (no functional change): several `noRemotes`-related fixes
+  (offline-shortcut gating, `>=` upgrade pinning) all landed at `2.0.0.9029`, so
+  installs already holding a `9029` would not pick up the merged build. Bumping
+  to `9030` forces r-universe to rebuild and lets `pak`/`Require` upgrade cleanly.
+
+# Require 2.0.0.9029 (development version)
+
+* The "all packages already in pak's download cache" shortcut no longer routes
+  an **online** install into the bespoke offline installer (`pakOfflineInstall`).
+  That installer hands pak every dependency-tree node as a `pkg@version`
+  exact-pin, which self-conflicts in pak's resolver
+  (`openssl@2.4.2: Conflicts with openssl@2.4.2`) and collapses to a slow
+  one-at-a-time per-ref fallback -- very visible on large `noRemotes` installs.
+  The shortcut now fires only in genuine `offlineMode`; otherwise the install
+  goes through pak's own resolve+install (`pakInstallFiltered`), which already
+  uses pak's download cache, orders builds natively, and carries the retry /
+  error-handling catches -- and still falls back to the offline cache installer
+  if the network turns out to be down.
+* Fixed a `>=` / `>` user constraint failing to upgrade an already-installed
+  but insufficient package. e.g. `Install("reproducible (>= 3.1.1.9054)")` kept
+  the installed `3.1.1` even though `3.1.1.9054` was available
+  (`pak::pak("reproducible")` upgraded it correctly). The install path stripped
+  the lower-bound constraint to a bare `any::pkg` ref, and pak + `upgrade = FALSE`
+  treats an installed version as already satisfying `any::pkg`, so it was kept.
+  Such refs are now pinned to the version pak resolved (`pkg@<version>`), which
+  pak installs regardless of the upgrade flag. Refs with no resolved version
+  known fall through to the previous strip behaviour.
+* The "all packages already in pak's download cache" shortcut no longer routes
+  an **online** install into the bespoke offline installer (`pakOfflineInstall`).
+  That installer hands pak every dependency-tree node as a `pkg@version`
+  exact-pin, which self-conflicts in pak's resolver
+  (`openssl@2.4.2: Conflicts with openssl@2.4.2`) and collapses to a slow
+  one-at-a-time per-ref fallback -- very visible on large `noRemotes` installs.
+  The shortcut now fires only in genuine `offlineMode`; otherwise the install
+  goes through pak's own resolve+install (`pakInstallFiltered`), which already
+  uses pak's download cache, orders builds natively, and carries the retry /
+  error-handling catches -- and still falls back to the offline cache installer
+  if the network turns out to be down.
+
+# Require 2.0.0.9028 (development version)
+
+* New option `Require.noRemotes` (default `FALSE`). When `TRUE`, GitHub-style
+  specs (`account/repo@branch`) passed to `Require()`/`Install()` are rewritten
+  to their bare package name (any version constraint is preserved) and resolved
+  from `repos` (e.g., prebuilt binaries on `predictiveecology.r-universe.dev`)
+  instead of being cloned and built from GitHub source. This removes the need
+  for git authentication and a source-build toolchain (e.g., Rtools on Windows)
+  -- useful for workshops and binary-only setups. Because version constraints
+  are kept, `repos` must carry a version that satisfies them. See
+  `?RequireOptions`. (Flows through `SpaDES.project::setupProject()` via
+  `options = list(Require.noRemotes = TRUE)`.)
 
 * A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
   exact-version pin under pak: it installs that exact commit even when a
@@ -19,8 +113,6 @@
   distinguished -- dev versions bump per commit). Only explicit commit SHAs
   qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
   carrying a version spec are unaffected.
-
-# Require 2.0.0.9026 (development version)
 
 * Performance: the offline (pak download-cache) install path no longer degrades
   to slow one-at-a-time installs when the resolved set contains a package as

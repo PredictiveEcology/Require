@@ -64,3 +64,31 @@ test_that("test 1", {
   })
 
 })
+
+test_that("stripGitHubToRepos (Require.noRemotes)", {
+  # GitHub specs lose account + branch but keep the version constraint
+  testthat::expect_identical(
+    stripGitHubToRepos("PredictiveEcology/SpaDES.core@development (>= 3.0.3.9003)", verbose = -1),
+    "SpaDES.core (>= 3.0.3.9003)"
+  )
+  testthat::expect_identical(
+    stripGitHubToRepos("ianmseddy/LandR.CS@development", verbose = -1),
+    "LandR.CS"
+  )
+  # Plain (non-GitHub) specs are untouched, with or without a version
+  testthat::expect_identical(
+    stripGitHubToRepos(c("RCurl", "reproducible (>= 2.1.0)"), verbose = -1),
+    c("RCurl", "reproducible (>= 2.1.0)")
+  )
+  # Mixed vector: only the GitHub entries change
+  inSpecs <- c("RCurl", "PredictiveEcology/reproducible@development",
+               "SpaDES.tools (>= 1.0.0.9001)",
+               "PredictiveEcology/SpaDES.project@development (>= 0.0.8.9026)")
+  testthat::expect_identical(
+    stripGitHubToRepos(inSpecs, verbose = -1),
+    c("RCurl", "reproducible", "SpaDES.tools (>= 1.0.0.9001)",
+      "SpaDES.project (>= 0.0.8.9026)")
+  )
+  # Empty input is a no-op
+  testthat::expect_identical(stripGitHubToRepos(character(0), verbose = -1), character(0))
+})

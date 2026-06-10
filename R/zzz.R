@@ -58,6 +58,16 @@ envPkgCreate()
       options(pkg.sysreqs_sudo = FALSE)
   }
 
+  ## NOTE: we deliberately do NOT pre-emptively pin the Bioconductor config here.
+  ## pak/pkgcache fetch bioconductor.org/config.yaml at startup, and the whole
+  ## pak call dies when bioc.org is unreachable -- but globally pinning
+  ## R_BIOC_VERSION to pkgcache's bundled (snapshot) config would silently freeze
+  ## the Bioc version for *every* Require user, even those who never hit the
+  ## fetch failure and who actually use Bioconductor. Instead, pakCall() catches
+  ## that specific fetch error and retries ONCE with the bundled config -- so the
+  ## real, current Bioc config is used whenever bioc.org is reachable, and the
+  ## fallback kicks in only when it genuinely fails. See pakCall() / setBiocConfigEnvForPak().
+
   ## DELIBERATELY do NOT eagerly load pak here. Loading pak grabs a Windows
   ## DLL lock that prevents `ensurePakInProjectLib()` from later reinstalling
   ## pak in libPaths[1] when needed (e.g. when pak is missing from the

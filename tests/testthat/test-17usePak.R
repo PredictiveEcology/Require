@@ -1814,3 +1814,183 @@ test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
   testthat::expect_equal(qualifies,
                          c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
 })
+
+# ---------------------------------------------------------------------------
+# A user `>=` / `>` constraint on an already-installed-but-insufficient package
+# must UPGRADE it, not keep the old version. pak has no native lower-bound ref
+# form; the install path used to strip the constraint to a bare `any::pkg` ref,
+# and pak + upgrade=FALSE then treats an installed version as satisfying `any::`
+# and KEEPS it (e.g. reproducible 3.1.1 stayed when (>= 3.1.1.9054) was asked
+# and available). pakInstallFiltered now pins such refs to the version pak
+# resolved (pakResolvedVersionMap) -> `pkg@<version>`, which pak installs
+# regardless of the upgrade flag (and the `@` keeps `any::` off).
+# ---------------------------------------------------------------------------
+test_that(">= refs are pinned to the pak-resolved version (not stripped to any::)", {
+  on.exit(suppressWarnings(rm("pakResolvedVersionMap", envir = Require:::pakEnv())),
+          add = TRUE)
+  assign("pakResolvedVersionMap",
+         c(reproducible = "3.1.1.9054", terra = "1.9-27"),
+         envir = Require:::pakEnv())
+
+  pkgs <- c("reproducible (>= 3.1.1.9054)", "terra (> 1.5.0)", "ggplot2")
+  # replicate pakInstallFiltered's >= pinning step (R/pak.R ~3275)
+  m <- get0("pakResolvedVersionMap", envir = Require:::pakEnv(), inherits = FALSE)
+  whGE <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) &
+          !grepl("@", pkgs) & !Require:::isGH(pkgs)
+  for (.k in which(whGE)) {
+    .nm <- Require:::extractPkgName(pkgs[.k]); .v <- unname(m[.nm])
+    if (!is.na(.v) && nzchar(.v)) pkgs[.k] <- paste0(.nm, "@", .v)
+  }
+  testthat::expect_identical(pkgs[1], "reproducible@3.1.1.9054")
+  testthat::expect_identical(pkgs[2], "terra@1.9-27")
+  testthat::expect_identical(pkgs[3], "ggplot2")            # no constraint -> untouched
+  # a package absent from the resolved map keeps its constraint (falls through to strip)
+  pkgs2 <- "somePkg (>= 1.0)"
+  whGE2 <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs2) & !grepl("@", pkgs2)
+  v2 <- unname(m[Require:::extractPkgName(pkgs2)])
+  testthat::expect_true(is.na(v2))   # not pinned; downstream strip handles it
+})
+
+# ---------------------------------------------------------------------------
+# flagRestartForLoadedInsufficient: a package can be installed at a satisfying
+# version while an OLDER, insufficient version is still LOADED (e.g. a dep pulled
+# in via another package's Imports from a different library before the new
+# version was installed). R can't hot-swap a loaded namespace, so Require now
+# flags these so the "Please restart R" warning fires.
+# ---------------------------------------------------------------------------
+test_that("flagRestartForLoadedInsufficient flags loaded-but-insufficient, leaves others", {
+  loadedVer <- as.character(getNamespaceVersion("data.table"))  # data.table is loaded in tests
+  hi <- "9999.0.0"
+
+  # loaded data.table fails (>= 9999.0.0) but the on-disk Version meets it -> restart
+  d1 <- data.table::data.table(Package = "data.table", versionSpec = hi,
+                               inequality = ">=", Version = hi, installResult = "OK")
+  o1 <- Require:::flagRestartForLoadedInsufficient(d1)
+  testthat::expect_match(o1$installResult, "restart", fixed = TRUE)
+
+  # loaded version already satisfies -> untouched
+  d2 <- data.table::data.table(Package = "data.table", versionSpec = "0.0.1",
+                               inequality = ">=", Version = loadedVer, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d2)$installResult, "OK")
+
+  # package not loaded -> untouched
+  d3 <- data.table::data.table(Package = "notLoadedPkgXYZ", versionSpec = hi,
+                               inequality = ">=", Version = hi, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d3)$installResult, "OK")
+
+  # no constraint -> untouched (a bare loaded package is never "insufficient")
+  d4 <- data.table::data.table(Package = "data.table", versionSpec = NA_character_,
+                               inequality = NA_character_, Version = loadedVer, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d4)$installResult, "OK")
+})
+
+# ---------------------------------------------------------------------------
+# Resilience to the transient `cannot open URL 'http://bioconductor.org/config.yaml'`
+# failure: setBiocConfigEnvForPak() points pak/pkgcache at its own bundled bioc
+# config (file://) and pins R_BIOC_VERSION, so pak never reaches bioc.org. Only
+# sets unset env vars (respects the user), only when the bundled fixture exists.
+# ---------------------------------------------------------------------------
+test_that("setBiocConfigEnvForPak uses bundled bioc config, idempotent, respects user", {
+  skip_if_not_installed("pak")
+  old <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"), names = TRUE, unset = NA)
+  on.exit({
+    for (nm in names(old))
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(old[[nm]]), nm))
+  }, add = TRUE)
+
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  bf <- Require:::pakBiocFixture()
+  testthat::skip_if(is.na(bf$version) || !nzchar(bf$path), "pkgcache bioc fixture not found")
+
+  testthat::expect_true(Require:::setBiocConfigEnvForPak())                 # sets
+  testthat::expect_true(nzchar(Sys.getenv("R_BIOC_VERSION")))
+  testthat::expect_match(Sys.getenv("R_BIOC_CONFIG_URL"), "^file://")
+  testthat::expect_false(Require:::setBiocConfigEnvForPak())                # idempotent
+
+  Sys.setenv(R_BIOC_VERSION = "9.9", R_BIOC_CONFIG_URL = "file:///x")       # explicit user values
+  Require:::setBiocConfigEnvForPak()
+  testthat::expect_identical(Sys.getenv("R_BIOC_VERSION"), "9.9")
+})
+
+# ---------------------------------------------------------------------------
+# The bioc-config resilience is FAILURE-TRIGGERED: pakCall() runs the pak call
+# normally (so the real Bioc config is used when bioc.org is reachable) and only
+# falls back to the bundled config + retries once when the call dies on the bioc
+# fetch. It must NOT pin the Bioc config pre-emptively on success.
+# ---------------------------------------------------------------------------
+test_that("isBiocConfigFetchError detects the bioc fetch error via the cause chain", {
+  e <- simpleError("error in pak subprocess")
+  e$parent <- simpleError("cannot open URL 'http://bioconductor.org/config.yaml'")
+  testthat::expect_true(Require:::isBiocConfigFetchError(e))
+  testthat::expect_false(Require:::isBiocConfigFetchError(simpleError("Could not solve package dependencies")))
+  testthat::expect_false(Require:::isBiocConfigFetchError(NULL))
+})
+
+test_that("pakCall is failure-triggered: no proactive pin on success; retries once on bioc error", {
+  old <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"), names = TRUE, unset = NA)
+  on.exit({
+    for (nm in names(old))
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(old[[nm]]), nm))
+  }, add = TRUE)
+
+  # success path must not set the bioc env
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  testthat::expect_identical(Require:::pakCall("ok", verbose = 0), "ok")
+  testthat::expect_false(nzchar(Sys.getenv("R_BIOC_VERSION")))
+
+  # bioc fetch error -> fall back + retry once
+  bf <- Require:::pakBiocFixture()
+  testthat::skip_if(is.na(bf$version) || !nzchar(bf$path), "pkgcache bioc fixture not found")
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  n <- 0L
+  f <- function() {
+    n <<- n + 1L
+    if (n == 1L) {
+      e <- simpleError("error in pak subprocess")
+      e$parent <- simpleError("cannot open URL 'http://bioconductor.org/config.yaml'")
+      stop(e)
+    }
+    "retried"
+  }
+  testthat::expect_identical(Require:::pakCall(f(), verbose = 0), "retried")
+  testthat::expect_identical(n, 2L)                              # exactly one retry
+  testthat::expect_true(nzchar(Sys.getenv("R_BIOC_VERSION")))    # env set only on fallback
+
+  # a non-bioc error propagates without retry
+  m <- 0L
+  g <- function() { m <<- m + 1L; stop("Could not solve package dependencies") }
+  testthat::expect_error(Require:::pakCall(g(), verbose = 0), "solve package")
+  testthat::expect_identical(m, 1L)
+})
+
+# ---------------------------------------------------------------------------
+# getCRANrepos must resolve the "@CRAN@" placeholder IN PLACE, preserving other
+# repos (e.g. an r-universe). Regression: previously, when "@CRAN@" was present
+# AND CRAN_REPO was set (RStudio's default state), it replaced the entire repos
+# vector with CRAN-only, silently dropping r-universe and breaking
+# Require.noRemotes installs of PredictiveEcology packages.
+# ---------------------------------------------------------------------------
+test_that("getCRANrepos preserves non-CRAN repos when resolving @CRAN@", {
+  oldRepos <- getOption("repos"); oldEnv <- Sys.getenv("CRAN_REPO", unset = NA)
+  on.exit({
+    options(repos = oldRepos)
+    if (is.na(oldEnv)) Sys.unsetenv("CRAN_REPO") else Sys.setenv(CRAN_REPO = oldEnv)
+  }, add = TRUE)
+
+  peUniv <- "https://predictiveecology.r-universe.dev"
+
+  # GEDET5 case: r-universe + an unnamed "@CRAN@" + CRAN_REPO set
+  Sys.setenv(CRAN_REPO = "https://cran.rstudio.com/")
+  options(repos = c(CRAN = "https://cloud.r-project.org", peUniv, "@CRAN@"))
+  invisible(getCRANrepos(ind = 1))
+  testthat::expect_true(any(peUniv == unname(getOption("repos"))))   # r-universe kept
+  testthat::expect_false(any("@CRAN@" == unname(getOption("repos")))) # placeholder resolved
+
+  # no @CRAN@ -> untouched
+  options(repos = c(CRAN = "https://cloud.r-project.org", peUniv))
+  invisible(getCRANrepos(ind = 1))
+  testthat::expect_true(any(peUniv == unname(getOption("repos"))))
+})
