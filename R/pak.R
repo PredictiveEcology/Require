@@ -2295,6 +2295,22 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
          conditionMessage(pakLoad), ")", call. = FALSE)
   }
 
+  # Defense-in-depth for Require.noRemotes: ensure NO GitHub ref reaches pak's
+  # resolver. pak follows a package's `Remotes:` field ONLY when it resolves that
+  # package from a GitHub/source ref (pkgdepends' resolve_from_description scans
+  # the DESCRIPTION and resolve_ref_deps UNCONDITIONALLY rewrites a dependency's
+  # ref to the matching Remotes entry, e.g. `LandR` -> `PredictiveEcology/LandR`).
+  # A bare repo ref is immune -- r-universe's PACKAGES carries no `Remotes`
+  # column, so a bare `LandR.CS` resolves `LandR` as a `standard` repo ref. There
+  # is no pkgdepends toggle to disable Remotes-following, so the only guarantee
+  # that noRemotes means "resolve from repos, follow no Remotes" is to ensure no
+  # `account/repo[@ref]` ref reaches this resolver. The top-level strip in
+  # Require() (stripGitHubToRepos) normally does this; re-apply it here so it
+  # holds for ANY caller/path into pakDepsToPkgDT. No-op (and silent) once the
+  # refs are already bare.
+  if (isTRUE(getOption("Require.noRemotes", FALSE)))
+    packages <- stripGitHubToRepos(packages, verbose = verbose)
+
   # Honour an explicit type = "source": pin pak to source-only resolution for
   # the duration of this call (covers the nested pakDepsResolve/pak::pkg_deps).
   oldPlatforms <- forcePakSourceIfRequested(type)
