@@ -1,3 +1,17 @@
+# Require 2.0.0.9035 (development version)
+
+* The `identify-and-defer` install strategy now installs deferred build-failure
+  culprits in **dependency order** and **retries** them. Previously, when both a
+  dependency and its dependent were deferred (e.g. `LandR` and `LandR.CS`, where
+  `LandR.CS` Imports `LandR`), the final serial pass installed them in deferral
+  order, so the dependent could be built before its dependency and fail with
+  `dependency 'LandR' is not available for package 'LandR.CS'` — and was never
+  re-attempted once the dependency landed. Now: (1) deferred culprits are
+  topologically ordered using pak's own "dependency 'X' is not available for
+  package 'Y'" lines so X installs before Y, and (2) a retry pass re-attempts any
+  still-missing culprit while progress is being made (a newly-installed
+  dependency can unblock another dependent). (`orderRefsByMissingDepEdges()`.)
+
 # Require 2.0.0.9034 (development version)
 
 * Resilience to the transient
