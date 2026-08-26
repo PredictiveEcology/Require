@@ -1912,7 +1912,32 @@ masterOrMainFromGitRefs <- function(gitRefsSplit2) {
   br
 }
 
+#' Find a GitHub token, from the git credential store or the environment
+#'
+#' `gitcreds::gitcreds_get()` reads the *git credential store* only; it does not
+#' consult `GITHUB_PAT` or `GITHUB_TOKEN`. CI runners routinely set the
+#' environment variable and configure no credential helper, so relying on
+#' gitcreds alone left API calls unauthenticated and subject to GitHub's
+#' 60-request/hour per-IP limit -- which surfaces as intermittent HTTP 403s
+#' spread across whichever job happens to exhaust the quota.
+#'
+#' The credential store still wins when it has something, so behaviour on a
+#' developer machine is unchanged; the environment is only a fallback.
+#'
+#' @return The `"token <pat>"` string [GETWauthThenNonAuth()] expects, or `NULL`.
+#' @keywords internal
+#' @rdname getGitCredsToken
 getGitCredsToken <- function() {
+  token <- gitcredsToken()
+  if (is.null(token)) {
+    token <- envToken()
+  }
+  token
+}
+
+## Kept as its own function so tests can drive the "no credential store" case
+## without mocking another package's bindings.
+gitcredsToken <- function() {
   token <- tryCatch(
     gitcreds::gitcreds_get(use_cache = FALSE),
     error = function(e) NULL
@@ -1921,6 +1946,14 @@ getGitCredsToken <- function() {
     token <- paste0("token ", token$password)
   }
   token
+}
+
+envToken <- function() {
+  pat <- Sys.getenv("GITHUB_PAT", unset = "")
+  if (!nzchar(pat)) {
+    pat <- Sys.getenv("GITHUB_TOKEN", unset = "")
+  }
+  if (nzchar(pat)) paste0("token ", pat) else NULL
 }
 
 
