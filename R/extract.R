@@ -5,6 +5,7 @@
 #' @param pkgs A character string vector of packages with or without GitHub path or versions
 #' @return Just the package names without extraneous info.
 #' @seealso [trimVersionNumber()]
+#' @family version specifications
 #' @export
 #' @rdname extractPkgName
 #' @examples
@@ -163,6 +164,7 @@ stripGitHubToRepos <- function(pkgs, verbose = getOption("Require.verbose", 1)) 
 #'
 #' @rdname trimVersionNumber
 #' @seealso [extractPkgName()]
+#' @family version specifications
 #' @export
 #' @examples
 #' trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")

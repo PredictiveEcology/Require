@@ -23,6 +23,7 @@ utils::globalVariables(c(
 #' @return
 #' `parseGitHub` returns a `data.table` with added columns.
 #'
+#' @family version specifications
 #' @export
 #' @rdname GitHubTools
 #' @param pkgDT A pkgDT data.table.
@@ -1855,6 +1856,27 @@ rmEmptyFiles <- function(files, minSize = 100) {
 }
 
 
+#' GET a URL with a GitHub token, falling back to an unauthenticated request
+#'
+#' Signs the request with `httr::add_headers(Authorization = token)` when a
+#' token is supplied, and retries without credentials if GitHub rejects them or
+#' returns a 404. `token` must carry the `"token "` prefix that
+#' [getGitCredsToken()] produces -- a bare PAT authenticates nothing.
+#'
+#' Exported for the SpaDES packages, which query the GitHub API for module
+#' repositories and need the same authentication behaviour as `Require`. Not
+#' part of the advertised API.
+#'
+#' @param url The URL to GET.
+#' @param token A GitHub token of the form `"token <pat>"`, or `NULL` for an
+#'   unauthenticated request.
+#' @param verbose Numeric or logical, controlling messaging verbosity.
+#'
+#' @return The `httr` response object.
+#'
+#' @export
+#' @keywords internal
+#' @rdname GETWauthThenNonAuth
 GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
   if (is.null(token)) {
     a <- httr::GET(url)
@@ -1912,7 +1934,36 @@ masterOrMainFromGitRefs <- function(gitRefsSplit2) {
   br
 }
 
+#' Find a GitHub token, from the git credential store or the environment
+#'
+#' `gitcreds::gitcreds_get()` reads the *git credential store* only; it does not
+#' consult `GITHUB_PAT` or `GITHUB_TOKEN`. CI runners routinely set the
+#' environment variable and configure no credential helper, so relying on
+#' gitcreds alone left API calls unauthenticated and subject to GitHub's
+#' 60-request/hour per-IP limit -- which surfaces as intermittent HTTP 403s
+#' spread across whichever job happens to exhaust the quota.
+#'
+#' The credential store still wins when it has something, so behaviour on a
+#' developer machine is unchanged; the environment is only a fallback.
+#'
+#' Exported for the SpaDES packages, which authenticate GitHub API calls the
+#' same way. Not part of the advertised API.
+#'
+#' @return The `"token <pat>"` string [GETWauthThenNonAuth()] expects, or `NULL`.
+#' @export
+#' @keywords internal
+#' @rdname getGitCredsToken
 getGitCredsToken <- function() {
+  token <- gitcredsToken()
+  if (is.null(token)) {
+    token <- envToken()
+  }
+  token
+}
+
+## Kept as its own function so tests can drive the "no credential store" case
+## without mocking another package's bindings.
+gitcredsToken <- function() {
   token <- tryCatch(
     gitcreds::gitcreds_get(use_cache = FALSE),
     error = function(e) NULL
@@ -1921,6 +1972,14 @@ getGitCredsToken <- function() {
     token <- paste0("token ", token$password)
   }
   token
+}
+
+envToken <- function() {
+  pat <- Sys.getenv("GITHUB_PAT", unset = "")
+  if (!nzchar(pat)) {
+    pat <- Sys.getenv("GITHUB_TOKEN", unset = "")
+  }
+  if (nzchar(pat)) paste0("token ", pat) else NULL
 }
 
 

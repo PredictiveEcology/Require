@@ -1065,13 +1065,9 @@ hasHave <- function(l, v) {
 }
 
 singularPlural <- function(singPlur, l, v) {
-  if (!missing(l)) {
-    out <- singPlur[(length(l) > 1) + 1]
-  }
-  if (!missing(v)) {
-    out <- singPlur[(v > 1) + 1]
-  }
-  out
+  ## `v` is a count, `l` an object whose length is the count. When both are
+  ## supplied `v` wins, as it always has -- its assignment came second.
+  singPlur[(if (!missing(v)) v > 1 else length(l) > 1) + 1]
 }
 
 
