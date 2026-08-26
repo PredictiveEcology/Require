@@ -26,3 +26,11 @@ into separate columns, "Account", "Repo", "Branch", "GitSubFolder" (if there is 
 \code{parseGitHub} turns the single character string representation into 3 or 4:
 \code{Account}, \code{Repo}, \code{Branch}, \code{SubFolder}.
 }
+\seealso{
+Other version specifications:
+\code{\link[=compareVersion2]{compareVersion2()}},
+\code{\link[=extractPkgName]{extractPkgName()}},
+\code{\link[=trimRedundancies]{trimRedundancies()}},
+\code{\link[=trimVersionNumber]{trimVersionNumber()}}
+}
+\concept{version specifications}

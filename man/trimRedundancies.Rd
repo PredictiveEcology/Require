@@ -45,6 +45,7 @@ trimRedundancies(c("data.table", "data.table (>= 1.14.0)"))
 Other version specifications:
 \code{\link[=compareVersion2]{compareVersion2()}},
 \code{\link[=extractPkgName]{extractPkgName()}},
+\code{\link[=parseGitHub]{parseGitHub()}},
 \code{\link[=trimVersionNumber]{trimVersionNumber()}}
 }
 \concept{version specifications}

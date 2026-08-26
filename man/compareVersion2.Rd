@@ -25,6 +25,7 @@ in the returned vector if one of the arguments has NA for that element.
 \seealso{
 Other version specifications:
 \code{\link[=extractPkgName]{extractPkgName()}},
+\code{\link[=parseGitHub]{parseGitHub()}},
 \code{\link[=trimRedundancies]{trimRedundancies()}},
 \code{\link[=trimVersionNumber]{trimVersionNumber()}}
 }

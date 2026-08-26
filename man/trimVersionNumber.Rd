@@ -21,6 +21,7 @@ trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 Other version specifications:
 \code{\link[=compareVersion2]{compareVersion2()}},
 \code{\link[=extractPkgName]{extractPkgName()}},
+\code{\link[=parseGitHub]{parseGitHub()}},
 \code{\link[=trimRedundancies]{trimRedundancies()}}
 }
 \concept{version specifications}

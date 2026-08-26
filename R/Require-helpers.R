@@ -23,6 +23,7 @@ utils::globalVariables(c(
 #' @return
 #' `parseGitHub` returns a `data.table` with added columns.
 #'
+#' @family version specifications
 #' @export
 #' @rdname GitHubTools
 #' @param pkgDT A pkgDT data.table.
