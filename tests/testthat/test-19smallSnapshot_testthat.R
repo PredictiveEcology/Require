@@ -32,6 +32,16 @@ test_that("small snapshot install pins each package to the requested version", {
                    returnDetails = TRUE)
   )
 
+  ## Once a session has hit "Please restart R" -- a namespace was loaded before
+  ## a satisfying version was installed, and R cannot hot-swap it -- nothing
+  ## afterwards installs reliably. In a full-suite run that state is inherited
+  ## from earlier tests, and asserting on pins then reports a session problem as
+  ## a pinning failure. Every other install test in this suite defers to
+  ## testWarnsInUsePleaseChange() for exactly this; these two did not.
+  skip_if(!testWarnsInUsePleaseChange(warns),
+          paste("session cannot install reliably:",
+                paste(utils::head(warns, 2), collapse = " | ")))
+
   ip <- data.table::as.data.table(installed.packages(lib.loc = testlib, noCache = TRUE))
 
   ## Every snapshot package must be installed in the test lib
