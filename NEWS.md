@@ -34,6 +34,13 @@
 
 ## Installation correctness
 
+* `options(Require.snapshotInstaller = "install.packages")` now genuinely
+  bypasses pak. The option selected which installer function to call, but that
+  function's own branches keyed on whether pak was *installed* rather than on
+  the option -- so with pak present, which is the norm, snapshot installs still
+  went through pak and the `install.packages()` path was unreachable. Anyone
+  setting the option was silently getting pak.
+
 * `getCRANrepos()` no longer discards other repositories when resolving the
   `"@CRAN@"` placeholder. Previously, with `repos` containing `"@CRAN@"` and
   `CRAN_REPO` set -- RStudio's default state -- it replaced the whole `repos`
@@ -61,6 +68,12 @@
 * `Require()`/`Install()` now warn to restart R when a satisfying version is
   installed but an older, insufficient one is still loaded -- R cannot hot-swap a
   loaded namespace, so the session silently kept using the stale version.
+
+* The `install.packages()`-based snapshot installer is **retained but no longer
+  developed**. pak is the default and the maintained path; the legacy chain now
+  has test coverage so that it keeps working, but it is not being extended. In
+  particular, compile failures from old pinned versions are not something it
+  tries to solve -- the answer there is to ask for a newer version.
 
 ## Robustness
 
