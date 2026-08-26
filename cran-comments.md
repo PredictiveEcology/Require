@@ -15,6 +15,11 @@ resolving the `"@CRAN@"` placeholder). See NEWS.md.
   ### local
   * Ubuntu 24.04 - R 4.5.3
 
+  ### win-builder
+  * Windows - R-devel
+  * Windows - R release
+  * Windows - R oldrelease
+
   ### GitHub Actions
   * Ubuntu - R-devel, R 4.5 (release), R 4.4 (oldrel-1), R 4.3 (oldrel-2),
     R 4.2 (oldrel-3)
@@ -25,6 +30,16 @@ resolving the `"@CRAN@"` placeholder). See NEWS.md.
 ## R CMD check results
 
 0 errors | 0 warnings | 0 notes
+
+One win-builder run (R-oldrelease) reported a NOTE on a URL in
+`man/setLibPaths.Rd`:
+
+    URL: https://stackoverflow.com/a/36873741/3890027
+      Status: 403 Forbidden
+
+The link is correct. Stack Overflow returns 403 to automated requests, so the
+URL checker cannot fetch it; the same link is fine in a browser. The other two
+win-builder runs did not flag it.
 
 ## Downstream dependencies
 
