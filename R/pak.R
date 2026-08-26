@@ -1456,8 +1456,8 @@ lessThanToAt <- function(pkgs) {
 
       # vers <- Map(pkg = pkgs[whTrulyLT], function(pkg) {
       pkgNoVersion <- trimVersionNumber(pkg)
-      his <- try(pak::pkg_history(pkgNoVersion))
-      if (is(his, "try-error")) return(character())
+      his <- pkgHistoryVersions(pkgNoVersion)
+      if (is.null(his)) return(character())
       whOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(whOK %in% FALSE)) {
         warning(msgPleaseChangeRqdVersion(pkgNoVersion, ineq = ">=", newVersion = tail(his$Version, 1)))
@@ -1466,18 +1466,27 @@ lessThanToAt <- function(pkgs) {
     })
     noneAvail <- lengths(vers) == 0
     if (any(noneAvail)) {
+      ## `hasLT` indexes `pkgs`; `noneAvail` indexes the `hasLT` *subset*.
+      ## Subsetting one by the other (the previous `hasLT <- hasLT[!noneAvail]`)
+      ## mismatches both length and position, so with a mix of resolvable and
+      ## unresolvable refs the resolved versions were written onto the wrong
+      ## packages. Switch off the unresolvable positions instead.
+      hasLT[which(hasLT)[noneAvail]] <- FALSE
       pkgDT <- pkgDT[!noneAvail]
       vers <- vers[!noneAvail]
-      hasLT <- hasLT[!noneAvail]
     }
-    if (any(noneAvail %in% FALSE)) {
+    if (NROW(pkgDT)) {
       set(pkgDT, NULL, "Version", vers)
       # set(pkgDT, whTrulyLT, "Version", vers)
       set(pkgDT, NULL, "packageFullName", paste0(pkgDT$Package, "@", pkgDT$Version))
       pkgs[hasLT] <- pkgDT$packageFullName
-    } else {
-      pkgs <- pkgDT$packageFullName
     }
+    ## When nothing was resolvable, leave `pkgs` as it came in. The previous
+    ## `else pkgs <- pkgDT$packageFullName` assigned an *emptied* pkgDT, so the
+    ## function returned character(0) and callers doing
+    ## `pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned])` died with
+    ## "replacement has length zero". The user has already been warned by
+    ## msgPleaseChangeRqdVersion(); the refs keep their original form.
     # val[trulyLT] <- pkgDT$packageFullName
     # }
     # LTorET <- trulyLT %in% FALSE
@@ -1486,6 +1495,14 @@ lessThanToAt <- function(pkgs) {
     # }
   }
   pkgs
+}
+
+## Seam around pak::pkg_history(): kept as its own function so the
+## "no version history available" path is testable without a network call.
+## Returns NULL rather than a try-error.
+pkgHistoryVersions <- function(pkgNoVersion) {
+  his <- try(pak::pkg_history(pkgNoVersion), silent = TRUE)
+  if (is(his, "try-error")) NULL else his
 }
 
 HEADtoNone <- function(pkgs) {
