@@ -21,6 +21,11 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       GOOGLEDRIVE_AUTH: ${{ secrets.GOOGLEDRIVE_AUTH }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      # covr::package_coverage() sets R_COVR but NOT NOT_CRAN, so without this
+      # every skip_on_cran() fires during the coverage run -- 20 of them -- and
+      # the reported figure measures a fraction of the suite rather than the
+      # suite. skip_on_ci() (11 more) still fires by definition.
+      NOT_CRAN: true
 
     steps:
       - uses: actions/checkout@v4
