@@ -152,19 +152,30 @@ lp2 <- c(head(lp, 1), tail(lp, 1))
 orig <- setLibPaths(lp2, standAlone = TRUE)
 withr::defer(.libPaths(lp), envir = teardown_env())
 
+## PPM binaries on Ubuntu/Debian, for everyone -- this was previously inside the
+## `emcintir` block, so CI never got it. Without it, Linux resolves everything
+## from source (CRAN publishes no Linux binaries), so every dependency the tests
+## install is compiled. That is why the Ubuntu legs run far longer than the
+## Windows ones, where CRAN serves binaries from the ordinary repo.
+## `use-public-rspm: true` in the workflow only covers setup-r-dependencies
+## installing Require's own deps; the tests call Require::Install(), which
+## resolves through getOption("repos") as the test session leaves it.
+## positBinaryRepos() derives the distro codename; guarded, so a no-op elsewhere.
+if (isUbuntuOrDebian()) {
+  reposPPM <- c(PPM = positBinaryRepos(), getOption("repos"))
+  withr::local_options(
+    .local_envir = teardown_env(),
+    repos = reposPPM[!duplicated(reposPPM)]  # keep names
+  )
+}
+
 if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
-  repos <- getOption("repos")
-  if (isUbuntuOrDebian()) {
-    repos <- c(PPM = positBinaryRepos(), repos)
-  }
-  repos <- repos[!duplicated(repos)] # keep names
   withr::local_options(
     .local_envir = teardown_env(),
     Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
     "Require.installPackagesSys" = Require.installPackageSys,
     Ncpus = 8,
-    repos = repos,
     Require.origLibPathForTests = .libPaths()[1],
     gargle_oauth_email = "eliotmcintire@gmail.com",
     gargle_oauth_cache = secretPath) # , .local_envir = teardown_env())
