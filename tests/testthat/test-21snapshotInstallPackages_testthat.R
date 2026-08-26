@@ -237,12 +237,6 @@ test_that("a small snapshot installs through the install.packages chain", {
     Require(packageVersionFile = snf, require = FALSE, returnDetails = TRUE)
   )
 
-  ## See test-19: a session already in "Please restart R" state cannot install
-  ## reliably, and in a full-suite run that is inherited from earlier tests.
-  skip_if(!testWarnsInUsePleaseChange(warns),
-          paste("session cannot install reliably:",
-                paste(utils::head(warns, 2), collapse = " | ")))
-
   ip <- data.table::as.data.table(
     installed.packages(lib.loc = testlib, noCache = TRUE))
 

@@ -17,6 +17,11 @@ test_that("small snapshot install pins each package to the requested version", {
   ##     formatR, so the set still exercises *transitive* resolution -- 2
   ##     direct deps resolving to 3 -- without dragging in a compiler.
   ##   - 1 GitHub@<sha> pin to a leaf package with no Remotes/Imports
+  ##
+  ## Every pin is a package the test stack never loads. That is a requirement,
+  ## not a preference: R cannot hot-swap a loaded namespace, so pinning a
+  ## package that testthat itself has loaded (it loads R6 and withr) asks for a
+  ## downgrade that cannot happen, and the pin silently does not land.
   ## Lightweight enough to run under CI budget.
   snf <- testthat::test_path("fixtures", "smallSnapshot.txt")
   pkgs <- data.table::fread(snf)
@@ -31,16 +36,6 @@ test_that("small snapshot install pins each package to the requested version", {
     out <- Require(packageVersionFile = snf, require = FALSE,
                    returnDetails = TRUE)
   )
-
-  ## Once a session has hit "Please restart R" -- a namespace was loaded before
-  ## a satisfying version was installed, and R cannot hot-swap it -- nothing
-  ## afterwards installs reliably. In a full-suite run that state is inherited
-  ## from earlier tests, and asserting on pins then reports a session problem as
-  ## a pinning failure. Every other install test in this suite defers to
-  ## testWarnsInUsePleaseChange() for exactly this; these two did not.
-  skip_if(!testWarnsInUsePleaseChange(warns),
-          paste("session cannot install reliably:",
-                paste(utils::head(warns, 2), collapse = " | ")))
 
   ip <- data.table::as.data.table(installed.packages(lib.loc = testlib, noCache = TRUE))
 

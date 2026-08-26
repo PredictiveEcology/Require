@@ -2,5 +2,5 @@ Package,Version,GithubRepo,GithubUsername,GithubRef,GithubSHA1
 "crayon","1.4.0",NA,NA,NA,NA
 "futile.logger","1.4.3",NA,NA,NA,NA
 "assertthat","0.2.0",NA,NA,NA,NA
-"withr","2.5.0",NA,NA,NA,NA
-"R6",NA,"R6","r-lib","main","507867875fdeaffbe7f7038291256b798f6bb042"
+"prettyunits","1.1.1",NA,NA,NA,NA
+"praise",NA,"praise","rladies","main","094469afaf033af00aeb46527970f1db22f4d49d"
