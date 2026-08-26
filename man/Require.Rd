@@ -184,6 +184,17 @@ If packages are already installed (\code{packages} supplied), and their optional
 version numbers are satisfied, then the "install" component will be skipped.
 }
 \details{
+Require declares hard \code{Imports} on \code{callr} and \code{processx} to ensure they are
+installed alongside Require. They are not called directly from Require's R
+code; they are runtime dependencies of \code{pak}'s background \code{r_session}
+subprocess. pak's CRAN binary ships embedded copies of these helpers but
+does not declare them as standalone \code{Imports}, and on some Windows
+configurations pak's subprocess wedges unless standalone \code{processx} /
+\code{callr} are also visible in \code{.libPaths()} (symptom: every per-ref
+\code{pak::pak()} call fails with an empty reason string and no pak progress
+output). Declaring them in Require's Imports guarantees they're present
+wherever Require is installed.
+
 \code{Install} is the same as \code{Require(..., require = FALSE)}, for convenience.
 }
 \note{

@@ -51,43 +51,51 @@ exportMethods(checkPath)
 exportMethods(normPath)
 import(methods)
 importFrom(callr,r)
-importFrom(data.table,":=")
-importFrom(data.table,.I)
-importFrom(data.table,.SD)
-importFrom(data.table,as.data.table)
-importFrom(data.table,copy)
-importFrom(data.table,data.table)
-importFrom(data.table,fwrite)
-importFrom(data.table,is.data.table)
-importFrom(data.table,rbindlist)
-importFrom(data.table,rleid)
-importFrom(data.table,set)
-importFrom(data.table,setDT)
-importFrom(data.table,setnames)
-importFrom(data.table,setorderv)
+importFrom(data.table,
+  ":=",
+  .I,
+  .SD,
+  as.data.table,
+  copy,
+  data.table,
+  fwrite,
+  is.data.table,
+  rbindlist,
+  rleid,
+  set,
+  setDT,
+  setnames,
+  setorderv
+)
 importFrom(processx,run)
-importFrom(stats,na.omit)
-importFrom(stats,setNames)
-importFrom(sys,exec_background)
-importFrom(sys,exec_wait)
+importFrom(stats,
+  na.omit,
+  setNames
+)
+importFrom(sys,
+  exec_background,
+  exec_wait
+)
 importFrom(tools,R_user_dir)
-importFrom(utils,assignInMyNamespace)
-importFrom(utils,available.packages)
-importFrom(utils,capture.output)
-importFrom(utils,chooseCRANmirror)
-importFrom(utils,compareVersion)
-importFrom(utils,contrib.url)
-importFrom(utils,download.file)
-importFrom(utils,head)
-importFrom(utils,install.packages)
-importFrom(utils,installed.packages)
-importFrom(utils,modifyList)
-importFrom(utils,packageDescription)
-importFrom(utils,packageVersion)
-importFrom(utils,read.csv)
-importFrom(utils,remove.packages)
-importFrom(utils,sessionInfo)
-importFrom(utils,tail)
-importFrom(utils,untar)
-importFrom(utils,unzip)
-importFrom(utils,write.table)
+importFrom(utils,
+  assignInMyNamespace,
+  available.packages,
+  capture.output,
+  chooseCRANmirror,
+  compareVersion,
+  contrib.url,
+  download.file,
+  head,
+  install.packages,
+  installed.packages,
+  modifyList,
+  packageDescription,
+  packageVersion,
+  read.csv,
+  remove.packages,
+  sessionInfo,
+  tail,
+  untar,
+  unzip,
+  write.table
+)
