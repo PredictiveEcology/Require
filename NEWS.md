@@ -41,6 +41,13 @@
   went through pak and the `install.packages()` path was unreachable. Anyone
   setting the option was silently getting pak.
 
+* Fixed two defects in `lessThanToAt()`, which converts a `<` version
+  constraint into an exact pin. When no released version satisfied the
+  constraint it returned an empty vector, and the install path died with
+  "replacement has length zero"; the constrained refs are now left as they
+  were. Separately, when only some refs were resolvable, the resolved version
+  could be written onto the wrong package -- silently, with no error.
+
 * `getCRANrepos()` no longer discards other repositories when resolving the
   `"@CRAN@"` placeholder. Previously, with `repos` containing `"@CRAN@"` and
   `CRAN_REPO` set -- RStudio's default state -- it replaced the whole `repos`
