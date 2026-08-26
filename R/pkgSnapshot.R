@@ -1307,8 +1307,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
                pkgs$GithubRepo[i], "/archive/",
                pkgs$GithubSHA1[i], ".tar.gz")
       } else {
-        rowRepo <- pkgs$Repository[i]
-        baseRepo <- if (!is.na(rowRepo) && grepl("^https?://", rowRepo))
+        ## A snapshot need not carry a Repository column at all -- a
+        ## hand-written pin list, or the rows pak adds for a dependency that
+        ## was not itself pinned, have none. pkgs$Repository is then NULL and
+        ## pkgs$Repository[i] is NULL, so `!is.na(NULL) && ...` is logical(0)
+        ## and the `if` errors with "missing value where TRUE/FALSE needed".
+        ## Guarded the same way as buildUrls() above.
+        rowRepo <- if (!is.null(pkgs$Repository)) pkgs$Repository[i] else NA_character_
+        baseRepo <- if (length(rowRepo) && !is.na(rowRepo) &&
+                        grepl("^https?://", rowRepo))
                       rowRepo
                     else if (length(ppmRepos)) ppmRepos[1]
                     else cranRepos[1]
