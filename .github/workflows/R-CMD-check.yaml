@@ -58,7 +58,7 @@ jobs:
       R_REQUIRE_RUN_LONG_CI: ${{ matrix.config.runLong && 'true' || '' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # setup-pandoc occasionally fails with HTTP 5xx when its CDN blips
       # (hit SpaDES.tools today). Three attempts with continue-on-error
