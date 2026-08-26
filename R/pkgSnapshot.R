@@ -363,6 +363,16 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## GH pin: match RemoteSha (if recorded) against GithubSHA1.
   destLib <- libPaths[1]
 
+  ## Require.snapshotInstaller = "install.packages" means exactly that: do not
+  ## touch pak at all. This chain is legacy -- retained, no longer developed --
+  ## and the only reason to exercise it is to cover code pak has otherwise
+  ## replaced. Keying the branches below on requireNamespace("pak") instead of
+  ## on the option meant that with pak installed (effectively always) the
+  ## install still went through pak, and the pure install.packages path was
+  ## unreachable. pak's own machinery is covered elsewhere.
+  useIP <- identical(getOption("Require.snapshotInstaller", "pak"),
+                     "install.packages")
+
   ## Cache the just-built binaries in pkgcache. Registered via on.exit
   ## so an interrupted run (Ctrl-C during compile, error mid-install,
   ## pak crash, etc.) still saves whatever binaries DID land in
@@ -1640,7 +1650,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   pakErr <- NULL
   pakDetail <- character()
   pakPlanInfo <- character()
-  if (requireNamespace("pak", quietly = TRUE) && length(pakInputRefs)) {
+  if (!useIP && requireNamespace("pak", quietly = TRUE) && length(pakInputRefs)) {
     messageVerbose("Trying pak::pkg_install with ", length(pakInputRefs),
                    " ", refStrategyLabel, " refs, lib=", destLib,
                    " (fallback: install.packages)",
@@ -1851,7 +1861,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
         type = "source", dependencies = NA, Ncpus = Ncpus,
         keep_outputs = outDir,
         quiet = isTRUE(verbose < 1)))
-  } else if (requireNamespace("pak", quietly = TRUE)) {
+  } else if (!useIP && requireNamespace("pak", quietly = TRUE)) {
     messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
                    verbose = verbose, verboseLevel = 1)
   } else {

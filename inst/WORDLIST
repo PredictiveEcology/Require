@@ -12,6 +12,7 @@
 60s
 64ms
 ABI
+Bioc
 Bugfixes
 CMD
 CRAN's
@@ -25,12 +26,14 @@ GithubRepo
 GithubSHA1
 GithubSubFolder
 GithubUsername
+HPC
 Homebrew
 INSTALL's
 LandR
 LandR's
 LinkingTo
 MRAN
+MacOS
 NeedsCompilation
 ORCID
 Pak
@@ -38,9 +41,11 @@ PredictiveEcology
 README
 RSPM
 RStudio
+RStudio's
 Rcpp's
 Readme
 Require's
+Rtools
 SHAs
 SSL
 SaveNames
@@ -51,6 +56,7 @@ arg
 arity
 backoff
 behavior
+bioc
 bugfix
 bugfixes
 callr
@@ -137,6 +143,7 @@ subfolder
 subprocess
 symlink
 sysreqs
+toolchain
 ulimit
 unbuilt
 unlinks

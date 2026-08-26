@@ -1,11 +1,21 @@
 test_that("small snapshot install pins each package to the requested version", {
+  ## CRAN policy: tests may only download/install packages listed in Suggests.
+  ## The fixture pins crayon / futile.logger / assertthat / R6 (and their
+  ## deps), which are not Require Suggests -- so this is CI-only.
+  skip_on_cran()
   setupInitial <- setupTest()
   skip_if_offline2()
 
   ## A 5-package snapshot that exercises the version-pin paths Require
   ## must support, without dragging in the LandR-shaped Remotes mess:
   ##   - 4 CRAN packages pinned to non-current versions (served by CRAN
-  ##     Archive forever)
+  ##     Archive forever). None needs compilation, and neither does anything
+  ##     they pull in: old packages that need a compiler are their own beast,
+  ##     and the answer there is "ask for a newer version", not something
+  ##     Require tries to solve.
+  ##   - futile.logger imports lambda.r + futile.options, and lambda.r imports
+  ##     formatR, so the set still exercises *transitive* resolution -- 2
+  ##     direct deps resolving to 3 -- without dragging in a compiler.
   ##   - 1 GitHub@<sha> pin to a leaf package with no Remotes/Imports
   ## Lightweight enough to run under CI budget.
   snf <- testthat::test_path("fixtures", "smallSnapshot.txt")
