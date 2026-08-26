@@ -1770,11 +1770,20 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     if (packages[1, "Package"] == "R") {
       Rversion <- packages[["Version"]][1] |> versionMajorMinor()
       if (!compareVersion2(versionMajorMinor(), Rversion, inequality = "=="))
-        messageVerbose("The package snapshot was made using R ", Rversion,
-                       ". Current session is running R ", getRversion(),
-                       "\nThere may be difficulties installing packages. ",
-                       "If there are please restart session using the appropriate R version",
-                       verbose = verbose)
+        ## warning(), not messageVerbose(): a snapshot pinned under a different
+        ## R routinely fails to build -- packages pinned under an older R can
+        ## use headers or functions the current one has removed (e.g. Calloc /
+        ## Free before STRICT_R_HEADERS, is.R() now defunct) -- and the symptom
+        ## is hundreds of lines of compiler output with no statement of the
+        ## cause. A message at a verbosity level is suppressed by default in
+        ## quiet sessions and swallowed entirely under testthat, so the one
+        ## piece of information that explains the failure was the piece most
+        ## likely to be lost.
+        warning("The package snapshot was made using R ", Rversion,
+                ". Current session is running R ", getRversion(),
+                ". There may be difficulties installing packages; ",
+                "if there are, please restart the session using R ", Rversion,
+                call. = FALSE)
       packages <- packages[-1, ]
     }
 
