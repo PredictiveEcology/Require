@@ -69,6 +69,13 @@
   installed but an older, insufficient one is still loaded -- R cannot hot-swap a
   loaded namespace, so the session silently kept using the stale version.
 
+* Fixed a crash in the `install.packages()` snapshot installer when a snapshot
+  row carries no `Repository` -- a hand-written pin list, or the rows added for
+  a dependency that was not itself pinned. The download-URL builder tested
+  `!is.na(pkgs$Repository[i])` without first checking the column exists, so the
+  whole install died with "missing value where TRUE/FALSE needed". Not
+  previously reachable, since the option did not route there.
+
 * The `install.packages()`-based snapshot installer is **retained but no longer
   developed**. pak is the default and the maintained path; the legacy chain now
   has test coverage so that it keeps working, but it is not being extended. In
