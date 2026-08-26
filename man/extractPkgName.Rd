@@ -38,4 +38,10 @@ extractPkgGitHub("PredictiveEcology/Require")
 }
 \seealso{
 \code{\link[=trimVersionNumber]{trimVersionNumber()}}
+
+Other version specifications:
+\code{\link[=compareVersion2]{compareVersion2()}},
+\code{\link[=trimRedundancies]{trimRedundancies()}},
+\code{\link[=trimVersionNumber]{trimVersionNumber()}}
 }
+\concept{version specifications}

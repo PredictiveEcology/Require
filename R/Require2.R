@@ -1953,6 +1953,7 @@ availableVersionOK <- function(pkgDT) {
 #' @param inequality The inequality to use, i.e., `>=`.
 #' @return a logical vector of the length of the longest of the 3 arguments.
 #'
+#' @family version specifications
 #' @export
 compareVersion2 <- function(version, versionSpec, inequality) {
   if (isTRUE(any(is(version, "numeric_version"))))
@@ -2673,8 +2674,34 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
   pkgDT
 }
 
+#' Collapse redundant package specifications
+#'
+#' Given package specifications that may name the same package more than once --
+#' e.g. `"pkg"`, `"pkg (>= 1.0)"` and `"user/pkg@branch"` -- reduce them to one
+#' entry per package, keeping the most specific requirement. This is the
+#' reduction `Require()` applies to a dependency set before installing, exposed
+#' because packages that assemble their own `reqdPkgs`-style lists need the same
+#' rule to agree with what `Require()` will actually do.
+#'
+#' @param pkgInstall Package specifications: a character vector, or a
+#'   `data.table` as produced internally by `Require`.
+#' @param repos,purge,libPaths Unused; retained so existing positional calls
+#'   keep working.
+#' @param verbose Numeric or logical, controlling messaging verbosity.
+#' @param type Package type, as in [utils::install.packages()].
+#'
+#' @return A `data.table` with one row per package, with redundant entries
+#'   removed. Callers wanting the specifications back as text take the
+#'   `packageFullName` column.
+#'
+#' @family version specifications
+#' @export
+#' @examples
+#' trimRedundancies(c("data.table", "data.table (>= 1.14.0)"))
+#'
 #' @importFrom data.table rleid
-trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
+trimRedundancies <- function(pkgInstall, repos = NULL, purge = NULL, libPaths = NULL,
+                             verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
   if (!is.data.table(pkgInstall)) {
     pkgInstall <- toPkgDT(pkgInstall)

@@ -1855,6 +1855,27 @@ rmEmptyFiles <- function(files, minSize = 100) {
 }
 
 
+#' GET a URL with a GitHub token, falling back to an unauthenticated request
+#'
+#' Signs the request with `httr::add_headers(Authorization = token)` when a
+#' token is supplied, and retries without credentials if GitHub rejects them or
+#' returns a 404. `token` must carry the `"token "` prefix that
+#' [getGitCredsToken()] produces -- a bare PAT authenticates nothing.
+#'
+#' Exported for the SpaDES packages, which query the GitHub API for module
+#' repositories and need the same authentication behaviour as `Require`. Not
+#' part of the advertised API.
+#'
+#' @param url The URL to GET.
+#' @param token A GitHub token of the form `"token <pat>"`, or `NULL` for an
+#'   unauthenticated request.
+#' @param verbose Numeric or logical, controlling messaging verbosity.
+#'
+#' @return The `httr` response object.
+#'
+#' @export
+#' @keywords internal
+#' @rdname GETWauthThenNonAuth
 GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
   if (is.null(token)) {
     a <- httr::GET(url)
@@ -1924,7 +1945,11 @@ masterOrMainFromGitRefs <- function(gitRefsSplit2) {
 #' The credential store still wins when it has something, so behaviour on a
 #' developer machine is unchanged; the environment is only a fallback.
 #'
+#' Exported for the SpaDES packages, which authenticate GitHub API calls the
+#' same way. Not part of the advertised API.
+#'
 #' @return The `"token <pat>"` string [GETWauthThenNonAuth()] expects, or `NULL`.
+#' @export
 #' @keywords internal
 #' @rdname getGitCredsToken
 getGitCredsToken <- function() {
