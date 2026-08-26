@@ -1,471 +1,99 @@
-# Require 2.0.0.9036 (development version)
+# Require 2.1.0
 
-* `Require.noRemotes = TRUE` now reliably follows **no** `Remotes:`. pak follows a
-  package's `Remotes:` field whenever it resolves that package from a GitHub /
-  source ref (pkgdepends' `resolve_from_description` → `resolve_ref_deps`
-  rewrites a dependency's ref to the matching `Remotes` entry, e.g.
-  `LandR` → `PredictiveEcology/LandR`) — there is no pkgdepends switch to turn
-  this off. A package resolved from a repository is immune (r-universe's
-  `PACKAGES` has no `Remotes` column). So under noRemotes the guarantee is simply
-  that no `account/repo[@ref]` ref reaches pak's resolver. `pakDepsToPkgDT()` now
-  re-applies `stripGitHubToRepos()` at its entry (in addition to the top-level
-  strip in `Require()`), so a GitHub ref can't slip through any caller/path and
-  cause a transitive dependency (e.g. `LandR` pulled by `LandR.CS`'s `Remotes`)
-  to be built from GitHub source instead of resolved from the configured repos.
-
-* The `identify-and-defer` install strategy now installs deferred build-failure
-  culprits in **dependency order** and **retries** them. Previously, when both a
-  dependency and its dependent were deferred (e.g. `LandR` and `LandR.CS`, where
-  `LandR.CS` Imports `LandR`), the final serial pass installed them in deferral
-  order, so the dependent could be built before its dependency and fail with
-  `dependency 'LandR' is not available for package 'LandR.CS'` — and was never
-  re-attempted once the dependency landed. Now: (1) deferred culprits are
-  topologically ordered using pak's own "dependency 'X' is not available for
-  package 'Y'" lines so X installs before Y, and (2) a retry pass re-attempts any
-  still-missing culprit while progress is being made (a newly-installed
-  dependency can unblock another dependent). (`orderRefsByMissingDepEdges()`.)
-
-# Require 2.0.0.9034 (development version)
-
-* `getCRANrepos()` now also de-duplicates `getOption("repos")` (dropping
-  duplicate repo URLs, keeping the first occurrence to preserve names) in
-  addition to stripping the resolved `@CRAN@` placeholder, updating the global
-  `repos` option in place so downstream resolvers don't query the same repo
-  twice. Centralizes repo cleanup that previously lived in
-  `SpaDES.project::setupProject()`.
-
-* Resilience to the transient
-  `cannot open URL 'http://bioconductor.org/config.yaml'` failure. pak/pkgcache
-  fetch the Bioconductor config at startup, and the entire pak call dies when
-  bioc.org is unreachable (network blip, firewall, bioc downtime) -- even when no
-  Bioconductor package was requested. This is **failure-triggered**: pak calls
-  run normally (so the real, current Bioc config is used whenever bioc.org is
-  reachable), and *only* when a call dies on that specific fetch does `pakCall()`
-  point pkgcache at its own bundled bioc config (`R_BIOC_CONFIG_URL` file:// +
-  `R_BIOC_VERSION`, set only when unset) and retry once. We deliberately do **not**
-  pin the Bioc config pre-emptively -- doing so would freeze the Bioc version
-  (to pkgcache's snapshot) for every user, including those who never hit the
-  failure and who actually use Bioconductor. The underlying hard-fail is a pak
-  bug (an optional config fetch should not abort the whole operation); this is a
-  local fallback until that is fixed upstream. Note: a *direct* `pak::pak(...)`
-  call made before Require is loaded (e.g. a bootstrap script's first line) is
-  outside Require's reach -- set `R_BIOC_VERSION` yourself there or in `.Rprofile`.
-
-# Require 2.0.0.9033 (development version)
-
-* `getCRANrepos()` no longer drops other repositories when resolving the
-  `"@CRAN@"` placeholder. Previously, when `repos` contained `"@CRAN@"` **and**
-  the `CRAN_REPO` env var was set (RStudio's default state: `repos` is
-  `c(CRAN = "@CRAN@")` and RStudio sets `CRAN_REPO`), it replaced the entire
-  `repos` vector with CRAN-only — silently wiping an r-universe a user had added
-  via `options(repos = unique(c(<r-universe>, getOption("repos"))))`. That broke
-  `Require.noRemotes` installs of PredictiveEcology packages (LandR, pemisc, ...)
-  for RStudio users: the packages "could not be found" because their hosting
-  r-universe had been removed from `repos` mid-run. Now the `"@CRAN@"`
-  placeholder is resolved in place and every other repo is preserved.
-
-# Require 2.0.0.9031 (development version)
-
-* `Require()`/`Install()` now warn to restart R when a package is installed at a
-  version that satisfies the request but an OLDER, insufficient version is still
-  loaded in the session. This happens when a dependency (e.g. `reproducible`) is
-  pulled in via another package's `Imports` from a different library before the
-  satisfying version is installed -- R can't hot-swap a loaded namespace, so the
-  session keeps using the stale version (and `find.package()` returns its path)
-  until restart. Previously this was silent. (`flagRestartForLoadedInsufficient()`,
-  surfaced through the existing "Please restart R" warning.)
-
-# Require 2.0.0.9030 (development version)
-
-* Version bump only (no functional change): several `noRemotes`-related fixes
-  (offline-shortcut gating, `>=` upgrade pinning) all landed at `2.0.0.9029`, so
-  installs already holding a `9029` would not pick up the merged build. Bumping
-  to `9030` forces r-universe to rebuild and lets `pak`/`Require` upgrade cleanly.
-
-# Require 2.0.0.9029 (development version)
-
-* The "all packages already in pak's download cache" shortcut no longer routes
-  an **online** install into the bespoke offline installer (`pakOfflineInstall`).
-  That installer hands pak every dependency-tree node as a `pkg@version`
-  exact-pin, which self-conflicts in pak's resolver
-  (`openssl@2.4.2: Conflicts with openssl@2.4.2`) and collapses to a slow
-  one-at-a-time per-ref fallback -- very visible on large `noRemotes` installs.
-  The shortcut now fires only in genuine `offlineMode`; otherwise the install
-  goes through pak's own resolve+install (`pakInstallFiltered`), which already
-  uses pak's download cache, orders builds natively, and carries the retry /
-  error-handling catches -- and still falls back to the offline cache installer
-  if the network turns out to be down.
-* Fixed a `>=` / `>` user constraint failing to upgrade an already-installed
-  but insufficient package. e.g. `Install("reproducible (>= 3.1.1.9054)")` kept
-  the installed `3.1.1` even though `3.1.1.9054` was available
-  (`pak::pak("reproducible")` upgraded it correctly). The install path stripped
-  the lower-bound constraint to a bare `any::pkg` ref, and pak + `upgrade = FALSE`
-  treats an installed version as already satisfying `any::pkg`, so it was kept.
-  Such refs are now pinned to the version pak resolved (`pkg@<version>`), which
-  pak installs regardless of the upgrade flag. Refs with no resolved version
-  known fall through to the previous strip behaviour.
-* The "all packages already in pak's download cache" shortcut no longer routes
-  an **online** install into the bespoke offline installer (`pakOfflineInstall`).
-  That installer hands pak every dependency-tree node as a `pkg@version`
-  exact-pin, which self-conflicts in pak's resolver
-  (`openssl@2.4.2: Conflicts with openssl@2.4.2`) and collapses to a slow
-  one-at-a-time per-ref fallback -- very visible on large `noRemotes` installs.
-  The shortcut now fires only in genuine `offlineMode`; otherwise the install
-  goes through pak's own resolve+install (`pakInstallFiltered`), which already
-  uses pak's download cache, orders builds natively, and carries the retry /
-  error-handling catches -- and still falls back to the offline cache installer
-  if the network turns out to be down.
-
-# Require 2.0.0.9028 (development version)
+## New features
 
 * New option `Require.noRemotes` (default `FALSE`). When `TRUE`, GitHub-style
-  specs (`account/repo@branch`) passed to `Require()`/`Install()` are rewritten
-  to their bare package name (any version constraint is preserved) and resolved
-  from `repos` (e.g., prebuilt binaries on `predictiveecology.r-universe.dev`)
-  instead of being cloned and built from GitHub source. This removes the need
-  for git authentication and a source-build toolchain (e.g., Rtools on Windows)
-  -- useful for workshops and binary-only setups. Because version constraints
-  are kept, `repos` must carry a version that satisfies them. See
-  `?RequireOptions`. (Flows through `SpaDES.project::setupProject()` via
-  `options = list(Require.noRemotes = TRUE)`.)
+  specs (`account/repo@branch`) are rewritten to their bare package name --
+  version constraints preserved -- and resolved from `repos` (e.g. prebuilt
+  binaries on an r-universe) instead of being cloned and built from GitHub
+  source. This removes the need for git authentication and a source-build
+  toolchain such as Rtools, which makes workshops and binary-only setups far
+  easier. `repos` must carry a version satisfying any constraint. See
+  `?RequireOptions`.
 
-* A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now treated as an
-  exact-version pin under pak: it installs that exact commit even when a
-  *different* version is already installed (previously a bare `@sha` was a no-op
-  whenever any version was installed, because the pak path is version-driven).
-  Implemented by attaching `(== <version pak resolves for that commit>)` to the
-  ref, so the commit's version drives the install decision; an equal installed
-  version is treated as satisfied (a same-version, different-commit case is not
-  distinguished -- dev versions bump per commit). Only explicit commit SHAs
-  qualify (`isExplicitShaPin()`); branch refs, `(HEAD)` refs, and refs already
-  carrying a version spec are unaffected.
+* A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now an exact-version
+  pin: it installs that commit even when a different version is already
+  installed. Previously a bare `@sha` was a no-op whenever any version was
+  present. Branch refs and refs already carrying a version spec are unaffected.
 
-* Performance: the offline (pak download-cache) install path no longer degrades
-  to slow one-at-a-time installs when the resolved set contains a package as
-  both a CRAN ref and a GitHub ref (e.g. `SpaDES.tools (>= 2.0.0)` plus
-  `PredictiveEcology/SpaDES.tools@development`). pak rejects such a batch with a
-  "Conflicts with" error even under `dependencies = FALSE`, which forced
-  `pakOfflineInstall()` into the per-ref fallback (and could cascade into build
-  failures, e.g. `LandR`, because deps were installed in isolation). The
-  CRAN-vs-GitHub/duplicate-CRAN dedup that the online path already applied is
-  now factored into a shared `dedupInstallRefs()` helper and run on the offline
-  path too, so the single parallel `pak::pak()` batch install proceeds. The
-  GitHub ref wins; among duplicate CRAN rows the strictest version pin is kept.
+* `getGitCredsToken()` now falls back to the `GITHUB_PAT` / `GITHUB_TOKEN`
+  environment variables when the git credential store has nothing. `gitcreds`
+  reads only the credential store, so CI runners -- which set the environment
+  variable and configure no credential helper -- were making unauthenticated
+  GitHub API calls, capped at 60 requests/hour per IP.
 
-* Fixed `Install("owner/repo@<sha> (== X)")` (a GitHub ref pinned by commit
-  *and* an exact version) silently no-op'ing when a different version was
-  already installed, then warning "pak resolved X but only Y is available as a
-  binary". The install path's `equalsToAt()` appended `@X` to the already-`@sha`
-  -pinned ref, producing a malformed `owner/repo@sha@X` ref pak could not
-  install. `equalsToAt()`/`lessThanToAt()` now skip refs that already carry an
-  `@` pin; the version parenthetical is stripped by `trimVersionNumber()` and
-  Require's post-install check verifies the version. The pinned commit now
-  installs (downgrading if needed) as expected.
+* `trimRedundancies()`, `GETWauthThenNonAuth()` and `getGitCredsToken()` are now
+  exported. Other packages were reaching them with `getFromNamespace()`, which a
+  rename here would break without warning. The specification parsers
+  (`compareVersion2()`, `extractPkgName()` and friends, `parseGitHub()`,
+  `trimVersionNumber()`, `trimRedundancies()`) now cross-reference each other as
+  a documented family.
 
-* Fix: a user-requested CRAN package could be installed *without its
-  dependencies* when pak's batch dependency solve was unsolvable. When a few
-  GitHub `Remotes` refs genuinely conflict (e.g. `quickPlot@development` ->
-  `tidyverse/ggplot2` vs a pinned `ggplot2`), pak's error reports many innocent
-  CRAN packages as `"X: dependency conflict"`. `pakDepsResolve()` strips those
-  CRAN refs from `pkgsForPak` to coax the batch solver, but the per-package
-  fallback then resolved only the *stripped* set -- so a stripped top-level
-  package (e.g. `googledrive`) still installed via `user_pkgFN` while its
-  transitive deps (e.g. `gargle`) were never resolved, leaving a broken
-  namespace (`loadNamespace("googledrive")` -> "there is no package called
-  'gargle'"). Two complementary fixes:
-    - `pakDepsResolve()`'s per-package fallback now resolves the **original,
-      unstripped** ref set (in isolation there are no cross-package conflicts,
-      so cascade casualties keep their own dependency subtrees).
-    - `pakDepsToPkgDT()` adds a closure guard: any user-requested CRAN package
-      absent from the resolved tree is resolved individually and merged, so its
-      dependencies enter the install plan even if a future code path drops it.
-  Regression tests added in `test-17usePak.R` (network-free, via mocked
-  `pak::pkg_deps()`).
+* New option `Require.forcePakReinstall` (default `FALSE`) forces one fresh pak
+  install, for the case where pak's files are present but broken.
 
+## Installation correctness
 
-* `test-01packages_testthat.R` (issue 87): the pinned-SHA downgrade test now
-  drops the loaded/installed newer `reproducible` before each
-  `Install(<owner>/reproducible@<sha> (HEAD))`, so pak does a clean install
-  rather than an in-place downgrade. pak's build worker crashes
-  (`unzip_class`/processx) when re-packaging during an in-place update over a
-  loaded newer version; the same SHA installs cleanly into a fresh state (and
-  Require's serial-install fallback then recovers). Issue 87's intent -- a SHA
-  ref resolving to the commit's version (`2.0.2.9001`) rather than CRAN's
-  (`2.0.2`) -- is still exercised. The underlying pak crash is tracked
-  separately.
+* `getCRANrepos()` no longer discards other repositories when resolving the
+  `"@CRAN@"` placeholder. Previously, with `repos` containing `"@CRAN@"` and
+  `CRAN_REPO` set -- RStudio's default state -- it replaced the whole `repos`
+  vector with CRAN alone, silently removing an r-universe the user had added and
+  breaking installs of packages hosted there. Duplicate repo URLs are also
+  dropped now.
 
-# Require 2.0.0.9020 (development version)
+* A `>=` or `>` constraint now upgrades an installed-but-insufficient package.
+  `Install("reproducible (>= 3.1.1.9054)")` kept an installed `3.1.1` because the
+  constraint was stripped to a bare ref, which pak treats as already satisfied.
 
-* pak per-package dependency resolution is now cached per ref (two tiers:
-  in-memory for the session + disk across restarts), via the new
-  `pakPkgDepsCached()` helper. Previously only the *whole* requested package
-  set was cached (`pakDepsResolve()`), so changing a single ref in `reqdPkgs`
-  invalidated the key and forced every ref to be re-resolved online when pak's
-  batch resolution failed and the slow per-package fallback ran. Now a repeat
-  call with only a few changed refs re-resolves online just those; unchanged
-  refs come from cache. This restores the pre-pak behaviour where `pkgDep()`
-  was memoised per package. A `verbose >= 1` note reports how many refs were
-  served from cache. TTL/offline/`purge` semantics match `pakDepsResolve()`
-  (`options(Require.pak.depCacheTTL=)`, default 24 h).
+* A user-requested CRAN package can no longer be installed *without its
+  dependencies* when pak's batch dependency solve is unsolvable, which left
+  broken namespaces (`loadNamespace("googledrive")` failing on a missing
+  `gargle`).
 
-* `test-12offlineMode_testthat.R:50`: fixed a test error that failed
-  R CMD check on all platforms. `expect_length()` has no `info`
-  argument, so the prior `expect_length(warns2, 0L, info = ...)` threw
-  `unused argument (info = ...)`. Replaced with
-  `expect_true(length(warns2) == 0L, info = ...)`, which keeps the
-  captured-`warns2` diagnostic the original change intended.
+* When an `==X` pin loses to an irreconcilable `>=Y` floor, the surviving
+  constraint is rewritten to `==Y`, honouring the "as old as possible" intent
+  rather than letting pak install CRAN's latest.
 
-* `pakOfflineInstall()`: removed the tier-B fallback (bare `pkg` ref
-  retry on pak's `Conflicts with`). It silently installed the wrong
-  version when pak's cache held a different version of the package
-  than CRAN's mainline (e.g. cache: `fpCompare@0.2.6.9000` PE-fork;
-  pak picks CRAN's mainline `0.2.6` on bare-ref retry). The tier-C
-  whole-batch retry with the failing ref swapped to
-  `local::<cached_path>` is the correct recovery -- it guarantees
-  the cached version is installed regardless of CRAN's mainline.
-  Tier C now handles both "Conflicts with" and any other batch
-  failure.
-* `test-05packagesLong_testthat.R:43`: the `c("data.table","pak") %in%
-  names(pkgDepTest2[[1]])` check is now applied to
-  `extractPkgName(names(...))` since pkgDep2 returns names with
-  version constraints attached (e.g. `"data.table (>= 1.10.4)"`).
+* Multiple ref forms for the same package (`owner/pkg@branch`, `owner/pkg`,
+  `pkg`) no longer all reach the installer, where pak rejected the whole batch
+  with `Conflicts with` and blocked every package in it.
 
-# Require 2.0.0.9019 (development version)
+* `Require()`/`Install()` now warn to restart R when a satisfying version is
+  installed but an older, insufficient one is still loaded -- R cannot hot-swap a
+  loaded namespace, so the session silently kept using the stale version.
 
-* When `confirmEqualsDontViolateInequalitiesThenTrim()` rejects an
-  `==X` row in favour of an irreconcilable `>=Y` / `>Y` row (e.g. user
-  listed `c("stringfish (==0.17.0)", ...)` while another package
-  required `stringfish (>= 0.18.0)`), the surviving floor row is now
-  rewritten to `==Y` instead of left as `>=Y`. This honours the user
-  intent that motivated the original `==X` pin -- "as old as
-  possible" -- by installing the **minimum** version that satisfies
-  the surviving constraint instead of CRAN's latest. Previously, pak
-  was free to install e.g. stringfish 0.19.0 when only 0.18.0 was
-  needed, which then broke any package whose source build was
-  binary-pinned against 0.18.0. No behaviour change when a `>=`
-  conflict has no `==` opponent.
+## Robustness
 
+* Recovery from a transient
+  `cannot open URL 'http://bioconductor.org/config.yaml'` failure, which
+  previously killed an entire pak call even when no Bioconductor package was
+  requested. Only triggered on that specific failure, so the real Bioc config is
+  used whenever bioc.org is reachable.
 
+* `processx` and `callr` are now `Imports`. pak ships embedded copies but does
+  not declare them, and on some Windows configurations its subprocess wedges
+  unless standalone versions are visible in `.libPaths()` -- every install
+  failing with an empty reason string.
 
-* `pakOfflineInstall()` tier-C fallback now retries the WHOLE batch
-  with just the failing ref swapped to `local::<cached_path>`,
-  instead of calling pak on the single `local::` ref standalone.
-  With `dependencies = FALSE` (the batch-wide policy), every other
-  ref's user-supplied pin stays visible to pak -- so a
-  `Require::Install(c("stringfish (==0.17.0)", "qs (==0.27.3)"))`
-  call gets stringfish installed at 0.17.0 (the user's pin) instead
-  of pak resolving CRAN's latest 0.19.0 for qs's LinkingTo. Pak
-  orders the cached deps before the local::-driven source build.
-  If the whole-batch retry succeeds, the per-ref loop exits early
-  (every ref is now installed, no point continuing).
+* Several Windows-specific pak subprocess fixes: pak and its native-helper
+  siblings are no longer file-copied between libraries (their embedded
+  executables do not survive the copy), pak is verified in the project library
+  before use, and it is no longer eagerly loaded at startup, which had grabbed a
+  DLL lock that prevented reinstalling it.
 
-# Require 2.0.0.9017 (development version)
+* Offline and cached installs: the download-cache shortcut no longer routes an
+  *online* install through the offline installer, per-ref retries gained a
+  `local::` last resort that bypasses pak's resolver, and dependency resolution
+  is cached per ref rather than per whole request -- so changing one entry in a
+  list no longer forces every entry to be re-resolved.
 
-* `pakOfflineInstall()` tier-C `local::<cached_path>` fallback now
-  passes `dependencies = NA` (pak's default: Depends + Imports +
-  LinkingTo for build) instead of `FALSE`. The other tiers stay at
-  `FALSE` because they're explicitly isolating a ref from pak's
-  solver, but tier C is doing a source build whose R CMD INSTALL
-  needs the build-time deps actually present in the lib. Without
-  this, `local::.../qs_0.27.3.tar.gz` failed to build because qs's
-  `LinkingTo: stringfish` wasn't in lib at build time, even though
-  both tarballs were in pak's cache. With `NA`, pak reads the
-  tarball's DESCRIPTION, resolves stringfish, finds it in the cache,
-  installs it first, then builds qs. Still all-cache; no network.
+* `attachNamespace()` recovery when a package is already loaded from a different
+  library and its dependents have imported it, fixing "object not found"
+  cascades against a project library.
 
-# Require 2.0.0.9016 (development version)
-
-* `pakOfflineInstall()`: per-ref retry now fires on ANY pak batch
-  failure (not only `Conflicts with`), and gains a third-tier
-  `local::<cached_path>` fallback. Bypasses pak's resolver almost
-  entirely on the cached source tarball -- recovery path for resolver
-  bugs that error before the install can start (e.g. the
-  `! missing value where TRUE/FALSE needed` from
-  `version_satisfies(... atleast = NA)` that pak emits on
-  archived-CRAN packages whose metadata has nullable fields, observed
-  end-to-end on `qs@0.27.3` install). Trade-off: triggers pak's
-  vignette rebuild on source tarballs, which can pull from the
-  network -- worth it as a last resort. Tier order per ref is:
-  (A) ref as-is, (B) bare `pkg` on `Conflicts with`, (C) `local::`
-  on any remaining error.
-
-
-
-* `pakOfflineInstall()`: when a per-ref retry after a batch "Conflicts
-  with" failure ALSO hits "Conflicts with" (typical when the ref is a
-  `pkg@version` exact-pin and pak's resolver creates two solver entries
-  for the same package -- one from the input ref and one from an
-  installed/loaded copy), now falls back to a bare `pkg` ref. The
-  pak download cache was already filtered to the right version, so
-  dropping the explicit pin is safe.
-* `test-18nosudo_testthat.R`: the `callr::r()` subprocess now gets an
-  explicit `libpath` that includes `pkgload`'s and `pak`'s install
-  locations. `tests/testthat/setup.R` narrows the parent's
-  `.libPaths()` to `head + tail`, dropping middle entries where
-  Suggests like `pkgload` typically live under `devtools::test()`.
-  Without the override the subprocess could not load pkgload and the
-  sudo-trap test errored before reaching the protective assertion.
-* `test-05packagesLong_testthat.R:39`: replace the brittle
-  `length(pkgDepTest2[[1]]) == 2` assertion (which broke every time
-  Require's Imports list grew) with a robust "core deps are present"
-  check. The 2nd `Require()` call in the loop now applies the same
-  warning-pre-filter (drop `Please change required version` /
-  `could not be installed`) as the first call before testing against
-  `testWarnsInUsePleaseChange`.
-* `test-05`, `test-08`, `test-10`: the `testWarnsInUsePleaseChange`
-  assertions now attach the captured `warns` vector via `info=` so
-  future failures self-document the offending warning instead of just
-  reporting `TRUE != FALSE`.
-
-# Require 2.0.0.9014 (development version)
-
-* Auto-invalidate the pak dep-resolution cache when an install attempt
-  fails with `missing-build-deps`. The cached plan is provably stale in
-  that case (a build-time package wasn't in the resolved graph) --
-  most commonly because the user just upgraded Require to a release
-  that added an `Imports` package and the cache from before the
-  upgrade still represents the old graph. Without this, every
-  subsequent Require call would serve the same stale plan and hit the
-  same failure ad infinitum. The fix wipes only the specific cache
-  entry that was just used (both the in-memory and on-disk copy) so
-  the next call re-resolves. `pakDepsResolve()` now stashes its
-  cache key in `pakEnv()` so the invalidator doesn't need to recompute
-  it from the resolution args.
-
-
-
-* `processx` and `callr` are now declared `Imports` (callr moved from
-  Suggests). pak ships its own embedded copies in `pak/library/` and
-  does not declare them as standalone Imports, but on some Windows
-  configurations pak's subprocess wedges unless standalone versions
-  are also visible in `.libPaths()` (symptom: every per-ref
-  `pak::pak()` call in `pakSerialInstall` fails with an empty reason
-  string and no pak progress output, blocking the entire install
-  plan; manually `install.packages("processx")` was confirmed to fix
-  this end-to-end on a user's Windows machine). Declaring them as
-  Require Imports guarantees they're installed alongside Require by R's
-  standard dep resolution, without any runtime install of third-party
-  packages from Require's code (the CRAN-friendly approach).
-* `pakResetSubprocess()` now also REMOVES the `remote` slot from
-  `pak:::pkg_data` (in addition to `interrupt + wait + kill` on the
-  `r_session`). pak's `restart_remote_if_needed()` checks for slot
-  existence, not whether the process is alive -- leaving a dead
-  r_session in place was insufficient to make per-ref retries spawn
-  fresh subprocesses on Windows.
-* `pakSerialInstall()` now dumps the raw pak error text at
-  `Require.verbose >= 3` when `pakBuildFailReason()` extracts no
-  reason. Previously a wedged-subprocess failure showed only
-  `could not be installed: any::X` with no suffix, leaving users (and
-  maintainers) blind to whether the failure was a genuine build error
-  or a generic post-wedge "error in pak subprocess".
-
-# Require 2.0.0.9010 (development version)
-
-* User input lists with multiple ref forms for the same package
-  (e.g. `c("PredictiveEcology/reproducible@development",
-  "PredictiveEcology/reproducible", "reproducible")`) no longer leak
-  all three forms through `pakDepsToPkgDT()` into `pakOfflineInstall()`.
-  `trimRedundancies()` can't dedup these because none of the three has
-  a `versionSpec` -- the existing GH-vs-CRAN tiebreaker in
-  `pakDepsToPkgDT()` was applied to `pkgsForPak` (input to pak's
-  resolver) but NOT to `user_pkgFN` (input to `toPkgDTFull()`), so all
-  three rows reached the install machinery. Symptom: pak's batch
-  resolver refused the entire offline-install batch with
-  `reproducible@<v>: Conflicts with reproducible@<v>`, blocking the
-  install of ALL packages in the same batch (digest, fpCompare,
-  lobstr, prettyunits, reproducible). Fix: factored the existing GH-
-  ref-preference dedup loop into a `.preferGHrefDedup()` helper and
-  applied it to `user_pkgFN` as well.
-
-# Require 2.0.0.9009 (development version)
-
-* `ensurePakInProjectLib()` is now only called when `libPaths[1]` is part
-  of the session-wide `.libPaths()` -- i.e. a real project lib, not an
-  ephemeral install-target tempdir passed via
-  `Require::Install(pkg, libPaths = some_tempdir, standAlone = TRUE)`.
-  Previously every such call (common in tests and one-off installs)
-  tried to install pak into the ephemeral lib and ran
-  `unloadNamespace("pak")`, whose cascade left other packages in a
-  partial-load state. Symptom in CI: `test-12offlineMode_testthat.R`
-  failing in `unloadNamespace("fpCompare")` with
-  `cannot open file '.../fpCompare/R/fpCompare.rdb'`.
-
-# Require 2.0.0.9008 (development version)
-
-* pak (and its native-helper siblings `callr`, `processx`, `cli`) are
-  no longer file-copied across libs by `clonePackages()` /
-  `linkOrCopyPackageFiles()`. Their embedded platform-specific
-  executables don't survive a copy on Windows, producing
-  `Native call to processx_exec failed: Command '' not found` on the
-  next subprocess spawn. Those packages now stay in the install plan so
-  the install machinery installs them fresh.
-* New `ensurePakInProjectLib()` called early in `Require()`: when
-  `Require.usePak = TRUE`, verifies pak is installed in `libPaths[1]`
-  (the project lib) and reinstalls it fresh via `utils::install.packages()`
-  if absent. Uses base `install.packages()`, not pak itself, to avoid
-  the chicken-and-egg problem when pak is broken.
-* `ensurePakInProjectLib()` correctly handles the case where pak is
-  already loaded in this R session (e.g. user ran `pak::pak()` before
-  `Require::Install`). On Windows the loaded DLL holds a filesystem
-  lock that blocks `install.packages` from writing. Two-step release
-  before installing: `pakResetSubprocess()` (kill the persistent
-  r_session that holds an indirect DLL reference) followed by
-  `unloadNamespace("pak")`. Only if pak is *still* loaded after both
-  does Require `stop()` with a clear "please RESTART R" message.
-* `R/zzz.R` no longer eagerly loads pak in `.onLoad()`. Eager loading
-  grabbed the Windows DLL lock before `ensurePakInProjectLib()` could
-  run, leaving us unable to reinstall pak when needed. Pak is now
-  loaded on first actual use by the existing `requireNamespace("pak")`
-  checks in `R/pak.R`.
-* New `Require.forcePakReinstall` option (default `FALSE`). The
-  "pak files present in projLib but secretly broken from a file-copy
-  bootstrap" case can't be detected reliably from disk -- the
-  `(local install?)` tag in `pak::pak_sitrep()` is **not** a reliable
-  signal (it also fires on healthy CRAN binaries, which would put
-  CRAN-pak users in an infinite reinstall loop). The new option is
-  the explicit escape hatch: set `options(Require.forcePakReinstall = TRUE)`
-  before `Require::Install(...)` to force a fresh pak install once,
-  then unset it.
-
-# Require 2.0.0.9002 (development version)
-
-* `whIsOfficialCRANrepo()` no longer leaks a "cannot open file"
-  warning when the cached `.mirrors.csv` is absent and the download
-  fallback also fails (offline / fresh cache).
-  `try(read.csv(...), silent = TRUE)` swallows the *error* but
-  `file()` signals the warning first, so it escaped to callers'
-  `withCallingHandlers` (e.g. `SpaDES.project::setupProject`),
-  whose handlers probed the call stack for variables that do not
-  exist on the pak code path -- crashing with
-  `Error in get(obj, envir = env, inherits = FALSE) : object 'pkgDT' not found`.
-  The read is now skipped when the file is absent, and wrapped in
-  `suppressWarnings()` otherwise.
-* `isBinaryCRANRepo()` no longer errors with "subscript out of bounds"
-  when `getOption("repos")` has no element named "CRAN". This can
-  happen when calling code rebuilds the repos option in a way that
-  drops names, e.g. `unique(c(extraRepo, getOption("repos")))`.
-  The default now resolves CRAN lazily and falls back to `NA` when
-  absent.
-
-# Require 2.0.0.9001 (development version)
-
-* Recover from `cannot be unloaded ... imported by` failure via
-  `attachNamespace()`: when `require(pkg, lib.loc = ...)` fails because
-  `pkg` is already loaded from a different lib and its dependents (e.g.
-  `SpaDES.core`) have imported it, the previous recovery code called
-  `require(pkg)` without `lib.loc` -- but that still re-triggers R's
-  version check and the same unload-and-fail path, so the package was
-  left detached. Replace that fallback with a direct `attachNamespace(pkg)`
-  call, which puts the already-loaded namespace on the search path
-  without re-resolving against `.libPaths()`. Fixes the "object
-  'prepInputs' not found" cascade when running a SpaDES workflow
-  against a project lib whose `reproducible`/`SpaDES.core` versions
-  differ from those already loaded in the user lib.
-
-# Require 2.0.0.9000 (development version)
-
-* Development version opened after the CRAN release of 2.0.0. No
-  user-facing changes yet.
+* `whIsOfficialCRANrepo()` no longer leaks a "cannot open file" warning when
+  offline with no cached mirror list, and `isBinaryCRANRepo()` no longer errors
+  when `getOption("repos")` has no element named `CRAN`.
 
 # Require 2.0.0
 
