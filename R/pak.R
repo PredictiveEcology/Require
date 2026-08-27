@@ -3243,9 +3243,12 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
   reason <- .pakNeedsReinstall(pakPath, forceReinstall = forceReinstall)
   if (!nzchar(reason)) return(invisible(TRUE))
 
+  ## Deliberately says only what is being addressed, not how: the "how" is
+  ## decided below and reported there. Claiming a fresh install here printed
+  ## that line even on runs where pak was symlinked in milliseconds.
   messageVerbose(
     "Require: ", reason, ".\n",
-    "  Installing pak fresh into project lib (NOT copying): ", projLib,
+    "  Making pak available in the project lib: ", projLib,
     if (isWindows())
       paste0("\n  Copying pak from another lib does not work on Windows -- pak's\n",
              "  embedded callr/processx helper executables do not survive a copy.\n",
@@ -3298,10 +3301,13 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
       linked <- isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE))
       if (linked)
         messageVerbose("  Linked pak from ", src, " (no reinstall needed)",
-                       verbose = verbose, verboseLevel = 2)
+                       verbose = verbose, verboseLevel = 1)
     }
   }
 
+  if (!isTRUE(linked))
+    messageVerbose("  Installing pak fresh (no linkable copy found)",
+                   verbose = verbose, verboseLevel = 1)
   ok <- if (isTRUE(linked)) {
     length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
   } else tryCatch({
