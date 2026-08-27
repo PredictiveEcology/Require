@@ -1406,3 +1406,30 @@ test_that(".pinSurvivorToMinimumAfterExactReject() handles empty/malformed input
   expect_silent(Require:::.pinSurvivorToMinimumAfterExactReject(
     pkgDT, NULL))
 })
+
+test_that("pak is pinned to source only when the caller actually asked for it", {
+  ## Require()/Install() default `type = getOption("pkgType")`, which is
+  ## "source" on Linux. Keying the pin on the value alone therefore fired on
+  ## every Linux install: pak resolved the whole tree as source, so every
+  ## already-installed *binary* dependency stopped matching and was replanned
+  ## as a source rebuild -- a plan full of `cli 3.6.6 -> 3.6.6 [bld][cmp]`.
+  ## Measured on one ref whose deps were all installed: 23 same-version
+  ## rebuilds and 103.8s forced, versus "kept 20, added 1" and 2.6s not forced.
+  withr::local_options(list(pkg.platforms = NULL))
+
+  ## defaulted type -- must NOT pin, whatever the platform default happens to be
+  expect_null(Require:::forcePakSourceIfRequested("source", typeExplicit = FALSE))
+  expect_null(getOption("pkg.platforms"))
+
+  ## explicitly requested source -- must pin, and hand back the old value so
+  ## the caller's on.exit() can restore it
+  old <- Require:::forcePakSourceIfRequested("source", typeExplicit = TRUE)
+  expect_identical(getOption("pkg.platforms"), "source")
+  expect_true(is.list(old) && "pkg.platforms" %in% names(old))
+  options(old)
+  expect_null(getOption("pkg.platforms"))
+
+  ## an explicit non-source type never pins
+  expect_null(Require:::forcePakSourceIfRequested("binary", typeExplicit = TRUE))
+  expect_null(getOption("pkg.platforms"))
+})

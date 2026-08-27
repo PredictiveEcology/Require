@@ -20,6 +20,7 @@ Require(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
+  typeExplicit = !missing(type),
   upgrade = FALSE,
   returnDetails = FALSE,
   ...
@@ -37,6 +38,7 @@ Install(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
+  typeExplicit = !missing(type),
   upgrade = FALSE,
   ...
 )
@@ -142,6 +144,13 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{returnDetails = TRUE} (for backwards compatibility).}
 
 \item{type}{See \code{utils::install.packages}}
+
+\item{typeExplicit}{Logical. Whether \code{type} was supplied by the caller
+rather than defaulted from \code{getOption("pkgType")}. Defaults to
+\code{!missing(type)} and should not normally be set by hand. It exists because
+\code{getOption("pkgType")} is \code{"source"} on Linux, so the value of \code{type}
+alone cannot say whether source-only builds were actually asked for; only
+an explicit request pins pak to source.}
 
 \item{upgrade}{When \code{FALSE}, the default, will only upgrade a package when the
 version on in the local library is not adequate for the version requirements
