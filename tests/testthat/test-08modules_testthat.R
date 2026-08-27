@@ -243,12 +243,19 @@ test_that("test 8", {
                     ## cascades to a load-time failure even though its own code
                     ## is fine.
                     "fireSenseUtils",
-                    ## Same cascade, newer cause: ggplot2 4.x moved to S7, so
-                    ## ggpubr (1.0.0) now pulls S7 + isoband, and its tree also
-                    ## reaches stringi -- all NeedsCompilation. On a machine
-                    ## where any of those will not build, ggpubr cannot install
-                    ## however sound its own code is. Observed on R 4.4.3/gcc 13
-                    ## and R 4.6, with isoband and stringi the failing builds.
+                    ## Same cascade, newer cause. ggpubr (1.0.0) reaches Deriv
+                    ## through rstatix -> car -> doBy, and Deriv 4.3.0 calls
+                    ## R_ClosureFormals(), added to R's C API in 4.5.0, while
+                    ## declaring only `Depends: Rcpp`. On R < 4.5 the metadata
+                    ## therefore says it is installable and the build fails:
+                    ##   derive_simplif.cpp:376: error:
+                    ##     'R_ClosureFormals' was not declared in this scope
+                    ## Nothing can resolve that -- there is no declared
+                    ## requirement to fall back from, so Deriv 4.2.0 in the
+                    ## Archive is never considered -- and ggpubr cannot install
+                    ## however sound its own code is. (On R 4.6 Deriv builds;
+                    ## ggpubr can still fail there if isoband or stringi will
+                    ## not build.)
                     "ggpubr")
     allInstalledPre <- allInstalled
     allInstalled <- setdiff(allInstalled, knownFails)
