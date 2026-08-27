@@ -233,7 +233,7 @@ test_that("a small snapshot installs through the install.packages chain", {
     Ncpus = max(1L, parallel::detectCores() - 1L)
   )
 
-  suppressWarnings(
+  warns <- capture_warnings(
     Require(packageVersionFile = snf, require = FALSE, returnDetails = TRUE)
   )
 

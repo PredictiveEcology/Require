@@ -17,6 +17,11 @@ test_that("small snapshot install pins each package to the requested version", {
   ##     formatR, so the set still exercises *transitive* resolution -- 2
   ##     direct deps resolving to 3 -- without dragging in a compiler.
   ##   - 1 GitHub@<sha> pin to a leaf package with no Remotes/Imports
+  ##
+  ## Every pin is a package the test stack never loads. That is a requirement,
+  ## not a preference: R cannot hot-swap a loaded namespace, so pinning a
+  ## package that testthat itself has loaded (it loads R6 and withr) asks for a
+  ## downgrade that cannot happen, and the pin silently does not land.
   ## Lightweight enough to run under CI budget.
   snf <- testthat::test_path("fixtures", "smallSnapshot.txt")
   pkgs <- data.table::fread(snf)

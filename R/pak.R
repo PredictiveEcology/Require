@@ -291,7 +291,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       })))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
-        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
+        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm, verbose = verbose)
         break
       }
       if (grp[i] == .txtFailedToDLFrom) {
@@ -303,7 +303,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         for (j in seq_along(pkgNoVersion)) {
           if (isGH(pkgNoVersion[j])) { # "PredictiveEcology/fpCompare (>=2.0.0)"
             if (is.na(pkg[whRm[j]]) || !length(whRm[j])) next
-            isOK <- pakCheckGHversionOK(pkg[whRm[j]])
+            isOK <- pakCheckGHversionOK(pkg[whRm[j]], verbose = verbose)
             # pkgDT <- toPkgDTFull(pkg)
             # dl <- pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2())
             # vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
@@ -313,7 +313,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
               # packages <- packages[-whRm[j]]
             next
           }
-          packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRm[j])
+          packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRm[j], verbose = verbose)
           if (!identical(length(packages2), length(packages)))
             whRmAll <- c(whRmAll, whRm[j])
 
@@ -329,7 +329,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         # likely a repository that has a 4th version number element,
         #  e.g., NetLogoR 1.0.5.9001 on e.g., predictiveecology.r-universe.dev
         repoToUse <- unlist(whIsOfficialCRANrepo(currentRepos = getOption("repos")))
-        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
+        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm, verbose = verbose)
         # options(repos = repoToUse)
         break
       }
@@ -461,7 +461,7 @@ pakPkgSetup <- function(pkgs, doDeps, verbose = getOption("Require.verbose")) {
     pkgs[whEquals] <- equalsToAt(pkgs[whEquals])
     # pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
   if (length(whLT))
-    pkgs[whLT] <- lessThanToAt(pkgs[whLT])
+    pkgs[whLT] <- lessThanToAt(pkgs[whLT], verbose = verbose)
     # pkgs[whLT] <- gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs[whLT])
   if (length(whHEAD))
     pkgs[whHEAD] <- HEADtoNone(pkgs[whHEAD])
@@ -655,10 +655,10 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       notGH <- isGH %in% FALSE
       if (any(notGH)) {
         pkg[notGH] <- equalsToAt(pkg[notGH])
-        pkg2 <- lessThanToAt(pkg[notGH]) # can remove a pkg if not an option
+        pkg2 <- lessThanToAt(pkg[notGH], verbose = verbose) # can remove a pkg if not an option
       } else {
         pkg <- equalsToAt(pkg)
-        pkg2 <- lessThanToAt(pkg) # can remove a pkg if not an option
+        pkg2 <- lessThanToAt(pkg, verbose = verbose) # can remove a pkg if not an option
       }
       if (length(pkg2) == 0) {
         pkg1 <- pkg2
@@ -1432,7 +1432,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   pkgDT
 }
 
-lessThanToAt <- function(pkgs) {
+lessThanToAt <- function(pkgs, verbose = getOption("Require.verbose")) {
   hasLT <- grepl("<", pkgs) # only < not <=
   if (any(hasLT %in% TRUE)) {
     #trulyLT <- grepl("<[^=]", pkgs) # only < not <=
@@ -1444,7 +1444,7 @@ lessThanToAt <- function(pkgs) {
 
       isGH <- isGH(pkg)
       if (any(isGH)) {
-        isOK <- pakCheckGHversionOK(pkg)
+        isOK <- pakCheckGHversionOK(pkg, verbose = verbose)
         notOK <- isOK %in% FALSE
         if (any(notOK)) {
           pkg2 <- pkg[!notOK]
@@ -1456,7 +1456,7 @@ lessThanToAt <- function(pkgs) {
 
       # vers <- Map(pkg = pkgs[whTrulyLT], function(pkg) {
       pkgNoVersion <- trimVersionNumber(pkg)
-      his <- pkgHistoryVersions(pkgNoVersion)
+      his <- pkgHistoryVersions(pkgNoVersion, verbose = verbose)
       if (is.null(his)) return(character())
       whOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(whOK %in% FALSE)) {
@@ -1500,8 +1500,8 @@ lessThanToAt <- function(pkgs) {
 ## Seam around pak::pkg_history(): kept as its own function so the
 ## "no version history available" path is testable without a network call.
 ## Returns NULL rather than a try-error.
-pkgHistoryVersions <- function(pkgNoVersion) {
-  his <- try(pak::pkg_history(pkgNoVersion), silent = TRUE)
+pkgHistoryVersions <- function(pkgNoVersion, verbose = getOption("Require.verbose")) {
+  his <- try(pakCall(pak::pkg_history(pkgNoVersion), verbose), silent = TRUE)
   if (is(his, "try-error")) NULL else his
 }
 
@@ -1511,7 +1511,8 @@ HEADtoNone <- function(pkgs) {
 
 isGT <- function(pkgs) grepl(">", pkgs)
 
-pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
+pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages),
+                          verbose = getOption("Require.verbose")) {
   # Guard against being called with no package to look up. pakErrorHandling
   # parses pak's error output and can pass through an empty `pkgNoVersion`
   # when the parse yields no packages (e.g. a pak-internal error like
@@ -1529,7 +1530,7 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   hasVer <- pkgNoVer != packages[whRm]
 
   isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
-  hisAll <- try(pak::pkg_history(pkgNoVer), silent = TRUE)
+  hisAll <- try(pakCall(pak::pkg_history(pkgNoVer), verbose), silent = TRUE)
   ## Was previously `tail(..., 1)` (the LATEST archive entry). That broke
   ## snapshot installs that pin a specific older version: a snapshot ref
   ## like "BH@1.81.0-1" produced an Archive URL for the latest BH version
@@ -1625,9 +1626,9 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
 
 .txtDummyPackage <- "dummy"
 
-pakCheckGHversionOK <- function(pkg) {
+pakCheckGHversionOK <- function(pkg, verbose = getOption("Require.verbose")) {
   pkgDT <- toPkgDTFull(pkg)
-  dl <- try(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()))
+  dl <- try(pakCall(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()), verbose))
   if (is(dl, "try-error")) return(FALSE)
   vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
   isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
@@ -3418,7 +3419,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   whUnpinned <- !grepl("@", pkgs)
   pkgs[whUnpinned] <- equalsToAt(pkgs[whUnpinned])    # == version -> @version (exact pin)
   # <= version -> find highest satisfying version via pak::pkg_history() -> @version
-  pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned])
+  pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned], verbose = verbose)
 
   # >= / > version: pak has no native lower-bound ref form. The old approach
   # stripped the constraint to a bare name and let `any::` + the install run

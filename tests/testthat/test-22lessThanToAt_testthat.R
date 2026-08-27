@@ -9,8 +9,11 @@
 ## pkgHistoryVersions() wraps the pak::pkg_history() call so these can drive
 ## the empty case without a network round trip.
 
+## `...` so the mock keeps matching if pkgHistoryVersions() gains arguments --
+## it now takes `verbose`, threaded down so a caller-supplied value beats the
+## option.
 fakeHistory <- function(versions) {
-  function(pkgNoVersion) data.frame(Version = versions, stringsAsFactors = FALSE)
+  function(pkgNoVersion, ...) data.frame(Version = versions, stringsAsFactors = FALSE)
 }
 
 test_that("lessThanToAt pins to the highest version satisfying the constraint", {
