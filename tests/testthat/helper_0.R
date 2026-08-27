@@ -1,21 +1,59 @@
+## pakLibForTests(): one shared, single-package library carrying pak, built at
+## most once per session.
+##
+## setupTest() narrows .libPaths() to a per-file temp lib, which puts the real
+## pak out of reach of pak's callr subprocess: that subprocess runs its own
+## loadNamespace("pak") against the *inherited* .libPaths() and dies with
+## "there is no package called 'pak'" if no entry has it -- a pak merely loaded
+## in this session does not reach it. Require's ensurePakInProjectLib() covers
+## that by installing a fresh 12 MB pak into the project lib, correct but ~5.6s
+## per lib, once for each of the 15 test files that call setupTest(). Carrying
+## one shared lib as the *second* .libPaths() entry serves all of them, and
+## works under standAlone = TRUE too, since that only controls whether the user
+## libs get appended -- not how many entries you may pass.
+##
+## Kept to a single package so it adds only pak to anything reading across
+## .libPaths() (installed.packages(), pkgSnapshot(), ...). Defined here rather
+## than in setup.R so it does not depend on which environment testthat sources
+## setup files into, and lazily so a run that never calls setupTest() never
+## pays for it.
+pakLibForTests <- local({
+  lib <- NULL
+  function() {
+    if (!is.null(lib)) return(lib)
+    lib <<- if (isTRUE(getOption("Require.usePak", TRUE))) {
+      l <- tempdir2("RequirePakLibForTests")
+      if (!length(find.package("pak", lib.loc = l, quiet = TRUE)))
+        utils::install.packages("pak", lib = l, repos = getOption("repos"),
+                                quiet = TRUE)
+      l
+    } else {
+      character(0)
+    }
+    lib
+  }
+})
+
 setupTest <- function(verbose = getOption("Require.verbose"),
                       needRequireInNewLib = FALSE, envir = parent.frame()) {
   newLib <- tempdir3("Require_test_libs")
   if (needRequireInNewLib) {
     linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
   }
-  ## Force-load pak BEFORE narrowing .libPaths(): once a namespace is loaded,
-  ## R remembers where it came from even if the lib is no longer on .libPaths().
-  ## This lets us narrow the path to c(newLib, .Library) so `installed.packages()`
-  ## returns clean per-test results, while still being able to call pak inside
-  ## tests. Replacing the path without this preload hides pak under R CMD check
-  ## (it lives in a temporary RLIBS dir); leaving the wider path in causes
-  ## duplicate rows from packages like fpCompare that exist in multiple libs,
-  ## which break version-pin tests.
-  ## Don't preload Require: under covr, Require's namespace is the instrumented
-  ## copy and re-loading via loadNamespace can interfere with coverage tracking.
-  tryCatch(loadNamespace("pak"), error = function(e) NULL)
-  withr::local_libpaths(c(newLib, .Library), .local_envir = envir)
+  ## Narrow .libPaths() to c(newLib, pakLibForTests, .Library) so
+  ## `installed.packages()` returns clean per-test results -- leaving the wider
+  ## path in causes duplicate rows from packages like fpCompare that exist in
+  ## several libs, which breaks version-pin tests.
+  ##
+  ## pakLibForTests() is documented above. pak has to be *on the path*, not
+  ## merely loaded. An earlier version of this function force-loaded pak here
+  ## and claimed that was what kept pak usable inside tests; it was not -- what
+  ## actually did the work was Require's ensurePakInProjectLib() reinstalling
+  ## pak into every newLib.
+  ## Don't preload Require either: under covr, Require's namespace is the
+  ## instrumented copy and re-loading via loadNamespace can interfere with
+  ## coverage tracking.
+  withr::local_libpaths(c(newLib, pakLibForTests(), .Library), .local_envir = envir)
 
   ## Always use temporary package cache for tests (#128):
   ## - we don't want to modify the user's cache;

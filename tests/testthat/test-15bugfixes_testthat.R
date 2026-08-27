@@ -1058,13 +1058,13 @@ test_that(".isSessionLibPath() distinguishes real project libs from ephemeral te
   expect_false(Require:::.isSessionLibPath(NULL))
 })
 
-test_that(".pakNeedsReinstall() flags missing-from-projLib and forceReinstall opt-in", {
-  # Missing from project lib
-  expect_match(Require:::.pakNeedsReinstall(character(0)), "not present")
-  expect_match(Require:::.pakNeedsReinstall(""),           "not present")
-  expect_match(Require:::.pakNeedsReinstall(NULL),         "not present")
+test_that(".pakNeedsReinstall() flags pak-not-on-.libPaths and forceReinstall opt-in", {
+  # Not reachable anywhere on .libPaths()
+  expect_match(Require:::.pakNeedsReinstall(character(0)), "not available on .libPaths")
+  expect_match(Require:::.pakNeedsReinstall(""),           "not available on .libPaths")
+  expect_match(Require:::.pakNeedsReinstall(NULL),         "not available on .libPaths")
 
-  # Present in projLib + no force => no reinstall
+  # Reachable on .libPaths() + no force => no install
   expect_identical(Require:::.pakNeedsReinstall("/some/path/pak"), "")
   expect_identical(Require:::.pakNeedsReinstall("/some/path/pak",
                                                  forceReinstall = FALSE), "")

@@ -3025,9 +3025,19 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # ---------------------------------------------------------------------------
 # .pakNeedsReinstall: pure decision function for ensurePakInProjectLib().
 #
-# Given the result of find.package("pak", lib.loc = projLib), return:
-#   - ""              if pak is present in projLib (no reinstall needed)
-#   - <reason string> if pak should be reinstalled fresh into projLib
+# Given the result of find.package("pak", lib.loc = .libPaths()), return:
+#   - ""              if pak is reachable on .libPaths() (no install needed)
+#   - <reason string> if pak must be installed fresh into projLib
+#
+# The question is deliberately "reachable anywhere on .libPaths()", not
+# "present in projLib". pak does its real work in a callr subprocess that
+# runs its own loadNamespace("pak") against the inherited .libPaths(), so
+# which entry holds pak is irrelevant -- only that some entry does. A pak
+# loaded in the parent session is NOT sufficient; the subprocess dies with
+#   `error in pak subprocess` / `there is no package called 'pak'`.
+# One shared pak install therefore serves any number of project libs,
+# including standAlone = TRUE ones, via
+#   setLibPaths(c(projLib, pakLib), standAlone = TRUE)
 #
 # Note: we deliberately do NOT use pak_sitrep()'s "(local install?)" tag
 # as a corruption signal. That tag fires for every install where
@@ -3041,7 +3051,7 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
   if (isTRUE(forceReinstall))
     return("Require.forcePakReinstall = TRUE (explicit opt-in)")
   if (!length(pakPath) || !nzchar(pakPath[1]))
-    return("pak not present in project lib")
+    return("pak not available on .libPaths()")
   ""
 }
 
@@ -3120,8 +3130,12 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
   if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
     return(invisible(FALSE))
 
+  ## lib.loc = .libPaths() deliberately, and never lib.loc = NULL: with NULL,
+  ## find.package() consults loaded namespaces first and so reports pak as
+  ## found even when its library is off .libPaths() -- precisely the case
+  ## where pak's subprocess cannot load it.
   pakPath <- suppressWarnings(tryCatch(
-    find.package("pak", lib.loc = projLib, quiet = TRUE),
+    find.package("pak", lib.loc = .libPaths(), quiet = TRUE),
     error = function(e) character(0)))
 
   forceReinstall <- isTRUE(getOption("Require.forcePakReinstall", FALSE))
@@ -3130,10 +3144,13 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
 
   messageVerbose(
     "Require: ", reason, ".\n",
-    "  Installing pak fresh into project lib (NOT copying): ", projLib, "\n",
-    "  Copying pak from another lib does not work on Windows -- pak's\n",
-    "  embedded callr/processx helper executables do not survive a copy.\n",
-    "  (Symptom otherwise: 'Native call to processx_exec failed: Command' '' 'not found'.)",
+    "  Installing pak fresh into project lib (NOT copying): ", projLib,
+    if (isWindows())
+      paste0("\n  Copying pak from another lib does not work on Windows -- pak's\n",
+             "  embedded callr/processx helper executables do not survive a copy.\n",
+             "  (Symptom otherwise: 'Native call to processx_exec failed: ",
+             "Command' '' 'not found'.)")
+    else "",
     verbose = verbose, verboseLevel = 1)
 
   ## Case 4 -- pak loaded by the user (or by an earlier load) before we

@@ -224,7 +224,10 @@ test_that("a small snapshot installs through the install.packages chain", {
   testlib <- file.path(tempdir(), paste0("rqlib_ipsnap_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
-  origLibPaths <- setLibPaths(testlib, standAlone = TRUE)
+  ## standAlone = TRUE only means "do not append the user libs"; it does not
+  ## limit how many entries we pass. Carrying pakLibForTests keeps pak
+  ## reachable for its subprocess without a per-test 12 MB reinstall.
+  origLibPaths <- setLibPaths(c(testlib, pakLibForTests()), standAlone = TRUE)
   on.exit(setLibPaths(origLibPaths), add = TRUE)
 
   withr::local_options(
