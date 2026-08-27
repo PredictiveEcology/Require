@@ -579,7 +579,9 @@ whEquals <- function(pkgs) {
 }
 
 isGH <- function(pkgs) {
-  grepl("^[[:alpha:]]+/.+", pkgs)
+  ## Shared with extractPkgGitHub(); see .ghRefRegex in R/extract.R for why
+  ## these two must not have separate definitions.
+  grepl(.ghRefRegex, pkgs)
 }
 
 # Returns TRUE iff the constraint (`versionSpec` / `inequality`) is satisfied,
