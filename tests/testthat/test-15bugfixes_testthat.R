@@ -1370,3 +1370,75 @@ test_that(".pinSurvivorToMinimumAfterExactReject() handles empty/malformed input
   expect_silent(Require:::.pinSurvivorToMinimumAfterExactReject(
     pkgDT, NULL))
 })
+
+test_that(".pakDropUnchangedFailures re-attempts only when something new is installed", {
+  ## #190: identify-and-defer ran several phases, each deciding independently
+  ## what to attempt, so a ref that cannot build was handed to pak once per
+  ## phase against an identical installed set. Retrying is only useful when a
+  ## dependency has landed since the last attempt.
+  memo <- Require:::.pakFailMemo()
+  refs <- c("any::Deriv", "any::car")
+  inst1 <- c("cli", "rlang")
+
+  ## nothing recorded yet -> everything is attempted
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, inst1, verbose = -2), refs)
+
+  Require:::.pakRecordFailures(memo, refs, inst1)
+
+  ## same installed set -> both dropped
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, inst1, verbose = -2),
+    character(0))
+
+  ## the comparison is set-wise, not order-sensitive
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, rev(inst1), verbose = -2),
+    character(0))
+
+  ## one new package anywhere makes them eligible again
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, c(inst1, "glue"), verbose = -2),
+    refs)
+
+  ## a ref that never failed is never dropped
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, "any::brandNew", inst1, verbose = -2),
+    "any::brandNew")
+
+  ## empty in, empty out
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, character(0), inst1, verbose = -2),
+    character(0))
+})
+
+test_that(".updateIsPossiblyNeeded keeps only what could actually change", {
+  ## updatePackages() handed Install() every installed package as `pkg (HEAD)`
+  ## with no version comparison, so pak planned a reinstall of the whole
+  ## library -- 170 same-version "updates" where base::update.packages()
+  ## correctly found 3.
+  ap <- cbind(Version = c(older = "1.0.0", same = "2.0.0", newer = "3.1.0"))
+  rownames(ap) <- c("older", "same", "newer")
+
+  nms   <- c("older", "same", "newer", "notInRepos", "aGitHubPkg")
+  inst  <- c("1.2.0", "2.0.0", "3.0.0", "9.9.9", "0.0.1")
+  isGH  <- c(FALSE, FALSE, FALSE, FALSE, TRUE)
+
+  res <- Require:::.updateIsPossiblyNeeded(nms, inst, isGH, ap)
+
+  ## installed is ahead of the repo, and identical to the repo -> nothing to do
+  expect_false(res[[1]])
+  expect_false(res[[2]])
+  ## repo has something strictly newer -> needed
+  expect_true(res[[3]])
+  ## not offered by any repo (archived / repo down) -> cannot prove current
+  expect_true(res[[4]])
+  ## GitHub refs always resolve remotely: HEAD moves without a version bump
+  expect_true(res[[5]])
+
+  ## no usable available.packages() -> exactly the previous behaviour
+  expect_true(all(Require:::.updateIsPossiblyNeeded(nms, inst, isGH, NULL)))
+  expect_true(all(Require:::.updateIsPossiblyNeeded(nms, inst, isGH, ap[0, , drop = FALSE])))
+  expect_identical(Require:::.updateIsPossiblyNeeded(character(0), character(0),
+                                                     logical(0), ap), logical(0))
+})

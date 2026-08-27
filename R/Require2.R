@@ -3059,6 +3059,40 @@ packageFullNameFromSnapshot <- function(snapshot) {
 #' possible state, whether they are on CRAN currently, archived, or on GitHub.
 #' @export
 #'
+# ---------------------------------------------------------------------------
+# .updateIsPossiblyNeeded: which installed packages might have something newer?
+#
+# updatePackages() used to hand Install() every installed package as
+# `pkg (HEAD)`, with no comparison against what the repositories actually
+# offer. pak then planned a reinstall of the whole library, reported as a wall
+# of same-version "updates" (`cli 3.6.6 -> 3.6.6 [bld][cmp]`), and rebuilt
+# packages that were already current. base::update.packages() makes this
+# comparison first, which is why it found three packages needing work where
+# updatePackages() found a hundred and seventy.
+#
+# Returns TRUE for a row that must still be resolved:
+#   * GitHub refs, always -- a branch HEAD moves without the DESCRIPTION
+#     version changing, so there is nothing local to compare against;
+#   * anything the repositories do not currently offer (archived, or a repo
+#     that is momentarily unreachable), since we cannot show it is current;
+#   * CRAN-form refs whose available version is strictly newer than installed.
+#
+# With no usable `ap` this returns all TRUE, i.e. exactly the old behaviour.
+# ---------------------------------------------------------------------------
+.updateIsPossiblyNeeded <- function(pkgNames, instVer, isGH, ap) {
+  n <- length(pkgNames)
+  if (!n) return(logical(0))
+  if (is.null(ap) || !NROW(ap)) return(rep(TRUE, n))
+  m <- match(pkgNames, rownames(ap))
+  availVer <- rep(NA_character_, n)
+  availVer[!is.na(m)] <- ap[m[!is.na(m)], "Version"]
+  isNewer <- vapply(seq_len(n), function(i) {
+    if (is.na(availVer[i]) || is.na(instVer[i])) return(TRUE)
+    utils::compareVersion(availVer[i], instVer[i]) > 0
+  }, logical(1))
+  isGH | isNewer
+}
+
 updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
                            verbose = getOption("Require.verbose")) {
 
@@ -3078,6 +3112,26 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
     # github
     paste0(ip[["Package"]], head) # cran
   ))
+
+  ## Ask only for what could actually change; see .updateIsPossiblyNeeded().
+  isGHrow <- !is.na(ip$GithubRepo)
+  ap <- tryCatch(available.packages(repos = getOption("repos")),
+                 error = function(e) NULL)
+  needed <- .updateIsPossiblyNeeded(ip[["Package"]], ip[["Version"]], isGHrow, ap)
+  if (any(!needed)) {
+    messageVerbose(
+      "updatePackages: ", sum(!needed), " of ", length(needed),
+      " installed package(s) are already at the newest version the ",
+      "repositories offer; not reinstalling them",
+      verbose = verbose, verboseLevel = 1)
+    pkgs <- pkgs[needed]
+    ip <- ip[needed]
+  }
+  if (!length(pkgs)) {
+    messageVerbose("updatePackages: nothing to update",
+                   verbose = verbose, verboseLevel = 1)
+    return(invisible(NULL))
+  }
 
   # check for SHAs that need user input to update:
   pkgsSplit <- strsplit(pkgs, split = "@")
