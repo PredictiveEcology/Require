@@ -4004,7 +4004,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         error = function(e) character(0))
       deferred <- .pakDropUnchangedFailures(failMemo, deferred,
                                             instBeforeDeferred, verbose)
-      if (!length(deferred)) break
+    }
+    ## Re-test: .pakDropUnchangedFailures() above can empty `deferred`, and the
+    ## serial pass and its retries below must then be skipped. This was a
+    ## `break`, which R CMD check rightly flagged -- "break used in wrong
+    ## context: no loop is visible" -- because the enclosing block is an `if`,
+    ## not a loop. That WARNING failed every R-CMD-check job while the tests
+    ## themselves passed.
+    if (length(deferred)) {
       .pakRecordFailures(failMemo, deferred, instBeforeDeferred)
       messageVerbose(
         "identify-and-defer: installing ", length(deferred),
