@@ -108,9 +108,18 @@ test_that("test 1", {
       pv <= pvWant
     })
     # Test snapshot file
-    orig <- setLibPaths(dir2, standAlone = TRUE, updateRprofile = FALSE)
+    ## Carry pakLibForTests(): this narrowing is what stranded pak the first
+    ## time the shared lib was tried. Without it, ensurePakInProjectLib()
+    ## installs pak into dir2, pak's namespace binds there, dir2 is later
+    ## removed, and every subsequent pak:::loaded_packages() warns on the dead
+    ## directory -- which failed test-01:294/:409 and test-12:52 because those
+    ## assert on the warnings a call produced.
+    orig <- setLibPaths(c(dir2, pakLibForTests()), standAlone = TRUE,
+                        updateRprofile = FALSE)
     pkgSnapFile <- tempfile()
-    pkgSnapshot(pkgSnapFile, libPaths = .libPaths()[-length(.libPaths())])
+    ## Name dir2 rather than deriving it from .libPaths(): the path now also
+    ## carries the shared pak lib, and pak has no business in this snapshot.
+    pkgSnapshot(pkgSnapFile, libPaths = dir2)
     pkgSnapFileRes <- data.table::fread(pkgSnapFile)
     dir6 <- Require:::rpackageFolder(Require::tempdir2("test6"))
     dir6 <- Require::checkPath(dir6, create = TRUE)
