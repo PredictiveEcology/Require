@@ -3,7 +3,7 @@ test_that("test 1", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
 
   a <- extractPkgName("Require (>=0.0.1)")
   testthat::expect_true({

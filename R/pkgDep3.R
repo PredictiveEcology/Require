@@ -76,19 +76,15 @@ utils::globalVariables(c(
 #' @export
 #' @rdname pkgDep
 #'
-#' @examples
-#' \dontrun{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDep("tidyverse", recursive = TRUE)
+#' pkgDep("tidyverse", recursive = TRUE)
 #'
-#'   # GitHub, local, and CRAN packages
-#'   pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
+#' # GitHub, local, and CRAN packages
+#' pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 pkgDep <- function(packages,
                    libPaths,
                    which = c("Depends", "Imports", "LinkingTo"),
@@ -1588,6 +1584,7 @@ appendRecursiveToDeps <- function(pkgDT, caTr, depFa, caFa, snFa, depTr, snTr) {
 
 
 #' @include pkgDep.R
+#' @importFrom utils packageDescription
 RequireDependencies <- function(libPaths = .libPaths()) {
   localRequireDir <- file.path(libPaths, "Require")
   de <- dir.exists(localRequireDir)

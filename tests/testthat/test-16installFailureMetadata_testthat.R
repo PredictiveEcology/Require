@@ -445,7 +445,6 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
   # round-trip (which exercises the archive fallback path inside
   # pakInstallFiltered) is environment-sensitive and runs in the larger
   # integration test below.
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -469,7 +468,6 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
 # so the caller can skip cleanly.
 # ---------------------------------------------------------------------------
 test_that("pakGetArchive returns unchanged packages when no concrete CRAN repo", {
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -582,7 +580,6 @@ test_that("pak::pak installs cross-dependent archived refs in one batch", {
 # in pakEnv()$.lastInstallFailures.
 # ---------------------------------------------------------------------------
 test_that("pakEnv()$.lastInstallFailures is populated after a successful install", {
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -636,7 +633,7 @@ test_that("pakEnv()$.lastInstallFailures is populated after a successful install
 # ---------------------------------------------------------------------------
 test_that("identify-and-defer recovers from PSPclean-style cascade", {
   skip_on_cran()
-  skip_on_ci()
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_if_offline2()
   skip_if_not_installed("pak")
   if (identical(tolower(Sys.getenv("R_REQUIRE_RUN_LARGE_INTEGRATION", "true")),

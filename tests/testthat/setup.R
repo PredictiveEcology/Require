@@ -1,24 +1,3 @@
-## Enable the install-heavy tests for a local manual run.
-##
-## This was keyed on .isDevelVersion(), i.e. a 4-part version like 2.0.0.9036.
-## At a release version (2.1.0 -> 3 parts) it switched off, so test-08, test-09
-## and test-10 went quiet at exactly the commit being released -- the build that
-## most needs them. They reported "empty test" rather than a skip, so the gap
-## was easy to miss.
-##
-## The version was never the right discriminator: those tests already carry
-## skip_on_ci() AND skip_on_cran(), so CI and CRAN exclude themselves. What has
-## to be excluded here is R CMD check, where skip_on_cran() does NOT fire
-## (devtools::check() sets NOT_CRAN = "true") and test-08 alone would install
-## ~100 packages. testthat::is_checking() detects that; it reads
-## TESTTHAT_IS_CHECKING, which testthat sets under R CMD check and not under
-## devtools::test().
-if (nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0 &&
-    !testthat::is_checking() &&
-    !isTRUE(as.logical(Sys.getenv("CI")))) {
-  withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
-}
-
 ## pak's pkgcache refuses to use the system cache during R CMD check (CRAN
 ## policy: pkgcache aborts with "R_USER_CACHE_DIR env var not set during
 ## package check"). Without this, every pak::pak() call inside the test suite
@@ -59,21 +38,40 @@ usePkgCache <- tempdir2("RequireCacheForTests") # or NULL for using default
 ##    occasionally hung indefinitely on cold pak/pkgcache state — the same
 ##    hang we observed in the 6-hour CI matrix timeouts.
 
-isDev <- Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true" &&
-  Sys.getenv("R_REQUIRE_CHECK_AS_CRAN") != "true"
+## Named for exactly what it is. It mirrors testthat's own two gates and
+## derives from nothing else, so there is no separate switch to maintain and
+## nothing that can disagree with skip_on_cran() / skip_on_ci():
+##
+##   on_cran <- function() {
+##     env <- Sys.getenv("NOT_CRAN")
+##     if (identical(env, "")) !interactive() else !isTRUE(as.logical(env))
+##   }
+##   on_ci <- function() env_var_is_true("CI")
+##
+## This encodes the three contexts the suite actually has: a local run gets
+## everything, CI gets what its skip_on_ci() calls allow, and CRAN gets the
+## small tests. The previous name (`notOnCranOrCI`) was keyed on the package version,
+## which switched off at a release version -- silently, at the one commit that
+## most needed the tests.
+notOnCranOrCI <- local({
+  notCran <- Sys.getenv("NOT_CRAN")
+  notOnCran <- if (identical(notCran, "")) interactive() else isTRUE(as.logical(notCran))
+  notOnCran && !isTRUE(as.logical(Sys.getenv("CI")))
+})
 ## Actually interactive
-isDevAndInteractive <- interactive() && isDev && Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
+notOnCranOrCIInteractive <- interactive() && notOnCranOrCI &&
+  Sys.getenv("R_REQUIRE_TEST_AS_INTERACTIVE") != "false"
 
 # try(rm(getFromCache1, getDeps1, getDepsFromCache1), silent = TRUE); i <- 0
 withr::local_options(
   .new = list(
     Require.usePak = Require.usePak,
-    Require.verbose = ifelse(isDev, verboseForDev, -2)
+    Require.verbose = ifelse(notOnCranOrCI, verboseForDev, -2)
   ),
   .local_envir = teardown_env()
 )
 
-if (!isDevAndInteractive) { # i.e., CRAN
+if (!notOnCranOrCIInteractive) { # i.e., CRAN
   withr::local_envvar(# R_REQUIRE_PKG_CACHE = "FALSE",
                       .local_envir = teardown_env())
 }
@@ -109,8 +107,8 @@ withr::local_options(
   .new = list(
     repos = getCRANrepos(ind = 1),
     Ncpus = 2,
-    Require.isDev = isDev,
-    Require.isDevAndInteractive = isDevAndInteractive,
+    Require.notOnCranOrCI = notOnCranOrCI,
+    Require.notOnCranOrCIInteractive = notOnCranOrCIInteractive,
     install.packages.check.source = "never",
     install.packages.compile.from.source = "never",
     Require.unloadNamespaces = TRUE,
@@ -123,7 +121,7 @@ withr::local_options(
     ## any *direct* cli use in Require / our test code; the
     ## R_CLI_DYNAMIC env var (in local_envvar below) carries this
     ## into subprocesses.
-    cli.dynamic = if (isDevAndInteractive) TRUE else NULL,
+    cli.dynamic = if (notOnCranOrCIInteractive) TRUE else NULL,
     ## pak vendors its own progress renderer that ignores cli.dynamic.
     ## Even with the option set, pak's pkgdepends progress bar emits
     ## its spinner ticks as separate lines under testthat's sink.
@@ -131,7 +129,7 @@ withr::local_options(
     ## informational headers ("Will install N packages", "✔ Installed
     ## X") and the per-package install confirmations, just no spinner
     ## storm. Same logic as cli.dynamic: only during interactive dev.
-    pkg.show_progress = if (isDevAndInteractive) FALSE else NULL
+    pkg.show_progress = if (notOnCranOrCIInteractive) FALSE else NULL
   ),
   .local_envir = teardown_env()
 )
@@ -149,7 +147,7 @@ withr::local_envvar(
     ## is_dynamic_tty() reads R_CLI_DYNAMIC after getOption("cli.dynamic")
     ## but before isatty(). Empty string (NA via setting NA) leaves it
     ## untouched in CI / R CMD check.
-    "R_CLI_DYNAMIC" = if (isDevAndInteractive) "true" else NA
+    "R_CLI_DYNAMIC" = if (notOnCranOrCIInteractive) "true" else NA
   ),
   .local_envir = teardown_env()
 )

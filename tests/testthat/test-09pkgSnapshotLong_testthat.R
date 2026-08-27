@@ -1,8 +1,8 @@
 test_that("test 09", {
 
   # 380-pkg snapshot install + recursive pkgDep takes >1h end-to-end on
-  # a 30-pkg slice profile -- way past CI budget. Run locally only via
-  # R_REQUIRE_RUN_ALL_TESTS=true.
+  # a 30-pkg slice profile -- way past CI budget. Runs locally only,
+  # where NOT_CRAN=true.
   skip_on_ci()
   # The snapshot-vs-installed-version assertion compares the pinned versions
   # in inst/snapshot.txt against installed.packages() in the system library.
@@ -16,8 +16,8 @@ test_that("test 09", {
   setupInitial <- setupTest(needRequireInNewLib = FALSE)
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
-  isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
   skip_if_offline2()
 

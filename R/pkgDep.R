@@ -41,16 +41,12 @@ utils::globalVariables(
 #' A possibly ordered, named (with packages as names) list where list elements
 #' are either full reverse depends.
 #'
-#' @examples
-#' \dontrun{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+#' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 #'
 pkgDepTopoSort <- function(packages,
                            deps,
@@ -639,16 +635,12 @@ DESCRIPTIONFileDepsV <-
 #' listed in this final list, then it means that it is also a recursive
 #' dependency elsewhere, so its removal has no effect.
 #' @inheritParams Require
-#' @examples
-#' \dontrun{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDepIfDepRemoved("reproducible", "data.table")
+#' pkgDepIfDepRemoved("reproducible", "data.table")
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 #'
 pkgDepIfDepRemoved <-
   function(pkg = character(),
@@ -1598,18 +1590,14 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 #' i.e., the first order dependencies, and runs the `pkgDep` on those.
 #' @rdname pkgDep
 #' @export
-#' @examples
-#' \dontrun{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDep2("reproducible")
-#'   # much bigger one
-#'   pkgDep2("tidyverse")
+#' pkgDep2("reproducible")
+#' # much bigger one
+#' pkgDep2("tidyverse")
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 pkgDep2 <- function(...) {
   dots <- list(...)
   dots$recursive <- FALSE

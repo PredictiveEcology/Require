@@ -13,7 +13,7 @@ test_that("test 1", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
 
   ## cover CRAN in case of having a environment variable set, which CI seems to
   origCRAN_REPO <- Sys.getenv("CRAN_REPO")
@@ -89,7 +89,7 @@ test_that("test 1", {
 
   # Try older version
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
-      isDevAndInteractive || # interactive
+      notOnCranOrCIInteractive || # interactive
       identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
     dir2 <- rpackageFolder(tempdir3())
     dir2 <- checkPath(dir2, create = TRUE)
@@ -261,7 +261,7 @@ test_that("test 1", {
 
   # Code coverage
   skip_on_cran()
-  # if (isDev) { # i.e., GA, R CMD check etc.
+  # if (notOnCranOrCI) { # i.e., GA, R CMD check etc.
 
   # Issue 87
   try(remove.packages("reproducible"), silent = TRUE) |> suppressMessages()
@@ -377,7 +377,7 @@ test_that("test 1", {
   # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
   #                                 install = "force"),
   #                  error = function(x) x)
-  if (isDevAndInteractive) {
+  if (notOnCranOrCIInteractive) {
     warn <- tryCatch(
       {
         out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")

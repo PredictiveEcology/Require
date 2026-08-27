@@ -630,17 +630,8 @@ SysInfo <-
   options(opts$opts)
 }
 
-#' @importFrom utils packageDescription
-.isDevelVersion <- function() {
-  length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3
-}
-
-.runLongTests <- function() {
-  .isDevelVersion() || Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true"
-}
-
 .runLongExamples <- function() {
-  # Auto-enable based on .isDevelVersion() is unsafe: with
+  # Auto-enabling from the package version is unsafe: with
   # `--run-dontrun --run-donttest` (default in r-lib/actions/check-r-package),
   # every dev-version R CMD check runs the full Require::Install() cascade
   # for every example in Require.Rd — hours on a cold CI runner.

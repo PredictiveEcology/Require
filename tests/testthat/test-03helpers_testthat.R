@@ -3,7 +3,7 @@ test_that("test 3", {
   setupInitial <- setupTest()
     # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
 
   out <- utils::capture.output(type = "message", Require:::messageDF(cbind(a = 1.1232),
                                                                      round = 2,
