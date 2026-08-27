@@ -13,10 +13,30 @@
 ## ~100 packages. testthat::is_checking() detects that; it reads
 ## TESTTHAT_IS_CHECKING, which testthat sets under R CMD check and not under
 ## devtools::test().
-if (nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0 &&
-    !testthat::is_checking() &&
-    !isTRUE(as.logical(Sys.getenv("CI")))) {
+.localManualRun <- !testthat::is_checking() && !isTRUE(as.logical(Sys.getenv("CI")))
+
+if (nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0 && .localManualRun) {
   withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
+}
+
+## Same idea for NOT_CRAN, which gates skip_on_cran(). None of devtools::test(),
+## testthat::test_local() or test_dir() sets it, and testthat's on_cran() falls
+## back to !interactive() when it is unset:
+##
+##   on_cran <- function() {
+##     env <- Sys.getenv("NOT_CRAN")
+##     if (identical(env, "")) !interactive() else !isTRUE(as.logical(env))
+##   }
+##
+## So the same call ran interactively and from a script behaved differently: a
+## scripted `Rscript -e 'testthat::test_local(".")'` silently skipped every
+## skip_on_cran() test, while devtools::test() in a console did not. Asserting
+## it here makes a local run mean the same thing either way.
+##
+## Set NOT_CRAN=false explicitly for a quick run that skips the install-heavy
+## tests -- an explicit value is always respected.
+if (!nzchar(Sys.getenv("NOT_CRAN")) && .localManualRun) {
+  withr::local_envvar(NOT_CRAN = "true", .local_envir = teardown_env())
 }
 
 ## pak's pkgcache refuses to use the system cache during R CMD check (CRAN
