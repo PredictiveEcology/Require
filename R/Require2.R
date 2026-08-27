@@ -449,7 +449,7 @@ Require <- function(packages,
         }
       }
       pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
-      pkgDT <- whichToInstall(pkgDT, install, verbose)
+      pkgDT <- whichToInstall(pkgDT, install, verbose, libPaths = libPaths)
 
       # If a candidate is already loaded in this session with a version that
       # satisfies the constraint, skip reinstall -- both to avoid pak's
@@ -1098,7 +1098,7 @@ archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroup
   )
 }
 
-whichToInstall <- function(pkgDT, install, verbose) {
+whichToInstall <- function(pkgDT, install, verbose, libPaths = .libPaths()) {
   set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT[["Version"]]))
   set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT[["Version"]])) # default: if it is installed,  say "OK"
   if (!is.null(pkgDT[[hasHEADtxt]])) {
@@ -1118,7 +1118,66 @@ whichToInstall <- function(pkgDT, install, verbose) {
 
   pkgDT <- checkHEAD(pkgDT)
   if (any(pkgDT[[hasHEADtxt]])) {
-    set(pkgDT, which(pkgDT[[hasHEADtxt]]), "installedVersionOK", FALSE)
+    ## A `(HEAD)` ref used to force installedVersionOK = FALSE on every row
+    ## carrying it -- "always install", whatever is on disk.
+    ##
+    ## For a GitHub ref that is right: a branch HEAD moves without the
+    ## DESCRIPTION version changing, so only a SHA comparison can settle it.
+    ## For a CRAN-form ref, "HEAD" just means "the newest the repositories
+    ## have", which we can settle here from metadata already in hand. Nothing
+    ## downstream did it: the HEAD -> dontInstall comparison lives in
+    ## doDownloads(), reachable only from doInstalls(), which is the `else`
+    ## branch of `if (getOption("Require.usePak"))`. Under the default
+    ## usePak = TRUE it never ran.
+    ##
+    ## That mattered because updatePackages() tags every installed CRAN
+    ## package `pkg (HEAD)`, so Install() was being asked to reinstall the
+    ## whole library -- 170 same-version rebuilds where update.packages()
+    ## correctly found 3. Install() not reinstalling what you already have is
+    ## the point of the package, so the fix belongs here, not in the caller.
+    whHEAD <- which(pkgDT[[hasHEADtxt]] %in% TRUE)
+    isGHrow <- if (is.null(pkgDT[["repoLocation"]])) rep(TRUE, length(whHEAD))
+               else pkgDT[["repoLocation"]][whHEAD] %in% .txtGitHub
+    ok <- rep(FALSE, length(whHEAD))
+
+    ## CRAN-alike half: newest the repositories offer, by version.
+    vor <- pkgDT[["VersionOnRepos"]]
+    if (!is.null(vor)) {
+      instV <- pkgDT[["Version"]][whHEAD]
+      availV <- vor[whHEAD]
+      cmp <- which(!isGHrow & !is.na(instV) & !is.na(availV))
+      for (k in cmp) ok[k] <- utils::compareVersion(instV[k], availV[k]) >= 0
+    }
+
+    ## GitHub half: newest the branch points at, by SHA. Reuses
+    ## alreadyExistingDESCFile(), which is the existing implementation of this
+    ## question -- it reads GithubSHA1 out of the installed DESCRIPTION and
+    ## compares it with getSHAfromGitHubMemoise(). doDownloads() calls the same
+    ## machinery, but it sits on the legacy non-pak path, so under the default
+    ## Require.usePak = TRUE nothing compared SHAs and every GitHub HEAD ref
+    ## reinstalled unconditionally. Reading the SHA from disk means this does
+    ## not depend on pkgDT carrying a local-SHA column.
+    haveGHcols <- all(c("Account", "Repo", "Branch") %in% colnames(pkgDT))
+    if (any(isGHrow) && haveGHcols) {
+      acct <- pkgDT[["Account"]][whHEAD]
+      repo <- pkgDT[["Repo"]][whHEAD]
+      br <- pkgDT[["Branch"]][whHEAD]
+      gh <- which(isGHrow & !is.na(acct) & !is.na(repo) & !is.na(br))
+      for (k in gh) {
+        ## Anything unresolvable -- no local DESCRIPTION, unreachable GitHub --
+        ## leaves ok = FALSE, i.e. the old "install" answer. A network failure
+        ## must never read as "you are up to date".
+        res <- tryCatch(
+          alreadyExistingDESCFile(libPaths = libPaths, Repo = repo[k],
+                                  Account = acct[k], Branch = br[k],
+                                  installResult = NA_character_,
+                                  verbose = verbose),
+          error = function(e) NULL)
+        if (!is.null(res))
+          ok[k] <- identical(res[[3]], .txtShaUnchangedNoInstall)
+      }
+    }
+    set(pkgDT, whHEAD, "installedVersionOK", ok)
   }
 
   set(pkgDT, NULL, "needInstall", c(.txtDontInstall, .txtInstall)[pkgDT$installedVersionOK %in% FALSE + 1])
