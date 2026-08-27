@@ -1412,33 +1412,38 @@ test_that(".pakDropUnchangedFailures re-attempts only when something new is inst
     character(0))
 })
 
-test_that(".updateIsPossiblyNeeded keeps only what could actually change", {
-  ## updatePackages() handed Install() every installed package as `pkg (HEAD)`
-  ## with no version comparison, so pak planned a reinstall of the whole
-  ## library -- 170 same-version "updates" where base::update.packages()
-  ## correctly found 3.
-  ap <- cbind(Version = c(older = "1.0.0", same = "2.0.0", newer = "3.1.0"))
-  rownames(ap) <- c("older", "same", "newer")
+test_that("a `(HEAD)` CRAN ref does not force a reinstall of what is current", {
+  ## Install() must not reinstall a package it already has -- that is the point
+  ## of the package. `(HEAD)` used to force installedVersionOK = FALSE on every
+  ## row carrying it, so updatePackages() (which tags every installed CRAN
+  ## package `pkg (HEAD)`) asked for the whole library back: 170 same-version
+  ## rebuilds where base::update.packages() correctly found 3.
+  ##
+  ## Nothing downstream corrected it under the default Require.usePak = TRUE:
+  ## the HEAD -> dontInstall comparison lives in doDownloads(), on the legacy
+  ## non-pak path only.
+  mk <- function(pkg, instVer, availVer, repoLoc) {
+    data.table::data.table(
+      Package = pkg, Version = instVer, VersionOnRepos = availVer,
+      packageFullName = paste0(pkg, " (HEAD)"), repoLocation = repoLoc,
+      versionSpec = "HEAD", inequality = "")
+  }
 
-  nms   <- c("older", "same", "newer", "notInRepos", "aGitHubPkg")
-  inst  <- c("1.2.0", "2.0.0", "3.0.0", "9.9.9", "0.0.1")
-  isGH  <- c(FALSE, FALSE, FALSE, FALSE, TRUE)
+  dt <- data.table::rbindlist(list(
+    mk("current",  "1.2.0", "1.2.0", "CRAN"),          # installed == newest
+    mk("ahead",    "1.3.0", "1.2.0", "CRAN"),          # installed newer than repo
+    mk("stale",    "1.0.0", "1.2.0", "CRAN"),          # repo has something newer
+    mk("unknown",  "1.0.0", NA_character_, "CRAN"),    # cannot settle -> install
+    mk("fromGH",   "1.0.0", "1.0.0", "GitHub")         # HEAD moves; must resolve
+  ))
 
-  res <- Require:::.updateIsPossiblyNeeded(nms, inst, isGH, ap)
+  out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2)
+  needInstall <- setNames(out$needInstall, out$Package)
 
-  ## installed is ahead of the repo, and identical to the repo -> nothing to do
-  expect_false(res[[1]])
-  expect_false(res[[2]])
-  ## repo has something strictly newer -> needed
-  expect_true(res[[3]])
-  ## not offered by any repo (archived / repo down) -> cannot prove current
-  expect_true(res[[4]])
-  ## GitHub refs always resolve remotely: HEAD moves without a version bump
-  expect_true(res[[5]])
-
-  ## no usable available.packages() -> exactly the previous behaviour
-  expect_true(all(Require:::.updateIsPossiblyNeeded(nms, inst, isGH, NULL)))
-  expect_true(all(Require:::.updateIsPossiblyNeeded(nms, inst, isGH, ap[0, , drop = FALSE])))
-  expect_identical(Require:::.updateIsPossiblyNeeded(character(0), character(0),
-                                                     logical(0), ap), logical(0))
+  expect_identical(unname(needInstall[["current"]]), Require:::.txtDontInstall)
+  expect_identical(unname(needInstall[["ahead"]]),   Require:::.txtDontInstall)
+  expect_identical(unname(needInstall[["stale"]]),   Require:::.txtInstall)
+  expect_identical(unname(needInstall[["unknown"]]), Require:::.txtInstall)
+  ## a GitHub HEAD ref is still always resolved -- unchanged behaviour
+  expect_identical(unname(needInstall[["fromGH"]]),  Require:::.txtInstall)
 })

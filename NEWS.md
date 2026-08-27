@@ -34,13 +34,16 @@
 
 ## Installation correctness
 
-* `updatePackages()` no longer reinstalls the whole library. It handed every
-  installed package to the installer as `pkg (HEAD)` without comparing against
-  what the repositories offer, so pak planned a same-version rebuild for each
-  (`cli 3.6.6 -> 3.6.6`). Where `base::update.packages()` found three packages
-  needing work, `updatePackages()` asked for a hundred and seventy. GitHub refs
-  are still always resolved -- a branch HEAD moves without the version changing
-  -- as is anything the repositories do not currently offer.
+* A `(HEAD)` version spec no longer forces a reinstall of a package that is
+  already current. Any ref carrying `(HEAD)` was marked "installed version not
+  OK" regardless of what was on disk, and the comparison that would have
+  corrected this lives on the legacy non-pak install path, so under the default
+  `Require.usePak = TRUE` it never ran. Since `updatePackages()` tags every
+  installed CRAN package `pkg (HEAD)`, it asked for the entire library back --
+  a hundred and seventy same-version rebuilds where `base::update.packages()`
+  correctly found three. A CRAN-form `(HEAD)` ref is now settled against the
+  version the repositories offer; GitHub refs are unchanged, since a branch
+  HEAD moves without the version changing.
 
 * The pak retry machinery no longer re-attempts a ref that already failed while
   nothing it depends on has changed, and pins already-installed refs on every
