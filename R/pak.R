@@ -3303,8 +3303,58 @@ pakResetSubprocess <- function() {
 # upgrade = FALSE for CRAN, TRUE for GitHub -- same per-ref policy as the
 # parallel version. Failures are warned but don't abort the loop.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# .pakFailMemo / .pakDropUnchangedFailures: stop re-attempting a ref that
+# already failed while nothing it could depend on has changed.
+#
+# identify-and-defer runs several phases -- the iteration loop, the
+# no-parseable-culprits serial fallback, the deferred-culprit serial pass, and
+# up to three retries after it. Each phase decided independently what to
+# attempt, so a ref that cannot build (e.g. Deriv failing to compile) was
+# handed to pak once per phase, five times in all, every time against an
+# identical set of installed packages. See #190.
+#
+# Retrying is only useful when a dependency has been installed since the last
+# attempt, so the memo keys each failed ref on the installed set at the moment
+# it failed. A ref is dropped only if that set is unchanged; any new package
+# anywhere makes it eligible again, which is deliberately conservative -- we
+# would rather retry once too often than refuse to install something that has
+# just been unblocked.
+# ---------------------------------------------------------------------------
+.pakFailMemo <- function() new.env(parent = emptyenv())
+
+.pakRecordFailures <- function(memo, refs, installedNow) {
+  for (r in refs) assign(r, installedNow, envir = memo)
+  invisible(memo)
+}
+
+.pakDropUnchangedFailures <- function(memo, refs, installedNow, verbose = 0L) {
+  if (!length(refs)) return(refs)
+  keep <- vapply(refs, function(r) {
+    prev <- if (exists(r, envir = memo, inherits = FALSE)) get(r, envir = memo) else NULL
+    is.null(prev) || !identical(sort(prev), sort(installedNow))
+  }, logical(1))
+  if (any(!keep))
+    messageVerbose(
+      "identify-and-defer: skipping ", sum(!keep), " ref(s) that already failed ",
+      "with no change in what is installed since: ",
+      paste(utils::head(refs[!keep], 5L), collapse = ", "),
+      if (sum(!keep) > 5L) ", ..." else "",
+      verbose = verbose, verboseLevel = 1)
+  refs[keep]
+}
+
 pakSerialInstall <- function(pkgs, lib, repos, verbose) {
   if (!length(pkgs)) return(invisible(NULL))
+  ## Pin already-installed refs to their installed version so pak keeps them
+  ## rather than replanning a rebuild. pinInstalledForPak() was only ever
+  ## applied to the FIRST batch, so every later phase handed pak unpinned refs
+  ## and its plans came back full of same-version "updates" of packages the
+  ## previous phase had just installed (#190). Passing `pkgs` as resolvedPkgs
+  ## keeps any ref carrying a `( ... )` version spec unpinned, so a user's
+  ## upgrade or downgrade request is never masked by what happens to be
+  ## installed.
+  pkgs <- pinInstalledForPak(pkgs, libPaths = lib, resolvedPkgs = pkgs)
   opts <- options(repos = repos)
   on.exit(options(opts), add = TRUE)
   failed <- character(0)
@@ -3853,6 +3903,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     capturePak(pakRetryLoop(pkgs, repos, verbose))
   } else {
     # Iterative identify-and-defer.
+    # Cross-phase record of refs that failed against a given installed set, so
+    # no later phase re-attempts one whose situation has not changed (#190).
+    failMemo <- .pakFailMemo()
     passList <- pkgs
     deferred <- character(0)  # culprit refs (named with their full pak ref)
     maxIter  <- 8L
@@ -3927,6 +3980,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # fine, and a failure on one ref no longer abort the rest.
         pkgsMissingFallback <- passList[match(missingNamesIter, passNames)]
         pkgsMissingFallback <- pkgsMissingFallback[!is.na(pkgsMissingFallback)]
+        pkgsMissingFallback <- .pakDropUnchangedFailures(
+          failMemo, pkgsMissingFallback, instNow, verbose)
+        .pakRecordFailures(failMemo, pkgsMissingFallback, instNow)
         messageVerbose(
           "identify-and-defer: ", length(missingNamesIter),
           " ref(s) still missing after iter ", iter,
@@ -3973,6 +4029,20 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       # dependent before its dependency and hit a spurious
       # "dependency 'X' is not available for package 'Y'" build-error.
       deferred <- orderRefsByMissingDepEdges(deferred, allCapturedMsgs)
+      instBeforeDeferred <- tryCatch(
+        rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+        error = function(e) character(0))
+      deferred <- .pakDropUnchangedFailures(failMemo, deferred,
+                                            instBeforeDeferred, verbose)
+    }
+    ## Re-test: .pakDropUnchangedFailures() above can empty `deferred`, and the
+    ## serial pass and its retries below must then be skipped. This was a
+    ## `break`, which R CMD check rightly flagged -- "break used in wrong
+    ## context: no loop is visible" -- because the enclosing block is an `if`,
+    ## not a loop. That WARNING failed every R-CMD-check job while the tests
+    ## themselves passed.
+    if (length(deferred)) {
+      .pakRecordFailures(failMemo, deferred, instBeforeDeferred)
       messageVerbose(
         "identify-and-defer: installing ", length(deferred),
         " deferred culprit(s) one at a time",
@@ -3990,7 +4060,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
           error = function(e) character(0))
         stillMissing <- deferred[!extractPkgName(deferred) %in% instNow]
+        stillMissing <- .pakDropUnchangedFailures(failMemo, stillMissing,
+                                                  instNow, verbose)
         if (!length(stillMissing)) break
+        .pakRecordFailures(failMemo, stillMissing, instNow)
         messageVerbose(
           "identify-and-defer: retry ", retry, " -- re-attempting ",
           length(stillMissing), " still-missing culprit(s) now that their ",

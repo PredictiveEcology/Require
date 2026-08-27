@@ -1433,3 +1433,129 @@ test_that("pak is pinned to source only when the caller actually asked for it", 
   expect_null(Require:::forcePakSourceIfRequested("binary", typeExplicit = TRUE))
   expect_null(getOption("pkg.platforms"))
 })
+
+test_that(".pakDropUnchangedFailures re-attempts only when something new is installed", {
+  ## #190: identify-and-defer ran several phases, each deciding independently
+  ## what to attempt, so a ref that cannot build was handed to pak once per
+  ## phase against an identical installed set. Retrying is only useful when a
+  ## dependency has landed since the last attempt.
+  memo <- Require:::.pakFailMemo()
+  refs <- c("any::Deriv", "any::car")
+  inst1 <- c("cli", "rlang")
+
+  ## nothing recorded yet -> everything is attempted
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, inst1, verbose = -2), refs)
+
+  Require:::.pakRecordFailures(memo, refs, inst1)
+
+  ## same installed set -> both dropped
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, inst1, verbose = -2),
+    character(0))
+
+  ## the comparison is set-wise, not order-sensitive
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, rev(inst1), verbose = -2),
+    character(0))
+
+  ## one new package anywhere makes them eligible again
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, c(inst1, "glue"), verbose = -2),
+    refs)
+
+  ## a ref that never failed is never dropped
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, "any::brandNew", inst1, verbose = -2),
+    "any::brandNew")
+
+  ## empty in, empty out
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, character(0), inst1, verbose = -2),
+    character(0))
+})
+
+test_that("a `(HEAD)` CRAN ref does not force a reinstall of what is current", {
+  ## Install() must not reinstall a package it already has -- that is the point
+  ## of the package. `(HEAD)` used to force installedVersionOK = FALSE on every
+  ## row carrying it, so updatePackages() (which tags every installed CRAN
+  ## package `pkg (HEAD)`) asked for the whole library back: 170 same-version
+  ## rebuilds where base::update.packages() correctly found 3.
+  ##
+  ## Nothing downstream corrected it under the default Require.usePak = TRUE:
+  ## the HEAD -> dontInstall comparison lives in doDownloads(), on the legacy
+  ## non-pak path only.
+  mk <- function(pkg, instVer, availVer, repoLoc) {
+    data.table::data.table(
+      Package = pkg, Version = instVer, VersionOnRepos = availVer,
+      packageFullName = paste0(pkg, " (HEAD)"), repoLocation = repoLoc,
+      versionSpec = "HEAD", inequality = "")
+  }
+
+  dt <- data.table::rbindlist(list(
+    mk("current",  "1.2.0", "1.2.0", "CRAN"),          # installed == newest
+    mk("ahead",    "1.3.0", "1.2.0", "CRAN"),          # installed newer than repo
+    mk("stale",    "1.0.0", "1.2.0", "CRAN"),          # repo has something newer
+    mk("unknown",  "1.0.0", NA_character_, "CRAN"),    # cannot settle -> install
+    mk("noSHA",    "1.0.0", "1.0.0", "GitHub")         # no local SHA -> install
+  ))
+
+  out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2)
+  needInstall <- setNames(out$needInstall, out$Package)
+
+  expect_identical(unname(needInstall[["current"]]), Require:::.txtDontInstall)
+  expect_identical(unname(needInstall[["ahead"]]),   Require:::.txtDontInstall)
+  expect_identical(unname(needInstall[["stale"]]),   Require:::.txtInstall)
+  expect_identical(unname(needInstall[["unknown"]]), Require:::.txtInstall)
+  ## a GitHub row with no local SHA cannot be settled -> keep the old answer
+  expect_identical(unname(needInstall[["noSHA"]]),   Require:::.txtInstall)
+})
+
+test_that("a `(HEAD)` GitHub ref is settled by SHA, not reinstalled blindly", {
+  ## HEAD means "the newest available" for both CRAN-alikes and Git; the Git
+  ## half is a SHA comparison. alreadyExistingDESCFile() is the existing
+  ## implementation -- doDownloads() uses it -- but that is the legacy non-pak
+  ## path, so under Require.usePak = TRUE every GitHub HEAD ref reinstalled
+  ## unconditionally. Reuse, not a second implementation.
+  remoteSHA <- strrep("a", 40)
+  lib <- tempfile("headlib"); dir.create(lib)
+  on.exit(unlink(lib, recursive = TRUE), add = TRUE)
+  mkInstalled <- function(pkg, sha) {
+    dir.create(file.path(lib, pkg), recursive = TRUE, showWarnings = FALSE)
+    writeLines(c(paste0("Package: ", pkg), "Version: 1.0.0",
+                 paste0("GithubSHA1: ", sha)),
+               file.path(lib, pkg, "DESCRIPTION"))
+  }
+  mkInstalled("atHead", remoteSHA)
+  mkInstalled("behind", strrep("b", 40))
+
+  mkGH <- function(pkg) data.table::data.table(
+    Package = pkg, Version = "1.0.0", VersionOnRepos = NA_character_,
+    packageFullName = paste0("acct/", pkg, "@main (HEAD)"),
+    repoLocation = "GitHub", versionSpec = "HEAD", inequality = "",
+    Account = "acct", Repo = pkg, Branch = "main")
+  dt <- data.table::rbindlist(list(mkGH("atHead"), mkGH("behind")))
+
+  testthat::with_mocked_bindings(
+    getSHAfromGitHubMemoise = function(...) remoteSHA,
+    {
+      out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2,
+                                      libPaths = lib)
+      needInstall <- setNames(out$needInstall, out$Package)
+      ## local SHA == branch HEAD -> nothing to do
+      expect_identical(unname(needInstall[["atHead"]]), Require:::.txtDontInstall)
+      ## local SHA differs -> install
+      expect_identical(unname(needInstall[["behind"]]), Require:::.txtInstall)
+    },
+    .package = "Require")
+
+  ## an unreachable GitHub must not be read as "up to date"
+  testthat::with_mocked_bindings(
+    getSHAfromGitHubMemoise = function(...) stop("no network"),
+    {
+      out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2,
+                                      libPaths = lib)
+      expect_true(all(out$needInstall == Require:::.txtInstall))
+    },
+    .package = "Require")
+})

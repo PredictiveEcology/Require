@@ -45,6 +45,24 @@
   same-version rebuilds taking 103.8s, now `kept 22, added 1` in 2.7s. An
   explicit `type = "source"` still pins pak to source, on every platform.
 
+* A `(HEAD)` version spec no longer forces a reinstall of a package that is
+  already current. Any ref carrying `(HEAD)` was marked "installed version not
+  OK" regardless of what was on disk, and the comparison that would have
+  corrected this lives on the legacy non-pak install path, so under the default
+  `Require.usePak = TRUE` it never ran. Since `updatePackages()` tags every
+  installed CRAN package `pkg (HEAD)`, it asked for the entire library back --
+  a hundred and seventy same-version rebuilds where `base::update.packages()`
+  correctly found three. `(HEAD)` is now settled per source, as it always
+  meant to be: a CRAN-alike ref against the version the repositories offer, a
+  GitHub ref against the SHA its branch points at. Anything unresolvable -- an
+  unknown version, no installed `DESCRIPTION`, an unreachable GitHub -- still
+  installs, so a network failure is never read as "up to date".
+
+* The pak retry machinery no longer re-attempts a ref that already failed while
+  nothing it depends on has changed, and pins already-installed refs on every
+  pass rather than only the first. A single unbuildable dependency used to make
+  each of the four identify-and-defer phases retry it in turn, rebuilding
+  dozens of already-installed packages each round (#190).
 * GitHub specs whose account contains a hyphen or a digit -- `r-lib/crancache`,
   `e-sensing/sits`, `user123/pkg` -- are now recognised as GitHub. `isGH()`
   required a purely alphabetic account while `extractPkgGitHub()` did not, so
