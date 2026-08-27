@@ -224,7 +224,35 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
 # the 3.0.0 binary exists on Windows/Mac, leaving the user silently downgraded.
 # Returns the previous options() list for on.exit(options(old)) restoration, or
 # NULL when no override was applied (caller skips the on.exit in that case).
-forcePakSourceIfRequested <- function(type) {
+# ---------------------------------------------------------------------------
+# forcePakSourceIfRequested: pin pak to source-only builds, but ONLY when the
+# caller actually asked for `type = "source"`.
+#
+# `typeExplicit` is not a nicety. Require()/Install() default
+# `type = getOption("pkgType")`, and on Linux that is "source" -- so testing
+# `identical(type, "source")` alone fired on every Linux install, whether or
+# not anyone asked. pak then resolved the whole tree as source, and every
+# already-installed *binary* dependency (PPM serves __linux__ builds) failed to
+# match that resolution and was replanned as a source rebuild. The symptom was
+# a plan full of same-version "updates":
+#
+#     + cli   3.6.6 -> 3.6.6 [bld][cmp]
+#     + Rcpp  1.1.2 -> 1.1.2 [bld][cmp]
+#
+# Measured, one ref whose dependencies were all installed:
+#     forced   : "Will update 23", 23 same-version rebuilds, 103.8s
+#     not forced: "kept 20, added 1", 0 rebuilds, 2.6s (and a binary was used)
+#
+# Pure-R packages were kept either way, since source and binary are the same
+# thing for them -- which is why only the compiled dependencies churned.
+#
+# The protection itself is still worth having when genuinely requested:
+# without it pak's install step can keep or fetch an older platform binary
+# after the resolve picked a newer source version (the silent binary-lag
+# downgrade). That is why this narrows the trigger rather than removing it.
+# ---------------------------------------------------------------------------
+forcePakSourceIfRequested <- function(type, typeExplicit = FALSE) {
+  if (!isTRUE(typeExplicit)) return(NULL)
   if (!identical(type, "source")) return(NULL)
   options(pkg.platforms = "source")
 }
@@ -882,7 +910,7 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
 
   d$Imports <- Require::extractPkgName(deps)
   versionNumb <- Require::extractVersionNumber(deps)
-  needRemotes <- which(!is.na(Require::extractPkgGitHub(deps)))
+  needRemotes <- which(!is.na(extractPkgGitHub(deps)))
   d$Remotes <- Require::trimVersionNumber(deps[needRemotes])
 
   hasVersionNumb <- !is.na(versionNumb)
@@ -2338,7 +2366,8 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL,
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
 pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                           purge = getOption("Require.purge", FALSE),
-                          install = TRUE, type = getOption("pkgType")) {
+                          install = TRUE, type = getOption("pkgType"),
+                          typeExplicit = FALSE) {
   pakLoad <- tryCatch(loadNamespace("pak"),
                       error = function(e) e)
   if (inherits(pakLoad, "error")) {
@@ -2364,7 +2393,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
 
   # Honour an explicit type = "source": pin pak to source-only resolution for
   # the duration of this call (covers the nested pakDepsResolve/pak::pkg_deps).
-  oldPlatforms <- forcePakSourceIfRequested(type)
+  oldPlatforms <- forcePakSourceIfRequested(type, typeExplicit = typeExplicit)
   if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # pak spawns a subprocess that inherits .libPaths(). Set .libPaths() to match
@@ -3483,13 +3512,14 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
-                                forceUpgrade = FALSE, type = getOption("pkgType")) {
+                                forceUpgrade = FALSE, type = getOption("pkgType"),
+                                typeExplicit = FALSE) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
 
   # Honour an explicit type = "source": without this, pak's install step can
   # "keep" or fetch the older platform binary even after the resolve picked the
   # newer source version, producing the silent binary-lag downgrade.
-  oldPlatforms <- forcePakSourceIfRequested(type)
+  oldPlatforms <- forcePakSourceIfRequested(type, typeExplicit = typeExplicit)
   if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
