@@ -3164,6 +3164,26 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # The robust fix is to install pak fresh into the project lib using base
 # install.packages() (NOT pak::pak -- chicken-and-egg if pak is broken).
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# .pakLinkSource: a real, complete pak installation to symlink from, or NULL.
+#
+# Resolves symlinks, so linking never chains through another project lib's
+# link and cannot end up pointing at a directory that has since been removed.
+# ---------------------------------------------------------------------------
+.pakLinkSource <- function() {
+  cands <- suppressWarnings(tryCatch(
+    find.package("pak", lib.loc = .libPaths(), quiet = TRUE),
+    error = function(e) character(0)))
+  if (!length(cands) && "pak" %in% loadedNamespaces())
+    cands <- tryCatch(getNamespaceInfo("pak", "path"), error = function(e) character(0))
+  cands <- cands[nzchar(cands)]
+  for (cand in cands) {
+    p <- tryCatch(normalizePath(cand, mustWork = FALSE), error = function(e) cand)
+    if (dir.exists(p) && file.exists(file.path(p, "DESCRIPTION"))) return(p)
+  }
+  NULL
+}
+
 ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
                                   verbose = getOption("Require.verbose")) {
   if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
@@ -3213,7 +3233,37 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
     }
   }
 
-  ok <- tryCatch({
+  ## Symlink rather than download+install where the platform allows it.
+  ##
+  ## pak has to end up in projLib -- that is what re-binds pak's namespace to a
+  ## live directory each time a caller moves to a new project library, and it is
+  ## why the suite stays healthy while tests create and discard libraries. But
+  ## it does not have to be a fresh 12 MB install: measured at ~5.6s a time, and
+  ## the test suite does it once per project lib.
+  ##
+  ## A symlink is not the file-by-file copy .pakNoCopyPkgs() forbids. That
+  ## exclusion exists because pak's embedded callr/processx helper executables
+  ## do not survive being copied on Windows; a symlink leaves every one of those
+  ## files at its original path. Windows is excluded anyway, since symlinks
+  ## there need privileges R cannot assume.
+  linked <- FALSE
+  if (!isWindows()) {
+    src <- .pakLinkSource()
+    projLibNorm <- tryCatch(normalizePath(projLib, mustWork = FALSE),
+                            error = function(e) projLib)
+    if (!is.null(src) && !identical(dirname(src), projLibNorm)) {
+      dest <- file.path(projLib, "pak")
+      unlink(dest, recursive = TRUE, force = TRUE)
+      linked <- isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE))
+      if (linked)
+        messageVerbose("  Linked pak from ", src, " (no reinstall needed)",
+                       verbose = verbose, verboseLevel = 2)
+    }
+  }
+
+  ok <- if (isTRUE(linked)) {
+    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  } else tryCatch({
     utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE)
     length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
   }, error = function(e) {
