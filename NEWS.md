@@ -34,6 +34,16 @@
 
 ## Installation correctness
 
+* Require no longer reinstalls pak into a project library that does not have
+  its own copy. It now checks whether pak is reachable anywhere on
+  `.libPaths()`, which is what actually determines whether pak works: pak runs
+  in a subprocess that loads pak from the inherited library path, so any entry
+  will serve. Previously a project library without pak triggered a fresh ~12 MB
+  install even when pak sat one entry behind it -- on every `Require()` call
+  with `standAlone = FALSE`. One shared pak library can now serve any number of
+  project libraries, `standAlone = TRUE` included, via
+  `setLibPaths(c(projLib, pakLib), standAlone = TRUE)`.
+
 * `options(Require.snapshotInstaller = "install.packages")` now genuinely
   bypasses pak. The option selected which installer function to call, but that
   function's own branches keyed on whether pak was *installed* rather than on
