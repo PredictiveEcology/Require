@@ -17,19 +17,24 @@
 ## than in setup.R so it does not depend on which environment testthat sources
 ## setup files into, and lazily so a run that never calls setupTest() never
 ## pays for it.
+## Deliberately NOT tempdir2(): that roots under tempdir()/Require, and that
+## whole subtree gets removed wholesale by more than one caller -- .cleanup()
+## does unlink(file.path(tempdir(), "Require"), recursive = TRUE), and test-01
+## unlinks dirname(dir3)/dirname(dir4). A lib cached there disappears between
+## test files and every later setupTest() dies in normalizePath(mustWork =
+## TRUE). Rooted beside that subtree instead, and re-checked on every call so
+## that a sweep from anywhere is recovered rather than fatal.
 pakLibForTests <- local({
   lib <- NULL
   function() {
-    if (!is.null(lib)) return(lib)
-    lib <<- if (isTRUE(getOption("Require.usePak", TRUE))) {
-      l <- tempdir2("RequirePakLibForTests")
-      if (!length(find.package("pak", lib.loc = l, quiet = TRUE)))
-        utils::install.packages("pak", lib = l, repos = getOption("repos"),
-                                quiet = TRUE)
-      l
-    } else {
-      character(0)
+    if (!isTRUE(getOption("Require.usePak", TRUE))) return(character(0))
+    if (is.null(lib) || !dir.exists(lib)) {
+      lib <<- file.path(tempdir(), "RequirePakLibForTests")
+      dir.create(lib, recursive = TRUE, showWarnings = FALSE)
     }
+    if (!length(find.package("pak", lib.loc = lib, quiet = TRUE)))
+      utils::install.packages("pak", lib = lib, repos = getOption("repos"),
+                              quiet = TRUE)
     lib
   }
 })

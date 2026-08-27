@@ -113,20 +113,40 @@ setBiocConfigEnvForPak <- function() {
 # Bioc version and hard-fails the WHOLE call when bioc.org is unreachable, even
 # when no Bioconductor package was requested. Used by pakCall() to trigger the
 # one-shot bundled-config fallback.
-isBiocConfigFetchError <- function(e) {
-  if (is.null(e)) return(FALSE)
+# .conditionChainText: flatten a condition and its `parent` chain to one
+# string. pak wraps the subprocess's real error inside its own
+# "! error in pak subprocess" condition, so the text that identifies a failure
+# is usually not in conditionMessage(e) itself.
+.conditionChainText <- function(e, depth = 10L) {
   txt <- character(0)
   cur <- e
-  depth <- 0L
-  while (!is.null(cur) && depth < 10L) {
+  d <- 0L
+  while (!is.null(cur) && d < depth) {
     txt <- c(txt, tryCatch(conditionMessage(cur), error = function(x) ""))
     cur <- cur$parent
-    depth <- depth + 1L
+    d <- d + 1L
   }
-  txt <- paste(txt, collapse = "\n")
+  paste(txt, collapse = "\n")
+}
+
+isBiocConfigFetchError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  txt <- .conditionChainText(e)
   grepl("bioconductor\\.org/config\\.yaml", txt, ignore.case = TRUE) ||
     (grepl("config\\.yaml", txt, ignore.case = TRUE) &&
        grepl("bioconductor", txt, ignore.case = TRUE))
+}
+
+# ---------------------------------------------------------------------------
+# isPakBrokenInstallError: pak's signature for a pak installation whose native
+# helper executables no longer run -- the state a file-by-file copy of a
+# library leaves pak in (see .pakNoCopyPkgs()). Distinct from "pak is not on
+# .libPaths()", which pak reports as .txtPakNoPkgCalledPak and which
+# .txtPakNotOnLibPaths covers.
+# ---------------------------------------------------------------------------
+isPakBrokenInstallError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  grepl(.txtPakProcessxExec, .conditionChainText(e), fixed = TRUE)
 }
 
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
@@ -168,6 +188,12 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
             verbose = verbose, verboseLevel = 1)
           eval(exprSub, envir = pf)
         } else {
+          ## Append, rather than replace: keep pak's own condition (classes
+          ## included, so downstream handlers still match) and add the part
+          ## pak cannot know -- that this is a damaged install and how to
+          ## clear it.
+          if (isPakBrokenInstallError(e))
+            e$message <- paste0(conditionMessage(e), .txtPakBrokenInstall)
           stop(e)
         }
       })
@@ -357,8 +383,13 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
               break
             }
             if (grp[i] == .txtPakNoPkgCalledPak) {
-              stop("\nTry running: \npak::meta_clean()")
-              # stop(err)
+              ## Previously this replaced the error with "Try running:
+              ## pak::meta_clean()". That clears pak's *metadata cache*, which
+              ## has nothing to do with the cause: pak's subprocess loads pak
+              ## from the .libPaths() it inherits, so this error means no entry
+              ## on that path has pak. Keep the original error and say so;
+              ## meta_clean() survives as the secondary suggestion.
+              stop(err, .txtPakNotOnLibPaths, call. = FALSE)
             }
             packages <- packages[-whRm]
             break
