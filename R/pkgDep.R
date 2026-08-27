@@ -832,7 +832,7 @@ defaultCacheAgeForPurge <- 3600
 cachePurge <- function(packages = FALSE,
                        repos = getOption("repos")) {
   if (isTRUE(packages))
-    Require::cacheClearPackages(ask = FALSE)
+    cacheClearPackages(ask = FALSE)
   dealWithCache(TRUE, repos = repos)
 }
 

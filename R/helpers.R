@@ -604,7 +604,7 @@ SysInfo <-
 
 .cleanup <- function(opts = list()) {
   unlink(file.path(tempdir(), "Require"), recursive = TRUE)
-  unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
+  unlink(tempdir2(create = FALSE), recursive = TRUE)
   cacheClearPackages(
     ask = FALSE,
     Rversion = versionMajorMinor(),
