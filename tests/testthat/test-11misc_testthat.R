@@ -71,8 +71,13 @@ test_that("test 11", {
     }
     # two sources, where both are OK; use CRAN by preference
     if (!isMacOS()) {
+      ## try(): remove.packages() errors out of find.package() when the package
+      ## is not installed, and suppressWarnings/suppressMessages do not catch an
+      ## error. This is a pre-emptive cleanup -- nothing here requires
+      ## SpaDES.core to be present -- so an absent package is not a failure.
+      ## The fpCompare cleanup above already uses try() for the same reason.
       lala <- suppressWarnings(capture.output(suppressMessages(
-        remove.packages("SpaDES.core")))) ## TODO: fails on macOS
+        try(remove.packages("SpaDES.core"), silent = TRUE)))) ## TODO: fails on macOS
       suppressWarnings(
         out <- Require(c("PredictiveEcology/SpaDES.core@development (>=1.1.2)",
                          "SpaDES.core (>=1.0.0)"),
