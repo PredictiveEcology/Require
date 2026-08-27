@@ -34,6 +34,17 @@
 
 ## Installation correctness
 
+* Installs on Linux no longer rebuild every already-installed compiled
+  dependency from source. `Require()`/`Install()` default
+  `type = getOption("pkgType")`, which is `"source"` on Linux, and that value
+  alone was taken as a request for source-only builds. pak was therefore pinned
+  to source on every Linux install, so each installed *binary* dependency
+  stopped matching the resolution and was replanned as a source rebuild -- a
+  plan full of same-version "updates" such as `cli 3.6.6 -> 3.6.6 [bld][cmp]`.
+  Measured on one package whose dependencies were all installed: 23
+  same-version rebuilds taking 103.8s, now `kept 22, added 1` in 2.7s. An
+  explicit `type = "source"` still pins pak to source, on every platform.
+
 * A `(HEAD)` version spec no longer forces a reinstall of a package that is
   already current. Any ref carrying `(HEAD)` was marked "installed version not
   OK" regardless of what was on disk, and the comparison that would have

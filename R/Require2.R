@@ -164,6 +164,12 @@ utils::globalVariables(c(
 #'   attribute: `attr(.., "Require")` which has lots of information about the
 #'   processes of the installs.
 #' @param type See `utils::install.packages`
+#' @param typeExplicit Logical. Whether `type` was supplied by the caller
+#'   rather than defaulted from `getOption("pkgType")`. Defaults to
+#'   `!missing(type)` and should not normally be set by hand. It exists because
+#'   `getOption("pkgType")` is `"source"` on Linux, so the value of `type`
+#'   alone cannot say whether source-only builds were actually asked for; only
+#'   an explicit request pins pak to source.
 #' @param upgrade When `FALSE`, the default, will only upgrade a package when the
 #'   version on in the local library is not adequate for the version requirements
 #'   of the `packages`. Note: for convenience, `update`
@@ -247,6 +253,7 @@ Require <- function(packages,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     type = getOption("pkgType"),
+                    typeExplicit = !missing(type),
                     upgrade = FALSE,
                     returnDetails = FALSE,
                     ...) {
@@ -385,13 +392,15 @@ Require <- function(packages,
          withCallingHandlers(
            pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                     standAlone = standAlone, verbose = verbose,
-                                    purge = purge, install = install, type = type),
+                                    purge = purge, install = install, type = type,
+                                    typeExplicit = typeExplicit),
            message = function(m) invokeRestart("muffleMessage")
          )
        } else {
          pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                   standAlone = standAlone, verbose = verbose,
-                                  purge = purge, install = install, type = type)
+                                  purge = purge, install = install, type = type,
+                                  typeExplicit = typeExplicit)
        }
     } else if (!skipDepResolution) {
       if (length(which)) {
@@ -515,7 +524,7 @@ Require <- function(packages,
             pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
                                         standAlone = standAlone, verbose = verbose,
                                         forceUpgrade = identical(install, "force"),
-                                        type = type)
+                                        type = type, typeExplicit = typeExplicit)
             # Invalidate the dep-tree cache: installed state changed, so the next
             # call should re-resolve rather than use a stale cached result.
             pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
@@ -3484,6 +3493,7 @@ Install <- function(packages, packageVersionFile,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     type = getOption("pkgType"),
+                    typeExplicit = !missing(type),
                     upgrade = FALSE,
                     ...) {
 
@@ -3504,6 +3514,10 @@ Install <- function(packages, packageVersionFile,
           purge,
           verbose,
           type,
+          ## named, deliberately: `type` above is positional, so missing(type)
+          ## inside Require() would always be FALSE when called from here and
+          ## every Install() would look like an explicit type request
+          typeExplicit = typeExplicit,
           upgrade,
           ...
   )

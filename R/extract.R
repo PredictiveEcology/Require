@@ -89,10 +89,6 @@ extractInequality <- function(pkgs) {
   gsub(grepExtractPkgs, "\\1", pkgs, perl = FALSE)
 }
 
-#' @rdname extractPkgName
-#' @export
-#' @examples
-#' extractPkgGitHub("PredictiveEcology/Require")
 ## The single definition of "looks like a GitHub `account/repo` spec".
 ##
 ## Both isGH() and extractPkgGitHub() use this. They used to carry separate
@@ -128,6 +124,10 @@ extractInequality <- function(pkgs) {
 .ghRepoRegex <- "[[:alnum:]._-]+"
 .ghRefRegex <- paste0("^", .ghAccountRegex, "/", .ghRepoRegex)
 
+#' @rdname extractPkgName
+#' @export
+#' @examples
+#' extractPkgGitHub("PredictiveEcology/Require")
 extractPkgGitHub <- function(pkgs) {
   isGH <- grepl(.ghRefRegex, pkgs, perl = FALSE)
   if (any(isGH)) {
