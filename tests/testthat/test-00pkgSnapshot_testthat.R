@@ -10,13 +10,17 @@ test_that("test 1", {
   tmpdir2 <- tempdir3()
   created <- dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
   pkgVF <- file.path(tmpdir, "packageVersions.txt")
-  setLibPaths(tmpdir, standAlone = TRUE)
+  ## Carry the shared pak lib: a narrowing that omits it leaves pak
+  ## unreachable, so ensurePakInProjectLib() installs a fresh copy into this
+  ## project lib -- and binds pak's namespace to a directory the test later
+  ## discards. `.libPaths()[1]` is unaffected, since the shared lib goes second.
+  setLibPaths(c(tmpdir, pakLibForTests()), standAlone = TRUE)
   tmpdirActual <- .libPaths()[1] # setLibPaths postpends the R version
   suppressWarnings(Require(c("rlang"), require = FALSE, quiet = quiet))
 
   skip_if_offline2()
 
-  setLibPaths(tmpdir2, standAlone = TRUE)
+  setLibPaths(c(tmpdir2, pakLibForTests()), standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
   if (notOnCranOrCI) {
     ## Bumped from covr (==3.6.3) to covr (==3.6.5):

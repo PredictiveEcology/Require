@@ -110,7 +110,11 @@ test_that("test 4", {
     grepl("you will likely", warn)
   })
 
-  origLP <- setLibPaths(tempdir2("other"), updateRprofile = FALSE)
+  ## Carry the shared pak lib -- setLibPaths() defaults to standAlone = TRUE,
+  ## so this narrowing would otherwise leave pak unreachable and trigger a
+  ## fresh install into this project lib.
+  origLP <- setLibPaths(c(tempdir2("other"), pakLibForTests()),
+                        updateRprofile = FALSE)
   warn <- tryCatch(Require("data.table", require = FALSE), warning = function(w) w$message)
   silent <- setLibPaths(origLP, updateRprofile = FALSE)
 
@@ -256,7 +260,7 @@ test_that("test 4", {
     a <- unique(extractPkgName(unlist(unname(pkgDep(pkgs)))))
     cacheClearPackages(a, ask = FALSE)
     library(sys); library(waldo)
-    setLibPaths(tempdir3())
+    setLibPaths(c(tempdir3(), pakLibForTests()))
     try(remove.packages(a))
     options(Require.installPackagesSys = 1L)
     ipBefore <- installed.packages(lib.loc = .libPaths()[1], noCache = TRUE)

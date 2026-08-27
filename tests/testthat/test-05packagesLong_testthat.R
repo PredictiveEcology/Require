@@ -22,7 +22,9 @@ test_that("test 5", {
   pkgDepTest2 <- Require::pkgDep2(c("Require"), # simplify = FALSE,
                                   # which = c("Depends", "Imports"),
                                   includeSelf = FALSE)
-  orig <- Require::setLibPaths(tmpdir, standAlone = TRUE, updateRprofile = FALSE)
+  ## Carry the shared pak lib -- see the note in test-00pkgSnapshot.
+  orig <- Require::setLibPaths(c(tmpdir, pakLibForTests()), standAlone = TRUE,
+                               updateRprofile = FALSE)
 
   skip_if_offline2()
   testthat::expect_true({
