@@ -242,7 +242,14 @@ test_that("test 8", {
                     ## those fail to compile under R 4.5/gcc 13, fireSenseUtils
                     ## cascades to a load-time failure even though its own code
                     ## is fine.
-                    "fireSenseUtils")
+                    "fireSenseUtils",
+                    ## Same cascade, newer cause: ggplot2 4.x moved to S7, so
+                    ## ggpubr (1.0.0) now pulls S7 + isoband, and its tree also
+                    ## reaches stringi -- all NeedsCompilation. On a machine
+                    ## where any of those will not build, ggpubr cannot install
+                    ## however sound its own code is. Observed on R 4.4.3/gcc 13
+                    ## and R 4.6, with isoband and stringi the failing builds.
+                    "ggpubr")
     allInstalledPre <- allInstalled
     allInstalled <- setdiff(allInstalled, knownFails)
     cat("\n=== test-08 allInstalled diagnostic ===\n",

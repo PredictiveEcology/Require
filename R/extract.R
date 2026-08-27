@@ -93,8 +93,43 @@ extractInequality <- function(pkgs) {
 #' @export
 #' @examples
 #' extractPkgGitHub("PredictiveEcology/Require")
+## The single definition of "looks like a GitHub `account/repo` spec".
+##
+## Both isGH() and extractPkgGitHub() use this. They used to carry separate
+## definitions: isGH()'s was "^[[:alpha:]]+/.+", whose account class is
+## alphabetic only, so an account carrying a hyphen or a digit -- r-lib,
+## e-sensing, s-u, user123 -- was GitHub to one function and not to the other.
+## The consequence was that
+##   Install("r-lib/crancache (==0.0.0.9001)")
+## asked GitHub for a *ref* named 0.0.0.9001: the GitHub-detecting path built
+## a ref out of the trailing version, while the isGH()-gated code that reads
+## (==ver) as a version constraint never ran.
+##
+## Account and repo do NOT share a character class, which is why they are
+## spelled separately here:
+##
+##   account  alphanumerics and hyphens only. No "_", no "."; and no leading
+##            or trailing hyphen. (GitHub also forbids consecutive hyphens and
+##            caps the length at 39; neither is worth encoding.)
+##   repo     alphanumerics plus "-", "_" and "." -- so "SpaDES.core" and
+##            "fire_sense" are valid repos but not valid accounts.
+##
+## None of ".", "_" or "-" needs escaping inside a bracket expression: "." is
+## literal there, "_" is never special, and "-" is literal when it is last.
+## The pattern these replaced wrote "[[:alnum:]\\_\\.\\-]", which in a POSIX
+## bracket expression is not an escape at all -- it silently admitted a literal
+## backslash to the class.
+##
+## Not anchored at the end, so a trailing "@ref" or " (>=ver)" still matches.
+## Non-GitHub specs fall out for free: a scheme prefix (any::, bioc::, url::,
+## local::) and a Windows drive letter both hit ":" where "/" is required, and
+## an absolute path has no account before its first "/".
+.ghAccountRegex <- "[[:alnum:]]([[:alnum:]-]*[[:alnum:]])?"
+.ghRepoRegex <- "[[:alnum:]._-]+"
+.ghRefRegex <- paste0("^", .ghAccountRegex, "/", .ghRepoRegex)
+
 extractPkgGitHub <- function(pkgs) {
-  isGH <- grepl("^[^//][[:alnum:]\\_\\.\\-]+/.+[@.+]?", pkgs, perl = FALSE)
+  isGH <- grepl(.ghRefRegex, pkgs, perl = FALSE)
   if (any(isGH)) {
     a <- trimVersionNumber(pkgs[isGH])
     hasRepo <- grepl("/", a)
