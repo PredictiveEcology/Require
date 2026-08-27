@@ -3171,9 +3171,21 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # link and cannot end up pointing at a directory that has since been removed.
 # ---------------------------------------------------------------------------
 .pakLinkSource <- function() {
+  ## lib.loc = NULL deliberately, and FIRST: with NULL, find.package() consults
+  ## loaded namespaces before .libPaths(), so it still finds pak when its
+  ## library is not on the path. That is precisely the situation here -- by the
+  ## time ensurePakInProjectLib() runs, .libPaths() has usually been narrowed to
+  ## the project lib, and searching only that finds nothing and falls through to
+  ## a full install. (Elsewhere this same NULL behaviour is a trap and is
+  ## avoided; here it is the point.)
   cands <- suppressWarnings(tryCatch(
-    find.package("pak", lib.loc = .libPaths(), quiet = TRUE),
-    error = function(e) character(0)))
+    find.package("pak", quiet = TRUE), error = function(e) character(0)))
+  if (!length(cands))
+    cands <- suppressWarnings(tryCatch(
+      find.package("pak", lib.loc = unique(c(.libPaths(),
+                                             Sys.getenv("R_LIBS_USER"))),
+                   quiet = TRUE),
+      error = function(e) character(0)))
   if (!length(cands) && "pak" %in% loadedNamespaces())
     cands <- tryCatch(getNamespaceInfo("pak", "path"), error = function(e) character(0))
   cands <- cands[nzchar(cands)]
