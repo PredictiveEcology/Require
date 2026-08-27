@@ -73,7 +73,7 @@ pakBiocFixture <- function() {
   fixture <- tryCatch(system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
                       error = function(e) "")
   if (!nzchar(fixture)) {
-    pakDir <- tryCatch(find.package("pak"), error = function(e) "")
+    pakDir <- tryCatch(suppressWarnings(find.package("pak")), error = function(e) "")
     if (length(pakDir) && nzchar(pakDir)) {
       cand <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
       if (file.exists(cand)) fixture <- cand
@@ -2372,7 +2372,14 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # standAlone = FALSE -> c(libPaths[1], existing .libPaths())  (shared)
   #
   # In both cases, pak's own library must be present so the subprocess can load pak.
-  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  ## suppressWarnings, not just tryCatch: find.package() warns once for every
+  ## .libPaths() entry that has a pak/ directory whose DESCRIPTION it cannot
+  ## read -- a stale entry left by a deleted library, which says nothing about
+  ## the pak we are looking for. tryCatch(error=) does not catch a warning, so
+  ## these leaked into callers' capture_warnings(). Only reachable once pak is
+  ## found late on the path; when pak sits in libPaths[1] the scan stops first.
+  pakLib    <- tryCatch(suppressWarnings(dirname(find.package("pak"))),
+                        error = function(e) NULL)
   basePkgLib <- tail(.libPaths(), 1L)   # always the base R packages path
   origPaths  <- .libPaths()
   if (isTRUE(standAlone)) {
@@ -3373,7 +3380,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
   # sees the same library set that was used for dependency resolution.
-  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  ## suppressWarnings, not just tryCatch: find.package() warns once for every
+  ## .libPaths() entry that has a pak/ directory whose DESCRIPTION it cannot
+  ## read -- a stale entry left by a deleted library, which says nothing about
+  ## the pak we are looking for. tryCatch(error=) does not catch a warning, so
+  ## these leaked into callers' capture_warnings(). Only reachable once pak is
+  ## found late on the path; when pak sits in libPaths[1] the scan stops first.
+  pakLib    <- tryCatch(suppressWarnings(dirname(find.package("pak"))),
+                        error = function(e) NULL)
   basePkgLib <- tail(.libPaths(), 1L)
   origPaths  <- .libPaths()
   if (isTRUE(standAlone)) {
