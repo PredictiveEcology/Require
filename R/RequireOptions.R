@@ -56,6 +56,17 @@
 #'   by `Require` will be deleted and rebuilt. This should not generally be
 #'   necessary as it will automatically be deleted after (by default) 1 hour (set
 #'   via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in seconds).}
+#' \item{`cloneFrom`}{ Default: `NULL`. A path to an existing package library.
+#'   When set, any package that is already installed there at the version being
+#'   requested is copied or hard-linked into the destination library instead of
+#'   being downloaded and installed, which is much faster when populating a new
+#'   project library on a machine that already has the packages. Only packages
+#'   that need no compilation and were built under a compatible R version are
+#'   cloned; the rest go through the normal install machinery, as do `pak`,
+#'   `callr`, `processx` and `cli`, whose native helper executables do not
+#'   survive a file-by-file copy. Has no effect under `Require.usePak = TRUE`
+#'   (the default): cloning lives in the legacy (non-pak) install path, so this
+#'   option is consulted only when `Require.usePak = FALSE`.}
 #' \item{`downloadTimeout`}{Default: `300L` (seconds). Used as the floor for
 #'   `options("timeout")` during GitHub source-archive downloads in the legacy
 #'   (non-pak) install path. R's stock 60-second timeout is too short for
