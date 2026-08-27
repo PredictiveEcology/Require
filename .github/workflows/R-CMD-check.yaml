@@ -38,11 +38,14 @@ jobs:
           # deps in well under an hour.
           - {os: ubuntu-latest,   r: 'devel'}
           # Single matrix entry that opts in to the slow integration tests
-          # (5 archived-CRAN install round-trips in test-16 — measured at
-          # 340s vs ~50s for the rest of the test suite). Other matrix
+          # in test-16: two archived-CRAN install round-trips (measured at
+          # 103s and 20s) and the PSPclean-style cascade. Other matrix
           # entries skip those via R_REQUIRE_RUN_LONG_CI gate so the 11-job
           # matrix doesn't camp on GHA's 20-job concurrency cap. Coverage
           # of the slow path is preserved on this one entry.
+          # The cheap tests in that file (pakGetArchive URL construction,
+          # 2.2s for both; .lastInstallFailures, 3.4s) are NOT gated -- they
+          # install nothing worth gating and run on every entry.
           - {os: ubuntu-latest,   r: 'release', runLong: true}  ## currently 4.5
           - {os: ubuntu-latest,   r: 'oldrel-1'} ## currently 4.4
           - {os: ubuntu-latest,   r: 'oldrel-2'} ## currently 4.3
@@ -52,9 +55,10 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
       # Set to "true" only on the matrix entry tagged `runLong: true`.
-      # Tests that read this env (currently the 5 archived-CRAN install
-      # round-trips in test-16installFailureMetadata) bypass skip_on_ci()
-      # only when this is non-empty.
+      # Tests that read this env (3 in test-16installFailureMetadata: two
+      # archived-CRAN install round-trips and the PSPclean cascade; plus the
+      # pkgDepTopoSort section of test-06, ~626s) bypass skip_on_ci() only
+      # when this is non-empty.
       R_REQUIRE_RUN_LONG_CI: ${{ matrix.config.runLong && 'true' || '' }}
 
     steps:
