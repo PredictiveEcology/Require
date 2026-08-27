@@ -93,6 +93,23 @@ test_that("test 8", {
     }
     # THE INSTALL
     pkgs <- c(pkgs, "xml2 (>=1.5.2)")
+
+    ## Deriv 4.3.0 calls R_ClosureFormals(), added to R's C API in 4.5.0, while
+    ## declaring only `Depends: Rcpp`. On R < 4.5 the metadata therefore says it
+    ## is installable and the build fails with
+    ##   derive_simplif.cpp:376: 'R_ClosureFormals' was not declared in this scope
+    ## Nothing downstream can resolve that -- there is no declared requirement
+    ## to fall back from -- and ggpubr reaches Deriv via rstatix -> car -> doBy,
+    ## so ggpubr became uninstallable too.
+    ##
+    ## Pin the last version that predates the API use rather than excusing
+    ## ggpubr from the check. Deriv 4.2.0 is pure R (NeedsCompilation: no, no
+    ## src/ at all), so it cannot fail to build on any R version, and CRAN
+    ## serves it from the Archive indefinitely. Only on R < 4.5: on newer R the
+    ## pin would be a pointless downgrade.
+    if (getRversion() < "4.5.0")
+      pkgs <- c("Deriv (==4.2.0)", pkgs)
+
     pkgs <- omitPkgsTemporarily(pkgs)
 
     (
@@ -242,21 +259,7 @@ test_that("test 8", {
                     ## those fail to compile under R 4.5/gcc 13, fireSenseUtils
                     ## cascades to a load-time failure even though its own code
                     ## is fine.
-                    "fireSenseUtils",
-                    ## Same cascade, newer cause. ggpubr (1.0.0) reaches Deriv
-                    ## through rstatix -> car -> doBy, and Deriv 4.3.0 calls
-                    ## R_ClosureFormals(), added to R's C API in 4.5.0, while
-                    ## declaring only `Depends: Rcpp`. On R < 4.5 the metadata
-                    ## therefore says it is installable and the build fails:
-                    ##   derive_simplif.cpp:376: error:
-                    ##     'R_ClosureFormals' was not declared in this scope
-                    ## Nothing can resolve that -- there is no declared
-                    ## requirement to fall back from, so Deriv 4.2.0 in the
-                    ## Archive is never considered -- and ggpubr cannot install
-                    ## however sound its own code is. (On R 4.6 Deriv builds;
-                    ## ggpubr can still fail there if isoband or stringi will
-                    ## not build.)
-                    "ggpubr")
+                    "fireSenseUtils")
     allInstalledPre <- allInstalled
     allInstalled <- setdiff(allInstalled, knownFails)
     cat("\n=== test-08 allInstalled diagnostic ===\n",
