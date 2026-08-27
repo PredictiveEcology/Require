@@ -216,37 +216,30 @@ does not detect the dependencies of base packages among themselves, \emph{e.g.},
 \code{methods} depends on \code{stats} and \code{graphics}. }
 }
 \examples{
-\dontrun{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+\dontshow{if (Require:::.runLongExamples()) withAutoprint(\{ # examplesIf}
+opts <- Require:::.setupExample()
 
-  pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 
-  Require:::.cleanup(opts)
-}
-}
+Require:::.cleanup(opts)
+\dontshow{\}) # examplesIf}
+\dontshow{if (Require:::.runLongExamples()) withAutoprint(\{ # examplesIf}
+opts <- Require:::.setupExample()
 
-\dontrun{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+pkgDep2("reproducible")
+# much bigger one
+pkgDep2("tidyverse")
 
-  pkgDep2("reproducible")
-  # much bigger one
-  pkgDep2("tidyverse")
+Require:::.cleanup(opts)
+\dontshow{\}) # examplesIf}
+\dontshow{if (Require:::.runLongExamples()) withAutoprint(\{ # examplesIf}
+opts <- Require:::.setupExample()
 
-  Require:::.cleanup(opts)
-}
-}
-\dontrun{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+pkgDep("tidyverse", recursive = TRUE)
 
-  pkgDep("tidyverse", recursive = TRUE)
+# GitHub, local, and CRAN packages
+pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
 
-  # GitHub, local, and CRAN packages
-  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
-
-  Require:::.cleanup(opts)
-}
-}
+Require:::.cleanup(opts)
+\dontshow{\}) # examplesIf}
 }
