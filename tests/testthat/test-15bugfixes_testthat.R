@@ -1434,7 +1434,7 @@ test_that("a `(HEAD)` CRAN ref does not force a reinstall of what is current", {
     mk("ahead",    "1.3.0", "1.2.0", "CRAN"),          # installed newer than repo
     mk("stale",    "1.0.0", "1.2.0", "CRAN"),          # repo has something newer
     mk("unknown",  "1.0.0", NA_character_, "CRAN"),    # cannot settle -> install
-    mk("fromGH",   "1.0.0", "1.0.0", "GitHub")         # HEAD moves; must resolve
+    mk("noSHA",    "1.0.0", "1.0.0", "GitHub")         # no local SHA -> install
   ))
 
   out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2)
@@ -1444,6 +1444,55 @@ test_that("a `(HEAD)` CRAN ref does not force a reinstall of what is current", {
   expect_identical(unname(needInstall[["ahead"]]),   Require:::.txtDontInstall)
   expect_identical(unname(needInstall[["stale"]]),   Require:::.txtInstall)
   expect_identical(unname(needInstall[["unknown"]]), Require:::.txtInstall)
-  ## a GitHub HEAD ref is still always resolved -- unchanged behaviour
-  expect_identical(unname(needInstall[["fromGH"]]),  Require:::.txtInstall)
+  ## a GitHub row with no local SHA cannot be settled -> keep the old answer
+  expect_identical(unname(needInstall[["noSHA"]]),   Require:::.txtInstall)
+})
+
+test_that("a `(HEAD)` GitHub ref is settled by SHA, not reinstalled blindly", {
+  ## HEAD means "the newest available" for both CRAN-alikes and Git; the Git
+  ## half is a SHA comparison. alreadyExistingDESCFile() is the existing
+  ## implementation -- doDownloads() uses it -- but that is the legacy non-pak
+  ## path, so under Require.usePak = TRUE every GitHub HEAD ref reinstalled
+  ## unconditionally. Reuse, not a second implementation.
+  remoteSHA <- strrep("a", 40)
+  lib <- tempfile("headlib"); dir.create(lib)
+  on.exit(unlink(lib, recursive = TRUE), add = TRUE)
+  mkInstalled <- function(pkg, sha) {
+    dir.create(file.path(lib, pkg), recursive = TRUE, showWarnings = FALSE)
+    writeLines(c(paste0("Package: ", pkg), "Version: 1.0.0",
+                 paste0("GithubSHA1: ", sha)),
+               file.path(lib, pkg, "DESCRIPTION"))
+  }
+  mkInstalled("atHead", remoteSHA)
+  mkInstalled("behind", strrep("b", 40))
+
+  mkGH <- function(pkg) data.table::data.table(
+    Package = pkg, Version = "1.0.0", VersionOnRepos = NA_character_,
+    packageFullName = paste0("acct/", pkg, "@main (HEAD)"),
+    repoLocation = "GitHub", versionSpec = "HEAD", inequality = "",
+    Account = "acct", Repo = pkg, Branch = "main")
+  dt <- data.table::rbindlist(list(mkGH("atHead"), mkGH("behind")))
+
+  testthat::with_mocked_bindings(
+    getSHAfromGitHubMemoise = function(...) remoteSHA,
+    {
+      out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2,
+                                      libPaths = lib)
+      needInstall <- setNames(out$needInstall, out$Package)
+      ## local SHA == branch HEAD -> nothing to do
+      expect_identical(unname(needInstall[["atHead"]]), Require:::.txtDontInstall)
+      ## local SHA differs -> install
+      expect_identical(unname(needInstall[["behind"]]), Require:::.txtInstall)
+    },
+    .package = "Require")
+
+  ## an unreachable GitHub must not be read as "up to date"
+  testthat::with_mocked_bindings(
+    getSHAfromGitHubMemoise = function(...) stop("no network"),
+    {
+      out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2,
+                                      libPaths = lib)
+      expect_true(all(out$needInstall == Require:::.txtInstall))
+    },
+    .package = "Require")
 })

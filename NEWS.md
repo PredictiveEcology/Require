@@ -41,9 +41,11 @@
   `Require.usePak = TRUE` it never ran. Since `updatePackages()` tags every
   installed CRAN package `pkg (HEAD)`, it asked for the entire library back --
   a hundred and seventy same-version rebuilds where `base::update.packages()`
-  correctly found three. A CRAN-form `(HEAD)` ref is now settled against the
-  version the repositories offer; GitHub refs are unchanged, since a branch
-  HEAD moves without the version changing.
+  correctly found three. `(HEAD)` is now settled per source, as it always
+  meant to be: a CRAN-alike ref against the version the repositories offer, a
+  GitHub ref against the SHA its branch points at. Anything unresolvable -- an
+  unknown version, no installed `DESCRIPTION`, an unreachable GitHub -- still
+  installs, so a network failure is never read as "up to date".
 
 * The pak retry machinery no longer re-attempts a ref that already failed while
   nothing it depends on has changed, and pins already-installed refs on every
