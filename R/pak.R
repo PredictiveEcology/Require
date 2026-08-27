@@ -3204,7 +3204,7 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
   ## found even when its library is off .libPaths() -- precisely the case
   ## where pak's subprocess cannot load it.
   pakPath <- suppressWarnings(tryCatch(
-    find.package("pak", lib.loc = .libPaths(), quiet = TRUE),
+    find.package("pak", lib.loc = projLib, quiet = TRUE),
     error = function(e) character(0)))
 
   forceReinstall <- isTRUE(getOption("Require.forcePakReinstall", FALSE))
