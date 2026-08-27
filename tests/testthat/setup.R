@@ -1,4 +1,21 @@
-if (.isDevelVersion() && nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0) {
+## Enable the install-heavy tests for a local manual run.
+##
+## This was keyed on .isDevelVersion(), i.e. a 4-part version like 2.0.0.9036.
+## At a release version (2.1.0 -> 3 parts) it switched off, so test-08, test-09
+## and test-10 went quiet at exactly the commit being released -- the build that
+## most needs them. They reported "empty test" rather than a skip, so the gap
+## was easy to miss.
+##
+## The version was never the right discriminator: those tests already carry
+## skip_on_ci() AND skip_on_cran(), so CI and CRAN exclude themselves. What has
+## to be excluded here is R CMD check, where skip_on_cran() does NOT fire
+## (devtools::check() sets NOT_CRAN = "true") and test-08 alone would install
+## ~100 packages. testthat::is_checking() detects that; it reads
+## TESTTHAT_IS_CHECKING, which testthat sets under R CMD check and not under
+## devtools::test().
+if (nchar(Sys.getenv("R_REQUIRE_RUN_ALL_TESTS")) == 0 &&
+    !testthat::is_checking() &&
+    !isTRUE(as.logical(Sys.getenv("CI")))) {
   withr::local_envvar(R_REQUIRE_RUN_ALL_TESTS = "true", .local_envir = teardown_env())
 }
 
