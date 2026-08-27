@@ -5,10 +5,10 @@ test_that("test 5", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  # isDev <- getOption("Require.isDev")
-  # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  # notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  # notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
-  # if (isDevAndInteractive) {
+  # if (notOnCranOrCIInteractive) {
   tmpdir <- file.path(tempdir2(paste0("RequireTmp", sample(1e5, 1))))
 
   dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)

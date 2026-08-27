@@ -2,7 +2,7 @@ test_that("test 1", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
 
   quiet <- !(getOption("Require.verbose") >= 1)
 
@@ -18,7 +18,7 @@ test_that("test 1", {
 
   setLibPaths(tmpdir2, standAlone = TRUE)
   tmpdir2Actual <- .libPaths()[1] # setLibPaths postpends the R version
-  if (isDev) {
+  if (notOnCranOrCI) {
     ## Bumped from covr (==3.6.3) to covr (==3.6.5):
     ## covr 3.6.3 used the SET_BODY symbol from R-internals which was
     ## removed in R 4.5+. R CMD INSTALL of covr 3.6.3 builds fine but

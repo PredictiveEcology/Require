@@ -5,8 +5,8 @@ test_that("test 6", {
   tmpdir <- tempdir2(.rndstr())
   .libPaths(tmpdir)
 
-  isDev <- getOption("Require.isDev")
-  # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  # notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
   a <- pkgDep("Require", recursive = TRUE)
   testthat::expect_true({
@@ -176,7 +176,7 @@ test_that("test 6", {
     knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
   }))
 
-  # if (isDev) {
+  # if (notOnCranOrCI) {
   testthat::expect_true({
     length(test) == 0
   })

@@ -2,15 +2,15 @@ test_that("test 10", {
   setupInitial <- setupTest(needRequireInNewLib = TRUE)
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
-  isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
   # Skip on CI: installs bcgov/climr + tidymodels + ccissr — heavy GitHub
-  # cascades that exceed CI budgets. Runs locally for devs via
-  # R_REQUIRE_RUN_ALL_TESTS=true. Same rationale applies to CRAN's check
+  # cascades that exceed CI budgets. Runs locally for devs, where
+  # NOT_CRAN=true. Same rationale applies to CRAN's check
   # farm (install budget + risk of detritus from source compiles).
   skip_on_cran()
   skip_on_ci()
-  if (isDev) {
+  if (notOnCranOrCI) {
     # 4.3.0 doesn't have binaries, and historical versions of spatial packages won't compile
     pkgs <- c('reproducible',
               'SpaDES.core (>= 2.0.3)',

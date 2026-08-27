@@ -25,10 +25,10 @@ test_that("test 11", {
                 info = paste("warns =", paste(warns, collapse = " | ")))
   }
 
-  isDev <- getOption("Require.isDev")
-  isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
-  if (isDevAndInteractive) {
+  if (notOnCranOrCIInteractive) {
     # Use a mixture of different types of "off CRAN"
     if (!isMacOS()) {
       pkgs <- c("knn", "ggplot2 (==3.4.3)", "silly1", "SpaDES.core")
