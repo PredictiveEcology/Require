@@ -910,7 +910,7 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
 
   d$Imports <- Require::extractPkgName(deps)
   versionNumb <- Require::extractVersionNumber(deps)
-  needRemotes <- which(!is.na(Require::extractPkgGitHub(deps)))
+  needRemotes <- which(!is.na(extractPkgGitHub(deps)))
   d$Remotes <- Require::trimVersionNumber(deps[needRemotes])
 
   hasVersionNumb <- !is.na(versionNumb)

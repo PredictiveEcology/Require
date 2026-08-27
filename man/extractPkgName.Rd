@@ -4,7 +4,7 @@
 \alias{extractPkgName}
 \alias{extractVersionNumber}
 \alias{extractInequality}
-\alias{.ghAccountRegex}
+\alias{extractPkgGitHub}
 \title{Extract info from package character strings}
 \usage{
 extractPkgName(pkgs, filenames)
@@ -13,7 +13,7 @@ extractVersionNumber(pkgs, filenames)
 
 extractInequality(pkgs)
 
-.ghAccountRegex
+extractPkgGitHub(pkgs)
 }
 \arguments{
 \item{pkgs}{A character string vector of packages with or without GitHub path or versions}
