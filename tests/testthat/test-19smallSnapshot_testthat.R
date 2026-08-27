@@ -44,10 +44,7 @@ test_that("small snapshot install pins each package to the requested version", {
   testlib <- file.path(tempdir(), paste0("rqlib_smallsnap_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
-  ## standAlone = TRUE only means "do not append the user libs"; it does not
-  ## limit how many entries we pass. Carrying pakLibForTests keeps pak
-  ## reachable for its subprocess without a per-test 12 MB reinstall.
-  origLibPaths <- setLibPaths(c(testlib, pakLibForTests()), standAlone = TRUE)
+  origLibPaths <- setLibPaths(testlib, standAlone = TRUE)
   on.exit(setLibPaths(origLibPaths), add = TRUE)
 
   warns <- capture_warnings(
