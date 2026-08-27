@@ -34,15 +34,6 @@
 
 ## Installation correctness
 
-* Require no longer reinstalls pak into a project library that does not have
-  its own copy. It now checks whether pak is reachable anywhere on
-  `.libPaths()`, which is what actually determines whether pak works: pak runs
-  in a subprocess that loads pak from the inherited library path, so any entry
-  will serve. Previously a project library without pak triggered a fresh ~12 MB
-  install even when pak sat one entry behind it -- on every `Require()` call
-  with `standAlone = FALSE`. One shared pak library can now serve any number of
-  project libraries, `standAlone = TRUE` included, via
-  `setLibPaths(c(projLib, pakLib), standAlone = TRUE)`.
 * GitHub specs whose account contains a hyphen or a digit -- `r-lib/crancache`,
   `e-sensing/sits`, `user123/pkg` -- are now recognised as GitHub. `isGH()`
   required a purely alphabetic account while `extractPkgGitHub()` did not, so
