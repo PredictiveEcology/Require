@@ -1,6 +1,6 @@
 Package,Version,GithubRepo,GithubUsername,GithubRef,GithubSHA1
-"crayon","1.4.0",NA,NA,NA,NA
+"iterators","1.0.12",NA,NA,NA,NA
+"itertools","0.1-1",NA,NA,NA,NA
 "futile.logger","1.4.3",NA,NA,NA,NA
 "assertthat","0.2.0",NA,NA,NA,NA
-"prettyunits","1.1.1",NA,NA,NA,NA
-"praise",NA,"praise","rladies","main","094469afaf033af00aeb46527970f1db22f4d49d"
+"R.methodsS3",NA,"R.methodsS3","HenrikBengtsson","master","c842db47c1eab9524bddfd789955ca0c9aa817bc"

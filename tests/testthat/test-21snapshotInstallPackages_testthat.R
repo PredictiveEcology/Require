@@ -191,9 +191,10 @@ test_that("a small snapshot installs through the install.packages chain", {
   ## post-install diagnostic -- is actually executed. Kept to the same
   ## 5-package fixture so the CI cost is the same as test-19's.
   ## CRAN policy: a package's tests may only download/install packages listed
-  ## in its own Suggests. This installs the fixture's pins (crayon,
-  ## futile.logger, assertthat, R6 and their deps), none of which are Require
-  ## Suggests, so it is CI-only. The tests above install nothing and run
+  ## in its own Suggests. This installs the fixture's pins (iterators,
+  ## futile.options, assertthat and the GitHub R.methodsS3 pin), none of which
+  ## are Require Suggests, so it is CI-only. As in test-19, none may be a
+  ## package the test stack loads -- see the note there. The tests above install nothing and run
   ## everywhere.
   skip_on_cran()
   ## Windows: the chain has no binary path there -- the code's own comment says
