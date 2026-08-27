@@ -1058,13 +1058,13 @@ test_that(".isSessionLibPath() distinguishes real project libs from ephemeral te
   expect_false(Require:::.isSessionLibPath(NULL))
 })
 
-test_that(".pakNeedsReinstall() flags missing-from-projLib and forceReinstall opt-in", {
-  # Missing from project lib
-  expect_match(Require:::.pakNeedsReinstall(character(0)), "not present")
-  expect_match(Require:::.pakNeedsReinstall(""),           "not present")
-  expect_match(Require:::.pakNeedsReinstall(NULL),         "not present")
+test_that(".pakNeedsReinstall() flags pak-not-on-.libPaths and forceReinstall opt-in", {
+  # Not reachable anywhere on .libPaths()
+  expect_match(Require:::.pakNeedsReinstall(character(0)), "not available on .libPaths")
+  expect_match(Require:::.pakNeedsReinstall(""),           "not available on .libPaths")
+  expect_match(Require:::.pakNeedsReinstall(NULL),         "not available on .libPaths")
 
-  # Present in projLib + no force => no reinstall
+  # Reachable on .libPaths() + no force => no install
   expect_identical(Require:::.pakNeedsReinstall("/some/path/pak"), "")
   expect_identical(Require:::.pakNeedsReinstall("/some/path/pak",
                                                  forceReinstall = FALSE), "")
@@ -1073,6 +1073,42 @@ test_that(".pakNeedsReinstall() flags missing-from-projLib and forceReinstall op
   expect_match(
     Require:::.pakNeedsReinstall("/some/path/pak", forceReinstall = TRUE),
     "forcePakReinstall = TRUE")
+})
+
+test_that("a damaged-pak error is detected through pak's wrapper and annotated", {
+  broken <- simpleError("Native call to processx_exec failed: Command '' not found")
+  expect_true(Require:::isPakBrokenInstallError(broken))
+  expect_false(Require:::isPakBrokenInstallError(simpleError("some other failure")))
+  expect_false(Require:::isPakBrokenInstallError(NULL))
+
+  ## pak nests the subprocess's real error inside its own wrapper condition,
+  ## so conditionMessage() alone does not see the signature.
+  nested <- simpleError("! error in pak subprocess")
+  nested$parent <- broken
+  expect_false(grepl("processx_exec", conditionMessage(nested), fixed = TRUE))
+  expect_true(Require:::isPakBrokenInstallError(nested))
+
+  ## pakCall() appends the remedy and keeps pak's own condition intact
+  e <- tryCatch(Require:::pakCall(stop(broken), verbose = -2),
+                error = function(e) e)
+  expect_s3_class(e, "simpleError")
+  expect_match(conditionMessage(e), "processx_exec", fixed = TRUE)
+  expect_match(conditionMessage(e), "Require.forcePakReinstall = TRUE", fixed = TRUE)
+
+  ## an unrelated pak error is re-raised untouched
+  e2 <- tryCatch(Require:::pakCall(stop(simpleError("plain failure")), verbose = -2),
+                 error = function(e) e)
+  expect_identical(conditionMessage(e2), "plain failure")
+})
+
+test_that("the pak-not-on-.libPaths hint names the cause, not the metadata cache", {
+  ## Regression: this branch used to replace the error with
+  ## "Try running: pak::meta_clean()", which addresses the metadata cache --
+  ## not the library path that actually causes it.
+  expect_match(Require:::.txtPakNotOnLibPaths, ".libPaths()", fixed = TRUE)
+  expect_match(Require:::.txtPakNotOnLibPaths, "setLibPaths(", fixed = TRUE)
+  expect_match(Require:::.txtPakBrokenInstall, "Require.forcePakReinstall = TRUE",
+               fixed = TRUE)
 })
 
 test_that("linkOrCopyPackageFiles() excludes pak/callr/processx/cli even when asked", {

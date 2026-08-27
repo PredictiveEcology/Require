@@ -34,6 +34,29 @@ comma <- ", "
 .txtFailedToDLFrom <- "Failed to download.+from"
 .txtPakCurrentlyPakNoSnapshots <- "Currently, pak is unlikely to work for package snapshots"
 .txtPakNoPkgCalledPak <- "there is no package called 'pak'"
+.txtPakProcessxExec <- "Native call to processx_exec failed"
+
+## Guidance appended to the two pak failures a user cannot diagnose from the
+## message pak gives them. Both are about *where pak lives*, which pak has no
+## way to explain, so Require has to say it.
+.txtPakNotOnLibPaths <- paste0(
+  "\n\npak could not load itself in its own subprocess. pak does its work in a ",
+  "subprocess that loads pak from the library path it inherits, so this means ",
+  "no entry on .libPaths() has pak -- a pak loaded in *this* session does not ",
+  "reach it. Install pak into one of .libPaths(), or pass a library that has ",
+  "it, e.g.\n",
+  "  setLibPaths(c(projLib, pakLib), standAlone = TRUE)\n",
+  "If pak is on .libPaths() and this persists, its metadata cache may be ",
+  "corrupt: try pak::meta_clean().")
+
+.txtPakBrokenInstall <- paste0(
+  "\n\nThis is pak's signature for a damaged pak installation: pak's embedded ",
+  "callr/processx helper executables do not survive a file-by-file copy of a ",
+  "library, which an rsync-style project bootstrap will do. find.package() ",
+  "cannot detect it -- every file is present, they just do not run -- and ",
+  "retrying cannot help, because a fresh subprocess loads the same copy. ",
+  "Force one clean reinstall of pak with:\n",
+  "  options(Require.forcePakReinstall = TRUE)")
 .txtUnknownArchiveType <- "unknown archive type"
 .txtFollowingPkgsVersionCantBeMet <- "The following shows packages whose version requirements can not be met; "
 

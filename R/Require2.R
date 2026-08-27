@@ -291,11 +291,13 @@ Require <- function(packages,
   libPaths <- doLibPaths(libPaths, standAlone = standAlone)
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
 
-  # Make sure pak is installed in the project lib (libPaths[1]) BEFORE any
-  # downstream code path calls pak. If pak is missing from the project lib,
-  # reinstall it fresh -- copying pak from another lib does NOT work on
-  # Windows: pak's embedded callr/processx helper executables don't survive
-  # a file-by-file copy and the next pak call dies with
+  # Make sure pak is reachable on .libPaths() BEFORE any downstream code path
+  # calls pak; if it is not, install it fresh into the project lib. pak runs
+  # its work in a callr subprocess that does its own loadNamespace("pak")
+  # against the inherited .libPaths(), so any entry will serve -- but a pak
+  # loaded only in this session will not. Never file-copy pak into place:
+  # its embedded callr/processx helper executables do not survive a
+  # file-by-file copy on Windows and the next pak call dies with
   #   `Native call to processx_exec failed: Command '' not found`.
   #
   # Gate on libPaths[1] being part of the session-wide .libPaths() so this

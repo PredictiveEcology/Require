@@ -52,6 +52,14 @@
   pass rather than only the first. A single unbuildable dependency used to make
   each of the four identify-and-defer phases retry it in turn, rebuilding
   dozens of already-installed packages each round (#190).
+* GitHub specs whose account contains a hyphen or a digit -- `r-lib/crancache`,
+  `e-sensing/sits`, `user123/pkg` -- are now recognised as GitHub. `isGH()`
+  required a purely alphabetic account while `extractPkgGitHub()` did not, so
+  the two disagreed and such specs were pushed down CRAN code paths; a bare
+  `Remotes: r-lib/crancache` was looked up as a CRAN package. Both now share
+  one definition, following GitHub's naming rules, which differ between the
+  account (alphanumerics and hyphens, no `_` or `.`) and the repository
+  (those plus `_` and `.`).
 
 * `options(Require.snapshotInstaller = "install.packages")` now genuinely
   bypasses pak. The option selected which installer function to call, but that

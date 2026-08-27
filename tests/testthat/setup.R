@@ -24,7 +24,7 @@ if (!nzchar(Sys.getenv("R_USER_CACHE_DIR")) && !interactive()) {
   )
   rm(.userCacheDir)
 }
-verboseForDev <- 2
+verboseForDev <- -2
 Require.usePak <- TRUE#Sys.getenv("R_REQUIRE_USE_PAK", "false") == "true"
 Require.installPackageSys <- 2L#2 * (isMacOS() %in% FALSE)
 Require.offlineMode <- FALSE

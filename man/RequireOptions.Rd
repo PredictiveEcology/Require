@@ -30,7 +30,11 @@ The following options are likely of interest to most users:
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
 but does not affect \code{Install}. If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error.}
-\item{\code{RPackageCache}}{ Default: \code{cacheGetOptionCachePkgDir()}, which must be
+\item{\code{cachePkgDir}}{ Deprecated, and ignored under \code{Require.usePak = TRUE}
+(the default): redirect pak's package cache with the \code{R_USER_CACHE_DIR}
+environment variable instead. \code{R_REQUIRE_PKG_CACHE} is deprecated for the
+same reason. Both are still honoured when \code{Require.usePak = FALSE}.
+Default: \code{cacheGetOptionCachePkgDir()}, which must be
 either a path or a logical. To turn off package caching, set this to \code{FALSE}.
 This can be set using an environment variable e.g.,
 \code{Sys.setenv(R_REQUIRE_PKG_CACHE = "somePath")}, or
@@ -64,6 +68,17 @@ the relevant repository (e.g., \code{predictiveecology.r-universe.dev}) is in
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set
 via \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds).}
+\item{\code{cloneFrom}}{ Default: \code{NULL}. A path to an existing package library.
+When set, any package that is already installed there at the version being
+requested is copied or hard-linked into the destination library instead of
+being downloaded and installed, which is much faster when populating a new
+project library on a machine that already has the packages. Only packages
+that need no compilation and were built under a compatible R version are
+cloned; the rest go through the normal install machinery, as do \code{pak},
+\code{callr}, \code{processx} and \code{cli}, whose native helper executables do not
+survive a file-by-file copy. Has no effect under \code{Require.usePak = TRUE}
+(the default): cloning lives in the legacy (non-pak) install path, so this
+option is consulted only when \code{Require.usePak = FALSE}.}
 \item{\code{downloadTimeout}}{Default: \code{300L} (seconds). Used as the floor for
 \code{options("timeout")} during GitHub source-archive downloads in the legacy
 (non-pak) install path. R's stock 60-second timeout is too short for
@@ -79,6 +94,48 @@ See also \code{otherPkgs} option, which does the same for non-spatial packages.}
 \item{\code{useCranCache}}{ Default: \code{FALSE}. A user can optionally use the locally
 cached packages that are available due to a user's use of the \code{crancache} package.
 }
+\item{\code{checkInternet}}{ Default: \code{TRUE}. Whether \code{Require} may run a short
+internet probe before work that needs the network. Results are cached for
+\code{Require.internetExistsTimeout} seconds (30). Setting this \code{FALSE} skips
+the probe at most call sites, but not those that pass \code{force = TRUE},
+where failing late costs more than a 2-second check.}
+\item{\code{forcePakReinstall}}{ Default: \code{FALSE}. Set \code{TRUE} to force one clean
+\code{install.packages("pak")} into the project library. This is the remedy for
+a pak whose bundled callr/processx helper executables no longer run --
+the state a file-by-file copy of a library leaves pak in. \code{find.package()}
+cannot detect that (every file is present, they just do not run), so the
+reinstall has to be asked for explicitly.}
+\item{\code{installPackagesSys}}{ Default: \code{2L}. Legacy (non-pak) path only.
+\code{0} installs in-process with \code{install.packages()}; a non-zero value runs
+builds and installs through the \code{sys} package in a subprocess; \code{2}
+additionally performs the CRAN downloads itself rather than leaving them
+to \code{install.packages()}. Requires the \code{sys} package.}
+\item{\code{offlineMode}}{ Default: \code{FALSE}. When \code{TRUE}, \code{Require} attempts no
+network access and installs only from local caches. It is also set
+automatically -- together with \code{Require.offlineModeSetAutomatically} --
+when an install fails and an internet probe finds no connection.}
+\item{\code{packageVersionFile}}{ Default: \code{"packageVersions.txt"}. The default
+file path used by \code{pkgSnapshot()} when writing a snapshot.}
+\item{\code{snapshotInstaller}}{ Default: \code{"pak"}. Which installer to use for a
+snapshot install. \code{"install.packages"} selects the pre-pak chain, which is
+retained but no longer developed. See \code{?pkgSnapshot} for the rest of the
+snapshot-installer options.}
+\item{\code{snapshotInstallerUsePPM}}{ Default: \code{TRUE}. Prepend a Posit Package
+Manager binary repository when installing a snapshot through the
+\code{install.packages} chain. PPM serves macOS binaries by content-negotiating
+the \verb{R/<version>} User-Agent.}
+\item{\code{standAlone}}{ Default: \code{TRUE}. The default \code{standAlone} argument for
+\code{Require}, \code{Install} and \code{setLibPaths()}. \code{TRUE} means the given library
+path is used on its own, without the user and site libraries appended;
+\code{FALSE} appends them. It controls whether those libraries are added, not
+how many library paths may be given -- passing several is always allowed.}
+\item{\code{updateRprofile}}{ Default: \code{FALSE}. Whether \code{setLibPaths()} also
+writes the library path into the project \code{.Rprofile}, so it persists
+across sessions.}
+\item{\code{usePak}}{ Default: \code{TRUE}. Use pak to resolve and install packages.
+\code{FALSE} selects the pre-pak path. Several options apply only to that path
+and do nothing under the default: \code{cachePkgDir}, \code{cloneFrom},
+\code{downloadTimeout} and \code{installPackagesSys}.}
 \item{\code{verbose}}{ Default: \code{1}. See ?Require. }
 }
 }

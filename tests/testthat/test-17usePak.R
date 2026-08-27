@@ -655,6 +655,34 @@ test_that("versionChanged is FALSE when preVer is NA (first-time install failure
 # 13. pakRetryLoop upgrade flag: GitHub refs → upgrade=TRUE; CRAN → upgrade=FALSE
 # ---------------------------------------------------------------------------
 
+test_that("isGH() accepts the account names GitHub actually allows", {
+  ## Regression: the account class was "[[:alpha:]]+", so any account carrying
+  ## a hyphen or a digit -- r-lib, e-sensing, s-u, user123 -- was classified as
+  ## NOT GitHub, while extractPkgGitHub() (and so isGitHub()) classified it as
+  ## GitHub. That disagreement turned
+  ##   Install("r-lib/crancache (==0.0.0.9001)")
+  ## into a request for the git ref @0.0.0.9001: the GitHub-detecting path
+  ## built a ref out of the version, and the isGH()-gated code that treats a
+  ## trailing (==ver) as a *version* never ran.
+  gh <- c("PredictiveEcology/reproducible", "achubaty/fpCompare",
+          "r-lib/crancache", "r-lib/remotes", "e-sensing/sits",
+          "s-u/fastmatch", "user123/pkg", "cran4linux/foo",
+          "r-lib/crancache@main", "r-lib/crancache (==0.0.0.9001)")
+  testthat::expect_true(all(Require:::isGH(gh)))
+
+  notGH <- c("crancache", "crancache (==1.0)", "any::crancache",
+             "bioc::S4Vectors", "url::https://example.com/a.tar.gz",
+             "local::/home/x/pkg", "/abs/path/pkg", "C:/some/path")
+  testthat::expect_false(any(Require:::isGH(notGH)))
+
+  ## The two detectors must not drift apart again: one regex, one definition.
+  both <- c(gh, notGH)
+  testthat::expect_identical(Require:::isGH(both),
+                             !is.na(Require:::extractPkgGitHub(both)))
+  testthat::expect_identical(Require:::isGH(both),
+                             grepl(Require:::.ghRefRegex, both))
+})
+
 test_that("isGH correctly distinguishes GitHub refs from CRAN refs for upgrade flag logic", {
   # The pakRetryLoop split: ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
   # GitHub and url:: packages need upgrade=TRUE so pak always fetches the latest

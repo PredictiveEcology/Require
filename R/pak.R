@@ -73,7 +73,7 @@ pakBiocFixture <- function() {
   fixture <- tryCatch(system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
                       error = function(e) "")
   if (!nzchar(fixture)) {
-    pakDir <- tryCatch(find.package("pak"), error = function(e) "")
+    pakDir <- tryCatch(suppressWarnings(find.package("pak")), error = function(e) "")
     if (length(pakDir) && nzchar(pakDir)) {
       cand <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
       if (file.exists(cand)) fixture <- cand
@@ -113,20 +113,40 @@ setBiocConfigEnvForPak <- function() {
 # Bioc version and hard-fails the WHOLE call when bioc.org is unreachable, even
 # when no Bioconductor package was requested. Used by pakCall() to trigger the
 # one-shot bundled-config fallback.
-isBiocConfigFetchError <- function(e) {
-  if (is.null(e)) return(FALSE)
+# .conditionChainText: flatten a condition and its `parent` chain to one
+# string. pak wraps the subprocess's real error inside its own
+# "! error in pak subprocess" condition, so the text that identifies a failure
+# is usually not in conditionMessage(e) itself.
+.conditionChainText <- function(e, depth = 10L) {
   txt <- character(0)
   cur <- e
-  depth <- 0L
-  while (!is.null(cur) && depth < 10L) {
+  d <- 0L
+  while (!is.null(cur) && d < depth) {
     txt <- c(txt, tryCatch(conditionMessage(cur), error = function(x) ""))
     cur <- cur$parent
-    depth <- depth + 1L
+    d <- d + 1L
   }
-  txt <- paste(txt, collapse = "\n")
+  paste(txt, collapse = "\n")
+}
+
+isBiocConfigFetchError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  txt <- .conditionChainText(e)
   grepl("bioconductor\\.org/config\\.yaml", txt, ignore.case = TRUE) ||
     (grepl("config\\.yaml", txt, ignore.case = TRUE) &&
        grepl("bioconductor", txt, ignore.case = TRUE))
+}
+
+# ---------------------------------------------------------------------------
+# isPakBrokenInstallError: pak's signature for a pak installation whose native
+# helper executables no longer run -- the state a file-by-file copy of a
+# library leaves pak in (see .pakNoCopyPkgs()). Distinct from "pak is not on
+# .libPaths()", which pak reports as .txtPakNoPkgCalledPak and which
+# .txtPakNotOnLibPaths covers.
+# ---------------------------------------------------------------------------
+isPakBrokenInstallError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  grepl(.txtPakProcessxExec, .conditionChainText(e), fixed = TRUE)
 }
 
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
@@ -168,6 +188,12 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
             verbose = verbose, verboseLevel = 1)
           eval(exprSub, envir = pf)
         } else {
+          ## Append, rather than replace: keep pak's own condition (classes
+          ## included, so downstream handlers still match) and add the part
+          ## pak cannot know -- that this is a damaged install and how to
+          ## clear it.
+          if (isPakBrokenInstallError(e))
+            e$message <- paste0(conditionMessage(e), .txtPakBrokenInstall)
           stop(e)
         }
       })
@@ -357,8 +383,13 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
               break
             }
             if (grp[i] == .txtPakNoPkgCalledPak) {
-              stop("\nTry running: \npak::meta_clean()")
-              # stop(err)
+              ## Previously this replaced the error with "Try running:
+              ## pak::meta_clean()". That clears pak's *metadata cache*, which
+              ## has nothing to do with the cause: pak's subprocess loads pak
+              ## from the .libPaths() it inherits, so this error means no entry
+              ## on that path has pak. Keep the original error and say so;
+              ## meta_clean() survives as the secondary suggestion.
+              stop(err, .txtPakNotOnLibPaths, call. = FALSE)
             }
             packages <- packages[-whRm]
             break
@@ -548,7 +579,9 @@ whEquals <- function(pkgs) {
 }
 
 isGH <- function(pkgs) {
-  grepl("^[[:alpha:]]+/.+", pkgs)
+  ## Shared with extractPkgGitHub(); see .ghRefRegex in R/extract.R for why
+  ## these two must not have separate definitions.
+  grepl(.ghRefRegex, pkgs)
 }
 
 # Returns TRUE iff the constraint (`versionSpec` / `inequality`) is satisfied,
@@ -2341,7 +2374,14 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # standAlone = FALSE -> c(libPaths[1], existing .libPaths())  (shared)
   #
   # In both cases, pak's own library must be present so the subprocess can load pak.
-  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  ## suppressWarnings, not just tryCatch: find.package() warns once for every
+  ## .libPaths() entry that has a pak/ directory whose DESCRIPTION it cannot
+  ## read -- a stale entry left by a deleted library, which says nothing about
+  ## the pak we are looking for. tryCatch(error=) does not catch a warning, so
+  ## these leaked into callers' capture_warnings(). Only reachable once pak is
+  ## found late on the path; when pak sits in libPaths[1] the scan stops first.
+  pakLib    <- tryCatch(suppressWarnings(dirname(find.package("pak"))),
+                        error = function(e) NULL)
   basePkgLib <- tail(.libPaths(), 1L)   # always the base R packages path
   origPaths  <- .libPaths()
   if (isTRUE(standAlone)) {
@@ -3025,9 +3065,19 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # ---------------------------------------------------------------------------
 # .pakNeedsReinstall: pure decision function for ensurePakInProjectLib().
 #
-# Given the result of find.package("pak", lib.loc = projLib), return:
-#   - ""              if pak is present in projLib (no reinstall needed)
-#   - <reason string> if pak should be reinstalled fresh into projLib
+# Given the result of find.package("pak", lib.loc = .libPaths()), return:
+#   - ""              if pak is reachable on .libPaths() (no install needed)
+#   - <reason string> if pak must be installed fresh into projLib
+#
+# The question is deliberately "reachable anywhere on .libPaths()", not
+# "present in projLib". pak does its real work in a callr subprocess that
+# runs its own loadNamespace("pak") against the inherited .libPaths(), so
+# which entry holds pak is irrelevant -- only that some entry does. A pak
+# loaded in the parent session is NOT sufficient; the subprocess dies with
+#   `error in pak subprocess` / `there is no package called 'pak'`.
+# One shared pak install therefore serves any number of project libs,
+# including standAlone = TRUE ones, via
+#   setLibPaths(c(projLib, pakLib), standAlone = TRUE)
 #
 # Note: we deliberately do NOT use pak_sitrep()'s "(local install?)" tag
 # as a corruption signal. That tag fires for every install where
@@ -3041,7 +3091,7 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
   if (isTRUE(forceReinstall))
     return("Require.forcePakReinstall = TRUE (explicit opt-in)")
   if (!length(pakPath) || !nzchar(pakPath[1]))
-    return("pak not present in project lib")
+    return("pak not available on .libPaths()")
   ""
 }
 
@@ -3120,6 +3170,10 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
   if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
     return(invisible(FALSE))
 
+  ## lib.loc = .libPaths() deliberately, and never lib.loc = NULL: with NULL,
+  ## find.package() consults loaded namespaces first and so reports pak as
+  ## found even when its library is off .libPaths() -- precisely the case
+  ## where pak's subprocess cannot load it.
   pakPath <- suppressWarnings(tryCatch(
     find.package("pak", lib.loc = projLib, quiet = TRUE),
     error = function(e) character(0)))
@@ -3130,10 +3184,13 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
 
   messageVerbose(
     "Require: ", reason, ".\n",
-    "  Installing pak fresh into project lib (NOT copying): ", projLib, "\n",
-    "  Copying pak from another lib does not work on Windows -- pak's\n",
-    "  embedded callr/processx helper executables do not survive a copy.\n",
-    "  (Symptom otherwise: 'Native call to processx_exec failed: Command' '' 'not found'.)",
+    "  Installing pak fresh into project lib (NOT copying): ", projLib,
+    if (isWindows())
+      paste0("\n  Copying pak from another lib does not work on Windows -- pak's\n",
+             "  embedded callr/processx helper executables do not survive a copy.\n",
+             "  (Symptom otherwise: 'Native call to processx_exec failed: ",
+             "Command' '' 'not found'.)")
+    else "",
     verbose = verbose, verboseLevel = 1)
 
   ## Case 4 -- pak loaded by the user (or by an earlier load) before we
@@ -3375,7 +3432,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
   # sees the same library set that was used for dependency resolution.
-  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  ## suppressWarnings, not just tryCatch: find.package() warns once for every
+  ## .libPaths() entry that has a pak/ directory whose DESCRIPTION it cannot
+  ## read -- a stale entry left by a deleted library, which says nothing about
+  ## the pak we are looking for. tryCatch(error=) does not catch a warning, so
+  ## these leaked into callers' capture_warnings(). Only reachable once pak is
+  ## found late on the path; when pak sits in libPaths[1] the scan stops first.
+  pakLib    <- tryCatch(suppressWarnings(dirname(find.package("pak"))),
+                        error = function(e) NULL)
   basePkgLib <- tail(.libPaths(), 1L)
   origPaths  <- .libPaths()
   if (isTRUE(standAlone)) {
