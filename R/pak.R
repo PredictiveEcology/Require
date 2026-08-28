@@ -4187,7 +4187,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # Next iteration: previously-missing minus the culprits.
         pkgsMissingIter <- passList[match(missingNamesIter, passNames)]
         pkgsMissingIter <- pkgsMissingIter[!is.na(pkgsMissingIter)]
-        newPassList <- pkgsMissingIter[!extractPkgName(pkgsMissingIter) %in% culpritsIter]
+        newPassList <- pkgsMissingIter[!pakRefToBareName(pkgsMissingIter) %in% culpritsIter]
 
         messageVerbose(
           "identify-and-defer iter ", iter, ": ", length(culpritsIter),
@@ -4246,7 +4246,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           instNow <- tryCatch(
             rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
             error = function(e) character(0))
-          stillMissing <- deferred[!extractPkgName(deferred) %in% instNow]
+          stillMissing <- deferred[!pakRefToBareName(deferred) %in% instNow]
           stillMissing <- .pakDropUnchangedFailures(failMemo, stillMissing,
                                                     instNow, verbose)
           if (!length(stillMissing)) break
@@ -4262,7 +4262,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
             rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
             error = function(e) character(0))
           # No progress this pass (none of the still-missing got installed) -> stop.
-          if (sum(!extractPkgName(stillMissing) %in% instAfter) >= length(stillMissing))
+          if (sum(!pakRefToBareName(stillMissing) %in% instAfter) >= length(stillMissing))
             break
         }
       }
