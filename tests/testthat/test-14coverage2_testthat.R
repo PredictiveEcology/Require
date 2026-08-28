@@ -178,6 +178,21 @@ test_that("pkgDepTopoSort with local packages", {
   testthat::expect_true(is.list(out4))
 
   # useAllInSearch = TRUE, no deps (reads search() path)
+  ##
+  ## useAllInSearch appends *every non-core package in search()* to `packages`
+  ## and resolves dependencies for all of them, so this call's cost is set by
+  ## the caller's attached packages, not by anything the test controls. Under
+  ## Rscript search() is short and it takes ~2s; from an interactive session
+  ## with devtools/testthat attached it resolves that whole set through pak and
+  ## does not return in any useful time. It stalls reliably at this line and
+  ## nowhere else.
+  ##
+  ## Skip rather than let the caller's environment decide whether the suite
+  ## finishes. The branch stays covered wherever the suite normally runs -- CI,
+  ## R CMD check and plain Rscript all have a short search path.
+  skip_if(length(search()) > 12,
+          paste0("useAllInSearch scales with search(); ", length(search()),
+                 " entries attached would resolve them all"))
   out5 <- pkgDepTopoSort("data.table", useAllInSearch = TRUE)
   testthat::expect_true(is.list(out5))
 
