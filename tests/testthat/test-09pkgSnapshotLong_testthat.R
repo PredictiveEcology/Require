@@ -31,7 +31,7 @@ test_that("a snapshot installs exactly what it pins", {
   snf <- snapshotForThisR()
   skip_if(!nzchar(snf) || !file.exists(snf),
           sprintf("no snapshot for R %s.%s in inst/snapshots", R.version$major, R.version$minor))
-  pkgs <- data.table::fread(snf)
+  pkgs <- data.table::fread(snf)[Package != "R"]   # pkgSnapshot() records the R version as a row
   knownFails <- knownFailsForThisR()
   opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
