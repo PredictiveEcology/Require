@@ -163,20 +163,14 @@ test_that("test 09", {
       names(packageFullName) <- packageFullName
       opts <- options(repos = PEUniverseRepo()); on.exit(options(opts), add = TRUE)
 
-      ## Pin the snapshot install to the fast pipeline. Without this, the
-      ## test goes through pak's solver which:
-      ##   - all-or-nothings the install (any unsatisfiable transitive
-      ##     constraint blocks every package),
-      ##   - falls back to *serial* per-ref installs after a batch failure,
-      ##   - doesn't reliably negotiate PPM binaries (pak's UA logic
-      ##     occasionally serves source even when binaries exist).
-      ## installSnapshotViaInstallPackages instead does libcurl-multi
-      ## parallel downloads with R-style UA for PPM binary negotiation,
-      ## gzip-t validated tarballs, retry on flaky network, then parallel
-      ## install via install.packages(Ncpus = ...) with keep_outputs for
-      ## the post-install diagnostic report.
+      ## Exercise the default snapshot pipeline (Require.snapshotInstaller =
+      ## "pak"). This test used to pin the installer to "install.packages",
+      ## but that chain is legacy -- retained, no longer developed -- so
+      ## pinning to it stopped testing the path Require actually uses.
+      ## Note the pak pipeline still reaches install.packages of its own
+      ## accord: the hybrid binary pre-install, and the file:// fallback for
+      ## refs pak refuses.
       withr::local_options(.local_envir = teardown_env(),
-        Require.snapshotInstaller = "install.packages",
         Require.snapshotInstallerUsePPM = TRUE,
         Require.snapshotDownloadAttempts = 4L,
         Ncpus = max(1L, parallel::detectCores() - 1L))
@@ -212,8 +206,7 @@ test_that("test 09", {
       expect_true(testWarnsInUsePleaseChange(warns))
 
       ## Core invariant: every package the snapshot asked for ended up in
-      ## the destination libPath. The fast-path installer (gated above via
-      ## Require.snapshotInstaller = "install.packages") uses dependencies =
+      ## the destination libPath. The snapshot install uses dependencies =
       ## FALSE, so by construction it installs exactly the snapshot — no
       ## extra packages, no missing packages — assuming nothing failed.
       ## knownFails are packages with system-library prerequisites we don't
