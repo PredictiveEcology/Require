@@ -508,7 +508,7 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
   skip_if_offline2()
   skip_if_not_installed("pak")
 
-  testlib <- file.path(tempdir(), paste0("rqlib_pryrurl_", sample(1e5, 1)))
+  testlib <- file.path(tempdir(), paste0("rqlib_archurl_", sample(1e5, 1)))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
 
@@ -524,21 +524,22 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
   .libPaths(c(testlib, .Library))  # .Library is the cross-platform base R lib
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
 
-  ref <- "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz"
+  ## assertthat 0.2.0: archived, pure R, no dependencies -- builds on any R
+  ## (pryr was used before; its last release cannot compile on R >= 4.5).
+  ref <- "url::https://cran.rstudio.com/src/contrib/Archive/assertthat/assertthat_0.2.0.tar.gz"
   res <- try(pak::pak(ref, lib = testlib, ask = FALSE,
                       dependencies = NA, upgrade = FALSE), silent = TRUE)
   if (inherits(res, "try-error")) skip(paste("pak install failed:", as.character(res)))
 
-  expect_true("pryr" %in% rownames(installed.packages(testlib)),
-              info = "pryr should be installed via direct pak::pak(url::...)")
+  expect_true("assertthat" %in% rownames(installed.packages(testlib)),
+              info = "assertthat should be installed via direct pak::pak(url::...)")
 })
 
 # ---------------------------------------------------------------------------
-# Cross-archive deps: disk.frame depends on pryr (>= 0.1.4); both are
-# archived from CRAN, so pak::pak("any::disk.frame") fails with
-# "Can't find package called pryr". The archive-fallback batch must pass
-# both archive URLs together so pak resolves disk.frame -> pryr from the
-# same plan.
+# Cross-archive deps: R.oo 1.25.0 depends on R.methodsS3 (>= 1.8.1); both
+# versions are archived from CRAN, so pak::pak("any::R.oo@1.25.0") cannot
+# resolve the dependency. The archive-fallback batch must pass both archive
+# URLs together so pak resolves R.oo -> R.methodsS3 from the same plan.
 # ---------------------------------------------------------------------------
 test_that("pak::pak installs cross-dependent archived refs in one batch", {
   if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
@@ -563,15 +564,17 @@ test_that("pak::pak installs cross-dependent archived refs in one batch", {
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
 
   refs <- c(
-    "url::https://cran.rstudio.com/src/contrib/Archive/disk.frame/disk.frame_0.8.3.tar.gz",
-    "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz")
+    ## R.oo Depends on R.methodsS3; both archived versions, both pure R
+    ## (disk.frame + pryr were used before; pryr cannot compile on R >= 4.5).
+    "url::https://cran.rstudio.com/src/contrib/Archive/R.oo/R.oo_1.25.0.tar.gz",
+    "url::https://cran.rstudio.com/src/contrib/Archive/R.methodsS3/R.methodsS3_1.8.1.tar.gz")
   res <- try(pak::pak(refs, lib = testlib, ask = FALSE,
                       dependencies = NA, upgrade = FALSE), silent = TRUE)
   if (inherits(res, "try-error")) skip(paste("pak install failed:", as.character(res)))
 
   inst <- rownames(installed.packages(testlib))
-  expect_true("disk.frame" %in% inst, info = "disk.frame should be installed")
-  expect_true("pryr"       %in% inst, info = "pryr should be installed")
+  expect_true("R.oo"        %in% inst, info = "R.oo should be installed")
+  expect_true("R.methodsS3" %in% inst, info = "R.methodsS3 should be installed")
 })
 
 # ---------------------------------------------------------------------------
@@ -640,7 +643,13 @@ test_that("identify-and-defer recovers from PSPclean-style cascade", {
                 "false")) {
     skip("R_REQUIRE_RUN_LARGE_INTEGRATION=false; skipping multi-minute install")
   }
-  skip_if_not_installed("SpaDES.project")
+  ## Not skip_if_not_installed(): when SpaDES.project is installed but its
+  ## namespace cannot load (e.g. a dependency left loaded at another version
+  ## by an earlier test), that reports "not installed" and sends people to
+  ## check their library. Report the real reason instead.
+  spOK <- tryCatch({ loadNamespace("SpaDES.project"); TRUE },
+                   error = function(e) conditionMessage(e))
+  if (!isTRUE(spOK)) skip(paste("SpaDES.project cannot be loaded:", spOK))
 
   testlib <- file.path(tempdir(), paste0("rqlib_landr_", sample(1e5, 1)))
   dir.create(testlib, recursive = TRUE)
