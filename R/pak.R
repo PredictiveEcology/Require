@@ -1034,7 +1034,8 @@ isExplicitShaPin <- function(refs) {
 # install -- because installed.packages() returns "pkg".
 pakRefToBareName <- function(refs) {
   isUrl <- startsWith(refs, "url::")
-  refs[isUrl] <- extractPkgName(filenames = basename(refs[isUrl]))
+  if (any(isUrl))
+    refs[isUrl] <- extractPkgName(filenames = basename(refs[isUrl]))
   sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
 }
 
