@@ -23,6 +23,54 @@
 ## library a later test deletes, and pak:::loaded_packages() then warns on a
 ## dead path, failing test-01, test-04 and test-12. pak keeps its own symlink
 ## path inside Require.
+## requireIntoTestLib(): make Require -- and the deps its own DESCRIPTION
+## declares -- present *in* the test library.
+##
+## Under devtools::test() Require is loaded from source by pkgload, so there is
+## no installed copy anywhere to symlink (a developer machine may have none in
+## its personal library at all). Anything that must *build* against Require --
+## test-08 installs SpaDES.project, which Imports Require -- then fails with
+## "dependency 'Require' is not available".
+##
+## Relying on the personal library via Require.cloneFrom is not a fix: it makes
+## a standAlone test's outcome depend on what happens to be installed there,
+## which is why test-08 passed under one R version and skipped under another on
+## the same machine. So install the package *under test* once per session into
+## a cache library and symlink that in -- the test library then holds the code
+## actually being tested, not whatever the developer happens to have.
+requireSourceLib <- local({
+  cached <- NULL
+  function() {
+    if (!is.null(cached) && dir.exists(file.path(cached, "Require"))) return(cached)
+    src <- tryCatch(find.package("Require"), error = function(e) NULL)
+    ## a source checkout, not an installed package: no Meta/ directory
+    if (is.null(src) || !dir.exists(file.path(src, "R")) || dir.exists(file.path(src, "Meta")))
+      return(NULL)
+    lib <- file.path(tempdir(), "Require_source_lib")
+    dir.create(lib, showWarnings = FALSE, recursive = TRUE)
+    ok <- tryCatch(system2(file.path(R.home("bin"), "R"),
+                           c("CMD", "INSTALL", "--no-docs", "--no-help", "--no-byte-compile",
+                             "-l", shQuote(lib), shQuote(src)),
+                           stdout = FALSE, stderr = FALSE), error = function(e) 1L)
+    if (!identical(as.integer(ok), 0L) || !dir.exists(file.path(lib, "Require"))) return(NULL)
+    cached <<- lib
+    lib
+  }
+})
+
+requireIntoTestLib <- function(destLib) {
+  ## Require's own non-base Imports; pak is excluded on purpose, as above
+  linkTestSupportInto(destLib, pkgs = c("callr", "data.table", "processx", "sys"))
+  srcLib <- requireSourceLib()
+  if (!is.null(srcLib)) {
+    linkTestSupportInto(destLib, pkgs = "Require", srcLibs = srcLib)
+  } else {
+    ## Require is installed for real (e.g. under R CMD check): link it from there
+    linkTestSupportInto(destLib, pkgs = "Require")
+  }
+  invisible(dir.exists(file.path(destLib, "Require")))
+}
+
 linkTestSupportInto <- function(destLib, pkgs = c("curl", "httr", "waldo"),
                                 srcLibs = .libPaths()) {
   srcLibs <- setdiff(srcLibs, destLib)
@@ -54,7 +102,7 @@ setupTest <- function(verbose = getOption("Require.verbose"),
                       needRequireInNewLib = FALSE, envir = parent.frame()) {
   newLib <- tempdir3("Require_test_libs")
   if (needRequireInNewLib) {
-    linkOrCopyPackageFiles("Require", fromLib = .libPaths()[1], newLib)
+    requireIntoTestLib(newLib)
   }
   ## Force-load pak BEFORE narrowing .libPaths(): once a namespace is loaded,
   ## R remembers where it came from even if the lib is no longer on .libPaths().
