@@ -3826,7 +3826,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # GitHub/url refs go to pak with dependencies = FALSE (so their pins are not
   # re-resolved), under which pak does not order builds: install them one
   # dependency level at a time. upgrade = TRUE so a branch ref fetches HEAD.
+  ghDone <- FALSE  # reset by each pakRetryLoop call; set once its GitHub levels succeed
   pakGhByLevel <- function(refs) {
+    if (isTRUE(ghDone)) return(NULL)  # already installed earlier in this pakRetryLoop call
     for (lvl in pakInstallLevels(refs, pakRefToBareName(refs))) {
       e <- try(pakCall(
         pak::pak(lvl, lib = libPaths[1], ask = FALSE,
@@ -3834,10 +3836,12 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         verbose), silent = TRUE)
       if (is(e, "try-error")) return(e)
     }
+    ghDone <<- TRUE
     e
   }
 
   pakRetryLoop <- function(packages, repos, verbose) {
+    ghDone <<- FALSE
     for (i in seq_len(15)) {
       pkgsIn <- packages
       # Snapshot the captured-messages buffer so we can slice out exactly the
@@ -4122,7 +4126,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # Restarting the subprocess gives the next iteration clean state.
         if (iter > 1L) pakResetSubprocess()
         iterMsgsStart <- length(allCapturedMsgs) + 1L
-        capturePak(pakRetryLoop(passList, repos, verbose))
+        if (iter == 1L) {
+          capturePak(pakRetryLoop(passList, repos, verbose))
+        } else {
+          ## A batch that already failed once restarts one dependency level at
+          ## a time, so the next culprit aborts only its level rather than the
+          ## whole batch again. The first attempt stays a single call: on an
+          ## install that simply succeeds, levels are only extra pak calls.
+          for (lvl in pakInstallLevels(passList, pakRefToBareName(passList)))
+            capturePak(pakRetryLoop(lvl, repos, verbose))
+        }
         capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
 
         ## Terminate early if pak reports missing system packages. Retrying
