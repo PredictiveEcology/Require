@@ -7,10 +7,13 @@
 30s
 3b
 3s
+403s
 404s
 5's
 60s
 64ms
+7s
+8s
 ABI
 Bioc
 Bugfixes
@@ -52,6 +55,7 @@ SaveNames
 SpaDES
 TRE
 UI
+alphanumerics
 arg
 arity
 backoff
@@ -86,6 +90,7 @@ gcc
 gdal
 geos
 getDeps
+gitcreds
 github
 glpk
 gz
@@ -122,12 +127,15 @@ pkgcache's
 pkgs
 pre
 prepInputs
+processx
 pryr
 qs
 recognise
+recognised
 recognises
 redirectable
 reinstallation
+replanned
 reprexes
 respawn
 retryable
@@ -145,6 +153,7 @@ symlink
 sysreqs
 toolchain
 ulimit
+unbuildable
 unbuilt
 unlinks
 yaml
