@@ -1498,8 +1498,10 @@ test_that("pakRetryLoop GitHub batch still uses upgrade=TRUE", {
 test_that("pakRetryLoop single-call branch routes GitHub refs by level and CRAN by cranUp", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
+  ## covr instruments the body (a counter call lands between `{` and the
+  ## routed call), so allow anything short between the condition and the call.
   testthat::expect_true(
-    grepl("if \\(any\\(ghOrUrl\\)\\)\\s*\\{?\\s*pakGhByLevel\\(packages\\)", oneLine),
+    grepl("if \\(any\\(ghOrUrl\\)\\)[\\s\\S]{0,300}?pakGhByLevel\\(packages\\)", oneLine, perl = TRUE),
     info = "a batch with GitHub/url refs must go through pakGhByLevel()")
   cranCall <- regmatches(oneLine, regexpr(
     "pak::pak\\(packages, [^)]*dependencies = cranDeps[^)]*\\)", oneLine))
