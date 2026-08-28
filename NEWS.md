@@ -43,7 +43,9 @@
   the set is solved once, packages the snapshot does not pin are reported
   and not installed, and installation proceeds one dependency level at a
   time with `dependencies = FALSE`, so no package can pull a dependency at
-  an unpinned version.
+  an unpinned version. A pin that is not the current CRAN version is handed
+  to pak as its CRAN Archive tarball: pak's solver otherwise discards an
+  older pinned version whenever its dependencies match the newest one.
 
 * `pkgDepTopoSort()` could place a package in the same install level as one
   of its dependencies; levels are now built the way `install.packages()`
