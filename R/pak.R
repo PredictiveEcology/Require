@@ -3193,6 +3193,38 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # The robust fix is to install pak fresh into the project lib using base
 # install.packages() (NOT pak::pak -- chicken-and-egg if pak is broken).
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# .pakLinkSource: a real, complete pak installation to symlink from, or NULL.
+#
+# Resolves symlinks, so linking never chains through another project lib's
+# link and cannot end up pointing at a directory that has since been removed.
+# ---------------------------------------------------------------------------
+.pakLinkSource <- function() {
+  ## lib.loc = NULL deliberately, and FIRST: with NULL, find.package() consults
+  ## loaded namespaces before .libPaths(), so it still finds pak when its
+  ## library is not on the path. That is precisely the situation here -- by the
+  ## time ensurePakInProjectLib() runs, .libPaths() has usually been narrowed to
+  ## the project lib, and searching only that finds nothing and falls through to
+  ## a full install. (Elsewhere this same NULL behaviour is a trap and is
+  ## avoided; here it is the point.)
+  cands <- suppressWarnings(tryCatch(
+    find.package("pak", quiet = TRUE), error = function(e) character(0)))
+  if (!length(cands))
+    cands <- suppressWarnings(tryCatch(
+      find.package("pak", lib.loc = unique(c(.libPaths(),
+                                             Sys.getenv("R_LIBS_USER"))),
+                   quiet = TRUE),
+      error = function(e) character(0)))
+  if (!length(cands) && "pak" %in% loadedNamespaces())
+    cands <- tryCatch(getNamespaceInfo("pak", "path"), error = function(e) character(0))
+  cands <- cands[nzchar(cands)]
+  for (cand in cands) {
+    p <- tryCatch(normalizePath(cand, mustWork = FALSE), error = function(e) cand)
+    if (dir.exists(p) && file.exists(file.path(p, "DESCRIPTION"))) return(p)
+  }
+  NULL
+}
+
 ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
                                   verbose = getOption("Require.verbose")) {
   if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
@@ -3211,9 +3243,12 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
   reason <- .pakNeedsReinstall(pakPath, forceReinstall = forceReinstall)
   if (!nzchar(reason)) return(invisible(TRUE))
 
+  ## Deliberately says only what is being addressed, not how: the "how" is
+  ## decided below and reported there. Claiming a fresh install here printed
+  ## that line even on runs where pak was symlinked in milliseconds.
   messageVerbose(
     "Require: ", reason, ".\n",
-    "  Installing pak fresh into project lib (NOT copying): ", projLib,
+    "  Making pak available in the project lib: ", projLib,
     if (isWindows())
       paste0("\n  Copying pak from another lib does not work on Windows -- pak's\n",
              "  embedded callr/processx helper executables do not survive a copy.\n",
@@ -3242,7 +3277,40 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
     }
   }
 
-  ok <- tryCatch({
+  ## Symlink rather than download+install where the platform allows it.
+  ##
+  ## pak has to end up in projLib -- that is what re-binds pak's namespace to a
+  ## live directory each time a caller moves to a new project library, and it is
+  ## why the suite stays healthy while tests create and discard libraries. But
+  ## it does not have to be a fresh 12 MB install: measured at ~5.6s a time, and
+  ## the test suite does it once per project lib.
+  ##
+  ## A symlink is not the file-by-file copy .pakNoCopyPkgs() forbids. That
+  ## exclusion exists because pak's embedded callr/processx helper executables
+  ## do not survive being copied on Windows; a symlink leaves every one of those
+  ## files at its original path. Windows is excluded anyway, since symlinks
+  ## there need privileges R cannot assume.
+  linked <- FALSE
+  if (!isWindows()) {
+    src <- .pakLinkSource()
+    projLibNorm <- tryCatch(normalizePath(projLib, mustWork = FALSE),
+                            error = function(e) projLib)
+    if (!is.null(src) && !identical(dirname(src), projLibNorm)) {
+      dest <- file.path(projLib, "pak")
+      unlink(dest, recursive = TRUE, force = TRUE)
+      linked <- isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE))
+      if (linked)
+        messageVerbose("  Linked pak from ", src, " (no reinstall needed)",
+                       verbose = verbose, verboseLevel = 1)
+    }
+  }
+
+  if (!isTRUE(linked))
+    messageVerbose("  Installing pak fresh (no linkable copy found)",
+                   verbose = verbose, verboseLevel = 1)
+  ok <- if (isTRUE(linked)) {
+    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  } else tryCatch({
     utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE)
     length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
   }, error = function(e) {

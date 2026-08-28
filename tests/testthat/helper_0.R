@@ -1,3 +1,55 @@
+## linkTestSupportInto(): put the packages testthat needs -- curl, httr, waldo
+## and their dependency closure -- into `destLib` as symlinks, from wherever
+## they are already installed.
+##
+## Into destLib, deliberately, rather than into a separate library placed on
+## .libPaths(). Tests inspect the contents of their own library:
+##
+##   test-06:175   installedPkgs <- dir(.libPaths()[1])
+##                 knownRevDeps  <- lapply(knownRevDeps, intersect, installedPkgs)
+##
+## so a package that is merely *reachable* rather than *present* silently
+## shrinks what that test checks. Symlinking into destLib keeps dir(),
+## installed.packages() and .libPaths() exactly as they were when setupTest()
+## installed these for real -- the suite asserts the same things, it just does
+## not spend 13s per file doing it.
+##
+## Symlinks, not copies: R resolves them when loading, so each namespace binds
+## to the permanent library rather than to this temporary one.
+##
+## pak is excluded on purpose. Reachable pak stops ensurePakInProjectLib()
+## reinstalling it per project lib, and that reinstall is what re-binds pak's
+## namespace to a live directory; without it the namespace stays pointing at a
+## library a later test deletes, and pak:::loaded_packages() then warns on a
+## dead path, failing test-01, test-04 and test-12. pak keeps its own symlink
+## path inside Require.
+linkTestSupportInto <- function(destLib, pkgs = c("curl", "httr", "waldo"),
+                                srcLibs = .libPaths()) {
+  srcLibs <- setdiff(srcLibs, destLib)
+  ip <- tryCatch(installed.packages(lib.loc = srcLibs), error = function(e) NULL)
+  if (is.null(ip) || !NROW(ip)) return(invisible(character(0)))
+  closure <- pkgs
+  repeat {
+    deps <- unique(unlist(tools::package_dependencies(
+      intersect(closure, rownames(ip)), db = ip,
+      which = c("Depends", "Imports", "LinkingTo"))))
+    extra <- setdiff(deps, closure)
+    if (!length(extra)) break
+    closure <- c(closure, extra)
+  }
+  linked <- character(0)
+  for (pkg in intersect(closure, rownames(ip))) {
+    dest <- file.path(destLib, pkg)
+    if (file.exists(dest)) next
+    src <- tryCatch(normalizePath(file.path(ip[pkg, "LibPath"], pkg), mustWork = FALSE),
+                    error = function(e) "")
+    if (nzchar(src) && dir.exists(src) &&
+        isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE)))
+      linked <- c(linked, pkg)
+  }
+  invisible(linked)
+}
+
 setupTest <- function(verbose = getOption("Require.verbose"),
                       needRequireInNewLib = FALSE, envir = parent.frame()) {
   newLib <- tempdir3("Require_test_libs")
@@ -15,6 +67,9 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   ## Don't preload Require: under covr, Require's namespace is the instrumented
   ## copy and re-loading via loadNamespace can interfere with coverage tracking.
   tryCatch(loadNamespace("pak"), error = function(e) NULL)
+  ## Populate newLib before narrowing, while the source libraries are still
+  ## on .libPaths() to link from.
+  linkTestSupportInto(newLib)
   withr::local_libpaths(c(newLib, .Library), .local_envir = envir)
 
   ## Always use temporary package cache for tests (#128):
@@ -22,7 +77,17 @@ setupTest <- function(verbose = getOption("Require.verbose"),
   ## - user's cache may have package versions that are newer than those requested in the tests;
   withr::local_envvar("R_REQUIRE_CACHE" = tempdir2("RequireCacheForTests"), .local_envir = envir)
 
-  Install(c("curl", "httr", "waldo")) ## needed by testthat but not installed in tmp libPath
+  ## testthat needs these inside the narrowed .libPaths(). Install() places a
+  ## package in libPaths[1] even when it is already reachable further down the
+  ## path -- measured: with curl visible via another library entry, Install()
+  ## still installed it, 9.21s vs 9.18s without. So the saving is not in making
+  ## the call cheap, it is in not making it: skip when every one of them is
+  ## already loadable from the current path.
+  .testthatSupport <- c("curl", "httr", "waldo")
+  .haveSupport <- vapply(.testthatSupport, function(p)
+    length(suppressWarnings(find.package(p, lib.loc = .libPaths(), quiet = TRUE))) > 0,
+    logical(1))
+  if (!all(.haveSupport)) Install(.testthatSupport[!.haveSupport])
 
   messageVerbose(blue(" getOption('Require.verbose'): ",
     getOption("Require.verbose")),
