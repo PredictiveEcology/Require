@@ -34,6 +34,21 @@
 
 ## Installation correctness
 
+* Exact pins (`pkg (==ver)`) now reach pak's dependency solve. They were
+  stripped before the solve, so every pinned package resolved to the current
+  version, which was installed and then replaced by the pin (e.g.
+  `abind 1.4-8 -> 1.4-5`).
+
+* Installing from a snapshot (`packageVersionFile`) is now a pinned install:
+  the set is solved once, packages the snapshot does not pin are reported
+  and not installed, and installation proceeds one dependency level at a
+  time with `dependencies = FALSE`, so no package can pull a dependency at
+  an unpinned version.
+
+* `pkgDepTopoSort()` could place a package in the same install level as one
+  of its dependencies; levels are now built the way `install.packages()`
+  orders its installs.
+
 * Installs on Linux no longer rebuild every already-installed compiled
   dependency from source. `Require()`/`Install()` default
   `type = getOption("pkgType")`, which is `"source"` on Linux, and that value
