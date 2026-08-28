@@ -1910,7 +1910,7 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     ## dependencies = FALSE, and never lets a lone ref pull its deps at
     ## unpinned versions (see pakPinnedInstall in pak.R).
     assign("pakPinnedInstall", TRUE, envir = pakEnv())
-    on.exit(rm(list = intersect(c("pakPinnedInstall", "pakPinnedDepGraph"),
+    on.exit(rm(list = intersect(c("pakPinnedInstall", "pakDepGraph"),
                                 ls(pakEnv(), all.names = TRUE)),
                envir = pakEnv()), add = TRUE)
     out <- Require(need,

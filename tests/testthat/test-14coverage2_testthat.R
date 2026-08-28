@@ -462,7 +462,6 @@ test_that("pakPinnedResolve keeps the graph and drops what the snapshot did not 
   expect_warning(out <- Require:::pakPinnedResolve(pkgDT, pak_result, pinned = c("a", "b"), verbose = -2),
                  "not pinned.*: c$")
   expect_identical(out$Package, c("a", "b"))
-  graph <- get("pakPinnedDepGraph", envir = Require:::pakEnv())
-  expect_identical(graph, list(a = "b", b = character()))   # c and Suggests excluded
-  rm("pakPinnedDepGraph", envir = Require:::pakEnv())
+  graph <- Require:::pakHardDepGraph(pak_result)
+  expect_identical(graph, list(a = "b", b = "c", c = character()))   # Suggests excluded
 })

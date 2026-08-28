@@ -2810,6 +2810,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
     assign("pakResolvedVersionMap",
            setNames(as.character(pak_result$version), pak_result$package),
            envir = pakEnv())
+    assign("pakDepGraph", pakHardDepGraph(pak_result), envir = pakEnv())
     if (isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
       pkgDT <- pakPinnedResolve(pkgDT, pak_result, extractPkgName(packages), verbose)
   }
@@ -2817,21 +2818,27 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   pkgDT
 }
 
-# A pinned install (a snapshot; see Require2.R) is a closed set: every hard dep
-# of every package is itself pinned in the set. The global solve above is the
-# whole resolution stage, so keep two things from it for pakInstallFiltered():
-#   * the hard-dep graph (Depends/Imports/LinkingTo) among the pinned packages,
-#     which pkgDepTopoSort() turns into install levels so the set can be
-#     installed with dependencies = FALSE (pak only orders builds when it
-#     resolves deps itself -- see the dependencies = NA note in pakRetryLoop);
-#   * nothing else: any package the solve added that is not in the pinned set
-#     is a gap in the snapshot. It is reported and dropped rather than installed
-#     at whatever version CRAN has today, so a non-closed snapshot fails loudly
-#     on the packages that need the missing pin instead of quietly drifting.
-# Install levels for a pinned set: refs whose hard deps (within the set) are
-# all in earlier levels. Falls back to a single level when no graph was kept.
-pakPinnedLevels <- function(pkgs, pkgNames) {
-  graph <- get0("pakPinnedDepGraph", envir = pakEnv(), inherits = FALSE)
+# The hard-dep graph (Depends/Imports/LinkingTo) among the packages the global
+# solve returned. pakInstallFiltered() turns it into install levels: pak only
+# orders builds when it resolves deps itself (dependencies = NA), so a batch
+# handed over with dependencies = FALSE -- every GitHub batch -- would otherwise
+# start building a package before a sibling it Imports has landed, fail in
+# under a second, abort the whole batch, and rebuild everything next pass.
+pakHardDepGraph <- function(pak_result) {
+  hard <- c("depends", "imports", "linkingto")
+  all <- pak_result$package
+  graph <- lapply(pak_result$deps, function(deps) {
+    if (is.null(deps) || !NROW(deps)) return(character())
+    intersect(unique(deps$package[tolower(deps$type) %in% hard]), all)
+  })
+  names(graph) <- all
+  graph
+}
+
+# Install levels: refs whose hard deps (within the set) are all in earlier
+# levels. Falls back to a single level when no graph was kept.
+pakInstallLevels <- function(pkgs, pkgNames) {
+  graph <- get0("pakDepGraph", envir = pakEnv(), inherits = FALSE)
   if (is.null(graph)) return(list(pkgs))
   g <- lapply(pkgNames, function(nm) if (is.null(graph[[nm]])) character() else graph[[nm]])
   names(g) <- pkgNames
@@ -2840,15 +2847,13 @@ pakPinnedLevels <- function(pkgs, pkgNames) {
   lapply(split(names(ord), grp), function(nm) pkgs[match(nm, pkgNames)])
 }
 
+# A pinned install (a snapshot; see Require2.R) is a closed set: every hard dep
+# of every package is itself pinned in the set, so the global solve is the whole
+# resolution stage. Any package the solve added that is not in the pinned set
+# is a gap in the snapshot: it is reported and dropped rather than installed at
+# whatever version CRAN has today, so a non-closed snapshot fails loudly on the
+# packages that need the missing pin instead of quietly drifting.
 pakPinnedResolve <- function(pkgDT, pak_result, pinned, verbose) {
-  hard <- c("depends", "imports", "linkingto")
-  graph <- Map(function(pkg, deps) {
-    if (is.null(deps) || !NROW(deps)) return(character())
-    d <- deps$package[tolower(deps$type) %in% hard]
-    intersect(unique(d), pinned)
-  }, pak_result$package, pak_result$deps)
-  assign("pakPinnedDepGraph", graph[names(graph) %in% pinned], envir = pakEnv())
-
   extra <- setdiff(pak_result$package, c(pinned, .basePkgs))
   if (length(extra)) {
     warning("pinned install: ", length(extra), " package(s) are needed but not pinned ",
@@ -3814,9 +3819,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   warnedDropped <- character(0)
   lastPakErr    <- ""
   # A pinned install (snapshot; see pakPinnedResolve) carries every hard dep
-  # in the set, so nothing is left for pak to resolve: dependencies = FALSE,
-  # and the build order pak would otherwise derive comes from the install
-  # levels below instead.
+  # in the set, so nothing is left for pak to resolve: dependencies = FALSE.
   pinned   <- isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE))
   cranDeps <- if (pinned) FALSE else NA   # last raw pak error string; used by silentlyFailed warning below
 
@@ -4077,9 +4080,12 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # because installed.packages() returns the bare name ("qs").
   pkgNamesAll <- pakRefToBareName(pkgs)
   failMemo <- .pakFailMemo()
-  # One pass over everything, or -- for a pinned install -- one pass per
-  # dependency level so each package's hard deps are installed before it builds.
-  levels <- if (pinned) pakPinnedLevels(pkgs, pkgNamesAll) else list(pkgs)
+  # One pass per dependency level, so each package's hard deps are installed
+  # before it builds. The graph is this install's: do not let it leak into a
+  # later one that resolved differently, or not at all.
+  on.exit(if (exists("pakDepGraph", envir = pakEnv(), inherits = FALSE))
+            rm("pakDepGraph", envir = pakEnv()), add = TRUE)
+  levels <- pakInstallLevels(pkgs, pkgNamesAll)
   installLevel <- function(pkgs) {
     if (identical(strategy, "original")) {
       capturePak(pakRetryLoop(pkgs, repos, verbose))
