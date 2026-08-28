@@ -1056,7 +1056,12 @@ pakPinnedArchiveRefs <- function(refs, repos = getOption("repos"),
   cur <- ap$Version[match(pkgs, ap$Package)]
   old <- is.na(cur) | cur != vers
   if (!any(old)) return(refs)
-  av <- dlArchiveVersionsAvailable(unique(pkgs[old]), repos = repos, verbose = verbose)
+  ## Archive tarballs are source: take them from an official CRAN mirror, not
+  ## from a PPM binary path -- pak refuses a source tarball served under
+  ## `__linux__/<codename>` on some R versions (R 4.5.3 here, not 4.4 or 4.6).
+  isCRAN <- unlist(whIsOfficialCRANrepo(repos)) %in% TRUE
+  cranRepos <- unique(c(repos[isCRAN], srcPackageURLOnCRAN))
+  av <- dlArchiveVersionsAvailable(unique(pkgs[old]), repos = cranRepos, verbose = verbose)
   for (i in which(old)) {
     d <- av[[pkgs[i]]]
     if (!NROW(d)) next
