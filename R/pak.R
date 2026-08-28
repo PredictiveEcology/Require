@@ -1044,7 +1044,10 @@ pakRefToBareName <- function(refs) {
 # ("choose-latest") -- even when that candidate is an explicit `pkg@version`
 # pin. So BH@1.81.0-1 or bitops@1.0-7 can never be solved as a standard ref.
 # The rule covers only cran/bioc/standard refs, so a pin that is not the
-# current version is handed over as its CRAN Archive tarball instead.
+# current version is handed over as its CRAN Archive tarball instead -- for
+# every exact pin, not only snapshots: Install("bitops (==1.0-7)") is refused
+# the same way, and otherwise only reaches the archive through the slow
+# per-package and archive-fallback passes.
 pakPinnedArchiveRefs <- function(refs, repos = getOption("repos"),
                                  verbose = getOption("Require.verbose")) {
   pkgs <- sub("@.*$", "", refs)
@@ -2498,7 +2501,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   ## of its way and trim only the inequality specs.
   isPin <- notGH & grepl("@", pkgsForPak, fixed = TRUE)
   pkgsForPak[!isPin] <- trimVersionNumber(pkgsForPak[!isPin])
-  if (any(isPin) && isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
+  if (any(isPin))
     pkgsForPak[isPin] <- pakPinnedArchiveRefs(pkgsForPak[isPin], verbose = verbose)
   pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
   pkgsForPak <- .preferGHrefDedup(pkgsForPak)
