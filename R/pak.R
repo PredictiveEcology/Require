@@ -1033,7 +1033,34 @@ isExplicitShaPin <- function(refs) {
 # checks all misclassify it as still-missing -- even right after a successful
 # install -- because installed.packages() returns "pkg".
 pakRefToBareName <- function(refs) {
+  isUrl <- startsWith(refs, "url::")
+  refs[isUrl] <- extractPkgName(filenames = basename(refs[isUrl]))
   sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
+}
+
+# pkgdepends (0.9.x, pkgplan_i_lp_deduplicate) rules out an older source
+# candidate of a package whose dependency list matches the newest one
+# ("choose-latest") -- even when that candidate is an explicit `pkg@version`
+# pin. So BH@1.81.0-1 or bitops@1.0-7 can never be solved as a standard ref.
+# The rule covers only cran/bioc/standard refs, so a pin that is not the
+# current version is handed over as its CRAN Archive tarball instead.
+pakPinnedArchiveRefs <- function(refs, repos = getOption("repos"),
+                                 verbose = getOption("Require.verbose")) {
+  pkgs <- sub("@.*$", "", refs)
+  vers <- sub("^.*@", "", refs)
+  ap <- available.packagesCached(repos, purge = FALSE, verbose = verbose)
+  cur <- ap$Version[match(pkgs, ap$Package)]
+  old <- is.na(cur) | cur != vers
+  if (!any(old)) return(refs)
+  av <- dlArchiveVersionsAvailable(unique(pkgs[old]), repos = repos, verbose = verbose)
+  for (i in which(old)) {
+    d <- av[[pkgs[i]]]
+    if (!NROW(d)) next
+    hit <- which(basename(d$PackageUrl) == paste0(pkgs[i], "_", vers[i], ".tar.gz"))[1]
+    if (!is.na(hit))
+      refs[i] <- paste0("url::", sub("/$", "", d$repo[hit]), "/src/contrib/Archive/", d$PackageUrl[hit])
+  }
+  refs
 }
 
 # Look up `pkg` (bare name) in pak's local download cache and return the path
@@ -2470,6 +2497,8 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   ## of its way and trim only the inequality specs.
   isPin <- notGH & grepl("@", pkgsForPak, fixed = TRUE)
   pkgsForPak[!isPin] <- trimVersionNumber(pkgsForPak[!isPin])
+  if (any(isPin) && isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
+    pkgsForPak[isPin] <- pakPinnedArchiveRefs(pkgsForPak[isPin], verbose = verbose)
   pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
   pkgsForPak <- .preferGHrefDedup(pkgsForPak)
   pkgsForPak <- unique(pkgsForPak)
