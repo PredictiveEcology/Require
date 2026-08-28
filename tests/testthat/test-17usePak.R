@@ -1478,30 +1478,35 @@ test_that("pakRetryLoop GitHub batch still uses upgrade=TRUE", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
 
-  ## In the two-call branch (mixed batch), the GitHub call must hard-code
-  ## upgrade=TRUE to force fetching the latest commit from the branch.
-  ## Find pak::pak(packages[ghOrUrl], ...) and confirm upgrade = TRUE in
-  ## the same arg list (allowing whitespace + line breaks).
+  ## The GitHub/url batch is installed one dependency level at a time by
+  ## pakGhByLevel(); its pak::pak(lvl, ...) call must hard-code upgrade=TRUE
+  ## to force fetching the latest commit from the branch. Confirm upgrade =
+  ## TRUE in that arg list (allowing whitespace + line breaks).
   ghCall <- regmatches(oneLine, regexpr(
-    "pak::pak\\(packages\\[ghOrUrl\\][^)]*\\)", oneLine))
+    "pak::pak\\(lvl,[^)]*\\)", oneLine))
   testthat::expect_true(length(ghCall) > 0L,
-    info = "must find the pak::pak(packages[ghOrUrl], ...) call")
+    info = "must find pakGhByLevel's pak::pak(lvl, ...) call")
   testthat::expect_true(
     grepl("upgrade\\s*=\\s*TRUE", ghCall),
     info = "GitHub-batch pak call must keep upgrade=TRUE so latest commits are fetched"
   )
 })
 
-# (b) -- single-call branch upgrade flag is `any(ghOrUrl) || cranUp`,
-#         so a CRAN-only batch tracks cranUp (=forceUpgrade) and a GH-only
-#         batch always upgrades. No leaking of forceUpgrade through any
-#         other path.
-test_that("pakRetryLoop single-call branch combines ghOrUrl with cranUp (not forceUpgrade directly)", {
+# (b) -- single-call branch: a batch with any GitHub/url ref goes through
+#         pakGhByLevel() (upgrade=TRUE), and a CRAN-only batch tracks cranUp
+#         (=forceUpgrade). No leaking of forceUpgrade through any other path.
+test_that("pakRetryLoop single-call branch routes GitHub refs by level and CRAN by cranUp", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
+  ## Assert on the calls, not their layout: covr rewrites the body around
+  ## them, so adjacency to the `if (any(ghOrUrl))` test cannot be relied on.
   testthat::expect_true(
-    grepl("up\\s*<-\\s*any\\(ghOrUrl\\)\\s*\\|\\|\\s*cranUp", oneLine),
-    info = "single-call branch must combine ghOrUrl with cranUp")
+    grepl("pakGhByLevel\\(packages\\)", oneLine),
+    info = "a batch with GitHub/url refs must go through pakGhByLevel()")
+  cranCall <- regmatches(oneLine, regexpr(
+    "pak::pak\\(packages, [^)]*dependencies = cranDeps[^)]*\\)", oneLine))
+  testthat::expect_true(length(cranCall) > 0L && grepl("upgrade\\s*=\\s*cranUp", cranCall),
+    info = "the CRAN-only call must use upgrade = cranUp")
 })
 
 # (c) -- pakDepsToPkgDT must pin installed user packages even under

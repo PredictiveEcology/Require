@@ -3823,7 +3823,25 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   pinned   <- isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE))
   cranDeps <- if (pinned) FALSE else NA   # last raw pak error string; used by silentlyFailed warning below
 
+  # GitHub/url refs go to pak with dependencies = FALSE (so their pins are not
+  # re-resolved), under which pak does not order builds: install them one
+  # dependency level at a time. upgrade = TRUE so a branch ref fetches HEAD.
+  ghDone <- FALSE  # reset by each pakRetryLoop call; set once its GitHub levels succeed
+  pakGhByLevel <- function(refs) {
+    if (isTRUE(ghDone)) return(NULL)  # already installed earlier in this pakRetryLoop call
+    for (lvl in pakInstallLevels(refs, pakRefToBareName(refs))) {
+      e <- try(pakCall(
+        pak::pak(lvl, lib = libPaths[1], ask = FALSE,
+                 dependencies = FALSE, upgrade = TRUE),
+        verbose), silent = TRUE)
+      if (is(e, "try-error")) return(e)
+    }
+    ghDone <<- TRUE
+    e
+  }
+
   pakRetryLoop <- function(packages, repos, verbose) {
+    ghDone <<- FALSE
     for (i in seq_len(15)) {
       pkgsIn <- packages
       # Snapshot the captured-messages buffer so we can slice out exactly the
@@ -3863,10 +3881,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       cranUp <- isTRUE(forceUpgrade)
       err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
         # Two separate calls when both types are present
-        e1 <- try(pakCall(
-          pak::pak(packages[ghOrUrl],  lib = libPaths[1], ask = FALSE,
-                   dependencies = FALSE, upgrade = TRUE),
-          verbose), silent = TRUE)
+        e1 <- pakGhByLevel(packages[ghOrUrl])
         e2 <- try(pakCall(
           pak::pak(packages[!ghOrUrl], lib = libPaths[1], ask = FALSE,
                    dependencies = cranDeps, upgrade = cranUp),
@@ -3875,12 +3890,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # fails return that one; if neither fails return non-try-error.
         if (is(e1, "try-error")) e1 else if (is(e2, "try-error")) e2 else e2
       } else {
-        up <- any(ghOrUrl) || cranUp  # TRUE -> upgrade=TRUE
-        deps <- if (any(ghOrUrl)) FALSE else cranDeps  # GH-only: FALSE; CRAN-only: NA (FALSE when pinned)
-        try(pakCall(
-          pak::pak(packages, lib = libPaths[1], ask = FALSE,
-                   dependencies = deps, upgrade = up),
-          verbose), silent = TRUE)
+        if (any(ghOrUrl)) {
+          pakGhByLevel(packages)
+        } else {
+          try(pakCall(
+            pak::pak(packages, lib = libPaths[1], ask = FALSE,
+                     dependencies = cranDeps, upgrade = cranUp),
+            verbose), silent = TRUE)
+        }
       }
       options(opts)
       options(opts)
@@ -4080,12 +4097,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # because installed.packages() returns the bare name ("qs").
   pkgNamesAll <- pakRefToBareName(pkgs)
   failMemo <- .pakFailMemo()
-  # One pass per dependency level, so each package's hard deps are installed
-  # before it builds. The graph is this install's: do not let it leak into a
-  # later one that resolved differently, or not at all.
+  # Levels only where pak cannot order builds itself: a pinned install runs
+  # every batch with dependencies = FALSE, so the whole set goes one level at a
+  # time; otherwise the CRAN batch (dependencies = NA, ordered by pak) is one
+  # call and only the GitHub/url batch is levelled, inside pakRetryLoop. Each
+  # pak call costs a few seconds of subprocess and metadata work, so levelling
+  # an ordinary CRAN batch was pure overhead. The graph is this install's: do
+  # not let it leak into a later one that resolved differently, or not at all.
   on.exit(if (exists("pakDepGraph", envir = pakEnv(), inherits = FALSE))
             rm("pakDepGraph", envir = pakEnv()), add = TRUE)
-  levels <- pakInstallLevels(pkgs, pkgNamesAll)
+  levels <- if (pinned) pakInstallLevels(pkgs, pkgNamesAll) else list(pkgs)
   installLevel <- function(pkgs) {
     if (identical(strategy, "original")) {
       capturePak(pakRetryLoop(pkgs, repos, verbose))
@@ -4105,7 +4126,16 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # Restarting the subprocess gives the next iteration clean state.
         if (iter > 1L) pakResetSubprocess()
         iterMsgsStart <- length(allCapturedMsgs) + 1L
-        capturePak(pakRetryLoop(passList, repos, verbose))
+        if (iter == 1L) {
+          capturePak(pakRetryLoop(passList, repos, verbose))
+        } else {
+          ## A batch that already failed once restarts one dependency level at
+          ## a time, so the next culprit aborts only its level rather than the
+          ## whole batch again. The first attempt stays a single call: on an
+          ## install that simply succeeds, levels are only extra pak calls.
+          for (lvl in pakInstallLevels(passList, pakRefToBareName(passList)))
+            capturePak(pakRetryLoop(lvl, repos, verbose))
+        }
         capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
 
         ## Terminate early if pak reports missing system packages. Retrying
