@@ -239,7 +239,7 @@ test_that("a small snapshot installs through the install.packages chain", {
   )
 
   ip <- data.table::as.data.table(
-    installed.packages(lib.loc = testlib, noCache = TRUE))
+    installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))  # the lib Require used: setLibPaths() appends the R version when interactive()
 
   ## the CRAN pins must land at exactly the requested version
   cranPins <- pkgs[is.na(GithubRepo)]
