@@ -1905,6 +1905,14 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     if (any(funnyNames)) {
       names(need)[funnyNames] <- packages[["Package"]][funnyNames]
     }
+    ## A snapshot is a closed, fully pinned set: tell the pak path so it
+    ## resolves the whole set once, installs it in dependency order with
+    ## dependencies = FALSE, and never lets a lone ref pull its deps at
+    ## unpinned versions (see pakPinnedInstall in pak.R).
+    assign("pakPinnedInstall", TRUE, envir = pakEnv())
+    on.exit(rm(list = intersect(c("pakPinnedInstall", "pakDepGraph"),
+                                ls(pakEnv(), all.names = TRUE)),
+               envir = pakEnv()), add = TRUE)
     out <- Require(need,
                    verbose = verbose, purge = purge, libPaths = libPaths, repos = repos,
                    install_githubArgs = install_githubArgs,

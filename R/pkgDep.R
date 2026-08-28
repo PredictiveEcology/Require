@@ -159,68 +159,39 @@ pkgDepTopoSort <- function(packages,
 
 
   if (length(aa) > 1) {
-    lengths <- lengths(aa)
-    aa <- aa[order(lengths)]
-    cc <- cc[order(lengths)]
-    dd <- lapply(cc, function(x) {
-      0
-    })
-
-    ddIndex <- 0
-    priorsBeingInstalled <- priorsAlreadyInstalled <- character()
-
     if (isTRUE(topoSort)) {
-      notInOrder <- TRUE
-      isCorrectOrder <- logical(length(aa))
-      i <- 1
-      newOrd <- numeric(0)
-      for (i in seq_along(aa)) {
-        dif <- setdiff(seq_along(aa), newOrd)
-        pkgNameNames <- extractPkgName(names(aa))
-        for (j in dif) {
-          pkgName <- extractPkgName(aa[[j]])
-          overlapFull <- pkgName %in% pkgNameNames[-i]
-          overlap <- pkgName %in% pkgNameNames[dif]
-          overlapPkgs <- pkgName[overlapFull]
-          isCorrectOrder <- !any(overlap)
-          if (isCorrectOrder) {
-            cc[j] <- list(overlapPkgs)
-            priorsBeingInstalled <-
-              vapply(dd, function(x) {
-                if (is.numeric(x)) {
-                  x == ddIndex
-                } else {
-                  FALSE
-                }
-              }, logical(1))
-            priorsBeingInstalled <-
-              extractPkgName(names(priorsBeingInstalled)[priorsBeingInstalled])
-            overlapPkgsAdditional <-
-              intersect(overlapPkgs, priorsBeingInstalled)
-            if (length(overlapPkgsAdditional)) {
-              ddIndex <- ddIndex + 1
-              priorsAlreadyInstalled <-
-                vapply(dd, function(x) {
-                  if (is.numeric(x)) {
-                    x < ddIndex
-                  } else {
-                    FALSE
-                  }
-                }, logical(1))
-              priorsAlreadyInstalled <-
-                extractPkgName(names(priorsAlreadyInstalled)[priorsAlreadyInstalled])
-            }
-            dd[j] <- list(ddIndex)
-
-            newOrd <- c(newOrd, j)
-            # i <- i + 1
-            break
-          }
+      ## Adapted from utils:::.find_install_order (base R, GPL), which is what
+      ## install.packages() uses: peel off every package whose in-set
+      ## dependencies are already done, repeat. Each pass is one install
+      ## level -- everything in a level can be installed in parallel once the
+      ## earlier levels are in. Dependencies outside the set do not count.
+      nms <- names(aa)
+      inSet <- lapply(aa, function(x) intersect(extractPkgName(x), nms))
+      lvl <- setNames(rep(NA_integer_, length(aa)), nms)
+      DL <- inSet[lengths(inSet) > 0L]
+      lvl[lengths(inSet) == 0L] <- 0L
+      pass <- 0L
+      while (length(DL)) {
+        pass <- pass + 1L
+        OK <- vapply(DL, function(x) all(x %in% names(lvl)[!is.na(lvl)]), NA)
+        if (!any(OK)) {
+          warning("packages ", paste(names(DL), collapse = ", "),
+                  " are mutually dependent", call. = FALSE)
+          lvl[names(DL)] <- pass
+          break
         }
+        lvl[names(DL)[OK]] <- pass
+        DL <- DL[!OK]
       }
-      aa <- aa[newOrd]
-      cc <- cc[newOrd]
-      dd <- dd[newOrd]
+      ord <- order(lvl, lengths(aa))
+      aa <- aa[ord]
+      cc <- inSet[ord]
+      dd <- as.list(lvl[ord])
+    } else {
+      ord <- order(lengths(aa))
+      aa <- aa[ord]
+      cc <- cc[ord]
+      dd <- lapply(cc, function(x) 0)
     }
   }
 
