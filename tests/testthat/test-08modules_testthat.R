@@ -260,6 +260,11 @@ test_that("test 8", {
                     ## cascades to a load-time failure even though its own code
                     ## is fine.
                     "fireSenseUtils")
+    ## pryr 0.1.6 -- its last release, archived -- uses C entry points R removed
+    ## from the API in 4.5.0 (NAMED, FRAME, CLOENV, PRVALUE, ...), and its GitHub
+    ## HEAD is the same code, so on R >= 4.5 there is no buildable pryr anywhere.
+    if (getRversion() >= "4.5.0")
+      knownFails <- c(knownFails, "pryr")
     allInstalledPre <- allInstalled
     allInstalled <- setdiff(allInstalled, knownFails)
     cat("\n=== test-08 allInstalled diagnostic ===\n",
