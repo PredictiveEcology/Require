@@ -340,9 +340,19 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       versEsc         <- regexEscape(as.character(unlist(vers)))
       patVec <- paste0("^", pkgNoVersionEsc, ".*", versEsc, "|/",
                               pkgNoVersionEsc, ".*", versEsc)
-      whRm <- unlist(unname(lapply(patVec, function(p) {
+      hits <- lapply(patVec, function(p) {
         tryCatch(grep(p, pkg), error = function(e) integer(0))
-      })))
+      })
+      ## whRm: the flattened set of every hit, for the branches that remove a
+      ## set of refs. whRmEach: one index per entry of pkgNoVersion (NA when
+      ## pak named a package that is not in `pkg`, e.g. a transitive dep), for
+      ## the positional `[j]` lookups below. Flattening alone drops the zero-hit
+      ## patterns and shifts every later index, so `whRm[j]` ran off the end
+      ## and put NA into packages[whRm] -- crashing the parser and with it the
+      ## whole retry path.
+      whRm <- unlist(hits)
+      whRmEach <- vapply(hits, function(h) if (length(h)) h[1] else NA_integer_,
+                         integer(1))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
         packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm, verbose = verbose)
@@ -355,24 +365,26 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       if (grp[i] == .txtCntInstllDep) {
         whRmAll <- integer()
         for (j in seq_along(pkgNoVersion)) {
+          if (is.na(whRmEach[j])) next # not one of our refs (transitive dep)
           if (isGH(pkgNoVersion[j])) { # "PredictiveEcology/fpCompare (>=2.0.0)"
-            if (is.na(pkg[whRm[j]]) || !length(whRm[j])) next
-            isOK <- pakCheckGHversionOK(pkg[whRm[j]], verbose = verbose)
+            isOK <- pakCheckGHversionOK(pkg[whRmEach[j]], verbose = verbose)
             # pkgDT <- toPkgDTFull(pkg)
             # dl <- pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2())
             # vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
             # isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
             if (isOK %in% FALSE)
-              whRmAll <- c(whRmAll, whRm[j])
+              whRmAll <- c(whRmAll, whRmEach[j])
               # packages <- packages[-whRm[j]]
             next
           }
-          packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRm[j], verbose = verbose)
+          packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRmEach[j], verbose = verbose)
           if (!identical(length(packages2), length(packages)))
-            whRmAll <- c(whRmAll, whRm[j])
+            whRmAll <- c(whRmAll, whRmEach[j])
 
         }
-        packages <- packages[-whRmAll]
+        ## x[-integer(0)] is empty, not x: only subset when there is something to drop
+        if (length(whRmAll))
+          packages <- packages[-whRmAll]
         break
       }
 
