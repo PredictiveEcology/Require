@@ -47,6 +47,12 @@
   to pak as its CRAN Archive tarball: pak's solver otherwise discards an
   older pinned version whenever its dependencies match the newest one.
 
+* Every install now proceeds one dependency level at a time. pak does not
+  order builds within a batch it installs with `dependencies = FALSE` (every
+  GitHub batch), so a package could start building before a sibling it
+  Imports had landed, fail at once, abort the batch, and be rebuilt on every
+  later pass -- once per culprit.
+
 * `pkgDepTopoSort()` could place a package in the same install level as one
   of its dependencies; levels are now built the way `install.packages()`
   orders its installs.
