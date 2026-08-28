@@ -52,7 +52,9 @@ test_that("small snapshot install pins each package to the requested version", {
                    returnDetails = TRUE)
   )
 
-  ip <- data.table::as.data.table(installed.packages(lib.loc = testlib, noCache = TRUE))
+  ## Require installs into .libPaths()[1], which setLibPaths() may have made an
+  ## R-version subfolder of testlib (it appends the version when interactive()).
+  ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
 
   ## Every snapshot package must be installed in the test lib
   missing <- setdiff(pkgs$Package, ip$Package)
