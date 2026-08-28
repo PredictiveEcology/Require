@@ -1,7 +1,7 @@
 test_that("test 8", {
 
   # skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
-  setupInitial <- setupTest()
+  setupInitial <- setupTest(needRequireInNewLib = TRUE)
 
   notOnCranOrCI <- getOption("Require.notOnCranOrCI")
   notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
