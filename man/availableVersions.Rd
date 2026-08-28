@@ -54,6 +54,12 @@ Otherwise, it is a \code{matrix}, as per \code{available.packages}}
 
 \item{type}{See \code{utils::install.packages}}
 }
+\value{
+\code{dlArchiveVersionsAvailable()}: a list with one \code{data.table} per \code{package}, the
+versions found in the CRAN archive (\code{repo}, \code{PackageUrl} and file metadata), empty when
+none. \code{available.packagesCached()}: the available-packages table for \code{repos}, as a
+\code{data.table} (default) or a matrix as \code{utils::available.packages()} returns it.
+}
 \description{
 These are wrappers around available.packages and also get the archived versions
 available on CRAN.

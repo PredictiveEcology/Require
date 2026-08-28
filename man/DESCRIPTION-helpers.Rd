@@ -42,7 +42,7 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{returnDetails = TRUE} (for backwards compatibility).}
 }
 \value{
-\code{DESCRIPTIONFileVersionV()} and \code{DESCRIPTIONFileOtherV()} return a character vector with one element per \code{file} (the \code{Version} field, or the field named in \code{other}); \code{dlGitHubDESCRIPTION()} returns the local path(s) of the downloaded DESCRIPTION file(s).
+\code{DESCRIPTIONFileVersionV()} and \code{DESCRIPTIONFileOtherV()} return a character vector with one element per \code{file} (the \code{Version} field, or the field named in \code{other}); \code{dlGitHubDESCRIPTION()} returns the \code{data.table} of parsed GitHub refs with the local path of each downloaded DESCRIPTION file in a \code{DESCFile} column.
 }
 \description{
 A series of helpers to access and deal with GitHub packages

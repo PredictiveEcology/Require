@@ -249,6 +249,8 @@ RequireGitHubCacheDir <- function(create) {
 #' 4. Else if the option is `FALSE`, return `NULL`.
 #' 5. Otherwise, return `cachePkgDir(FALSE)`.
 #'
+#' @return The package cache directory, or `NULL` when caching is disabled. Deprecated
+#'   in favour of `cachePkgDir()`.
 #' @export
 cacheGetOptionCachePkgDir <- function() {
   .Deprecated("cachePkgDir", package = "Require",

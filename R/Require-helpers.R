@@ -75,7 +75,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   pkgDT[]
 }
 
-#' @return `DESCRIPTIONFileVersionV()` and `DESCRIPTIONFileOtherV()` return a character vector with one element per `file` (the `Version` field, or the field named in `other`); `dlGitHubDESCRIPTION()` returns the local path(s) of the downloaded DESCRIPTION file(s).
+#' @return `DESCRIPTIONFileVersionV()` and `DESCRIPTIONFileOtherV()` return a character vector with one element per `file` (the `Version` field, or the field named in `other`); `dlGitHubDESCRIPTION()` returns the `data.table` of parsed GitHub refs with the local path of each downloaded DESCRIPTION file in a `DESCFile` column.
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FALSE)) {
@@ -297,6 +297,10 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' These are wrappers around available.packages and also get the archived versions
 #' available on CRAN.
 #'
+#' @return `dlArchiveVersionsAvailable()`: a list with one `data.table` per `package`, the
+#'   versions found in the CRAN archive (`repo`, `PackageUrl` and file metadata), empty when
+#'   none. `available.packagesCached()`: the available-packages table for `repos`, as a
+#'   `data.table` (default) or a matrix as `utils::available.packages()` returns it.
 #' @rdname availableVersions
 #' @export
 #' @param package A single package name (without version or github specifications)

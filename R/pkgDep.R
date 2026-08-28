@@ -1112,6 +1112,8 @@ getAvailablePackagesIfNeeded <-
 #'   `options(Require.useCranCache = TRUE)`.
 #' @export
 #' @inheritParams Require
+#' @return Called for their side effect of deleting cached package files; return `NULL`
+#'   invisibly.
 #' @rdname clearRequire
 cacheClearPackages <- function(packages,
                                      ask = interactive(),

@@ -6,6 +6,10 @@
 \usage{
 cacheGetOptionCachePkgDir()
 }
+\value{
+The package cache directory, or \code{NULL} when caching is disabled. Deprecated
+in favour of \code{cachePkgDir()}.
+}
 \description{
 \strong{Deprecated.} Use \code{\link[=cachePkgDir]{cachePkgDir()}} instead -- it is now the single
 getter for the package-tarball cache and wraps
