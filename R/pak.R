@@ -2459,12 +2459,21 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # Strip version specs and HEAD flags for the pak query; pak resolves from the ref alone
   pkgsForPak <- resolvedPkgs
   pkgsForPak <- HEADtoNone(pkgsForPak)
-  pkgsForPak <- trimVersionNumber(pkgsForPak)
+  ## Exact pins become pak's `pkg@version` BEFORE the other specs are trimmed:
+  ## trimVersionNumber() strips every "(op version)", so running equalsToAt()
+  ## after it (as this did) left the solve with no pins at all -- every pinned
+  ## package resolved to the current version, which was installed and then
+  ## overwritten by the pin (abind 1.4-8 -> 1.4-5).
+  notGH <- !isGH(pkgsForPak)
+  pkgsForPak[notGH] <- equalsToAt(pkgsForPak[notGH])
+  ## trimVersionNumber() also strips a bare `pkg@version`, so keep the pins out
+  ## of its way and trim only the inequality specs.
+  isPin <- notGH & grepl("@", pkgsForPak, fixed = TRUE)
+  pkgsForPak[!isPin] <- trimVersionNumber(pkgsForPak[!isPin])
   pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
   pkgsForPak <- .preferGHrefDedup(pkgsForPak)
   pkgsForPak <- unique(pkgsForPak)
   # Convert == version specs to pak @version format for the dep query
-  pkgsForPak <- equalsToAt(pkgsForPak)
 
   # Pin already-installed user packages to their installed version before
   # pak resolves transitive deps. Without this, pak picks the LATEST CRAN
@@ -2763,8 +2772,52 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
     assign("pakResolvedVersionMap",
            setNames(as.character(pak_result$version), pak_result$package),
            envir = pakEnv())
+    if (isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
+      pkgDT <- pakPinnedResolve(pkgDT, pak_result, extractPkgName(packages), verbose)
   }
 
+  pkgDT
+}
+
+# A pinned install (a snapshot; see Require2.R) is a closed set: every hard dep
+# of every package is itself pinned in the set. The global solve above is the
+# whole resolution stage, so keep two things from it for pakInstallFiltered():
+#   * the hard-dep graph (Depends/Imports/LinkingTo) among the pinned packages,
+#     which pkgDepTopoSort() turns into install levels so the set can be
+#     installed with dependencies = FALSE (pak only orders builds when it
+#     resolves deps itself -- see the dependencies = NA note in pakRetryLoop);
+#   * nothing else: any package the solve added that is not in the pinned set
+#     is a gap in the snapshot. It is reported and dropped rather than installed
+#     at whatever version CRAN has today, so a non-closed snapshot fails loudly
+#     on the packages that need the missing pin instead of quietly drifting.
+# Install levels for a pinned set: refs whose hard deps (within the set) are
+# all in earlier levels. Falls back to a single level when no graph was kept.
+pakPinnedLevels <- function(pkgs, pkgNames) {
+  graph <- get0("pakPinnedDepGraph", envir = pakEnv(), inherits = FALSE)
+  if (is.null(graph)) return(list(pkgs))
+  g <- lapply(pkgNames, function(nm) if (is.null(graph[[nm]])) character() else graph[[nm]])
+  names(g) <- pkgNames
+  ord <- pkgDepTopoSort(pkgNames, deps = g)
+  grp <- unlist(attr(ord, "installSafeGroups"))
+  lapply(split(names(ord), grp), function(nm) pkgs[match(nm, pkgNames)])
+}
+
+pakPinnedResolve <- function(pkgDT, pak_result, pinned, verbose) {
+  hard <- c("depends", "imports", "linkingto")
+  graph <- Map(function(pkg, deps) {
+    if (is.null(deps) || !NROW(deps)) return(character())
+    d <- deps$package[tolower(deps$type) %in% hard]
+    intersect(unique(d), pinned)
+  }, pak_result$package, pak_result$deps)
+  assign("pakPinnedDepGraph", graph[names(graph) %in% pinned], envir = pakEnv())
+
+  extra <- setdiff(pak_result$package, c(pinned, .basePkgs))
+  if (length(extra)) {
+    warning("pinned install: ", length(extra), " package(s) are needed but not pinned ",
+            "in the snapshot, so they will not be installed: ",
+            paste(extra, collapse = ", "), call. = FALSE)
+    pkgDT <- pkgDT[!Package %in% extra]
+  }
   pkgDT
 }
 
@@ -3424,7 +3477,7 @@ pakResetSubprocess <- function() {
   refs[keep]
 }
 
-pakSerialInstall <- function(pkgs, lib, repos, verbose) {
+pakSerialInstall <- function(pkgs, lib, repos, verbose, cranDeps = NA) {
   if (!length(pkgs)) return(invisible(NULL))
   ## Pin already-installed refs to their installed version so pak keeps them
   ## rather than replanning a rebuild. pinInstalledForPak() was only ever
@@ -3455,7 +3508,7 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
     #                    not yet be in lib, e.g. when the cascade-casualty
     #                    fallback installs refs whose deps were also
     #                    casualties.)
-    deps <- if (isGH_) FALSE else NA
+    deps <- if (isGH_) FALSE else cranDeps
     up   <- isGH_
     # Capture pak's subprocess messages for this single ref so the warning
     # below can surface the actual root cause (e.g. "namespace 'X' is
@@ -3721,7 +3774,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # Collect names of packages that pakRetryLoop explicitly warned about so
   # that the post-install update loop can skip them (avoid double-warning).
   warnedDropped <- character(0)
-  lastPakErr    <- ""   # last raw pak error string; used by silentlyFailed warning below
+  lastPakErr    <- ""
+  # A pinned install (snapshot; see pakPinnedResolve) carries every hard dep
+  # in the set, so nothing is left for pak to resolve: dependencies = FALSE,
+  # and the build order pak would otherwise derive comes from the install
+  # levels below instead.
+  pinned   <- isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE))
+  cranDeps <- if (pinned) FALSE else NA   # last raw pak error string; used by silentlyFailed warning below
 
   pakRetryLoop <- function(packages, repos, verbose) {
     for (i in seq_len(15)) {
@@ -3769,14 +3828,14 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           verbose), silent = TRUE)
         e2 <- try(pakCall(
           pak::pak(packages[!ghOrUrl], lib = libPaths[1], ask = FALSE,
-                   dependencies = NA, upgrade = cranUp),
+                   dependencies = cranDeps, upgrade = cranUp),
           verbose), silent = TRUE)
         # Combine errors: prefer the first error if both fail; if only one
         # fails return that one; if neither fails return non-try-error.
         if (is(e1, "try-error")) e1 else if (is(e2, "try-error")) e2 else e2
       } else {
         up <- any(ghOrUrl) || cranUp  # TRUE -> upgrade=TRUE
-        deps <- if (any(ghOrUrl)) FALSE else NA  # GH-only: FALSE; CRAN-only: NA
+        deps <- if (any(ghOrUrl)) FALSE else cranDeps  # GH-only: FALSE; CRAN-only: NA (FALSE when pinned)
         try(pakCall(
           pak::pak(packages, lib = libPaths[1], ask = FALSE,
                    dependencies = deps, upgrade = up),
@@ -3979,187 +4038,194 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # every version-pinned ref ("qs@0.27.3") is misclassified as missing
   # because installed.packages() returns the bare name ("qs").
   pkgNamesAll <- pakRefToBareName(pkgs)
-  if (identical(strategy, "original")) {
-    capturePak(pakRetryLoop(pkgs, repos, verbose))
-  } else {
-    # Iterative identify-and-defer.
-    # Cross-phase record of refs that failed against a given installed set, so
-    # no later phase re-attempts one whose situation has not changed (#190).
-    failMemo <- .pakFailMemo()
-    passList <- pkgs
-    deferred <- character(0)  # culprit refs (named with their full pak ref)
-    maxIter  <- 8L
-    for (iter in seq_len(maxIter)) {
-      # Force a fresh pak subprocess for every iteration after the first.
-      # pak holds a persistent r_session that, after a large failed install
-      # plan, can wedge into a state where every subsequent call emits
-      # "Error : ! error in pak subprocess" without naming a build culprit
-      # (so identify-and-defer has nothing parseable to defer and stalls).
-      # Restarting the subprocess gives the next iteration clean state.
-      if (iter > 1L) pakResetSubprocess()
-      iterMsgsStart <- length(allCapturedMsgs) + 1L
-      capturePak(pakRetryLoop(passList, repos, verbose))
-      capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
+  failMemo <- .pakFailMemo()
+  # One pass over everything, or -- for a pinned install -- one pass per
+  # dependency level so each package's hard deps are installed before it builds.
+  levels <- if (pinned) pakPinnedLevels(pkgs, pkgNamesAll) else list(pkgs)
+  installLevel <- function(pkgs) {
+    if (identical(strategy, "original")) {
+      capturePak(pakRetryLoop(pkgs, repos, verbose))
+    } else {
+      # Iterative identify-and-defer.
+      # Cross-phase record of refs that failed against a given installed set, so
+      # no later phase re-attempts one whose situation has not changed (#190).
+      passList <- pkgs
+      deferred <- character(0)  # culprit refs (named with their full pak ref)
+      maxIter  <- 8L
+      for (iter in seq_len(maxIter)) {
+        # Force a fresh pak subprocess for every iteration after the first.
+        # pak holds a persistent r_session that, after a large failed install
+        # plan, can wedge into a state where every subsequent call emits
+        # "Error : ! error in pak subprocess" without naming a build culprit
+        # (so identify-and-defer has nothing parseable to defer and stalls).
+        # Restarting the subprocess gives the next iteration clean state.
+        if (iter > 1L) pakResetSubprocess()
+        iterMsgsStart <- length(allCapturedMsgs) + 1L
+        capturePak(pakRetryLoop(passList, repos, verbose))
+        capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
 
-      ## Terminate early if pak reports missing system packages. Retrying
-      ## won't help: pak's dep resolver re-includes the failing pkg in
-      ## every plan that contains any of its dependents, so the loop just
-      ## ping-pongs on the same culprit. Emit a clear actionable error
-      ## (with sysreq -> pkg mapping) instead of spinning forever.
-      sysreqMissing <- extractMissingSysreqs(capturedMsgs)
-      if (length(sysreqMissing)) {
-        affectedPkgs <- unique(names(sysreqMissing))
-        # Group sysreqs by package for a readable summary
-        byPkg <- split(unname(sysreqMissing), names(sysreqMissing))
-        summary <- vapply(names(byPkg), function(p) {
-          paste0(p, " needs: ", paste(unique(byPkg[[p]]), collapse = ", "))
-        }, character(1))
-        warning(.txtCouldNotBeInstalled, ": ",
-                paste(affectedPkgs, collapse = ", "),
-                "; missing system packages -- install them and re-run.\n  ",
-                paste(summary, collapse = "\n  "),
-                call. = FALSE)
-        break
-      }
-
-      # noCache = TRUE: pak just installed these packages in a subprocess; the
-      # parent R session's installed.packages() cache is still pre-install.
-      # Without this, even successfully-installed packages look "still missing"
-      # and the loop falls into the no-parseable-culprits serial fallback for
-      # no reason, doubling install time.
-      instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-                          error = function(e) character(0))
-      # Same bare-name reduction as pkgNamesAll above. Without stripping
-      # "any::" / "owner/" / "@version", instNow's bare names ("cli", "qs")
-      # never match passNames' decorated form ("any::cli", "qs@0.27.3") and
-      # every iteration's "still missing" check returns the full pass-list --
-      # which then falls into the no-parseable-culprits serial fallback,
-      # doubling install time and emitting bogus "still missing after iter 1"
-      # messages for packages that pak in fact already installed.
-      passNames <- pakRefToBareName(passList)
-      missingNamesIter <- passNames[!passNames %in% instNow]
-      if (!length(missingNamesIter)) {
-        if (iter > 1L) {
-          messageVerbose(
-            "identify-and-defer: cascade casualties resolved after ",
-            iter - 1L, " deferral pass(es); ", length(deferred),
-            " culprit(s) pending serial install",
-            verbose = verbose, verboseLevel = 1)
-        }
-        break
-      }
-
-      culpritsIter <- intersect(extractBuildFailures(capturedMsgs),
-                                missingNamesIter)
-      if (!length(culpritsIter)) {
-        # No new culprits parseable from pak output. Common cause: pak's
-        # subprocess crashes during dep resolution on large cascade-casualty
-        # batches (no per-package "Failed to build X" line, just a generic
-        # "Error : ! error in pak subprocess"). Fall back to serial install:
-        # each pak::pak(single_ref) call has a tiny dep graph that resolves
-        # fine, and a failure on one ref no longer abort the rest.
-        pkgsMissingFallback <- passList[match(missingNamesIter, passNames)]
-        pkgsMissingFallback <- pkgsMissingFallback[!is.na(pkgsMissingFallback)]
-        pkgsMissingFallback <- .pakDropUnchangedFailures(
-          failMemo, pkgsMissingFallback, instNow, verbose)
-        .pakRecordFailures(failMemo, pkgsMissingFallback, instNow)
-        messageVerbose(
-          "identify-and-defer: ", length(missingNamesIter),
-          " ref(s) still missing after iter ", iter,
-          ", no parseable culprits; falling back to serial install",
-          verbose = verbose, verboseLevel = 1)
-        pakResetSubprocess()
-        capturePak(pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose))
-        break
-      }
-
-      pkgsCulpritIter <- passList[match(culpritsIter, passNames)]
-      pkgsCulpritIter <- pkgsCulpritIter[!is.na(pkgsCulpritIter)]
-      deferred <- c(deferred, pkgsCulpritIter)
-
-      # Next iteration: previously-missing minus the culprits.
-      pkgsMissingIter <- passList[match(missingNamesIter, passNames)]
-      pkgsMissingIter <- pkgsMissingIter[!is.na(pkgsMissingIter)]
-      newPassList <- pkgsMissingIter[!extractPkgName(pkgsMissingIter) %in% culpritsIter]
-
-      messageVerbose(
-        "identify-and-defer iter ", iter, ": ", length(culpritsIter),
-        " culprit(s) deferred (",
-        paste(utils::head(culpritsIter, 5L), collapse = ", "),
-        if (length(culpritsIter) > 5L) ", ..." else "",
-        "); ", length(newPassList),
-        " cascade casualt", if (length(newPassList) == 1L) "y" else "ies",
-        " queued for next pass",
-        verbose = verbose, verboseLevel = 1)
-
-      if (!length(newPassList) || identical(sort(newPassList), sort(passList))) {
-        # No-progress guard.
-        break
-      }
-      passList <- newPassList
-    }
-
-    # Final phase: install the accumulated culprits serially. Reset pak's
-    # subprocess first -- the iteration loop may have left it in a wedged
-    # state from the failed plan(s), and each serial install benefits from
-    # a clean subprocess (see pakResetSubprocess() comment).
-    if (length(deferred)) {
-      # Order so a deferred dependency installs before a deferred dependent
-      # (e.g. LandR before LandR.CS). Without this, the serial pass could build a
-      # dependent before its dependency and hit a spurious
-      # "dependency 'X' is not available for package 'Y'" build-error.
-      deferred <- orderRefsByMissingDepEdges(deferred, allCapturedMsgs)
-      instBeforeDeferred <- tryCatch(
-        rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-        error = function(e) character(0))
-      deferred <- .pakDropUnchangedFailures(failMemo, deferred,
-                                            instBeforeDeferred, verbose)
-    }
-    ## Re-test: .pakDropUnchangedFailures() above can empty `deferred`, and the
-    ## serial pass and its retries below must then be skipped. This was a
-    ## `break`, which R CMD check rightly flagged -- "break used in wrong
-    ## context: no loop is visible" -- because the enclosing block is an `if`,
-    ## not a loop. That WARNING failed every R-CMD-check job while the tests
-    ## themselves passed.
-    if (length(deferred)) {
-      .pakRecordFailures(failMemo, deferred, instBeforeDeferred)
-      messageVerbose(
-        "identify-and-defer: installing ", length(deferred),
-        " deferred culprit(s) one at a time",
-        verbose = verbose, verboseLevel = 1)
-      pakResetSubprocess()
-      capturePak(pakSerialInstall(deferred, libPaths[1], repos, verbose))
-
-      # Retry pass: a culprit can still fail only because a dependency that is
-      # ALSO a deferred culprit had not yet been installed when it was attempted
-      # (an ordering we couldn't infer, or a dependency installed later in the
-      # same pass). Re-attempt the ones still missing while progress is being
-      # made -- each newly-installed dependency can unblock another dependent.
-      for (retry in seq_len(3L)) {
-        instNow <- tryCatch(
-          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-          error = function(e) character(0))
-        stillMissing <- deferred[!extractPkgName(deferred) %in% instNow]
-        stillMissing <- .pakDropUnchangedFailures(failMemo, stillMissing,
-                                                  instNow, verbose)
-        if (!length(stillMissing)) break
-        .pakRecordFailures(failMemo, stillMissing, instNow)
-        messageVerbose(
-          "identify-and-defer: retry ", retry, " -- re-attempting ",
-          length(stillMissing), " still-missing culprit(s) now that their ",
-          "dependencies may be installed",
-          verbose = verbose, verboseLevel = 1)
-        pakResetSubprocess()
-        capturePak(pakSerialInstall(stillMissing, libPaths[1], repos, verbose))
-        instAfter <- tryCatch(
-          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-          error = function(e) character(0))
-        # No progress this pass (none of the still-missing got installed) -> stop.
-        if (sum(!extractPkgName(stillMissing) %in% instAfter) >= length(stillMissing))
+        ## Terminate early if pak reports missing system packages. Retrying
+        ## won't help: pak's dep resolver re-includes the failing pkg in
+        ## every plan that contains any of its dependents, so the loop just
+        ## ping-pongs on the same culprit. Emit a clear actionable error
+        ## (with sysreq -> pkg mapping) instead of spinning forever.
+        sysreqMissing <- extractMissingSysreqs(capturedMsgs)
+        if (length(sysreqMissing)) {
+          affectedPkgs <- unique(names(sysreqMissing))
+          # Group sysreqs by package for a readable summary
+          byPkg <- split(unname(sysreqMissing), names(sysreqMissing))
+          summary <- vapply(names(byPkg), function(p) {
+            paste0(p, " needs: ", paste(unique(byPkg[[p]]), collapse = ", "))
+          }, character(1))
+          warning(.txtCouldNotBeInstalled, ": ",
+                  paste(affectedPkgs, collapse = ", "),
+                  "; missing system packages -- install them and re-run.\n  ",
+                  paste(summary, collapse = "\n  "),
+                  call. = FALSE)
           break
+        }
+
+        # noCache = TRUE: pak just installed these packages in a subprocess; the
+        # parent R session's installed.packages() cache is still pre-install.
+        # Without this, even successfully-installed packages look "still missing"
+        # and the loop falls into the no-parseable-culprits serial fallback for
+        # no reason, doubling install time.
+        instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+                            error = function(e) character(0))
+        # Same bare-name reduction as pkgNamesAll above. Without stripping
+        # "any::" / "owner/" / "@version", instNow's bare names ("cli", "qs")
+        # never match passNames' decorated form ("any::cli", "qs@0.27.3") and
+        # every iteration's "still missing" check returns the full pass-list --
+        # which then falls into the no-parseable-culprits serial fallback,
+        # doubling install time and emitting bogus "still missing after iter 1"
+        # messages for packages that pak in fact already installed.
+        passNames <- pakRefToBareName(passList)
+        missingNamesIter <- passNames[!passNames %in% instNow]
+        if (!length(missingNamesIter)) {
+          if (iter > 1L) {
+            messageVerbose(
+              "identify-and-defer: cascade casualties resolved after ",
+              iter - 1L, " deferral pass(es); ", length(deferred),
+              " culprit(s) pending serial install",
+              verbose = verbose, verboseLevel = 1)
+          }
+          break
+        }
+
+        culpritsIter <- intersect(extractBuildFailures(capturedMsgs),
+                                  missingNamesIter)
+        if (!length(culpritsIter)) {
+          # No new culprits parseable from pak output. Common cause: pak's
+          # subprocess crashes during dep resolution on large cascade-casualty
+          # batches (no per-package "Failed to build X" line, just a generic
+          # "Error : ! error in pak subprocess"). Fall back to serial install:
+          # each pak::pak(single_ref) call has a tiny dep graph that resolves
+          # fine, and a failure on one ref no longer abort the rest.
+          pkgsMissingFallback <- passList[match(missingNamesIter, passNames)]
+          pkgsMissingFallback <- pkgsMissingFallback[!is.na(pkgsMissingFallback)]
+          pkgsMissingFallback <- .pakDropUnchangedFailures(
+            failMemo, pkgsMissingFallback, instNow, verbose)
+          .pakRecordFailures(failMemo, pkgsMissingFallback, instNow)
+          messageVerbose(
+            "identify-and-defer: ", length(missingNamesIter),
+            " ref(s) still missing after iter ", iter,
+            ", no parseable culprits; falling back to serial install",
+            verbose = verbose, verboseLevel = 1)
+          pakResetSubprocess()
+          capturePak(pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose, cranDeps = cranDeps))
+          break
+        }
+
+        pkgsCulpritIter <- passList[match(culpritsIter, passNames)]
+        pkgsCulpritIter <- pkgsCulpritIter[!is.na(pkgsCulpritIter)]
+        deferred <- c(deferred, pkgsCulpritIter)
+
+        # Next iteration: previously-missing minus the culprits.
+        pkgsMissingIter <- passList[match(missingNamesIter, passNames)]
+        pkgsMissingIter <- pkgsMissingIter[!is.na(pkgsMissingIter)]
+        newPassList <- pkgsMissingIter[!extractPkgName(pkgsMissingIter) %in% culpritsIter]
+
+        messageVerbose(
+          "identify-and-defer iter ", iter, ": ", length(culpritsIter),
+          " culprit(s) deferred (",
+          paste(utils::head(culpritsIter, 5L), collapse = ", "),
+          if (length(culpritsIter) > 5L) ", ..." else "",
+          "); ", length(newPassList),
+          " cascade casualt", if (length(newPassList) == 1L) "y" else "ies",
+          " queued for next pass",
+          verbose = verbose, verboseLevel = 1)
+
+        if (!length(newPassList) || identical(sort(newPassList), sort(passList))) {
+          # No-progress guard.
+          break
+        }
+        passList <- newPassList
+      }
+
+      # Final phase: install the accumulated culprits serially. Reset pak's
+      # subprocess first -- the iteration loop may have left it in a wedged
+      # state from the failed plan(s), and each serial install benefits from
+      # a clean subprocess (see pakResetSubprocess() comment).
+      if (length(deferred)) {
+        # Order so a deferred dependency installs before a deferred dependent
+        # (e.g. LandR before LandR.CS). Without this, the serial pass could build a
+        # dependent before its dependency and hit a spurious
+        # "dependency 'X' is not available for package 'Y'" build-error.
+        deferred <- orderRefsByMissingDepEdges(deferred, allCapturedMsgs)
+        instBeforeDeferred <- tryCatch(
+          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+          error = function(e) character(0))
+        deferred <- .pakDropUnchangedFailures(failMemo, deferred,
+                                              instBeforeDeferred, verbose)
+      }
+      ## Re-test: .pakDropUnchangedFailures() above can empty `deferred`, and the
+      ## serial pass and its retries below must then be skipped. This was a
+      ## `break`, which R CMD check rightly flagged -- "break used in wrong
+      ## context: no loop is visible" -- because the enclosing block is an `if`,
+      ## not a loop. That WARNING failed every R-CMD-check job while the tests
+      ## themselves passed.
+      if (length(deferred)) {
+        .pakRecordFailures(failMemo, deferred, instBeforeDeferred)
+        messageVerbose(
+          "identify-and-defer: installing ", length(deferred),
+          " deferred culprit(s) one at a time",
+          verbose = verbose, verboseLevel = 1)
+        pakResetSubprocess()
+        capturePak(pakSerialInstall(deferred, libPaths[1], repos, verbose, cranDeps = cranDeps))
+
+        # Retry pass: a culprit can still fail only because a dependency that is
+        # ALSO a deferred culprit had not yet been installed when it was attempted
+        # (an ordering we couldn't infer, or a dependency installed later in the
+        # same pass). Re-attempt the ones still missing while progress is being
+        # made -- each newly-installed dependency can unblock another dependent.
+        for (retry in seq_len(3L)) {
+          instNow <- tryCatch(
+            rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+            error = function(e) character(0))
+          stillMissing <- deferred[!extractPkgName(deferred) %in% instNow]
+          stillMissing <- .pakDropUnchangedFailures(failMemo, stillMissing,
+                                                    instNow, verbose)
+          if (!length(stillMissing)) break
+          .pakRecordFailures(failMemo, stillMissing, instNow)
+          messageVerbose(
+            "identify-and-defer: retry ", retry, " -- re-attempting ",
+            length(stillMissing), " still-missing culprit(s) now that their ",
+            "dependencies may be installed",
+            verbose = verbose, verboseLevel = 1)
+          pakResetSubprocess()
+          capturePak(pakSerialInstall(stillMissing, libPaths[1], repos, verbose, cranDeps = cranDeps))
+          instAfter <- tryCatch(
+            rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+            error = function(e) character(0))
+          # No progress this pass (none of the still-missing got installed) -> stop.
+          if (sum(!extractPkgName(stillMissing) %in% instAfter) >= length(stillMissing))
+            break
+        }
       }
     }
+
   }
+  for (levelPkgs in levels) installLevel(levelPkgs)
 
   installTimings$end     <- Sys.time()
   installTimings$elapsed <- as.numeric(difftime(installTimings$end,
@@ -4280,7 +4346,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
             "archive fallback: batch call failed; retrying serially",
             verbose = verbose, verboseLevel = 1)
           pakResetSubprocess()
-          capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose))
+          capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose, cranDeps = cranDeps))
         }
       }
       # Recompute final-missing after the archive pass.

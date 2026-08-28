@@ -423,3 +423,46 @@ test_that("pkgsInSearch skips non-package entries on the search path", {
   ## and a genuinely attached package still comes through
   expect_true("Require" %in% out || !("package:Require" %in% search()))
 })
+
+test_that("pkgDepTopoSort orders and levels a supplied graph", {
+  ## a -> b, c ; b -> d ; c -> d ; e -> a ; f alone ; g -> zzz (not in the set)
+  g <- list(a = c("b", "c"), b = "d", c = "d", d = character(),
+            e = "a", f = character(), g = "zzz")
+  out <- pkgDepTopoSort(names(g), deps = g)
+  lvl <- unlist(attr(out, "installSafeGroups"))
+
+  expect_setequal(names(out), names(g))
+  ## every in-set dependency sits in a strictly earlier level ...
+  for (p in names(g)) {
+    d <- intersect(g[[p]], names(g))
+    if (length(d)) expect_true(all(lvl[d] < lvl[p]), label = p)
+  }
+  ## ... and the order agrees with the levels
+  expect_false(is.unsorted(lvl[names(out)]))
+  ## a package with no in-set deps is level 0, even if it depends on something outside
+  expect_identical(unname(lvl[c("d", "f", "g")]), c(0L, 0L, 0L))
+  ## the longest chain d -> b -> a -> e spans four levels
+  expect_identical(unname(lvl[c("d", "b", "a", "e")]), 0:3)
+  ## returnFull = FALSE gives each package's in-set deps
+  expect_identical(pkgDepTopoSort(names(g), deps = g, returnFull = FALSE)[["a"]], c("b", "c"))
+
+  expect_warning(pkgDepTopoSort(c("x", "y", "z"), deps = list(x = "y", y = "x", z = character())),
+                 "mutually dependent")
+})
+
+test_that("pakPinnedResolve keeps the graph and drops what the snapshot did not pin", {
+  ## a solve of a 'snapshot' that pins a and b, where a Imports b and Suggests s,
+  ## and pak brought in c because b Imports it -- c is not pinned
+  mkdeps <- function(...) data.frame(package = c(...), type = rep("Imports", length(c(...))))
+  pak_result <- data.frame(package = c("a", "b", "c"), version = c("1", "2", "3"))
+  pak_result$deps <- list(rbind(mkdeps("b"), data.frame(package = "s", type = "Suggests")),
+                          mkdeps("c"), mkdeps())
+  pkgDT <- data.table::data.table(Package = c("a", "b", "c"))
+
+  expect_warning(out <- Require:::pakPinnedResolve(pkgDT, pak_result, pinned = c("a", "b"), verbose = -2),
+                 "not pinned.*: c$")
+  expect_identical(out$Package, c("a", "b"))
+  graph <- get("pakPinnedDepGraph", envir = Require:::pakEnv())
+  expect_identical(graph, list(a = "b", b = character()))   # c and Suggests excluded
+  rm("pakPinnedDepGraph", envir = Require:::pakEnv())
+})
