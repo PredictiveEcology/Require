@@ -3952,7 +3952,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       # the authoritative source of user-visible failure warnings, even
       # for packages that pakErrorHandling dropped earlier.
       if (!alreadyWarned) {
-        droppedPkgNames <- setdiff(extractPkgName(pkgsIn), extractPkgName(packages))
+        droppedPkgNames <- setdiff(pakRefToBareName(pkgsIn), pakRefToBareName(packages))
         if (length(droppedPkgNames)) {
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           msg <- paste0("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ",
@@ -3966,7 +3966,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           # packages. Mark all remaining packages as failed for this loop;
           # the outer iter will fall through to serial / archive fallback.
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
-          failedNames <- extractPkgName(packages)
+          failedNames <- pakRefToBareName(packages)
           msg <- paste0("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ",
                         paste(failedNames, collapse = ", "),
                         if (nzchar(reason)) paste0("; ", reason) else "")
