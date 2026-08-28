@@ -4486,7 +4486,7 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
     notInstalled <- setdiff(.RequireDependenciesNoBase, installed)
     if (length(notInstalled)) {
       # warning is about restart R; not relevant here
-      suppressWarnings(Require::Install(notInstalled, verbose = -2, libPaths = libPaths[1]))
+      suppressWarnings(Install(notInstalled, verbose = -2, libPaths = libPaths[1]))
     }
     ar <- c(paste0(".libPaths('", libPaths[1], "')"), ar)
   }

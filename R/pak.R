@@ -908,10 +908,10 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   # if (all(!hasSC))
   #   deps <- c("SpaDES.core", deps)
 
-  d$Imports <- Require::extractPkgName(deps)
-  versionNumb <- Require::extractVersionNumber(deps)
+  d$Imports <- extractPkgName(deps)
+  versionNumb <- extractVersionNumber(deps)
   needRemotes <- which(!is.na(extractPkgGitHub(deps)))
-  d$Remotes <- Require::trimVersionNumber(deps[needRemotes])
+  d$Remotes <- trimVersionNumber(deps[needRemotes])
 
   hasVersionNumb <- !is.na(versionNumb)
   inequality <- paste0("(", gsub("(.+)\\((.+)\\)", "\\2", deps[hasVersionNumb]), ")")
