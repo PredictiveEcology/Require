@@ -32,8 +32,8 @@ test_that("test 11", {
     # Use a mixture of different types of "off CRAN"
     if (!isMacOS()) {
       ## an archived exact pin, but not older than 4.0.0: quickPlot 1.0.4 imports
-      ## ggplot2::is_ggplot() (new in 4.0.0) without declaring the minimum, so
-      ## an older ggplot2 leaves quickPlot unloadable and SpaDES.core's build
+      ## ggplot2::is_ggplot() (absent in 3.4.3, present from 3.5) without declaring
+      ## the minimum, so an older ggplot2 leaves quickPlot unloadable and SpaDES.core's build
       ## then fails at lazy-load. Nothing in Require can see an undeclared
       ## minimum; the fix belongs in quickPlot's DESCRIPTION.
       pkgs <- c("knn", "ggplot2 (==4.0.0)", "silly1", "SpaDES.core")
