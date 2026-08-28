@@ -75,6 +75,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   pkgDT[]
 }
 
+#' @return `DESCRIPTIONFileVersionV()` and `DESCRIPTIONFileOtherV()` return a character vector with one element per `file` (the `Version` field, or the field named in `other`); `dlGitHubDESCRIPTION()` returns the local path(s) of the downloaded DESCRIPTION file(s).
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FALSE)) {

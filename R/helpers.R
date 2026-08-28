@@ -263,6 +263,7 @@ messageDF <-
 #'   temporary dir should be placed. Defaults to `.RequireTempPath()`
 #' @param create Logical. Should the directory be created. Default `TRUE`
 #' @seealso [tempfile2()]
+#' @return The normalized path to the temporary (sub-)directory, created when `create = TRUE`.
 #' @export
 tempdir2 <- function(sub = "",
                      tempdir = getOption("Require.tempPath", .RequireTempPath()),
@@ -287,6 +288,7 @@ tempdir3 <- function(sub = "Require") {
 #' @seealso [tempdir2()]
 #' @inheritParams tempdir2
 #' @param ... passed to `tempfile`, e.g., `fileext`
+#' @return The normalized path to a temporary file inside `tempdir2(sub)`; the file is not created.
 #' @export
 tempfile2 <- function(sub = "",
                       tempdir = getOption("Require.tempPath", .RequireTempPath()),
@@ -338,6 +340,7 @@ invertList <- function(l) {
 #' `keep.null = TRUE` by default.
 #' @inheritParams utils::modifyList
 #'
+#' @return A list: the first argument with each subsequent argument's elements merged in, later ones overriding earlier ones of the same name.
 #' @export
 #' @param ... One or more named lists.
 #' @importFrom utils modifyList

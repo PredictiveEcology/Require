@@ -42,6 +42,9 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 
 \item{removePackages}{Deprecated. Please remove packages manually from \code{.libPaths()}}
 }
+\value{
+Nothing (\code{invisible()}); called for its side effects on \code{.libPaths()}, the package cache and options. Deprecated.
+}
 \description{
 \code{setup} and \code{setupOff} are currently deprecated.
 These may be re-created in a future version.

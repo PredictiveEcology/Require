@@ -311,6 +311,7 @@ cacheGetOptionCachePkgDir <- function() {
 #' @inheritParams setLibPaths
 #' @inheritParams Require
 #'
+#' @return Nothing (`invisible()`); called for its side effects on `.libPaths()`, the package cache and options. Deprecated.
 #' @export
 #' @rdname setup
 #'
@@ -393,6 +394,7 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @param backupCRAN If there is no CRAN repository set
 #'
 #' @importFrom utils read.csv
+#' @return Called for its side effect on `options("repos")`; returns that `options()` result invisibly, or `NULL` when nothing needed changing.
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {

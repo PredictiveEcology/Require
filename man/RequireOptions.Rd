@@ -9,6 +9,9 @@ RequireOptions()
 
 getRequireOptions()
 }
+\value{
+A named list of the package options and their default values.
+}
 \description{
 These provide top-level, powerful settings for a comprehensive reproducible workflow.
 See Details below.

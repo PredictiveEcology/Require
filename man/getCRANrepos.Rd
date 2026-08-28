@@ -11,6 +11,9 @@ getCRANrepos(repos = NULL, ind)
 
 \item{ind}{an integer of which mirror to use in \code{chooseCRANmirror()}}
 }
+\value{
+The \code{repos} option as it is after the call: a named character vector of repository URLs, with a resolved CRAN mirror in place of the \code{"@CRAN@"} placeholder. Called partly for its side effect of setting that option.
+}
 \description{
 This will get the current option in \code{getOption('repos')}, and if that is not
 set to a url, then it will prompt the user to select a mirror, unless

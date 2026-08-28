@@ -16,6 +16,9 @@ modifyList3(..., keep.null = TRUE)
     become \code{NULL} elements in \code{x}.  Otherwise, the
     corresponding element, if present, is deleted from \code{x}. }
 }
+\value{
+A list: the first argument with each subsequent argument's elements merged in, later ones overriding earlier ones of the same name.
+}
 \description{
 This calls \code{\link[utils:modifyList]{utils::modifyList}} iteratively using
 \code{\link[base:Reduce]{base::Reduce}}, so it can handle >2 lists.

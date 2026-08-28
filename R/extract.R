@@ -197,6 +197,7 @@ stripGitHubToRepos <- function(pkgs, verbose = getOption("Require.verbose", 1)) 
 #'
 #' @inheritParams extractPkgName
 #'
+#' @return A character vector the length of `pkgs`, each element with its version specification (and any pak source prefix) removed.
 #' @rdname trimVersionNumber
 #' @seealso [extractPkgName()]
 #' @family version specifications

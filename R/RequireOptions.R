@@ -9,6 +9,7 @@
 #'   \item{`getRequireOptions()`}{prints the current values of package options.}
 #' }
 #'
+#' @return A named list of the package options and their default values.
 #' @export
 #'
 #' @details

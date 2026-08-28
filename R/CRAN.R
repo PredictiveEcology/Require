@@ -5,6 +5,7 @@
 #' `ind` is set, in which case, it will use that mirror (in
 #' `chooseCRANmirror()`)
 #' @importFrom utils chooseCRANmirror
+#' @return The `repos` option as it is after the call: a named character vector of repository URLs, with a resolved CRAN mirror in place of the `"@CRAN@"` placeholder. Called partly for its side effect of setting that option.
 #' @export
 #' @param repos A CRAN-like repository
 #' @param ind an integer of which mirror to use in `chooseCRANmirror()`

@@ -9,6 +9,9 @@ trimVersionNumber(pkgs)
 \arguments{
 \item{pkgs}{A character string vector of packages with or without GitHub path or versions}
 }
+\value{
+A character vector the length of \code{pkgs}, each element with its version specification (and any pak source prefix) removed.
+}
 \description{
 The resulting string(s) will have only name (including github.com repository if it exists).
 }
