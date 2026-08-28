@@ -404,10 +404,11 @@ test_that("removeOldFlatCachePkgs removes flat .tar.gz files", {
 })
 
 test_that("pkgsInSearch skips non-package entries on the search path", {
-  ## devtools attaches "devtools-shims", which is not a package. It used to be
-  ## passed to the resolver, which then hung trying to resolve it -- so this is
-  ## asserted on the selection itself, not via pkgDepTopoSort(), which would
-  ## hang rather than fail if this regressed.
+  ## attach() puts non-package environments on the search path: pkgload uses
+  ## devtools_shims, and a .Rprofile may attach its own helpers. These used to
+  ## be passed to the resolver, which then hung trying to resolve them -- so
+  ## this asserts on the selection itself, not via pkgDepTopoSort(), which
+  ## would hang rather than fail if this regressed.
   attach(list(), name = "devtools-shims", warn.conflicts = FALSE)
   on.exit(detach("devtools-shims", character.only = TRUE), add = TRUE)
   attach(list(), name = "aRandomAttachedObject", warn.conflicts = FALSE)

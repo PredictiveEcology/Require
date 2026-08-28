@@ -235,7 +235,8 @@ pkgDepTopoSort <- function(packages,
 }
 
 ## Packages attached on the search path. Only attached packages are
-## "package:<name>"; anything else there (devtools-shims, an attach()ed object)
+## "package:<name>"; anything else there -- pkgload's devtools_shims, or any
+## environment from attach(), such as a helper attached in a user's .Rprofile --
 ## is not a package and must not be passed to the resolver, which hangs on it.
 pkgsInSearch <- function() {
   a <- setdiff(search(), .defaultPackages)
