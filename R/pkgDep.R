@@ -66,10 +66,7 @@ pkgDepTopoSort <- function(packages,
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
-      a <- search()
-      a <- setdiff(a, .defaultPackages)
-      a <- gsub("package:", "", a)
-      packages <- unique(c(packages, a))
+      packages <- unique(c(packages, pkgsInSearch()))
     } else {
       messageVerbose(
         "deps is provided; useAllInSearch will be set to FALSE",
@@ -235,6 +232,14 @@ pkgDepTopoSort <- function(packages,
   attr(out, "installSafeGroups") <- dd
 
   return(out)
+}
+
+## Packages attached on the search path. Only attached packages are
+## "package:<name>"; anything else there (devtools-shims, an attach()ed object)
+## is not a package and must not be passed to the resolver, which hangs on it.
+pkgsInSearch <- function() {
+  a <- setdiff(search(), .defaultPackages)
+  gsub("^package:", "", grep("^package:", a, value = TRUE))
 }
 
 .defaultPackages <-

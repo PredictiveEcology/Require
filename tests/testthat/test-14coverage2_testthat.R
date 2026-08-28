@@ -402,3 +402,23 @@ test_that("removeOldFlatCachePkgs removes flat .tar.gz files", {
     testthat::expect_false(file.exists(fakeFile))
   })
 })
+
+test_that("pkgsInSearch skips non-package entries on the search path", {
+  ## devtools attaches "devtools-shims", which is not a package. It used to be
+  ## passed to the resolver, which then hung trying to resolve it -- so this is
+  ## asserted on the selection itself, not via pkgDepTopoSort(), which would
+  ## hang rather than fail if this regressed.
+  attach(list(), name = "devtools-shims", warn.conflicts = FALSE)
+  on.exit(detach("devtools-shims", character.only = TRUE), add = TRUE)
+  attach(list(), name = "aRandomAttachedObject", warn.conflicts = FALSE)
+  on.exit(detach("aRandomAttachedObject", character.only = TRUE), add = TRUE)
+
+  out <- Require:::pkgsInSearch()
+
+  expect_false("devtools-shims" %in% out)
+  expect_false("aRandomAttachedObject" %in% out)
+  ## every remaining entry is a package that is actually attached
+  expect_true(all(paste0("package:", out) %in% search()))
+  ## and a genuinely attached package still comes through
+  expect_true("Require" %in% out || !("package:Require" %in% search()))
+})
