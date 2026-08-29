@@ -304,9 +304,9 @@ Require("remotes (>=2.4.0)", standAlone = TRUE, libPaths = projectPackages)
 ### Installing old package versions
 
 `Require` has the functionality of `renv` and `versions` in that you can
-install previous versions. On Windows, it will search for the binary
-version on MRAN and CRAN Archives. In the same way as above, we can
-specify maximum or exact package versions.
+install previous versions. It will retrieve these from the CRAN
+archives. In the same way as above, we can specify maximum or exact
+package versions.
 
 ``` r
 
