@@ -64,7 +64,7 @@ tryCatch(checkPath(tmpdir, create = FALSE), error = function(e) FALSE) ## FALSE
 #> [1] FALSE
 
 checkPath(tmpdir, create = TRUE)
-#> [1] "/tmp/Rtmpop07om/example_checkPath"
+#> [1] "/tmp/RtmpEXjRYK/example_checkPath"
 dir.exists(tmpdir) ## TRUE
 #> [1] TRUE
 
