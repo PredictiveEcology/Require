@@ -163,7 +163,7 @@ install.packages("Require", repose = "https://predictiveecology.r-universe.dev")
 `Require` is a wrapper around functions `utils::install packages` and one of the main function to load packages, `base::require`. Like `install.packages`, it is vectorized on package names.
 
 ```r
-if (!require("Require")) {install.packages("Require")} # sadly, Require can't install itself, so must comment this line
+if (!require("Require")) {install.packages("Require")} # sadly, Require can't install itself
 Require::Require("data.table")
 
 # With version numbering, this will install data.table, and also check that the installed 
@@ -217,17 +217,15 @@ Require can make install to and use from a single directory, so a project can be
 library(Require)
 projectPackages = "projectPackages"
 dir.create(projectPackages)
-.libPaths(projectPackages)
-Require("remotes (>=2.4.0)", standAlone = TRUE)
+Require("remotes (>=2.4.0)", standAlone = TRUE, libPaths = projectPackages)
 ```
 
 ### Installing old package versions
 
-In the same way as above, we can specify maximum or exact package versions. 
-`Require` will retrieve these on CRAN archives.
+`Require` has the functionality of `renv` and `versions` in that you can install previous versions. On Windows, it will search for the binary version on MRAN and CRAN Archives. In the same way as above, we can specify maximum or exact package versions.
 
 ```r
-Require("fpCompare (<=0.1.0)")
+Require("fpCompare (<=0.1.0)") # we don't have to know where to get this
 ```
 
 ### Managing a project
@@ -250,6 +248,8 @@ pkgSnapshot("mySnapshot.txt", standAlone = TRUE) # to get only the project speci
 ## move to a new machine, say
 Require(packageVersionFile = "mySnapshot.txt")
 ```
+
+The argument `packageVersionFile` can also be `TRUE` if the default filename is accepted.
 
 ### Using local package cache
 
