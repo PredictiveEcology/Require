@@ -46,13 +46,11 @@ is also a recursive dependency elsewhere, so its removal has no effect.
 ## Examples
 
 ``` r
-# \donttest{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+if (FALSE) { # Require:::.runLongExamples()
+opts <- Require:::.setupExample()
 
-  pkgDepIfDepRemoved("reproducible", "data.table")
+pkgDepIfDepRemoved("reproducible", "data.table")
 
-  Require:::.cleanup(opts)
+Require:::.cleanup(opts)
 }
-# }
 ```

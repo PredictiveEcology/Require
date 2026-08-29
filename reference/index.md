@@ -201,6 +201,9 @@
 - [`tempfile2()`](https://Require.predictiveecology.org/reference/tempfile2.md)
   : Make a temporary subfile in a temporary (sub-)directory
 
+- [`trimRedundancies()`](https://Require.predictiveecology.org/reference/trimRedundancies.md)
+  : Collapse redundant package specifications
+
 - [`trimVersionNumber()`](https://Require.predictiveecology.org/reference/trimVersionNumber.md)
   : Trim version number off a compound package name
 

@@ -35,6 +35,12 @@ Just the package names without extraneous info.
 
 [`trimVersionNumber()`](https://Require.predictiveecology.org/reference/trimVersionNumber.md)
 
+Other version specifications:
+[`compareVersion2()`](https://Require.predictiveecology.org/reference/compareVersion2.md),
+[`parseGitHub()`](https://Require.predictiveecology.org/reference/GitHubTools.md),
+[`trimRedundancies()`](https://Require.predictiveecology.org/reference/trimRedundancies.md),
+[`trimVersionNumber()`](https://Require.predictiveecology.org/reference/trimVersionNumber.md)
+
 ## Examples
 
 ``` r

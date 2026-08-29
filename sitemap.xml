@@ -8,6 +8,7 @@
 <url><loc>https://Require.predictiveecology.org/index.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/news/index.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/DESCRIPTION-helpers.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/reference/GETWauthThenNonAuth.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/GitHubTools.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/R_TESTSomit.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/Require.html</loc></url>
@@ -35,6 +36,7 @@
 <url><loc>https://Require.predictiveecology.org/reference/extractPkgName.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/getCRANrepos.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/getDeps.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/reference/getGitCredsToken.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/index.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/internetExists.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/invertList.html</loc></url>
@@ -58,10 +60,13 @@
 <url><loc>https://Require.predictiveecology.org/reference/setup.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/sourcePkgs.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/splitKeepOrderAndDTIntegrity.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/reference/stripGitHubToRepos.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/sysInstallAndDownload.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/tempdir2.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/tempfile2.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/reference/trimRedundancies.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/trimVersionNumber.html</loc></url>
 <url><loc>https://Require.predictiveecology.org/reference/updatePackages.html</loc></url>
+<url><loc>https://Require.predictiveecology.org/winbuilder-https-upload.html</loc></url>
 </urlset>
 

@@ -1,5 +1,232 @@
 # Changelog
 
+## Require 2.1.0
+
+### New features
+
+- New option `Require.noRemotes` (default `FALSE`). When `TRUE`,
+  GitHub-style specs (`account/repo@branch`) are rewritten to their bare
+  package name – version constraints preserved – and resolved from
+  `repos` (e.g. prebuilt binaries on an r-universe) instead of being
+  cloned and built from GitHub source. This removes the need for git
+  authentication and a source-build toolchain such as Rtools, which
+  makes workshops and binary-only setups far easier. `repos` must carry
+  a version satisfying any constraint. See
+  [`?RequireOptions`](https://Require.predictiveecology.org/reference/RequireOptions.md).
+
+- A pinned GitHub commit (`Install("owner/repo@<sha>")`) is now an
+  exact-version pin: it installs that commit even when a different
+  version is already installed. Previously a bare `@sha` was a no-op
+  whenever any version was present. Branch refs and refs already
+  carrying a version spec are unaffected.
+
+- [`getGitCredsToken()`](https://Require.predictiveecology.org/reference/getGitCredsToken.md)
+  now falls back to the `GITHUB_PAT` / `GITHUB_TOKEN` environment
+  variables when the git credential store has nothing. `gitcreds` reads
+  only the credential store, so CI runners – which set the environment
+  variable and configure no credential helper – were making
+  unauthenticated GitHub API calls, capped at 60 requests/hour per IP.
+
+- [`trimRedundancies()`](https://Require.predictiveecology.org/reference/trimRedundancies.md),
+  [`GETWauthThenNonAuth()`](https://Require.predictiveecology.org/reference/GETWauthThenNonAuth.md)
+  and
+  [`getGitCredsToken()`](https://Require.predictiveecology.org/reference/getGitCredsToken.md)
+  are now exported. Other packages were reaching them with
+  [`getFromNamespace()`](https://rdrr.io/r/utils/getFromNamespace.html),
+  which a rename here would break without warning. The specification
+  parsers
+  ([`compareVersion2()`](https://Require.predictiveecology.org/reference/compareVersion2.md),
+  [`extractPkgName()`](https://Require.predictiveecology.org/reference/extractPkgName.md)
+  and friends,
+  [`parseGitHub()`](https://Require.predictiveecology.org/reference/GitHubTools.md),
+  [`trimVersionNumber()`](https://Require.predictiveecology.org/reference/trimVersionNumber.md),
+  [`trimRedundancies()`](https://Require.predictiveecology.org/reference/trimRedundancies.md))
+  now cross-reference each other as a documented family.
+
+- New option `Require.forcePakReinstall` (default `FALSE`) forces one
+  fresh pak install, for the case where pak’s files are present but
+  broken.
+
+### Installation correctness
+
+- Exact pins (`pkg (==ver)`) now reach pak’s dependency solve. They were
+  stripped before the solve, so every pinned package resolved to the
+  current version, which was installed and then replaced by the pin
+  (e.g. `abind 1.4-8 -> 1.4-5`).
+
+- Installing from a snapshot (`packageVersionFile`) is now a pinned
+  install: the set is solved once, packages the snapshot does not pin
+  are reported and not installed, and installation proceeds one
+  dependency level at a time with `dependencies = FALSE`, so no package
+  can pull a dependency at an unpinned version. A pin that is not the
+  current CRAN version is handed to pak as its CRAN Archive tarball:
+  pak’s solver otherwise discards an older pinned version whenever its
+  dependencies match the newest one.
+
+- Every install now proceeds one dependency level at a time. pak does
+  not order builds within a batch it installs with
+  `dependencies = FALSE` (every GitHub batch), so a package could start
+  building before a sibling it Imports had landed, fail at once, abort
+  the batch, and be rebuilt on every later pass – once per culprit.
+
+- [`pkgDepTopoSort()`](https://Require.predictiveecology.org/reference/pkgDep.md)
+  could place a package in the same install level as one of its
+  dependencies; levels are now built the way
+  [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
+  orders its installs.
+
+- Installs on Linux no longer rebuild every already-installed compiled
+  dependency from source.
+  [`Require()`](https://Require.predictiveecology.org/reference/Require.md)/[`Install()`](https://Require.predictiveecology.org/reference/Require.md)
+  default `type = getOption("pkgType")`, which is `"source"` on Linux,
+  and that value alone was taken as a request for source-only builds.
+  pak was therefore pinned to source on every Linux install, so each
+  installed *binary* dependency stopped matching the resolution and was
+  replanned as a source rebuild – a plan full of same-version “updates”
+  such as `cli 3.6.6 -> 3.6.6 [bld][cmp]`. Measured on one package whose
+  dependencies were all installed: 23 same-version rebuilds taking
+  103.8s, now `kept 22, added 1` in 2.7s. An explicit `type = "source"`
+  still pins pak to source, on every platform.
+
+- A `(HEAD)` version spec no longer forces a reinstall of a package that
+  is already current. Any ref carrying `(HEAD)` was marked “installed
+  version not OK” regardless of what was on disk, and the comparison
+  that would have corrected this lives on the legacy non-pak install
+  path, so under the default `Require.usePak = TRUE` it never ran. Since
+  [`updatePackages()`](https://Require.predictiveecology.org/reference/updatePackages.md)
+  tags every installed CRAN package `pkg (HEAD)`, it asked for the
+  entire library back – a hundred and seventy same-version rebuilds
+  where `base::update.packages()` correctly found three. `(HEAD)` is now
+  settled per source, as it always meant to be: a CRAN-alike ref against
+  the version the repositories offer, a GitHub ref against the SHA its
+  branch points at. Anything unresolvable – an unknown version, no
+  installed `DESCRIPTION`, an unreachable GitHub – still installs, so a
+  network failure is never read as “up to date”.
+
+- The pak retry machinery no longer re-attempts a ref that already
+  failed while nothing it depends on has changed, and pins
+  already-installed refs on every pass rather than only the first. A
+  single unbuildable dependency used to make each of the four
+  identify-and-defer phases retry it in turn, rebuilding dozens of
+  already-installed packages each round
+  ([\#190](https://github.com/PredictiveEcology/Require/issues/190)).
+
+- GitHub specs whose account contains a hyphen or a digit –
+  `r-lib/crancache`, `e-sensing/sits`, `user123/pkg` – are now
+  recognised as GitHub. `isGH()` required a purely alphabetic account
+  while
+  [`extractPkgGitHub()`](https://Require.predictiveecology.org/reference/extractPkgName.md)
+  did not, so the two disagreed and such specs were pushed down CRAN
+  code paths; a bare `Remotes: r-lib/crancache` was looked up as a CRAN
+  package. Both now share one definition, following GitHub’s naming
+  rules, which differ between the account (alphanumerics and hyphens, no
+  `_` or `.`) and the repository (those plus `_` and `.`).
+
+- `options(Require.snapshotInstaller = "install.packages")` now
+  genuinely bypasses pak. The option selected which installer function
+  to call, but that function’s own branches keyed on whether pak was
+  *installed* rather than on the option – so with pak present, which is
+  the norm, snapshot installs still went through pak and the
+  [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
+  path was unreachable. Anyone setting the option was silently getting
+  pak.
+
+- Fixed two defects in `lessThanToAt()`, which converts a `<` version
+  constraint into an exact pin. When no released version satisfied the
+  constraint it returned an empty vector, and the install path died with
+  “replacement has length zero”; the constrained refs are now left as
+  they were. Separately, when only some refs were resolvable, the
+  resolved version could be written onto the wrong package – silently,
+  with no error.
+
+- [`getCRANrepos()`](https://Require.predictiveecology.org/reference/getCRANrepos.md)
+  no longer discards other repositories when resolving the `"@CRAN@"`
+  placeholder. Previously, with `repos` containing `"@CRAN@"` and
+  `CRAN_REPO` set – RStudio’s default state – it replaced the whole
+  `repos` vector with CRAN alone, silently removing an r-universe the
+  user had added and breaking installs of packages hosted there.
+  Duplicate repo URLs are also dropped now.
+
+- A `>=` or `>` constraint now upgrades an installed-but-insufficient
+  package. `Install("reproducible (>= 3.1.1.9054)")` kept an installed
+  `3.1.1` because the constraint was stripped to a bare ref, which pak
+  treats as already satisfied.
+
+- A user-requested CRAN package can no longer be installed *without its
+  dependencies* when pak’s batch dependency solve is unsolvable, which
+  left broken namespaces (`loadNamespace("googledrive")` failing on a
+  missing `gargle`).
+
+- When an `==X` pin loses to an irreconcilable `>=Y` floor, the
+  surviving constraint is rewritten to `==Y`, honouring the “as old as
+  possible” intent rather than letting pak install CRAN’s latest.
+
+- Multiple ref forms for the same package (`owner/pkg@branch`,
+  `owner/pkg`, `pkg`) no longer all reach the installer, where pak
+  rejected the whole batch with `Conflicts with` and blocked every
+  package in it.
+
+- [`Require()`](https://Require.predictiveecology.org/reference/Require.md)/[`Install()`](https://Require.predictiveecology.org/reference/Require.md)
+  now warn to restart R when a satisfying version is installed but an
+  older, insufficient one is still loaded – R cannot hot-swap a loaded
+  namespace, so the session silently kept using the stale version.
+
+- Fixed a crash in the
+  [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
+  snapshot installer when a snapshot row carries no `Repository` – a
+  hand-written pin list, or the rows added for a dependency that was not
+  itself pinned. The download-URL builder tested
+  `!is.na(pkgs$Repository[i])` without first checking the column exists,
+  so the whole install died with “missing value where TRUE/FALSE
+  needed”. Not previously reachable, since the option did not route
+  there.
+
+- The
+  [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)-based
+  snapshot installer is **retained but no longer developed**. pak is the
+  default and the maintained path; the legacy chain now has test
+  coverage so that it keeps working, but it is not being extended. In
+  particular, compile failures from old pinned versions are not
+  something it tries to solve – the answer there is to ask for a newer
+  version.
+
+### Robustness
+
+- Recovery from a transient
+  `cannot open URL 'http://bioconductor.org/config.yaml'` failure, which
+  previously killed an entire pak call even when no Bioconductor package
+  was requested. Only triggered on that specific failure, so the real
+  Bioc config is used whenever bioc.org is reachable.
+
+- `processx` and `callr` are now `Imports`. pak ships embedded copies
+  but does not declare them, and on some Windows configurations its
+  subprocess wedges unless standalone versions are visible in
+  [`.libPaths()`](https://rdrr.io/r/base/libPaths.html) – every install
+  failing with an empty reason string.
+
+- Several Windows-specific pak subprocess fixes: pak and its
+  native-helper siblings are no longer file-copied between libraries
+  (their embedded executables do not survive the copy), pak is verified
+  in the project library before use, and it is no longer eagerly loaded
+  at startup, which had grabbed a DLL lock that prevented reinstalling
+  it.
+
+- Offline and cached installs: the download-cache shortcut no longer
+  routes an *online* install through the offline installer, per-ref
+  retries gained a `local::` last resort that bypasses pak’s resolver,
+  and dependency resolution is cached per ref rather than per whole
+  request – so changing one entry in a list no longer forces every entry
+  to be re-resolved.
+
+- [`attachNamespace()`](https://rdrr.io/r/base/ns-load.html) recovery
+  when a package is already loaded from a different library and its
+  dependents have imported it, fixing “object not found” cascades
+  against a project library.
+
+- `whIsOfficialCRANrepo()` no longer leaks a “cannot open file” warning
+  when offline with no cached mirror list, and `isBinaryCRANRepo()` no
+  longer errors when `getOption("repos")` has no element named `CRAN`.
+
 ## Require 2.0.0
 
 CRAN release: 2026-05-15

@@ -24,3 +24,9 @@ setLinuxBinaryRepo(
 - backupCRAN:
 
   If there is no CRAN repository set
+
+## Value
+
+Called for its side effect on `options("repos")`; returns that
+[`options()`](https://rdrr.io/r/base/options.html) result invisibly, or
+`NULL` when nothing needed changing.

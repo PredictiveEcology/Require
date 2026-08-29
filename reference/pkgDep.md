@@ -271,37 +271,30 @@ and `pkgDep` will differ under the following circumstances:
 ## Examples
 
 ``` r
-# \donttest{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+if (FALSE) { # Require:::.runLongExamples()
+opts <- Require:::.setupExample()
 
-  pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 
-  Require:::.cleanup(opts)
+Require:::.cleanup(opts)
 }
-# }
+if (FALSE) { # Require:::.runLongExamples()
+opts <- Require:::.setupExample()
 
-# \donttest{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+pkgDep2("reproducible")
+# much bigger one
+pkgDep2("tidyverse")
 
-  pkgDep2("reproducible")
-  # much bigger one
-  pkgDep2("tidyverse")
-
-  Require:::.cleanup(opts)
+Require:::.cleanup(opts)
 }
-# }
-# \donttest{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+if (FALSE) { # Require:::.runLongExamples()
+opts <- Require:::.setupExample()
 
-  pkgDep("tidyverse", recursive = TRUE)
+pkgDep("tidyverse", recursive = TRUE)
 
-  # GitHub, local, and CRAN packages
-  pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
+# GitHub, local, and CRAN packages
+pkgDep(c("PredictiveEcology/reproducible", "Require", "plyr"))
 
-  Require:::.cleanup(opts)
+Require:::.cleanup(opts)
 }
-# }
 ```

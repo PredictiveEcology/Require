@@ -30,3 +30,11 @@ compareVersion2(version, versionSpec, inequality)
 ## Value
 
 a logical vector of the length of the longest of the 3 arguments.
+
+## See also
+
+Other version specifications:
+[`extractPkgName()`](https://Require.predictiveecology.org/reference/extractPkgName.md),
+[`parseGitHub()`](https://Require.predictiveecology.org/reference/GitHubTools.md),
+[`trimRedundancies()`](https://Require.predictiveecology.org/reference/trimRedundancies.md),
+[`trimVersionNumber()`](https://Require.predictiveecology.org/reference/trimVersionNumber.md)

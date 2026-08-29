@@ -73,6 +73,16 @@ available.packagesCached(
   See
   [`utils::install.packages`](https://rdrr.io/r/utils/install.packages.html)
 
+## Value
+
+`dlArchiveVersionsAvailable()`: a list with one `data.table` per
+`package`, the versions found in the CRAN archive (`repo`, `PackageUrl`
+and file metadata), empty when none. `available.packagesCached()`: the
+available-packages table for `repos`, as a `data.table` (default) or a
+matrix as
+[`utils::available.packages()`](https://rdrr.io/r/utils/available.packages.html)
+returns it.
+
 ## Details
 
 `dlArchiveVersionsAvailable` searches CRAN Archives for available

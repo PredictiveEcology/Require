@@ -64,3 +64,10 @@ setupOff(removePackages = FALSE, verbose = getOption("Require.verbose"))
 
   Deprecated. Please remove packages manually from
   [`.libPaths()`](https://rdrr.io/r/base/libPaths.html)
+
+## Value
+
+Nothing ([`invisible()`](https://rdrr.io/r/base/invisible.html)); called
+for its side effects on
+[`.libPaths()`](https://rdrr.io/r/base/libPaths.html), the package cache
+and options. Deprecated.

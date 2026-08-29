@@ -33,3 +33,9 @@ Resolution order (legacy path):
 ``` r
 cacheGetOptionCachePkgDir()
 ```
+
+## Value
+
+The package cache directory, or `NULL` when caching is disabled.
+Deprecated in favour of
+[`cachePkgDir()`](https://Require.predictiveecology.org/reference/cacheDir.md).

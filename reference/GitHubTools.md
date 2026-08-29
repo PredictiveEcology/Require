@@ -32,3 +32,11 @@ parseGitHub(pkgDT, verbose = getOption("Require.verbose"))
 
 `parseGitHub` turns the single character string representation into 3 or
 4: `Account`, `Repo`, `Branch`, `SubFolder`.
+
+## See also
+
+Other version specifications:
+[`compareVersion2()`](https://Require.predictiveecology.org/reference/compareVersion2.md),
+[`extractPkgName()`](https://Require.predictiveecology.org/reference/extractPkgName.md),
+[`trimRedundancies()`](https://Require.predictiveecology.org/reference/trimRedundancies.md),
+[`trimVersionNumber()`](https://Require.predictiveecology.org/reference/trimVersionNumber.md)

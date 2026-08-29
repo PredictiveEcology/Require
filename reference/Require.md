@@ -38,6 +38,7 @@ Require(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
+  typeExplicit = !missing(type),
   upgrade = FALSE,
   returnDetails = FALSE,
   ...
@@ -55,6 +56,7 @@ Install(
   purge = getOption("Require.purge", FALSE),
   verbose = getOption("Require.verbose", FALSE),
   type = getOption("pkgType"),
+  typeExplicit = !missing(type),
   upgrade = FALSE,
   ...
 )
@@ -195,6 +197,15 @@ Install(
   See
   [`utils::install.packages`](https://rdrr.io/r/utils/install.packages.html)
 
+- typeExplicit:
+
+  Logical. Whether `type` was supplied by the caller rather than
+  defaulted from `getOption("pkgType")`. Defaults to `!missing(type)`
+  and should not normally be set by hand. It exists because
+  `getOption("pkgType")` is `"source"` on Linux, so the value of `type`
+  alone cannot say whether source-only builds were actually asked for;
+  only an explicit request pins pak to source.
+
 - upgrade:
 
   When `FALSE`, the default, will only upgrade a package when the
@@ -234,6 +245,19 @@ directory. Any packages or dependencies that are not yet installed will
 be installed in `libPaths`.
 
 ## Details
+
+Require declares hard `Imports` on `callr` and `processx` to ensure they
+are installed alongside Require. They are not called directly from
+Require's R code; they are runtime dependencies of `pak`'s background
+`r_session` subprocess. pak's CRAN binary ships embedded copies of these
+helpers but does not declare them as standalone `Imports`, and on some
+Windows configurations pak's subprocess wedges unless standalone
+`processx` / `callr` are also visible in
+[`.libPaths()`](https://rdrr.io/r/base/libPaths.html) (symptom: every
+per-ref [`pak::pak()`](https://pak.r-lib.org/reference/pak.html) call
+fails with an empty reason string and no pak progress output). Declaring
+them in Require's Imports guarantees they're present wherever Require is
+installed.
 
 `Install` is the same as `Require(..., require = FALSE)`, for
 convenience.
@@ -312,67 +336,60 @@ Other contributors:
 ## Examples
 
 ``` r
-# \donttest{
+if (FALSE) { # Require:::.runLongExamples()
 opts <- Require:::.setupExample()
 
 library(Require)
 getCRANrepos(ind = 1)
-#>                                                          RSPM 
-#> "https://packagemanager.posit.co/cran/__linux__/noble/latest" 
-#>                                                          CRAN 
-#>                                    "https://cran.rstudio.com" 
 Require("utils") # analogous to require(stats), but it checks for
 #   pkg dependencies, and installs them, if missing
 
 # unquoted version
 Require(c(tools, utils))
-#> Loading required package: tools
 
-if (Require:::.runLongExamples()) {
-  # Install in a new local library (libPaths)
-  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-  # use standAlone, means it will put it in libPaths, even if it already exists
-  #   in another local library (e.g., personal library)
-  Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
+# Install in a new local library (libPaths)
+tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+# use standAlone, means it will put it in libPaths, even if it already exists
+#   in another local library (e.g., personal library)
+Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 
-  # Mutual dependencies, only installs once -- e.g., cli
-  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-  Install(c("cli", "R6"), libPaths = tempPkgFolder, standAlone = TRUE)
+# Mutual dependencies, only installs once -- e.g., cli
+tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+Install(c("cli", "R6"), libPaths = tempPkgFolder, standAlone = TRUE)
 
-  # Mutual dependencies, only installs once -- e.g., rlang
-  tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-  Install(c("rlang", "ellipsis"), libPaths = tempPkgFolder, standAlone = TRUE)
+# Mutual dependencies, only installs once -- e.g., rlang
+tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+Install(c("rlang", "ellipsis"), libPaths = tempPkgFolder, standAlone = TRUE)
 
-  #####################################################################################
-  # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
-  #####################################################################################
-  # GitHub packages
-  if (requireNamespace("gitcreds", quietly = TRUE)) {
-    # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
-    ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-    if (requireNamespace("curl")) {
-      Require("PredictiveEcology/fpCompare@development",
-        libPaths = ProjectPackageFolder,
-      )
-    }
-
-    # No install because it is there already
-    Install("PredictiveEcology/fpCompare@development",
+#####################################################################################
+# Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
+#####################################################################################
+# GitHub packages
+if (requireNamespace("gitcreds", quietly = TRUE)) {
+  # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+  ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+  if (requireNamespace("curl")) {
+    Require("PredictiveEcology/fpCompare@development",
       libPaths = ProjectPackageFolder,
-    ) # the latest version on GitHub
-
-    ############################################################################
-    # Mixing and matching GitHub, CRAN, with and without version numbering
-    ############################################################################
-    pkgs <- c(
-      "remotes (<=2.4.1)", # old version
-      "digest (>= 0.6.28)", # recent version
-      "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
     )
-    Require::Require(pkgs, libPaths = ProjectPackageFolder)
-    # }
   }
-  Require:::.cleanup(opts)
+
+  # No install because it is there already
+  Install("PredictiveEcology/fpCompare@development",
+    libPaths = ProjectPackageFolder,
+  ) # the latest version on GitHub
+
+  ############################################################################
+  # Mixing and matching GitHub, CRAN, with and without version numbering
+  ############################################################################
+  pkgs <- c(
+    "remotes (<=2.4.1)", # old version
+    "digest (>= 0.6.28)", # recent version
+    "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+  )
+  Require::Require(pkgs, libPaths = ProjectPackageFolder)
+  # }
 }
-# }
+Require:::.cleanup(opts)
+}
 ```

@@ -28,6 +28,11 @@ tempfile2(
 
   passed to `tempfile`, e.g., `fileext`
 
+## Value
+
+The normalized path to a temporary file inside `tempdir2(sub)`; the file
+is not created.
+
 ## See also
 
 [`tempdir2()`](https://Require.predictiveecology.org/reference/tempdir2.md)

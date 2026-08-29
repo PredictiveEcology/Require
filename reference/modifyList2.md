@@ -27,6 +27,11 @@ modifyList3(..., keep.null = TRUE)
   If `TRUE`, `NULL` elements in `val` become `NULL` elements in `x`.
   Otherwise, the corresponding element, if present, is deleted from `x`.
 
+## Value
+
+A list: the first argument with each subsequent argument's elements
+merged in, later ones overriding earlier ones of the same name.
+
 ## Details
 
 More or less a convenience around `Reduce(modifyList, list(...))`, with

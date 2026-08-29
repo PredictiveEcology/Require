@@ -54,6 +54,14 @@ dlGitHubDESCRIPTION(
   `Require` function, when `verbose >= 2`, also returns details as if
   `returnDetails = TRUE` (for backwards compatibility).
 
+## Value
+
+`DESCRIPTIONFileVersionV()` and `DESCRIPTIONFileOtherV()` return a
+character vector with one element per `file` (the `Version` field, or
+the field named in `other`); `dlGitHubDESCRIPTION()` returns the
+`data.table` of parsed GitHub refs with the local path of each
+downloaded DESCRIPTION file in a `DESCFile` column.
+
 ## Details
 
 `dlGitHubDESCRIPTION` retrieves the DESCRIPTION file from GitHub.com

@@ -29,6 +29,11 @@ tempdir2(
 
   Logical. Should the directory be created. Default `TRUE`
 
+## Value
+
+The normalized path to the temporary (sub-)directory, created when
+`create = TRUE`.
+
 ## See also
 
 [`tempfile2()`](https://Require.predictiveecology.org/reference/tempfile2.md)

@@ -57,6 +57,11 @@ clearRequirePackageCache(
   `Require` function, when `verbose >= 2`, also returns details as if
   `returnDetails = TRUE` (for backwards compatibility).
 
+## Value
+
+Called for their side effect of deleting cached package files; return
+`NULL` invisibly.
+
 ## Details
 
 Require's own bookkeeping (SHA DB, mirrors.csv, available.packages

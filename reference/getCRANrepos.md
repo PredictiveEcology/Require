@@ -21,3 +21,9 @@ getCRANrepos(repos = NULL, ind)
 
   an integer of which mirror to use in
   [`chooseCRANmirror()`](https://rdrr.io/r/utils/chooseCRANmirror.html)
+
+## Value
+
+The `repos` option as it is after the call: a named character vector of
+repository URLs, with a resolved CRAN mirror in place of the `"@CRAN@"`
+placeholder. Called partly for its side effect of setting that option.
