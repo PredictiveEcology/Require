@@ -18,9 +18,9 @@ the `"@CRAN@"` placeholder. See NEWS.md.
     the tests gated behind `NOT_CRAN`, passes on R 4.6.1: 822 tests)
 
   ### win-builder
-  * Windows - R-devel
-  * Windows - R release
-  * Windows - R oldrelease
+  * Windows - R-devel (2026-08-27 r90452, UCRT)
+  * Windows - R 4.6.1 (release)
+  * Windows - R 4.5.3 (oldrelease)
 
   ### GitHub Actions
   * Ubuntu - R-devel, R 4.6 (release), R 4.5 (oldrel-1), R 4.4 (oldrel-2),
@@ -34,17 +34,24 @@ the `"@CRAN@"` placeholder. See NEWS.md.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
 
-One win-builder run (R-oldrelease) reported a NOTE on a URL in
+The note came from the win-builder R-oldrelease (R 4.5.3) run, under "checking
+CRAN incoming feasibility". It is an HTTP 403 Forbidden on a URL in
 `man/setLibPaths.Rd`:
 
-    URL: https://stackoverflow.com/a/36873741/3890027
-      Status: 403 Forbidden
+    Found the following (possibly) invalid URLs:
+      URL: https://stackoverflow.com/a/36873741/3890027
+        From: man/setLibPaths.Rd
+        Status: 403
+        Message: Forbidden
 
-The link is correct. Stack Overflow returns 403 to automated requests, so the
-URL checker cannot fetch it; the same link is fine in a browser. The other two
-win-builder runs did not flag it.
+The URL is correct and opens normally in a browser. Stack Overflow returns
+403 Forbidden to non-browser clients, so the URL checker cannot fetch it -- the
+well-known false positive for stackoverflow.com links. No other platform
+flagged it: the win-builder R-devel and R-release runs, all GitHub Actions
+runs, the R-hub macOS runs and the local checks were 0 errors | 0 warnings |
+0 notes.
 
 ## Downstream dependencies
 
